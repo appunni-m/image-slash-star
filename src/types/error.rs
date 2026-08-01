@@ -33,6 +33,8 @@ pub enum ImageErrorStage {
 pub enum ResourceLimit {
     /// Complete encoded input length in bytes.
     EncodedBytes,
+    /// Complete encoded output length admitted to the caller.
+    EncodedOutputBytes,
     /// Inspected image canvas width in pixels.
     Width,
     /// Inspected image canvas height in pixels.

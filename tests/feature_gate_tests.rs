@@ -4125,6 +4125,123 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn std::error::Error>>
+{
+    // Pillow has no caller-controlled maximum-output policy. These assertions
+    // classify the Rust result/sink boundary and must not become parity rows.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::Png);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+        let exact = u64::try_from(expected.len())?;
+        let admitted = image_slash_star::EncodePolicy::new().with_max_output_bytes(exact);
+        assert_eq!(admitted.max_output_bytes(), Some(exact));
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &admitted,
+            )?,
+            expected,
+            "exact output limit admits the complete result"
+        );
+
+        let below = image_slash_star::EncodePolicy::new().with_max_output_bytes(exact - 1);
+        let error = match image_slash_star::encode_with_policy(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &below,
+        ) {
+            Ok(_) => return Err("output policy unexpectedly admitted an oversized result".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                maximum,
+                observed,
+            } if maximum == exact - 1 && observed == exact
+        ));
+
+        let mut sink = vec![0xAA];
+        assert!(matches!(
+            image_slash_star::encode_to_sink_with_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &below,
+                &mut sink,
+            ),
+            Err(ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            })
+        ));
+        assert_eq!(sink, vec![0xAA], "policy failure must precede sink writes");
+    }
+
+    if cfg!(feature = "gif") {
+        let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        let options = EncodeOptions::for_format(ImageFormat::Gif);
+        let expected = image_slash_star::encode_sequence(&sequence, ImageFormat::Gif, &options)?;
+        let exact = u64::try_from(expected.len())?;
+        let below = image_slash_star::EncodePolicy::new().with_max_output_bytes(exact - 1);
+        let error = match image_slash_star::encode_sequence_with_policy(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &below,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "sequence output policy unexpectedly admitted an oversized result".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::SequenceEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                maximum,
+                observed,
+            } if maximum == exact - 1 && observed == exact
+        ));
+
+        let mut sink = vec![0xBB];
+        assert!(matches!(
+            image_slash_star::encode_sequence_to_sink_with_policy(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &below,
+                &mut sink,
+            ),
+            Err(ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            })
+        ));
+        assert_eq!(
+            sink,
+            vec![0xBB],
+            "sequence policy failure must precede sink writes"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn unsupported_reasons_are_non_parity_capability_contracts()
 -> Result<(), Box<dyn std::error::Error>> {
     // These reason fields classify the Rust API's capability boundary. Pillow

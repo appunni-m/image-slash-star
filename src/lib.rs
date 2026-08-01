@@ -92,6 +92,7 @@ mod codecs;
 pub mod decode_policy;
 mod diagnostic;
 pub mod encode_options;
+pub mod encode_policy;
 pub mod source;
 pub mod types;
 
@@ -104,6 +105,7 @@ pub(crate) use decode_policy::SequenceDecodeBudget;
 pub use decode_policy::{DecodeLimits, DecodePolicy};
 pub use diagnostic::{DiagnosticKind, ImageDiagnostic};
 pub use encode_options::*;
+pub use encode_policy::EncodePolicy;
 pub use source::{EncodedImage, EncodedImageView};
 pub use types::*;
 
@@ -809,7 +811,30 @@ pub fn encode(
     format: ImageFormat,
     opts: &EncodeOptions,
 ) -> ImageResult<Vec<u8>> {
-    codecs::encode_format(img, format, opts)
+    encode_with_policy(img, format, opts, &EncodePolicy::default())
+}
+
+/// Encode a decoded still image under an explicit output-result policy.
+///
+/// The policy is checked after the selected codec has produced its complete
+/// validated buffer and before that buffer is returned. It therefore bounds
+/// caller-visible output size, but does not yet bound transient allocations
+/// inside the whole-buffer encoder.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode`], plus
+/// [`ImageError::LimitExceeded`] with [`ResourceLimit::EncodedOutputBytes`]
+/// when the complete result exceeds `policy`.
+pub fn encode_with_policy(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+) -> ImageResult<Vec<u8>> {
+    let encoded = codecs::encode_format(img, format, opts)?;
+    policy.check_output(&encoded, format, CodecOperation::StillEncode)?;
+    Ok(encoded)
 }
 
 /// Encode a still image or animation while retaining every source frame.
@@ -828,7 +853,30 @@ pub fn encode_sequence(
     format: ImageFormat,
     opts: &EncodeOptions,
 ) -> ImageResult<Vec<u8>> {
-    codecs::encode_sequence_format(sequence, format, opts)
+    encode_sequence_with_policy(sequence, format, opts, &EncodePolicy::default())
+}
+
+/// Encode a still image or animation under an explicit output-result policy.
+///
+/// The policy is checked after the selected codec has produced its complete
+/// validated buffer and before that buffer is returned. It therefore bounds
+/// caller-visible output size, but does not yet bound transient allocations
+/// inside the whole-buffer encoder.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence`], plus
+/// [`ImageError::LimitExceeded`] with [`ResourceLimit::EncodedOutputBytes`]
+/// when the complete result exceeds `policy`.
+pub fn encode_sequence_with_policy(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+) -> ImageResult<Vec<u8>> {
+    let encoded = codecs::encode_sequence_format(sequence, format, opts)?;
+    policy.check_output(&encoded, format, CodecOperation::SequenceEncode)?;
+    Ok(encoded)
 }
 
 /// Dependency-free destination for encoded output.
@@ -876,7 +924,24 @@ pub fn encode_to_sink(
     opts: &EncodeOptions,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
-    let encoded = encode(img, format, opts)?;
+    encode_to_sink_with_policy(img, format, opts, &EncodePolicy::default(), sink)
+}
+
+/// Encode a still image under an output-result policy and write it to a
+/// caller-owned sink only when the policy admits the complete result.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_with_policy`], plus
+/// [`ImageError::OutputWrite`] when the sink rejects the admitted buffer.
+pub fn encode_to_sink_with_policy(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode_with_policy(img, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
 }
 
@@ -893,7 +958,24 @@ pub fn encode_sequence_to_sink(
     opts: &EncodeOptions,
     sink: &mut impl OutputSink,
 ) -> ImageResult<usize> {
-    let encoded = encode_sequence(sequence, format, opts)?;
+    encode_sequence_to_sink_with_policy(sequence, format, opts, &EncodePolicy::default(), sink)
+}
+
+/// Encode a still image or animation under an output-result policy and write
+/// it to a caller-owned sink only when the policy admits the complete result.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence_with_policy`], plus
+/// [`ImageError::OutputWrite`] when the sink rejects the admitted buffer.
+pub fn encode_sequence_to_sink_with_policy(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut impl OutputSink,
+) -> ImageResult<usize> {
+    let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
 }
 
