@@ -8,20 +8,34 @@ const ENTRY_SIZE: usize = 16;
 
 /// Inspect the same best-resolution entry selected by the ICO decoder.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
-    let header = need_slice(data, 0, HEADER_SIZE, "truncated ICO header")?;
+    let header = need_slice(data, 0, HEADER_SIZE, "truncated ICO header")
+        .map_err(|error| error.at(0, "ico_header"))?;
     let reserved = u16::from_le_bytes([header[0], header[1]]);
     let kind = u16::from_le_bytes([header[2], header[3]]);
     let count = usize::from(u16::from_le_bytes([header[4], header[5]]));
-    if reserved != 0 || !matches!(kind, 1 | 2) || count == 0 || count > 255 {
-        return Err(CodecError::Malformed(
-            "invalid ICO header fields".to_owned(),
-        ));
+    if reserved != 0 {
+        return Err(
+            CodecError::Malformed("invalid ICO reserved header field".to_owned())
+                .at(0, "ico_header"),
+        );
+    }
+    if !matches!(kind, 1 | 2) {
+        return Err(
+            CodecError::Malformed("invalid ICO container type".to_owned()).at(2, "ico_header"),
+        );
+    }
+    if count == 0 || count > 255 {
+        return Err(
+            CodecError::Malformed("invalid ICO directory count".to_owned()).at(4, "ico_header"),
+        );
     }
     let directory_end = HEADER_SIZE.saturating_add(count.saturating_mul(ENTRY_SIZE));
-    let directory = need_slice(data, HEADER_SIZE, directory_end, "truncated ICO directory")?;
+    let directory = need_slice(data, HEADER_SIZE, directory_end, "truncated ICO directory")
+        .map_err(|error| error.at(HEADER_SIZE as u64, "ico_directory"))?;
     let mut best = &directory[..ENTRY_SIZE];
+    let mut best_offset = HEADER_SIZE;
     let mut best_score = 0;
-    for entry in directory.chunks_exact(ENTRY_SIZE) {
+    for (index, entry) in directory.chunks_exact(ENTRY_SIZE).enumerate() {
         let width = if entry[0] == 0 {
             256
         } else {
@@ -35,6 +49,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         let score = width.saturating_mul(height);
         if score > best_score {
             best = entry;
+            best_offset = HEADER_SIZE.saturating_add(index.saturating_mul(ENTRY_SIZE));
             best_score = score;
         }
     }
@@ -42,10 +57,21 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let length_u32 = u32::from_le_bytes([best[8], best[9], best[10], best[11]]);
     let length = length_u32 as usize;
     let offset = u32::from_le_bytes([best[12], best[13], best[14], best[15]]) as usize;
-    if length == 0 || offset == 0 {
-        return Err(CodecError::Malformed(
-            "ICO directory entry has an empty size or offset".to_owned(),
-        ));
+    if length == 0 {
+        return Err(
+            CodecError::Malformed("ICO directory entry has an empty size".to_owned()).at(
+                u64::try_from(best_offset.saturating_add(8)).unwrap_or(u64::MAX),
+                "ico_entry",
+            ),
+        );
+    }
+    if offset == 0 {
+        return Err(
+            CodecError::Malformed("ICO directory entry has an empty offset".to_owned()).at(
+                u64::try_from(best_offset.saturating_add(12)).unwrap_or(u64::MAX),
+                "ico_entry",
+            ),
+        );
     }
     let payload_end = codec_add_end(offset, length);
     let payload = need_slice(
@@ -53,13 +79,20 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         offset,
         payload_end,
         "ICO entry payload is out of bounds",
-    )?;
+    )
+    .map_err(|error| error.at(u64::try_from(offset).unwrap_or(u64::MAX), "ico_entry"))?;
     let mut info = if payload.starts_with(b"\x89PNG\r\n\x1a\n") {
-        crate::codecs::png::inspect::inspect(payload).map_err(terminalize)?
+        crate::codecs::png::inspect::inspect(payload)
+            .map_err(terminalize)
+            .map_err(|error| error.at(u64::try_from(offset).unwrap_or(u64::MAX), "ico_png"))?
     } else if kind == 2 {
-        inspect_cursor_dib(payload, length_u32)?
+        inspect_cursor_dib(payload, length_u32)
+            .map_err(terminalize)
+            .map_err(|error| error.at(u64::try_from(offset).unwrap_or(u64::MAX), "ico_cur_dib"))?
     } else {
-        inspect_icon_dib(payload)?
+        inspect_icon_dib(payload)
+            .map_err(terminalize)
+            .map_err(|error| error.at(u64::try_from(offset).unwrap_or(u64::MAX), "ico_dib"))?
     };
     info.format = ImageFormat::Ico;
     info.is_animated = false;
