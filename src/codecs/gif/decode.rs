@@ -592,11 +592,12 @@ impl<'a> Input<'a> {
     }
 
     fn read_u8(&mut self) -> CodecResult<u8> {
+        let here = self.position;
         let value = *self
             .data
-            .get(self.position)
-            .malformed("truncated GIF byte field")?;
-        self.position = self.position.saturating_add(1);
+            .get(here)
+            .need_more(here.saturating_add(1), "truncated GIF byte field")?;
+        self.position = here.saturating_add(1);
         Ok(value)
     }
 
@@ -611,7 +612,10 @@ impl<'a> Input<'a> {
 
     fn read_bytes(&mut self, len: usize) -> CodecResult<&'a [u8]> {
         if len > self.data.len().saturating_sub(self.position) {
-            return Err(CodecError::Malformed("truncated GIF field".to_owned()));
+            return Err(CodecError::NeedMore {
+                minimum: self.position.saturating_add(len),
+                message: "truncated GIF field".to_owned(),
+            });
         }
         let end = self.position.saturating_add(len);
         let bytes = &self.data[self.position..end];
