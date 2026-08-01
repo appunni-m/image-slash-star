@@ -3449,6 +3449,26 @@ fn coverage_structural_states() {
         ..Meta::default()
     };
     let _ = empty_metadata_location.metadata(&[]);
+    let overflowing_metadata_capacity = Meta {
+        items: vec![Item {
+            id: 9,
+            kind: *b"Exif",
+            metadata_kind: Some(*b"Exif"),
+        }],
+        locations: vec![ItemLocation {
+            item_id: 9,
+            source: ExtentSource::File,
+            extents: vec![
+                ByteSpan {
+                    start: 0,
+                    end: usize::MAX,
+                },
+                ByteSpan { start: 0, end: 1 },
+            ],
+        }],
+        ..Meta::default()
+    };
+    let _ = overflowing_metadata_capacity.metadata(&[]);
 
     let coverage_plane = |spans: &[(usize, usize)]| EncodedPlane {
         samples: vec![EncodedSample {
