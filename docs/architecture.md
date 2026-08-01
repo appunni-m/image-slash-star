@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-01 against the working tree based on `291f21fc613c17aefc131718fcfc68b65f737cd0`
+Reviewed: 2026-08-01 against the working tree based on `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -186,20 +186,23 @@ bytes as data, in scan order, under the documented BMFF convention (no
 safe-to-copy bit; unknown boxes are ignorable). Interpreted boxes (ftyp/meta/
 moov/mdat) stay out, truncated trailing boxes are ignored exactly as before,
 and default encoding never replays retained boxes.
-The primary AVIF item's `colr`/`nclx` CICP declaration and `clli`
-content-light-level property are retained in `SourceColor` on `ImageInfo`,
-decoded still images, and still-sequence fallbacks: primaries, transfer
-characteristics, matrix coefficients, the full-range flag, maxCLL, and maxPALL.
-They record source provenance and never perform color conversion or tone
-mapping. These fields are not part of the Pillow parity matrix; the committed
-contract test is defensive/specification evidence. AVIF `irot` and `imir`
+The primary AVIF item's `colr`/`nclx` CICP declaration, `clli`
+content-light-level property, and `colr`/`prof` or `rICC` ICC profile are
+retained in `SourceColor` on `ImageInfo`, decoded still images, and
+still-sequence fallbacks: primaries, transfer characteristics, matrix
+coefficients, the full-range flag, maxCLL, maxPALL, and the exact ICC profile
+kind and bytes. They record source provenance and never perform color
+conversion or tone mapping. These fields are not part of the Pillow parity
+matrix; the committed contract test is defensive/specification evidence and
+uses a Pillow-generated encoded metadata output only as a source witness.
+AVIF `irot` and `imir`
 properties are likewise retained in `SourceDescriptor`; their legal values are
 validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Non-`nclx` profiles, track-only/auxiliary item properties, and AVIF
-ICC/EXIF/XMP remain outside the current model.
+Non-ICC profiles, track-only/auxiliary item properties, and AVIF EXIF/XMP
+remain outside the current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

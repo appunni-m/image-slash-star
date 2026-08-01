@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`
+Reviewed: 2026-08-01 on the working tree based on revision `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -127,12 +127,14 @@ diagnostic-specific `cfg(coverage)` hook supplies the contract.
 
 GIF source rectangles are not mislabeled as rendered-pixel parity: their
 source/presentation metadata is independently asserted, while exact raw source
-sample bytes remain a documented gap. The schema does not yet compare
-auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
+sample bytes remain a documented gap. The parity schema does not compare
+auxiliary retained metadata such as EXIF, XMP, text, or orientation. Primary
+AVIF ICC is covered by the separate defensive/specification contract below,
+not by a synthetic parity row.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`, the generated matrix
+For the current working tree based on revision `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -291,6 +293,14 @@ continue to assert the observable outer result, mode, and pixels, but they do
 not claim to prove item-level AVIF color metadata because Pillow exposes no
 equivalent structured result. No parity row is added for this source-
 provenance field; malformed parser cases remain defensive-model evidence.
+
+The same source-color contract reads primary-item `colr` ICC profiles with
+`prof` and `rICC` kinds into `SourceColor`, retaining the exact profile kind
+and bytes and rejecting an empty profile. It uses the committed
+Pillow-generated encoded metadata output only as a source witness, then
+asserts inspect, still decode, fallback-sequence, pixel-preservation, and
+malformed-profile behavior as separate defensive/specification evidence. No
+row is added to `coverage_matrix.json`.
 
 The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal
@@ -459,25 +469,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 45,289 | 45,289 |
-| Branches | 6,408 | 6,408 |
-| Functions | 2,506 | 2,506 |
-| Regions | 71,191 | 71,191 |
+| Lines | 45,326 | 45,326 |
+| Branches | 6,422 | 6,422 |
+| Functions | 2,508 | 2,508 |
+| Regions | 71,245 | 71,245 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`5bc37abb-d7d1-4ebd-be7a-7689f080c256`, submitted against
-`291f21fc613c17aefc131718fcfc68b65f737cd0`: 727 native and `wasm32-wasip1`
+`bc3906d3-464f-45a2-8e87-81a4006c435d`, submitted against
+`3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`: 727 native and `wasm32-wasip1`
 runtime tests passed with zero failures, and its terminal capability-table
 record says the native and WASI lanes agree. This is target/runtime evidence;
 it does not turn aggregate coverage, defensive/specification contracts, or
 Rust-only diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `881147c6-3247-4849-bf20-9e4aa4c4ffce`
+Coverage MCP run: `08e9d9d3-3abe-4c49-9395-ae5fdd7b8f30`
 
-Snapshot: `8f91ff19-4a27-4aa5-928e-28785dee7ef4`
+Snapshot: `d035f6e8-a042-4741-a043-06ff548e2d5b`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

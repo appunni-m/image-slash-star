@@ -2,7 +2,7 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-01 on the working tree based on revision `291f21fc613c17aefc131718fcfc68b65f737cd0`
+Reviewed: 2026-08-01 on the working tree based on revision `3c257b6bf93b9af71d6f6a13bb0d1ea79bb70118`
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -112,16 +112,19 @@ decode subset" at the `StillDecode` stage. When an AVIF item declares an
 alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
 (unassociated), matching the AVIF alpha contract.
 
-The primary item's `colr`/`nclx` CICP declaration and `clli` content-light-level
-property are retained as source provenance in `SourceColor` on inspection,
-still decode, and the still-sequence fallback. The record contains color
-primaries, transfer characteristics, matrix coefficients, the full-range flag,
-maxCLL, and maxPALL; it never applies color conversion or tone mapping. This
-is a bounded specification/defensive-model contract rather than Pillow parity
-evidence, because Pillow's observable result has no equivalent item-level
-structured color field. Non-`nclx` profiles, mastering-display/chroma-position
-fields, track-only and auxiliary item properties, and AVIF ICC/EXIF/XMP remain
-future metadata slices.
+The primary item's `colr`/`nclx` CICP declaration, `clli` content-light-level
+property, and `colr`/`prof` or `rICC` ICC profile are retained as source
+provenance in `SourceColor` on inspection, still decode, and the
+still-sequence fallback. The record contains color primaries, transfer
+characteristics, matrix coefficients, the full-range flag, maxCLL, maxPALL,
+and the exact ICC profile kind and bytes; it never applies color conversion or
+tone mapping. This is a bounded specification/defensive-model contract rather
+than Pillow parity evidence, because Pillow's observable result has no
+equivalent item-level structured color field. The test uses a committed
+Pillow-generated encoded metadata output as a source witness and does not add a
+parity row. Non-ICC item profiles, mastering-display/chroma-position fields,
+track-only and auxiliary item properties, and AVIF EXIF/XMP remain future
+metadata slices.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
@@ -130,8 +133,8 @@ the top/bottom or left/right axis, and `pasp` retains its positive horizontal
 and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
-pixels are never rotated, mirrored, rescaled, or cropped. Item-level
-ICC/EXIF/XMP and auxiliary relationships remain open.
+pixels are never rotated, mirrored, rescaled, or cropped. Non-primary
+item-level ICC, EXIF/XMP, and auxiliary relationships remain open.
 
 ## Native FFI boundary
 
