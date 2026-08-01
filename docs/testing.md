@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `c08a64d`
+Reviewed: 2026-08-01 on the working tree based on revision `a77e0f05faced5e3fcab7544ba1370e7dd502330`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -121,7 +121,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `c08a64d`, the generated matrix
+For the current working tree based on revision `a77e0f05faced5e3fcab7544ba1370e7dd502330`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -428,17 +428,17 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 44,210 | 44,210 |
-| Branches | 6,250 | 6,250 |
-| Functions | 2,443 | 2,443 |
-| Regions | 69,879 | 69,879 |
+| Lines | 44,434 | 44,434 |
+| Branches | 6,280 | 6,280 |
+| Functions | 2,457 | 2,457 |
+| Regions | 70,169 | 70,169 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Coverage MCP run: `53f6f774-3f41-4a96-be87-a2d658ed260c`
+Coverage MCP run: `85bc6ecf-3863-4208-94d7-c0a60949246d`
 
-Snapshot: `76171c53-f698-4b2a-bd32-e83b3930d147`
+Snapshot: `b91a2749-2fbd-4b9e-a847-05788e24b022`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -466,6 +466,9 @@ Malformed-class ledger SHA-256:
 
 Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
+
+Diagnostic manifest SHA-256:
+`9bcd7618f47b4abcaa1d64f04e65cafbfcb4a3655005f7148c81b9e4c8f0eae8`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions
