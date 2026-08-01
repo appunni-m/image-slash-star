@@ -3700,6 +3700,93 @@ fn incremental_decode_attaches_structured_context() -> Result<(), Box<dyn std::e
 }
 
 #[test]
+fn incremental_decode_policy_variants_apply_limits() -> Result<(), Box<dyn std::error::Error>> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    if cfg!(feature = "png") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        // Encoded-byte and metadata limits fail before codec parsing on both
+        // prefix variants.
+        for maximum in [10u64, 20] {
+            let policy = image_slash_star::DecodePolicy::default().with_max_encoded_bytes(maximum);
+            let error = match image_slash_star::decode_prefix_with_policy(&bytes, &policy) {
+                Ok(info) => panic!("encoded-byte limit must reject decode_prefix: {info:?}"),
+                Err(error) => error,
+            };
+            assert_eq!(
+                error.kind(),
+                image_slash_star::ImageErrorKind::LimitExceeded
+            );
+            let error = match image_slash_star::decode_sequence_prefix_with_policy(&bytes, &policy)
+            {
+                Ok(info) => {
+                    panic!("encoded-byte limit must reject decode_sequence_prefix: {info:?}")
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                error.kind(),
+                image_slash_star::ImageErrorKind::LimitExceeded
+            );
+        }
+        let policy = image_slash_star::DecodePolicy::default().with_max_metadata_bytes(10);
+        let error = match image_slash_star::decode_prefix_with_policy(&bytes, &policy) {
+            Ok(info) => panic!("metadata limit must reject decode_prefix: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+        let error = match image_slash_star::decode_sequence_prefix_with_policy(&bytes, &policy) {
+            Ok(info) => panic!("metadata limit must reject decode_sequence_prefix: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+
+        // A width limit forces inspection preflight inside the prefix path.
+        let policy = image_slash_star::DecodePolicy::default().with_max_width(1);
+        let decoded = image_slash_star::decode_prefix_with_policy(&bytes, &policy)?;
+        assert_eq!(decoded.content.width, 1);
+        let sequence = image_slash_star::decode_sequence_prefix_with_policy(&bytes, &policy)?;
+        assert_eq!(sequence.content.frames.len(), 1);
+
+        // Complete-input sequence decode exercises the success mapping of the
+        // sequence prefix API and agrees with the legacy sequence result.
+        let prefix_sequence = image_slash_star::decode_sequence_prefix(&bytes)?;
+        let legacy_sequence = image_slash_star::decode_sequence(&bytes)?;
+        assert_eq!(
+            prefix_sequence.content.frames.len(),
+            legacy_sequence.content.frames.len()
+        );
+        assert_eq!(
+            prefix_sequence.content.frames[0].image.pixels,
+            legacy_sequence.content.frames[0].image.pixels
+        );
+    }
+
+    // Still formats use the sequence fallback, which must expose the same
+    // non-terminal status as still decode.
+    if cfg!(feature = "jpeg") {
+        let bytes = fs::read(root.join("tests/fixtures/input/images/jpeg/1x1.jpg"))?;
+        let sequence = image_slash_star::decode_sequence_prefix(&bytes)?;
+        assert_eq!(sequence.content.frames.len(), 1);
+        let error = match image_slash_star::decode_sequence_prefix(&bytes[..20]) {
+            Ok(info) => panic!("a truncated JPEG must need more data: {info:?}"),
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::NeedMoreData);
+        assert_eq!(error.format(), Some(ImageFormat::Jpeg));
+        // The still-format sequence fallback keeps the still-decode stage,
+        // exactly like the legacy sequence fallback.
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillDecode));
+    }
+    Ok(())
+}
+
+#[test]
 fn incremental_inspection_attaches_structured_context() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::ImageError;
 
