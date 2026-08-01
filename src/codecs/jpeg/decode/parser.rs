@@ -70,9 +70,10 @@ pub(super) struct JpegInfo {
 
 pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     if pos.saturating_add(1) >= data.len() {
-        return Err(CodecError::Malformed(
-            "truncated JPEG 16-bit field".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: pos.saturating_add(2),
+            message: "truncated JPEG 16-bit field".to_owned(),
+        });
     }
     let val = u16::from_be_bytes([data[*pos], data[pos.saturating_add(1)]]);
     *pos = pos.saturating_add(2);
@@ -81,9 +82,10 @@ pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
 
 pub(super) fn read_u8(data: &[u8], pos: &mut usize) -> CodecResult<u8> {
     if *pos >= data.len() {
-        return Err(CodecError::Malformed(
-            "truncated JPEG byte field".to_owned(),
-        ));
+        return Err(CodecError::NeedMore {
+            minimum: pos.saturating_add(1),
+            message: "truncated JPEG byte field".to_owned(),
+        });
     }
     let val = data[*pos];
     *pos = pos.saturating_add(1);
@@ -96,14 +98,16 @@ pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> CodecResult<u16>
             *pos = pos.saturating_add(1);
         }
         if *pos >= data.len() {
-            return Err(CodecError::Malformed(
-                "JPEG marker stream ended unexpectedly".to_owned(),
-            ));
+            return Err(CodecError::NeedMore {
+                minimum: pos.saturating_add(1),
+                message: "JPEG marker stream ended unexpectedly".to_owned(),
+            });
         }
         if pos.saturating_add(1) >= data.len() {
-            return Err(CodecError::Malformed(
-                "truncated JPEG marker code".to_owned(),
-            ));
+            return Err(CodecError::NeedMore {
+                minimum: pos.saturating_add(2),
+                message: "truncated JPEG marker code".to_owned(),
+            });
         }
         let marker_byte = data[pos.saturating_add(1)];
         if marker_byte == 0x00 || marker_byte == 0xFF {
@@ -114,9 +118,10 @@ pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> CodecResult<u16>
         *pos = pos.saturating_add(2);
         return Ok(marker);
     }
-    Err(CodecError::Malformed(
-        "JPEG marker stream ended unexpectedly".to_owned(),
-    ))
+    Err(CodecError::NeedMore {
+        minimum: data.len().saturating_add(1),
+        message: "JPEG marker stream ended unexpectedly".to_owned(),
+    })
 }
 
 pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> usize {
@@ -456,9 +461,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let payload_len = length.saturating_sub(2);
                 if payload_len > data.len().saturating_sub(pos) {
-                    return Err(CodecError::Malformed(
-                        "truncated JPEG APP14 payload".to_owned(),
-                    ));
+                    return Err(CodecError::NeedMore {
+                        minimum: pos.saturating_add(payload_len),
+                        message: "truncated JPEG APP14 payload".to_owned(),
+                    });
                 }
                 let payload_end = pos.saturating_add(payload_len);
                 metadata.push(crate::types::OpaqueMetadata {
@@ -482,9 +488,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let payload_len = length.saturating_sub(2);
                 if payload_len > data.len().saturating_sub(pos) {
-                    return Err(CodecError::Malformed(
-                        "truncated JPEG metadata marker payload".to_owned(),
-                    )
+                    return Err(CodecError::NeedMore {
+                        minimum: pos.saturating_add(payload_len),
+                        message: "truncated JPEG metadata marker payload".to_owned(),
+                    }
                     .at(marker_offset, "jpeg_metadata"));
                 }
                 let payload_end = pos.saturating_add(payload_len);
