@@ -2877,7 +2877,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     use image_slash_star::{
         AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
         AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-        AvifTransformProperties, RawIccProfile, SourceColor, SourceDescriptor,
+        AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor, SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -3050,6 +3050,18 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         metadata_sequence.content.source_color, expected_icc,
         "AVIF ICC sequence fallback"
     );
+    let expected_metadata = vec![
+        OpaqueMetadata {
+            kind: b"Exif".to_vec(),
+            data: b"\0\0\0\x06Exif\0\0II*\0\x08\0\0\0\0\0\0\0".to_vec(),
+        },
+        OpaqueMetadata {
+            kind: b"XMP ".to_vec(),
+            data: b"<x:xmpmeta/>".to_vec(),
+        },
+    ];
+    assert_eq!(metadata_decoded.content.metadata, expected_metadata);
+    assert_eq!(metadata_sequence.content.metadata, expected_metadata);
 
     let profile_box = box_start(&metadata, b"prof")?;
     let mut ricc = metadata;

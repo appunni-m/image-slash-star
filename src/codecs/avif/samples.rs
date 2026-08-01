@@ -5,8 +5,8 @@ use std::num::NonZeroU32;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMasteringDisplayColorVolume,
-    AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, RawIccProfile,
-    SourceColor,
+    AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, OpaqueMetadata,
+    RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -315,6 +315,10 @@ fn parse_ftyp(input: &[u8], payload: ByteSpan) -> ParseResult<Brands> {
 struct Item {
     id: u32,
     kind: FourCc,
+    /// Stable metadata kind for item types whose payload is retained without
+    /// semantic parsing. AVIF MIME items are classified only when their
+    /// declared content type is the standard XMP media type.
+    metadata_kind: Option<FourCc>,
 }
 
 #[derive(Clone)]
@@ -518,10 +522,19 @@ fn parse_infe(input: &[u8], payload: ByteSpan) -> ParseResult<Item> {
     let _ = reader.u16()?;
     let kind = reader.four_cc()?;
     let _ = reader.c_string()?;
-    if kind == *b"mime" {
-        let _ = reader.c_string()?;
-    }
-    Ok(Item { id, kind })
+    let metadata_kind = if kind == *b"Exif" {
+        Some(kind)
+    } else if kind == *b"mime" {
+        let content_type = reader.c_string()?;
+        (content_type == b"application/rdf+xml").then_some(*b"XMP ")
+    } else {
+        None
+    };
+    Ok(Item {
+        id,
+        kind,
+        metadata_kind,
+    })
 }
 
 fn parse_iprp(
@@ -966,6 +979,33 @@ impl Meta {
             .find(|location| location.item_id == item_id)
     }
 
+    fn metadata(&self, input: &[u8]) -> ParseResult<Vec<OpaqueMetadata>> {
+        let mut metadata = Vec::new();
+        for item in &self.items {
+            let Some(kind) = item.metadata_kind else {
+                continue;
+            };
+            let location = self.location(item.id).ok_or_else(|| parse_failure!())?;
+            if location.extents.is_empty() {
+                return Err(parse_failure!());
+            }
+            let capacity = location.extents.iter().try_fold(0_usize, |total, span| {
+                total
+                    .checked_add(span.len())
+                    .ok_or_else(|| parse_failure!())
+            })?;
+            let mut data = Vec::with_capacity(capacity);
+            for span in &location.extents {
+                data.extend_from_slice(span.bytes(input)?);
+            }
+            metadata.push(OpaqueMetadata {
+                kind: kind.to_vec(),
+                data,
+            });
+        }
+        Ok(metadata)
+    }
+
     fn associated(&self, item_id: u32) -> impl Iterator<Item = &Property> {
         self.associations
             .iter()
@@ -1126,6 +1166,7 @@ pub(super) struct ExtractedAvif<'input> {
     /// Encoded bytes of the parsed top-level BMFF extent.
     pub(super) consumed: usize,
     pub(super) retained_boxes: Vec<crate::types::OpaqueBlock>,
+    pub(super) metadata: Vec<OpaqueMetadata>,
     pub(super) source_color: SourceColor,
     pub(super) transform: Option<AvifTransformProperties>,
 }
@@ -1856,6 +1897,13 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
 }
 
 fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
+    extract_inner_with_metadata(input, true)
+}
+
+fn extract_inner_with_metadata(
+    input: &[u8],
+    retain_metadata: bool,
+) -> ParseResult<ExtractedAvif<'_>> {
     let mut budget = Budget::default();
     let mut reader = Reader::whole(input);
     let first = next_box(&mut reader, true, &mut budget)
@@ -1946,6 +1994,14 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         .map(Meta::source_color)
         .transpose()?
         .unwrap_or_default();
+    let metadata = if retain_metadata {
+        meta.as_ref()
+            .map(|meta| meta.metadata(input))
+            .transpose()?
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
     let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
     let _ = brands.major;
     Ok(ExtractedAvif {
@@ -1954,6 +2010,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
         sequence,
         consumed,
         retained_boxes,
+        metadata,
         source_color,
         transform,
     })
@@ -1969,76 +2026,66 @@ pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     Ok(extracted)
 }
 
-/// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
-/// the encoded `mdat` payload bytes.
-pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
-    let mut budget = Budget::default();
-    let mut reader = Reader::whole(data);
-    let first = next_box(&mut reader, true, &mut budget)
-        .map_err(|error| error.at(0, "avif_box"))?
-        .ok_or_else(|| parse_failure!())?;
-    if first.kind != *b"ftyp" {
-        return Err(parse_failure!());
-    }
-    let brands = parse_ftyp(data, first.payload).map_err(|error| error.at(0, "avif_box"))?;
-    let mut meta = None;
-    let mut movie = None;
-    let mut pixel = 0u64;
-    // Reassigned at the top of every iteration; the initializer only satisfies
-    // definite initialization.
-    #[allow(unused_assignments)]
-    let mut consumed = 0usize;
-    loop {
-        // Extent of the last successfully parsed top-level box.
-        consumed = reader.offset;
-        let box_offset = reader.offset as u64;
-        match next_box(&mut reader, true, &mut budget)
-            .map_err(|error| error.at(box_offset, "avif_box"))
-        {
-            Ok(Some(child)) => {
-                if child.kind == *b"mdat" {
-                    pixel = pixel.saturating_add(child.payload.len() as u64);
-                }
-                match child.kind {
-                    kind if kind == *b"meta" => {
-                        if meta.is_some() {
-                            return Err(parse_failure!());
-                        }
-                        meta = Some(
-                            parse_meta(data, child.payload, &mut budget)
-                                .map_err(|error| error.at(box_offset, "avif_box"))?,
-                        );
-                    }
-                    kind if kind == *b"moov" => {
-                        if movie.is_some() {
-                            return Err(parse_failure!());
-                        }
-                        movie = Some(
-                            parse_movie(data, child.payload, &mut budget)
-                                .map_err(|error| error.at(box_offset, "avif_box"))?,
-                        );
-                    }
-                    _ => {}
-                }
-            }
-            Ok(None) => break,
-            Err(error) => {
-                let complete =
-                    (brands.has_avif && meta.is_some()) || (brands.has_avis && movie.is_some());
-                if !complete {
-                    return Err(error);
-                }
-                break;
-            }
+fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> ParseResult<u64> {
+    let mut spans = Vec::new();
+    let mut add_plane = |plane: &EncodedPlane| {
+        for sample in &plane.samples {
+            spans.extend(sample.spans.iter().map(|span| (span.start, span.end)));
+        }
+    };
+    if let Some(still) = &extracted.still {
+        add_plane(&still.color);
+        if let Some(alpha) = &still.alpha {
+            add_plane(alpha);
         }
     }
-    if (brands.has_avif && meta.is_none()) || (brands.has_avis && movie.is_none()) {
-        return Err(parse_failure!());
+    if let Some(sequence) = &extracted.sequence {
+        add_plane(&sequence.color);
+        if let Some(alpha) = &sequence.alpha {
+            add_plane(alpha);
+        }
     }
-    // `pixel` is the sum of mdat payloads inside `consumed`.
-    #[allow(clippy::arithmetic_side_effects)]
-    let metadata = consumed as u64 - pixel;
-    Ok(metadata)
+    spans.sort_unstable_by_key(|(start, _)| *start);
+    let mut total = 0_u64;
+    let mut current = None;
+    for (start, end) in spans {
+        if start >= end {
+            continue;
+        }
+        match current {
+            Some((current_start, current_end)) if start <= current_end => {
+                current = Some((current_start, current_end.max(end)));
+            }
+            Some((current_start, current_end)) => {
+                let length = current_end
+                    .checked_sub(current_start)
+                    .ok_or_else(|| parse_failure!())?;
+                total = total
+                    .checked_add(u64::try_from(length).map_err(|_| parse_failure!())?)
+                    .ok_or_else(|| parse_failure!())?;
+                current = Some((start, end));
+            }
+            None => current = Some((start, end)),
+        }
+    }
+    if let Some((current_start, current_end)) = current {
+        let length = current_end
+            .checked_sub(current_start)
+            .ok_or_else(|| parse_failure!())?;
+        total = total
+            .checked_add(u64::try_from(length).map_err(|_| parse_failure!())?)
+            .ok_or_else(|| parse_failure!())?;
+    }
+    Ok(total)
+}
+
+/// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
+/// the referenced primary and auxiliary pixel-sample payload spans.
+pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
+    let extracted = extract_inner_with_metadata(data, false)?;
+    let consumed = u64::try_from(extracted.consumed).map_err(|_| parse_failure!())?;
+    let pixel = pixel_payload_bytes(&extracted)?;
+    consumed.checked_sub(pixel).ok_or_else(|| parse_failure!())
 }
 
 #[cfg(coverage)]
@@ -3415,14 +3462,17 @@ fn coverage_structural_states() {
             Item {
                 id: 1,
                 kind: *b"av01",
+                metadata_kind: None,
             },
             Item {
                 id: 2,
                 kind: *b"av01",
+                metadata_kind: None,
             },
             Item {
                 id: 3,
                 kind: *b"av01",
+                metadata_kind: None,
             },
         ],
         properties: vec![
@@ -3469,18 +3519,22 @@ fn coverage_structural_states() {
             Item {
                 id: 1,
                 kind: *b"grid",
+                metadata_kind: None,
             },
             Item {
                 id: 2,
                 kind: *b"av01",
+                metadata_kind: None,
             },
             Item {
                 id: 3,
                 kind: *b"av01",
+                metadata_kind: None,
             },
             Item {
                 id: 4,
                 kind: *b"av01",
+                metadata_kind: None,
             },
         ],
         properties: vec![
@@ -3589,6 +3643,7 @@ fn coverage_structural_states() {
         sequence: None,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
     };
@@ -3638,6 +3693,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3653,6 +3709,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3675,6 +3732,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3710,6 +3768,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: None,
@@ -3731,6 +3790,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: None,
@@ -3747,6 +3807,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: None,
@@ -3770,6 +3831,7 @@ fn coverage_structural_states() {
         input: &sample_input,
         consumed: 0,
         retained_boxes: Vec::new(),
+        metadata: Vec::new(),
         source_color: SourceColor::new(),
         transform: None,
         still: None,

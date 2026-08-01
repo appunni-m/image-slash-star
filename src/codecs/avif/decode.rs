@@ -18,6 +18,7 @@ pub fn decode(
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
+    let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
@@ -39,6 +40,7 @@ pub fn decode(
     Ok((
         image
             .with_opaque_blocks(retained_boxes)
+            .with_metadata(metadata)
             .with_source_color(source_color),
         consumed,
     ))
@@ -54,6 +56,7 @@ pub fn decode_sequence(
     let mut extracted = extract_av1(data)?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
+    let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
@@ -67,6 +70,7 @@ pub fn decode_sequence(
         }
     }
     sequence.opaque_blocks = retained_boxes;
+    sequence.metadata = metadata;
     sequence.source_color = source_color;
     Ok((sequence, consumed))
 }
