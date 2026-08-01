@@ -81,8 +81,8 @@ fn next_nul(data: &[u8], start: usize) -> Option<usize> {
 /// Return the stable identity for compressed ancillary metadata that has a
 /// structurally recognizable field but cannot be inflated within the bounded
 /// metadata validation budget. Malformed field shapes remain raw metadata;
-/// this decision only covers the Pillow-observable "usable pixels, metadata
-/// lost" cases.
+/// this decision only covers Pillow-tolerated "usable pixels, metadata lost"
+/// cases.
 fn invalid_compressed_metadata_identity(kind: [u8; 4], data: &[u8]) -> Option<&'static str> {
     match &kind {
         b"zTXt" => {
@@ -90,26 +90,26 @@ fn invalid_compressed_metadata_identity(kind: [u8; 4], data: &[u8]) -> Option<&'
             if keyword_end == 0 {
                 return None;
             }
-            let method = *data.get(keyword_end.saturating_add(1))?;
+            let _method = *data.get(keyword_end.saturating_add(1))?;
             let compressed = data
                 .get(keyword_end.saturating_add(2)..)
                 .unwrap_or_default();
-            (method != 0
-                || decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT).is_err())
-            .then_some("png_zTXt")
+            decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT)
+                .is_err()
+                .then_some("png_zTXt")
         }
         b"iCCP" => {
             let keyword_end = next_nul(data, 0)?;
             if keyword_end == 0 {
                 return None;
             }
-            let method = *data.get(keyword_end.saturating_add(1))?;
+            let _method = *data.get(keyword_end.saturating_add(1))?;
             let compressed = data
                 .get(keyword_end.saturating_add(2)..)
                 .unwrap_or_default();
-            (method != 0
-                || decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT).is_err())
-            .then_some("png_iCCP")
+            decompress_zlib_prefix(compressed, MAX_COMPRESSED_METADATA_OUTPUT)
+                .is_err()
+                .then_some("png_iCCP")
         }
         b"iTXt" => {
             let keyword_end = next_nul(data, 0)?;
