@@ -2690,6 +2690,35 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
         Err(error) => error,
     };
     assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+
+    // Each truncated CICP field is a structural error. This is defensive
+    // specification evidence; Pillow does not expose item-property parsing
+    // as a parity oracle.
+    for retained_payload in [0_usize, 4, 6, 8, 10] {
+        let removed = 11_usize - retained_payload;
+        let payload_end = nclx
+            .checked_add(retained_payload)
+            .ok_or("truncated nclx payload offset overflowed")?;
+        let original_payload_end = nclx
+            .checked_add(11)
+            .ok_or("baseline AVIF nclx payload offset overflowed")?;
+        let mut truncated = Vec::with_capacity(bytes.len() - removed);
+        truncated.extend_from_slice(&bytes[..payload_end]);
+        truncated.extend_from_slice(&bytes[original_payload_end..]);
+        for kind in [&b"colr"[..], &b"ipco"[..], &b"iprp"[..], &b"meta"[..]] {
+            let start = box_start(kind)?;
+            let old_size = u32::from_be_bytes(bytes[start..start + 4].try_into()?);
+            let new_size = old_size
+                .checked_sub(u32::try_from(removed)?)
+                .ok_or("AVIF box size underflowed while truncating nclx")?;
+            truncated[start..start + 4].copy_from_slice(&new_size.to_be_bytes());
+        }
+        let error = match image_slash_star::inspect(&truncated) {
+            Ok(_) => return Err("truncated nclx payload must fail inspection".into()),
+            Err(error) => error,
+        };
+        assert_eq!(error.identity(), Some("avif_box"));
+    }
     Ok(())
 }
 

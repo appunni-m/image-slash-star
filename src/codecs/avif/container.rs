@@ -1960,6 +1960,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         parse_colr(&extra_nclx),
         Err(CodecError::Malformed(_))
     ));
+    for payload in [
+        &[][..],
+        b"nclx".as_slice(),
+        b"nclx\0\x01".as_slice(),
+        b"nclx\0\x01\0\r".as_slice(),
+        b"nclx\0\x01\0\r\0\x06".as_slice(),
+    ] {
+        assert!(parse_colr(payload).is_err());
+    }
     let _ = parse_property(BoxView {
         kind: *b"av1C",
         payload: &[0, 0, 0, 0],
