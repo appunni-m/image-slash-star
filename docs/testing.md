@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-01 on the working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`
+Reviewed: 2026-08-01 on the working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -132,7 +132,7 @@ auxiliary retained metadata such as ICC, EXIF, XMP, text, or orientation.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `00451646c1cc1d74cad8946ca3d9ba66b1316217`, the generated matrix
+For the current working tree based on revision `627153f108b3410715305cf75bda5935761ee5c1`, the generated matrix
 reports:
 
 | Metric | Count |
@@ -294,12 +294,13 @@ evidence.
 
 The AVIF item-property contract is separate from Pillow parity. A committed
 AVIF orientation output supplies `irot`; the test mutates all four legal
-rotation values, both `imir` axes, and an associated `pasp` property, then
-asserts inspect, still decode, and fallback-sequence source descriptors agree
-while pixel bytes remain unchanged. Reserved values, zero spacings, duplicate
-associations, and malformed property payloads are rejected by both bounded
-parsers. The test is specification/defensive-model evidence because Pillow's
-observable result does not expose item properties or structured provenance.
+rotation values, both `imir` axes, and associated `pasp` and `clap` properties,
+then asserts inspect, still decode, and fallback-sequence source descriptors
+agree while pixel bytes remain unchanged. Reserved values, zero spacings or
+fractions, duplicate associations, and malformed property payloads are
+rejected by both bounded parsers. The test is specification/defensive-model
+evidence because Pillow's observable result does not expose item properties or
+structured provenance.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
@@ -458,24 +459,24 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 44,995 | 44,995 |
-| Branches | 6,352 | 6,352 |
-| Functions | 2,484 | 2,484 |
-| Regions | 70,811 | 70,811 |
+| Lines | 45,210 | 45,210 |
+| Branches | 6,390 | 6,390 |
+| Functions | 2,497 | 2,497 |
+| Regions | 71,077 | 71,077 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Separate managed runtime evidence comes from feature-matrix run
-`f6054909-6f00-450d-a9c8-08f5aaf36692`: 727 native and `wasm32-wasip1` runtime
+`2e7f440a-e63e-4066-ab27-5af837577e6b`: 727 native and `wasm32-wasip1` runtime
 tests passed with zero failures, and its terminal capability-table record says
 the native and WASI lanes agree. This is target/runtime evidence; it does not
 turn aggregate coverage, defensive/specification contracts, or Rust-only
 diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `1a735222-b186-46c1-9e4e-6ae7612ab066`
+Coverage MCP run: `babcab83-4d9a-424d-b446-31bcb55a41f6`
 
-Snapshot: `45f3c687-9680-4088-be29-dab45879a18f`
+Snapshot: `27dad99b-32eb-4d42-8993-5e202e01b091`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
