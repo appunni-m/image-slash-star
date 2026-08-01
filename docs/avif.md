@@ -2,7 +2,7 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-01 on the working tree based on revision `ed3d3241138ba66b32fe280ee246fce9b3759a8a`
+Reviewed: 2026-08-01 on the working tree based on revision `fffd30a9f251fc0ccaf03afbaa6c5348ac429a09`
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -83,6 +83,8 @@ The WASM path contains repository-owned:
 
 - ISO-BMFF brand and box parsing;
 - item, extent, property, grid, alpha, and sample extraction;
+- bounded retention of recognized AVIF EXIF and XMP item extents as raw
+  `OpaqueMetadata` records;
 - AV1 sequence and frame-header parsing;
 - tile-boundary validation;
 - scalar entropy decoding with adaptive CDF state;
@@ -123,8 +125,12 @@ This is a bounded specification/defensive-model contract rather than Pillow
 parity evidence, because Pillow's observable result has no equivalent item-level
 structured color field. The test uses a committed Pillow-generated encoded
 metadata output only as a source witness for ICC and does not add a parity row.
+Recognized `Exif` items and `mime` items with content type exactly
+`application/rdf+xml` now follow the same raw-retention boundary as the decoded
+metadata records. The EXIF record preserves the item payload exactly, including
+the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
 Non-ICC item profiles, chroma sample position, track-only and auxiliary item
-properties, and AVIF EXIF/XMP remain future metadata slices.
+properties, and other non-primary item relationships remain future slices.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
@@ -133,8 +139,8 @@ the top/bottom or left/right axis, and `pasp` retains its positive horizontal
 and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
-pixels are never rotated, mirrored, rescaled, or cropped. Non-primary
-item-level ICC, EXIF/XMP, and auxiliary relationships remain open.
+pixels are never rotated, mirrored, rescaled, or cropped. Non-primary item-level
+ICC, auxiliary relationships, and other item metadata remain open.
 
 ## Native FFI boundary
 

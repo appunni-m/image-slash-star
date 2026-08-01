@@ -298,6 +298,12 @@ copyright, ICC) in the metadata records, per page.
 AVIF top-level BMFF retention keeps unknown boxes and `free`/`skip` padding
 boxes as raw opaque records (fourcc as kind, full box bytes as data) while
 interpreted boxes (ftyp/meta/moov/mdat) stay out.
+Recognized AVIF `Exif` items and MIME items whose content type is exactly
+`application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on
+still and sequence decode (`Exif` and `XMP ` kinds). Their item extent bytes
+are preserved exactly; the EXIF record therefore includes the AVIF TIFF-offset
+prefix. This is source retention only: default encoding never replays it, and
+non-primary/auxiliary item relationships and other item metadata remain open.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it
@@ -407,6 +413,8 @@ by the primary-canvas limits.
 `max_metadata_bytes` bounds the encoded metadata extent — every encoded byte
 that is not primary pixel payload data — measured by a per-format container
 scan before inspection or pixel work on all five policy paths.
+For AVIF, the scan includes item metadata payloads stored in `mdat` and
+subtracts only sample spans referenced by the decoded primary/auxiliary planes.
 
 `EncodePolicy::max_output_bytes` is the encode-side result-admission limit. It
 is inclusive and applies to still and sequence encodes, including their sink
