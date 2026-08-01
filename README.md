@@ -231,8 +231,10 @@ are validated before encoding.
 `ImageInfo::source` and `DecodedImage::source` retain structural source facts
 without changing the transfer bytes. TIFF currently records its exact
 `SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
-modes keep their documented transfer layout. Other codecs currently return an
-empty `SourceDescriptor`.
+modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`
+properties are retained through `SourceDescriptor::avif_transform()` as
+source provenance; decoded pixels are never rotated or mirrored. Codecs
+without a retained structural fact currently return an empty descriptor.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller

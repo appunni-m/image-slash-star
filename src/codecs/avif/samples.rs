@@ -1777,7 +1777,7 @@ fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
     let source_color = meta
         .as_ref()
         .map_or_else(SourceColor::new, Meta::source_color);
-    let transform = meta.as_ref().map_or_else(|| Ok(None), Meta::transform)?;
+    let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,

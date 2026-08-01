@@ -190,11 +190,10 @@ The primary AVIF item's `colr`/`nclx` CICP declaration is retained in
 fallbacks: primaries, transfer characteristics, matrix coefficients, and the
 full-range flag. It records source provenance and never performs color
 conversion. This field is not part of the Pillow parity matrix; the committed
-contract test is defensive/specification evidence. Non-`nclx` profiles,
 contract test is defensive/specification evidence. AVIF `irot` and `imir`
-properties are likewise retained in `SourceDescriptor`; their legal values
-are validated, but no rotation or mirroring is applied. `pasp`, `clap`,
-non-`nclx` profiles, track-only/auxiliary item properties, and AVIF ICC/EXIF/
+properties are likewise retained in `SourceDescriptor`; their legal values are
+validated, but no rotation or mirroring is applied. `pasp`, `clap`, non-`nclx`
+profiles, track-only/auxiliary item properties, and AVIF ICC/EXIF/
 XMP remain outside the current model.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.

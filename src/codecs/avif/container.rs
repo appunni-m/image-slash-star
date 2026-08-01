@@ -2056,6 +2056,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = parse_property(BoxView { kind, payload });
     }
+    let _ = std::hint::black_box(parse_irot(&[]));
+    let _ = std::hint::black_box(parse_imir(&[]));
     let duplicate_rotation = Meta {
         properties: vec![
             Property::Rotation(AvifRotation::Zero),
@@ -2074,6 +2076,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_rotation.source_descriptor(1);
+    let duplicate_details = Meta {
+        primary_item_id: Some(1),
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
+        properties: vec![
+            Property::Ispe {
+                width: 1,
+                height: 1,
+            },
+            Property::Rotation(AvifRotation::Zero),
+            Property::Rotation(AvifRotation::CounterClockwise90),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+            Association {
+                item_id: 1,
+                property_index: 2,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = std::hint::black_box(duplicate_details.details());
     let duplicate_mirror = Meta {
         properties: vec![
             Property::Mirror(AvifMirrorAxis::TopBottom),
@@ -2161,6 +2194,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = std::hint::black_box(details_meta.details());
+    let duplicate_transform_meta = Meta {
+        primary_item_id: Some(1),
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
+        properties: vec![
+            Property::Ispe {
+                width: 2,
+                height: 3,
+            },
+            Property::Rotation(AvifRotation::Zero),
+            Property::Rotation(AvifRotation::CounterClockwise90),
+        ],
+        associations: vec![
+            Association {
+                item_id: 1,
+                property_index: 0,
+            },
+            Association {
+                item_id: 1,
+                property_index: 1,
+            },
+            Association {
+                item_id: 1,
+                property_index: 2,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_transform_meta.details();
     details_meta.items.push(Item {
         id: 1,
         kind: *b"free",
