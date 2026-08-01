@@ -2730,9 +2730,9 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 #[test]
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifCleanAperture, AvifColorProperties, AvifContentLightLevel, AvifMirrorAxis,
-        AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, RawIccProfile, SourceColor,
-        SourceDescriptor,
+        AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
+        AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+        AvifTransformProperties, RawIccProfile, SourceColor, SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -2972,6 +2972,71 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         clli_sequence.content.source_color, expected_clli,
         "clli sequence"
     );
+
+    // `mdcv` is a fixed-width HDR mastering-display declaration, not a
+    // Pillow-observable result. Keep its exact field contract in this
+    // defensive/specification test rather than adding a synthetic parity row.
+    // The ISO-BMFF wire order is green, blue, red; the public descriptor is
+    // normalized to red, green, blue accessors.
+    let mdcv_payload = [
+        0x11, 0x11, 0x22, 0x22, // green x/y
+        0x33, 0x33, 0x44, 0x44, // blue x/y
+        0x55, 0x55, 0x66, 0x66, // red x/y
+        0x77, 0x77, 0x88, 0x88, // white point x/y
+        0x00, 0x0f, 0x42, 0x40, // maximum luminance
+        0x00, 0x00, 0x00, 0x32, // minimum luminance
+    ];
+    let mdcv = append_associated_property(&bytes, b"mdcv", &mdcv_payload, 6)?;
+    let expected_mdcv_value = AvifMasteringDisplayColorVolume::new(
+        0x5555, 0x6666, 0x1111, 0x2222, 0x3333, 0x4444, 0x7777, 0x8888, 1_000_000, 50,
+    );
+    let expected_mdcv = SourceColor::new()
+        .with_avif_color(AvifColorProperties {
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            full_range: true,
+        })
+        .with_avif_mastering_display_color_volume(expected_mdcv_value);
+    assert_eq!(
+        expected_mdcv.avif_mastering_display_color_volume(),
+        Some(expected_mdcv_value)
+    );
+    assert!(!expected_mdcv.is_empty());
+    let mdcv_inspected = image_slash_star::inspect(&mdcv)?;
+    assert_eq!(mdcv_inspected.source_color, expected_mdcv, "mdcv inspect");
+    let mdcv_decoded = image_slash_star::decode(&mdcv)?;
+    assert_eq!(
+        mdcv_decoded.content.source_color, expected_mdcv,
+        "mdcv decode"
+    );
+    assert_eq!(mdcv_decoded.content.pixels, expected_pixels);
+    let mdcv_sequence = image_slash_star::decode_sequence(&mdcv)?;
+    assert_eq!(
+        mdcv_sequence.content.source_color, expected_mdcv,
+        "mdcv sequence"
+    );
+
+    let mdcv_box = box_start(&mdcv, b"mdcv")?;
+    let mut truncated_mdcv = Vec::with_capacity(mdcv.len() - 1);
+    truncated_mdcv.extend_from_slice(&mdcv[..mdcv_box + 8 + 23]);
+    truncated_mdcv.extend_from_slice(&mdcv[mdcv_box + 8 + 24..]);
+    for kind in [b"mdcv", b"ipco", b"iprp", b"meta"] {
+        shrink_box_size(&mut truncated_mdcv, kind, 1)?;
+    }
+    assert_malformed(&truncated_mdcv, "truncated mdcv payload")?;
+
+    let mut extra_mdcv = Vec::with_capacity(mdcv.len() + 1);
+    extra_mdcv.extend_from_slice(&mdcv[..mdcv_box + 8 + 24]);
+    extra_mdcv.push(0);
+    extra_mdcv.extend_from_slice(&mdcv[mdcv_box + 8 + 24..]);
+    for kind in [b"mdcv", b"ipco", b"iprp", b"meta"] {
+        grow_box_size(&mut extra_mdcv, kind, 1)?;
+    }
+    assert_malformed(&extra_mdcv, "extra mdcv payload")?;
+
+    let duplicate_mdcv = append_associated_property(&mdcv, b"mdcv", &mdcv_payload, 7)?;
+    assert_malformed(&duplicate_mdcv, "duplicate mdcv association")?;
 
     let clli_box = box_start(&clli, b"clli")?;
     let mut empty_clli = Vec::with_capacity(clli.len() - 4);
