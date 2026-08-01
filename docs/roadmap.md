@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-01 on the working tree based on revision `00d3e167edd289f43d4b7a3b868f12569d72c410`
+Reviewed: 2026-08-01 on the working tree based on revision `2fcfa5853f8fa9b0036d8bf8d819e9a7dd01ad1e`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -54,7 +54,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the working-tree state based on `00d3e167edd289f43d4b7a3b868f12569d72c410`,
+The correction evidence below is the working-tree state based on `2fcfa5853f8fa9b0036d8bf8d819e9a7dd01ad1e`,
 identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -180,7 +180,6 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | COR-059 | The incremental contract now covers decoding: `decode_prefix`, `decode_sequence_prefix`, and their policy variants run the identical codec paths as the complete-slice APIs but expose internal truncation as `NeedMoreData { minimum }`. Minimums are exact for declared extents (PNG chunks, BMP/ICO pixel spans, TIFF strip/tile spans, WebP RIFF payloads, AVIF boxes) and progress-aware elsewhere (JPEG marker/scan reads, GIF sub-blocks, WebP native reads); compressed payloads bounded by a complete declared structure (GIF LZW sub-block streams, TIFF strip payloads, JPEG entropy zero-padding) stay terminal. Policy limits are re-evaluated on every retry against the current input length. | The feature-gate suite sweeps every byte boundary of one valid fixture per format for `decode_prefix` and `decode_sequence_prefix`: identical pixels on success, retry progress on `NeedMoreData`, and exact legacy `Malformed`/`UnknownFormat` parity on terminal results; the committed defensive-model manifest pins per-format decode spot checks with exact minimums. |
 | COR-060 | Cooperative cancellation now exists as a dependency-free `CancellationToken` (shared clones, `cancel()`, single-threaded `Rc<Cell>` state) with `decode_with_token`, `decode_sequence_with_token`, and their policy variants. The token is polled at structural checkpoints: dispatch entry, PNG chunk boundaries, GIF block and frame boundaries, TIFF page and strip/tile boundaries, JPEG scan/segment boundaries, WebP frame boundaries, BMP RLE commands, ICO directory entries, and AVIF frames. A fired token stops with `ImageError::Cancelled` carrying the format and operation stage and never publishes partial state; truncated input still reports `NeedMoreData { minimum }`. | The feature-gate suite checks all eight formats: never-cancelled token results are byte-identical to legacy, pre-cancelled tokens stop with `Cancelled` and the correct format/stage, clones share state, policy limits still reject first, and a fresh-token retry of a cancelled multi-frame GIF reproduces the full frame list. Coverage drills fire the token after a fixed number of polls so every structural checkpoint is exercised. |
 | COR-062 | Primary AVIF item CICP color properties (`colr`/`nclx`) now flow through bounded inspection and sample extraction into `ImageInfo::source_color`, `DecodedImage::source_color`, and the still-sequence fallback. Primaries, transfer characteristics, matrix coefficients, and the full-range flag are retained as source declarations; no color conversion is implied. Non-`nclx` color profiles, track-only/auxiliary item properties, and AVIF ICC/EXIF/XMP retention remain open. | `avif_primary_cicp_color_matches_the_container_contract` uses the committed baseline item property and reserved-flag, extra-payload, and truncated-field mutations to assert inspect/decode agreement and malformed `avif_box` boundaries. The independent bounded container parser also exercises those structural rejection cases. This is defensive-model/specification evidence: Pillow parity still proves its outer result and pixels but has no equivalent item-level CICP result, so the generated parity matrix is unchanged. |
-| COR-063 | Primary AVIF `irot` and `imir` item properties now flow through the bounded container and sample parsers into `ImageInfo::source` and decoded still/fallback frame `SourceDescriptor::avif_transform()`. Legal counter-clockwise quarter-turn and mirror-axis values are retained as source provenance; decoded pixels remain untransformed. `pasp`, `clap`, non-`nclx` profiles, and other item metadata remain open. | `avif_item_transforms_match_the_non_parity_contract` uses the committed orientation output, all legal `irot` values, both `imir` axes, reserved-value mutations, malformed payloads, duplicate associations, and exact pixel invariance. This is specification/defensive-model evidence; Pillow parity has no equivalent item-transform field. |
 | TST-001 | Every successful inspect row records and asserts encoded storage bit depth independently of decoded transfer mode. Each value also identifies its evidence class. | All 761 successful inspect rows carry `ref_bit_depth`: 367 specification-reference observations, 207 Pillow-plugin observations, and 187 independent AVIF container observations. PNG depths 1/2/4/8/16, BMP/ICO depths 1/4/8/16/24/32, TIFF depths 1/2/4/8/16/32, GIF depths 1/2/4/8, and AVIF depths 8/10/12 are represented. |
 | TST-002 | Every successful decode records separate inspect and decoded palette states: non-indexed/absent, indexed/implicit, or exact table. Explicit tables compare every RGB byte and each retained alpha byte from committed references. | All 582 successful decode rows carry both contracts: 515 absent, 5 implicit, and 62 exact-table rows for each surface. The GIF out-of-table-index leniency case separately proves the decoded model's implicit black padding while inspection retains only the encoded table. |
 | TST-003 | Every successful GIF, PNG, TIFF, WebP, and AVIF sequence row independently asserts canvas size, loop count, background, source rectangle, disposal, blend, interlace, default-image state, and pixel layout. Exact frame/page bytes are required whenever Pillow exposes the same layout. | 70 sequence rows contain 133 frames/pages: all 133 carry the complete source/presentation contract, 92 PNG/TIFF/WebP/AVIF frames/pages compare exact bytes, and 41 GIF source-rectangle frames are explicitly metadata-only because Pillow exposes composited presentation pixels instead. |
@@ -193,10 +192,10 @@ Pillow 12.2.0 for JPEG, GIF, TIFF, WebP, ICO, and AVIF.
 | TST-010 | Every active row labels its assertion families as Pillow-fixture or defensive-model evidence; mixed fields retain narrower labels, including specification-reference and independent-implementation observations. | All 1,417 rows carry assertion origins: 6,364 Pillow-fixture, 232 specification-reference, 3 independent-implementation, and 64 Rust defensive-model labels. Existing `cfg(coverage)` models remain explicitly labeled in source. |
 
 The final all-feature Coverage MCP run
-`ddee4d33-50ea-4109-bf6e-ed8064e3ef25`, snapshot
-`f8aee673-e001-41fd-b4f3-bb2e65bc6246`, passed with zero failures or
-skips and reports 44,563/44,563 lines, 6,298/6,298 branches,
-2,463/2,463 functions, and 70,331/70,331 regions.
+`09d4bab4-4eb4-4a15-9ce0-ab3a270f985b`, snapshot
+`0b523a15-2f77-4bec-ae9f-655cd9772124`, passed with zero failures or
+skips and reports 44,881/44,881 lines, 6,330/6,330 branches,
+2,477/2,477 functions, and 70,677/70,677 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
