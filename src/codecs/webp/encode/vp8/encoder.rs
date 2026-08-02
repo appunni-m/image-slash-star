@@ -42,7 +42,7 @@ pub(crate) fn encode_vp8_lossy(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
-    let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height);
+    let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let vp8_data = encode_vp8_planes(
         y_plane,
@@ -70,7 +70,7 @@ pub(crate) fn encode_vp8_lossy_rgba(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
-    let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height);
+    let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let vp8_data = encode_vp8_planes(
         y_plane,
@@ -285,6 +285,7 @@ const YUV_HALF: i32 = 1 << (YUV_FIX - 1);
 const GAMMA_FIX: i32 = 12;
 const GAMMA_TAB_FIX: i32 = 7;
 const GAMMA_TAB_SIZE: usize = 1 << (GAMMA_FIX - GAMMA_TAB_FIX);
+const YUV_CHECKPOINT_ITEMS: usize = 1_024;
 
 fn low_u32(value: usize) -> u32 {
     let bytes = value.to_le_bytes();
@@ -385,7 +386,8 @@ pub(super) fn rgb_to_yuv_planes_internal(
     rgb: &[u8],
     width: u32,
     height: u32,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
     let w = width as usize;
     let h = height as usize;
     let mut y_plane = vec![0u8; w.wrapping_mul(h)];
@@ -394,6 +396,7 @@ pub(super) fn rgb_to_yuv_planes_internal(
     let mut u_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
     let mut v_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
 
+    let mut conversion_items = 0usize;
     for row in 0..h {
         for col in 0..w {
             let idx = pixel_offset(row, w, col, 3);
@@ -402,6 +405,10 @@ pub(super) fn rgb_to_yuv_planes_internal(
                 i32::from(rgb[idx.wrapping_add(1)]),
                 i32::from(rgb[idx.wrapping_add(2)]),
             );
+            conversion_items = conversion_items.saturating_add(1);
+            if conversion_items.is_multiple_of(YUV_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
 
@@ -436,10 +443,14 @@ pub(super) fn rgb_to_yuv_planes_internal(
             let uv_idx = row.wrapping_mul(uv_w).wrapping_add(col);
             u_plane[uv_idx] = rgb_to_u(r, g, b);
             v_plane[uv_idx] = rgb_to_v(r, g, b);
+            conversion_items = conversion_items.saturating_add(1);
+            if conversion_items.is_multiple_of(YUV_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
 
-    (y_plane, u_plane, v_plane)
+    Ok((y_plane, u_plane, v_plane))
 }
 
 fn smoothen_transparent_luma(
@@ -584,7 +595,8 @@ fn rgba_to_yuv_planes_internal(
     rgba: &[u8],
     width: u32,
     height: u32,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
     let w = width as usize;
     let h = height as usize;
     let mut y_plane = vec![0u8; w.wrapping_mul(h)];
@@ -593,6 +605,7 @@ fn rgba_to_yuv_planes_internal(
     let mut u_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
     let mut v_plane = vec![0u8; uv_w.wrapping_mul(uv_h)];
 
+    let mut conversion_items = 0usize;
     for row in 0..h {
         for col in 0..w {
             let index = pixel_offset(row, w, col, 4);
@@ -601,6 +614,10 @@ fn rgba_to_yuv_planes_internal(
                 i32::from(rgba[index.wrapping_add(1)]),
                 i32::from(rgba[index.wrapping_add(2)]),
             );
+            conversion_items = conversion_items.saturating_add(1);
+            if conversion_items.is_multiple_of(YUV_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
 
@@ -646,11 +663,15 @@ fn rgba_to_yuv_planes_internal(
             let uv_index = row.wrapping_mul(uv_w).wrapping_add(col);
             u_plane[uv_index] = rgb_to_u(r, g, b);
             v_plane[uv_index] = rgb_to_v(r, g, b);
+            conversion_items = conversion_items.saturating_add(1);
+            if conversion_items.is_multiple_of(YUV_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
 
     cleanup_transparent_area(rgba, w, h, &mut y_plane, &mut u_plane, &mut v_plane);
-    (y_plane, u_plane, v_plane)
+    Ok((y_plane, u_plane, v_plane))
 }
 
 /// Build the uncompressed VP8 keyframe header (NOT bool-encoded).

@@ -5,7 +5,7 @@
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
 //! Deflate expansion/Huffman/bitstream/checksum stages, lossy WebP VP8
-//! analysis/bitstream stages, and lossless WebP VP8L
+//! RGB/RGBA-to-YUV conversion items and analysis/bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, bitstream, and
 //! bounded backward-reference/token-stream intervals, plus GIF LZW
 //! input-symbol intervals and BMP row-conversion subsegments) and stop with

@@ -11,7 +11,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
 /// the PNG adaptive-filter and filtered-row checkpoints charged after each
 /// 1,024 row bytes, BMP row-conversion checkpoints charged after each 1,024
-/// pixels, the lossy WebP VP8 analysis/partition stages, and the lossless WebP VP8L
+/// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items and analysis/partition
+/// stages, and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, and GIF LZW
 /// input-symbol intervals; it is a
@@ -62,8 +63,9 @@ impl EncodePolicy {
     /// Deflate charges input-row and level-six matcher candidate, insertion,
     /// fizzle, window, and position intervals plus expansion, Huffman,
     /// bitstream, stored-block, and checksum intervals. Lossy
-    /// WebP VP8 encoding charges checkpoints between its major analysis,
-    /// mode-selection, probability, and bitstream stages; VP8L encoding
+    /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
+    /// conversion items and between its major analysis, mode-selection,
+    /// probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
     /// token-stream intervals. GIF LZW encoding charges an interval for each
