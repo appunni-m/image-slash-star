@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `723c68209e992ce65501d6ed5f827308b30ebfa8`
+Reviewed: 2026-08-02 against the working tree based on `3039d5dc3519e8247db2f76d61ea064ff6f1e74b`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -108,9 +108,10 @@ records returned beside successful still or sequence decode. Each
 byte offset, and container-structure identity; prose is intentionally absent.
 The current manifest-proven kinds are ignored trailing data, accepted
 non-standard GIF graphic-control size, ignored invalid compressed PNG
-ancillary metadata, an accepted bad PNG `IDAT` CRC, and an accepted invalid
-PNG reserved-bit chunk name. A diagnostic reports a recoverable condition; it
-does not change pixels or turn Pillow's result into a new parity field. The
+ancillary metadata, an accepted bad PNG `IDAT` CRC, an accepted invalid PNG
+reserved-bit chunk name, and an accepted unknown ancillary chunk after `IDAT`.
+A diagnostic reports a recoverable condition; it does not change pixels or turn
+Pillow's result into a new parity field. The
 `IDAT` CRC remains fatal at `verify()`.
 
 `SourceDescriptor::alpha()` records the alpha association declared by the
@@ -143,6 +144,10 @@ decoded with a `RecoveredStructure` diagnostic (`png_IDAT_crc`) and remain
 rejected by structural verification. Pillow-tolerated unknown ancillary chunk
 names with a lowercase reserved third character are decoded with a
 `RecoveredStructure` diagnostic (`png_reserved_bit`).
+Pillow-tolerated unknown ancillary chunks after `IDAT` produce the same
+diagnostic kind with identity `png_ancillary_after_idat`; valid APNG control
+and frame-data chunks (`acTL`, `fcTL`, and `fdAT`) are excluded from this
+static ordering diagnostic.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
