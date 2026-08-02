@@ -6488,8 +6488,9 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
 
         if cfg!(feature = "jpeg") {
-            // Exercise the generic whole-buffer sink fallback so the
-            // structural-writer dispatch remains explicit and complete.
+            // JPEG marker and entropy-scan delivery is a Rust-only structural
+            // sink contract. Pillow has no caller-owned sink, so parity stays
+            // unchanged while the complete encoder buffer remains retained.
             let jpeg_image =
                 image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
             let jpeg_options = EncodeOptions::for_format(ImageFormat::Jpeg);
@@ -6509,7 +6510,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 jpeg_expected.len()
             );
             assert_eq!(jpeg_sink.bytes, jpeg_expected);
-            assert_eq!(jpeg_sink.writes, 1);
+            assert!(
+                jpeg_sink.writes > 1,
+                "JPEG output must cross marker boundaries"
+            );
 
             let jpeg_token = image_slash_star::CancellationToken::new();
             let mut jpeg_token_sink = RecordingSink {
@@ -6527,11 +6531,136 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 jpeg_expected.len()
             );
             assert_eq!(jpeg_token_sink.bytes, jpeg_expected);
-            assert_eq!(jpeg_token_sink.writes, 1);
+            assert!(
+                jpeg_token_sink.writes > 1,
+                "JPEG token path must cross marker boundaries"
+            );
 
-            // The generic whole-buffer fallback must also preserve invalid
-            // still-input errors before touching its sink. These are
-            // Rust-owned API/error contracts, not Pillow parity rows.
+            let progressive_options = match EncodeOptions::for_format(ImageFormat::Jpeg) {
+                EncodeOptions::Jpeg(mut options) => {
+                    options.progressive = Some(true);
+                    EncodeOptions::Jpeg(options)
+                }
+                _ => unreachable!("JPEG options must name JPEG"),
+            };
+            let progressive_expected =
+                image_slash_star::encode(&jpeg_image, ImageFormat::Jpeg, &progressive_options)?;
+            let mut progressive_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &jpeg_image,
+                    ImageFormat::Jpeg,
+                    &progressive_options,
+                    &mut progressive_sink,
+                )?,
+                progressive_expected.len()
+            );
+            assert_eq!(progressive_sink.bytes, progressive_expected);
+            assert!(
+                progressive_sink.writes > 1,
+                "progressive JPEG must cross scan boundaries"
+            );
+            assert!(
+                progressive_expected
+                    .windows(2)
+                    .any(|marker| marker == b"\xff\xc2"),
+                "progressive JPEG must contain SOF2"
+            );
+
+            let jpeg_cancel_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_jpeg = CancellingSink {
+                bytes: Vec::new(),
+                token: jpeg_cancel_token.clone(),
+                writes: 0,
+            };
+            let jpeg_cancel_error = match image_slash_star::encode_to_sink_with_token(
+                &jpeg_image,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &jpeg_cancel_token,
+                &mut cancelling_jpeg,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "JPEG sink cancellation unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                jpeg_cancel_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(jpeg_cancel_error.format(), Some(ImageFormat::Jpeg));
+            assert_eq!(
+                jpeg_cancel_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(cancelling_jpeg.writes, 1);
+            assert_eq!(cancelling_jpeg.bytes, b"\xff\xd8");
+
+            let too_small_jpeg = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(jpeg_expected.len() - 1)?);
+            let mut limited_jpeg = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let jpeg_limit_error = match image_slash_star::encode_to_sink_with_policy(
+                &jpeg_image,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &too_small_jpeg,
+                &mut limited_jpeg,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("JPEG output policy unexpectedly admitted {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                jpeg_limit_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Jpeg),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_jpeg.writes, 0);
+            assert!(limited_jpeg.bytes.is_empty());
+
+            let mut failing_jpeg = FailingAfterWrites {
+                fail_at: 2,
+                writes: 0,
+            };
+            let jpeg_write_error = match image_slash_star::encode_to_sink(
+                &jpeg_image,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &mut failing_jpeg,
+            ) {
+                Ok(length) => {
+                    return Err(format!("JPEG sink unexpectedly accepted {length} bytes").into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                jpeg_write_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(jpeg_write_error.format(), Some(ImageFormat::Jpeg));
+            assert_eq!(jpeg_write_error.stage(), Some(ImageErrorStage::StillEncode));
+            assert_eq!(failing_jpeg.writes, 2);
+
+            // The structural writer must preserve invalid still-input errors
+            // before touching its sink. These are Rust-owned API/error
+            // contracts, not Pillow parity rows.
             let invalid_jpeg =
                 image_slash_star::DecodedImage::new(1, 1, Vec::new(), ColorType::Rgb8);
             let mut invalid_jpeg_sink = RecordingSink {
@@ -6545,9 +6674,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 &mut invalid_jpeg_sink,
             ) {
                 Ok(length) => {
-                    return Err(
-                        format!("invalid JPEG fallback unexpectedly wrote {length} bytes").into(),
-                    );
+                    return Err(format!(
+                        "invalid JPEG structural sink unexpectedly wrote {length} bytes"
+                    )
+                    .into());
                 }
                 Err(error) => error,
             };
@@ -6572,7 +6702,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             ) {
                 Ok(length) => {
                     return Err(format!(
-                        "invalid token JPEG fallback unexpectedly wrote {length} bytes"
+                        "invalid token JPEG structural sink unexpectedly wrote {length} bytes"
                     )
                     .into());
                 }

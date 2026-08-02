@@ -5,6 +5,7 @@
 
 use crate::SequenceDecodeBudget;
 #[cfg(any(
+    feature = "jpeg",
     feature = "bmp",
     feature = "gif",
     feature = "png",
@@ -877,6 +878,7 @@ pub(crate) fn encode_format_with_token(
 /// whole-buffer fallback used by other codecs.
 #[cfg_attr(
     not(any(
+        feature = "jpeg",
         feature = "bmp",
         feature = "gif",
         feature = "ico",
@@ -894,6 +896,57 @@ pub(crate) fn encode_format_to_sink_with_token(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn crate::OutputSink,
 ) -> ImageResult<Option<usize>> {
+    if format == ImageFormat::Jpeg {
+        #[cfg(not(feature = "jpeg"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "jpeg",
+            });
+        }
+        #[cfg(feature = "jpeg")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            image
+                .validate()
+                .map_err(|error| error.with_format(format))?;
+            let EncodeOptions::Jpeg(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::StillEncode,
+                ));
+            };
+            let encoded = jpeg::encode::encode_to_sink(
+                image,
+                options,
+                policy,
+                CodecOperation::StillEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode")),
+                format,
+                ImageErrorStage::StillEncode,
+            )
+            .map(Some);
+        }
+    }
+
     if format == ImageFormat::Png {
         #[cfg(not(feature = "png"))]
         {
