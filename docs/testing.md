@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `45e19227bfbd1d1c9b21f03d2171955efd4f600c`
+Reviewed: 2026-08-02 on the working tree based on revision `391f50aea8668771eaca61709945df943ce3e028`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -236,9 +236,11 @@ still sinks that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
-preparing rows and between sink segments; GIF, TIFF, WebP, and native AVIF
-sequence paths poll their implemented frame/coalescing/page/finalization
-checkpoints. This slice does not claim universal interior interruption,
+preparing rows and between sink segments; TIFF still encoding now polls page
+preparation, row prediction, raw/PackBits/LZW work, and deflate boundaries;
+GIF, TIFF, WebP, and native AVIF sequence paths poll their implemented
+frame/coalescing/page/finalization checkpoints. This slice does not claim
+universal interior interruption, deeper deflate/structural interruption,
 progress callbacks, work budgets, short-write/flush semantics, or rollback
 cleanup.
 
@@ -263,7 +265,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`45e19227bfbd1d1c9b21f03d2171955efd4f600c`, the generated matrix reports:
+`391f50aea8668771eaca61709945df943ce3e028`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -646,10 +648,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,475 | 47,475 |
-| Branches | 6,556 | 6,556 |
-| Functions | 2,657 | 2,657 |
-| Regions | 73,904 | 73,904 |
+| Lines | 47,575 | 47,575 |
+| Branches | 6,558 | 6,558 |
+| Functions | 2,658 | 2,658 |
+| Regions | 74,085 | 74,085 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -689,9 +691,9 @@ working tree; the patch was committed as `766a6dd`. The shorter duration is
 retained as runtime evidence, not a controlled speedup claim, because the
 managed target/cache state differs from the earlier 865,050 ms execution.
 
-Coverage MCP run: `d690cb20-f078-4652-8c83-4892a1a880bc`
+Coverage MCP run: `8d23fb4f-d3d2-440d-a29c-5f88c8b837c6`
 
-Snapshot: `5b2addef-2953-4d3c-8e50-be66bb7e470d`
+Snapshot: `50225988-71f1-473e-a0bc-3662f19e53de`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

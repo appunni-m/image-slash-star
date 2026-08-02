@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `45e19227bfbd1d1c9b21f03d2171955efd4f600c`
+Reviewed: 2026-08-02 against the working tree based on `391f50aea8668771eaca61709945df943ce3e028`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -295,7 +295,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; JPEG also polls row/block/scan checkpoints, while other whole-buffer still codecs retain the public boundary |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; JPEG also polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and deflate boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -343,7 +343,8 @@ current input length.
 
 Cooperative cancellation polls a caller token at structural checkpoints:
 dispatch entry, PNG chunk boundaries, GIF block and frame boundaries, TIFF
-page and strip/tile boundaries, JPEG color/sampling/quantization rows and
+still page preparation/predictor/PackBits/LZW work plus sequence page and
+strip/tile boundaries, JPEG color/sampling/quantization rows and
 entropy/progressive scan batches, WebP frame boundaries, BMP RLE commands,
 ICO directory entries, and AVIF frames. A fired token returns
 `ImageError::Cancelled` with the format and operation stage and never publishes
