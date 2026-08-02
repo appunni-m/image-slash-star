@@ -237,12 +237,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0010u8]), 1, 1);
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8]), 1, 1);
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8, 7]), 1, 1);
-    let alpha = super::encoder::encode_alpha(&[7], 1, 1);
+    let alpha = super::encoder::encode_alpha(&[7], 1, 1, None).unwrap();
     let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 1, 1).unwrap();
     assert_eq!(chunk.data, vec![7]);
 
     let repeated_alpha = [7; 64];
-    let alpha = super::encoder::encode_alpha(&repeated_alpha, 8, 8);
+    let alpha = super::encoder::encode_alpha(&repeated_alpha, 8, 8, None).unwrap();
     assert_eq!(alpha.first(), Some(&1));
     let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 8, 8).unwrap();
     assert_eq!(chunk.data, repeated_alpha);
