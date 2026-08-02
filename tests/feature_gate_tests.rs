@@ -6475,6 +6475,123 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
     }
 
     if cfg!(feature = "gif") {
+        // GIF still delivery now splits the validated header, palette,
+        // extensions, image blocks, and trailer while retaining the complete
+        // encoder working buffer. This is a Rust-only sink contract: Pillow
+        // has no caller-owned sink, so the parity matrix remains unchanged.
+        let gif_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+        let gif_options = EncodeOptions::for_format(ImageFormat::Gif);
+        let gif_expected = image_slash_star::encode(&gif_image, ImageFormat::Gif, &gif_options)?;
+        let mut gif_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &gif_image,
+                ImageFormat::Gif,
+                &gif_options,
+                &mut gif_sink,
+            )?,
+            gif_expected.len()
+        );
+        assert_eq!(gif_sink.bytes, gif_expected);
+        assert!(
+            gif_sink.writes > 1,
+            "GIF output must cross block boundaries"
+        );
+        assert!(gif_sink.bytes.starts_with(b"GIF87a") || gif_sink.bytes.starts_with(b"GIF89a"));
+
+        let gif_token = image_slash_star::CancellationToken::new();
+        let mut cancelling_gif = CancellingSink {
+            bytes: Vec::new(),
+            token: gif_token.clone(),
+            writes: 0,
+        };
+        let cancelling_gif_error = match image_slash_star::encode_to_sink_with_token(
+            &gif_image,
+            ImageFormat::Gif,
+            &gif_options,
+            &gif_token,
+            &mut cancelling_gif,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("GIF sink cancellation unexpectedly wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            cancelling_gif_error.kind(),
+            image_slash_star::ImageErrorKind::Cancelled
+        );
+        assert_eq!(cancelling_gif_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            cancelling_gif_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(cancelling_gif.writes, 1);
+        assert_eq!(cancelling_gif.bytes, gif_expected[..13].to_vec());
+
+        let too_small_gif =
+            EncodePolicy::default().with_max_output_bytes(u64::try_from(gif_expected.len() - 1)?);
+        let mut limited_gif = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let limited_gif_error = match image_slash_star::encode_to_sink_with_policy(
+            &gif_image,
+            ImageFormat::Gif,
+            &gif_options,
+            &too_small_gif,
+            &mut limited_gif,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("GIF output policy unexpectedly admitted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            limited_gif_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            }
+        ));
+        assert_eq!(limited_gif.writes, 0);
+        assert!(limited_gif.bytes.is_empty());
+
+        let mut failing_gif = FailingAfterWrites {
+            fail_at: 2,
+            writes: 0,
+        };
+        let failing_gif_error = match image_slash_star::encode_to_sink(
+            &gif_image,
+            ImageFormat::Gif,
+            &gif_options,
+            &mut failing_gif,
+        ) {
+            Ok(length) => {
+                return Err(format!("GIF sink unexpectedly accepted {length} bytes").into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            failing_gif_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(failing_gif_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            failing_gif_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(failing_gif.writes, 2);
+
         let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
         let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
         let options = EncodeOptions::for_format(ImageFormat::Gif);
