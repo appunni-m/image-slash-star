@@ -118,12 +118,16 @@ which keep the first palette result, and an unknown ancillary chunk whose third
 type character violates PNG's reserved-bit rule but Pillow accepts. The
 defensive manifest also records a Pillow-tolerated unknown ancillary `teSt`
 chunk after `IDAT` at offset `57`; valid APNG control and frame-data chunks
-(`acTL`, `fcTL`, and `fdAT`) are not treated as ordering recoveries. The
+(`acTL`, `fcTL`, and `fdAT`) are not treated as ordering recoveries, while
+malformed duplicate `acTL` and `acTL`-after-`IDAT` declarations are tracked
+separately. The
 manifest also records Pillow-tolerated indexed-palette shape damage
 (`png_trns_overlong`, `png_missing_plte`, `png_empty_plte`, `png_partial_plte`,
 and `png_trns_without_plte`), an APNG declaration with zero animation frames
-(`png_apng_zero_frames`), and valid inflated PNG bytes beyond the first raster
-(`png_oversized_scanline`). These cases retain the usable Pillow-observed
+(`png_apng_zero_frames`), malformed APNG declarations that fall back to the
+default PNG image (`png_duplicate_actl` at offset `53` and
+`png_actl_after_idat` at offset `3681`), and valid inflated PNG bytes beyond
+the first raster (`png_oversized_scanline`). These cases retain the usable Pillow-observed
 pixels while their Rust-only diagnostics expose the recovered structure.
 `bad_idat_crc.png` parity row still owns the outer success/pixel result and the
 separate diagnostic rows own only the Rust `RecoveredStructure` records. The
@@ -133,6 +137,10 @@ separate diagnostic rows own only the Rust `RecoveredStructure` records. The
 and missing-terminator boundary. The duplicate `PLTE` and `tRNS` parity rows
 own their Pillow success/pixel results; separate defensive rows own only
 `png_duplicate_plte` at offset `51` and `png_duplicate_trns` at offset `65`.
+The malformed APNG declarations likewise own separate defensive records:
+`png_duplicate_actl` identifies the ignored second declaration and
+`png_actl_after_idat` identifies the late declaration; both retain the usable
+default-image result.
 Unsupported compression methods in PNG
 `zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
 remain outside this contract. No coverage-only unit or `cfg(coverage)` test is

@@ -334,6 +334,37 @@ fn record_post_idat_ancillary_diagnostic(
     }
 }
 
+fn record_apng_declaration_diagnostic(
+    chunk: &Chunk<'_>,
+    saw_idat: bool,
+    saw_actl: bool,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    if chunk.kind != *b"acTL" {
+        return;
+    }
+    let identity = if saw_idat {
+        Some("png_actl_after_idat")
+    } else if saw_actl {
+        Some("png_duplicate_actl")
+    } else {
+        None
+    };
+    let Some(identity) = identity else {
+        return;
+    };
+    // Pillow falls back to the usable default PNG image for these malformed
+    // APNG declarations. Keep that successful result while making the
+    // ignored declaration observable to Rust callers.
+    diagnostics.push(crate::ImageDiagnostic {
+        kind: crate::DiagnosticKind::RecoveredStructure,
+        format: crate::ImageFormat::Png,
+        stage: None,
+        offset: Some(chunk.offset),
+        identity: Some(identity),
+    });
+}
+
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     match value {
         0 => Some(crate::types::SrgbIntent::Perceptual),
@@ -434,6 +465,7 @@ pub fn decode(
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
     let mut saw_iend = false;
+    let mut saw_actl = false;
     let mut diagnostics = Vec::new();
     for chunk in &mut chunks {
         crate::codecs::error::check_cancelled(token)?;
@@ -441,6 +473,7 @@ pub fn decode(
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
+        record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
                 idat_offset.get_or_insert(chunk.offset);
@@ -478,6 +511,7 @@ pub fn decode(
                         "PNG acTL chunk has an invalid length".to_owned(),
                     ));
                 }
+                saw_actl = true;
                 record_zero_frame_apng_diagnostic(&chunk, &mut diagnostics);
             }
             b"fcTL" => {
@@ -836,12 +870,14 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
     let mut diagnostics = Vec::new();
+    let mut saw_actl = false;
 
     for chunk in &mut chunks {
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
+        record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_offset = Some(chunk.offset);
@@ -857,6 +893,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                         "APNG contains a truncated acTL chunk".to_owned(),
                     ));
                 }
+                saw_actl = true;
                 if animation.is_some() {
                     animation = None;
                     default_control = None;
