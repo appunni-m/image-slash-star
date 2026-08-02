@@ -962,8 +962,9 @@ link checks.
 
 `cargo package` intentionally excludes the large oracle corpus. The packaged
 library, README, maintained documentation, security/contribution routes, legal
-files, source, and distribution-relevant scripts must still be present and
-usable.
+files, and source must still be present and usable. The repository-only
+`scripts/test_feature_matrix.sh` is deliberately not packaged because it
+depends on the excluded integration targets and fixture corpus.
 
 Verify:
 
