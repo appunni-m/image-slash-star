@@ -6554,6 +6554,162 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 "JPEG token path must cross marker boundaries"
             );
 
+            // A one-frame JPEG sequence uses the same validated marker/scan
+            // writer as still output. This is a Rust-only destination
+            // contract: Pillow has no caller-owned sink, so the parity
+            // matrix remains unchanged.
+            let jpeg_sequence = DecodedSequence::from_image(jpeg_image.clone());
+            let jpeg_sequence_expected = image_slash_star::encode_sequence(
+                &jpeg_sequence,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+            )?;
+            let mut jpeg_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink(
+                    &jpeg_sequence,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &mut jpeg_sequence_sink,
+                )?,
+                jpeg_sequence_expected.len()
+            );
+            assert_eq!(jpeg_sequence_sink.bytes, jpeg_sequence_expected);
+            assert!(
+                jpeg_sequence_sink.writes > 1,
+                "one-frame JPEG sequence must cross marker boundaries"
+            );
+
+            let jpeg_sequence_token = image_slash_star::CancellationToken::new();
+            let mut jpeg_sequence_token_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink_with_token(
+                    &jpeg_sequence,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &jpeg_sequence_token,
+                    &mut jpeg_sequence_token_sink,
+                )?,
+                jpeg_sequence_expected.len()
+            );
+            assert_eq!(
+                jpeg_sequence_token_sink.bytes, jpeg_sequence_expected,
+                "one-frame JPEG sequence token bytes"
+            );
+            assert!(jpeg_sequence_token_sink.writes > 1);
+
+            let jpeg_sequence_cancel_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_jpeg_sequence = CancellingSink {
+                bytes: Vec::new(),
+                token: jpeg_sequence_cancel_token.clone(),
+                writes: 0,
+            };
+            let jpeg_sequence_cancel_error =
+                match image_slash_star::encode_sequence_to_sink_with_token(
+                    &jpeg_sequence,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &jpeg_sequence_cancel_token,
+                    &mut cancelling_jpeg_sequence,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "one-frame JPEG sequence cancellation unexpectedly wrote {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert_eq!(
+                jpeg_sequence_cancel_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(jpeg_sequence_cancel_error.format(), Some(ImageFormat::Jpeg));
+            assert_eq!(
+                jpeg_sequence_cancel_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(cancelling_jpeg_sequence.writes, 1);
+            assert_eq!(cancelling_jpeg_sequence.bytes, b"\xff\xd8");
+
+            let too_small_jpeg_sequence = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(jpeg_sequence_expected.len() - 1)?);
+            let mut limited_jpeg_sequence = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let jpeg_sequence_limit_error =
+                match image_slash_star::encode_sequence_to_sink_with_policy(
+                    &jpeg_sequence,
+                    ImageFormat::Jpeg,
+                    &jpeg_options,
+                    &too_small_jpeg_sequence,
+                    &mut limited_jpeg_sequence,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "JPEG sequence output policy unexpectedly admitted {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert!(matches!(
+                jpeg_sequence_limit_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Jpeg),
+                    operation: image_slash_star::CodecOperation::SequenceEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_jpeg_sequence.writes, 0);
+            assert!(limited_jpeg_sequence.bytes.is_empty());
+
+            let mut multiple_jpeg_sequence = jpeg_sequence.clone();
+            multiple_jpeg_sequence
+                .frames
+                .push(multiple_jpeg_sequence.frames[0].clone());
+            multiple_jpeg_sequence.kind = SequenceKind::TimedAnimation;
+            let mut multiple_jpeg_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let multiple_jpeg_error = match image_slash_star::encode_sequence_to_sink(
+                &multiple_jpeg_sequence,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &mut multiple_jpeg_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "multi-frame JPEG sequence unexpectedly accepted {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                multiple_jpeg_error.kind(),
+                image_slash_star::ImageErrorKind::Unsupported
+            );
+            assert_eq!(
+                multiple_jpeg_error.unsupported_reason(),
+                Some(UnsupportedReason::NotImplemented)
+            );
+            assert_eq!(
+                multiple_jpeg_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(multiple_jpeg_sink.writes, 0);
+            assert!(multiple_jpeg_sink.bytes.is_empty());
+
             let progressive_options = match EncodeOptions::for_format(ImageFormat::Jpeg) {
                 EncodeOptions::Jpeg(mut options) => {
                     options.progressive = Some(true);
