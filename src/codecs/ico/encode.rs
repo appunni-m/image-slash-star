@@ -10,11 +10,21 @@ use crate::encode_options::{IcoEncodeOptions, IcoEntryType, PngEncodeOptions};
 use crate::types::{ColorType, DecodedImage};
 /// Encode one source-sized image as one Pillow-compatible ICO entry.
 pub fn encode(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_with_token(img, opts, None)
+}
+
+/// Encode one source-sized ICO entry while polling a cooperative cancellation token.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &IcoEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     img.validate().map_err(CodecError::from_image_error)?;
     if opts.entry_type == IcoEntryType::Bmp {
-        return encode_bmp_entries(img, opts);
+        return encode_bmp_entries(img, opts, token);
     }
-    encode_png_entries(img, opts)
+    encode_png_entries(img, opts, token)
 }
 
 #[cfg(coverage)]
@@ -52,6 +62,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&rgb, &exact_size);
 
+    for checks in 0..=5 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&rgb, &exact_size, Some(&token));
+    }
+
     let wrong_size = IcoEncodeOptions {
         sizes: vec![IcoSize {
             width: 8,
@@ -63,6 +79,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut bmp = exact_size.clone();
     bmp.entry_type = IcoEntryType::Bmp;
+    for checks in 0..=5 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&rgb, &bmp, Some(&token));
+    }
     let _ = encode(&rgb, &bmp);
     let _ = encode(&rgba, &bmp);
     let _ = encode(&luma, &bmp);
@@ -90,19 +111,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let too_tall = DecodedImage::new(1, 257, vec![0; 257 * 3], ColorType::Rgb8);
     let _ = encode(&too_tall, &IcoEncodeOptions::default());
 
-    let _ = encode_directory((256, 256), &[1, 2, 3], 32);
+    let _ = encode_directory((256, 256), &[1, 2, 3], 32, None);
     for size in [(0, 1), (1, 0), (257, 1), (1, 257)] {
-        let _ = encode_directory(size, &[0], 32);
+        let _ = encode_directory(size, &[0], 32, None);
     }
-    let _ = encode_bmp_single_entry(&rgb);
-    let _ = encode_bmp_single_entry(&rgba);
+    let _ = encode_bmp_single_entry(&rgb, None);
+    let _ = encode_bmp_single_entry(&rgba, None);
 }
 
-fn encode_png_entries(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
+fn encode_png_entries(
+    img: &DecodedImage,
+    opts: &IcoEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let size = source_entry_size(img, opts)?;
-    let frame = crate::codecs::png::encode::encode(img, &PngEncodeOptions::default())
-        .map_err(|error| error.context("embedded ICO PNG encode"))?;
-    encode_directory(size, &frame, 32)
+    let frame =
+        crate::codecs::png::encode::encode_with_token(img, &PngEncodeOptions::default(), token)
+            .map_err(|error| error.context("embedded ICO PNG encode"))?;
+    crate::codecs::error::check_cancelled(token)?;
+    encode_directory(size, &frame, 32, token)
 }
 
 fn source_entry_size(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<(usize, usize)> {
@@ -130,7 +158,9 @@ fn encode_directory(
     (width, height): (usize, usize),
     frame: &[u8],
     bits: u16,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     if width == 0 || height == 0 || width > 256 || height > 256 {
         return Err(CodecError::Dimensions(
             "ICO entry dimensions must be between 1 and 256".to_owned(),
@@ -147,6 +177,7 @@ fn encode_directory(
     output.extend_from_slice(&bits.to_le_bytes());
     output.extend_from_slice(&low_u32(frame.len()).to_le_bytes());
     output.extend_from_slice(&22u32.to_le_bytes());
+    crate::codecs::error::check_cancelled(token)?;
     output.extend_from_slice(frame);
     Ok(output)
 }
@@ -160,11 +191,17 @@ fn directory_dimension(value: usize) -> u8 {
     }
 }
 
-fn encode_bmp_entries(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
+fn encode_bmp_entries(
+    img: &DecodedImage,
+    opts: &IcoEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let size = source_entry_size(img, opts)?;
-    let encoded = encode_bmp_single_entry(img)?;
+    let encoded = encode_bmp_single_entry(img, token)?;
     let bits = u16::from_le_bytes([encoded[12], encoded[13]]);
-    encode_directory(size, &encoded[22..], bits)
+    crate::codecs::error::check_cancelled(token)?;
+    encode_directory(size, &encoded[22..], bits, token)
 }
 
 fn bounded_usize_u32(value: u32) -> usize {
@@ -191,7 +228,11 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
-fn encode_bmp_single_entry(img: &DecodedImage) -> CodecResult<Vec<u8>> {
+fn encode_bmp_single_entry(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let width = bounded_usize_u32(img.width);
     let height = bounded_usize_u32(img.height);
     let (bits, row_bytes, pixels) = match img.color {
@@ -200,6 +241,7 @@ fn encode_bmp_single_entry(img: &DecodedImage) -> CodecResult<Vec<u8>> {
             let row_bytes = source_row_bytes.next_multiple_of(4);
             let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
             for row in img.pixels.chunks_exact(source_row_bytes).rev() {
+                crate::codecs::error::check_cancelled(token)?;
                 for pixel in row.chunks_exact(3) {
                     pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
                 }
@@ -212,6 +254,7 @@ fn encode_bmp_single_entry(img: &DecodedImage) -> CodecResult<Vec<u8>> {
             let row_bytes = width.saturating_mul(4);
             let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
             for row in img.pixels.chunks_exact(row_bytes).rev() {
+                crate::codecs::error::check_cancelled(token)?;
                 for pixel in row.chunks_exact(4) {
                     pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
                 }
@@ -264,5 +307,6 @@ fn encode_bmp_single_entry(img: &DecodedImage) -> CodecResult<Vec<u8>> {
     output.extend_from_slice(&0u32.to_le_bytes());
     output.extend_from_slice(&pixels);
     output.resize(output.len().saturating_add(mask_bytes), 0);
+    crate::codecs::error::check_cancelled(token)?;
     Ok(output)
 }
