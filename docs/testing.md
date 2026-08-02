@@ -2,7 +2,9 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the committed tree based on revision `f1048bc0399fad9801559ca7fcfd3163427b5832`
+Reviewed: 2026-08-02 against current implementation revision
+`5c129baba0bfa044b0b79d3842af69736b269519`; the claim-ledger baseline remains
+`f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -182,6 +184,35 @@ Pillow matrix, and checks these counts in the maintained docs. It executes no
 Rust test and contributes no coverage; it prevents the provenance statement
 from becoming stale as the defensive manifest grows.
 
+This is why COR-061 is not a parity-row expansion. The generated
+`coverage_matrix_tests.rs` harness can compare Pillow's outer success/error,
+pixels, metadata, frames, and (where applicable) verification exception, but
+Pillow exposes no successful-decode warning channel for `DiagnosticKind`,
+stage, offset, or structure identity. Adding those fields to a parity row
+would invent oracle data. Adding one of the 23 runtime-mutated byte streams to
+the matrix would be a separate outer-result comparison and still could not
+prove the Rust diagnostic; the 38 unchanged cases already map that shared
+outer-result evidence to active Pillow rows. The normal
+`diagnostic_manifest_matches_the_non_parity_contract` test is therefore the
+correct acceptance boundary. Its executed lines may appear in aggregate LLVM
+coverage, but that execution is not Pillow-parity coverage and no
+coverage-only test is used to manufacture it.
+
+The current implementation revision
+`5c129baba0bfa044b0b79d3842af69736b269519` is covered by Coverage MCP run
+`4f4cc8a0-c716-4667-8720-f0d96e1b77d5`, snapshot
+`24fe9c12-7cf7-4f2b-ac41-a1eda7e88828`: 72 tests passed with zero failures and
+the snapshot retains 48,615/48,938 lines, 6,659/6,714 branches,
+2,727/2,783 functions, and 75,687/76,106 regions. The feature matrix passed
+947/947 checks in run `50c67cfb-d97b-425e-8afc-7508cefd1b90`; retained logs
+show the diagnostic contract passing in all 22 feature-lane executions, with
+zero package-cache and build-directory lock waits. The unchanged Pillow
+parity matrix passed 1,434/1,434 checks in run
+`2b13beca-1b3c-471f-b8a9-c386f594427d`; it remains outer-result evidence only.
+These records are separate: the diagnostic test contributes only ordinary
+Rust execution to the aggregate coverage snapshot, not a Pillow diagnostic
+claim.
+
 The separate `png_unsupported_compressed_metadata_methods_remain_fatal`
 contract covers that Pillow-observable fatal boundary for valid-shape non-zero
 `zTXt`/`iCCP` methods. It asserts only the fatal error kind, operation stage,
@@ -333,8 +364,8 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current committed tree based on revision
-`f1048bc0399fad9801559ca7fcfd3163427b5832`, the generated matrix reports:
+For the current implementation revision
+`5c129baba0bfa044b0b79d3842af69736b269519`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1104,7 +1135,7 @@ not Pillow parity coverage.
 
 The native AVIF sequence structural-sink slice first landed at revision
 `81dae9af403dfa7358dfd833b25ef9c032582b5a` and is accepted at current
-revision `483f992f06f7dc6a17af43d4de714f68f4aeef03`. It retains the complete
+revision `5c129baba0bfa044b0b79d3842af69736b269519`. It retains the complete
 native encoder buffer, validates ISO-BMFF top-level boxes, and delivers each
 box header and non-empty payload span as separate sink segments after exact
 output-length preflight. Cancellation is checked between those segments, and
@@ -1112,30 +1143,32 @@ the sequence encoder also checks frame and finalization boundaries. This is
 ordinary Rust-only destination evidence: Pillow has no caller-owned sink, so
 no parity row or fixture was added, and portable WASM AVIF encoding remains
 target-unavailable. Coverage MCP run
-`e9b4d514-28c6-4027-96b7-056b04e16500`, snapshot
-`b9b888ea-9f61-44df-82e6-cb1b44973343`, passed 72 tests with zero failures in
-64,452 ms and reports 48,615/48,938 lines, 6,659/6,714 branches,
+`4f4cc8a0-c716-4667-8720-f0d96e1b77d5`, snapshot
+`24fe9c12-7cf7-4f2b-ac41-a1eda7e88828`, passed 72 tests with zero failures in
+65,498 ms and reports 48,615/48,938 lines, 6,659/6,714 branches,
 2,727/2,783 functions, and 75,687/76,106 regions. The feature matrix passed
 947/947 checks with zero failures in run
-`2aee1e65-baae-4135-93ed-3c1bf7709cc2` (12,069 ms), and the unchanged Pillow
+`50c67cfb-d97b-425e-8afc-7508cefd1b90` (15,200 ms), and the unchanged Pillow
 parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
-`731ee8ff-2e78-4aa9-a879-cc42eecb012a` (16,344 ms). These are execution
+`2b13beca-1b3c-471f-b8a9-c386f594427d` (12,864 ms). These are execution
 records rather than a universal runtime comparison; the sink assertions are
 not Pillow parity coverage.
 
 The runtime-first feature-matrix follow-up is committed at revision
-`483f992f06f7dc6a17af43d4de714f68f4aeef03`, after the bounded compiler-job
+`5c129baba0bfa044b0b79d3842af69736b269519`, after the bounded compiler-job
 revision `87510c76b1bfdafb8bde97d9d8b00427ee428a10`. The harness now fetches
 the locked host and WASM dependency graphs before lane fan-out, runs the
 lanes offline with lane-local target roots and the selected
-`lanes=6 test_threads=2 build_jobs=2` budget, and persists each capability row
-from the full native/WASI lane instead of launching 22 duplicate probe
-processes. The managed run above retained zero build-directory lock waits and
-the terminal record `capability tables OK: every native and wasm32-wasip1 lane
-agrees`; it still recorded 28 package-cache lock notices. The 947-check count
-therefore reflects removal of duplicate probe launches, not removal of feature
-assertions. This is runtime and harness evidence rather than a controlled
-speedup claim because managed cache and runner state can differ.
+`lanes=6 test_threads=2 build_jobs=2` budget, gives each concurrent lane a
+stable lane-scoped Cargo home that shares only the fetched registry sources,
+and persists each capability row from the full native/WASI lane instead of
+launching 22 duplicate probe processes. The diagnostic contract also reuses
+immutable fixture bytes and baseline decodes within each feature process. The
+managed run above retained zero package-cache or build-directory lock waits
+and the terminal record `capability tables OK: every native and
+wasm32-wasip1 lane agrees`; all 947 checks and feature assertions remain.
+This is runtime and harness evidence rather than a controlled speedup claim
+because managed cache and runner state can differ.
 
 Historical claim-ledger acceptance record:
 
