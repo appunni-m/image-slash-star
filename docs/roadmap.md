@@ -1215,6 +1215,12 @@ checks with zero failures in 77,855 ms, retained the same table record, and
 again had no build-directory lock-wait records. The observed difference is
 execution evidence rather than a controlled speedup claim because managed
 cache/build state differs.
+The bounded lane-concurrency follow-up then raised the default worker bound
+from three to four. Run `5e438aba-378e-4a33-b03f-d4ecd047865e` passed the same
+925 checks with zero failures in 67,609 ms, retained the capability-table
+record, and again had no build-directory lock-wait records. This remains
+execution evidence rather than a controlled speedup claim because managed
+cache/build state differs.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
