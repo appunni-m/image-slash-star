@@ -19,7 +19,9 @@ mod quant;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{JpegEncodeOptions, JpegSubsampling};
+use crate::encode_policy::EncodePolicy;
 use crate::types::{DecodedImage, ImageMode};
+use crate::{CodecOperation, ImageFormat, OutputSink};
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
 const ZIGZAG: [usize; 64] = [
@@ -352,6 +354,224 @@ pub(crate) fn encode_with_token(
     crate::codecs::error::check_cancelled(token)?;
     marker::write_eoi(&mut out);
     Ok(out)
+}
+
+/// Encode JPEG into validated marker and entropy-scan segments owned by the
+/// caller's sink. The encoder retains its complete working buffer; this
+/// boundary makes container delivery and cancellation observable without
+/// claiming interior entropy-bit streaming or destination rollback.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &JpegEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_with_token(img, opts, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::Jpeg, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_jpeg_to_sink(&encoded, token, sink)
+}
+
+fn write_jpeg_to_sink(
+    encoded: &[u8],
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let (initial_marker, initial_end) = read_jpeg_marker(encoded, 0)?;
+    if initial_marker != 0xd8 || initial_end != 2 {
+        return Err(CodecError::Malformed(
+            "JPEG encoder produced an invalid SOI marker".to_owned(),
+        ));
+    }
+
+    let mut written = 0usize;
+    write_jpeg_sink_segment(sink, &encoded[..initial_end], token, &mut written)?;
+    let mut offset = initial_end;
+    let mut in_scan = false;
+    let mut saw_scan = false;
+    let mut saw_eoi = false;
+
+    while offset < encoded.len() {
+        if in_scan {
+            let marker_start = find_scan_marker(encoded, offset)?;
+            if marker_start > offset {
+                write_jpeg_sink_segment(sink, &encoded[offset..marker_start], token, &mut written)?;
+            }
+            let (marker, marker_end) = read_jpeg_marker(encoded, marker_start)?;
+            if is_restart_marker(marker) {
+                write_jpeg_sink_segment(
+                    sink,
+                    &encoded[marker_start..marker_end],
+                    token,
+                    &mut written,
+                )?;
+                offset = marker_end;
+                continue;
+            }
+            in_scan = false;
+            offset = marker_start;
+            continue;
+        }
+
+        let marker_start = offset;
+        let (marker, marker_end) = read_jpeg_marker(encoded, marker_start)?;
+        match marker {
+            0xd8 => {
+                return Err(CodecError::Malformed(
+                    "JPEG encoder emitted a second SOI marker".to_owned(),
+                ));
+            }
+            0xd9 => {
+                write_jpeg_sink_segment(
+                    sink,
+                    &encoded[marker_start..marker_end],
+                    token,
+                    &mut written,
+                )?;
+                offset = marker_end;
+                saw_eoi = true;
+                break;
+            }
+            0xda => {
+                let segment_end = jpeg_length_segment_end(encoded, marker_end)?;
+                write_jpeg_sink_segment(
+                    sink,
+                    &encoded[marker_start..segment_end],
+                    token,
+                    &mut written,
+                )?;
+                offset = segment_end;
+                in_scan = true;
+                saw_scan = true;
+            }
+            marker if is_standalone_marker(marker) => {
+                return Err(CodecError::Malformed(
+                    "JPEG encoder emitted an unexpected standalone marker".to_owned(),
+                ));
+            }
+            _ => {
+                let segment_end = jpeg_length_segment_end(encoded, marker_end)?;
+                write_jpeg_sink_segment(
+                    sink,
+                    &encoded[marker_start..segment_end],
+                    token,
+                    &mut written,
+                )?;
+                offset = segment_end;
+            }
+        }
+    }
+
+    if in_scan {
+        return Err(CodecError::Malformed(
+            "JPEG encoder scan has no terminating marker".to_owned(),
+        ));
+    }
+    if !saw_scan {
+        return Err(CodecError::Malformed(
+            "JPEG encoder produced no scan marker".to_owned(),
+        ));
+    }
+    if !saw_eoi || offset != encoded.len() {
+        return Err(CodecError::Malformed(
+            "JPEG encoder produced trailing bytes after EOI".to_owned(),
+        ));
+    }
+    Ok(written)
+}
+
+fn read_jpeg_marker(encoded: &[u8], offset: usize) -> CodecResult<(u8, usize)> {
+    if encoded.get(offset) != Some(&0xff) {
+        return Err(CodecError::Malformed(
+            "JPEG marker does not begin with 0xff".to_owned(),
+        ));
+    }
+    let mut code_offset = offset.saturating_add(1);
+    while encoded.get(code_offset) == Some(&0xff) {
+        code_offset = code_offset.saturating_add(1);
+    }
+    let marker = *encoded
+        .get(code_offset)
+        .ok_or_else(|| CodecError::Malformed("JPEG marker is missing its code".to_owned()))?;
+    if marker == 0 {
+        return Err(CodecError::Malformed(
+            "JPEG stuffed byte appeared outside entropy data".to_owned(),
+        ));
+    }
+    Ok((marker, code_offset.saturating_add(1)))
+}
+
+fn jpeg_length_segment_end(encoded: &[u8], marker_end: usize) -> CodecResult<usize> {
+    let length_bytes = encoded
+        .get(marker_end..marker_end.saturating_add(2))
+        .ok_or_else(|| CodecError::Malformed("JPEG marker is missing its length".to_owned()))?;
+    let length = usize::from(u16::from_be_bytes([length_bytes[0], length_bytes[1]]));
+    if length < 2 {
+        return Err(CodecError::Malformed(
+            "JPEG marker length is smaller than its length field".to_owned(),
+        ));
+    }
+    let end = marker_end
+        .checked_add(length)
+        .ok_or_else(|| CodecError::Dimensions("JPEG marker length overflows".to_owned()))?;
+    if end > encoded.len() {
+        return Err(CodecError::Malformed(
+            "JPEG marker extends beyond the encoded output".to_owned(),
+        ));
+    }
+    Ok(end)
+}
+
+fn find_scan_marker(encoded: &[u8], offset: usize) -> CodecResult<usize> {
+    let mut cursor = offset;
+    while cursor < encoded.len() {
+        if encoded[cursor] != 0xff {
+            cursor = cursor.saturating_add(1);
+            continue;
+        }
+        let marker_start = cursor;
+        cursor = cursor.saturating_add(1);
+        while encoded.get(cursor) == Some(&0xff) {
+            cursor = cursor.saturating_add(1);
+        }
+        let marker = *encoded.get(cursor).ok_or_else(|| {
+            CodecError::Malformed("JPEG scan ends with an incomplete marker".to_owned())
+        })?;
+        if marker == 0 {
+            cursor = cursor.saturating_add(1);
+            continue;
+        }
+        return Ok(marker_start);
+    }
+    Err(CodecError::Malformed(
+        "JPEG scan has no terminating marker".to_owned(),
+    ))
+}
+
+fn is_restart_marker(marker: u8) -> bool {
+    (0xd0..=0xd7).contains(&marker)
+}
+
+fn is_standalone_marker(marker: u8) -> bool {
+    marker == 0x01 || is_restart_marker(marker)
+}
+
+fn write_jpeg_sink_segment(
+    sink: &mut dyn OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("JPEG sink output length overflows".to_owned()))?;
+    Ok(())
 }
 
 #[cfg(coverage)]
