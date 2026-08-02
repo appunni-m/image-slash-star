@@ -202,9 +202,9 @@ add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
 generic whole-buffer fallback for enabled JPEG, TIFF, and native AVIF still
-encoders, plus GIF sequence output. GIF still, WebP still, WebP one-frame
-sequence, ICO still, and the other one-frame sequence deliveries use the
-structural paths described below. Each real public call must normalize a
+encoders. GIF still and GIF sequence, WebP still, WebP one-frame sequence, ICO
+still, and the other one-frame sequence deliveries use the structural paths
+described below. Each real public call must normalize a
 rejecting destination to `OutputWrite` with the selected format and
 `StillEncode` stage, without an input offset, container identity, or
 `UnsupportedReason`. These are Rust-only destination contracts: Pillow has no
@@ -643,14 +643,14 @@ The output-sink contract is table-driven: `encode_to_sink` and
 `encode_sequence_to_sink` over PNG/BMP/GIF/WebP/ICO/TIFF still, one-frame
 BMP/WebP/ICO/TIFF sequence, and GIF sequence fixtures must write bytes
 identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
-and `&mut Vec<u8>` sinks. PNG, BMP, GIF, WebP, ICO, and TIFF still, plus
-one-frame WebP sequence, additionally prove
+and `&mut Vec<u8>` sinks. PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
+sequence, plus one-frame WebP sequence, additionally prove
 multiple structural writes, policy preflight before the first write, and
 cancellation between writes; one-frame BMP, ICO, and TIFF sequence additionally
-prove multiple structural writes and policy preflight, while GIF sequence
-remains a whole-buffer comparison. GIF's structural split is its signature and
-logical-screen descriptor, color tables, extension/image sub-blocks, and trailer.
-WebP's structural split is its 12-byte RIFF
+prove multiple structural writes and policy preflight. GIF's structural split
+is its signature and logical-screen descriptor, color tables, extension/image
+sub-blocks, and trailer; the same validated block parser serves still and
+sequence delivery. WebP's structural split is its 12-byte RIFF
 header followed by each validated chunk header and payload/padding span. ICO's
 structural split is a fixed 22-byte directory header followed by the complete
 embedded PNG/DIB payload. TIFF's split is its header, strip/padding span, and
@@ -1004,25 +1004,25 @@ and runner state can differ. The change affects feature-matrix scheduling only;
 the Pillow parity manifest, fixtures, row assertions, and provenance boundary
 are unchanged.
 
-The GIF still structural-sink slice is committed at revision
-`f3f6cd637248af9f1614928ba413d68ca446f316`. It retains the complete GIF
+The GIF still and sequence structural-sink slice is committed at revision
+`3f70c5e5e79d8756cd9c590d6fdadd02b82ff238`. It retains the complete GIF
 working buffer but delivers the validated signature/logical-screen descriptor,
 color tables, extension and image sub-blocks, and trailer as separately
-cancelable sink segments after exact output-length preflight. GIF sequence
-delivery remains the generic whole-buffer path. This is an ordinary Rust-only
-destination contract because Pillow has no caller-owned sink; no parity row or
-fixture was added. Coverage MCP run
-`269805b6-510a-4363-8d96-fb2302525b0d`, snapshot
-`aeb5792d-b39a-4e67-8fb2-7f85464c320d`, passed 72 tests with zero failures in
-81,951 ms and retained 48,288/48,469 lines, 6,613/6,634 branches,
-2,706/2,745 functions, and 75,188/75,466 regions. The feature matrix passed
+cancelable sink segments after exact output-length preflight for both still and
+sequence stages. This is an ordinary Rust-only destination contract because
+Pillow has no caller-owned sink; no parity row or fixture was added. Coverage
+MCP run `96d01110-737c-40e4-9db3-d976f456e4ac`, snapshot
+`626b4ff9-fdeb-4497-ad78-25e26a45368f`, passed 72 tests with zero failures in
+180,835 ms and retained 48,340/48,504 lines, 6,619/6,638 branches,
+2,709/2,747 functions, and 75,292/75,509 regions. The feature matrix passed
 947/947 checks with zero failures in run
-`44679f48-1410-4d11-9eea-a4e6ebcfff7d` (67,819 ms), and the unchanged Pillow
+`b9267f1d-be16-4214-a2a9-86f129354213` (112,313 ms), and the unchanged Pillow
 parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
-`7654d9a5-bc29-43f6-b491-6de677bdb8c9` (59,615 ms). The retained feature-matrix
-log has no build-directory lock waits; these durations are execution evidence
-rather than a universal speed comparison because managed cache and runner state
-can differ.
+`9625c19e-86ad-4365-835d-f76c2d5a6b33` (69,210 ms). The feature-matrix log
+records `lanes=6 test_threads=2 build_jobs=2`, no build-directory lock waits,
+and the terminal native/WASI capability-table agreement; package-cache waits
+remain possible. These durations are execution evidence rather than a
+universal speed comparison because managed cache and runner state can differ.
 
 Historical claim-ledger acceptance record:
 
