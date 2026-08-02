@@ -3,9 +3,10 @@
 //! A [`CancellationToken`] is a cheap handle that callers cancel from their
 //! own control flow. Token-aware operations poll it at documented structural
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
-//! strip/tile loops, lossy WebP VP8 analysis/bitstream stages, and lossless
-//! WebP VP8L predictor/cross-color/entropy/transform, histogram/Huffman,
-//! bitstream, and bounded backward-reference/token-stream intervals) and stop with
+//! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
+//! lossy WebP VP8 analysis/bitstream stages, and lossless WebP VP8L
+//! predictor/cross-color/entropy/transform, histogram/Huffman, bitstream, and
+//! bounded backward-reference/token-stream intervals) and stop with
 //! [`ImageError::Cancelled`] without publishing partial state.
 //! The crate remains single-threaded by design, so the token uses `Rc<Cell>`
 //! and adds no synchronization overhead on native or WASM targets.
