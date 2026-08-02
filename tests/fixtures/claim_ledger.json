@@ -1,11 +1,11 @@
 {
   "format_version": 1,
-  "base_revision": "0c6e7c287ee6c9b4b95d7b34711b46d17dcb44f5",
+  "base_revision": "0bc56ba272307e789be49c91761189f63e3ce3b0",
   "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
   "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
   "coverage": {
-    "run_id": "7209e672-dda4-4b40-b32b-c94bca372b59",
-    "snapshot_id": "4dff21bf-a675-4166-b1de-02b3bc9be791",
+    "run_id": "7a112d68-cb95-4e0f-9f25-bed935c4c0bb",
+    "snapshot_id": "af9a87b5-6d1b-431a-a2b4-43d98829e2ec",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -18,6 +18,6 @@
     "malformed_ledger": "66d11684fb9601ae7fcfe83d7ed10e6e4a87657f6780c76eb99da70a719caf72",
     "capability_tables": "44ecb9e7fe31ede7b0e74535b1207922f25bfd82ed1be922d1ec6067f9f290e1",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
-    "diagnostic": "45e370a2ec2205b8d36c6c97fdb233429c0b8dd2e558d15ce63c14be555caab0"
+    "diagnostic": "0e01463c05a6a4abf2abc4a426912a9fe8067f92b59426fed7f908537b5b009b"
   }
 }
