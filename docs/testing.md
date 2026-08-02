@@ -201,13 +201,14 @@ mode, and destination results are Rust-only structured contracts; they do not
 add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
-generic whole-buffer fallback for every enabled JPEG, GIF, TIFF, WebP, and
-native AVIF still encoder. ICO still and one-frame sequence delivery use the
-structural path described below. Each real public call must normalize a rejecting
-destination to `OutputWrite` with the selected format and `StillEncode` stage,
-without an input offset, container identity, or `UnsupportedReason`. These are
-Rust-only destination contracts: Pillow has no caller-owned sink, so the cases
-are not parity rows and any aggregate coverage from them is incidental evidence.
+generic whole-buffer fallback for every enabled JPEG, GIF, TIFF, and native AVIF
+still encoder. WebP still, ICO still, and one-frame sequence delivery use the
+structural paths described below. Each real public call must normalize a
+rejecting destination to `OutputWrite` with the selected format and
+`StillEncode` stage, without an input offset, container identity, or
+`UnsupportedReason`. These are Rust-only destination contracts: Pillow has no
+caller-owned sink, so the cases are not parity rows and any aggregate coverage
+from them is incidental evidence.
 
 The test boundary is deliberate. `diagnostic_manifest_matches_the_non_parity_contract`
 in `tests/feature_gate_tests.rs` and
@@ -242,7 +243,9 @@ result, rejects a one-byte-smaller result with the typed
 `EncodedOutputBytes` limit, and verifies that policy rejection leaves the sink
 unchanged. The test proves result admission before the first sink write; the
 PNG and BMP still paths additionally preflight their complete lengths before
-structural delivery. The TIFF still and one-frame sequence sink contract
+structural delivery. The WebP still structural-sink assertions in
+`output_sinks_receive_the_exact_encoded_bytes` prove the same preflight and
+delivery boundary. The TIFF still and one-frame sequence sink contract
 separately proves exact-length preflight, multiple header/strip/IFD writes,
 option mismatch, and cancellation-prefix behavior. It does not prove
 transient allocation limits or recoverable OOM behavior. Its aggregate coverage
@@ -273,9 +276,9 @@ the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
 They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
 native AVIF still, GIF-sequence output, and one-frame ICO sequence sink output;
-stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP/ICO/TIFF
-still sinks plus the one-frame TIFF sequence sink that can cancel between
-structural writes while retaining only the
+stable pre-cancelled errors, successful token-aware sink writes, and
+PNG/BMP/WebP/ICO/TIFF still sinks plus the one-frame TIFF sequence sink that
+can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
@@ -284,8 +287,9 @@ paths; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row
 boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
-checkpoints; WebP still encoding polls preparation, codec-result, and
-metadata-assembly boundaries; native AVIF still encoding polls its preparation,
+checkpoints; WebP still encoding polls preparation, codec-result,
+metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
+encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
 paths poll their implemented frame/coalescing/page/finalization checkpoints.
 ICO still encoding polls source-size validation, embedded PNG work or BMP row
@@ -634,16 +638,18 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over PNG/BMP/ICO/TIFF still, one-frame BMP/ICO/TIFF
-sequence, and GIF sequence fixtures must write bytes identical to
+`encode_sequence_to_sink` over PNG/BMP/WebP/ICO/TIFF still, one-frame
+BMP/ICO/TIFF sequence, and GIF sequence fixtures must write bytes identical to
 `encode`/`encode_sequence` with matching lengths for both `Vec<u8>` and
-`&mut Vec<u8>` sinks. PNG, BMP, ICO, and TIFF still additionally prove multiple
-structural writes, policy preflight before the first write, and cancellation
-between writes; one-frame BMP, ICO, and TIFF sequence additionally prove
-multiple structural writes and policy preflight, while GIF sequence remains a
-whole-buffer comparison. ICO's structural split is a fixed 22-byte directory
-header followed by the complete embedded PNG/DIB payload. TIFF's split is its
-header, strip/padding span, and IFD/value tail. A deterministic failing write or flush must be reported as
+`&mut Vec<u8>` sinks. PNG, BMP, WebP, ICO, and TIFF still additionally prove
+multiple structural writes, policy preflight before the first write, and
+cancellation between writes; one-frame BMP, ICO, and TIFF sequence additionally
+prove multiple structural writes and policy preflight, while GIF sequence
+remains a whole-buffer comparison. WebP's structural split is its 12-byte RIFF
+header followed by each validated chunk header and payload/padding span. ICO's
+structural split is a fixed 22-byte directory header followed by the complete
+embedded PNG/DIB payload. TIFF's split is its header, strip/padding span, and
+IFD/value tail. A deterministic failing write or flush must be reported as
 `ImageError::OutputWrite` with the selected format and encode stage. The
 current contract proves one post-delivery flush call and explicitly preserves
 the delivered prefix on flush failure. Short writes and rollback cleanup remain
@@ -800,6 +806,22 @@ and 74,819/74,826 regions. The feature matrix passed 947 checks in
 parity scope passed 1,434 checks with zero failures and zero skips in
 `531ac749-7aaa-4910-bfed-262e1eb66a20` (33,095 ms). No parity row or fixture
 was added.
+
+The WebP still structural-sink slice is implemented at revision
+`e632222badda34fb29913473556da99b8128d0f8`; the follow-up feature-gate fix is
+`63d801c93eabee36e8ec87f22ad20df940283be7`. It retains the complete WebP
+working buffer but delivers a validated RIFF header followed by chunk headers
+and payload/padding spans, with exact-length preflight and cancellation between
+segments. This is an ordinary Rust-only sink contract: Pillow has no
+caller-owned destination, so no parity row or fixture was added. Coverage MCP
+run `0cc54eb8-645c-4ef9-86ce-9bd3b7d3ddc7`, snapshot
+`94c15f68-788e-40bb-9f33-25245b5d692a`, passed 72 tests with zero failures and
+retained 48,149/48,183 lines, 6,598/6,604 branches, 2,697/2,709 functions,
+and 74,958/75,011 regions. The corrected feature matrix passed 947 checks
+with zero failures in run `8a317040-d51d-4a8e-8fb4-f799215ac083` (98,890 ms),
+and the unchanged Pillow parity scope passed 1,434 checks with zero failures
+and zero skips in run `87077d7c-9cdb-4b70-b5bd-0890cdc2379e` (63,221 ms).
+The managed parity scope and Pillow provenance remain unchanged.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
