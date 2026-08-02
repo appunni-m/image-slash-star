@@ -279,10 +279,14 @@ else
     exit 1
 fi
 
-# Resolve the locked dependency graph once before concurrent lanes start. This
-# keeps Cargo's shared package-cache lock out of the lane fan-out, while each
-# lane still uses its own target directory for independent feature builds.
+# Resolve the locked dependency graph once for every target family before
+# concurrent lanes start. Once the cache is complete, keep lane Cargo
+# processes offline so they do not contend on the shared package-cache lock;
+# each lane still uses its own target directory for independent feature builds.
 cargo fetch --locked
+cargo fetch --locked --target wasm32-unknown-unknown
+cargo fetch --locked --target wasm32-wasip1
+export CARGO_NET_OFFLINE=true
 
 run_parallel_jobs run_matrix_lane \
     native:none wasm-unknown:none wasm-wasi:none \
