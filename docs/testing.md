@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the committed tree based on revision `775263335df9680e4c453f666708745f53083e8f`
+Reviewed: 2026-08-02 on the committed tree based on revision `f1048bc0399fad9801559ca7fcfd3163427b5832`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -302,7 +302,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current committed tree based on revision
-`775263335df9680e4c453f666708745f53083e8f`, the generated matrix reports:
+`f1048bc0399fad9801559ca7fcfd3163427b5832`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -839,19 +839,26 @@ in 65,458 ms, retained the same terminal capability record, and had zero
 build-directory lock-wait matches. This is execution evidence rather than a
 controlled speed comparison because the managed cache state differed.
 
-Coverage MCP run: `f8875a27-27a0-4cec-85cc-be73e8e8e552`
+Coverage MCP run: `9bbe6760-7aa9-4ed8-8b31-bbf65444b85a`
 
-Snapshot: `78e65eb9-1f09-4a3f-9a65-e1c25d23f1a8`
+Snapshot: `f9a2fc69-ad68-493e-9c46-8837d0dd8d52`
 
-Coverage revision: `775263335df9680e4c453f666708745f53083e8f`
+Coverage revision: `f1048bc0399fad9801559ca7fcfd3163427b5832`
 
-Coverage MCP recorded 56 passed tests with zero failures and 100% line, branch,
+Coverage MCP recorded 58 passed tests with zero failures and 100% line, branch,
 function, and region coverage: 47,943 lines, 6,578 branches, 2,686 functions,
 and 74,654 regions. The ICO still and one-frame ICO sequence sink cases,
 sink finalization errors, and
 the deterministic encode work-budget contract execute the real dispatcher and
 structural/error paths; this is internal Rust evidence, not a synthetic Pillow
-parity case.
+parity case. The build-script decision tests likewise prove target-tool
+environment precedence as build invalidation evidence, not codec coverage.
+
+The same committed revision passed the feature matrix in run
+`1a0c0f1c-d5d7-4210-a24f-503d001a3d8f` (947 checks, zero failures) and the
+Pillow parity matrix in run `4ed3cd5c-3e92-4f2b-bd02-1b71a97ad0ed` (1,420 rows,
+zero failures). Their durations are retained execution evidence rather than a
+controlled benchmark because managed cache and build state can differ.
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
