@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `41f981aa0744224806d32ea38283d2c5dc4cf39d`
+Reviewed: 2026-08-02 on the working tree based on revision `c305daf4a5d13fdbbafabe03026b2fb2077094fd`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -255,7 +255,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`41f981aa0744224806d32ea38283d2c5dc4cf39d`, the generated matrix reports:
+`c305daf4a5d13fdbbafabe03026b2fb2077094fd`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -634,25 +634,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,353 | 47,353 |
-| Branches | 6,552 | 6,552 |
-| Functions | 2,656 | 2,656 |
-| Regions | 73,713 | 73,713 |
+| Lines | 47,366 | 47,366 |
+| Branches | 6,556 | 6,556 |
+| Functions | 2,657 | 2,657 |
+| Regions | 73,731 | 73,731 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Managed runtime evidence comes from feature-matrix run
-`f01cefa5-ec76-43f7-a3ec-70a7fcf9957c`: 859 checks passed with zero
-failures in 1,082,368 ms, and its terminal capability-table record says
+`afc8b425-9335-4b40-906c-2eafce3a1844`: 881 checks passed with zero
+failures in 1,255,273 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `c1541cf6-331d-475a-a81c-dce4707b164c`
+Coverage MCP run: `931cea9f-4bbc-439d-ae8b-f14367960748`
 
-Snapshot: `db6c79bf-70fe-407e-a581-f31f55683339`
+Snapshot: `6876ee5b-e9c2-44e5-9db3-afb29ace66d1`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -682,7 +682,7 @@ Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 Diagnostic manifest SHA-256:
-`23d52eb92e4faa36bb2e6f371649bb0ef6d5a7e1fda19d1d52bcf26535373b74`
+`7a6c38eaf6571d99fe2651bf30883cb013d6b59311708d7fc4447804b72d755a`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `41f981aa0744224806d32ea38283d2c5dc4cf39d`
+Reviewed: 2026-08-02 on the working tree based on revision `c305daf4a5d13fdbbafabe03026b2fb2077094fd`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`41f981aa0744224806d32ea38283d2c5dc4cf39d`, identified by manifest SHA-256
+`c305daf4a5d13fdbbafabe03026b2fb2077094fd`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -127,10 +127,10 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`c1541cf6-331d-475a-a81c-dce4707b164c`, snapshot
-`db6c79bf-70fe-407e-a581-f31f55683339`, passed 52 tests with zero failures
-or skips and reports 47,353/47,353 lines, 6,552/6,552 branches,
-2,656/2,656 functions, and 73,713/73,713 regions.
+`931cea9f-4bbc-439d-ae8b-f14367960748`, snapshot
+`6876ee5b-e9c2-44e5-9db3-afb29ace66d1`, passed 53 tests with zero failures
+or skips and reports 47,366/47,366 lines, 6,556/6,556 branches,
+2,657/2,657 functions, and 73,731/73,731 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -1147,8 +1147,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Managed feature-matrix runtime evidence comes from run
-`f01cefa5-ec76-43f7-a3ec-70a7fcf9957c`; it passed 859 checks with zero
-failures in 1,082,368 ms, and its terminal log records `capability tables OK: every native
+`afc8b425-9335-4b40-906c-2eafce3a1844`; it passed 881 checks with zero
+failures in 1,255,273 ms, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
 
