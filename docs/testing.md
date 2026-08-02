@@ -715,6 +715,17 @@ clean revision `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`; this duration is
 execution evidence rather than a controlled speed comparison because managed
 cache/build state differs.
 
+The lane-local Cargo target-root optimization was then validated by run
+`91155ed7-9729-4877-8433-d14146428137`: 925 checks passed with zero failures in
+110,405 ms and retained the same terminal capability-table record. Each bounded
+native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lane now gets a temporary
+target root, while the capability-table probes reuse those roots rather than
+creating a second build. The retained log has zero `Blocking waiting for file
+lock on build directory` matches; package-cache waits can still occur while
+parallel lanes initialize. This is a correctness and lock-contention result,
+not a controlled speedup claim, because the managed cache/build state differs
+from the earlier runs.
+
 Coverage MCP run: `1874d075-0f81-4dd5-af27-33076f32d582`
 
 Snapshot: `da721d61-16f9-4bca-bcc8-a44e553e610c`

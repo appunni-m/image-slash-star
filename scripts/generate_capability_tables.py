@@ -7,8 +7,11 @@ The probe test in ``tests/capability_table.rs`` is included by the
 probe in every native lane and in every ``wasm32-wasip1`` lane under Node's
 WASI runtime, then assembles ``tests/fixtures/capability_tables.json``.
 Reusing ``feature_gate_tests`` lets these cargo invocations reuse artifacts
-already built by ``scripts/test_feature_matrix.sh``. Independent probe jobs
-run concurrently with the bounded
+already built by ``scripts/test_feature_matrix.sh``. When
+``CAPABILITY_TARGET_ROOT`` is set by that matrix, each probe also selects the
+lane-local Cargo target directory used by the matrix, avoiding a second build
+root while keeping independent lanes free of build-directory lock contention.
+Independent probe jobs run concurrently with the bounded
 ``CAPABILITY_JOBS`` setting so this acceptance check does not serialize every
 feature lane.
 
@@ -46,6 +49,7 @@ OPERATIONS = [
 ]
 FORMATS = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
 MARKER = "CAPABILITY_TABLE_JSON "
+CAPABILITY_TARGET_ROOT = "CAPABILITY_TARGET_ROOT"
 
 
 def capability_jobs() -> int:
@@ -94,15 +98,24 @@ def cargo_args(lane: str, target: str | None) -> list[str]:
     return args
 
 
+def lane_environment(group: str, lane: str) -> dict[str, str]:
+    root = os.environ.get(CAPABILITY_TARGET_ROOT)
+    if not root:
+        return {}
+    return {"CARGO_TARGET_DIR": str(Path(root) / f"target-{group}-{lane}")}
+
+
 def run_native_probe(lane: str, triple: str) -> dict:
     args = cargo_args(lane, None) + [PROBE, "--", "--exact", "--nocapture"]
-    env = {"CAPABILITY_TRIPLE": triple}
+    env = {"CAPABILITY_TRIPLE": triple, **lane_environment("native", lane)}
     return run_probe(args, env, lane, "native")
 
 
-def wasi_executable(args: list[str]) -> Path:
+def wasi_executable(args: list[str], env: dict[str, str]) -> Path:
+    process_env = dict(os.environ)
+    process_env.update(env)
     output = subprocess.run(
-        args, cwd=ROOT, check=True, capture_output=True, text=True
+        args, cwd=ROOT, check=True, capture_output=True, text=True, env=process_env
     ).stdout
     for line in output.splitlines():
         try:
@@ -120,11 +133,11 @@ def wasi_executable(args: list[str]) -> Path:
 
 def run_wasi_probe(lane: str, triple: str) -> dict:
     build_args = cargo_args(lane, "wasm32-wasip1")
-    executable = wasi_executable(build_args)
+    env = {"CAPABILITY_TRIPLE": triple, **lane_environment("wasm-wasi", lane)}
+    executable = wasi_executable(build_args, env)
     node = shutil.which("node")
     if not node:
         raise RuntimeError("node is required for the wasm32-wasip1 runtime lane")
-    env = {"CAPABILITY_TRIPLE": triple}
     args = [
         node,
         str(ROOT / "scripts" / "wasm_test_runner.js"),
