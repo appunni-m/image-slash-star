@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `226390d04d387698b474815ae93ef45c8932cd66`
+Reviewed: 2026-08-02 on the working tree based on revision `a148f2b8ff953a3a3f5194a08553a24d3c7fd916`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -230,7 +230,7 @@ Encode cancellation follows the same evidence boundary. Pillow has no
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
-They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP still,
+They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
 native AVIF still, and GIF-sequence output, stable pre-cancelled errors,
 successful token-aware sink writes, and PNG/BMP
 still sinks that can cancel between structural writes while retaining only the
@@ -245,6 +245,8 @@ checkpoints; WebP still encoding polls preparation, codec-result, and
 metadata-assembly boundaries; native AVIF still encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
 paths poll their implemented frame/coalescing/page/finalization checkpoints.
+ICO still encoding polls source-size validation, embedded PNG work or BMP row
+assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim
 universal interior interruption, deeper deflate/structural interruption,
@@ -272,7 +274,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`226390d04d387698b474815ae93ef45c8932cd66`, the generated matrix reports:
+`a148f2b8ff953a3a3f5194a08553a24d3c7fd916`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -752,9 +754,27 @@ retained log had zero build-directory lock-wait matches. Raising the default
 from three to four is retained as execution evidence rather than a controlled
 speedup claim because managed cache/build state can differ.
 
-Coverage MCP run: `d3e666cb-ae36-4581-ac4b-968a43f499b9`
+The ICO still-token matrix run
+`991a26ef-f7a6-40be-b2bb-c98be087bcce` passed 925 checks with zero failures in
+116,267 ms. The cancellation contract passed in all 22 retained feature lanes,
+the terminal record remained `capability tables OK: every native and
+wasm32-wasip1 lane agrees`, and the retained log had zero build-directory
+lock-wait matches. It ran against clean revision
+`112a26868428278cf49c12a64451c3ccbc156d30`; the later coverage-drill-only
+revision is recorded below. This is ordinary Rust operation-boundary evidence,
+not a generated Pillow parity row.
 
-Snapshot: `fd4dccce-b2ff-4336-ba00-e381c8aff8d0`
+Coverage MCP run: `58fdfa09-45c5-405f-98ca-696b2b626882`
+
+Snapshot: `5fc602a3-79ca-431e-adf3-b56b70413c4b`
+
+Coverage revision: `a148f2b8ff953a3a3f5194a08553a24d3c7fd916`
+
+Coverage MCP recorded 55 passed tests with zero failures and 100% line,
+branch, function, and region coverage: 47,719 lines, 6,558 branches, 2,664
+functions, and 74,330 regions. The ICO coverage-only sweep reaches nested
+embedded-PNG and BMP row/payload/directory cancellation edges; it is internal
+Rust evidence, not a synthetic Pillow parity case.
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
