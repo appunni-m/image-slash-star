@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `f97dd679d7d83d62e0d9b230556abdac4d7f94b5`
+Reviewed: 2026-08-02 on the working tree based on revision `45e19227bfbd1d1c9b21f03d2171955efd4f600c`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`f97dd679d7d83d62e0d9b230556abdac4d7f94b5`, identified by manifest SHA-256
+`45e19227bfbd1d1c9b21f03d2171955efd4f600c`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -127,8 +127,8 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`b6b8ca32-43ae-4967-8a76-93ca9cb364b8`, snapshot
-`40413717-4a71-41c4-ba82-d933435af06b`, passed 54 tests with zero failures
+`d690cb20-f078-4652-8c83-4892a1a880bc`, snapshot
+`5b2addef-2953-4d3c-8e50-be66bb7e470d`, passed 55 tests with zero failures
 or skips and reports 47,475/47,475 lines, 6,556/6,556 branches,
 2,657/2,657 functions, and 73,904/73,904 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
@@ -160,7 +160,7 @@ but row count and 100% structural coverage do not expand the assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, concurrency, and clone identity for a selected success per format | Lazy sequences; not-attempted versus cached-failure state; cache eviction; repeated verification cost |
-| Coverage | 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; row assertion origins remain separate | Full semantic manifest execution in a WASM runtime and a machine-readable origin inventory for every `cfg(coverage)` helper branch |
+| Coverage | 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; row assertion origins remain separate; every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -723,7 +723,6 @@ union. That has several consequences for this crate.
 | QA-001 | Current feature CI runs no-feature, each singleton, default, and all, but not relevant pairwise combinations or the full powerset. | Static cfg inventory plus targeted pairs for shared compression and ICO; a powerset only if runtime cost stays reasonable. |
 | QA-002 | The all-feature semantic manifest runs natively only. The feature-gate and capability-table suites now execute on `wasm32-wasip1`, but the full semantic matrix is still not executed in a WASM runtime. | Execute default, singleton, and all supported semantic rows in a real WASM runtime. |
 | QA-003 | Coverage is all-feature native coverage. Disabled-feature arms and target-only behavior are partly reached by separate tests or coverage hooks, not one semantic snapshot. | State coverage provenance per lane and compare native/WASM snapshots only where source mappings are compatible. |
-| QA-004 | `cfg(coverage)` exposes hidden exercise functions that call private branches with synthetic inputs. | Keep them only where a real fixture cannot reach a defensive branch; label every call's origin under TST-010. |
 | QA-005 | No no-panic matrix exists across all valid public modes, formats, options, and sequence shapes. | Add a compact generated fixture matrix; COR-002 shows validation plus 100% coverage did not guarantee panic freedom. |
 | QA-006 | The encode manifest samples many options but is not a Cartesian source-mode × target-format matrix. | Add one row per Pillow-accepted/rejected mode boundary and one cross-format decode→encode row for every claimed transcode. |
 | QA-008 | No exact public error-message policy exists, despite retaining oracle messages. | Decide whether Rust messages are stable; test kind plus structured fields, and treat Pillow text as diagnostic evidence rather than equality unless intentionally mapped. |
@@ -1161,6 +1160,14 @@ scope. The current clean revision was then validated by run
 1,296,952 ms, with the same capability-table terminal record. The two timings
 are retained as separate execution evidence rather than treated as a controlled
 benchmark because managed cache/build state differs.
+The capability probe now lives in the feature-gate integration target, so the
+matrix does not compile a second target for the final capability-table check.
+Run `0433b3d0-110e-4242-a088-c7acbc3cefa2` passed 925 checks with zero failures
+in 865,050 ms and retained the same terminal capability-table record; its 22
+additional checks are the reused probe in each native/WASI lane. The run was
+submitted before the worktree patch was committed as `45e1922`, so its recorded
+parent revision is retained as execution provenance rather than a clean
+revision comparison.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
