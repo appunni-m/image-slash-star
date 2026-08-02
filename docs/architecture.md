@@ -157,10 +157,12 @@ Duplicate `PLTE` and `tRNS` chunks keep the first palette result and produce
 Pillow-tolerated indexed-palette shape damage keeps the usable first result and
 produces `png_trns_overlong`, `png_missing_plte`, `png_empty_plte`,
 `png_partial_plte`, or `png_trns_without_plte`. A zero-frame APNG declaration
-falls back to the default PNG image with `png_apng_zero_frames`, and valid
-inflated bytes beyond the first raster produce `png_oversized_scanline`. These
-are Rust-only defensive diagnostics because Pillow exposes the successful
-pixels but no equivalent structured warning field.
+falls back to the default PNG image with `png_apng_zero_frames`; malformed APNG
+declarations that Pillow also accepts by falling back produce
+`png_duplicate_actl` or `png_actl_after_idat`; and valid inflated bytes beyond
+the first raster produce `png_oversized_scanline`. These are Rust-only
+defensive diagnostics because Pillow exposes the successful pixels but no
+equivalent structured warning field.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
