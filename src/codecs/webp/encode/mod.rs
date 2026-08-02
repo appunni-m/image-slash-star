@@ -15,19 +15,38 @@ pub mod vp8;
 /// Lossless uses the internal VP8L encoder.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
-    validate_options(opts)?;
-    let (encoded, alpha) = encode_pixels(img, opts)?;
-    attach_metadata(encoded, img.width, img.height, alpha, opts)
+    encode_with_token(img, opts, None)
 }
 
-fn encode_pixels(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<(Vec<u8>, bool)> {
+/// Encode a still WebP while polling an optional cooperative cancellation token.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &WebPEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
+    validate_options(opts)?;
+    let (encoded, alpha) = encode_pixels(img, opts, token)?;
+    crate::codecs::error::check_cancelled(token)?;
+    attach_metadata(encoded, img.width, img.height, alpha, opts, token)
+}
+
+fn encode_pixels(
+    img: &DecodedImage,
+    opts: &WebPEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, bool)> {
+    crate::codecs::error::check_cancelled(token)?;
     let prepared = prepare_pixels(img)?;
+    crate::codecs::error::check_cancelled(token)?;
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(&prepared, img.width, img.height)
     } else {
         encode_lossy(&prepared, img.width, img.height, opts)
     }?;
+    crate::codecs::error::check_cancelled(token)?;
     let alpha = prepared.has_nonopaque_alpha();
+    crate::codecs::error::check_cancelled(token)?;
     Ok((encoded, alpha))
 }
 
@@ -71,7 +90,7 @@ pub fn encode_sequence_with_token(
         crate::codecs::error::check_cancelled(token)?;
         validate_keyframe(sequence, frame)?;
         let duration = duration_milliseconds(frame.source.duration)?;
-        let (encoded, alpha) = encode_pixels(&frame.image, opts)?;
+        let (encoded, alpha) = encode_pixels(&frame.image, opts, token)?;
         has_alpha |= alpha;
         let chunks = if encoded.get(12..16) == Some(b"VP8X") {
             &encoded[30..]
@@ -347,11 +366,14 @@ fn attach_metadata(
     height: u32,
     alpha: bool,
     opts: &WebPEncodeOptions,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let icc = opts.icc.as_deref();
     let exif = opts.exif.as_deref();
     let xmp = opts.xmp.as_deref();
     if icc.is_none() && exif.is_none() && xmp.is_none() {
+        crate::codecs::error::check_cancelled(token)?;
         return Ok(encoded);
     }
     // Both internal encoders return a complete RIFF header. Lossy alpha output
@@ -379,20 +401,25 @@ fn attach_metadata(
     output.extend_from_slice(b"RIFF");
     output.extend_from_slice(&[0; 4]);
     output.extend_from_slice(b"WEBP");
+    crate::codecs::error::check_cancelled(token)?;
     let mut vp8x = vec![flags, 0, 0, 0];
     vp8x.extend_from_slice(&width.saturating_sub(1).to_le_bytes()[..3]);
     vp8x.extend_from_slice(&height.saturating_sub(1).to_le_bytes()[..3]);
     write_chunk(&mut output, b"VP8X", &vp8x);
+    crate::codecs::error::check_cancelled(token)?;
     if let Some(payload) = icc {
         write_chunk(&mut output, b"ICCP", payload);
+        crate::codecs::error::check_cancelled(token)?;
     }
     output.extend_from_slice(encoded_chunks);
     if let Some(payload) = exif {
         let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(payload);
         write_chunk(&mut output, b"EXIF", payload);
+        crate::codecs::error::check_cancelled(token)?;
     }
     if let Some(payload) = xmp {
         write_chunk(&mut output, b"XMP ", payload);
+        crate::codecs::error::check_cancelled(token)?;
     }
     #[cfg(coverage)]
     let output_len = if opts.force_riff_size_overflow() {
@@ -402,6 +429,7 @@ fn attach_metadata(
     };
     #[cfg(not(coverage))]
     let output_len = output.len();
+    crate::codecs::error::check_cancelled(token)?;
     finish_riff(output, output_len)
 }
 
@@ -500,7 +528,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut opts = WebPEncodeOptions::default();
     opts.icc = Some(vec![0]);
     opts.set_force_riff_size_overflow();
-    let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts);
+    let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts, None);
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::Rgb8);
     let mut opts = WebPEncodeOptions::default();

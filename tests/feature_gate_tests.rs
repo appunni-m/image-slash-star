@@ -1304,6 +1304,43 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
         assert_eq!(written, expected.len());
         assert_eq!(&sink[1..], expected.as_slice());
     }
+
+    if cfg!(feature = "webp") {
+        let data = fs::read(root.join("tests/fixtures/input/images/webp/lossy.webp"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::WebP);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::WebP, &options)?;
+        let token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_with_token(
+                &decoded.content,
+                ImageFormat::WebP,
+                &options,
+                &token,
+            )?,
+            expected,
+            "an uncancelled WebP still encode remains byte-identical"
+        );
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::encode_with_token(
+            &decoded.content,
+            ImageFormat::WebP,
+            &options,
+            &cancelled,
+        ) {
+            Ok(bytes) => {
+                return Err(
+                    format!("cancelled WebP still encode returned {} bytes", bytes.len()).into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::WebP));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+    }
     Ok(())
 }
 
