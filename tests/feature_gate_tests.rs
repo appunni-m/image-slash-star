@@ -6527,6 +6527,70 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(sink, vec![0xA5]);
     }
 
+    if cfg!(feature = "jpeg") {
+        // Pillow has no caller-controlled checkpoint budget or equivalent
+        // result. This is a Rust-only work-control contract, including the
+        // pre-write policy boundary for the generic whole-buffer sink path.
+        let image = DecodedImage::new(17, 17, vec![128; 17 * 17 * 3], ColorType::Rgb8);
+        let options = EncodeOptions::for_format(ImageFormat::Jpeg);
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        let expected = image_slash_star::encode(&image, ImageFormat::Jpeg, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Jpeg, &options, &unlimited,)?,
+            expected,
+            "an ample JPEG checkpoint budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(1);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Jpeg,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("bounded JPEG work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1,
+                observed,
+            } if observed > 1
+        ));
+
+        let zero = image_slash_star::EncodePolicy::new().with_max_work_units(0);
+        let mut sink = vec![0x5A];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Jpeg,
+            &options,
+            &zero,
+            &mut sink,
+        ) {
+            Ok(_) => return Err("zero JPEG work budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 0,
+                observed: 1,
+            }
+        ));
+        assert_eq!(
+            sink,
+            vec![0x5A],
+            "budget rejection must precede sink writes"
+        );
+    }
+
     if cfg!(feature = "gif") {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
