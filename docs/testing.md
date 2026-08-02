@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `ecbd9c2e3f17491f55737ad10a4518bf19518a91`
+Reviewed: 2026-08-02 on the committed tree based on revision `cb0f67d2e76e99eefc2595317fd49fb5202a7162`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -286,8 +286,8 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision
-`ecbd9c2e3f17491f55737ad10a4518bf19518a91`, the generated matrix reports:
+For the current committed tree based on revision
+`cb0f67d2e76e99eefc2595317fd49fb5202a7162`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -677,10 +677,10 @@ The accepted Coverage MCP result for the current implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,929 | 47,929 |
+| Lines | 47,926 | 47,926 |
 | Branches | 6,578 | 6,578 |
-| Functions | 2,684 | 2,684 |
-| Regions | 74,621 | 74,621 |
+| Functions | 2,683 | 2,683 |
+| Regions | 74,618 | 74,618 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -794,7 +794,7 @@ invocations by default under `target/feature-matrix`; `MATRIX_TARGET_ROOT` can
 select a disposable or cold root. A clean population run at commit `a518776`
 (`283eef63-e5ee-49d5-ad14-5f775e4c6ac5`) passed 925 checks in 99,851 ms, and
 its warm repeat (`4a1f025a-f014-4fcb-b716-e7bfbec95f29`) passed in 17,289 ms.
-After the ICO coverage-edge commit, the first run on the final source revision
+At the pre-work-budget final source revision after the ICO coverage-edge commit
 `ecbd9c2e3f17491f55737ad10a4518bf19518a91`
 (`f9dbed4a-b416-4966-93af-5922a7d8bd77`) passed in 61,916 ms while rebuilding
 changed lanes; its warm repeat (`6a22af78-9666-4bc9-a936-9d82cf9110ca`) passed
@@ -804,9 +804,10 @@ in 15,766 ms. Every run passed the terminal capability record
 waits can still occur while lanes initialize. The timings are execution and
 cache-retention evidence, not a universal benchmark claim.
 
-The test-thread and completion-scheduler follow-up was validated by run
-`2489ce0e-ba43-48ff-8617-9317e55f52d1`: 947 checks passed with zero failures in
-14,023 ms. It retained the same terminal capability record and had zero
+The test-thread and completion-scheduler follow-up was validated on committed
+revision `cb0f67d2e76e99eefc2595317fd49fb5202a7162` by run
+`d91c3f7c-9487-4648-a575-9737e443b2b0`: 947 checks passed with zero failures
+in 14,236 ms. It retained the same terminal capability record and had zero
 build-directory lock-wait matches; package-cache lock waits remain observable
 while isolated lanes initialize. The previous warm run with the same 947-check
 scope (`1eff0861-ffde-4be0-96c7-b297dea9384c`) took 15,307 ms. This is observed
@@ -816,15 +817,15 @@ host CPUs and the lane bound (capped at eight), and interleaves native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes under one
 completion-driven scheduler without dropping a lane or assertion.
 
-Coverage MCP run: `96198d23-1269-4158-9db1-0a814b709c96`
+Coverage MCP run: `f47985c1-50c8-4752-8d83-ad71973fc7c7`
 
-Snapshot: `216271ad-e9bc-498d-b8b5-881882881a13`
+Snapshot: `14b3897e-1477-4a60-96bf-4ddff5d56e02`
 
-Coverage revision: `deb04fd5a5a1e27634824fffa202b075c5aaea0d`
+Coverage revision: `cb0f67d2e76e99eefc2595317fd49fb5202a7162`
 
 Coverage MCP recorded 56 passed tests with zero failures and 100% line, branch,
-function, and region coverage: 47,929 lines, 6,578 branches, 2,684 functions,
-and 74,621 regions. The ICO still and one-frame ICO sequence sink cases and
+function, and region coverage: 47,926 lines, 6,578 branches, 2,683 functions,
+and 74,618 regions. The ICO still and one-frame ICO sequence sink cases and
 the deterministic encode work-budget contract execute the real dispatcher and
 structural/error paths; this is internal Rust evidence, not a synthetic Pillow
 parity case.
