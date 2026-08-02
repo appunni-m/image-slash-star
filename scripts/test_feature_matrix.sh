@@ -6,8 +6,22 @@ set -eu
 # independent feature configurations into lock contention. The lane-local
 # roots still reuse clippy, rustdoc, and test artifacts within that lane, and
 # the capability-table probe is pointed at the same roots below.
-# Set MATRIX_JOBS higher on machines with more spare CPU and memory.
-MATRIX_JOBS=${MATRIX_JOBS:-4}
+# Use roughly two logical CPUs per active lane by default, capped so a large
+# host does not turn the matrix into an unbounded process fan-out. Set
+# MATRIX_JOBS explicitly when a CI runner has a known capacity.
+matrix_cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '%s\n' 1)
+case "$matrix_cpu_count" in
+    ''|*[!0-9]*|0)
+        matrix_cpu_count=1
+        ;;
+esac
+MATRIX_JOBS=${MATRIX_JOBS:-}
+if [ -z "$MATRIX_JOBS" ]; then
+    MATRIX_JOBS=$(( (matrix_cpu_count + 1) / 2 ))
+    if [ "$MATRIX_JOBS" -gt 6 ]; then
+        MATRIX_JOBS=6
+    fi
+fi
 case "$MATRIX_JOBS" in
     ''|*[!0-9]*|0)
         echo "MATRIX_JOBS must be a positive integer" >&2
@@ -20,12 +34,6 @@ esac
 # the host CPU count while allowing a caller to tune it explicitly.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
-    matrix_cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '%s\n' 1)
-    case "$matrix_cpu_count" in
-        ''|*[!0-9]*|0)
-            matrix_cpu_count=1
-            ;;
-    esac
     MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
     if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
         MATRIX_TEST_THREADS=1

@@ -1301,10 +1301,21 @@ build-directory lock-wait matches; package-cache lock waits remain observable
 while isolated lanes initialize. The previous warm run with the same 947-check
 scope (`1eff0861-ffde-4be0-96c7-b297dea9384c`) took 15,307 ms. This is observed
 runtime evidence rather than a universal benchmark claim because managed
-cache/build state can differ. The harness now derives `--test-threads` from
-host CPUs and the lane bound (capped at eight), and interleaves native,
+cache/build state can differ. The harness derives `--test-threads` from host
+CPUs and the lane bound (capped at eight), and interleaves native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes under one
 completion-driven scheduler without dropping a lane or assertion.
+
+The next scheduling follow-up makes that lane bound host-aware: by default
+`MATRIX_JOBS` uses roughly two logical CPUs per active lane, capped at six,
+while retaining explicit `MATRIX_JOBS` and `MATRIX_TEST_THREADS` overrides.
+Runs `790238ad-e8d8-4fce-9974-71560ffaac5d` and
+`53c23521-c3d1-4b4b-9914-4b8d8f50883c` passed all 947 checks in 13,136 ms and
+12,116 ms. The four-lane baseline `91c9bc98-5f22-41d2-95ad-d981957f1f82`
+passed the same scope in 16,844 ms on the same managed environment. These are
+observed scheduling results rather than universal benchmark claims; the
+capability-table record remained unchanged and the retained logs had no
+build-directory lock waits.
 The sink-finalization follow-up was validated on committed revision
 `775263335df9680e4c453f666708745f53083e8f` by run
 `6ef08e71-abcf-4841-b30f-649529bb3bfc`: 947 checks passed with zero failures
