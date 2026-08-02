@@ -1475,24 +1475,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // hook makes the post-codec public-boundary cancellation checkpoint
     // deterministic; Pillow has no equivalent caller token to exercise this
     // Rust-only path.
-    let post_codec_cancel = crate::CancellationToken::new();
-    post_codec_cancel.cancel_after(1);
-    let _ = encode_format_with_token(
-        &luma,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        Some(&post_codec_cancel),
-    );
-    // Token-aware PNG work can finish before the dispatcher performs its
-    // final public-boundary check; keep that successful continuation covered
-    // separately from the deterministic cancellation drill above.
-    let post_codec_complete = crate::CancellationToken::new();
-    let _ = encode_format_with_token(
-        &luma,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        Some(&post_codec_complete),
-    );
+    // Token-aware PNG work adds internal polls before the dispatcher performs
+    // its final public-boundary check. Sweep a bounded count so the
+    // dispatcher-level cancellation edge is reached as well as the earlier
+    // codec-local edges; Pillow has no equivalent caller token.
+    for checks in 0..=20 {
+        let post_codec_cancel = crate::CancellationToken::new();
+        post_codec_cancel.cancel_after(checks);
+        let _ = encode_format_with_token(
+            &luma,
+            ImageFormat::Png,
+            &EncodeOptions::for_format(ImageFormat::Png),
+            Some(&post_codec_cancel),
+        );
+    }
 
     let two_frame_sequence = DecodedSequence {
         width: 1,
