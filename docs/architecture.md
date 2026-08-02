@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `a148f2b8ff953a3a3f5194a08553a24d3c7fd916`
+Reviewed: 2026-08-02 against the working tree based on `f90d28927b8e9461c712fa65431b1265b2f272cb`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -300,7 +300,7 @@ translation cannot be bypassed.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer or structural segment reaches a caller-owned sink |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; whole-buffer codecs use one write, while PNG and BMP still output cross structural write boundaries |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; whole-buffer codecs use one write, while PNG and BMP still plus one-frame BMP sequences output across structural write boundaries |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Token-aware sink encoding; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
@@ -429,19 +429,20 @@ the policy-aware sink wrappers apply it before the first sink write. An
 oversized result returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodedOutputBytes`, and the sink remains untouched. The
 whole-buffer codecs construct the complete buffer before this check. The PNG
-and BMP still sink paths instead preflight their complete lengths before
-emitting validated structures; PNG prepares filtered rows and compressed
-payload, while BMP prepares only bounded palette/row segments. Neither path is
-a transient-allocation or recoverable-OOM guarantee, and other codecs remain
-whole-buffer.
+and BMP still sink paths, plus the one-frame BMP sequence sink path, instead
+preflight their complete lengths before emitting validated structures; PNG
+prepares filtered rows and compressed payload, while BMP prepares only bounded
+palette/row segments. Neither path is a transient-allocation or recoverable-OOM
+guarantee, and other codecs remain whole-buffer.
 
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
 checkpoints, the WebP still writer polls at preparation, codec-result, and
-metadata-assembly boundaries, and the PNG and BMP still writers poll while
-preparing rows and between emitted structural segments in both return and sink
-paths. GIF, TIFF, WebP, and native AVIF sequence encoders
+metadata-assembly boundaries, and the PNG and BMP still writers plus the
+one-frame BMP sequence sink writer poll while preparing rows and between
+emitted structural segments in both return and sink paths. GIF, TIFF, WebP,
+and native AVIF sequence encoders
 additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
 prefix because no rollback contract exists. Progress callbacks, work-budget
@@ -724,12 +725,12 @@ The public return APIs are whole-buffer based:
 
 - inputs are borrowed byte slices or immutable encoded snapshots;
 - decoded pixels and return APIs allocate complete buffers; PNG and BMP still
-  sink delivery avoid a second final output buffer after their validated
-  working state is ready;
+  sink delivery, plus one-frame BMP sequence sink delivery, avoid a second
+  final output buffer after their validated working state is ready;
 - sequence APIs retain complete supported frame data; and
 - `OutputSink` is the caller-owned writer boundary; PNG and BMP still delivery
-  can emit validated structural segments, while other codecs retain the
-  whole-buffer fallback.
+  and one-frame BMP sequence delivery can emit validated structural segments,
+  while other codecs retain the whole-buffer fallback.
 
 `DecodePolicy` already bounds encoded input, the inspected primary canvas and
 transfer bytes, the inspected frame/page count, later-frame and cumulative
