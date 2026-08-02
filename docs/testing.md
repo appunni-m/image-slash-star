@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`3c10f9ccaf494c96d42982006be1434050bd9c5c`; the claim-ledger baseline remains
+`18a8f42297c2ba247b29e8c3c8d4fec2fff51abd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -307,8 +307,11 @@ A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
 untouched sink. TIFF Deflate additionally charges at each supplied input-row
-boundary and inside the level-six matcher; the TIFF contract uses a single wide
-row to prove a bounded rejection inside that matcher. Lossy WebP VP8
+boundary and inside the level-six matcher, then while expanding tokens,
+analyzing Huffman trees, emitting stored/fixed/dynamic bitstreams, copying
+stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
+a single wide row plus a materially larger budget to prove bounded rejection
+inside the matcher and emission path. Lossy WebP VP8
 additionally charges after color conversion,
 padding, analysis, segment parameters, mode selection, coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
@@ -363,9 +366,8 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row subsegments, TIFF Deflate matcher, and WebP
-VP8L stages, finer WebP work, Deflate emission/structural interruption,
-progress callbacks, short-write
+beyond the implemented PNG row subsegments, TIFF Deflate matcher/emission
+checkpoints, and WebP VP8L stages, finer WebP work, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
@@ -1446,6 +1448,36 @@ ingested snapshot `30bfa31d-99e7-45b7-bd62-322c2139210f`, retaining
 76,571/77,234 regions. The snapshot is unchanged from the prior Rust source
 revision because this slice changes only the test harness; it adds no parity
 row, fixture, diagnostic origin, or coverage-only hook.
+
+The current TIFF Deflate emission/structural checkpoint slice is implemented at
+`18a8f42297c2ba247b29e8c3c8d4fec2fff51abd`. Token-aware TIFF output now charges
+cooperative checkpoints while expanding tokens, analyzing Huffman frequencies
+and trees, emitting stored/fixed/dynamic bitstreams, copying stored-block
+bytes, and computing the Adler-32 trailer. The ordinary PNG/general no-token
+path remains byte-preserving. The Rust-only contract uses a materially larger
+budget on the same wide TIFF row to reach this emission path, rejects with the
+typed `EncodeWorkUnits` result, and leaves the sink untouched; Pillow exposes
+neither a caller token nor a work-budget result, so no parity row, fixture,
+diagnostic origin, or coverage-only hook was added.
+
+Managed Pillow parity run `3259b555-199c-4c7f-85cd-a83f3ef6a2df` passed
+1,445/1,445 checks with zero failures or skips in 46,451 ms. Coverage MCP run
+`dd13608e-9ecc-4c44-b66e-0681cb1a96c4` passed 83/83 tests in 46,770 ms and
+ingested snapshot `8316ea85-bbc0-4d25-ba9f-fb49bd82b9fe`, reporting
+49,345/49,742 lines, 6,773/6,836 branches, 2,750/2,817 functions, and
+76,720/77,428 regions. Compared with the preceding TIFF matcher snapshot
+`abe2f77d-d2e5-4137-91d7-b71f7160ad4e`, this adds 113 covered lines (+115
+total), four covered branches (+4 total), four covered functions (+4 total),
+and 149 covered regions (+194 total); the small rate changes reflect the new
+checkpoint branches. The aggregate snapshot retains the LLVM segment-
+normalization warning. Feature-matrix run
+`87eb1796-8fae-4ae9-8dc7-dbcaaf36989d` passed 947/947 checks in 68,760 ms;
+its retained log has no package-cache or build-directory lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+These are observed implementation and target-evidence records, separate from
+Pillow parity. Remaining other codec interior work, finer WebP work, transient
+allocation accounting, short/interrupted output, rollback, and any remaining
+non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
