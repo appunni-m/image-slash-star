@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `0bc56ba272307e789be49c91761189f63e3ce3b0`
+Reviewed: 2026-08-02 against the working tree based on `574cf282be0fb7074c663116cfa575820f4ba2b7`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -109,8 +109,9 @@ byte offset, and container-structure identity; prose is intentionally absent.
 The current manifest-proven kinds are ignored trailing data, accepted
 non-standard GIF graphic-control size, ignored invalid compressed PNG
 ancillary metadata, an accepted bad PNG `IDAT` CRC, an accepted invalid PNG
-reserved-bit chunk name, an accepted unknown ancillary chunk after `IDAT`, and
-an accepted static PNG stream without `IEND`.
+reserved-bit chunk name, an accepted unknown ancillary chunk after `IDAT`, an
+accepted static PNG stream without `IEND`, and accepted duplicate PNG
+palette/transparency chunks.
 A diagnostic reports a recoverable condition; it does not change pixels or turn
 Pillow's result into a new parity field. The
 `IDAT` CRC remains fatal at `verify()`.
@@ -151,6 +152,8 @@ and frame-data chunks (`acTL`, `fcTL`, and `fdAT`) are excluded from this
 static ordering diagnostic. A static PNG stream that reaches EOF without an
 `IEND` chunk produces `RecoveredStructure` with identity `png_missing_iend` and
 the EOF offset; structural verification still rejects the missing terminator.
+Duplicate `PLTE` and `tRNS` chunks keep the first palette result and produce
+`png_duplicate_plte` or `png_duplicate_trns` at the ignored chunk offset.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
@@ -561,8 +564,8 @@ The Rust diagnostic fields are a defensive/specification contract, not a
 Pillow-parity field. The committed diagnostic manifest proves the stable
 kind/stage/offset/identity values for accepted GIF recovery, invalid
 compressed PNG ancillary members, accepted PNG structural recoveries including
-missing `IEND`, and trailing input; Pillow success and unchanged pixels are
-recorded as supporting fixture evidence.
+duplicate palette chunks and missing `IEND`, and trailing input; Pillow success
+and unchanged pixels are recorded as supporting fixture evidence.
 
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.

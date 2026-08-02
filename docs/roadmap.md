@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `0bc56ba272307e789be49c91761189f63e3ce3b0`
+Reviewed: 2026-08-02 on the working tree based on revision `574cf282be0fb7074c663116cfa575820f4ba2b7`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`0bc56ba272307e789be49c91761189f63e3ce3b0`, identified by manifest SHA-256
+`574cf282be0fb7074c663116cfa575820f4ba2b7`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -127,10 +127,10 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`7a112d68-cb95-4e0f-9f25-bed935c4c0bb`, snapshot
-`af9a87b5-6d1b-431a-a2b4-43d98829e2ec`, passed 52 tests with zero failures
-or skips and reports 47,135/47,135 lines, 6,518/6,518 branches,
-2,647/2,647 functions, and 73,500/73,500 regions.
+`e02c362c-a707-4ab5-b740-f0f157e37b6d`, snapshot
+`f587cccd-4160-42aa-bc49-d02e4cf27268`, passed 52 tests with zero failures
+or skips and reports 47,166/47,166 lines, 6,518/6,518 branches,
+2,648/2,648 functions, and 73,511/73,511 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -361,7 +361,7 @@ Minute gaps:
 | PNG-004 | Pillow 12.2.0 still accepts `I` source save, with a deprecation warning for Pillow 13. | Freeze the pinned behavior in a fixture and decide whether compatibility outweighs a soon-removed oracle path. |
 | PNG-005 | Encoder always emits non-Adam7 PNG because pinned Pillow ignores the tested interlace option. | Keep behavior, but document this as oracle compatibility rather than general PNG encoder capability. |
 | PNG-006 | Inspection scans through pre-IDAT chunks and validates selected CRCs; it is not a fixed 33-byte metadata read. | Document complexity and add limits before advertising cheap inspection on arbitrary inputs. |
-| PNG-007 | Critical/ancillary CRC behavior, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs, an invalid reserved-bit character in an unknown ancillary chunk, an unknown ancillary chunk after `IDAT`, and a missing `IEND` terminator now produce Rust-only `RecoveredStructure` diagnostics during decode; valid APNG control/frame-data chunks are excluded from the ordering diagnostic, and `verify()` remains fatal for the bad CRC and missing terminator. | Complete the minimized decision matrix for construction-critical CRCs, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
+| PNG-007 | Critical/ancillary CRC behavior, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs, an invalid reserved-bit character in an unknown ancillary chunk, an unknown ancillary chunk after `IDAT`, a missing `IEND` terminator, and duplicate `PLTE`/`tRNS` chunks now produce Rust-only `RecoveredStructure` diagnostics during decode; valid APNG control/frame-data chunks are excluded from the ordering diagnostic, and `verify()` remains fatal for the bad CRC and missing terminator. | Complete the minimized decision matrix for construction-critical CRCs, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
 | PNG-008 | Text and ICC payloads are not decompressed or parsed, and chunk count and per-chunk size limits are still absent. The total ancillary extent, including retained opaque blocks, is bounded by `max_metadata_bytes` when a caller sets it. | Add explicit compressed-metadata and chunk-count limits under API-023 before semantic parsing. |
 | PNG-010 | `sBIT`, `cICP`, `mDCV`, `cLLI`, `iCCP`, `sRGB`, `gAMA`, and `cHRM` precedence is not represented. | Preserve exact fields first and publish a precedence statement without performing color conversion. |
 | PNG-011 | Direct 16-bit LA/RGB/RGBA encode modes are absent even though the decoder observes those source depths. | Add one mode at a time with big-endian sample fixtures and exact Pillow/reference output. |
@@ -1107,8 +1107,8 @@ writers remain open.
 Successful decodes now carry stable non-fatal diagnostics for accepted
 recoveries, invalid compressed PNG ancillary metadata, an accepted bad `IDAT`
 CRC, an accepted invalid PNG reserved-bit character, an accepted unknown
-ancillary chunk after `IDAT`, an accepted static PNG stream without `IEND`, and
-ignored trailing input; valid APNG
+ancillary chunk after `IDAT`, an accepted static PNG stream without `IEND`,
+accepted duplicate `PLTE`/`tRNS` chunks, and ignored trailing input; valid APNG
 control and frame-data chunks are excluded from the static ordering diagnostic.
 Their Rust-only fields are tested through a separate defensive-model
 manifest rather than the Pillow parity matrix. Unsupported valid-shape non-zero
@@ -1141,9 +1141,9 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`570661f6-f628-427a-8663-505ee665707e`, submitted against
-`0bc56ba272307e789be49c91761189f63e3ce3b0`; it passed 859 checks with zero
-failures in 1,453,001 ms, and its terminal log records `capability tables OK: every native
+`fd4f909d-9c5b-476d-bc25-65f994802f45`, submitted against
+`574cf282be0fb7074c663116cfa575820f4ba2b7`; it passed 859 checks with zero
+failures in 1,352,212 ms, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
 

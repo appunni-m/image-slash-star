@@ -284,7 +284,10 @@ without `IEND` remains decodable with a Rust-only
 `DiagnosticKind::RecoveredStructure` record named `png_missing_iend` at the
 EOF offset; structural verification still rejects the missing terminator. The
 diagnostic manifest asserts this field separately from Pillow parity because
-Pillow has no equivalent structured warning field.
+Pillow has no equivalent structured warning field. Pillow-tolerated duplicate
+`PLTE` and `tRNS` members keep the first palette result and produce separate
+Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
+`png_duplicate_trns`) at the ignored chunk offsets.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
