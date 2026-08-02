@@ -712,7 +712,6 @@ union. That has several consequences for this crate.
 | FTR-029 | Size attribution | There is no per-format attribution for Rust code, data tables, generated bindings, native shims, or compression after link-time optimization. | Produce additive singleton/default/all artifacts with identical compiler flags and report deltas without claiming they sum linearly. |
 | FTR-030 | Native oracle provenance | The `.oracle-venv` fallback recursively selects a filename beginning with `libavif` but does not verify libavif, dav1d, or libaom versions. The pkg-config path verifies only libavif's version, not its backend versions. | Query and record every native component version at build/test time and reject a mismatch before parity evidence is produced. |
 | FTR-031 | Linkage model | Native AVIF searches only dynamic-library forms and embeds/builds runtime search behavior. There is no static, musl, self-contained, or relocatable downstream artifact contract. | Keep this temporary oracle bridge explicitly unsupported for distribution; portable AVIF is the accepted solution rather than expanding native packaging. |
-| FTR-032 | Build invalidation | `build.rs` consults target-specific `CC_<target>`, `TARGET_CC`, `AR_<target>`, and `TARGET_AR`, but emits rerun directives only for plain `CC` and `AR`. Changing the selected cross tools may not rerun the build script. | Emit every consulted environment key and add a build-script decision test. |
 | FTR-033 | Target-OS classification | Library discovery recognizes Windows files, while linking panics outside macOS/Linux/Android. FreeBSD and other Unix targets are also unclassified; CI proves only Ubuntu. | Generate an explicit native-AVIF target table from build logic and fail capability discovery before compiler/linker side effects. |
 | FTR-034 | WASM artifact root | The crate builds as the default Rust library type only; it has no `cdylib`/binding wrapper, exported C/JS ABI, or generated package. A successful `wasm32` rlib build is not a consumable JavaScript codec. | Choose a thin binding crate or deliberate crate-type strategy after the Rust API settles, keeping codec features forwarded explicitly. |
 | FTR-035 | WASM target conflation | All `target_arch = "wasm32"` targets share the same AVIF and host-capability branches, although browser `wasm32-unknown-unknown`, WASI, and future component targets have different I/O/thread/runtime contracts. Runtime evidence is now keyed by full triple for `wasm32-wasip1`; `wasm32-unknown-unknown` remains compile/rustdoc-only. | Key capability evidence by full target triple and publish only triples with runtime tests. |
@@ -1057,7 +1056,12 @@ verifier, and the feature-evolution rule pins umbrella stability and additive
 subfeatures. Runtime capability tables are now emitted per feature lane on the
 native host and `wasm32-wasip1`, executed under Node's WASI preview1 in CI,
 and checked against a committed fixture; the exact feature-matrix command is
-registered with Coverage MCP. AVIF WASM operations now report staged
+registered with Coverage MCP. The optional AVIF build script now declares Cargo
+rerun triggers for every compiler and archiver variable it consults
+(`CC_<target>`, `TARGET_CC`, `CC`, and corresponding `AR` names). The dedicated
+build-script decision tests prove target-name normalization and
+specific-to-target-to-host precedence; this is build invalidation evidence, not
+Pillow parity evidence. AVIF WASM operations now report staged
 codec-level `Unsupported` errors that match capability discovery instead of a
 stale operation-free gate, and target-unavailable AVIF sequence/encode
 failures expose that reason through `unsupported_reason()`. `DecodedSequence`

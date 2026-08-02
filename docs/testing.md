@@ -1028,6 +1028,13 @@ parity. The `wasm32-wasip1` lanes are real runtime evidence for feature-gate
 and capability-table behavior; full semantic manifest execution in a WASM
 runtime remains planned.
 
+When the optional native AVIF bridge is enabled, `build.rs` declares Cargo
+rerun triggers for every compiler and archiver variable it consults:
+`CC_<target>`, `TARGET_CC`, `CC`, and the corresponding `AR` names. The
+`build_script_tests` target checks target-name normalization and the specific
+to-target-wide-to-host precedence. This is build invalidation evidence, not
+Pillow parity or implementation coverage for the codec itself.
+
 ### Coverage
 
 Repository agents must run coverage only through Coverage MCP and request line,

@@ -6,13 +6,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+#[path = "build_tool.rs"]
+mod build_tool;
+
 fn main() {
+    let target = required_env("TARGET");
     println!("cargo:rerun-if-changed=src/codecs/avif/native/bridge.c");
     println!("cargo:rerun-if-changed=third_party/libavif/include/avif/avif.h");
     println!("cargo:rerun-if-env-changed=IMAGE_SLASH_STAR_AVIF_LIB_DIR");
     println!("cargo:rerun-if-env-changed=IMAGE_SLASH_STAR_AVIF_LIB_NAME");
-    println!("cargo:rerun-if-env-changed=CC");
-    println!("cargo:rerun-if-env-changed=AR");
+    emit_target_tool_rerun_directives(&target);
 
     if env::var_os("CARGO_FEATURE_AVIF").is_none()
         || env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("wasm32")
@@ -22,10 +25,17 @@ fn main() {
 
     let manifest_dir = PathBuf::from(required_env("CARGO_MANIFEST_DIR"));
     let out_dir = PathBuf::from(required_env("OUT_DIR"));
-    let target = required_env("TARGET");
     let target_os = required_env("CARGO_CFG_TARGET_OS");
     compile_bridge(&manifest_dir, &out_dir, &target);
     link_libavif(&manifest_dir, &out_dir, &target_os);
+}
+
+fn emit_target_tool_rerun_directives(target: &str) {
+    for variable in ["CC", "AR"] {
+        for name in build_tool::target_tool_env_names(variable, target) {
+            println!("cargo:rerun-if-env-changed={name}");
+        }
+    }
 }
 
 fn compile_bridge(manifest_dir: &Path, out_dir: &Path, target: &str) {
@@ -203,11 +213,7 @@ fn link_library_file(library: &Path, out_dir: &Path, target_os: &str) {
 }
 
 fn target_tool(variable: &str, target: &str, fallback: &str) -> String {
-    let underscored = format!("{}_{}", variable, target.replace('-', "_"));
-    env::var(&underscored)
-        .or_else(|_| env::var(format!("TARGET_{variable}")))
-        .or_else(|_| env::var(variable))
-        .unwrap_or_else(|_| fallback.to_owned())
+    build_tool::target_tool_from_lookup(variable, target, fallback, |name| env::var(name).ok())
 }
 
 fn required_env(name: &str) -> String {
