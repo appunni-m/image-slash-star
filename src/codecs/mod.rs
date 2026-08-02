@@ -1094,6 +1094,7 @@ pub(crate) fn encode_sequence_to_sink_with_token(
     Ok(None)
 }
 
+#[cfg(any(feature = "bmp", feature = "png"))]
 fn single_frame_for_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,
