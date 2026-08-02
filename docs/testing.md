@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-02 against current implementation revision
-`5c129baba0bfa044b0b79d3842af69736b269519`; the claim-ledger baseline remains
+`2147fbf6e27241b4d25a06b8fa8a941cb83039d4`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -198,8 +198,8 @@ correct acceptance boundary. Its executed lines may appear in aggregate LLVM
 coverage, but that execution is not Pillow-parity coverage and no
 coverage-only test is used to manufacture it.
 
-The current implementation revision
-`5c129baba0bfa044b0b79d3842af69736b269519` is covered by Coverage MCP run
+The COR-061 acceptance record was collected against implementation revision
+`5c129baba0bfa044b0b79d3842af69736b269519` and is covered by Coverage MCP run
 `4f4cc8a0-c716-4667-8720-f0d96e1b77d5`, snapshot
 `24fe9c12-7cf7-4f2b-ac41-a1eda7e88828`: 72 tests passed with zero failures and
 the snapshot retains 48,615/48,938 lines, 6,659/6,714 branches,
@@ -232,13 +232,13 @@ mode, and destination results are Rust-only structured contracts; they do not
 add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
-format-specific structural paths for the enabled still encoders and the
-native AVIF sequence path. The remaining generic whole-buffer fallback is
-limited to sequence or codec paths that have not yet been assigned a
-structural writer. JPEG and TIFF still, GIF still and GIF sequence, WebP
-still, WebP one-frame sequence, ICO still, native AVIF still and sequence, and
-the other one-frame sequence deliveries use the structural paths described
-below. Each real public call must normalize a rejecting destination to
+format-specific structural paths for the enabled still and supported sequence
+encoders. The remaining generic whole-buffer fallback is limited to sequence
+or codec paths that have not yet been assigned a structural writer. JPEG and
+TIFF still and multi-page sequence, GIF still and GIF sequence, WebP still and
+sequence, ICO still, native AVIF still and sequence, and the other one-frame
+sequence deliveries use the structural paths described below. Each real public
+call must normalize a rejecting destination to
 `OutputWrite` with the selected format and corresponding `StillEncode` or
 `SequenceEncode` stage, without an input offset, container identity, or
 `UnsupportedReason`. These are Rust-only destination contracts: Pillow has no
@@ -280,7 +280,7 @@ unchanged. The test proves result admission before the first sink write; the
 PNG and BMP still paths additionally preflight their complete lengths before
 structural delivery. The WebP still structural-sink assertions in
 `output_sinks_receive_the_exact_encoded_bytes` prove the same preflight and
-delivery boundary. The TIFF still and one-frame sequence sink contract
+delivery boundary. The TIFF still and multi-page sequence sink contract
 separately proves exact-length preflight, multiple header/strip/IFD writes,
 option mismatch, and cancellation-prefix behavior. It does not prove
 transient allocation limits or recoverable OOM behavior. Its aggregate coverage
@@ -314,8 +314,8 @@ native AVIF still and sequence, GIF-sequence output, and one-frame WebP/ICO
 sequence sink output;
 stable pre-cancelled errors, successful token-aware sink writes, and
 JPEG/PNG/BMP/GIF/WebP/ICO/TIFF/native AVIF still and sequence sinks plus the
-one-frame WebP/TIFF sequence sinks that can cancel between structural writes
-while retaining only the delivered prefix. Native AVIF still and sequence
+WebP and multi-page TIFF sequence sinks that can cancel between structural
+writes while retaining only the delivered prefix. Native AVIF still and sequence
 sink delivery polls between validated top-level ISO-BMFF box segments. JPEG's
 codec-local coverage
 drill fires deterministic
@@ -365,7 +365,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`5c129baba0bfa044b0b79d3842af69736b269519`, the generated matrix reports:
+`2147fbf6e27241b4d25a06b8fa8a941cb83039d4`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -680,8 +680,8 @@ exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
 `encode_sequence_to_sink` over JPEG/PNG/BMP/GIF/WebP/ICO/TIFF/native AVIF
-still and sequence, one-frame BMP/WebP/ICO/TIFF sequence, GIF sequence, and
-multi-frame WebP sequence
+still and sequence, one-frame BMP/WebP/ICO sequence, multi-page TIFF sequence,
+GIF sequence, and multi-frame WebP sequence
 fixtures must write bytes
 identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
 and `&mut Vec<u8>` sinks. JPEG, PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
@@ -689,8 +689,9 @@ sequence, native AVIF still and sequence, one-frame WebP sequence, and
 multi-frame WebP sequence additionally
 prove
 multiple structural writes, policy preflight before the first write, and
-cancellation between writes; one-frame BMP, ICO, and TIFF sequence additionally
-prove multiple structural writes and policy preflight. GIF's structural split
+cancellation between writes; one-frame BMP and ICO, plus multi-page TIFF
+sequence, additionally prove multiple structural writes and policy preflight.
+GIF's structural split
 is its signature and logical-screen descriptor, color tables, extension/image
 sub-blocks, and trailer; the same validated block parser serves still and
 sequence delivery. WebP's structural split is its 12-byte RIFF
@@ -789,7 +790,7 @@ The same committed revision passed the adaptive feature matrix in run
 skips in 27,932 ms. The timings are retained execution evidence rather than a
 universal benchmark claim because managed cache and build state can differ.
 
-The current committed TIFF structural-sink acceptance result is Coverage MCP
+The earlier committed TIFF structural-sink acceptance result is Coverage MCP
 run `c6231d19-598d-4706-bdfd-9385e3c05b50`, snapshot
 `62014cef-25be-485e-a32f-ee1f9e9b606d`, at revision
 `8e2b3e82d11c8aacfc8f2b05a3931d4464412d53`:
@@ -1170,6 +1171,42 @@ wasm32-wasip1 lane agrees`; all 947 checks and feature assertions remain.
 This is runtime and harness evidence rather than a controlled speedup claim
 because managed cache and runner state can differ.
 
+## Latest implementation acceptance
+
+The current implementation revision is
+`2147fbf6e27241b4d25a06b8fa8a941cb83039d4`. The runtime-first parity follow-up
+is committed at `8c87e1d`: it keeps the active manifest at 1,417 rows and
+partitions the expensive GIF/WebP encode work into hot-row workers while
+keeping repeated source assets together. The current managed parity run
+`57b0915e-c5ab-4a67-807e-f2481b1caa03` passed 1,445 checks with zero failures
+or skips in 53,645 ms. Its retained output reports eight decode workers and
+nineteen encode workers, every one of which reports zero failed or skipped
+rows; the managed total is 1,417 active rows plus 28 worker test functions.
+The worker partition changes scheduling only: no manifest row, fixture,
+assertion, or Pillow provenance boundary changed. Managed durations are
+runner/cache-sensitive execution records, not a controlled speedup claim.
+
+The multi-page TIFF structural-sink implementation landed in
+`128406f` and the final feature-gating correction is `2147fbf`. TIFF sequence
+sink delivery now validates and preflights every page, relocates the page IFD
+chain, and emits the header, per-page strip/padding, and IFD/value spans as
+separate writes with cancellation checks between segments. The Rust-only
+acceptance test proves exact whole-buffer/sink byte identity and length,
+policy rejection before the first write, and cancellation after the initial
+TIFF header. Pillow has no caller-owned `OutputSink`, so this adds no parity
+row or fixture and no new coverage-only hook.
+
+Coverage MCP run `6b385efb-fdcd-42da-9059-dee67fd3378f` passed 83 tests with
+zero failures and ingested snapshot
+`ed494b17-21be-4861-b29d-c73c26148618` at revision `2147fbf`. The snapshot
+reports 48,721/49,086 lines, 6,668/6,728 branches, 2,734/2,801 functions,
+and 75,888/76,366 regions. The feature matrix run
+`88cebbb0-f70e-491b-9559-1b4cf6fea9d3` passed 947/947 checks in 66,855 ms;
+its retained log has no package-cache or build-directory lock-wait matches
+and ends with `capability tables OK: every native and wasm32-wasip1 lane
+agrees`. These aggregate and target-matrix results remain implementation
+evidence, separate from Pillow parity.
+
 Historical claim-ledger acceptance record:
 
 Coverage MCP run: `9bbe6760-7aa9-4ed8-8b31-bbf65444b85a`
@@ -1224,7 +1261,7 @@ Diagnostic manifest SHA-256:
 `bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822`
 
 Coverage-origin manifest SHA-256:
-`f6bc79c4d8011b1e4f7d41cc0fdd869d355f70f4ac6bc4b0ec0f3d0aecd0b043`
+`f6a5689522677786e9f1023cd910a09506866a9ee3ee1b7d23b0927811ca7aaf`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

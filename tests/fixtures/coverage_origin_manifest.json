@@ -106,9 +106,9 @@
         {"line": 654, "origin": "independent_implementation"},
         {"line": 662, "origin": "independent_implementation"},
         {"line": 669, "origin": "independent_implementation"},
-        {"line": 4121, "origin": "defensive_model"},
-        {"line": 4127, "origin": "independent_implementation"},
-        {"line": 4212, "origin": "independent_implementation"}
+        {"line": 4187, "origin": "defensive_model"},
+        {"line": 4193, "origin": "independent_implementation"},
+        {"line": 4278, "origin": "independent_implementation"}
       ]
     }
   ]
