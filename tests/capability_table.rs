@@ -4,7 +4,9 @@
 //! native and WASI lane, captures the single `CAPABILITY_TABLE_JSON` line, and
 //! assembles the committed `tests/fixtures/capability_tables.json` fixture.
 //! Running the probe is itself a test so every lane proves the emitted table
-//! is well-formed at runtime.
+//! is well-formed at runtime. The feature matrix can set
+//! `CAPABILITY_TABLE_OUTPUT` to persist that row without launching a second
+//! test process after the full lane suite.
 
 use image_slash_star::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
@@ -165,7 +167,7 @@ fn emit_runtime_capability_table() {
     }
     let target = capabilities_target_name();
     let lane = lane(&features);
-    println!(
+    let row = format!(
         "CAPABILITY_TABLE_JSON {{\"triple\":\"{}\",\"target\":\"{}\",\"lane\":\"{}\",\"features\":[{}],\"formats\":[{}]}}",
         json_escape(&triple),
         target,
@@ -173,6 +175,11 @@ fn emit_runtime_capability_table() {
         features_json,
         formats.join(",")
     );
+    if let Some(path) = std::env::var_os("CAPABILITY_TABLE_OUTPUT") {
+        std::fs::write(&path, format!("{row}\n"))
+            .unwrap_or_else(|error| panic!("cannot write capability table: {error}"));
+    }
+    println!("{row}");
 }
 
 fn capabilities_target_name() -> &'static str {
