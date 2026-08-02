@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`398e26f5fefb4bb8020427cd9e3f0be6780cab3b`; the claim-ledger baseline remains
+`748358a1810cfc00f686f6cc0a056fd9c1e669da`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -306,10 +306,14 @@ zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
-untouched sink. GIF LZW additionally charges an input-symbol checkpoint inside
-its dictionary pass; the contract proves ample-budget byte identity, typed
-interior rejection in both whole-buffer and direct-sink paths, and an untouched
-sink. TIFF Deflate additionally charges at each supplied input-row
+untouched sink. BMP row conversion additionally charges an interior checkpoint
+after each 1,024 pixels; the contract proves ample-budget byte identity and a
+typed whole-buffer rejection, while its direct structural sink preserves the
+validated header prefix before the same interior rejection. GIF LZW additionally
+charges an input-symbol checkpoint inside its dictionary pass; the contract
+proves ample-budget byte identity, typed interior rejection in both
+whole-buffer and direct-sink paths, and an untouched sink. TIFF Deflate
+additionally charges at each supplied input-row
 boundary and inside the level-six matcher, then while expanding tokens,
 analyzing Huffman trees, emitting stored/fixed/dynamic bitstreams, copying
 stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
@@ -353,6 +357,7 @@ subsegments after each 1,024 row bytes, and the still and sink paths poll
 between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
 level-six matcher candidate/insertion/fizzle/position boundaries;
+BMP still encoding also polls 1,024-pixel row-conversion subsegments;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints and polls GIF LZW input-symbol intervals; WebP still encoding polls preparation, lossy VP8
 analysis/mode-selection/coefficient-probability/bitstream stages, lossless
@@ -1548,6 +1553,35 @@ warning. These are implementation and target-lane records separate from
 Pillow parity. Other codec interior work, finer WebP work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
+
+The current BMP row-conversion interior checkpoint slice is implemented at
+`748358a1810cfc00f686f6cc0a056fd9c1e669da`. Token-aware BMP still encoding now
+polls after each 1,024 pixels while converting a wide indexed or true-color
+row. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract proves ample-
+budget byte identity, a typed whole-buffer `EncodeWorkUnits` rejection at the
+interior interval, and the same direct-sink rejection while preserving the
+already-delivered validated BMP header prefix. Pillow exposes neither a caller
+token nor a work-budget result, so this adds no parity row, fixture, diagnostic
+origin, or coverage-only hook.
+
+Managed Pillow parity run `60608903-8d58-42a7-a52a-be78651582c1` passed
+1,445/1,445 checks with zero failures or skips in 77,292 ms. Feature-matrix
+run `3cbbefd8-7244-4596-ae27-cc5dcc8a8f6d` passed 991/991 checks in 94,445
+ms; its retained log has no build-directory or package-cache lock-wait
+matches and ends with `capability tables OK: every native and wasm32-wasip1
+lane agrees`. Coverage MCP run `9f6273f0-80a9-4fef-933f-ea7a4d13fcf8` passed
+85/85 tests in 82,885 ms and ingested snapshot
+`b1cb1124-85b3-4b40-994f-7b9f8a4f831e`, reporting 49,352/49,749 lines,
+6,777/6,840 branches, 2,750/2,817 functions, and 76,733/77,441 regions.
+Compared with snapshot `94811710-aa78-4aad-b64f-7145f8fab17e`, this adds two
+covered lines (+2 total), four covered branches (+4 total), and nine covered
+regions (+9 total), with functions unchanged; every new BMP row-conversion
+line and branch is covered. The aggregate snapshot retains the LLVM
+segment-normalization warning. These are implementation and target-lane
+records separate from Pillow parity. Remaining other codec interior work,
+finer WebP work, transient allocation accounting, short/interrupted output,
+rollback, and remaining non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
