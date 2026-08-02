@@ -29,6 +29,14 @@
     clippy::cast_sign_loss
 )]
 
+type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
+type CheckpointResult<T> = Result<T, super::EncodingError>;
+
+#[inline]
+fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
+    super::check_token(token)
+}
+
 #[derive(Clone, Copy, Default)]
 struct Multipliers {
     green_to_red: u8,
@@ -107,6 +115,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Multipliers::default(),
         10,
         &accumulated,
+        None,
     );
     let _ = best_blue_multipliers(
         &pixels,
@@ -117,9 +126,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Multipliers::default(),
         40,
         &accumulated,
+        None,
     );
     let mut sampling = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
-    let _ = optimize_sampling(&mut sampling, 4, 4, 0);
+    let _ = optimize_sampling(&mut sampling, 4, 4, 0, None);
 }
 
 pub(super) fn prediction_bias(counts: &[u32; 256], zero_weight: u64, mut exponential: u64) -> i64 {
@@ -145,14 +155,18 @@ fn collect_red(
     width: usize,
     height: usize,
     multiplier: i32,
-) -> [u32; 256] {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<[u32; 256]> {
     let mut histogram = [0_u32; 256];
-    for row in argb.chunks(stride).take(height) {
+    for (row_index, row) in argb.chunks(stride).take(height).enumerate() {
+        if row_index.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         for &pixel in &row[..width] {
             histogram[usize::from(transformed_red(multiplier, pixel))] += 1;
         }
     }
-    histogram
+    Ok(histogram)
 }
 
 fn collect_blue(
@@ -162,14 +176,18 @@ fn collect_blue(
     height: usize,
     green_multiplier: i32,
     red_multiplier: i32,
-) -> [u32; 256] {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<[u32; 256]> {
     let mut histogram = [0_u32; 256];
-    for row in argb.chunks(stride).take(height) {
+    for (row_index, row) in argb.chunks(stride).take(height).enumerate() {
+        if row_index.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         for &pixel in &row[..width] {
             histogram[usize::from(transformed_blue(green_multiplier, red_multiplier, pixel))] += 1;
         }
     }
-    histogram
+    Ok(histogram)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -182,8 +200,9 @@ fn red_cost(
     previous_y: Multipliers,
     multiplier: i32,
     accumulated: &[u32; 256],
-) -> i64 {
-    let histogram = collect_red(argb, stride, width, height, multiplier);
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<i64> {
+    let histogram = collect_red(argb, stride, width, height, multiplier, token)?;
     let mut cost = prediction_cost(&histogram, accumulated);
     let multiplier = multiplier as u8;
     if multiplier == previous_x.green_to_red {
@@ -195,7 +214,7 @@ fn red_cost(
     if multiplier == 0 {
         cost -= 3_i64 << 23;
     }
-    cost
+    Ok(cost)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -208,7 +227,8 @@ fn best_green_to_red(
     previous_y: Multipliers,
     quality: i32,
     accumulated: &[u32; 256],
-) -> u8 {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u8> {
     let iterations = 4 + ((7 * quality) >> 8);
     let mut best = 0_i32;
     let mut best_cost = red_cost(
@@ -220,8 +240,10 @@ fn best_green_to_red(
         previous_y,
         best,
         accumulated,
-    );
+        token,
+    )?;
     for iteration in 0..iterations {
+        checkpoint(token)?;
         let delta = 32 >> iteration;
         for offset in [-delta, delta] {
             let candidate = best + offset;
@@ -234,14 +256,15 @@ fn best_green_to_red(
                 previous_y,
                 candidate,
                 accumulated,
-            );
+                token,
+            )?;
             if cost < best_cost {
                 best_cost = cost;
                 best = candidate;
             }
         }
     }
-    best as u8
+    Ok(best as u8)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -255,7 +278,8 @@ fn blue_cost(
     green_multiplier: i32,
     red_multiplier: i32,
     accumulated: &[u32; 256],
-) -> i64 {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<i64> {
     let histogram = collect_blue(
         argb,
         stride,
@@ -263,7 +287,8 @@ fn blue_cost(
         height,
         green_multiplier,
         red_multiplier,
-    );
+        token,
+    )?;
     let mut cost = prediction_cost(&histogram, accumulated);
     let green_multiplier = green_multiplier as u8;
     let red_multiplier = red_multiplier as u8;
@@ -285,7 +310,7 @@ fn blue_cost(
     if red_multiplier == 0 {
         cost -= 3_i64 << 23;
     }
-    cost
+    Ok(cost)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -298,7 +323,8 @@ fn best_blue_multipliers(
     previous_y: Multipliers,
     quality: i32,
     accumulated: &[u32; 256],
-) -> (u8, u8) {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(u8, u8)> {
     const OFFSETS: [(i32, i32); 8] = [
         (0, -1),
         (0, 1),
@@ -329,8 +355,10 @@ fn best_blue_multipliers(
         best_green,
         best_red,
         accumulated,
-    );
+        token,
+    )?;
     for &delta in &DELTAS[..iterations] {
+        checkpoint(token)?;
         for &(green_offset, red_offset) in &OFFSETS {
             let green = best_green + green_offset * delta;
             let red = best_red + red_offset * delta;
@@ -344,7 +372,8 @@ fn best_blue_multipliers(
                 green,
                 red,
                 accumulated,
-            );
+                token,
+            )?;
             if cost < best_cost {
                 best_cost = cost;
                 best_green = green;
@@ -355,7 +384,7 @@ fn best_blue_multipliers(
             break;
         }
     }
-    (best_green as u8, best_red as u8)
+    Ok((best_green as u8, best_red as u8))
 }
 
 fn transform_tile(
@@ -364,8 +393,12 @@ fn transform_tile(
     width: usize,
     height: usize,
     multipliers: Multipliers,
-) {
-    for row in argb.chunks_mut(stride).take(height) {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<()> {
+    for (row_index, row) in argb.chunks_mut(stride).take(height).enumerate() {
+        if row_index.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         for pixel in &mut row[..width] {
             let source = *pixel;
             let green = signed_byte(source >> 8);
@@ -378,6 +411,7 @@ fn transform_tile(
                 (source & 0xff00_ff00) | ((new_red as u32 & 0xff) << 16) | (new_blue as u32 & 0xff);
         }
     }
+    Ok(())
 }
 
 #[inline]
@@ -390,12 +424,14 @@ pub(super) fn optimize_sampling(
     full_width: usize,
     full_height: usize,
     bits: u8,
-) -> u8 {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u8> {
     const MAX_BITS: u8 = 9;
     let original_width = subsample_size(full_width, bits);
     let original_height = subsample_size(full_height, bits);
     let mut best_bits = bits;
     while best_bits < MAX_BITS {
+        checkpoint(token)?;
         let next_square = 1_usize << (best_bits + 1 - bits);
         let square = 1_usize << (best_bits - bits);
         let rows_equal = (0..original_height.saturating_sub(square))
@@ -410,6 +446,7 @@ pub(super) fn optimize_sampling(
         best_bits += 1;
     }
     while best_bits > bits {
+        checkpoint(token)?;
         let square = 1_usize << (best_bits - bits);
         let columns_equal = (0..original_height).all(|y| {
             (0..original_width).step_by(square).all(|x| {
@@ -424,17 +461,20 @@ pub(super) fn optimize_sampling(
         best_bits -= 1;
     }
     if best_bits == bits {
-        return bits;
+        return Ok(bits);
     }
     let square = 1_usize << (best_bits - bits);
     let width = subsample_size(full_width, best_bits);
     let height = subsample_size(full_height, best_bits);
     for y in 0..height {
+        if y.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         for x in 0..width {
             image[y * width + x] = image[square * (y * original_width + x)];
         }
     }
-    best_bits
+    Ok(best_bits)
 }
 
 /// Selects and applies libwebp's cross-color transform.
@@ -445,7 +485,8 @@ pub(crate) fn select_and_apply(
     height: usize,
     bits: u8,
     quality: i32,
-) -> (Vec<u32>, u8) {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(Vec<u32>, u8)> {
     let tile_width = subsample_size(width, bits);
     let tile_height = subsample_size(height, bits);
     let tile_size = 1_usize << bits;
@@ -455,6 +496,7 @@ pub(crate) fn select_and_apply(
     let mut previous_y;
     let mut previous_x = Multipliers::default();
     for tile_y in 0..tile_height {
+        checkpoint(token)?;
         previous_y = Multipliers::default();
         for tile_x in 0..tile_width {
             if tile_y != 0 {
@@ -479,7 +521,8 @@ pub(crate) fn select_and_apply(
                 previous_y,
                 quality,
                 &accumulated_red,
-            );
+                token,
+            )?;
             let (green_to_blue, red_to_blue) = best_blue_multipliers(
                 tile,
                 width,
@@ -489,7 +532,8 @@ pub(crate) fn select_and_apply(
                 previous_y,
                 quality,
                 &accumulated_blue,
-            );
+                token,
+            )?;
             previous_x = Multipliers {
                 green_to_red,
                 green_to_blue,
@@ -505,8 +549,12 @@ pub(crate) fn select_and_apply(
                 current_width,
                 current_height,
                 previous_x,
-            );
-            for row_y in y..y + current_height {
+                token,
+            )?;
+            for (row_index, row_y) in (y..y + current_height).enumerate() {
+                if row_index.is_multiple_of(16) {
+                    checkpoint(token)?;
+                }
                 let row_start = row_y * width + x;
                 for index in row_start..row_start + current_width {
                     let pixel = argb[index];
@@ -526,7 +574,7 @@ pub(crate) fn select_and_apply(
             }
         }
     }
-    let best_bits = optimize_sampling(&mut image, width, height, bits);
+    let best_bits = optimize_sampling(&mut image, width, height, bits, token)?;
     image.truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));
-    (image, best_bits)
+    Ok((image, best_bits))
 }

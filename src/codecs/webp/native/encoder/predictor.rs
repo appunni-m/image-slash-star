@@ -33,6 +33,14 @@ const ARGB_BLACK: u32 = 0xff00_0000;
 const MODE_COUNT: usize = 14;
 const HISTOGRAM_SIZE: usize = 4 * 256;
 
+type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
+type CheckpointResult<T> = Result<T, super::EncodingError>;
+
+#[inline]
+fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
+    super::check_token(token)
+}
+
 #[inline]
 fn average2(a: u32, b: u32) -> u32 {
     (((a ^ b) & 0xfefe_fefe) >> 1).wrapping_add(a & b)
@@ -144,7 +152,8 @@ fn tile_histogram(
     start_y: usize,
     tile_size: usize,
     mode: usize,
-) -> [u32; HISTOGRAM_SIZE] {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<[u32; HISTOGRAM_SIZE]> {
     let end_x = (start_x + tile_size).min(width);
     let end_y = (start_y + tile_size).min(height);
     let mut histogram = [0_u32; HISTOGRAM_SIZE];
@@ -156,14 +165,20 @@ fn tile_histogram(
             upper[width] = source[start_y * width];
         }
     }
-    for y in start_y..end_y {
+    for (row_index, y) in (start_y..end_y).enumerate() {
+        if row_index.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         current[..width].copy_from_slice(&source[y * width..(y + 1) * width]);
         current[width] = if y + 1 < height {
             source[(y + 1) * width]
         } else {
             0
         };
-        for x in start_x..end_x {
+        for (column_index, x) in (start_x..end_x).enumerate() {
+            if column_index.is_multiple_of(256) {
+                checkpoint(token)?;
+            }
             let prediction = if y == 0 {
                 if x == 0 { ARGB_BLACK } else { current[x - 1] }
             } else if x == 0 {
@@ -183,7 +198,7 @@ fn tile_histogram(
         }
         std::mem::swap(&mut upper, &mut current);
     }
-    histogram
+    Ok(histogram)
 }
 
 // Both inputs are fixed 4×256 arrays, so every plane conversion is exact.
@@ -217,12 +232,22 @@ fn spatial_cost(
 // The caller validates `width * height == source.len()` and constructs the
 // matching mode grid before entering this reference traversal.
 #[allow(clippy::arithmetic_side_effects)]
-fn apply_modes(source: &mut [u32], width: usize, height: usize, bits: u8, modes: &[u32]) {
+fn apply_modes(
+    source: &mut [u32],
+    width: usize,
+    height: usize,
+    bits: u8,
+    modes: &[u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<()> {
     let tiles_per_row = (width + (1_usize << bits) - 1) >> bits;
     let original = source.to_vec();
     let mut upper = vec![0_u32; width + 1];
     let mut current = vec![0_u32; width + 1];
     for y in 0..height {
+        if y.is_multiple_of(16) {
+            checkpoint(token)?;
+        }
         current[..width].copy_from_slice(&original[y * width..(y + 1) * width]);
         current[width] = if y + 1 < height {
             original[(y + 1) * width]
@@ -250,6 +275,7 @@ fn apply_modes(source: &mut [u32], width: usize, height: usize, bits: u8, modes:
         }
         std::mem::swap(&mut upper, &mut current);
     }
+    Ok(())
 }
 
 /// Selects and applies libwebp's predictor transform for Pillow's method-four
@@ -263,7 +289,8 @@ pub(crate) fn select_and_apply(
     width: usize,
     height: usize,
     bits: u8,
-) -> (Vec<u32>, u8) {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(Vec<u32>, u8)> {
     let tile_size = 1_usize << bits;
     let tiles_per_row = (width + tile_size - 1) >> bits;
     let tiles_per_column = (height + tile_size - 1) >> bits;
@@ -271,6 +298,9 @@ pub(crate) fn select_and_apply(
     let mut accumulated = [0_u32; HISTOGRAM_SIZE];
     for tile_y in 0..tiles_per_column {
         for tile_x in 0..tiles_per_row {
+            if tile_x.is_multiple_of(4) {
+                checkpoint(token)?;
+            }
             let left_mode = (tile_x > 0)
                 .then(|| ((modes[tile_y * tiles_per_row + tile_x - 1] >> 8) & 0xff) as usize);
             let above_mode = (tile_y > 0)
@@ -287,7 +317,8 @@ pub(crate) fn select_and_apply(
                     tile_y * tile_size,
                     tile_size,
                     mode,
-                );
+                    token,
+                )?;
                 let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
                 if cost < best_cost {
                     best_cost = cost;
@@ -301,13 +332,13 @@ pub(crate) fn select_and_apply(
             modes[tile_y * tiles_per_row + tile_x] = ARGB_BLACK | ((best_mode as u32) << 8);
         }
     }
-    apply_modes(source, width, height, bits, &modes);
-    let best_bits = optimize_sampling(&mut modes, width, height, bits);
+    apply_modes(source, width, height, bits, &modes, token)?;
+    let best_bits = optimize_sampling(&mut modes, width, height, bits, token)?;
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
-    (modes, best_bits)
+    Ok((modes, best_bits))
 }
 
 // Encoder geometry and the caller-selected predictor mode satisfy the same
@@ -319,34 +350,35 @@ pub(crate) fn apply_fixed(
     height: usize,
     bits: u8,
     mode: usize,
-) -> (Vec<u32>, u8) {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(Vec<u32>, u8)> {
     let tile_size = 1_usize << bits;
     let tiles_per_row = (width + tile_size - 1) >> bits;
     let tiles_per_column = (height + tile_size - 1) >> bits;
     let mut modes = vec![ARGB_BLACK | ((mode as u32) << 8); tiles_per_row * tiles_per_column];
-    apply_modes(source, width, height, bits, &modes);
-    let best_bits = optimize_sampling(&mut modes, width, height, bits);
+    apply_modes(source, width, height, bits, &modes, token)?;
+    let best_bits = optimize_sampling(&mut modes, width, height, bits, token)?;
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
-    (modes, best_bits)
+    Ok((modes, best_bits))
 }
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = select_and_apply(&mut source, 2, 2, 1);
+    let _ = select_and_apply(&mut source, 2, 2, 1, None);
     let source = vec![0xff00_0000, 0x0000_0001];
-    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0);
+    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0, None);
     let source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0);
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, None);
     let source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0);
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, None);
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
     let mut source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
     let mut source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
 }

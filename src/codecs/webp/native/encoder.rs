@@ -104,7 +104,9 @@ fn build_huffman_tree(
     lengths: &mut [u8],
     codes: &mut [u16],
     length_limit: u8,
-) -> bool {
+    token: Option<&crate::CancellationToken>,
+) -> Result<bool, EncodingError> {
+    check_token(token)?;
     assert_eq!(frequencies.len(), lengths.len());
     assert_eq!(frequencies.len(), codes.len());
 
@@ -132,10 +134,11 @@ fn build_huffman_tree(
         if let Some(symbol) = optimized.iter().position(|&frequency| frequency != 0) {
             lengths[symbol] = 1;
         }
-        return false;
+        return Ok(false);
     }
     let mut count_min = 1_u32;
     loop {
+        check_token(token)?;
         let mut nodes = optimized
             .iter()
             .enumerate()
@@ -153,6 +156,7 @@ fn build_huffman_tree(
                 .then_with(|| left.sort_value.cmp(&right.sort_value))
         });
         while nodes.len() > 1 {
+            check_token(token)?;
             let left = nodes.pop().unwrap();
             let right = nodes.pop().unwrap();
             let count = left.count + right.count;
@@ -173,6 +177,7 @@ fn build_huffman_tree(
         lengths.fill(0);
         let mut stack = vec![(&nodes[0].node, 0_u8)];
         while let Some((node, depth)) = stack.pop() {
+            check_token(token)?;
             match node {
                 Node::Leaf(value) => lengths[*value] = depth,
                 Node::Branch(left, right) => {
@@ -191,6 +196,7 @@ fn build_huffman_tree(
     codes.fill(0);
     let mut code = 0u32;
     for len in 1..=length_limit {
+        check_token(token)?;
         for (i, &length) in lengths.iter().enumerate() {
             if length == len {
                 codes[i] = (code as u16).reverse_bits() >> (16 - len);
@@ -199,7 +205,7 @@ fn build_huffman_tree(
         }
         code <<= 1;
     }
-    true
+    Ok(true)
 }
 
 fn optimize_huffman_for_rle(counts: &mut [u32]) {
@@ -339,8 +345,9 @@ fn write_huffman_tree(
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
-) {
-    build_huffman_tree(frequencies, lengths, codes, 15);
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    build_huffman_tree(frequencies, lengths, codes, 15, token)?;
     let symbols = lengths
         .iter()
         .enumerate()
@@ -368,21 +375,22 @@ fn write_huffman_tree(
             lengths[symbols[1]] = 1;
             codes[symbols[1]] = 1;
         }
-        return;
+        return Ok(());
     }
     let tokens = compressed_huffman_tokens(lengths);
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
-    for token in &tokens {
-        code_length_frequencies[usize::from(token.code)] += 1;
+    for huffman_token in &tokens {
+        code_length_frequencies[usize::from(huffman_token.code)] += 1;
     }
     build_huffman_tree(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
         7,
-    );
+        token,
+    )?;
     const CODE_LENGTH_ORDER: [usize; 19] = [
         17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ];
@@ -391,6 +399,7 @@ fn write_huffman_tree(
     w.write_bits(0, 1); // normal huffman tree
     let mut codes_to_store = 19;
     while codes_to_store > 4 && code_length_lengths[CODE_LENGTH_ORDER[codes_to_store - 1]] == 0 {
+        check_token(token)?;
         codes_to_store -= 1;
     }
     w.write_bits((codes_to_store - 4) as u64, 4);
@@ -439,19 +448,21 @@ fn write_huffman_tree(
     } else {
         tokens.len()
     };
-    for token in &tokens[..token_count] {
-        let symbol = usize::from(token.code);
+    for huffman_token in &tokens[..token_count] {
+        check_token(token)?;
+        let symbol = usize::from(huffman_token.code);
         let code = u64::from(code_length_codes[symbol]);
         let code_length = code_length_lengths[symbol];
         w.write_bits(code, code_length);
-        let bits = match token.code {
+        let bits = match huffman_token.code {
             16 => 2,
             17 => 3,
             18 => 7,
             _ => 0,
         };
-        w.write_bits(u64::from(token.extra), bits);
+        w.write_bits(u64::from(huffman_token.extra), bits);
     }
+    Ok(())
 }
 
 const fn length_to_symbol(len: usize) -> (usize, u8) {
@@ -631,7 +642,11 @@ fn optimize_sampling(
     Ok(best_bits)
 }
 
-fn write_group(w: &mut BitWriter<'_>, populations: &[Vec<u32>; 5]) -> GroupCodes {
+fn write_group(
+    w: &mut BitWriter<'_>,
+    populations: &[Vec<u32>; 5],
+    token: Option<&crate::CancellationToken>,
+) -> Result<GroupCodes, EncodingError> {
     let mut lengths = populations
         .each_ref()
         .map(|frequency| vec![0; frequency.len()]);
@@ -639,12 +654,13 @@ fn write_group(w: &mut BitWriter<'_>, populations: &[Vec<u32>; 5]) -> GroupCodes
         .each_ref()
         .map(|frequency| vec![0; frequency.len()]);
     for channel in 0..5 {
+        check_token(token)?;
         let population = &populations[channel];
         let channel_lengths = &mut lengths[channel];
         let channel_codes = &mut codes[channel];
-        write_huffman_tree(w, population, channel_lengths, channel_codes);
+        write_huffman_tree(w, population, channel_lengths, channel_codes, token)?;
     }
-    GroupCodes { lengths, codes }
+    Ok(GroupCodes { lengths, codes })
 }
 
 fn write_token_stream(
@@ -668,9 +684,17 @@ fn write_token_stream(
     }
     let height = pixels.len() / width;
     let (mut symbols, histograms) = if write_meta_huffman_bit {
-        histogram::cluster(tokens, width, height, cache_bits, quality, histogram_bits)
+        histogram::cluster(
+            tokens,
+            width,
+            height,
+            cache_bits,
+            quality,
+            histogram_bits,
+            token,
+        )?
     } else {
-        histogram::cluster(tokens, width, height, cache_bits, quality, 31)
+        histogram::cluster(tokens, width, height, cache_bits, quality, 31, token)?
     };
     check_token(token)?;
     let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
@@ -701,7 +725,7 @@ fn write_token_stream(
     let mut groups = Vec::with_capacity(histograms.len());
     for histogram in &histograms {
         check_token(token)?;
-        groups.push(write_group(w, &histogram.populations));
+        groups.push(write_group(w, &histogram.populations, token)?);
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
@@ -827,9 +851,10 @@ fn analyze_entropy(
     height: usize,
     palette_size: Option<usize>,
     transform_bits: u8,
-) -> (EntropyMode, bool) {
+    token: Option<&crate::CancellationToken>,
+) -> Result<(EntropyMode, bool), EncodingError> {
     if palette_size.is_some_and(|size| size <= 16) {
-        return (EntropyMode::Palette, true);
+        return Ok((EntropyMode::Palette, true));
     }
     const ALPHA: usize = 0;
     const ALPHA_PREDICTED: usize = 1;
@@ -847,7 +872,13 @@ fn analyze_entropy(
     let mut histograms = vec![[0_u32; 256]; 13];
     let mut previous_pixel = pixels[0];
     for y in 0..height {
+        if y.is_multiple_of(16) {
+            check_token(token)?;
+        }
         for x in 0..width {
+            if x.is_multiple_of(1024) {
+                check_token(token)?;
+            }
             let pixel = pixels[y * width + x];
             let difference = subtract_pixels(pixel, previous_pixel);
             previous_pixel = pixel;
@@ -904,6 +935,7 @@ fn analyze_entropy(
         .iter()
         .map(|histogram| histogram::bits_entropy(histogram))
         .collect::<Vec<_>>();
+    check_token(token)?;
     let transform_width = width.div_ceil(1 << transform_bits);
     let transform_height = height.div_ceil(1 << transform_bits);
     let fast_log = |value: u32| (f64::from(value).log2() * f64::from(1_u32 << 23)).round() as u64;
@@ -953,7 +985,7 @@ fn analyze_entropy(
     let red_and_blue_zero = (1..256).all(|index| {
         histograms[red_histogram][index] == 0 && histograms[blue_histogram][index] == 0
     });
-    (mode, red_and_blue_zero)
+    Ok((mode, red_and_blue_zero))
 }
 
 fn subtract_green(pixels: &mut [u32]) {
@@ -1108,7 +1140,8 @@ fn encode_frame(
         height as usize,
         palette_size,
         transform_bits,
-    );
+        token,
+    )?;
     check_token(token)?;
 
     let mut frame = Vec::new();
@@ -1157,14 +1190,16 @@ fn encode_frame(
                         height as usize,
                         transform_bits,
                         12,
-                    )
+                        token,
+                    )?
                 } else {
                     predictor::select_and_apply(
                         &mut pixels,
                         width as usize,
                         height as usize,
                         transform_bits,
-                    )
+                        token,
+                    )?
                 };
                 w.write_bits(1, 1);
                 w.write_bits(0, 2);
@@ -1181,7 +1216,8 @@ fn encode_frame(
                     height as usize,
                     transform_bits,
                     80,
-                );
+                    token,
+                )?;
                 w.write_bits(1, 1);
                 w.write_bits(1, 2);
                 w.write_bits(u64::from(color_bits - 2), 3);
@@ -1420,7 +1456,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut lengths = vec![0; 4];
     let mut codes = vec![0; 4];
-    write_huffman_tree(&mut tree_writer, &[1, 0, 0, 0], &mut lengths, &mut codes);
+    let _ = write_huffman_tree(
+        &mut tree_writer,
+        &[1, 0, 0, 0],
+        &mut lengths,
+        &mut codes,
+        None,
+    );
     tree_writer.flush();
 
     let mut trimmed_tree_bytes = Vec::new();
@@ -1433,11 +1475,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut trimmed_codes = vec![0; 256];
     let mut trimmed_frequencies = vec![0; 256];
     trimmed_frequencies[..4].fill(1);
-    write_huffman_tree(
+    let _ = write_huffman_tree(
         &mut trimmed_tree_writer,
         &trimmed_frequencies,
         &mut trimmed_lengths,
         &mut trimmed_codes,
+        None,
     );
     trimmed_tree_writer.flush();
 
@@ -1454,7 +1497,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         buffer: 0,
         nbits: 0,
     };
-    let _ = write_group(&mut group_writer, &populations);
+    let _ = write_group(&mut group_writer, &populations, None);
     group_writer.flush();
 
     let mut token_bytes = Vec::new();
@@ -1506,7 +1549,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     minimize_palette_deltas(&mut nonzero_first_palette);
     let entropy_pixels = [0xff10_2010, 0xff20_4020, 0xff30_6030, 0xff40_8040];
-    let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1);
+    let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1, None);
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {
         writer: &mut palette_bytes,
