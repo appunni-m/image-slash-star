@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `9a4a493e2c22bfd65b82c598061a3aacd0e066fa`
+Reviewed: 2026-08-02 on the working tree based on revision `41f981aa0744224806d32ea38283d2c5dc4cf39d`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -253,7 +253,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`9a4a493e2c22bfd65b82c598061a3aacd0e066fa`, the generated matrix reports:
+`41f981aa0744224806d32ea38283d2c5dc4cf39d`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -631,25 +631,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,352 | 47,352 |
-| Branches | 6,550 | 6,550 |
+| Lines | 47,353 | 47,353 |
+| Branches | 6,552 | 6,552 |
 | Functions | 2,656 | 2,656 |
-| Regions | 73,704 | 73,704 |
+| Regions | 73,713 | 73,713 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Managed runtime evidence comes from feature-matrix run
-`d9fcf0d3-8702-45d5-8184-665b2cb18624`: 859 checks passed with zero
-failures in 1,511,776 ms, and its terminal capability-table record says
+`f01cefa5-ec76-43f7-a3ec-70a7fcf9957c`: 859 checks passed with zero
+failures in 1,082,368 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `74b245fc-9a5e-4015-a46f-6b21883281b0`
+Coverage MCP run: `c1541cf6-331d-475a-a81c-dce4707b164c`
 
-Snapshot: `a8792567-857e-4082-992b-dac6caaf584c`
+Snapshot: `db6c79bf-70fe-407e-a581-f31f55683339`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
