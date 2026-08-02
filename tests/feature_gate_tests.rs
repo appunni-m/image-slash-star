@@ -7115,6 +7115,131 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(avif_write_error.format(), Some(ImageFormat::Avif));
         assert_eq!(avif_write_error.stage(), Some(ImageErrorStage::StillEncode));
         assert_eq!(failing_avif.writes, 2);
+
+        // Native AVIF sequence top-level ISO-BMFF delivery is the same
+        // Rust-only structural sink contract at SequenceEncode stage. The
+        // Pillow parity matrix has no caller-owned sink, so this adds no row.
+        let animated_avif = fs::read(root.join("tests/fixtures/input/images/avif/animated.avif"))?;
+        let avif_sequence = image_slash_star::decode_sequence(&animated_avif)?.into_inner();
+        assert!(avif_sequence.frames.len() > 1);
+        let avif_sequence_expected =
+            image_slash_star::encode_sequence(&avif_sequence, ImageFormat::Avif, &avif_options)?;
+        assert!(avif_sequence_expected.len() >= 8);
+        let mut avif_sequence_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_sequence_to_sink(
+                &avif_sequence,
+                ImageFormat::Avif,
+                &avif_options,
+                &mut avif_sequence_sink,
+            )?,
+            avif_sequence_expected.len()
+        );
+        assert_eq!(avif_sequence_sink.bytes, avif_sequence_expected);
+        assert!(
+            avif_sequence_sink.writes > 1,
+            "AVIF sequence output must cross box boundaries"
+        );
+
+        let avif_sequence_token = image_slash_star::CancellationToken::new();
+        let mut cancelling_avif_sequence = CancellingSink {
+            bytes: Vec::new(),
+            token: avif_sequence_token.clone(),
+            writes: 0,
+        };
+        let avif_sequence_cancel_error = match image_slash_star::encode_sequence_to_sink_with_token(
+            &avif_sequence,
+            ImageFormat::Avif,
+            &avif_options,
+            &avif_sequence_token,
+            &mut cancelling_avif_sequence,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "AVIF sequence sink cancellation unexpectedly wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            avif_sequence_cancel_error.kind(),
+            image_slash_star::ImageErrorKind::Cancelled
+        );
+        assert_eq!(avif_sequence_cancel_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(
+            avif_sequence_cancel_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(cancelling_avif_sequence.writes, 1);
+        assert_eq!(
+            cancelling_avif_sequence.bytes,
+            avif_sequence_expected[..8].to_vec()
+        );
+
+        let too_small_avif_sequence = EncodePolicy::default()
+            .with_max_output_bytes(u64::try_from(avif_sequence_expected.len() - 1)?);
+        let mut limited_avif_sequence = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let avif_sequence_limit_error = match image_slash_star::encode_sequence_to_sink_with_policy(
+            &avif_sequence,
+            ImageFormat::Avif,
+            &avif_options,
+            &too_small_avif_sequence,
+            &mut limited_avif_sequence,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "AVIF sequence output policy unexpectedly admitted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            avif_sequence_limit_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Avif),
+                operation: image_slash_star::CodecOperation::SequenceEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            }
+        ));
+        assert_eq!(limited_avif_sequence.writes, 0);
+        assert!(limited_avif_sequence.bytes.is_empty());
+
+        let mut failing_avif_sequence = FailingAfterWrites {
+            fail_at: 2,
+            writes: 0,
+        };
+        let avif_sequence_write_error = match image_slash_star::encode_sequence_to_sink(
+            &avif_sequence,
+            ImageFormat::Avif,
+            &avif_options,
+            &mut failing_avif_sequence,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("AVIF sequence sink unexpectedly accepted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            avif_sequence_write_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(avif_sequence_write_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(
+            avif_sequence_write_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(failing_avif_sequence.writes, 2);
     }
     Ok(())
 }

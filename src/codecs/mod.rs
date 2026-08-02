@@ -1309,10 +1309,11 @@ pub(crate) fn encode_format_to_sink_with_token(
     Ok(None)
 }
 
-/// Try the structural writer for supported PNG, BMP, GIF, WebP, TIFF, or ICO
-/// sequence delivery.
+/// Try the structural writer for supported PNG, BMP, GIF, WebP, TIFF, ICO, or
+/// AVIF sequence delivery.
 #[cfg_attr(
     not(any(
+        feature = "avif",
         feature = "bmp",
         feature = "gif",
         feature = "ico",
@@ -1330,6 +1331,54 @@ pub(crate) fn encode_sequence_to_sink_with_token(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn crate::OutputSink,
 ) -> ImageResult<Option<usize>> {
+    if format == ImageFormat::Avif {
+        #[cfg(not(feature = "avif"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "avif",
+            });
+        }
+        #[cfg(feature = "avif")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            let EncodeOptions::Avif(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::SequenceEncode,
+                ));
+            };
+            let encoded = avif::encode::encode_sequence_to_sink(
+                sequence,
+                options,
+                policy,
+                CodecOperation::SequenceEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode sequence")),
+                format,
+                ImageErrorStage::SequenceEncode,
+            )
+            .map(Some);
+        }
+    }
+
     if format == ImageFormat::Gif {
         #[cfg(not(feature = "gif"))]
         {
