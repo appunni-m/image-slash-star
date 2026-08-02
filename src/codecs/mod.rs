@@ -821,7 +821,10 @@ pub(crate) fn encode_format_with_token(
                 None => webp::encode::encode(_image, options),
             },
             #[cfg(feature = "ico")]
-            (ImageFormat::Ico, EncodeOptions::Ico(options)) => ico::encode::encode(_image, options),
+            (ImageFormat::Ico, EncodeOptions::Ico(options)) => match token {
+                Some(token) => ico::encode::encode_with_token(_image, options, Some(token)),
+                None => ico::encode::encode(_image, options),
+            },
             #[cfg(feature = "avif")]
             (ImageFormat::Avif, EncodeOptions::Avif(options)) => match token {
                 Some(token) => avif::encode::encode_with_token(_image, options, Some(token)),
