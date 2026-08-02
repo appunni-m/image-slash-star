@@ -8,9 +8,9 @@ probe in every native lane and in every ``wasm32-wasip1`` lane under Node's
 WASI runtime, then assembles ``tests/fixtures/capability_tables.json``.
 Reusing ``feature_gate_tests`` lets these cargo invocations reuse artifacts
 already built by ``scripts/test_feature_matrix.sh``. The feature-matrix
-command runs the full lane tests with normal output capture, then launches
-only this one-test probe with ``--nocapture`` so it does not retain the
-complete test listing for every lane. When
+command runs the full lane tests with normal output capture and asks the
+probe test to write its one row to a lane-scoped file, which the shell runner
+appends to the retained log without launching a second process. When
 ``CAPABILITY_TARGET_ROOT`` is set by that matrix, each probe also selects the
 lane-local Cargo target directory used by the matrix, avoiding a second build
 root while keeping independent lanes free of build-directory lock contention.

@@ -110,13 +110,13 @@ feature_args() {
 run_native_lane() {
     features=$1
     set -- $(feature_args "$features")
+    capability_output="$matrix_log_dir/native-$features.capability"
     cargo clippy --workspace --all-targets --locked "$@" -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked "$@"
-    cargo test --locked --test feature_gate_tests "$@" -- \
+    CAPABILITY_TABLE_OUTPUT="$capability_output" cargo test \
+        --locked --test feature_gate_tests "$@" -- \
         --test-threads "$MATRIX_TEST_THREADS"
-    cargo test --locked --test feature_gate_tests "$@" \
-        capability_table::emit_runtime_capability_table -- --exact --nocapture \
-        --test-threads 1
+    cat "$capability_output"
 }
 
 run_wasm_unknown_lane() {
@@ -159,11 +159,10 @@ for line in open(sys.argv[1], encoding="utf-8"):
 else:
     raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
 ' "$build_log")
-    node scripts/wasm_test_runner.js "$binary" \
+    capability_output="$matrix_log_dir/wasm-wasi-$features.capability"
+    CAPABILITY_TABLE_OUTPUT="$capability_output" node scripts/wasm_test_runner.js "$binary" \
         --test-threads "$MATRIX_TEST_THREADS"
-    node scripts/wasm_test_runner.js "$binary" \
-        capability_table::emit_runtime_capability_table --exact --nocapture \
-        --test-threads 1
+    cat "$capability_output"
 }
 
 run_matrix_lane() {
