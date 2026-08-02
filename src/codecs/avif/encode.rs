@@ -59,6 +59,27 @@ pub(crate) fn encode_to_sink(
     write_bmff_to_sink(&encoded, token, sink)
 }
 
+/// Encode an AVIF sequence into validated ISO-BMFF top-level box segments
+/// owned by the caller's sink. The native encoder retains its complete
+/// working buffer; this boundary makes sequence-container delivery and
+/// cancellation observable without claiming AV1 interior streaming or
+/// destination rollback. WASM encoding remains target-unavailable and never
+/// reaches box delivery.
+pub(crate) fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
+    options: &AvifEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_sequence_with_token(sequence, options, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::Avif, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_bmff_to_sink(&encoded, token, sink)
+}
+
 fn write_bmff_to_sink(
     encoded: &[u8],
     token: Option<&crate::CancellationToken>,
