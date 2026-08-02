@@ -1721,6 +1721,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_apng_zero_frames" => "png_apng_zero_frames",
             "png_duplicate_actl" => "png_duplicate_actl",
             "png_actl_after_idat" => "png_actl_after_idat",
+            "png_actl_overlong" => "png_actl_overlong",
             "png_oversized_scanline" => "png_oversized_scanline",
             other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
         };

@@ -361,7 +361,7 @@ Minute gaps:
 | PNG-004 | Pillow 12.2.0 still accepts `I` source save, with a deprecation warning for Pillow 13. | Freeze the pinned behavior in a fixture and decide whether compatibility outweighs a soon-removed oracle path. |
 | PNG-005 | Encoder always emits non-Adam7 PNG because pinned Pillow ignores the tested interlace option. | Keep behavior, but document this as oracle compatibility rather than general PNG encoder capability. |
 | PNG-006 | Inspection scans through pre-IDAT chunks and validates selected CRCs; it is not a fixed 33-byte metadata read. | Document complexity and add limits before advertising cheap inspection on arbitrary inputs. |
-| PNG-007 | Critical/ancillary CRC behavior, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs, an invalid reserved-bit character in an unknown ancillary chunk, an unknown ancillary chunk after `IDAT`, a missing `IEND` terminator, duplicate `PLTE`/`tRNS` chunks, indexed-palette shape damage, a zero-frame APNG declaration, malformed duplicate `acTL` and `acTL`-after-`IDAT` declarations, and valid inflated bytes beyond the first raster now produce Rust-only `RecoveredStructure` diagnostics during decode; valid APNG control/frame-data chunks are excluded from the ordering diagnostic, and `verify()` remains fatal for the bad CRC and missing terminator. | Complete the minimized decision matrix for construction-critical CRCs, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
+| PNG-007 | Critical/ancillary CRC behavior, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs, an invalid reserved-bit character in an unknown ancillary chunk, an unknown ancillary chunk after `IDAT`, a missing `IEND` terminator, duplicate `PLTE`/`tRNS` chunks, indexed-palette shape damage, a zero-frame APNG declaration, malformed duplicate `acTL` and `acTL`-after-`IDAT` declarations, an overlong `acTL` payload, and valid inflated bytes beyond the first raster now produce Rust-only `RecoveredStructure` diagnostics during decode; valid APNG control/frame-data chunks are excluded from the ordering diagnostic, and `verify()` remains fatal for the bad CRC and missing terminator. | Complete the minimized decision matrix for construction-critical CRCs, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
 | PNG-008 | Text and ICC payloads are not decompressed or parsed, and chunk count and per-chunk size limits are still absent. The total ancillary extent, including retained opaque blocks, is bounded by `max_metadata_bytes` when a caller sets it. | Add explicit compressed-metadata and chunk-count limits under API-023 before semantic parsing. |
 | PNG-010 | `sBIT`, `cICP`, `mDCV`, `cLLI`, `iCCP`, `sRGB`, `gAMA`, and `cHRM` precedence is not represented. | Preserve exact fields first and publish a precedence statement without performing color conversion. |
 | PNG-011 | Direct 16-bit LA/RGB/RGBA encode modes are absent even though the decoder observes those source depths. | Add one mode at a time with big-endian sample fixtures and exact Pillow/reference output. |
@@ -1110,9 +1110,10 @@ CRC, an accepted invalid PNG reserved-bit character, an accepted unknown
 ancillary chunk after `IDAT`, an accepted static PNG stream without `IEND`,
 accepted duplicate `PLTE`/`tRNS` chunks, tolerated indexed-palette shape damage,
 a zero-frame APNG declaration, malformed duplicate `acTL` and `acTL`-after-`IDAT`
-declarations that fall back to the default image, valid inflated bytes beyond
-the first raster, and ignored trailing input; valid APNG control and frame-data
-chunks are excluded from the static ordering diagnostic. Their Rust-only fields are
+declarations that fall back to the default image, an overlong `acTL` payload,
+valid inflated bytes beyond the first raster, and ignored trailing input; valid
+APNG control and frame-data chunks are excluded from the static ordering
+diagnostic. Their Rust-only fields are
 tested through a separate defensive-model manifest rather than the Pillow
 parity matrix. Unsupported valid-shape non-zero
 PNG `zTXt`/`iCCP` compression methods remain fatal with `png_chunk` context;

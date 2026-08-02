@@ -110,8 +110,8 @@ The current manifest-proven kinds are ignored trailing data, accepted
 non-standard GIF graphic-control size, ignored invalid compressed PNG
 ancillary metadata, an accepted bad PNG `IDAT` CRC, an accepted invalid PNG
 reserved-bit chunk name, an accepted unknown ancillary chunk after `IDAT`, an
-accepted static PNG stream without `IEND`, and accepted duplicate PNG
-palette/transparency chunks.
+accepted static PNG stream without `IEND`, accepted duplicate PNG
+palette/transparency chunks, and accepted APNG declaration-length damage.
 A diagnostic reports a recoverable condition; it does not change pixels or turn
 Pillow's result into a new parity field. The
 `IDAT` CRC remains fatal at `verify()`.
@@ -159,8 +159,9 @@ produces `png_trns_overlong`, `png_missing_plte`, `png_empty_plte`,
 `png_partial_plte`, or `png_trns_without_plte`. A zero-frame APNG declaration
 falls back to the default PNG image with `png_apng_zero_frames`; malformed APNG
 declarations that Pillow also accepts by falling back produce
-`png_duplicate_actl` or `png_actl_after_idat`; and valid inflated bytes beyond
-the first raster produce `png_oversized_scanline`. These are Rust-only
+`png_duplicate_actl` or `png_actl_after_idat`; an overlong `acTL` payload
+produces `png_actl_overlong`; and valid inflated bytes beyond the first raster
+produce `png_oversized_scanline`. These are Rust-only
 defensive diagnostics because Pillow exposes the successful pixels but no
 equivalent structured warning field.
 
