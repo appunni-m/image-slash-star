@@ -75,6 +75,22 @@ esac
 export CAPABILITY_JOBS
 echo "feature matrix: lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
 
+# Capability probes are compile-heavy and their test bodies are already tiny;
+# avoid paying optimized test-binary code generation independently in every
+# isolated feature/target lane. The repository test profile remains optimized
+# for the larger parity and coverage suites, while callers may override this
+# matrix-only setting explicitly.
+MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-0}
+case "$MATRIX_TEST_OPT_LEVEL" in
+    0|1|2|3|s|z)
+        ;;
+    *)
+        echo "MATRIX_TEST_OPT_LEVEL must be one of 0, 1, 2, 3, s, or z" >&2
+        exit 2
+        ;;
+esac
+export CARGO_PROFILE_TEST_OPT_LEVEL="$MATRIX_TEST_OPT_LEVEL"
+
 matrix_log_dir=$(mktemp -d "${TMPDIR:-/tmp}/image-slash-star-feature-matrix.XXXXXX")
 # Cargo's package-cache lock lives under CARGO_HOME even when the dependency
 # graph is already fetched and every lane uses a private target directory.
