@@ -5732,6 +5732,28 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(prefix_error.identity(), Some("webp_chunk"));
         assert!(prefix_error.offset().is_some());
         assert!(prefix_error.minimum_input().is_some());
+
+        // WebP bitstream context is a Rust defensive error contract. These
+        // fields describe the encoded payload parse site, which Pillow does
+        // not expose and therefore must not become parity-matrix columns.
+        for (label, fixture) in [
+            ("VP8", "vp8_tail_truncated.webp"),
+            ("VP8L", "vp8l_truncated_6.webp"),
+        ] {
+            let bytes = fs::read(root.join("tests/fixtures/input/images/webp").join(fixture))?;
+            let decode_error = match image_slash_star::decode(&bytes) {
+                Err(error) => error,
+                Ok(image) => panic!("truncated {label} bitstream must fail decode: {image:?}"),
+            };
+            assert_eq!(decode_error.kind(), ImageErrorKind::Malformed, "{label}");
+            assert_eq!(
+                decode_error.stage(),
+                Some(ImageErrorStage::StillDecode),
+                "{label}"
+            );
+            assert_eq!(decode_error.identity(), Some("webp_bitstream"), "{label}");
+            assert_eq!(decode_error.offset(), Some(20), "{label}");
+        }
     }
 
     let cmyk = DecodedImage::new(1, 1, vec![0; 4], ColorType::Cmyk8);
