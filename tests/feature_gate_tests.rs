@@ -1719,6 +1719,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_partial_plte" => "png_partial_plte",
             "png_trns_without_plte" => "png_trns_without_plte",
             "png_apng_zero_frames" => "png_apng_zero_frames",
+            "png_apng_frame_count_out_of_range" => "png_apng_frame_count_out_of_range",
             "png_duplicate_actl" => "png_duplicate_actl",
             "png_actl_after_idat" => "png_actl_after_idat",
             "png_actl_overlong" => "png_actl_overlong",

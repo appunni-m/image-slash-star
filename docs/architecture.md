@@ -157,7 +157,9 @@ Duplicate `PLTE` and `tRNS` chunks keep the first palette result and produce
 Pillow-tolerated indexed-palette shape damage keeps the usable first result and
 produces `png_trns_overlong`, `png_missing_plte`, `png_empty_plte`,
 `png_partial_plte`, or `png_trns_without_plte`. A zero-frame APNG declaration
-falls back to the default PNG image with `png_apng_zero_frames`; malformed APNG
+falls back to the default PNG image with `png_apng_zero_frames`; an out-of-range
+APNG frame count is reported as `png_apng_frame_count_out_of_range` while the
+usable default image is retained; malformed APNG
 declarations that Pillow also accepts by falling back produce
 `png_duplicate_actl` or `png_actl_after_idat`; an overlong `acTL` payload
 produces `png_actl_overlong`; and valid inflated bytes beyond the first raster

@@ -124,7 +124,8 @@ separately. The
 manifest also records Pillow-tolerated indexed-palette shape damage
 (`png_trns_overlong`, `png_missing_plte`, `png_empty_plte`, `png_partial_plte`,
 and `png_trns_without_plte`), an APNG declaration with zero animation frames
-(`png_apng_zero_frames`), malformed APNG declarations that fall back to the
+(`png_apng_zero_frames`), an out-of-range APNG frame count at offset `33`
+(`png_apng_frame_count_out_of_range`), malformed APNG declarations that fall back to the
 default PNG image (`png_duplicate_actl` at offset `53` and
 `png_actl_after_idat` at offset `3681`), an overlong APNG `acTL` payload at
 offset `33` (`png_actl_overlong`), and valid inflated PNG bytes beyond the
@@ -143,7 +144,10 @@ The malformed APNG declarations likewise own separate defensive records:
 `png_actl_after_idat` identifies the late declaration; both retain the usable
 default-image result. The `apng_long_actl.png` parity row owns the successful
 two-frame result, while separate defensive rows own `png_actl_overlong` for
-the ignored trailing byte in its `acTL` payload.
+the ignored trailing byte in its `acTL` payload. The
+`apng_control_after_idat_apng_large_frame_count` parity row owns Pillow's
+one-frame fallback result; separate defensive rows own
+`png_apng_frame_count_out_of_range` for the ignored out-of-range declaration.
 Unsupported compression methods in PNG
 `zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
 remain outside this contract. No coverage-only unit or `cfg(coverage)` test is

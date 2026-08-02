@@ -13,6 +13,7 @@ use crate::types::{
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 const MAX_COMPRESSED_METADATA_OUTPUT: usize = 1 << 20;
+const MAX_APNG_FRAME_COUNT: u32 = 0x8000_0000;
 const ADAM7: [(usize, usize, usize, usize); 7] = [
     (0, 0, 8, 8),
     (4, 0, 8, 8),
@@ -262,20 +263,31 @@ fn record_palette_shape_diagnostics(
     }
 }
 
-fn record_zero_frame_apng_diagnostic(
+fn record_apng_frame_count_diagnostic(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
 ) {
-    if read_u32(chunk.data, 0) == 0 {
+    let frame_count = read_u32(chunk.data, 0);
+    let identity = if frame_count == 0 {
         // Pillow falls back to the default PNG image for an APNG declaration
         // with no animation frames. Keep that successful result while making
         // the ignored animation declaration observable to Rust callers.
+        Some("png_apng_zero_frames")
+    } else if frame_count > MAX_APNG_FRAME_COUNT {
+        // The decoder bounds the declared frame count before it can be used
+        // to materialize an animation. Pillow likewise falls back to the
+        // usable static image for the committed out-of-range fixture.
+        Some("png_apng_frame_count_out_of_range")
+    } else {
+        None
+    };
+    if let Some(identity) = identity {
         diagnostics.push(crate::ImageDiagnostic {
             kind: crate::DiagnosticKind::RecoveredStructure,
             format: crate::ImageFormat::Png,
             stage: None,
             offset: Some(chunk.offset),
-            identity: Some("png_apng_zero_frames"),
+            identity: Some(identity),
         });
     }
 }
@@ -528,7 +540,7 @@ pub fn decode(
                     ));
                 }
                 saw_actl = true;
-                record_zero_frame_apng_diagnostic(&chunk, &mut diagnostics);
+                record_apng_frame_count_diagnostic(&chunk, &mut diagnostics);
             }
             b"fcTL" => {
                 if saw_idat {
@@ -919,10 +931,8 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                     continue;
                 }
                 let frame_count = read_u32(chunk.data, 0);
-                if frame_count == 0 || frame_count > 0x8000_0000 {
-                    if frame_count == 0 {
-                        record_zero_frame_apng_diagnostic(&chunk, &mut diagnostics);
-                    }
+                if frame_count == 0 || frame_count > MAX_APNG_FRAME_COUNT {
+                    record_apng_frame_count_diagnostic(&chunk, &mut diagnostics);
                     continue;
                 }
                 animation = Some((frame_count, read_u32(chunk.data, 4)));
