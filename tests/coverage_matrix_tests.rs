@@ -3176,46 +3176,105 @@ fn run_decode_matrix(format_filter: Option<&str>) {
 
 #[test]
 fn test_encode_matrix_jpeg() {
-    run_encode_matrix(Some("jpeg"));
+    run_encode_matrix(Some("jpeg"), None);
 }
 
 #[test]
 fn test_encode_matrix_png() {
-    run_encode_matrix(Some("png"));
+    run_encode_matrix(Some("png"), None);
 }
 
 #[test]
-fn test_encode_matrix_gif() {
-    run_encode_matrix(Some("gif"));
+fn test_encode_matrix_gif_basic() {
+    // Active-row partitions keep expensive GIF encodes independent while
+    // retaining repeated source assets in one worker. The ranges below are
+    // contiguous in active-row order; the final range is intentionally open
+    // ended via usize::MAX so appended active rows remain covered.
+    run_encode_matrix(Some("gif"), Some((0, 4)));
+}
+
+#[test]
+fn test_encode_matrix_gif_palette_animation() {
+    run_encode_matrix(Some("gif"), Some((4, 9)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_a() {
+    run_encode_matrix(Some("gif"), Some((9, 13)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_b1() {
+    run_encode_matrix(Some("gif"), Some((13, 14)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_b2() {
+    run_encode_matrix(Some("gif"), Some((14, 15)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_b3() {
+    run_encode_matrix(Some("gif"), Some((15, 16)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_b4() {
+    run_encode_matrix(Some("gif"), Some((16, 17)));
+}
+
+#[test]
+fn test_encode_matrix_gif_rgba_animation_b5() {
+    run_encode_matrix(Some("gif"), Some((17, 18)));
+}
+
+#[test]
+fn test_encode_matrix_gif_still_options() {
+    run_encode_matrix(Some("gif"), Some((18, 31)));
+}
+
+#[test]
+fn test_encode_matrix_gif_color_quantization() {
+    run_encode_matrix(Some("gif"), Some((31, usize::MAX)));
 }
 
 #[test]
 fn test_encode_matrix_bmp() {
-    run_encode_matrix(Some("bmp"));
+    run_encode_matrix(Some("bmp"), None);
 }
 
 #[test]
 fn test_encode_matrix_tiff() {
-    run_encode_matrix(Some("tiff"));
+    run_encode_matrix(Some("tiff"), None);
 }
 
 #[test]
-fn test_encode_matrix_webp() {
-    run_encode_matrix(Some("webp"));
+fn test_encode_matrix_webp_animation() {
+    run_encode_matrix(Some("webp"), Some((0, 28)));
+}
+
+#[test]
+fn test_encode_matrix_webp_common_sources() {
+    run_encode_matrix(Some("webp"), Some((28, 75)));
+}
+
+#[test]
+fn test_encode_matrix_webp_remaining_sources() {
+    run_encode_matrix(Some("webp"), Some((75, usize::MAX)));
 }
 
 #[test]
 fn test_encode_matrix_ico() {
-    run_encode_matrix(Some("ico"));
+    run_encode_matrix(Some("ico"), None);
 }
 
 #[test]
 fn test_encode_matrix_avif() {
-    run_encode_matrix(Some("avif"));
+    run_encode_matrix(Some("avif"), None);
 }
 
 #[allow(clippy::arithmetic_side_effects)]
-fn run_encode_matrix(format_filter: Option<&str>) {
+fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usize, usize)>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
         coverage_matrix(),
@@ -3242,9 +3301,16 @@ fn run_encode_matrix(format_filter: Option<&str>) {
             continue;
         }
 
+        let mut active_row_index = 0usize;
         for row in &fmt_data.encode {
             if row.status == "planned" {
                 skipped += 1;
+                continue;
+            }
+
+            let row_index = active_row_index;
+            active_row_index += 1;
+            if active_row_range.is_some_and(|(start, end)| row_index < start || row_index >= end) {
                 continue;
             }
 
