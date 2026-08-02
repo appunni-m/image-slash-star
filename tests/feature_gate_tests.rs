@@ -1129,6 +1129,42 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
         assert_eq!(&sink[1..], expected.as_slice());
     }
 
+    if cfg!(feature = "bmp") {
+        let data = fs::read(root.join("tests/fixtures/input/images/bmp/1x1.bmp"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::Bmp);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Bmp, &options)?;
+        let token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &options,
+                &image_slash_star::EncodePolicy::default(),
+                &token,
+            )?,
+            expected,
+            "an uncancelled BMP still encode remains byte-identical"
+        );
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::encode_with_token(
+            &decoded.content,
+            ImageFormat::Bmp,
+            &options,
+            &cancelled,
+        ) {
+            Ok(bytes) => {
+                return Err(format!("cancelled BMP encode returned {} bytes", bytes.len()).into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Bmp));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+    }
+
     if cfg!(feature = "tiff") {
         let data = fs::read(root.join("tests/fixtures/input/images/tiff/8bit.tiff"))?;
         let decoded = image_slash_star::decode(&data)?;

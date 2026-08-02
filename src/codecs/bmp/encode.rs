@@ -26,12 +26,21 @@ fn row_size(bits_per_pixel: usize, width: usize) -> usize {
 /// Pillow derives 1/8/24/32-bit output from the source mode and ignores save
 /// options requesting compression, row direction, or alternate DIB headers.
 pub fn encode(img: &DecodedImage, opts: &BmpEncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_with_token(img, opts, None)
+}
+
+/// Encode a BMP while polling an optional cooperative cancellation token.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &BmpEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut output = Vec::new();
     let mut writer = |bytes: &[u8]| {
         output.extend_from_slice(bytes);
         Ok(())
     };
-    write_encoded(img, opts, None, None, &mut writer)?;
+    write_encoded(img, opts, token, None, &mut writer)?;
     Ok(output)
 }
 

@@ -796,11 +796,17 @@ pub(crate) fn encode_format_with_token(
                 jpeg::encode::encode_with_token(_image, options, token)
             }
             #[cfg(feature = "png")]
-            (ImageFormat::Png, EncodeOptions::Png(options)) => png::encode::encode(_image, options),
+            (ImageFormat::Png, EncodeOptions::Png(options)) => match token {
+                Some(token) => png::encode::encode_with_token(_image, options, Some(token)),
+                None => png::encode::encode(_image, options),
+            },
             #[cfg(feature = "gif")]
             (ImageFormat::Gif, EncodeOptions::Gif(options)) => gif::encode::encode(_image, options),
             #[cfg(feature = "bmp")]
-            (ImageFormat::Bmp, EncodeOptions::Bmp(options)) => bmp::encode::encode(_image, options),
+            (ImageFormat::Bmp, EncodeOptions::Bmp(options)) => match token {
+                Some(token) => bmp::encode::encode_with_token(_image, options, Some(token)),
+                None => bmp::encode::encode(_image, options),
+            },
             #[cfg(feature = "tiff")]
             (ImageFormat::Tiff, EncodeOptions::Tiff(options)) => match token {
                 Some(token) => tiff::encode::encode_with_token(_image, options, Some(token)),

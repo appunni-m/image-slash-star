@@ -14,12 +14,21 @@ const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 /// emits non-interlaced rows. Compression levels select the corresponding
 /// strategy in the internal zlib/DEFLATE implementation.
 pub fn encode(img: &DecodedImage, opts: &PngEncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_with_token(img, opts, None)
+}
+
+/// Encode a PNG while polling an optional cooperative cancellation token.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &PngEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut output = Vec::new();
     let mut writer = |bytes: &[u8]| {
         output.extend_from_slice(bytes);
         Ok(())
     };
-    write_encoded(img, opts, None, None, &mut writer)?;
+    write_encoded(img, opts, token, None, &mut writer)?;
     Ok(output)
 }
 
