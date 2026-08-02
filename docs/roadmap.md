@@ -1168,6 +1168,15 @@ additional checks are the reused probe in each native/WASI lane. The run was
 submitted before the worktree patch was committed as `45e1922`, so its recorded
 parent revision is retained as execution provenance rather than a clean
 revision comparison.
+The matrix scheduler now admits the next lane as soon as any bounded worker
+finishes instead of waiting for a whole launch batch. Run
+`de0619ff-e117-4d9d-bc3e-e9ee7fff01bf` passed the same 925 checks with zero
+failures in 298,267 ms and retained the same terminal capability-table record.
+It was submitted against parent revision
+`65c3a4b5714f118e93b62b07b899f2ddc1c64d04` with the scheduler patch uncommitted;
+that patch is committed as `766a6dd`. The timing is retained as runtime
+evidence, not a controlled speed comparison, because managed cache/build state
+differs.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
