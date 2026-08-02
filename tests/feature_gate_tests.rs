@@ -7871,6 +7871,82 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             } if observed > 8
         ));
         assert_eq!(sink, vec![0xA8]);
+
+        // Lossless VP8L now charges checkpoints around its pixel, entropy,
+        // transform, and bitstream stages. Pillow has no caller-controlled
+        // checkpoint budget or equivalent result, so this remains ordinary
+        // Rust-only work-control evidence and adds no parity row.
+        let mut lossless_pixels = Vec::with_capacity(64 * 64 * 3);
+        for index in 0..64 * 64 {
+            let x = u8::try_from(index % 64)?;
+            let y = u8::try_from(index / 64)?;
+            lossless_pixels.extend_from_slice(&[
+                x.wrapping_mul(3) ^ y.wrapping_mul(5),
+                x.wrapping_add(y.wrapping_mul(7)),
+                x.wrapping_mul(11).wrapping_add(y),
+            ]);
+        }
+        let lossless_image = DecodedImage::new(64, 64, lossless_pixels, ColorType::Rgb8);
+        let mut lossless_options = EncodeOptions::for_format(ImageFormat::WebP);
+        if let EncodeOptions::WebP(options) = &mut lossless_options {
+            options.lossless = Some(true);
+        }
+        let lossless_unlimited =
+            image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        let lossless_expected =
+            image_slash_star::encode(&lossless_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &lossless_unlimited,
+            )?,
+            lossless_expected,
+            "an ample WebP VP8L budget preserves byte identity"
+        );
+        let lossless_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let lossless_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &lossless_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP VP8L budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            lossless_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed,
+            } if observed > 8
+        ));
+        let mut lossless_sink = vec![0xA9];
+        let lossless_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &lossless_bounded,
+            &mut lossless_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP VP8L budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            lossless_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed,
+            } if observed > 8
+        ));
+        assert_eq!(lossless_sink, vec![0xA9]);
     }
 
     if cfg!(feature = "gif") {
