@@ -1153,6 +1153,14 @@ Primary AVIF `clli` content-light-level declarations now follow the same
 source-provenance path through `SourceColor`; maxCLL and maxPALL are retained
 without tone mapping, and the contract test likewise adds no synthetic parity
 row.
+
+The COR-061 provenance audit confirms the boundary quantitatively: 38 of the
+54 diagnostic cases use committed bytes that also have a Pillow parity row, so
+those rows prove only the shared outer success/pixel result; 16 cases construct
+runtime mutations that are not matrix rows. The separate diagnostic test keeps
+asserting the Rust-only recovery records and baseline-preservation invariant,
+without adding a coverage-only hook or synthetic `diagnostics` field to the
+Pillow matrix.
 Primary AVIF `av1C` chroma sample-position declarations now follow the same
 source-provenance path through `SourceColor`; the four legal two-bit codes are
 retained as `AvifChromaSamplePosition` without changing decoded pixels or

@@ -162,6 +162,18 @@ used to manufacture these paths: real fixtures and the defensive manifest
 drive them. The oversized-scanline status is returned by the existing bounded
 one-pass inflater; no second decompression or coverage-only hook is used.
 
+The overlap between the two inventories is deliberately narrow. Of the 54
+diagnostic cases, 38 use committed bytes that also have a Pillow parity row, so
+those rows prove only the shared outer success/pixel result. The other 16 cases
+construct runtime mutations from parity baselines (bad CRCs, reserved-bit or
+ordering changes, and invalid compressed metadata); those mutated bytes are
+not `coverage_matrix.json` rows and must not be counted as Pillow-parity
+execution. In both groups, the Rust test compares decoded pixels or frames
+with the unmodified baseline only to assert the Rust recovery invariant. Its
+`pillow_outcome` field is supporting fixture annotation, not a live Pillow
+diagnostic result, and no parity row can legitimately assert `DiagnosticKind`,
+stage, offset, or identity because Pillow does not return those fields.
+
 The separate `png_unsupported_compressed_metadata_methods_remain_fatal`
 contract covers that Pillow-observable fatal boundary for valid-shape non-zero
 `zTXt`/`iCCP` methods. It asserts only the fatal error kind, operation stage,

@@ -1951,8 +1951,11 @@ fn metadata_matches_the_container_contract() -> Result<(), Box<dyn std::error::E
 // This is intentionally separate from the generated Pillow parity matrix.
 // Pillow exposes no structured warning/recovery field for these successful
 // decodes, so the expected kind, stage, offset, and identity are Rust
-// defensive-model policy rather than oracle output. Keep this as a normal
-// fixture-backed behavior contract, not a coverage-only diagnostic hook.
+// defensive-model policy rather than oracle output. Cases with `mutation ==
+// "none"` may overlap an existing parity asset, but that parity row owns only
+// Pillow's outer result; runtime mutations are not parity inputs. Keep this as
+// a normal fixture-backed behavior contract, not a coverage-only diagnostic
+// hook.
 #[test]
 fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
