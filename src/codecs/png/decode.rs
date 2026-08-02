@@ -204,6 +204,26 @@ fn record_reserved_bit_diagnostic(
     }
 }
 
+fn record_post_idat_ancillary_diagnostic(
+    chunk: &Chunk<'_>,
+    saw_idat: bool,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    // Pillow accepts unknown ancillary chunks after IDAT. APNG controls and
+    // frame data are valid post-IDAT members, so leave those semantic chunks
+    // outside this static-order recovery contract.
+    if saw_idat && chunk.kind[0] & 0x20 != 0 && !matches!(&chunk.kind, b"acTL" | b"fcTL" | b"fdAT")
+    {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_ancillary_after_idat"),
+        });
+    }
+}
+
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     match value {
         0 => Some(crate::types::SrgbIntent::Perceptual),
@@ -306,6 +326,7 @@ pub fn decode(
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
+        record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
                 saw_idat = true;
@@ -631,6 +652,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
+        record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_rgb = Some(chunk.data.to_vec());

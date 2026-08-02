@@ -1709,6 +1709,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_iTXt" => "png_iTXt",
             "png_IDAT_crc" => "png_IDAT_crc",
             "png_reserved_bit" => "png_reserved_bit",
+            "png_ancillary_after_idat" => "png_ancillary_after_idat",
             other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
         };
         let base = fs::read(root.join(&case.asset_path))?;
@@ -1731,6 +1732,25 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                 mutated.extend_from_slice(&base[..idat_offset]);
                 mutated.extend_from_slice(&png_chunk(&kind, &payload));
                 mutated.extend_from_slice(&base[idat_offset..]);
+                mutated
+            }
+            "png_after_idat" => {
+                let kind: [u8; 4] = case
+                    .chunk_kind
+                    .as_bytes()
+                    .try_into()
+                    .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
+                let payload = case
+                    .chunk_payload
+                    .iter()
+                    .copied()
+                    .map(u8::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                let iend_offset = png_chunk_offset(&base, b"IEND")?;
+                let mut mutated = Vec::with_capacity(base.len() + payload.len() + 12);
+                mutated.extend_from_slice(&base[..iend_offset]);
+                mutated.extend_from_slice(&png_chunk(&kind, &payload));
+                mutated.extend_from_slice(&base[iend_offset..]);
                 mutated
             }
             other => panic!("{}: unknown mutation `{other}`", case.id),
