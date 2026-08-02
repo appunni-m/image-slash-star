@@ -302,7 +302,7 @@ translation cannot be bypassed.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer or structural segment reaches a caller-owned sink |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; whole-buffer codecs use one write, while JPEG, PNG, BMP, and ICO still plus one-frame JPEG/BMP/ICO and TIFF still/multi-page sequences output across structural header/payload boundaries, then every path calls `OutputSink::flush` once |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; return APIs remain whole-buffer, while every current codec sink writer emits validated structural header/payload boundaries, then every path calls `OutputSink::flush` once |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Token-aware sink encoding; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
@@ -430,18 +430,18 @@ complete encoded length. Still and sequence encodes apply it before return;
 the policy-aware sink wrappers apply it before the first sink write. An
 oversized result returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodedOutputBytes`, and the sink remains untouched. The
-whole-buffer codecs construct the complete buffer before this check. The JPEG,
-PNG, BMP, ICO, and TIFF still sink paths, plus one-frame JPEG/BMP/ICO and
-multi-page TIFF sequence sink paths, instead preflight their complete lengths
-before emitting
-validated structures. ICO still delivery splits a fixed 22-byte directory
-header from its complete embedded PNG/DIB payload. TIFF delivery splits its
-header, strip/padding span, and IFD/value tail. PNG prepares filtered rows and
-compressed payload, BMP prepares only bounded palette/row segments, ICO
-prepares its embedded payload, and TIFF retains its complete page and
-compressed/pixel working state. These are structural-delivery boundaries, not
-transient-allocation or recoverable-OOM guarantees, and other codecs remain
-whole-buffer.
+The whole-buffer codecs construct the complete buffer before this check. Every
+current still sink path—JPEG, PNG, GIF, BMP, ICO, TIFF, WebP, and native AVIF—
+and the supported one-frame or multi-frame sequence sink paths instead
+preflight their complete lengths before emitting validated structures. ICO
+still delivery splits a fixed 22-byte directory header from its complete
+embedded PNG/DIB payload. TIFF delivery splits its header, strip/padding span,
+and IFD/value tail. The other writers use their corresponding marker, chunk,
+block, RIFF, or ISO-BMFF boundaries. PNG prepares filtered rows and compressed
+payload, BMP prepares bounded palette/row segments, and every codec may retain
+complete working state until a validated segment is ready. These are
+structural-delivery boundaries, not transient-allocation or recoverable-OOM
+guarantees.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit
@@ -470,8 +470,8 @@ additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
 prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
-not roll the prefix back. Progress callbacks, full structural writing for the
-remaining codecs, short-write/rollback cleanup, and interruption beyond the
+not roll the prefix back. Progress callbacks, transient working-state
+reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including CPU work inside an individual TIFF Deflate
 row—remain open.
 
@@ -603,16 +603,15 @@ finer inner bitstream cursor. Both fields are stable recovery data, never prose.
 
 When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
 caller-owned `OutputSink`, it normalizes that rejection to
-`ImageError::OutputWrite`. Every enabled whole-buffer still codec has an
+`ImageError::OutputWrite`. Every enabled still codec has an
 explicit Rust contract for this normalization. The error retains the selected
 output format, the `StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
 input offset and container identity are `None` because the failure is on the
 destination side. This boundary defines one post-delivery `OutputSink::flush`
 call; a flush failure is also `ImageError::OutputWrite` and may follow a
-complete prefix. Short-write and rollback semantics remain open. The
-whole-buffer sink fallback still delivers one complete
-buffer; the JPEG, PNG, BMP, ICO, and TIFF structural writers report the same
-structured cause if any emitted segment is rejected.
+complete prefix. Short-write and rollback semantics remain open. Every current
+codec sink writer reports the same structured cause if any validated emitted
+segment is rejected.
 
 Non-fatal recovery is separate from `ImageError`: successful decode returns
 `Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
@@ -753,16 +752,13 @@ with the `avif` feature.
 The public return APIs are whole-buffer based:
 
 - inputs are borrowed byte slices or immutable encoded snapshots;
-- decoded pixels and return APIs allocate complete buffers; JPEG, PNG, BMP, ICO,
-  and TIFF still sink delivery, plus one-frame JPEG/BMP/ICO and multi-page TIFF
-  sequence sink delivery, avoid a second final output buffer after their
-  validated working
-  state is ready;
+- decoded pixels and return APIs allocate complete buffers; current sink
+  delivery can emit validated structural segments from its working state
+  without an additional dispatcher buffer;
 - sequence APIs retain complete supported frame data; and
-- `OutputSink` is the caller-owned writer boundary; JPEG, PNG, BMP, ICO, and
-  TIFF still delivery and one-frame JPEG/BMP/ICO and multi-page TIFF sequence
-  delivery can emit validated structural segments, while other codecs retain the whole-buffer
-  fallback.
+- `OutputSink` is the caller-owned writer boundary; every current codec sink
+  delivery can emit validated structural segments, while complete codec
+  working state may remain in memory until those segments are ready.
 
 `DecodePolicy` already bounds encoded input, the inspected primary canvas and
 transfer bytes, the inspected frame/page count, later-frame and cumulative
