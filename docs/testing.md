@@ -1500,16 +1500,16 @@ format and `StillEncode` or `SequenceEncode` stage, preserves the exact
 delivered prefix, and does not call `flush`. Native AVIF comparisons use one
 worker so this contract remains byte-deterministic beside concurrent AVIF
 tests. Managed Pillow parity run
-`602cc246-1372-4bff-9514-f894ddf80c44` passed 1,445/1,445 checks with zero
-skips in 770 ms. Feature-matrix run
-`1d9ebd85-61ff-4f0d-99e1-b1e39c97d3ac` passed 991/991 checks in 35,698 ms;
+`7e5fc725-f121-4639-88cc-84a63b366420` passed 1,445/1,445 checks with zero
+skips in 891 ms. Feature-matrix run
+`93004110-a3cb-4d1b-9b81-77b48548338d` passed 991/991 checks in 36,830 ms;
 its retained log has no build-directory or package-cache lock-wait matches and
 ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
-Coverage MCP run `5b3092d0-c5b8-4eda-ab89-c513aa98631a` passed 85/85 tests in
-49,285 ms and ingested snapshot `f97ce72e-2499-4e64-aa24-457fe5e06eb6`,
+Coverage MCP run `a15e2a12-4ef8-436b-a3f2-2c6ffc43bb81` passed 85/85 tests in
+50,759 ms and ingested snapshot `61ba8d2a-75b9-4679-9450-2881405d5496`,
 reporting 49,345/49,742 lines, 6,773/6,836 branches, 2,750/2,817 functions,
 and 76,720/77,428 regions, unchanged in aggregate from snapshot
-`dd0274a6-ac57-41be-9aae-90d7a032d83a`. That unchanged coverage is expected:
+`f97ce72e-2499-4e64-aa24-457fe5e06eb6`. That unchanged coverage is expected:
 the slice changes only an integration-test contract, not a measured library
 execution path. Pillow has no caller-owned `OutputSink`, so this evidence adds
 no parity row, fixture, diagnostic origin, or coverage-only hook. Other
