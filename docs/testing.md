@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`
+Reviewed: 2026-08-02 on the working tree based on revision `226390d04d387698b474815ae93ef45c8932cd66`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -230,8 +230,9 @@ Encode cancellation follows the same evidence boundary. Pillow has no
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
-They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP still and GIF-sequence output,
-stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP
+They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP still,
+native AVIF still, and GIF-sequence output, stable pre-cancelled errors,
+successful token-aware sink writes, and PNG/BMP
 still sinks that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
@@ -241,8 +242,11 @@ paths; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and deflate boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints; WebP still encoding polls preparation, codec-result, and
-metadata-assembly boundaries; GIF, TIFF, WebP, and native AVIF sequence paths poll their implemented
-frame/coalescing/page/finalization checkpoints. This slice does not claim
+metadata-assembly boundaries; native AVIF still encoding polls its preparation,
+frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
+paths poll their implemented frame/coalescing/page/finalization checkpoints.
+The AVIF assertion is native-only because portable WASM AVIF encoding remains
+target-unavailable. This slice does not claim
 universal interior interruption, deeper deflate/structural interruption,
 progress callbacks, work budgets, short-write/flush semantics, or rollback
 cleanup.
@@ -268,7 +272,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`, the generated matrix reports:
+`226390d04d387698b474815ae93ef45c8932cd66`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -655,10 +659,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,647 | 47,647 |
+| Lines | 47,671 | 47,671 |
 | Branches | 6,558 | 6,558 |
-| Functions | 2,662 | 2,662 |
-| Regions | 74,220 | 74,220 |
+| Functions | 2,663 | 2,663 |
+| Regions | 74,245 | 74,245 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -748,9 +752,9 @@ retained log had zero build-directory lock-wait matches. Raising the default
 from three to four is retained as execution evidence rather than a controlled
 speedup claim because managed cache/build state can differ.
 
-Coverage MCP run: `1874d075-0f81-4dd5-af27-33076f32d582`
+Coverage MCP run: `d3e666cb-ae36-4581-ac4b-968a43f499b9`
 
-Snapshot: `da721d61-16f9-4bca-bcc8-a44e553e610c`
+Snapshot: `fd4dccce-b2ff-4336-ba00-e381c8aff8d0`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
