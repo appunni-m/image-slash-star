@@ -188,16 +188,12 @@ fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::Im
 
 fn record_duplicate_palette_diagnostic(
     chunk: &Chunk<'_>,
+    identity: &'static str,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
 ) {
     // Pillow keeps the first PLTE/tRNS member's observable palette result and
     // accepts the duplicate. Preserve that result while exposing the ignored
     // structural member through the Rust-only diagnostic contract.
-    let identity = match &chunk.kind {
-        b"PLTE" => "png_duplicate_plte",
-        b"tRNS" => "png_duplicate_trns",
-        _ => return,
-    };
     diagnostics.push(crate::ImageDiagnostic {
         kind: crate::DiagnosticKind::RecoveredStructure,
         format: crate::ImageFormat::Png,
@@ -358,7 +354,11 @@ pub fn decode(
                 if palette_rgb.is_none() {
                     palette_rgb = Some(chunk.data.to_vec());
                 } else {
-                    record_duplicate_palette_diagnostic(&chunk, &mut diagnostics);
+                    record_duplicate_palette_diagnostic(
+                        &chunk,
+                        "png_duplicate_plte",
+                        &mut diagnostics,
+                    );
                 }
             }
             b"tRNS" => {
@@ -366,7 +366,11 @@ pub fn decode(
                     palette_alpha.extend_from_slice(chunk.data);
                     saw_trns = true;
                 } else {
-                    record_duplicate_palette_diagnostic(&chunk, &mut diagnostics);
+                    record_duplicate_palette_diagnostic(
+                        &chunk,
+                        "png_duplicate_trns",
+                        &mut diagnostics,
+                    );
                 }
             }
             b"acTL" if chunk.data.len() < 8 => {
