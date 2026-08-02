@@ -5388,11 +5388,15 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 limited_bmp_sequence_error.kind(),
                 image_slash_star::ImageErrorKind::LimitExceeded
             );
-            assert_eq!(limited_bmp_sequence_error.format(), Some(ImageFormat::Bmp));
-            assert_eq!(
-                limited_bmp_sequence_error.stage(),
-                Some(ImageErrorStage::SequenceEncode)
-            );
+            assert!(matches!(
+                limited_bmp_sequence_error,
+                image_slash_star::ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Bmp),
+                    operation: image_slash_star::CodecOperation::SequenceEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
             assert_eq!(limited_bmp_sequence.writes, 0);
             assert!(limited_bmp_sequence.bytes.is_empty());
 
