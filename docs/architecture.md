@@ -343,8 +343,9 @@ zero-padding) keep their terminal classification because appending file bytes
 cannot repair them. Policy limits are re-evaluated on every retry against the
 current input length.
 
-Cooperative cancellation polls a caller token at structural checkpoints:
-dispatch entry, PNG chunk boundaries, GIF block and frame boundaries, TIFF
+Cooperative cancellation polls a caller token at structural and selected
+codec-internal checkpoints: dispatch entry, PNG chunk boundaries and
+1,024-byte adaptive-filter/filtered-row subsegments, GIF block and frame boundaries, TIFF
 still page preparation/predictor/PackBits/LZW work plus sequence page and
 strip/tile boundaries, JPEG color/sampling/quantization rows and
 entropy/progressive scan batches, WebP frame boundaries, BMP RLE commands,
@@ -451,7 +452,9 @@ returns `ImageError::LimitExceeded` with
 so caller cancellation still has precedence and remains `Cancelled`. TIFF
 Deflate tokenization additionally charges at each supplied input-row boundary,
 so a bounded page cannot consume the complete multi-row matcher pass between
-public checkpoints. This is deterministic work control, not CPU-time,
+public checkpoints. PNG adaptive filtering and filtered-row emission charge
+additional checkpoints after each 1,024 row bytes, including while candidate
+filters are scored. This is deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
 
 Token-aware encode variants are a separate cooperative work-control boundary.
@@ -461,7 +464,8 @@ checkpoints, the WebP still writer polls at preparation, codec-result, and
 metadata-assembly boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while
-preparing rows, embedded payloads, or TIFF page state and between emitted
+preparing rows, embedded payloads, or TIFF page state, including PNG adaptive
+filter subsegments, and between emitted
 structural segments in their sink paths. ICO still delivery has the same
 source-size, payload, and directory boundaries; TIFF sink delivery checks
 between its header, strip/padding, and IFD/value segments. GIF, TIFF, WebP,
@@ -472,8 +476,9 @@ prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
-documented checkpoints—including CPU work inside an individual TIFF Deflate
-row—remain open.
+documented checkpoints—including CPU work inside codec rows other than the
+implemented PNG adaptive-filter subsegments and deeper TIFF Deflate/structural
+work—remain open.
 
 ### Codec work is bounded by the resource set
 

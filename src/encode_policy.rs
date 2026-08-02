@@ -7,8 +7,9 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// An absent limit is unlimited for backward compatibility. The output-result
 /// bound does not account for transient allocations or recoverable out-of-
 /// memory failure. `max_work_units` counts the deterministic cooperative
-/// checkpoints reached by an encode; it is a work-control bound, not a CPU-time
-/// or allocation guarantee.
+/// checkpoints reached by an encode, including the PNG adaptive-filter and
+/// filtered-row checkpoints charged after each 1,024 row bytes; it is a
+/// work-control bound, not a CPU-time or allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct EncodePolicy {
@@ -48,6 +49,8 @@ impl EncodePolicy {
     /// Set the inclusive maximum number of cooperative encode checkpoints.
     ///
     /// One work unit is charged at each documented cancellation checkpoint.
+    /// PNG long-row filtering charges additional checkpoints after each 1,024
+    /// filtered bytes while adaptive candidates are scored or emitted.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]

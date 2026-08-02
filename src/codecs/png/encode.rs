@@ -8,6 +8,10 @@ use crate::types::{ColorType, DecodedImage, ImageMode};
 use crate::{CodecOperation, ImageFormat};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
+// Keep long adaptive-filter rows interruptible without charging every byte.
+// The interval is part of the Rust-only work-budget contract; it does not
+// affect the no-token Pillow-parity path.
+const FILTER_CHECKPOINT_BYTES: usize = 1_024;
 /// Encode an 8-bit grayscale, grayscale-alpha, RGB, or RGBA image as PNG.
 ///
 /// Pillow ignores PNG interlace save options, so this encoder also always
@@ -358,11 +362,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Filter::Adaptive,
     ] {
         let mut output = Vec::new();
-        append_filtered_row(&mut output, &row, Some(&previous), 2, filter, true);
-        let _ = filter_score(&row, Some(&previous), 2, filter);
+        let _ = append_filtered_row(&mut output, &row, Some(&previous), 2, filter, true, None);
+        let _ = filter_score(&row, Some(&previous), 2, filter, None);
         let _ = filter_byte(filter);
     }
-    let _ = select_adaptive_filter(&row, Some(&previous), 2, true);
+    let _ = select_adaptive_filter(&row, Some(&previous), 2, true, None);
     let _ = paeth(10, 20, 30);
     let _ = paeth(200, 10, 20);
     let _ = paeth(5, 200, 10);
@@ -383,7 +387,15 @@ fn plain_rows(
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
         crate::codecs::error::check_cancelled(token)?;
-        append_filtered_row(&mut output, row, previous, filter_bytes, filter, optimize);
+        append_filtered_row(
+            &mut output,
+            row,
+            previous,
+            filter_bytes,
+            filter,
+            optimize,
+            token,
+        )?;
         previous = Some(row);
     }
     Ok((output, input_chunks))
@@ -406,14 +418,18 @@ fn append_filtered_row(
     bytes_per_pixel: usize,
     requested: Filter,
     optimize: bool,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     let selected = if matches!(requested, Filter::Adaptive) {
-        select_adaptive_filter(row, previous, bytes_per_pixel, optimize)
+        select_adaptive_filter(row, previous, bytes_per_pixel, optimize, token)?
     } else {
         requested
     };
     output.push(filter_byte(selected));
     for (index, &value) in row.iter().enumerate() {
+        if index != 0 && index.is_multiple_of(FILTER_CHECKPOINT_BYTES) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
         let left = index
             .checked_sub(bytes_per_pixel)
             .map_or(0, |position| row[position]);
@@ -435,6 +451,7 @@ fn append_filtered_row(
         };
         output.push(value.wrapping_sub(prediction));
     }
+    Ok(())
 }
 
 fn select_adaptive_filter(
@@ -442,24 +459,25 @@ fn select_adaptive_filter(
     previous: Option<&[u8]>,
     bytes_per_pixel: usize,
     optimize: bool,
-) -> Filter {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Filter> {
     // Pillow's ZipEncode.c starts with None, then replaces it only on a
     // strictly lower score in this order. Average is deliberately excluded
     // unless optimize=True.
     let mut selected = Filter::None;
-    let mut score = filter_score(row, previous, bytes_per_pixel, selected);
+    let mut score = filter_score(row, previous, bytes_per_pixel, selected, token)?;
     for candidate in [Filter::Up, Filter::Sub]
         .into_iter()
         .chain(optimize.then_some(Filter::Average))
         .chain([Filter::Paeth])
     {
-        let candidate_score = filter_score(row, previous, bytes_per_pixel, candidate);
+        let candidate_score = filter_score(row, previous, bytes_per_pixel, candidate, token)?;
         if candidate_score < score {
             selected = candidate;
             score = candidate_score;
         }
     }
-    selected
+    Ok(selected)
 }
 
 fn filter_score(
@@ -467,32 +485,37 @@ fn filter_score(
     previous: Option<&[u8]>,
     bytes_per_pixel: usize,
     filter: Filter,
-) -> u64 {
-    row.iter()
-        .enumerate()
-        .map(|(index, &value)| {
-            let left = index
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<u64> {
+    let mut score = 0u64;
+    for (index, &value) in row.iter().enumerate() {
+        if index != 0 && index.is_multiple_of(FILTER_CHECKPOINT_BYTES) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
+        let left = index
+            .checked_sub(bytes_per_pixel)
+            .map_or(0, |position| row[position]);
+        let above = previous.map_or(0, |prior| prior[index]);
+        let upper_left = previous.map_or(0, |prior| {
+            index
                 .checked_sub(bytes_per_pixel)
-                .map_or(0, |position| row[position]);
-            let above = previous.map_or(0, |prior| prior[index]);
-            let upper_left = previous.map_or(0, |prior| {
-                index
-                    .checked_sub(bytes_per_pixel)
-                    .map_or(0, |position| prior[position])
-            });
-            let prediction = match filter {
-                Filter::None | Filter::Adaptive => 0,
-                Filter::Sub => left,
-                Filter::Up => above,
-                Filter::Average => u16::from(left)
-                    .saturating_add(u16::from(above))
-                    .div_euclid(2)
-                    .to_le_bytes()[0],
-                Filter::Paeth => paeth(left, above, upper_left),
-            };
-            u64::from((value.wrapping_sub(prediction) as i8).unsigned_abs())
-        })
-        .sum()
+                .map_or(0, |position| prior[position])
+        });
+        let prediction = match filter {
+            Filter::None | Filter::Adaptive => 0,
+            Filter::Sub => left,
+            Filter::Up => above,
+            Filter::Average => u16::from(left)
+                .saturating_add(u16::from(above))
+                .div_euclid(2)
+                .to_le_bytes()[0],
+            Filter::Paeth => paeth(left, above, upper_left),
+        };
+        score = score.saturating_add(u64::from(
+            (value.wrapping_sub(prediction) as i8).unsigned_abs(),
+        ));
+    }
+    Ok(score)
 }
 
 fn filter_byte(filter: Filter) -> u8 {

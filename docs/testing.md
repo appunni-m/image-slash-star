@@ -303,6 +303,11 @@ a bounded mid-encode rejection after more than one checkpoint, and a typed
 zero-budget no-write result through the JPEG structural sink path. The
 contract also proves that a pre-cancelled caller token takes precedence over a
 zero work budget for still PNG and sequence GIF, without touching the sink.
+A long PNG adaptive-filter row additionally charges a deterministic checkpoint
+after each 1,024 filtered bytes while candidate filters are scored or the row
+is emitted; the contract proves the resulting typed interior rejection and
+untouched sink. This is still Rust-only work-control evidence: no Pillow row,
+fixture, diagnostic field, or coverage-only hook is added.
 The test's aggregate coverage is incidental evidence, and no coverage-only
 hook or synthetic Pillow row is added.
 
@@ -324,8 +329,9 @@ codec-local coverage
 drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
-preparing rows and between emitted structural segments in both return and sink
-paths; TIFF still encoding now polls page
+preparing rows; PNG additionally polls adaptive-filter and filtered-row
+subsegments after each 1,024 row bytes, and the still and sink paths poll
+between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row
 boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
@@ -339,10 +345,10 @@ top-level box segments.
 ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
-target-unavailable. This slice does not claim
-universal interior interruption, deeper deflate/structural interruption,
-progress callbacks, short-write semantics, or rollback cleanup; the separate
-checkpoint work-budget contract is covered below.
+target-unavailable. This slice does not claim universal interior interruption
+beyond the implemented PNG row subsegments, deeper deflate/structural
+interruption, progress callbacks, short-write semantics, or rollback cleanup;
+the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
 delivery; a flush failure is a typed `OutputWrite` and does not roll back an
 already-delivered prefix.

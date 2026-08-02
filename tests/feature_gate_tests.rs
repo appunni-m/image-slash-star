@@ -7678,6 +7678,52 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xA6],
             "caller cancellation precedes work-budget delivery"
         );
+
+        // A long adaptive-filter row now charges a deterministic interior
+        // checkpoint after each 1,024 filtered bytes. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only evidence.
+        let interior_image = DecodedImage::new(1_024, 1, vec![0; 1_024 * 3], ColorType::Rgb8);
+        let interior_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3);
+        let interior_error = match image_slash_star::encode_with_policy(
+            &interior_image,
+            ImageFormat::Png,
+            &options,
+            &interior_policy,
+        ) {
+            Ok(_) => return Err("PNG interior work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            interior_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        let mut interior_sink = vec![0xA7];
+        let interior_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &interior_image,
+            ImageFormat::Png,
+            &options,
+            &interior_policy,
+            &mut interior_sink,
+        ) {
+            Ok(_) => return Err("PNG interior budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            interior_sink_error,
+            ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+                ..
+            }
+        ));
+        assert_eq!(interior_sink, vec![0xA7]);
     }
 
     if cfg!(feature = "jpeg") {
