@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Generate or verify the runtime capability-table fixture (FTR-028, QA-029).
 
-The probe test in ``tests/capability_table.rs`` emits one
+The probe test in ``tests/capability_table.rs`` is included by the
+``feature_gate_tests`` integration target and emits one
 ``CAPABILITY_TABLE_JSON`` line per feature lane. This script executes the
 probe in every native lane and in every ``wasm32-wasip1`` lane under Node's
 WASI runtime, then assembles ``tests/fixtures/capability_tables.json``.
-Independent probe jobs run concurrently with the bounded
+Reusing ``feature_gate_tests`` lets these cargo invocations reuse artifacts
+already built by ``scripts/test_feature_matrix.sh``. Independent probe jobs
+run concurrently with the bounded
 ``CAPABILITY_JOBS`` setting so this acceptance check does not serialize every
 feature lane.
 
@@ -30,7 +33,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "tests" / "fixtures" / "capability_tables.json"
-PROBE = "emit_runtime_capability_table"
+TEST_TARGET = "feature_gate_tests"
+PROBE = "capability_table::emit_runtime_capability_table"
 LANES = ["none", "jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif", "default", "all"]
 OPERATIONS = [
     "detection",
@@ -76,7 +80,7 @@ def lane_features(lane: str) -> list[str]:
 
 
 def cargo_args(lane: str, target: str | None) -> list[str]:
-    args = ["cargo", "test", "--locked", "--test", "capability_table"]
+    args = ["cargo", "test", "--locked", "--test", TEST_TARGET]
     if target:
         args += ["--target", target]
     args += ["--no-default-features"]
@@ -107,7 +111,7 @@ def wasi_executable(args: list[str]) -> Path:
             continue
         if (
             message.get("reason") == "compiler-artifact"
-            and message.get("target", {}).get("name") == "capability_table"
+            and message.get("target", {}).get("name") == TEST_TARGET
             and message.get("executable", "").endswith(".wasm")
         ):
             return Path(message["executable"])
