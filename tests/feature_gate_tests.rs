@@ -6344,9 +6344,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             );
             assert_eq!(failing_webp_sequence.writes, 2);
 
-            // Multi-frame WebP remains the intentionally generic whole-buffer
-            // sequence path until animation delivery gets its own rollback and
-            // interruption contract.
+            // Multi-frame WebP now uses the same validated RIFF structural
+            // delivery boundary. This remains a Rust-only sink contract:
+            // Pillow has no caller-owned sink and the parity matrix is
+            // unchanged.
             let mut multiple_webp_sequence = webp_sequence.clone();
             multiple_webp_sequence
                 .frames
@@ -6371,7 +6372,119 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 multiple_webp_expected.len()
             );
             assert_eq!(multiple_webp_sink.bytes, multiple_webp_expected);
-            assert_eq!(multiple_webp_sink.writes, 1);
+            assert!(multiple_webp_sink.writes > 1);
+            assert_eq!(&multiple_webp_sink.bytes[..4], b"RIFF");
+            assert_eq!(&multiple_webp_sink.bytes[8..12], b"WEBP");
+            assert!(
+                multiple_webp_sink
+                    .bytes
+                    .windows(4)
+                    .any(|chunk| chunk == b"ANMF"),
+                "multi-frame WebP must retain animation chunks"
+            );
+
+            let multiple_webp_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_multiple_webp = CancellingSink {
+                bytes: Vec::new(),
+                token: multiple_webp_token.clone(),
+                writes: 0,
+            };
+            let multiple_webp_cancellation_error =
+                match image_slash_star::encode_sequence_to_sink_with_token(
+                    &multiple_webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &multiple_webp_token,
+                    &mut cancelling_multiple_webp,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "multi-frame WebP sink cancellation unexpectedly wrote {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert_eq!(
+                multiple_webp_cancellation_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(
+                multiple_webp_cancellation_error.format(),
+                Some(ImageFormat::WebP)
+            );
+            assert_eq!(
+                multiple_webp_cancellation_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(cancelling_multiple_webp.writes, 1);
+            assert_eq!(
+                cancelling_multiple_webp.bytes,
+                multiple_webp_expected[..12].to_vec()
+            );
+
+            let too_small_multiple_webp = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(multiple_webp_expected.len() - 1)?);
+            let mut limited_multiple_webp = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let multiple_webp_limit_error =
+                match image_slash_star::encode_sequence_to_sink_with_policy(
+                    &multiple_webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &too_small_multiple_webp,
+                    &mut limited_multiple_webp,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "multi-frame WebP output policy unexpectedly admitted {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert!(matches!(
+                multiple_webp_limit_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::WebP),
+                    operation: image_slash_star::CodecOperation::SequenceEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_multiple_webp.writes, 0);
+            assert!(limited_multiple_webp.bytes.is_empty());
+
+            let mut failing_multiple_webp = FailingAfterWrites {
+                fail_at: 2,
+                writes: 0,
+            };
+            let multiple_webp_write_error = match image_slash_star::encode_sequence_to_sink(
+                &multiple_webp_sequence,
+                ImageFormat::WebP,
+                &webp_options,
+                &mut failing_multiple_webp,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "multi-frame WebP sink unexpectedly accepted {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                multiple_webp_write_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(multiple_webp_write_error.format(), Some(ImageFormat::WebP));
+            assert_eq!(
+                multiple_webp_write_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(failing_multiple_webp.writes, 2);
         }
 
         if cfg!(feature = "jpeg") {

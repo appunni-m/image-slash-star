@@ -52,6 +52,25 @@ pub(crate) fn encode_to_sink(
     write_riff_to_sink(&encoded, token, sink)
 }
 
+/// Encode a WebP animation into validated RIFF segments owned by the
+/// caller's sink. The codec retains its complete animation working buffer;
+/// this boundary makes container delivery and cancellation observable without
+/// claiming interior VP8/VP8L streaming.
+pub(crate) fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
+    opts: &WebPEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_sequence_with_token(sequence, opts, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::WebP, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_riff_to_sink(&encoded, token, sink)
+}
+
 fn write_riff_to_sink(
     encoded: &[u8],
     token: Option<&crate::CancellationToken>,
