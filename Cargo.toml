@@ -26,7 +26,6 @@ include = [
     "/PATENTS",
     "/README.md",
     "/scripts/build_avif_stack.sh",
-    "/scripts/test_feature_matrix.sh",
     "/scripts/verify_third_party_licenses.py",
 ]
 
