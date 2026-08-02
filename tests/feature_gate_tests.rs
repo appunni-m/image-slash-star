@@ -6596,7 +6596,10 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
         let options = EncodeOptions::for_format(ImageFormat::Gif);
         let expected = image_slash_star::encode_sequence(&sequence, ImageFormat::Gif, &options)?;
-        let mut sink = Vec::new();
+        let mut sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
         assert_eq!(
             image_slash_star::encode_sequence_to_sink(
                 &sequence,
@@ -6607,7 +6610,102 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             expected.len(),
             "sequence sink length"
         );
-        assert_eq!(sink, expected, "sequence sink bytes");
+        assert_eq!(sink.bytes, expected, "sequence sink bytes");
+        assert!(sink.writes > 1, "GIF sequence must cross block boundaries");
+
+        let sequence_token = image_slash_star::CancellationToken::new();
+        let mut cancelling_sequence = CancellingSink {
+            bytes: Vec::new(),
+            token: sequence_token.clone(),
+            writes: 0,
+        };
+        let cancellation_error = match image_slash_star::encode_sequence_to_sink_with_token(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &sequence_token,
+            &mut cancelling_sequence,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "GIF sequence sink cancellation unexpectedly wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            cancellation_error.kind(),
+            image_slash_star::ImageErrorKind::Cancelled
+        );
+        assert_eq!(cancellation_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            cancellation_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(cancelling_sequence.writes, 1);
+        assert_eq!(cancelling_sequence.bytes, expected[..13].to_vec());
+
+        let too_small_sequence =
+            EncodePolicy::default().with_max_output_bytes(u64::try_from(expected.len() - 1)?);
+        let mut limited_sequence = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let limited_error = match image_slash_star::encode_sequence_to_sink_with_policy(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &too_small_sequence,
+            &mut limited_sequence,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "GIF sequence output policy unexpectedly admitted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            limited_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::SequenceEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            }
+        ));
+        assert_eq!(limited_sequence.writes, 0);
+        assert!(limited_sequence.bytes.is_empty());
+
+        let mut failing_later = FailingAfterWrites {
+            fail_at: 2,
+            writes: 0,
+        };
+        let later_write_error = match image_slash_star::encode_sequence_to_sink(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &mut failing_later,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("GIF sequence sink unexpectedly accepted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            later_write_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(later_write_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            later_write_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(failing_later.writes, 2);
 
         // Invalid sequence and failing sequence sink error paths.
         let empty = image_slash_star::DecodedSequence {
@@ -6657,14 +6755,13 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         );
     }
 
-    // Every remaining enabled whole-buffer codec uses the same generic
+    // Every remaining enabled whole-buffer still codec uses the same generic
     // destination boundary. This is a Rust-only OutputWrite contract:
     // Pillow has no caller-owned sink, so these cases must not become parity
     // rows or alter the oracle-based coverage count.
     let sink_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
     for (format, enabled) in [
         (ImageFormat::Jpeg, cfg!(feature = "jpeg")),
-        (ImageFormat::Gif, cfg!(feature = "gif")),
         (ImageFormat::Tiff, cfg!(feature = "tiff")),
         (ImageFormat::Avif, cfg!(feature = "avif")),
     ] {

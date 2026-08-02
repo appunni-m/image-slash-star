@@ -1203,10 +1203,12 @@ pub(crate) fn encode_format_to_sink_with_token(
     Ok(None)
 }
 
-/// Try the structural writer for a one-frame PNG, BMP, WebP, or ICO sequence.
+/// Try the structural writer for supported PNG, BMP, GIF, WebP, TIFF, or ICO
+/// sequence delivery.
 #[cfg_attr(
     not(any(
         feature = "bmp",
+        feature = "gif",
         feature = "ico",
         feature = "png",
         feature = "tiff",
@@ -1222,6 +1224,54 @@ pub(crate) fn encode_sequence_to_sink_with_token(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn crate::OutputSink,
 ) -> ImageResult<Option<usize>> {
+    if format == ImageFormat::Gif {
+        #[cfg(not(feature = "gif"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "gif",
+            });
+        }
+        #[cfg(feature = "gif")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            let EncodeOptions::Gif(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::SequenceEncode,
+                ));
+            };
+            let encoded = gif::encode::encode_sequence_to_sink(
+                sequence,
+                options,
+                policy,
+                CodecOperation::SequenceEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode sequence")),
+                format,
+                ImageErrorStage::SequenceEncode,
+            )
+            .map(Some);
+        }
+    }
+
     if format == ImageFormat::Png {
         #[cfg(not(feature = "png"))]
         {

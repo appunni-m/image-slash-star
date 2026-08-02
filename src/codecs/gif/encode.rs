@@ -81,6 +81,25 @@ pub(crate) fn encode_to_sink(
     write_gif_to_sink(&encoded, token, sink)
 }
 
+/// Encode a GIF sequence into validated structural segments owned by the
+/// caller's sink. The encoder retains its complete working buffer; this
+/// boundary makes animated-container delivery and cancellation observable
+/// without claiming interior palette or LZW streaming.
+pub(crate) fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
+    opts: &GifEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_sequence_with_token(sequence, opts, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::Gif, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_gif_to_sink(&encoded, token, sink)
+}
+
 fn write_gif_to_sink(
     encoded: &[u8],
     token: Option<&crate::CancellationToken>,
