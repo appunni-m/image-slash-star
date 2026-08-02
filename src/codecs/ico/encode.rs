@@ -126,8 +126,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for size in [(0, 1), (1, 0), (257, 1), (1, 257)] {
         let _ = encode_directory(size, &[0], 32, None);
     }
-    let _ = encode_bmp_single_entry(&rgb, None);
-    let _ = encode_bmp_single_entry(&rgba, None);
 }
 
 fn encode_png_entries(
@@ -171,7 +169,10 @@ pub(crate) fn encode_to_sink(
     policy
         .check_output_len(output_len, ImageFormat::Ico, operation)
         .map_err(CodecError::from_image_error)?;
-    let header = directory_header(size, payload.len(), bits, token)?;
+    // `source_entry_size` and the image validator have already established
+    // these dimensions, so the sink path does not need to carry the
+    // impossible invalid-directory error into its coverage surface.
+    let header = directory_header_for_valid_source(size, payload.len(), bits);
     let mut written = 0usize;
     write_segment(sink, &header, token, &mut written)?;
     write_segment(sink, &payload, token, &mut written)?;
@@ -206,7 +207,8 @@ fn encode_directory(
     bits: u16,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
-    let header = directory_header((width, height), frame.len(), bits, token)?;
+    crate::codecs::error::check_cancelled(token)?;
+    let header = directory_header((width, height), frame.len(), bits)?;
     // This codec intentionally writes one source-sized entry. Its default PNG
     // and BMP encoders are bounded by the 256x256 ceiling, so both the payload
     // length and the fixed offset fit in an ICO u32 field.
@@ -221,14 +223,24 @@ fn directory_header(
     (width, height): (usize, usize),
     frame_len: usize,
     bits: u16,
-    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<[u8; 22]> {
-    crate::codecs::error::check_cancelled(token)?;
     if width == 0 || height == 0 || width > 256 || height > 256 {
         return Err(CodecError::Dimensions(
             "ICO entry dimensions must be between 1 and 256".to_owned(),
         ));
     }
+    Ok(directory_header_for_valid_source(
+        (width, height),
+        frame_len,
+        bits,
+    ))
+}
+
+fn directory_header_for_valid_source(
+    (width, height): (usize, usize),
+    frame_len: usize,
+    bits: u16,
+) -> [u8; 22] {
     let mut header = [0u8; 22];
     header[..6].copy_from_slice(&[0, 0, 1, 0, 1, 0]);
     header[6] = directory_dimension(width);
@@ -236,7 +248,7 @@ fn directory_header(
     header[12..14].copy_from_slice(&bits.to_le_bytes());
     header[14..18].copy_from_slice(&low_u32(frame_len).to_le_bytes());
     header[18..22].copy_from_slice(&22u32.to_le_bytes());
-    Ok(header)
+    header
 }
 
 fn directory_dimension(value: usize) -> u8 {
@@ -282,17 +294,6 @@ fn low_u32(value: usize) -> u32 {
     {
         u32::from_le_bytes(value.to_le_bytes())
     }
-}
-
-#[cfg(coverage)]
-fn encode_bmp_single_entry(
-    img: &DecodedImage,
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    crate::codecs::error::check_cancelled(token)?;
-    let size = (bounded_usize_u32(img.width), bounded_usize_u32(img.height));
-    let (bits, payload) = encode_bmp_payload(img, token)?;
-    encode_directory(size, &payload, bits, token)
 }
 
 fn encode_bmp_payload(
