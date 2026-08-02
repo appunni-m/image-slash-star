@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `44abdb7697344897430973fe380408ccfadd4f22`
+Reviewed: 2026-08-02 on the working tree based on revision `208b5a3f2482d71d95eb02ded6c08f78963dd0a9`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`44abdb7697344897430973fe380408ccfadd4f22`, identified by manifest SHA-256
+`208b5a3f2482d71d95eb02ded6c08f78963dd0a9`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -1150,11 +1150,14 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Managed feature-matrix runtime evidence comes from run
-`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`; it passed 903 checks with zero
-failures in 351,555 ms, and its terminal log records `capability tables OK: every
-native and wasm32-wasip1 lane agrees`. The matrix now runs independent native
-and `wasm32-unknown-unknown` lanes in bounded batches and interleaves the
-capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS` default to three.
+`f74e711f-c9a2-4327-bc74-d834b6bf399a`; it passed 903 checks with zero
+failures in 298,766 ms, and its terminal log records `capability tables OK: every
+native and wasm32-wasip1 lane agrees`. The matrix now runs independent native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` runtime lanes in bounded batches
+and interleaves the capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS`
+default to three. This is 52,789 ms faster than the previous managed run
+(`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`, 351,555 ms), without reducing its
+903-check scope.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
