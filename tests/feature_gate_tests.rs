@@ -6605,11 +6605,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
 
-        // These budgets reach the final row, post-tokenization, and
-        // post-output checkpoints respectively. They prove that each late
-        // rejection still publishes no returned bytes, rather than merely
-        // exercising the first row-boundary failure.
-        for maximum in [518, 519, 520] {
+        // These budgets reach the final row's post-processing checkpoint,
+        // final-row completion, post-tokenization, and post-output
+        // checkpoints respectively. They prove that each late rejection
+        // still publishes no returned bytes, rather than merely exercising
+        // the first row-boundary failure.
+        for maximum in [517, 518, 519, 520] {
             let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(maximum);
             let error = match image_slash_star::encode_with_policy(
                 &image,
