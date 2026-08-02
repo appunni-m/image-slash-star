@@ -846,9 +846,11 @@ pub fn encode_with_policy(
 /// row preparation and structural segments in still and one-frame fallback
 /// paths; GIF still encoding also polls block/frame/coalescing/output-assembly
 /// checkpoints, and WebP still encoding polls preparation, codec-result, and
-/// metadata-assembly boundaries. Other whole-buffer still codecs currently observe only the public
-/// boundary. The sequence API additionally checks at retained-frame
-/// boundaries and codec-specific checkpoints.
+/// metadata-assembly boundaries; native AVIF still encoding polls preparation,
+/// frame, and finalization checkpoints; ICO still encoding polls source-size
+/// validation, embedded PNG/BMP work, and directory finalization. The sequence
+/// API additionally checks at retained-frame boundaries and codec-specific
+/// checkpoints.
 ///
 /// # Errors
 ///
@@ -927,7 +929,8 @@ pub fn encode_sequence_with_policy(
 /// boundaries. Still-image codecs and one-frame fallback encodes generally
 /// observe cancellation only at the public codec boundary; PNG still and
 /// one-frame sink encodes additionally poll row preparation and emitted
-/// structural segments.
+/// structural segments, and BMP one-frame sequence sinks use the same
+/// structural path.
 ///
 /// # Errors
 ///

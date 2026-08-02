@@ -5359,9 +5359,42 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 expected_bmp.len()
             );
             assert_eq!(bmp_sequence_sink.bytes, expected_bmp);
-            // Sequence BMP still uses the existing whole-buffer fallback;
-            // structural sequence writing is a separate roadmap item.
-            assert_eq!(bmp_sequence_sink.writes, 1);
+            assert!(
+                bmp_sequence_sink.writes > 1,
+                "BMP sequence output must cross structural write boundaries"
+            );
+
+            let mut limited_bmp_sequence = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let limited_bmp_sequence_error =
+                match image_slash_star::encode_sequence_to_sink_with_policy(
+                    &bmp_sequence,
+                    ImageFormat::Bmp,
+                    &bmp_options,
+                    &too_small,
+                    &mut limited_bmp_sequence,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "BMP sequence output policy unexpectedly admitted {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert_eq!(
+                limited_bmp_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::LimitExceeded
+            );
+            assert_eq!(limited_bmp_sequence_error.format(), Some(ImageFormat::Bmp));
+            assert_eq!(
+                limited_bmp_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(limited_bmp_sequence.writes, 0);
+            assert!(limited_bmp_sequence.bytes.is_empty());
 
             let mut invalid_bmp_sink = RecordingSink {
                 bytes: Vec::new(),
