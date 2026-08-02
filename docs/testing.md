@@ -751,6 +751,25 @@ controlled runtime comparison;
 the TIFF sink, policy, and cancellation cases are Rust-only contracts, not
 Pillow-parity rows.
 
+The parity-harness runtime follow-up was committed at revision
+`ba06d91625ca72f81e94c0951ab6904b03e75ff6`. It keeps the same 1,417 active
+manifest rows and partitions the independent decode and encode work into eight
+format-scoped tests each; per-row success logging is opt-in through
+`IMAGE_SLASH_STAR_VERBOSE_MATRIX=1`, while failure diagnostics and per-format
+summaries remain unconditional. Coverage MCP run
+`aaaf3d94-a362-4cc2-9609-8b930d60f583`, snapshot
+`6d386562-ad46-4358-929b-e5b66dcd58ba`, passed 72 tests with zero failures and
+retained 48,061/48,062 lines, 6,588/6,588 branches, 2,692/2,693 functions,
+and 74,819/74,826 regions. The feature matrix passed 947 checks in
+`e38b36f5-a130-48bc-92ea-388fda6893b2` (13,762 ms); the parity registration
+passed 1,434 checks with zero failures and zero skips in
+`608a6de1-a9d0-4820-8ffd-7287267f16f2` (53,544 ms). Its retained test output
+reports 17 tests in 12.80 s, versus 3 tests in 33.48 s for the preceding
+parity run `d39ff85a-6d2e-41e8-b453-b4356943e3ff`; total managed wall time is
+not a controlled benchmark because build/cache state differs. The partition
+changes scheduling and diagnostics only: no parity row, fixture, assertion,
+or Pillow provenance boundary changed.
+
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
 checks passed with zero failures in 298,766 ms, and its terminal capability-table
