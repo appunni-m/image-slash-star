@@ -230,14 +230,17 @@ Encode cancellation follows the same evidence boundary. Pillow has no
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
-They check byte identity for uncancelled still and GIF-sequence output, stable
-pre-cancelled errors, successful token-aware sink writes, and PNG/BMP still
-sinks that can cancel between structural writes while retaining only the
-delivered prefix. The PNG and BMP still paths poll while preparing rows and
-between sink segments; GIF, TIFF, WebP, and native AVIF sequence paths poll their
-implemented frame/coalescing/page/finalization checkpoints. This slice does
-not claim universal interior interruption, progress callbacks, work budgets,
-short-write/flush semantics, or rollback cleanup.
+They check byte identity for uncancelled JPEG/still and GIF-sequence output,
+stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP
+still sinks that can cancel between structural writes while retaining only the
+delivered prefix. JPEG's codec-local coverage drill fires deterministic
+internal row/block/scan checkpoints; the public test intentionally avoids
+timing-sensitive interruption. The PNG and BMP still paths poll while
+preparing rows and between sink segments; GIF, TIFF, WebP, and native AVIF
+sequence paths poll their implemented frame/coalescing/page/finalization
+checkpoints. This slice does not claim universal interior interruption,
+progress callbacks, work budgets, short-write/flush semantics, or rollback
+cleanup.
 
 The codec-local `#[cfg(coverage)]` cancellation drills fire deterministic
 checkpoint counts so the implemented error edges are executed in the managed

@@ -793,7 +793,7 @@ pub(crate) fn encode_format_with_token(
         let encoded: CodecResult<Vec<u8>> = match (format, _options) {
             #[cfg(feature = "jpeg")]
             (ImageFormat::Jpeg, EncodeOptions::Jpeg(options)) => {
-                jpeg::encode::encode(_image, options)
+                jpeg::encode::encode_with_token(_image, options, token)
             }
             #[cfg(feature = "png")]
             (ImageFormat::Png, EncodeOptions::Png(options)) => png::encode::encode(_image, options),

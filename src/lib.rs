@@ -839,9 +839,12 @@ pub fn encode_with_policy(
 
 /// Encode a decoded still image with cooperative cancellation.
 ///
-/// The token is checked before codec dispatch and after the whole-buffer codec
-/// returns. Still encoders cannot yet poll during their codec-internal work;
-/// the sequence API additionally checks at retained-frame boundaries.
+/// The token is checked before codec dispatch and after encoding. JPEG also
+/// polls between color-conversion rows, sampling rows, quantized block rows,
+/// entropy rows, and progressive event batches; PNG and BMP poll their
+/// structural preparation and sink segments. Other whole-buffer still codecs
+/// currently observe only the public boundary. The sequence API additionally
+/// checks at retained-frame boundaries and codec-specific checkpoints.
 ///
 /// # Errors
 ///
