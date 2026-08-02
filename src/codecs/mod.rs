@@ -1549,7 +1549,6 @@ pub(crate) fn encode_sequence_to_sink_with_token(
                 target_arch = "wasm32"
             ))]
             ensure_available(format)?;
-            let frame = single_frame_for_sink(sequence, format)?;
             let options = match options {
                 EncodeOptions::Tiff(options) => options,
                 options => {
@@ -1560,8 +1559,8 @@ pub(crate) fn encode_sequence_to_sink_with_token(
                     ));
                 }
             };
-            let encoded = tiff::encode::encode_to_sink(
-                &frame.image,
+            let encoded = tiff::encode::encode_sequence_to_sink(
+                sequence,
                 options,
                 policy,
                 CodecOperation::SequenceEncode,
