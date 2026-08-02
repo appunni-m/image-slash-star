@@ -614,9 +614,9 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`47a6aa5c-2d9f-49e7-920d-2e99905e4ebd`, submitted against
+`570661f6-f628-427a-8663-505ee665707e`, submitted against
 `0bc56ba272307e789be49c91761189f63e3ce3b0`: 859 checks passed with zero
-failures in 980,114 ms, and its terminal capability-table record says
+failures in 1,453,001 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
