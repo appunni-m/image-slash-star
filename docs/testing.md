@@ -821,7 +821,11 @@ failures in 13,136 ms and 12,116 ms. The preceding four-lane baseline
 `91c9bc98-5f22-41d2-95ad-d981957f1f82` also passed all 947 checks in 16,844 ms
 on the same managed environment. This is observed scheduling evidence rather
 than a universal benchmark claim; the retained run logs show no build-directory
-lock waits and the capability-table result remains unchanged.
+lock waits and the capability-table result remains unchanged. The committed
+revision `125b1b0` then passed the same scope in runs
+`b016dd0f-6460-4bcf-8add-765b6ec8a8ee` (16,317 ms) and
+`b4bf4180-f72c-4969-a66e-c355c402d9ac` (11,648 ms), illustrating the managed
+runner variance that makes these observations non-universal benchmarks.
 
 The feature-matrix harness now retains each isolated lane target root between
 invocations by default under `target/feature-matrix`; `MATRIX_TARGET_ROOT` can
