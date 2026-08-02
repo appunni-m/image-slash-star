@@ -279,7 +279,12 @@ payloads are bounded-validated but never exposed inflated. Pillow-tolerated
 invalidly compressed `zTXt`, `iCCP`, and `iTXt` payloads are omitted and
 produce `DiagnosticKind::InvalidMetadataIgnored`; malformed field shapes stay
 raw metadata. Method-only `zTXt`/`iCCP` mutations are outside this recovery
-contract because Pillow rejects them.
+contract because Pillow rejects them. A static PNG stream that reaches EOF
+without `IEND` remains decodable with a Rust-only
+`DiagnosticKind::RecoveredStructure` record named `png_missing_iend` at the
+EOF offset; structural verification still rejects the missing terminator. The
+diagnostic manifest asserts this field separately from Pillow parity because
+Pillow has no equivalent structured warning field.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
