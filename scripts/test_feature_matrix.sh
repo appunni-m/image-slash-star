@@ -112,8 +112,11 @@ run_native_lane() {
     set -- $(feature_args "$features")
     cargo clippy --workspace --all-targets --locked "$@" -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked "$@"
-    cargo test --locked --test feature_gate_tests "$@" -- --nocapture \
+    cargo test --locked --test feature_gate_tests "$@" -- \
         --test-threads "$MATRIX_TEST_THREADS"
+    cargo test --locked --test feature_gate_tests "$@" \
+        capability_table::emit_runtime_capability_table -- --exact --nocapture \
+        --test-threads 1
 }
 
 run_wasm_unknown_lane() {
@@ -156,8 +159,11 @@ for line in open(sys.argv[1], encoding="utf-8"):
 else:
     raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
 ' "$build_log")
-    node scripts/wasm_test_runner.js "$binary" --nocapture \
+    node scripts/wasm_test_runner.js "$binary" \
         --test-threads "$MATRIX_TEST_THREADS"
+    node scripts/wasm_test_runner.js "$binary" \
+        capability_table::emit_runtime_capability_table --exact --nocapture \
+        --test-threads 1
 }
 
 run_matrix_lane() {
@@ -273,6 +279,11 @@ else
     echo "node is required for the wasm32-wasip1 runtime lanes" >&2
     exit 1
 fi
+
+# Resolve the locked dependency graph once before concurrent lanes start. This
+# keeps Cargo's shared package-cache lock out of the lane fan-out, while each
+# lane still uses its own target directory for independent feature builds.
+cargo fetch --locked
 
 run_parallel_jobs run_matrix_lane \
     native:none wasm-unknown:none wasm-wasi:none \
