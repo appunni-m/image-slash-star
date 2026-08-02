@@ -1014,7 +1014,10 @@ pub trait OutputSink {
     ///
     /// # Errors
     ///
-    /// Returns a structured error when the destination rejects the write.
+    /// Returns a structured error when the destination rejects the write. An
+    /// implementation must return `Ok(())` only after accepting the complete
+    /// slice; if it accepts a prefix and then returns an error, that prefix is
+    /// already delivered and cannot be rolled back by the encoder.
     fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()>;
 
     /// Finalize delivery after the complete encoded result has been written.

@@ -7426,6 +7426,89 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+fn partial_structural_sink_write_preserves_prefix_without_flush()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+
+    // Pillow has no caller-owned OutputSink. This real destination contract is
+    // Rust-only evidence and must not become a synthetic parity or coverage
+    // row.
+
+    struct PartialWriteSink {
+        bytes: Vec<u8>,
+        writes: usize,
+        flushes: usize,
+    }
+
+    impl image_slash_star::OutputSink for PartialWriteSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes == 2 {
+                let accepted = 5.min(bytes.len());
+                self.bytes.extend_from_slice(&bytes[..accepted]);
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "sink accepted a short prefix".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            Ok(())
+        }
+    }
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let decoded = image_slash_star::decode(&data)?;
+    let options = image_slash_star::EncodeOptions::for_format(ImageFormat::Png);
+    let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+    let mut sink = PartialWriteSink {
+        bytes: Vec::new(),
+        writes: 0,
+        flushes: 0,
+    };
+
+    let error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut sink,
+    ) {
+        Ok(length) => {
+            return Err(format!("short-writing sink unexpectedly accepted {length} bytes").into());
+        }
+        Err(error) => error,
+    };
+
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+    assert_eq!(error.format(), Some(ImageFormat::Png));
+    assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(
+        sink.writes, 2,
+        "the error must occur at a structural boundary"
+    );
+    assert_eq!(sink.flushes, 0, "failed delivery must not be finalized");
+    assert_eq!(
+        sink.bytes.len(),
+        13,
+        "8-byte signature plus a short 5-byte prefix"
+    );
+    assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
+    assert_eq!(&sink.bytes[..8], b"\x89PNG\r\n\x1a\n");
+    Ok(())
+}
+
+#[test]
 fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn std::error::Error>>
 {
     // Pillow has no caller-controlled maximum-output policy. These assertions
