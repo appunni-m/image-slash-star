@@ -389,11 +389,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![128; 17 * 17 * 3],
         crate::types::ColorType::Rgb8,
     );
-    for checks in [0, 1, 4, 12, 24, 48, 96] {
+    for checks in [0, 1, 4, 12, 24, 28, 37, 43, 44, 46, 48, 96] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&checkpoint_rgb, &JpegEncodeOptions::default(), Some(&token));
     }
+    let grayscale_token = crate::CancellationToken::new();
+    grayscale_token.cancel_after(2);
+    let _ = encode_with_token(&gray, &JpegEncodeOptions::default(), Some(&grayscale_token));
     let grayscale_alpha = DecodedImage::new(1, 1, vec![0, 255], crate::types::ColorType::La8);
     let _ = encode(&grayscale_alpha, &JpegEncodeOptions::default());
     let mut progressive = JpegEncodeOptions {
@@ -401,7 +404,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..JpegEncodeOptions::default()
     };
     let _ = encode(&rgb, &progressive);
-    for checks in [0, 8, 24, 64, 128] {
+    for checks in [0, 8, 24, 44, 45, 47, 64, 128] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&checkpoint_rgb, &progressive, Some(&token));
@@ -416,6 +419,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..JpegEncodeOptions::default()
     };
     let _ = encode(&rgb, &restart);
+    let optimized_checkpoint = JpegEncodeOptions {
+        optimize: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let optimized_token = crate::CancellationToken::new();
+    optimized_token.cancel_after(44);
+    let _ = encode_with_token(
+        &checkpoint_rgb,
+        &optimized_checkpoint,
+        Some(&optimized_token),
+    );
     let mut bad_restart = restart.clone();
     bad_restart.restart_interval = Some(70_000);
     let _ = encode(&rgb, &bad_restart);
@@ -435,6 +449,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, None);
     let _ = downsample(&plane, 2, 2, 1, 2, 2, 1, None);
     let _ = downsample(&plane, 2, 2, 1, 1, 2, 2, None);
+    let downsample_token = crate::CancellationToken::new();
+    downsample_token.cancel_after(0);
+    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, Some(&downsample_token));
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = downsample(&plane, 2, 2, 2, 1, 1, 2, None);
     }));
@@ -483,10 +500,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
         dc_tbl: 1,
         ac_tbl: 1,
     };
+    let progressive_components = [y_component, cb_component, cr_component];
+    let _ = dc_progressive_events(&progressive_dc_scan, &progressive_components, None);
+    let single_dc_scan = ProgScan {
+        comps: vec![0],
+        ss: 0,
+        se: 0,
+        ah: 0,
+        al: 0,
+        is_dc: true,
+    };
+    let single_dc_token = crate::CancellationToken::new();
+    single_dc_token.cancel_after(0);
     let _ = dc_progressive_events(
-        &progressive_dc_scan,
-        &[y_component, cb_component, cr_component],
-        None,
+        &single_dc_scan,
+        &progressive_components,
+        Some(&single_dc_token),
     );
 
     let scan = ProgScan {
