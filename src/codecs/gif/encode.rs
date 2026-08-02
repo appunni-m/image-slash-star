@@ -7,12 +7,14 @@
 
 use crate::codecs::error::{CodecError, CodecResult};
 use crate::encode_options::{GifColorTable, GifEncodeOptions, GifLoop};
+use crate::encode_policy::EncodePolicy;
 #[cfg(coverage)]
 use crate::types::DecodedFrame;
 use crate::types::{
     AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FrameDuration, FramePixelLayout, ImageMode, ImagePalette,
 };
+use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::collections::HashMap;
 
 const GIF_TRAILER: u8 = 0x3b;
@@ -58,6 +60,229 @@ pub fn encode_with_token(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     encode_sequence_with_token(&DecodedSequence::from_image(img.clone()), opts, token)
+}
+
+/// Encode a still GIF into validated structural segments owned by the
+/// caller's sink. The GIF encoder retains its complete working buffer; this
+/// boundary makes container delivery and cancellation observable without
+/// claiming interior palette or LZW streaming.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &GifEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_with_token(img, opts, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::Gif, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_gif_to_sink(&encoded, token, sink)
+}
+
+fn write_gif_to_sink(
+    encoded: &[u8],
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let signature = encoded.get(..6);
+    if !matches!(signature, Some(b"GIF87a" | b"GIF89a")) || encoded.len() < 13 {
+        return Err(CodecError::Malformed(
+            "GIF encoder produced an invalid header".to_owned(),
+        ));
+    }
+
+    let mut written = 0usize;
+    write_gif_sink_segment(sink, &encoded[..13], token, &mut written)?;
+    let mut offset = 13usize;
+    let global_packed = encoded[10];
+    if global_packed & 0x80 != 0 {
+        let table_len = gif_color_table_len(global_packed)?;
+        let end = offset
+            .checked_add(table_len)
+            .ok_or_else(|| CodecError::Dimensions("GIF global color table overflows".to_owned()))?;
+        let table = encoded.get(offset..end).ok_or_else(|| {
+            CodecError::Malformed("GIF global color table extends beyond output".to_owned())
+        })?;
+        write_gif_sink_segment(sink, table, token, &mut written)?;
+        offset = end;
+    }
+
+    loop {
+        let marker = *encoded
+            .get(offset)
+            .ok_or_else(|| CodecError::Malformed("GIF output has no trailer".to_owned()))?;
+        match marker {
+            GIF_TRAILER => {
+                let end = offset.checked_add(1).ok_or_else(|| {
+                    CodecError::Dimensions("GIF trailer offset overflows".to_owned())
+                })?;
+                if end != encoded.len() {
+                    return Err(CodecError::Malformed(
+                        "GIF output has trailing bytes after its trailer".to_owned(),
+                    ));
+                }
+                write_gif_sink_segment(sink, &encoded[offset..end], token, &mut written)?;
+                return Ok(written);
+            }
+            IMAGE_SEPARATOR => {
+                let descriptor_end = offset.checked_add(10).ok_or_else(|| {
+                    CodecError::Dimensions("GIF image descriptor overflows".to_owned())
+                })?;
+                let descriptor = encoded.get(offset..descriptor_end).ok_or_else(|| {
+                    CodecError::Malformed("GIF image descriptor extends beyond output".to_owned())
+                })?;
+                write_gif_sink_segment(sink, descriptor, token, &mut written)?;
+                let local_packed = descriptor[9];
+                offset = descriptor_end;
+                if local_packed & 0x80 != 0 {
+                    let table_len = gif_color_table_len(local_packed)?;
+                    let end = offset.checked_add(table_len).ok_or_else(|| {
+                        CodecError::Dimensions("GIF local color table overflows".to_owned())
+                    })?;
+                    let table = encoded.get(offset..end).ok_or_else(|| {
+                        CodecError::Malformed(
+                            "GIF local color table extends beyond output".to_owned(),
+                        )
+                    })?;
+                    write_gif_sink_segment(sink, table, token, &mut written)?;
+                    offset = end;
+                }
+                let lzw_end = offset
+                    .checked_add(1)
+                    .ok_or_else(|| CodecError::Dimensions("GIF LZW header overflows".to_owned()))?;
+                let lzw_header = encoded.get(offset..lzw_end).ok_or_else(|| {
+                    CodecError::Malformed("GIF image has no LZW code-size byte".to_owned())
+                })?;
+                write_gif_sink_segment(sink, lzw_header, token, &mut written)?;
+                offset = write_gif_sub_blocks(encoded, lzw_end, token, sink, &mut written)?;
+            }
+            EXTENSION_INTRODUCER => {
+                let label = *encoded
+                    .get(offset.checked_add(1).ok_or_else(|| {
+                        CodecError::Dimensions("GIF extension label offset overflows".to_owned())
+                    })?)
+                    .ok_or_else(|| {
+                        CodecError::Malformed("GIF extension has no label".to_owned())
+                    })?;
+                match label {
+                    GRAPHIC_CONTROL_LABEL => {
+                        let end = offset.checked_add(8).ok_or_else(|| {
+                            CodecError::Dimensions(
+                                "GIF graphic-control extension overflows".to_owned(),
+                            )
+                        })?;
+                        let block = encoded.get(offset..end).ok_or_else(|| {
+                            CodecError::Malformed(
+                                "GIF graphic-control extension extends beyond output".to_owned(),
+                            )
+                        })?;
+                        if block[2] != 4 || block[7] != 0 {
+                            return Err(CodecError::Malformed(
+                                "GIF graphic-control extension has an invalid block".to_owned(),
+                            ));
+                        }
+                        write_gif_sink_segment(sink, block, token, &mut written)?;
+                        offset = end;
+                    }
+                    0xff | 0x01 => {
+                        let expected_size = if label == 0xff { 11 } else { 12 };
+                        let size_offset = offset.checked_add(2).ok_or_else(|| {
+                            CodecError::Dimensions("GIF extension-size offset overflows".to_owned())
+                        })?;
+                        if encoded.get(size_offset).copied() != Some(expected_size) {
+                            return Err(CodecError::Malformed(
+                                "GIF fixed-layout extension has an invalid block size".to_owned(),
+                            ));
+                        }
+                        let prefix_end = size_offset
+                            .checked_add(1)
+                            .and_then(|value| value.checked_add(usize::from(expected_size)))
+                            .ok_or_else(|| {
+                                CodecError::Dimensions("GIF extension prefix overflows".to_owned())
+                            })?;
+                        let prefix = encoded.get(offset..prefix_end).ok_or_else(|| {
+                            CodecError::Malformed(
+                                "GIF extension prefix extends beyond output".to_owned(),
+                            )
+                        })?;
+                        write_gif_sink_segment(sink, prefix, token, &mut written)?;
+                        offset =
+                            write_gif_sub_blocks(encoded, prefix_end, token, sink, &mut written)?;
+                    }
+                    _ => {
+                        let prefix_end = offset.checked_add(2).ok_or_else(|| {
+                            CodecError::Dimensions("GIF extension prefix overflows".to_owned())
+                        })?;
+                        let prefix = encoded.get(offset..prefix_end).ok_or_else(|| {
+                            CodecError::Malformed(
+                                "GIF extension prefix extends beyond output".to_owned(),
+                            )
+                        })?;
+                        write_gif_sink_segment(sink, prefix, token, &mut written)?;
+                        offset =
+                            write_gif_sub_blocks(encoded, prefix_end, token, sink, &mut written)?;
+                    }
+                }
+            }
+            _ => {
+                return Err(CodecError::Malformed(
+                    "GIF output contains an unknown block marker".to_owned(),
+                ));
+            }
+        }
+    }
+}
+
+fn gif_color_table_len(packed: u8) -> CodecResult<usize> {
+    let entries = 2usize
+        .checked_shl(u32::from(packed & 0x07))
+        .ok_or_else(|| CodecError::Dimensions("GIF color table size overflows".to_owned()))?;
+    entries
+        .checked_mul(3)
+        .ok_or_else(|| CodecError::Dimensions("GIF color table length overflows".to_owned()))
+}
+
+fn write_gif_sub_blocks(
+    encoded: &[u8],
+    mut offset: usize,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+    written: &mut usize,
+) -> CodecResult<usize> {
+    loop {
+        let size = *encoded.get(offset).ok_or_else(|| {
+            CodecError::Malformed("GIF sub-block list has no terminator".to_owned())
+        })?;
+        let end = offset
+            .checked_add(1)
+            .and_then(|value| value.checked_add(usize::from(size)))
+            .ok_or_else(|| CodecError::Dimensions("GIF sub-block length overflows".to_owned()))?;
+        let block = encoded.get(offset..end).ok_or_else(|| {
+            CodecError::Malformed("GIF sub-block extends beyond output".to_owned())
+        })?;
+        write_gif_sink_segment(sink, block, token, written)?;
+        offset = end;
+        if size == 0 {
+            return Ok(offset);
+        }
+    }
+}
+
+fn write_gif_sink_segment(
+    sink: &mut dyn OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("GIF sink output length overflows".to_owned()))?;
+    Ok(())
 }
 
 #[cfg(coverage)]

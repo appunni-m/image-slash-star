@@ -4,7 +4,13 @@
 //! Cargo feature pulls in only that codec and its private support code.
 
 use crate::SequenceDecodeBudget;
-#[cfg(any(feature = "bmp", feature = "png", feature = "tiff", feature = "webp"))]
+#[cfg(any(
+    feature = "bmp",
+    feature = "gif",
+    feature = "png",
+    feature = "tiff",
+    feature = "webp"
+))]
 use crate::capabilities::CodecOperation;
 use crate::encode_options::EncodeOptions;
 use crate::encode_policy::EncodePolicy;
@@ -872,6 +878,7 @@ pub(crate) fn encode_format_with_token(
 #[cfg_attr(
     not(any(
         feature = "bmp",
+        feature = "gif",
         feature = "ico",
         feature = "png",
         feature = "tiff",
@@ -922,6 +929,57 @@ pub(crate) fn encode_format_to_sink_with_token(
                 ));
             };
             let encoded = png::encode::encode_to_sink(
+                image,
+                options,
+                policy,
+                CodecOperation::StillEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode")),
+                format,
+                ImageErrorStage::StillEncode,
+            )
+            .map(Some);
+        }
+    }
+
+    if format == ImageFormat::Gif {
+        #[cfg(not(feature = "gif"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "gif",
+            });
+        }
+        #[cfg(feature = "gif")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            image
+                .validate()
+                .map_err(|error| error.with_format(format))?;
+            let EncodeOptions::Gif(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::StillEncode,
+                ));
+            };
+            let encoded = gif::encode::encode_to_sink(
                 image,
                 options,
                 policy,
