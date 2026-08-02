@@ -365,6 +365,21 @@ fn record_apng_declaration_diagnostic(
     });
 }
 
+fn record_apng_length_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
+    // The APNG acTL payload contains exactly num_frames and num_plays. Pillow
+    // accepts the committed long-acTL fixture and keeps its usable animation;
+    // retain that result while exposing the ignored trailing byte to Rust.
+    if chunk.kind == *b"acTL" && chunk.data.len() > 8 {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_actl_overlong"),
+        });
+    }
+}
+
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     match value {
         0 => Some(crate::types::SrgbIntent::Perceptual),
@@ -474,6 +489,7 @@ pub fn decode(
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
+        record_apng_length_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
                 idat_offset.get_or_insert(chunk.offset);
@@ -878,6 +894,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
+        record_apng_length_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_offset = Some(chunk.offset);

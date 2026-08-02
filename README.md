@@ -293,8 +293,9 @@ first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
 `png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame
 APNG declaration reports `png_apng_zero_frames`, malformed APNG declarations
 that fall back to the default image report `png_duplicate_actl` or
-`png_actl_after_idat`, and valid inflated bytes past the first PNG raster
-report `png_oversized_scanline`. These are Rust-only
+`png_actl_after_idat`; an overlong `acTL` payload reports
+`png_actl_overlong`, and valid inflated bytes past the first PNG raster report
+`png_oversized_scanline`. These are Rust-only
 defensive diagnostics: Pillow exposes the successful pixels but no equivalent
 structured warning field.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained

@@ -529,6 +529,36 @@
       "pillow_outcome": "ok"
     },
     {
+      "id": "png_actl_overlong_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/apng_long_actl.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 33,
+      "identity": "png_actl_overlong",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_actl_overlong_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/apng_long_actl.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 33,
+      "identity": "png_actl_overlong",
+      "pillow_outcome": "ok"
+    },
+    {
       "id": "png_duplicate_actl_still",
       "feature": "png",
       "format": "png",

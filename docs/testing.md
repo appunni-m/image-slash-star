@@ -126,8 +126,9 @@ manifest also records Pillow-tolerated indexed-palette shape damage
 and `png_trns_without_plte`), an APNG declaration with zero animation frames
 (`png_apng_zero_frames`), malformed APNG declarations that fall back to the
 default PNG image (`png_duplicate_actl` at offset `53` and
-`png_actl_after_idat` at offset `3681`), and valid inflated PNG bytes beyond
-the first raster (`png_oversized_scanline`). These cases retain the usable Pillow-observed
+`png_actl_after_idat` at offset `3681`), an overlong APNG `acTL` payload at
+offset `33` (`png_actl_overlong`), and valid inflated PNG bytes beyond the
+first raster (`png_oversized_scanline`). These cases retain the usable Pillow-observed
 pixels while their Rust-only diagnostics expose the recovered structure.
 `bad_idat_crc.png` parity row still owns the outer success/pixel result and the
 separate diagnostic rows own only the Rust `RecoveredStructure` records. The
@@ -140,7 +141,9 @@ own their Pillow success/pixel results; separate defensive rows own only
 The malformed APNG declarations likewise own separate defensive records:
 `png_duplicate_actl` identifies the ignored second declaration and
 `png_actl_after_idat` identifies the late declaration; both retain the usable
-default-image result.
+default-image result. The `apng_long_actl.png` parity row owns the successful
+two-frame result, while separate defensive rows own `png_actl_overlong` for
+the ignored trailing byte in its `acTL` payload.
 Unsupported compression methods in PNG
 `zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
 remain outside this contract. No coverage-only unit or `cfg(coverage)` test is
