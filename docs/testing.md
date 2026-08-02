@@ -111,7 +111,8 @@ stable structure identity. Its `pillow_outcome: "ok"` and unchanged pixels are
 supporting fixture evidence, not proof that Pillow returned an equivalent
 diagnostic. The accepted cases are a non-standard GIF graphic-control size,
 Pillow-tolerated invalid compressed payloads in PNG `zTXt`/`iCCP`/`iTXt`, a bad
-PNG `IDAT` CRC that Pillow accepts through `load()`, a static PNG stream without
+PNG `IDAT` CRC that Pillow accepts through `load()`, a bad PNG `IEND` CRC that
+Pillow accepts through both `load()` and `verify()`, a static PNG stream without
 `IEND` that Pillow accepts through `load()`, and the existing trailing-input
 policy. It also records Pillow-tolerated duplicate `PLTE` and `tRNS` members,
 which keep the first palette result, and an unknown ancillary chunk whose third
@@ -135,8 +136,9 @@ pixels while their Rust-only diagnostics expose the recovered structure.
 separate diagnostic rows own only the Rust `RecoveredStructure` records. The
 `missing_iend.png` parity row owns Pillow's load-success/pixel result and
 `verify()` error; its separate defensive rows own only the Rust
-`png_missing_iend` record at EOF offset `3643`. `verify()` remains a fatal CRC
-and missing-terminator boundary. The duplicate `PLTE` and `tRNS` parity rows
+`png_missing_iend` record at EOF offset `3643`. Rust `verify()` remains a fatal
+CRC and missing-terminator boundary, including the defensive bad-`IEND`-CRC
+rows even though Pillow's `verify()` accepts that fixture. The duplicate `PLTE` and `tRNS` parity rows
 own their Pillow success/pixel results; separate defensive rows own only
 `png_duplicate_plte` at offset `51` and `png_duplicate_trns` at offset `65`.
 The malformed APNG declarations likewise own separate defensive records:
@@ -396,7 +398,8 @@ diagnostic-manifest rows prove that Pillow-tolerated invalid compressed
 `zTXt`/`iCCP`/`iTXt` payloads are ignored with usable pixels and a stable
 diagnostic instead of being retained as metadata. The same defensive manifest
 records the accepted bad-`IDAT`-CRC recovery at chunk offset `33` with
-`png_IDAT_crc`, plus the accepted `prvt` reserved-bit mutation at the same
+`png_IDAT_crc`, the accepted bad-`IEND`-CRC recovery at chunk offset `57` with
+`png_IEND_crc`, plus the accepted `prvt` reserved-bit mutation at the same
 offset with `png_reserved_bit`, and the accepted static `missing_iend.png`
 recovery at EOF offset `3643` with `png_missing_iend`; the Pillow parity matrix
 does not gain a diagnostic field. Duplicate `PLTE`/`tRNS` rows likewise remain

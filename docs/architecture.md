@@ -111,10 +111,11 @@ non-standard GIF graphic-control size, ignored invalid compressed PNG
 ancillary metadata, an accepted bad PNG `IDAT` CRC, an accepted invalid PNG
 reserved-bit chunk name, an accepted unknown ancillary chunk after `IDAT`, an
 accepted static PNG stream without `IEND`, accepted duplicate PNG
-palette/transparency chunks, and accepted APNG declaration-length damage.
+palette/transparency chunks, an accepted bad PNG `IEND` CRC, and accepted APNG
+declaration-length damage.
 A diagnostic reports a recoverable condition; it does not change pixels or turn
 Pillow's result into a new parity field. The
-`IDAT` CRC remains fatal at `verify()`.
+`IDAT` and `IEND` CRCs remain fatal at Rust `verify()`.
 
 `SourceDescriptor::alpha()` records the alpha association declared by the
 encoded source: straight (PNG, WebP, AVIF, TIFF `ExtraSamples` 2),
@@ -143,7 +144,9 @@ shapes retain their raw bytes. Method-only `zTXt`/`iCCP` mutations are outside
 this recovery contract because Pillow rejects them. The encoded metadata extent
 remains bounded by `max_metadata_bytes`. Pillow-tolerated bad `IDAT` CRCs are
 decoded with a `RecoveredStructure` diagnostic (`png_IDAT_crc`) and remain
-rejected by structural verification. Pillow-tolerated unknown ancillary chunk
+rejected by structural verification. Pillow-tolerated bad `IEND` CRCs are
+decoded with a `RecoveredStructure` diagnostic (`png_IEND_crc`) while Rust
+structural verification remains strict. Pillow-tolerated unknown ancillary chunk
 names with a lowercase reserved third character are decoded with a
 `RecoveredStructure` diagnostic (`png_reserved_bit`).
 Pillow-tolerated unknown ancillary chunks after `IDAT` produce the same
@@ -576,8 +579,9 @@ The Rust diagnostic fields are a defensive/specification contract, not a
 Pillow-parity field. The committed diagnostic manifest proves the stable
 kind/stage/offset/identity values for accepted GIF recovery, invalid
 compressed PNG ancillary members, accepted PNG structural recoveries including
-duplicate palette chunks and missing `IEND`, and trailing input; Pillow success
-and unchanged pixels are recorded as supporting fixture evidence.
+duplicate palette chunks, missing `IEND`, and a bad `IEND` CRC, and trailing
+input; Pillow success and unchanged pixels are recorded as supporting fixture
+evidence.
 
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.

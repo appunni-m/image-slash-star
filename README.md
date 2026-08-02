@@ -288,6 +288,8 @@ Pillow has no equivalent structured warning field. Pillow-tolerated duplicate
 `PLTE` and `tRNS` members keep the first palette result and produce separate
 Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
 `png_duplicate_trns`) at the ignored chunk offsets.
+Pillow-tolerated bad `IEND` CRCs likewise keep still and sequence decode
+successful with `png_IEND_crc`; Rust structural verification remains strict.
 Pillow-tolerated indexed-palette shape damage is likewise retained with the
 first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
 `png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame

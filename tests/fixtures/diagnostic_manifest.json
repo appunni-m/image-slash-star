@@ -64,6 +64,36 @@
       "pillow_outcome": "ok"
     },
     {
+      "id": "png_bad_iend_crc_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "mutation": "png_bad_crc",
+      "chunk_kind": "IEND",
+      "chunk_payload": [],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 57,
+      "identity": "png_IEND_crc",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_bad_iend_crc_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "mutation": "png_bad_crc",
+      "chunk_kind": "IEND",
+      "chunk_payload": [],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 57,
+      "identity": "png_IEND_crc",
+      "pillow_outcome": "ok"
+    },
+    {
       "id": "png_reserved_bit_still",
       "feature": "png",
       "format": "png",
