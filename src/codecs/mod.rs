@@ -4,7 +4,7 @@
 //! Cargo feature pulls in only that codec and its private support code.
 
 use crate::SequenceDecodeBudget;
-#[cfg(any(feature = "bmp", feature = "png", feature = "tiff"))]
+#[cfg(any(feature = "bmp", feature = "png", feature = "tiff", feature = "webp"))]
 use crate::capabilities::CodecOperation;
 use crate::encode_options::EncodeOptions;
 use crate::encode_policy::EncodePolicy;

@@ -80,7 +80,8 @@ impl CodecError {
         feature = "bmp",
         feature = "tiff",
         feature = "ico",
-        feature = "avif"
+        feature = "avif",
+        feature = "webp"
     ))]
     pub(crate) fn from_image_error(error: ImageError) -> Self {
         match error {
