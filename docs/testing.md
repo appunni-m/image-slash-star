@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`1726f44e381ebc6132a027696a068415ad82806a`; the claim-ledger baseline remains
+`398e26f5fefb4bb8020427cd9e3f0be6780cab3b`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -306,7 +306,10 @@ zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
-untouched sink. TIFF Deflate additionally charges at each supplied input-row
+untouched sink. GIF LZW additionally charges an input-symbol checkpoint inside
+its dictionary pass; the contract proves ample-budget byte identity, typed
+interior rejection in both whole-buffer and direct-sink paths, and an untouched
+sink. TIFF Deflate additionally charges at each supplied input-row
 boundary and inside the level-six matcher, then while expanding tokens,
 analyzing Huffman trees, emitting stored/fixed/dynamic bitstreams, copying
 stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
@@ -351,7 +354,7 @@ between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
 level-six matcher candidate/insertion/fizzle/position boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
-checkpoints; WebP still encoding polls preparation, lossy VP8
+checkpoints and polls GIF LZW input-symbol intervals; WebP still encoding polls preparation, lossy VP8
 analysis/mode-selection/coefficient-probability/bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
@@ -395,7 +398,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`447cc034eaccf85843b59e18310778310b22c5f8`, the generated matrix reports:
+`398e26f5fefb4bb8020427cd9e3f0be6780cab3b`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1515,6 +1518,36 @@ execution path. Pillow has no caller-owned `OutputSink`, so this evidence adds
 no parity row, fixture, diagnostic origin, or coverage-only hook. Other
 structural paths, interrupted writes, rollback, and partial-container cleanup
 remain open.
+
+The current GIF LZW interior checkpoint slice is implemented at
+`398e26f5fefb4bb8020427cd9e3f0be6780cab3b`. Token-aware still and sequence GIF
+encoding now polls once for each input symbol considered by the dictionary
+pass, so a bounded operation can stop inside LZW before compressed bytes are
+assembled or delivered. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract proves ample-
+budget byte identity, a typed `EncodeWorkUnits` rejection at that interior
+interval, the same direct-sink rejection, and an untouched sink. Ordinary
+GIF output remains byte-identical. Pillow exposes neither a caller token nor
+a work-budget result, so this adds no parity row, fixture, diagnostic origin,
+or coverage-only hook.
+
+Managed Pillow parity run `244c84d1-870a-4121-93ec-1273aaa56c5f` passed
+1,445/1,445 checks with zero failures or skips in 94,396 ms. Feature-matrix
+run `226e28ce-931f-4c8b-91e7-38a881f9da35` passed 991/991 checks in 141,714
+ms; its retained log has no build-directory or package-cache lock-wait
+matches and ends with `capability tables OK: every native and wasm32-wasip1
+lane agrees`. Coverage MCP run `48151e15-8583-43a1-b4c3-dbfcd187fbd3` passed
+85/85 tests in 145,381 ms and ingested snapshot
+`94811710-aa78-4aad-b64f-7145f8fab17e`, reporting 49,350/49,747 lines,
+6,773/6,836 branches, 2,750/2,817 functions, and 76,724/77,432 regions.
+Compared with snapshot `61ba8d2a-75b9-4679-9450-2881405d5496`, this adds
+five covered lines (+5 total) and four covered regions (+4 total), with
+branches and functions unchanged; every new GIF LZW line and branch is
+covered. The aggregate snapshot retains the LLVM segment-normalization
+warning. These are implementation and target-lane records separate from
+Pillow parity. Other codec interior work, finer WebP work, transient
+allocation accounting, short/interrupted output, rollback, and remaining
+non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
