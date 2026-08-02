@@ -7003,7 +7003,14 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         // sink contract. Pillow has no caller-owned sink, so this adds no
         // parity row or fixture and retains the complete native output buffer.
         let avif_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
-        let avif_options = EncodeOptions::for_format(ImageFormat::Avif);
+        let mut avif_options = EncodeOptions::for_format(ImageFormat::Avif);
+        if let EncodeOptions::Avif(options) = &mut avif_options {
+            // This native-only structural test invokes the encoder repeatedly
+            // to exercise sink, cancellation, policy, and write-failure paths.
+            // One worker keeps those comparisons deterministic and avoids
+            // spawning a large codec thread pool for a two-frame fixture.
+            options.max_threads = Some(1);
+        }
         let avif_expected =
             image_slash_star::encode(&avif_image, ImageFormat::Avif, &avif_options)?;
         assert!(
