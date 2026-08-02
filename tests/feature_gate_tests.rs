@@ -7984,6 +7984,55 @@ fn tiff_capability_and_destination_failures_are_structured()
     assert_eq!(mismatch_sink.writes, 0);
 
     let tiff_sequence = DecodedSequence::from_image(decoded.content.clone());
+    let sequence_options = EncodeOptions::for_format(ImageFormat::Tiff);
+    let expected_sequence =
+        image_slash_star::encode_sequence(&tiff_sequence, ImageFormat::Tiff, &sequence_options)?;
+    let mut sequence_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    assert_eq!(
+        image_slash_star::encode_sequence_to_sink(
+            &tiff_sequence,
+            ImageFormat::Tiff,
+            &sequence_options,
+            &mut sequence_sink,
+        )?,
+        expected_sequence.len()
+    );
+    assert_eq!(sequence_sink.bytes, expected_sequence);
+    assert!(sequence_sink.writes > 1);
+
+    let limited_sequence = image_slash_star::EncodePolicy::new()
+        .with_max_output_bytes(expected_sequence.len().saturating_sub(1) as u64);
+    let mut limited_sequence_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    let limited_sequence_error = match image_slash_star::encode_sequence_to_sink_with_policy(
+        &tiff_sequence,
+        ImageFormat::Tiff,
+        &sequence_options,
+        &limited_sequence,
+        &mut limited_sequence_sink,
+    ) {
+        Ok(length) => {
+            panic!("limited TIFF sequence sink unexpectedly accepted {length} bytes")
+        }
+        Err(error) => error,
+    };
+    assert!(matches!(
+        limited_sequence_error,
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Tiff),
+            operation: image_slash_star::CodecOperation::SequenceEncode,
+            resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+            ..
+        }
+    ));
+    assert_eq!(limited_sequence_sink.writes, 0);
+    assert!(limited_sequence_sink.bytes.is_empty());
+
     let mut sequence_mismatch_sink = RecordingTiffSink {
         bytes: Vec::new(),
         writes: 0,
@@ -8047,6 +8096,51 @@ fn tiff_capability_and_destination_failures_are_structured()
     );
     assert_eq!(cancelling.writes, 1);
     assert_eq!(cancelling.bytes, &expected_raw[..8]);
+
+    let sequence_token = image_slash_star::CancellationToken::new();
+    let mut token_sequence_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    assert_eq!(
+        image_slash_star::encode_sequence_to_sink_with_token(
+            &tiff_sequence,
+            ImageFormat::Tiff,
+            &sequence_options,
+            &sequence_token,
+            &mut token_sequence_sink,
+        )?,
+        expected_sequence.len()
+    );
+    assert_eq!(token_sequence_sink.bytes, expected_sequence);
+    assert!(token_sequence_sink.writes > 1);
+
+    let sequence_cancellation_token = image_slash_star::CancellationToken::new();
+    let mut sequence_cancelling = CancellingTiffSink {
+        bytes: Vec::new(),
+        token: sequence_cancellation_token.clone(),
+        writes: 0,
+    };
+    let sequence_cancellation_error = match image_slash_star::encode_sequence_to_sink_with_token(
+        &tiff_sequence,
+        ImageFormat::Tiff,
+        &sequence_options,
+        &sequence_cancellation_token,
+        &mut sequence_cancelling,
+    ) {
+        Ok(length) => panic!("cancelling TIFF sequence sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        sequence_cancellation_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(
+        sequence_cancellation_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(sequence_cancelling.writes, 1);
+    assert_eq!(sequence_cancelling.bytes, &expected_sequence[..8]);
 
     struct RejectingTiffSink;
     impl image_slash_star::OutputSink for RejectingTiffSink {
