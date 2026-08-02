@@ -3,9 +3,11 @@
 use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{TiffCompression, TiffEncodeOptions, TiffPredictor};
+use crate::encode_policy::EncodePolicy;
 #[cfg(coverage)]
 use crate::types::ColorType;
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
+use crate::{CodecOperation, ImageFormat};
 use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
@@ -27,6 +29,36 @@ pub fn encode_with_token(
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     encode_page_with_token(img, opts, token).map(|page| page.bytes)
+}
+
+/// Encode one TIFF page directly to a caller-owned sink.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &TiffEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> CodecResult<usize> {
+    let page = encode_page_with_token(img, opts, token)?;
+    policy
+        .check_output_len(page.bytes.len(), ImageFormat::Tiff, operation)
+        .map_err(CodecError::from_image_error)?;
+
+    // The page is already fully validated before delivery. Keep the
+    // container's header, encoded strip/padding, and IFD/value area as
+    // separate sink writes so cancellation and destination failure have
+    // deterministic structural boundaries. The compressed/pixel working
+    // buffer remains owned by this bounded page plan; this is not a
+    // transient-allocation or rollback guarantee.
+    let mut written = 0usize;
+    write_sink_segment(sink, &page.bytes[..8], token, &mut written)?;
+    if page.ifd_offset > 8 {
+        write_sink_segment(sink, &page.bytes[8..page.ifd_offset], token, &mut written)?;
+    }
+    write_sink_segment(sink, &page.bytes[page.ifd_offset..], token, &mut written)?;
+    debug_assert_eq!(written, page.bytes.len());
+    Ok(written)
 }
 
 struct EncodedPage {
@@ -388,6 +420,19 @@ fn checked_align_16(value: usize) -> CodecResult<usize> {
 fn bounded_u32(value: usize) -> u32 {
     let bytes = value.to_le_bytes();
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+fn write_sink_segment(
+    sink: &mut dyn crate::OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written.saturating_add(bytes.len());
+    Ok(())
 }
 
 #[cfg(coverage)]
