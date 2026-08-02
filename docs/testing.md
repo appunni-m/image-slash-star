@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `208b5a3f2482d71d95eb02ded6c08f78963dd0a9`
+Reviewed: 2026-08-02 on the working tree based on revision `f97dd679d7d83d62e0d9b230556abdac4d7f94b5`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -263,7 +263,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`208b5a3f2482d71d95eb02ded6c08f78963dd0a9`, the generated matrix reports:
+`f97dd679d7d83d62e0d9b230556abdac4d7f94b5`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -643,30 +643,34 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,365 | 47,365 |
-| Branches | 6,552 | 6,552 |
-| Functions | 2,656 | 2,656 |
-| Regions | 73,723 | 73,723 |
+| Lines | 47,475 | 47,475 |
+| Branches | 6,556 | 6,556 |
+| Functions | 2,657 | 2,657 |
+| Regions | 73,904 | 73,904 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Managed runtime evidence comes from feature-matrix run
-`f74e711f-c9a2-4327-bc74-d834b6bf399a`: 903 checks passed with zero
-failures in 298,766 ms, and its terminal capability-table record says
-`capability tables OK: every native and wasm32-wasip1 lane agrees`. The matrix
-uses bounded parallel batches for independent native,
-`wasm32-unknown-unknown`, and `wasm32-wasip1` runtime lanes and interleaved
-capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS` default to three. This
-is 52,789 ms faster than the previous managed run
+The bounded feature-matrix runtime optimization was benchmarked by run
+`f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
+checks passed with zero failures in 298,766 ms, and its terminal capability-table
+record says `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+That was 52,789 ms faster than the previous managed run
 (`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`, 351,555 ms) with the same 903-check
-scope. This is target/runtime evidence; it does not turn aggregate coverage,
+scope. The current clean revision was then validated by run
+`bea69012-22a4-4b55-9ef9-e3859c73ef2e`: 903 checks passed with zero failures in
+1,296,952 ms, with the same capability-table terminal record. These are separate
+execution records rather than a controlled speed comparison because managed
+cache/build state differs. The matrix uses bounded parallel batches for
+independent native, `wasm32-unknown-unknown`, and `wasm32-wasip1` runtime lanes
+and interleaved capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS` default to
+three. This is target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `1bf81abe-cd2c-41dd-897e-9ff09b9b92a8`
+Coverage MCP run: `b6b8ca32-43ae-4967-8a76-93ca9cb364b8`
 
-Snapshot: `03b234da-85db-4b31-8438-0a26837626a0`
+Snapshot: `40413717-4a71-41c4-ba82-d933435af06b`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
