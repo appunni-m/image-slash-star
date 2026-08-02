@@ -295,7 +295,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before dispatch and after the complete codec result |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; JPEG also polls row/block/scan checkpoints, while other whole-buffer still codecs retain the public boundary |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -343,12 +343,13 @@ current input length.
 
 Cooperative cancellation polls a caller token at structural checkpoints:
 dispatch entry, PNG chunk boundaries, GIF block and frame boundaries, TIFF
-page and strip/tile boundaries, JPEG scan/segment boundaries, WebP frame
-boundaries, BMP RLE commands, ICO directory entries, and AVIF frames. A fired
-token returns `ImageError::Cancelled` with the format and operation stage and
-never publishes partial results; codec state is per-call, so a fresh token
-can retry the same input. The token is `Rc<Cell>` based and neither `Send`
-nor `Sync`, matching the single-threaded execution model.
+page and strip/tile boundaries, JPEG color/sampling/quantization rows and
+entropy/progressive scan batches, WebP frame boundaries, BMP RLE commands,
+ICO directory entries, and AVIF frames. A fired token returns
+`ImageError::Cancelled` with the format and operation stage and never publishes
+partial results; codec state is per-call, so a fresh token can retry the same
+input. The token is `Rc<Cell>` based and neither `Send` nor `Sync`, matching
+the single-threaded execution model.
 
 Capability discovery mirrors this dispatch without parsing input.
 `Capability::ManifestBounded` means the operation can be attempted within the

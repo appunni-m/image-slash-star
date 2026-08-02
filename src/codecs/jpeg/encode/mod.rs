@@ -44,7 +44,17 @@ struct CompData {
 }
 
 pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_with_token(img, opts, None)
+}
+
+pub(crate) fn encode_with_token(
+    img: &DecodedImage,
+    opts: &JpegEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     img.validate().map_err(CodecError::from_image_error)?;
+    crate::codecs::error::check_cancelled(token)?;
     let w = bounded_usize(img.width);
     let h = bounded_usize(img.height);
     let pixels = img.as_bytes();
@@ -79,10 +89,15 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
         let pixel_count = w.saturating_mul(h);
         let mut y = vec![0u8; pixel_count];
         let copied = pixel_count.min(pixels.len());
-        y[..copied].copy_from_slice(&pixels[..copied]);
+        let row_width = w.max(1);
+        for row_start in (0..copied).step_by(row_width) {
+            crate::codecs::error::check_cancelled(token)?;
+            let row_end = copied.min(row_start.saturating_add(row_width));
+            y[row_start..row_end].copy_from_slice(&pixels[row_start..row_end]);
+        }
         (y, Vec::new(), Vec::new())
     } else {
-        rgb_to_ycbcr(pixels, w, h)
+        rgb_to_ycbcr(pixels, w, h, token)?
     };
 
     // Sampling factors (h, v) per component; max is the reference grid.
@@ -120,7 +135,8 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
             cb_h,
             usize::from(max_h).div_euclid(usize::from(cb_hs)),
             usize::from(max_v).div_euclid(usize::from(cb_vs)),
-        )
+            token,
+        )?
     } else {
         Vec::new()
     };
@@ -133,7 +149,8 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
             cr_h,
             usize::from(max_h).div_euclid(usize::from(cr_hs)),
             usize::from(max_v).div_euclid(usize::from(cr_vs)),
-        )
+            token,
+        )?
     } else {
         Vec::new()
     };
@@ -142,7 +159,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
     let mut comps: Vec<CompData> = Vec::with_capacity(usize::from(num_components));
 
     // Y
-    let y_blocks = fdct_quantize(&y_plane, y_w, y_h, &params.quant_tables[0]);
+    let y_blocks = fdct_quantize(&y_plane, y_w, y_h, &params.quant_tables[0], token)?;
     comps.push(CompData {
         blocks: y_blocks.0,
         blocks_per_row: y_blocks.1,
@@ -160,7 +177,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
             (&cb_ds, cb_w, cb_h, cb_hs, cb_vs, 2u8),
             (&cr_ds, cr_w, cr_h, cr_hs, cr_vs, 3u8),
         ] {
-            let blk = fdct_quantize(plane, cw, ch, &params.quant_tables[1]);
+            let blk = fdct_quantize(plane, cw, ch, &params.quant_tables[1], token)?;
             comps.push(CompData {
                 blocks: blk.0,
                 blocks_per_row: blk.1,
@@ -195,7 +212,7 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
     let ac_chroma = huffman::derive_table(&huffman::STD_AC_CHROMA.0, &huffman::STD_AC_CHROMA.1);
     let (optimized_dc, optimized_ac) = if !progressive && optimize {
         let (dc_frequencies, ac_frequencies) =
-            baseline_frequencies(&comps, max_h, max_v, restart_interval);
+            baseline_frequencies(&comps, max_h, max_v, restart_interval, token)?;
         (
             [
                 Some(huffman::optimal_table(&dc_frequencies[0])),
@@ -318,11 +335,21 @@ pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResul
             &dc_tables,
             &ac_tables,
             restart_interval,
-        );
+            token,
+        )?;
     } else {
-        encode_progressive_scans_exact(&mut out, &comps, num_components, max_h, max_v, &params);
+        encode_progressive_scans_exact(
+            &mut out,
+            &comps,
+            num_components,
+            max_h,
+            max_v,
+            &params,
+            token,
+        )?;
     }
 
+    crate::codecs::error::check_cancelled(token)?;
     marker::write_eoi(&mut out);
     Ok(out)
 }
@@ -351,6 +378,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = encode(&gray, &JpegEncodeOptions::default());
     let _ = encode(&rgb, &JpegEncodeOptions::default());
+
+    // Pillow has no caller-controlled cancellation token. These deterministic
+    // coverage-only drills exercise the Rust cancellation checkpoints across
+    // color conversion, sampling, quantization, and entropy preparation; they
+    // are not synthetic Pillow-parity rows.
+    let checkpoint_rgb = DecodedImage::new(
+        17,
+        17,
+        vec![128; 17 * 17 * 3],
+        crate::types::ColorType::Rgb8,
+    );
+    for checks in [0, 1, 4, 12, 24, 48, 96] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&checkpoint_rgb, &JpegEncodeOptions::default(), Some(&token));
+    }
     let grayscale_alpha = DecodedImage::new(1, 1, vec![0, 255], crate::types::ColorType::La8);
     let _ = encode(&grayscale_alpha, &JpegEncodeOptions::default());
     let mut progressive = JpegEncodeOptions {
@@ -358,6 +401,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..JpegEncodeOptions::default()
     };
     let _ = encode(&rgb, &progressive);
+    for checks in [0, 8, 24, 64, 128] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&checkpoint_rgb, &progressive, Some(&token));
+    }
     progressive.optimize = Some(true);
     progressive.subsampling = Some(JpegSubsampling::Cs444);
     let _ = encode(&rgb, &progressive);
@@ -384,14 +432,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = marker::write_exif_app1(&mut marker_bytes, &oversized_exif);
 
     let plane = [10u8, 20, 30, 40];
-    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1);
-    let _ = downsample(&plane, 2, 2, 1, 2, 2, 1);
-    let _ = downsample(&plane, 2, 2, 1, 1, 2, 2);
+    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, None);
+    let _ = downsample(&plane, 2, 2, 1, 2, 2, 1, None);
+    let _ = downsample(&plane, 2, 2, 1, 1, 2, 2, None);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = downsample(&plane, 2, 2, 2, 1, 1, 2);
+        let _ = downsample(&plane, 2, 2, 2, 1, 1, 2, None);
     }));
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = downsample(&plane, 2, 2, 1, 1, 2, 3);
+        let _ = downsample(&plane, 2, 2, 1, 1, 2, 3, None);
     }));
 
     let progressive_dc_scan = ProgScan {
@@ -438,6 +486,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = dc_progressive_events(
         &progressive_dc_scan,
         &[y_component, cb_component, cr_component],
+        None,
     );
 
     let scan = ProgScan {
@@ -507,27 +556,38 @@ fn rgb_fixed(terms: &[(i32, i32)], bias: i32) -> u8 {
 
 // ── Color conversion (jccolor.c) ─────────────────────────────────────────
 
-fn rgb_to_ycbcr(pixels: &[u8], w: usize, h: usize) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+fn rgb_to_ycbcr(
+    pixels: &[u8],
+    w: usize,
+    h: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
     let n = w.saturating_mul(h);
     let mut y = vec![0u8; n];
     let mut cb = vec![0u8; n];
     let mut cr = vec![0u8; n];
     let npix = n.min(pixels.len().div_euclid(3));
-    for i in 0..npix {
-        let source = i.saturating_mul(3);
-        let r = i32::from(pixels[source]);
-        let g = i32::from(pixels[source.saturating_add(1)]);
-        let b = i32::from(pixels[source.saturating_add(2)]);
-        // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jccolor.c:214-243 and
-        // jccolext.c:37-73. Chroma includes CENTERJSAMPLE before descaling;
-        // the prior port accidentally added 128 before, rather than after,
-        // the 16-bit fixed-point scale.
-        y[i] = rgb_fixed(&[(19_595, r), (38_470, g), (7_471, b)], 32_768);
-        let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
-        cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
-        cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
+    let row_width = w.max(1);
+    for row in 0..h {
+        crate::codecs::error::check_cancelled(token)?;
+        let row_start = row.saturating_mul(row_width).min(npix);
+        let row_end = npix.min(row_start.saturating_add(row_width));
+        for i in row_start..row_end {
+            let source = i.saturating_mul(3);
+            let r = i32::from(pixels[source]);
+            let g = i32::from(pixels[source.saturating_add(1)]);
+            let b = i32::from(pixels[source.saturating_add(2)]);
+            // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jccolor.c:214-243 and
+            // jccolext.c:37-73. Chroma includes CENTERJSAMPLE before descaling;
+            // the prior port accidentally added 128 before, rather than after,
+            // the 16-bit fixed-point scale.
+            y[i] = rgb_fixed(&[(19_595, r), (38_470, g), (7_471, b)], 32_768);
+            let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
+            cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
+            cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
+        }
     }
-    (y, cb, cr)
+    Ok((y, cb, cr))
 }
 
 // ── Downsampling (jcsample.c) ────────────────────────────────────────────
@@ -543,13 +603,15 @@ fn downsample(
     dh: usize,
     hr: usize,
     vr: usize,
-) -> Vec<u8> {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut out = vec![0u8; dw.saturating_mul(dh)];
     if hr == 1 && vr == 1 {
         // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:99-113,145-174.
         // Full-size components duplicate their right and bottom edge samples
         // through the padded DCT extent.
         for y in 0..dh {
+            crate::codecs::error::check_cancelled(token)?;
             for x in 0..dw {
                 let source_y = y.min(sh.saturating_sub(1));
                 let source_x = x.min(sw.saturating_sub(1));
@@ -557,9 +619,10 @@ fn downsample(
                     plane[source_y.saturating_mul(sw).saturating_add(source_x)];
             }
         }
-        return out;
+        return Ok(out);
     }
     for y in 0..dh {
+        crate::codecs::error::check_cancelled(token)?;
         for x in 0..dw {
             let mut sum = 0u32;
             for vy in 0..vr {
@@ -586,7 +649,7 @@ fn downsample(
                 sum.saturating_add(bias).div_euclid(divisor).to_le_bytes()[0];
         }
     }
-    out
+    Ok(out)
 }
 
 // ── FDCT + quantize (jfdctint.c + jcdctmgr.c) ────────────────────────────
@@ -599,12 +662,14 @@ fn fdct_quantize(
     w: usize,
     h: usize,
     qtable: &[u16; 64],
-) -> (Vec<[i16; 64]>, usize, usize) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
     let blocks_per_row = w.div_ceil(8);
     let block_rows = h.div_ceil(8);
     let mut blocks = vec![[0i16; 64]; blocks_per_row.saturating_mul(block_rows)];
 
     for by in 0..block_rows {
+        crate::codecs::error::check_cancelled(token)?;
         for bx in 0..blocks_per_row {
             let mut samples = [0i32; 64];
             for row in 0usize..8 {
@@ -646,7 +711,7 @@ fn fdct_quantize(
             blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = q;
         }
     }
-    (blocks, blocks_per_row, block_rows)
+    Ok((blocks, blocks_per_row, block_rows))
 }
 
 // ── Baseline entropy coding (jchuff.c) ───────────────────────────────────
@@ -656,7 +721,8 @@ fn baseline_frequencies(
     max_h: u8,
     max_v: u8,
     restart_interval: u16,
-) -> ([[u64; 256]; 2], [[u64; 256]; 2]) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<([[u64; 256]; 2], [[u64; 256]; 2])> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
     // Traverse exactly the same MCU stream as encode_baseline_entropy so the
     // optimized table describes every symbol that the output pass will emit.
@@ -670,6 +736,7 @@ fn baseline_frequencies(
     let mut mcus_until_restart = usize::from(restart_interval);
 
     for my in 0..n_mcu_y {
+        crate::codecs::error::check_cancelled(token)?;
         for mx in 0..n_mcu_x {
             if restart_interval != 0 && mcus_until_restart == 0 {
                 last_dc.fill(0);
@@ -727,7 +794,7 @@ fn baseline_frequencies(
             mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
-    (dc, ac)
+    Ok((dc, ac))
 }
 
 fn encode_baseline_entropy(
@@ -738,7 +805,8 @@ fn encode_baseline_entropy(
     dc_tables: &[&huffman::DerivedTable; 2],
     ac_tables: &[&huffman::DerivedTable; 2],
     restart_interval: u16,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     let mcu_w = usize::from(max_h).saturating_mul(8);
     let mcu_h = usize::from(max_v).saturating_mul(8);
     let n_mcu_x = comps[0].blocks_per_row.saturating_mul(8).div_ceil(mcu_w);
@@ -750,6 +818,7 @@ fn encode_baseline_entropy(
     let mut next_restart = 0u8;
 
     for my in 0..n_mcu_y {
+        crate::codecs::error::check_cancelled(token)?;
         for mx in 0..n_mcu_x {
             if restart_interval != 0 && mcus_until_restart == 0 {
                 bw.flush();
@@ -788,6 +857,7 @@ fn encode_baseline_entropy(
     }
     bw.flush();
     out.extend_from_slice(&bw.out);
+    Ok(())
 }
 
 /// Encode one 8×8 block: DC difference + AC run/length in zigzag order.
@@ -938,11 +1008,13 @@ fn encode_progressive_scans_exact(
     _maximum_horizontal_sampling: u8,
     _maximum_vertical_sampling: u8,
     _params: &quant::EncodeParams,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
     // jcmaster.c's jpeg_simple_progression scan script.
     for scan in default_progression_script(component_count) {
-        let events = progressive_events(&scan, components);
+        crate::codecs::error::check_cancelled(token)?;
+        let events = progressive_events(&scan, components, token)?;
         let mut frequencies = [[0u64; 256]; 4];
         for &event in &events {
             if let ProgressiveEvent::Symbol { table, value } = event {
@@ -1001,18 +1073,28 @@ fn encode_progressive_scans_exact(
         }
         writer.flush();
         output.extend_from_slice(&writer.out);
+        crate::codecs::error::check_cancelled(token)?;
     }
+    Ok(())
 }
 
-fn progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
+fn progressive_events(
+    scan: &ProgScan,
+    components: &[CompData],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<ProgressiveEvent>> {
     if scan.ss == 0 {
-        dc_progressive_events(scan, components)
+        dc_progressive_events(scan, components, token)
     } else {
-        ac_progressive_events(scan, components)
+        ac_progressive_events(scan, components, token)
     }
 }
 
-fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
+fn dc_progressive_events(
+    scan: &ProgScan,
+    components: &[CompData],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<ProgressiveEvent>> {
     let mut events = Vec::new();
     let interleaved = scan.comps.len() > 1;
     let maximum_horizontal_sampling = components.iter().map(|c| c.h_samp).max().unwrap_or(1);
@@ -1057,6 +1139,7 @@ fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<Progre
 
     if interleaved {
         for mcu_row in 0..mcu_rows {
+            crate::codecs::error::check_cancelled(token)?;
             for mcu_column in 0..mcu_columns {
                 for (scan_index, &component_index) in scan.comps.iter().enumerate() {
                     let component = &components[component_index];
@@ -1087,20 +1170,30 @@ fn dc_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<Progre
     } else {
         let component_index = scan.comps[0];
         let component = &components[component_index];
-        for block in &component.blocks {
+        for (block_index, block) in component.blocks.iter().enumerate() {
+            if block_index % component.blocks_per_row.max(1) == 0 {
+                crate::codecs::error::check_cancelled(token)?;
+            }
             append(0, component_index, block);
         }
     }
-    events
+    Ok(events)
 }
 
-fn ac_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<ProgressiveEvent> {
+fn ac_progressive_events(
+    scan: &ProgScan,
+    components: &[CompData],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<ProgressiveEvent>> {
     let component = &components[scan.comps[0]];
     let table = usize::from(component.ac_tbl);
     let mut events = Vec::new();
     let mut eob_run = 0u32;
     let mut correction_bits = Vec::<u8>::new();
-    for block in &component.blocks {
+    for (block_index, block) in component.blocks.iter().enumerate() {
+        if block_index % component.blocks_per_row.max(1) == 0 {
+            crate::codecs::error::check_cancelled(token)?;
+        }
         if scan.ah == 0 {
             append_ac_first_events(
                 &mut events,
@@ -1122,7 +1215,7 @@ fn ac_progressive_events(scan: &ProgScan, components: &[CompData]) -> Vec<Progre
         }
     }
     flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
-    events
+    Ok(events)
 }
 
 fn append_ac_first_events(

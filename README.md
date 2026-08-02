@@ -150,7 +150,7 @@ capabilities and setup.
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and return a typed `EncodedOutputBytes` limit failure when the complete result is too large |
-| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation at the public codec boundary |
+| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; JPEG polls internal row/block/scan checkpoints, while other whole-buffer still codecs retain their public boundary |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
@@ -197,12 +197,14 @@ progress-aware otherwise.
 `cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
 page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
 without publishing partial state. Token-aware encode APIs check before and
-after whole-buffer still codecs; PNG and BMP still sink encoding also poll
-while preparing rows and between emitted segments, while GIF, TIFF, WebP, and
-native AVIF sequence paths poll at their frame/coalescing/page/finalization
-boundaries. A structural sink cancellation may leave its delivered prefix;
-progress callbacks, work-budget exhaustion, and universal structural writing
-remain separate roadmap work. Legacy APIs never cancel.
+after whole-buffer codecs; JPEG also polls internal color, sampling,
+quantization, entropy, and progressive-scan checkpoints, while PNG and BMP
+still sink encoding poll while preparing rows and between emitted segments.
+GIF, TIFF, WebP, and native AVIF sequence paths poll at their
+frame/coalescing/page/finalization boundaries. A structural sink cancellation
+may leave its delivered prefix; progress callbacks, work-budget exhaustion,
+and universal structural writing remain separate roadmap work. Legacy APIs
+never cancel.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
