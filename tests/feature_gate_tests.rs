@@ -5364,6 +5364,40 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 "BMP sequence output must cross structural write boundaries"
             );
 
+            let mismatched_bmp_options = EncodeOptions::for_format(ImageFormat::Png);
+            let mut mismatched_bmp_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let mismatched_bmp_sequence_error = match image_slash_star::encode_sequence_to_sink(
+                &bmp_sequence,
+                ImageFormat::Bmp,
+                &mismatched_bmp_options,
+                &mut mismatched_bmp_sequence_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "BMP sequence accepted mismatched options and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                mismatched_bmp_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::Parameter
+            );
+            assert_eq!(
+                mismatched_bmp_sequence_error.format(),
+                Some(ImageFormat::Bmp)
+            );
+            assert_eq!(
+                mismatched_bmp_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(mismatched_bmp_sequence_sink.writes, 0);
+            assert!(mismatched_bmp_sequence_sink.bytes.is_empty());
+
             let mut limited_bmp_sequence = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
