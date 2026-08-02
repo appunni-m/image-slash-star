@@ -242,9 +242,12 @@ result, rejects a one-byte-smaller result with the typed
 `EncodedOutputBytes` limit, and verifies that policy rejection leaves the sink
 unchanged. The test proves result admission before the first sink write; the
 PNG and BMP still paths additionally preflight their complete lengths before
-structural delivery. It does not prove transient allocation limits or
-recoverable OOM behavior. Its aggregate coverage is incidental evidence, not
-Pillow parity coverage, and no coverage-only hook is added.
+structural delivery. The TIFF still and one-frame sequence sink contract
+separately proves exact-length preflight, multiple header/strip/IFD writes,
+option mismatch, and cancellation-prefix behavior. It does not prove
+transient allocation limits or recoverable OOM behavior. Its aggregate coverage
+is incidental evidence, not Pillow parity coverage, and no coverage-only hook
+is added.
 
 `EncodePolicy::max_work_units` follows the same boundary. Pillow has no
 caller-controlled checkpoint budget or equivalent result, so
@@ -265,8 +268,9 @@ the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
 They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
 native AVIF still, GIF-sequence output, and one-frame ICO sequence sink output;
-stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP/ICO
-still sinks that can cancel between structural writes while retaining only the
+stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP/ICO/TIFF
+still sinks plus the one-frame TIFF sequence sink that can cancel between
+structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
@@ -625,15 +629,16 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over PNG/BMP/ICO still, one-frame BMP/ICO sequence,
-and GIF sequence fixtures must write bytes identical to `encode`/`encode_sequence`
-with matching lengths for both `Vec<u8>` and `&mut Vec<u8>` sinks. PNG, BMP, and
-ICO still additionally prove multiple structural writes, policy preflight
-before the first write, and cancellation between writes; one-frame BMP and ICO
-sequence additionally prove multiple structural writes and policy preflight,
-while GIF sequence remains a whole-buffer comparison. ICO's structural split is
-a fixed 22-byte directory header followed by the complete embedded PNG/DIB
-payload. A deterministic failing write or flush must be reported as
+`encode_sequence_to_sink` over PNG/BMP/ICO/TIFF still, one-frame BMP/ICO/TIFF
+sequence, and GIF sequence fixtures must write bytes identical to
+`encode`/`encode_sequence` with matching lengths for both `Vec<u8>` and
+`&mut Vec<u8>` sinks. PNG, BMP, ICO, and TIFF still additionally prove multiple
+structural writes, policy preflight before the first write, and cancellation
+between writes; one-frame BMP, ICO, and TIFF sequence additionally prove
+multiple structural writes and policy preflight, while GIF sequence remains a
+whole-buffer comparison. ICO's structural split is a fixed 22-byte directory
+header followed by the complete embedded PNG/DIB payload. TIFF's split is its
+header, strip/padding span, and IFD/value tail. A deterministic failing write or flush must be reported as
 `ImageError::OutputWrite` with the selected format and encode stage. The
 current contract proves one post-delivery flush call and explicitly preserves
 the delivered prefix on flush failure. Short writes and rollback cleanup remain
@@ -697,7 +702,7 @@ The counts are reproducible from the generated artifact:
 jq '.summary' tests/fixtures/coverage_matrix.json
 ```
 
-The current committed acceptance result is Coverage MCP run
+The preceding committed acceptance result was Coverage MCP run
 `822bf053-61cb-4488-af1c-d2e23b15785c`, snapshot
 `512dce77-6eda-4b2d-b8aa-9cbfcdd6a8a6`, at revision
 `07f7a0977149803f96eec16ac8c2f3c1cb073eee`:
@@ -720,6 +725,31 @@ The same committed revision passed the adaptive feature matrix in run
 `888ba305-ff93-41c4-8d96-05c12f033c64` with 1,420 rows, zero failures, and zero
 skips in 27,932 ms. The timings are retained execution evidence rather than a
 universal benchmark claim because managed cache and build state can differ.
+
+The current committed TIFF structural-sink acceptance result is Coverage MCP
+run `31468b32-854b-474c-8cb6-8ac15603f13b`, snapshot
+`5c25e6ff-c4cd-4fb6-8699-54ada16c5624`, at revision
+`2826a2ceaac5e71316ad54709b65fb6702469c36`:
+
+| Metric | Covered | Total |
+| --- | ---: | ---: |
+| Lines | 48,061 | 48,062 |
+| Branches | 6,588 | 6,588 |
+| Functions | 2,692 | 2,693 |
+| Regions | 74,819 | 74,826 |
+
+The managed run executed 58 tests with zero failures. The TIFF encoder file
+itself is fully covered for lines, branches, and functions (1,321/1,323
+regions); the aggregate snapshot retains one uncovered line, one function,
+and seven regions. No coverage-only test was added. The same revision passed
+the adaptive feature matrix in run
+`93db1420-2245-48a6-b972-364ba8774182` with 947 checks and zero failures in
+108,677 ms, and the Pillow parity matrix in run
+`7397b2ac-7a1f-4ea6-8878-de3e11592e75` with 1,420 rows, zero failures, and zero
+skips in 88,935 ms. Those current matrix runs were concurrent, so their
+durations are execution evidence rather than a controlled runtime comparison;
+the TIFF sink, policy, and cancellation cases are Rust-only contracts, not
+Pillow-parity rows.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
