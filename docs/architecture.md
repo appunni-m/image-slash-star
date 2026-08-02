@@ -295,7 +295,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and deflate boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and Deflate input-row boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -443,9 +443,11 @@ documented cooperative encode checkpoints. A checkpoint charges one unit
 before it continues; when the next charge would exceed the maximum, encoding
 returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodeWorkUnits`. The budget is layered over a caller token,
-so caller cancellation still has precedence and remains `Cancelled`. This is
-deterministic work control, not CPU-time, instruction-count, transient-memory,
-or recoverable-OOM accounting.
+so caller cancellation still has precedence and remains `Cancelled`. TIFF
+Deflate tokenization additionally charges at each supplied input-row boundary,
+so a bounded page cannot consume the complete multi-row matcher pass between
+public checkpoints. This is deterministic work control, not CPU-time,
+instruction-count, transient-memory, or recoverable-OOM accounting.
 
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
@@ -463,7 +465,8 @@ prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, full structural writing for the
 remaining codecs, short-write/rollback cleanup, and interruption beyond the
-documented checkpoints remain open.
+documented checkpoints—including CPU work inside an individual TIFF Deflate
+row—remain open.
 
 ### Codec work is bounded by the resource set
 

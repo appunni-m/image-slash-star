@@ -98,9 +98,7 @@ fn encode_page_with_token(
         encode_lzw(&raw, token)?
     } else if compression == COMPRESSION_DEFLATE {
         crate::codecs::error::check_cancelled(token)?;
-        let encoded = compress_zlib_tiff(&raw, &vec![row_len; height]);
-        crate::codecs::error::check_cancelled(token)?;
-        encoded
+        compress_zlib_tiff(&raw, &vec![row_len; height], token)?
     } else {
         encode_packbits(&raw, row_len, token)?
     };

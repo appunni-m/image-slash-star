@@ -330,14 +330,18 @@ fn decompress_zlib_with_limit(
 
 /// Compress TIFF scanlines with zlib-ng's default memLevel-eight buffer.
 #[cfg(feature = "tiff")]
-pub(crate) fn compress_zlib_tiff(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
+pub(crate) fn compress_zlib_tiff(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<Vec<u8>> {
     debug_assert_eq!(
         input_chunks
             .iter()
             .fold(0usize, |total, &length| total.wrapping_add(length)),
         data.len()
     );
-    super::zlib_ng::compress_level6_tiff(data, input_chunks)
+    super::zlib_ng::compress_level6_tiff(data, input_chunks, token)
 }
 
 /// Compress a sequence of input calls as one zlib stream.
