@@ -859,7 +859,8 @@ pub fn encode_with_policy(
 /// The token is checked before codec dispatch and after encoding. JPEG also
 /// polls between color-conversion rows, sampling rows, quantized block rows,
 /// entropy rows, and progressive event batches; TIFF polls page preparation,
-/// row prediction, and PackBits/LZW compression checkpoints; PNG polls row
+/// row prediction, PackBits/LZW compression checkpoints, and Deflate input-row
+/// plus level-six matcher intervals; PNG polls row
 /// preparation, adaptive-filter and filtered-row subsegments, and structural
 /// segments in still and one-frame fallback paths; BMP polls row preparation
 /// and structural segments; GIF still encoding also polls block/frame/coalescing/output-assembly
