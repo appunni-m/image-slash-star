@@ -1463,7 +1463,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         buffer: 0,
         nbits: 0,
     };
-    write_token_stream(
+    let _ = write_token_stream(
         &mut token_writer,
         &[0xff00_0000; 8],
         8,

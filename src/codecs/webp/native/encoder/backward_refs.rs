@@ -1096,10 +1096,10 @@ pub(super) fn candidates(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert_eq!(
+    assert!(matches!(
         candidates(&[], 1, true, 80, 0, None).map(|items| items.len()),
         Ok(1)
-    );
+    ));
     let _ = candidates(&[0xff00_0000; MAX_LENGTH + 4], 1, false, 60, 0, None);
     let alternating = (0..MAX_LENGTH + 260)
         .map(|index| {
