@@ -7509,6 +7509,101 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
 }
 
 #[test]
+fn partial_structural_sink_write_preserves_prefix_across_still_codecs()
+-> Result<(), Box<dyn std::error::Error>> {
+    // Pillow has no caller-owned OutputSink. This loops over the real still
+    // writers available in each feature/target lane, so it is Rust-only
+    // contract evidence rather than a synthetic parity or coverage row.
+    struct PartialWriteSink {
+        bytes: Vec<u8>,
+        writes: usize,
+        flushes: usize,
+        failed_segment_len: usize,
+        accepted_prefix_len: usize,
+    }
+
+    impl image_slash_star::OutputSink for PartialWriteSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes == 2 {
+                self.failed_segment_len = bytes.len();
+                let accepted = (bytes.len() / 2).max(1);
+                self.accepted_prefix_len = accepted;
+                self.bytes.extend_from_slice(&bytes[..accepted]);
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "sink accepted a partial structural prefix".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            Ok(())
+        }
+    }
+
+    let image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+    let formats = [
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Gif,
+        ImageFormat::Bmp,
+        ImageFormat::Tiff,
+        ImageFormat::WebP,
+        ImageFormat::Ico,
+        ImageFormat::Avif,
+    ];
+    for format in formats {
+        if !format.capabilities().still_encode().is_available() {
+            continue;
+        }
+
+        let options = EncodeOptions::for_format(format);
+        let expected = image_slash_star::encode(&image, format, &options)?;
+        let mut sink = PartialWriteSink {
+            bytes: Vec::new(),
+            writes: 0,
+            flushes: 0,
+            failed_segment_len: 0,
+            accepted_prefix_len: 0,
+        };
+        let error = match image_slash_star::encode_to_sink(&image, format, &options, &mut sink) {
+            Ok(length) => {
+                return Err(format!(
+                    "{format:?} accepted a partial sink write and returned {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(sink.writes, 2, "{format:?} must reject at a later segment");
+        assert_eq!(
+            sink.flushes, 0,
+            "{format:?} must not finalize failed delivery"
+        );
+        assert!(sink.failed_segment_len > sink.accepted_prefix_len);
+        assert!(!sink.bytes.is_empty(), "{format:?} must deliver a prefix");
+        assert!(sink.bytes.len() < expected.len());
+        assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
+    }
+
+    // Feature-matrix lanes with no still encoder are compile/capability lanes;
+    // the all-feature and default lanes exercise the full writer set above.
+    Ok(())
+}
+
+#[test]
 fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn std::error::Error>>
 {
     // Pillow has no caller-controlled maximum-output policy. These assertions
