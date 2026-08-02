@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `c305daf4a5d13fdbbafabe03026b2fb2077094fd`
+Reviewed: 2026-08-02 on the working tree based on revision `44abdb7697344897430973fe380408ccfadd4f22`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -131,7 +131,12 @@ default PNG image (`png_duplicate_actl` at offset `53` and
 `png_actl_after_idat` at offset `3681`), an overlong APNG `acTL` payload at
 offset `33` (`png_actl_overlong`), and valid inflated PNG bytes beyond the
 first raster (`png_oversized_scanline`). These cases retain the usable Pillow-observed
-pixels while their Rust-only diagnostics expose the recovered structure.
+pixels while their Rust-only diagnostics expose the recovered structure. CRC
+mutations after the first `IDAT` additionally cover APNG `fcTL`/`fdAT`, a late
+`acTL`, and an unknown `teSt` ancillary member. They use
+`png_fcTL_crc`, `png_fdAT_crc`, `png_acTL_crc`, or `png_post_idat_crc`; a late
+declaration or ancillary-order case records both applicable diagnostics in
+manifest order.
 `bad_idat_crc.png` parity row still owns the outer success/pixel result and the
 separate diagnostic rows own only the Rust `RecoveredStructure` records. The
 `missing_iend.png` parity row owns Pillow's load-success/pixel result and
@@ -255,7 +260,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`c305daf4a5d13fdbbafabe03026b2fb2077094fd`, the generated matrix reports:
+`44abdb7697344897430973fe380408ccfadd4f22`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -399,8 +404,9 @@ diagnostic-manifest rows prove that Pillow-tolerated invalid compressed
 diagnostic instead of being retained as metadata. The same defensive manifest
 records the accepted bad-`IDAT`-CRC recovery at chunk offset `33` with
 `png_IDAT_crc`, the accepted bad-`IEND`-CRC recovery at chunk offset `57` with
-`png_IEND_crc`, plus the accepted `prvt` reserved-bit mutation at the same
-offset with `png_reserved_bit`, and the accepted static `missing_iend.png`
+`png_IEND_crc`, the accepted post-`IDAT` CRC recoveries for APNG and ancillary
+chunks, plus the accepted `prvt` reserved-bit mutation at the same offset with
+`png_reserved_bit`, and the accepted static `missing_iend.png`
 recovery at EOF offset `3643` with `png_missing_iend`; the Pillow parity matrix
 does not gain a diagnostic field. Duplicate `PLTE`/`tRNS` rows likewise remain
 Rust-only structural diagnostics rather than parity fields.
@@ -634,25 +640,27 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,366 | 47,366 |
-| Branches | 6,556 | 6,556 |
-| Functions | 2,657 | 2,657 |
-| Regions | 73,731 | 73,731 |
+| Lines | 47,365 | 47,365 |
+| Branches | 6,552 | 6,552 |
+| Functions | 2,656 | 2,656 |
+| Regions | 73,723 | 73,723 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Managed runtime evidence comes from feature-matrix run
-`afc8b425-9335-4b40-906c-2eafce3a1844`: 881 checks passed with zero
-failures in 1,255,273 ms, and its terminal capability-table record says
-`capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
-target/runtime evidence; it does not turn aggregate coverage,
-defensive/specification contracts, or Rust-only diagnostic tests into
-Pillow-parity coverage.
+`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`: 903 checks passed with zero
+failures in 351,555 ms, and its terminal capability-table record says
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. The matrix
+uses bounded parallel batches for independent native and
+`wasm32-unknown-unknown` lanes and interleaved capability probes;
+`MATRIX_JOBS` and `CAPABILITY_JOBS` default to three. This is target/runtime
+evidence; it does not turn aggregate coverage, defensive/specification
+contracts, or Rust-only diagnostic tests into Pillow-parity coverage.
 
-Coverage MCP run: `931cea9f-4bbc-439d-ae8b-f14367960748`
+Coverage MCP run: `1bf81abe-cd2c-41dd-897e-9ff09b9b92a8`
 
-Snapshot: `6876ee5b-e9c2-44e5-9db3-afb29ace66d1`
+Snapshot: `03b234da-85db-4b31-8438-0a26837626a0`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -682,7 +690,7 @@ Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 Diagnostic manifest SHA-256:
-`7a6c38eaf6571d99fe2651bf30883cb013d6b59311708d7fc4447804b72d755a`
+`bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

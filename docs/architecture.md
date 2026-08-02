@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `c305daf4a5d13fdbbafabe03026b2fb2077094fd`
+Reviewed: 2026-08-02 against the working tree based on `44abdb7697344897430973fe380408ccfadd4f22`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -149,11 +149,17 @@ decoded with a `RecoveredStructure` diagnostic (`png_IEND_crc`) while Rust
 structural verification remains strict. Pillow-tolerated unknown ancillary chunk
 names with a lowercase reserved third character are decoded with a
 `RecoveredStructure` diagnostic (`png_reserved_bit`).
-Pillow-tolerated unknown ancillary chunks after `IDAT` produce the same
-diagnostic kind with identity `png_ancillary_after_idat`; valid APNG control
-and frame-data chunks (`acTL`, `fcTL`, and `fdAT`) are excluded from this
-static ordering diagnostic. A static PNG stream that reaches EOF without an
-`IEND` chunk produces `RecoveredStructure` with identity `png_missing_iend` and
+Pillow-deferred CRC failures after the first `IDAT` are likewise decoded with
+`RecoveredStructure`: `png_acTL_crc`, `png_fcTL_crc`, and `png_fdAT_crc` name
+the APNG members, while `png_post_idat_crc` names an uninterpreted ancillary
+member. A late declaration or ancillary-order recovery can therefore produce
+two records for one chunk; the records retain the same offset and remain
+separate from the Pillow parity result. Pillow-tolerated unknown ancillary
+chunks after `IDAT` produce the same diagnostic kind with identity
+`png_ancillary_after_idat`; valid APNG control and frame-data chunks (`acTL`,
+`fcTL`, and `fdAT`) are excluded from this static ordering diagnostic. A static
+PNG stream that reaches EOF without an `IEND` chunk produces
+`RecoveredStructure` with identity `png_missing_iend` and
 the EOF offset; structural verification still rejects the missing terminator.
 Duplicate `PLTE` and `tRNS` chunks keep the first palette result and produce
 `png_duplicate_plte` or `png_duplicate_trns` at the ignored chunk offset.
@@ -579,9 +585,9 @@ The Rust diagnostic fields are a defensive/specification contract, not a
 Pillow-parity field. The committed diagnostic manifest proves the stable
 kind/stage/offset/identity values for accepted GIF recovery, invalid
 compressed PNG ancillary members, accepted PNG structural recoveries including
-duplicate palette chunks, missing `IEND`, and a bad `IEND` CRC, and trailing
-input; Pillow success and unchanged pixels are recorded as supporting fixture
-evidence.
+duplicate palette chunks, missing `IEND`, bad `IEND` CRC, and post-`IDAT` CRC
+recovery, and trailing input; Pillow success and unchanged pixels are recorded
+as supporting fixture evidence.
 
 All canonical fallible operations return `ImageResult<T>`. `ImageError` is
 non-exhaustive so downstream matches need a fallback arm.

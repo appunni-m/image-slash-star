@@ -290,6 +290,12 @@ Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
 `png_duplicate_trns`) at the ignored chunk offsets.
 Pillow-tolerated bad `IEND` CRCs likewise keep still and sequence decode
 successful with `png_IEND_crc`; Rust structural verification remains strict.
+Pillow also defers CRC checks for chunks after the first `IDAT`: APNG
+`acTL`/`fcTL`/`fdAT` members produce `png_acTL_crc`, `png_fcTL_crc`, or
+`png_fdAT_crc`, and an uninterpreted late ancillary member produces
+`png_post_idat_crc`. A late declaration or ordering recovery can produce more
+than one diagnostic for the same chunk; Rust structural verification remains
+strict for every one of these CRCs.
 Pillow-tolerated indexed-palette shape damage is likewise retained with the
 first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
 `png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame
