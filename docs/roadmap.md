@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`ac22bf1cbdb43922969bb35172a9515430e753b8`; the claim-ledger baseline remains
+`1726f44e381ebc6132a027696a068415ad82806a`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -221,7 +221,7 @@ public reusable conversion layer would violate project scope.
 | API-012 | Lazy-loading limitation | `EncodedImage` lazily caches only `DecodedImage`, not `DecodedSequence`. Animated callers must use eager `decode_sequence`. | Add a separate cached sequence path or a source view with independently named still/sequence caches; prove no accidental first-frame collapse. |
 | API-013 | Lazy-state ambiguity | `is_decoded()` is false for both "never attempted" and "failure already cached." | Add a small decode-state enum if callers need observability; do not expose internal synchronization details. |
 | API-014 | Memory behavior | Lazy materialization retains the complete encoded snapshot and decoded raster forever; clones share both, but there is no eviction. Repeated `verify` reparses independently. | Document peak memory now; benchmark before adding optional cache release or cached verification. |
-| API-017 | Output model | Encoders still produce complete `Vec<u8>` output for their return APIs, and codec working state can remain whole-buffer until a validated sink segment is ready. The dependency-free `OutputSink` contract normalizes write and post-delivery flush rejection to `ImageError::OutputWrite`; every current JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF sink path now emits validated structural segments after exact-length preflight. Every sink path calls `OutputSink::flush` once after complete delivery. JPEG delivery splits marker/scan spans, GIF delivery splits signature/logical-screen, color-table, extension/image sub-block, and trailer segments, WebP delivery splits RIFF/chunk spans, ICO delivery splits its directory from embedded payload, TIFF delivery splits its header, page strip/padding, and IFD/value spans, and native AVIF delivery splits validated ISO-BMFF top-level boxes. These are structural delivery boundaries, not universal streaming; PNG filtered/compressed buffers, BMP row/palette segments, GIF working state, WebP encoded RIFF state, ICO embedded payload, TIFF page/compressed-pixel state, and native AVIF's complete encoded buffer remain bounded working state. A Rust-only contract now exercises a genuine partial second structural write across every still encoder available in each feature/target lane, preserving the delivered prefix and avoiding finalization; broader interrupted-write, rollback, and cleanup behavior remain open. | Reduce transient working buffers one independently enforceable boundary at a time. Keep `Vec` convenience wrappers, preserve the structured output-write cause, and define behavior for every short-write/rollback path before claiming universal streaming. |
+| API-017 | Output model | Encoders still produce complete `Vec<u8>` output for their return APIs, and codec working state can remain whole-buffer until a validated sink segment is ready. The dependency-free `OutputSink` contract normalizes write and post-delivery flush rejection to `ImageError::OutputWrite`; every current JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF sink path now emits validated structural segments after exact-length preflight. Every sink path calls `OutputSink::flush` once after complete delivery. JPEG delivery splits marker/scan spans, GIF delivery splits signature/logical-screen, color-table, extension/image sub-block, and trailer segments, WebP delivery splits RIFF/chunk spans, ICO delivery splits its directory from embedded payload, TIFF delivery splits its header, page strip/padding, and IFD/value spans, and native AVIF delivery splits validated ISO-BMFF top-level boxes. These are structural delivery boundaries, not universal streaming; PNG filtered/compressed buffers, BMP row/palette segments, GIF working state, WebP encoded RIFF state, ICO embedded payload, TIFF page/compressed-pixel state, and native AVIF's complete encoded buffer remain bounded working state. A Rust-only contract now exercises a genuine partial second structural write across every still encoder and supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer available in each feature/target lane, preserving the delivered prefix, reporting the selected `StillEncode` or `SequenceEncode` stage, and avoiding `flush`; broader interrupted-write, rollback, and cleanup behavior remain open. | Reduce transient working buffers one independently enforceable boundary at a time. Keep `Vec` convenience wrappers, preserve the structured output-write cause, and define behavior for every short-write/rollback path before claiming universal streaming. |
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
 | API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Recognized AVIF `Exif` items and `mime` items with content type `application/rdf+xml` are now retained as ordered raw `OpaqueMetadata` records on still and sequence decode; primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, primary `av1C` chroma sample position, and `irot`/`imir`/`pasp`/`clap` item properties remain typed source descriptors. Non-primary/auxiliary item relationships, unknown item properties, and other item metadata remain open. | Extend the opaque model to the remaining AVIF item/property graph and exact color fields; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
@@ -736,7 +736,7 @@ union. That has several consequences for this crate.
 | QA-011 | No semver/public API diff runs before release. | Add a public API snapshot once enum/type decisions settle. |
 | QA-012 | Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification. | Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity. |
 | QA-013 | `cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured. | Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer. |
-| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled still codec and supported sequence path. JPEG, PNG, BMP, GIF still and sequence, WebP still and multi-frame sequence delivery, ICO still delivery, native AVIF still and sequence delivery, and the one-frame JPEG/BMP/WebP/ICO plus multi-page TIFF sequence deliveries now exercise multiple structural writes, policy preflight, sink-triggered cancellation where implemented, and one post-delivery flush with typed flush-failure coverage; JPEG still and one-frame sequence delivery additionally cover marker/scan boundaries, GIF delivery additionally covers signature/logical-screen, color-table, extension/image sub-block, and trailer segments, TIFF still and multi-page sequence delivery additionally cover the header, strip/padding, and IFD/value segments, and AVIF delivery additionally covers top-level ISO-BMFF box boundaries. A Rust-only contract now proves a genuine partial second structural write for every available still writer, with the selected `OutputWrite` cause, exact delivered-prefix preservation, and no `flush`; other short/interrupted writes, rollback, and partial-container cleanup remain open. | Define short-write, rollback, and recoverable cleanup behavior for the current structural boundaries before claiming a universal incremental writer. |
+| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled still codec and supported sequence path. JPEG, PNG, BMP, GIF still and sequence, WebP still and multi-frame sequence delivery, ICO still delivery, native AVIF still and sequence delivery, and the one-frame JPEG/BMP/WebP/ICO plus multi-page TIFF sequence deliveries now exercise multiple structural writes, policy preflight, sink-triggered cancellation where implemented, and one post-delivery flush with typed flush-failure coverage; JPEG still and one-frame sequence delivery additionally cover marker/scan boundaries, GIF delivery additionally covers signature/logical-screen, color-table, extension/image sub-block, and trailer segments, TIFF still and multi-page sequence delivery additionally cover the header, strip/padding, and IFD/value segments, and AVIF delivery additionally covers top-level ISO-BMFF box boundaries. A Rust-only contract now proves a genuine partial second structural write for every available still writer and each supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer, with the selected `OutputWrite` cause, exact delivered-prefix preservation, the selected encode stage, and no `flush`; other short/interrupted writes, rollback, and partial-container cleanup remain open. | Define short-write, rollback, and recoverable cleanup behavior for the current structural boundaries before claiming a universal incremental writer. |
 | QA-019 | Exact encoded-byte determinism is now proven between the ARM64 native host and `wasm32-wasip1` for a fixed encoder/decoder subset; x86-64, 32-bit, and big-endian lanes are still missing. | Run deterministic fixture subsets across the remaining targets and classify unavoidable native-oracle differences explicitly. |
 | QA-020 | Peak stack use and recursion depth are not measured for nested containers, TIFF directory graphs, DEFLATE/Huffman paths, or AV1 syntax. | Add bounded deep-structure fixtures and stack instrumentation before browser/embedded recommendations. |
 | QA-021 | Reverse-mapped/generated fixtures do not all retain generator version, parameters, first-divergence purpose, and minimized-input hash in the manifest. | Extend TST-009 with reproducible generation provenance and a regeneration check. |
@@ -1881,24 +1881,28 @@ allocation accounting, short/interrupted output, rollback, and any remaining
 non-checkpointed work-budget semantics remain open.
 
 The current partial structural sink-write slice is implemented at
-`ac22bf1cbdb43922969bb35172a9515430e753b8`, broadening the earlier PNG witness
-from `9cef5ca66de48d78f2754fb246886cb0eb27eb09`. The Rust-only
-`partial_structural_sink_write_preserves_prefix_across_still_codecs` contract
-iterates every still encoder available in each feature/target lane. Each
-writer accepts a genuine prefix of its second structural segment, then
-rejects; the encoder reports `ImageError::OutputWrite` with the selected format
-and `StillEncode` stage, preserves the exact delivered prefix, and does not
-call `flush`. Managed Pillow parity run
-`d514c2d6-bcf8-4023-88f9-d8dffe0f393e` passed 1,445/1,445 checks with zero
-skips in 906 ms. Feature-matrix run
-`fd09416e-59a9-429f-ac62-88ed33e08d76` passed 991/991 checks in 40,594 ms;
+`1726f44e381ebc6132a027696a068415ad82806a`, building on the still-codec
+coverage in `ac22bf1cbdb43922969bb35172a9515430e753b8` and the sequence
+coverage in `c2919b0bf383a308e3ce111c2cfafcb4d8ab22f5`. The Rust-only
+`partial_structural_sink_write_preserves_prefix_across_available_encoders`
+contract iterates every still encoder and every supported multi-frame
+GIF/TIFF/WebP/native-AVIF sequence writer available in each feature/target
+lane. Each writer accepts a genuine prefix of its second structural segment,
+then rejects; the encoder reports `ImageError::OutputWrite` with the selected
+format and `StillEncode` or `SequenceEncode` stage, preserves the exact
+delivered prefix, and does not call `flush`. Native AVIF comparisons use one
+worker so this contract remains byte-deterministic beside concurrent AVIF
+tests. Managed Pillow parity run
+`602cc246-1372-4bff-9514-f894ddf80c44` passed 1,445/1,445 checks with zero
+skips in 770 ms. Feature-matrix run
+`1d9ebd85-61ff-4f0d-99e1-b1e39c97d3ac` passed 991/991 checks in 35,698 ms;
 its retained log has no build-directory or package-cache lock-wait matches and
 ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
-Coverage MCP run `2f6990c5-5f5f-4505-8c21-d7be98fc705e` passed 85/85 tests in
-54,581 ms and ingested snapshot `f3c7bb5a-11f0-4330-a034-b7d64a45b50a`,
+Coverage MCP run `5b3092d0-c5b8-4eda-ab89-c513aa98631a` passed 85/85 tests in
+49,285 ms and ingested snapshot `f97ce72e-2499-4e64-aa24-457fe5e06eb6`,
 reporting 49,345/49,742 lines, 6,773/6,836 branches, 2,750/2,817 functions,
 and 76,720/77,428 regions, unchanged in aggregate from snapshot
-`0e46066a-762c-47a5-89d3-69c76ca81d52`. That unchanged coverage is expected:
+`dd0274a6-ac57-41be-9aae-90d7a032d83a`. That unchanged coverage is expected:
 the slice changes only an integration-test contract, not a measured library
 execution path. Pillow has no caller-owned `OutputSink`, so this evidence adds
 no parity row, fixture, diagnostic origin, or coverage-only hook. Other

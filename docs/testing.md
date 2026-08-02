@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`ac22bf1cbdb43922969bb35172a9515430e753b8`; the claim-ledger baseline remains
+`1726f44e381ebc6132a027696a068415ad82806a`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -737,11 +737,13 @@ failing write or flush must be reported as `ImageError::OutputWrite` with the
 selected format and encode stage. The current contract proves one
 post-delivery flush call and explicitly preserves
 the delivered prefix on flush failure. The Rust-only
-`partial_structural_sink_write_preserves_prefix_across_still_codecs` contract
-also proves that every available still writer can accept a partial prefix of a
-structural segment, reject the write as `OutputWrite`, preserve the exact
-delivered prefix, and avoid `flush`. Pillow has no caller-owned `OutputSink`,
-so this is not a parity row; short-write behavior on other paths, rollback, and
+`partial_structural_sink_write_preserves_prefix_across_available_encoders`
+contract also proves that every available still writer and each supported
+multi-frame GIF/TIFF/WebP/native-AVIF sequence writer can accept a partial
+prefix of a structural segment, reject the write as `OutputWrite`, preserve the
+exact delivered prefix, report the selected `StillEncode` or `SequenceEncode`
+stage, and avoid `flush`. Pillow has no caller-owned `OutputSink`, so this is
+not a parity row; short-write behavior on other paths, rollback, and
 partial-container cleanup remain future writer evidence, not claims made by
 this contract.
 The same contract exercises invalid-input errors through the JPEG structural
@@ -1486,24 +1488,28 @@ allocation accounting, short/interrupted output, rollback, and any remaining
 non-checkpointed work-budget semantics remain open.
 
 The current partial structural sink-write slice is implemented at
-`ac22bf1cbdb43922969bb35172a9515430e753b8`, broadening the earlier PNG witness
-from `9cef5ca66de48d78f2754fb246886cb0eb27eb09`. The Rust-only
-`partial_structural_sink_write_preserves_prefix_across_still_codecs` contract
-iterates every still encoder available in each feature/target lane. Each
-writer accepts a genuine prefix of its second structural segment, then
-rejects; the encoder reports `ImageError::OutputWrite` with the selected format
-and `StillEncode` stage, preserves the exact delivered prefix, and does not
-call `flush`. Managed Pillow parity run
-`d514c2d6-bcf8-4023-88f9-d8dffe0f393e` passed 1,445/1,445 checks with zero
-skips in 906 ms. Feature-matrix run
-`fd09416e-59a9-429f-ac62-88ed33e08d76` passed 991/991 checks in 40,594 ms;
+`1726f44e381ebc6132a027696a068415ad82806a`, building on the still-codec
+coverage in `ac22bf1cbdb43922969bb35172a9515430e753b8` and the sequence
+coverage in `c2919b0bf383a308e3ce111c2cfafcb4d8ab22f5`. The Rust-only
+`partial_structural_sink_write_preserves_prefix_across_available_encoders`
+contract iterates every still encoder and every supported multi-frame
+GIF/TIFF/WebP/native-AVIF sequence writer available in each feature/target
+lane. Each writer accepts a genuine prefix of its second structural segment,
+then rejects; the encoder reports `ImageError::OutputWrite` with the selected
+format and `StillEncode` or `SequenceEncode` stage, preserves the exact
+delivered prefix, and does not call `flush`. Native AVIF comparisons use one
+worker so this contract remains byte-deterministic beside concurrent AVIF
+tests. Managed Pillow parity run
+`602cc246-1372-4bff-9514-f894ddf80c44` passed 1,445/1,445 checks with zero
+skips in 770 ms. Feature-matrix run
+`1d9ebd85-61ff-4f0d-99e1-b1e39c97d3ac` passed 991/991 checks in 35,698 ms;
 its retained log has no build-directory or package-cache lock-wait matches and
 ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
-Coverage MCP run `2f6990c5-5f5f-4505-8c21-d7be98fc705e` passed 85/85 tests in
-54,581 ms and ingested snapshot `f3c7bb5a-11f0-4330-a034-b7d64a45b50a`,
+Coverage MCP run `5b3092d0-c5b8-4eda-ab89-c513aa98631a` passed 85/85 tests in
+49,285 ms and ingested snapshot `f97ce72e-2499-4e64-aa24-457fe5e06eb6`,
 reporting 49,345/49,742 lines, 6,773/6,836 branches, 2,750/2,817 functions,
 and 76,720/77,428 regions, unchanged in aggregate from snapshot
-`0e46066a-762c-47a5-89d3-69c76ca81d52`. That unchanged coverage is expected:
+`dd0274a6-ac57-41be-9aae-90d7a032d83a`. That unchanged coverage is expected:
 the slice changes only an integration-test contract, not a measured library
 execution path. Pillow has no caller-owned `OutputSink`, so this evidence adds
 no parity row, fixture, diagnostic origin, or coverage-only hook. Other

@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`ac22bf1cbdb43922969bb35172a9515430e753b8`; the claim-ledger baseline remains
+`1726f44e381ebc6132a027696a068415ad82806a`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -625,18 +625,20 @@ finer inner bitstream cursor. Both fields are stable recovery data, never prose.
 
 When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
 caller-owned `OutputSink`, it normalizes that rejection to
-`ImageError::OutputWrite`. Every enabled still codec has an
-explicit Rust contract for this normalization. The error retains the selected
+`ImageError::OutputWrite`. Every available still codec and supported multi-frame
+sequence writer has an explicit Rust contract for this normalization. The error retains the selected
 output format, the `StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
 input offset and container identity are `None` because the failure is on the
 destination side. This boundary defines one post-delivery `OutputSink::flush`
 call; a flush failure is also `ImageError::OutputWrite` and may follow a
-complete prefix. The Rust-only still-writer contract additionally proves that
-every available still codec may reject after accepting a partial structural
-prefix: the delivered prefix remains observable and finalization is not called.
-Short-write behavior on other paths, rollback, and partial-container cleanup
-remain open. Every current codec sink writer reports the same structured cause
-if any validated emitted segment is rejected.
+complete prefix. The Rust-only partial-write contract additionally proves that
+every available still codec and each supported multi-frame GIF/TIFF/WebP/native-
+AVIF sequence writer may reject after accepting a partial structural prefix: the
+delivered prefix remains observable, the error stage is `StillEncode` or
+`SequenceEncode`, and `flush` is not called. Short-write behavior on other
+paths, rollback, and partial-container cleanup remain open. Every current codec
+sink writer reports the same structured cause if any validated emitted segment
+is rejected.
 
 Non-fatal recovery is separate from `ImageError`: successful decode returns
 `Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
