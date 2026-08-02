@@ -823,9 +823,10 @@ pub(crate) fn encode_format_with_token(
             #[cfg(feature = "ico")]
             (ImageFormat::Ico, EncodeOptions::Ico(options)) => ico::encode::encode(_image, options),
             #[cfg(feature = "avif")]
-            (ImageFormat::Avif, EncodeOptions::Avif(options)) => {
-                avif::encode::encode(_image, options)
-            }
+            (ImageFormat::Avif, EncodeOptions::Avif(options)) => match token {
+                Some(token) => avif::encode::encode_with_token(_image, options, Some(token)),
+                None => avif::encode::encode(_image, options),
+            },
             _ => {
                 return Err(option_format_mismatch(
                     format,
@@ -1511,7 +1512,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 crate::types::FrameBlend::Unspecified,
             ),
             crate::types::DecodedFrame::rendered_canvas(
-                luma,
+                luma.clone(),
                 crate::types::FrameRect {
                     left: 0,
                     top: 0,
@@ -1552,6 +1553,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &EncodeOptions::for_format(ImageFormat::Avif),
         Some(&crate::CancellationToken::new()),
     );
+    #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
+    {
+        // The public dispatcher consumes the first poll before entering the
+        // AVIF still encoder. Cancel after that poll to exercise the codec's
+        // own pre-work checkpoint without adding a parity row.
+        let avif_still_cancel = crate::CancellationToken::new();
+        avif_still_cancel.cancel_after(1);
+        let _ = encode_format_with_token(
+            &luma,
+            ImageFormat::Avif,
+            &EncodeOptions::for_format(ImageFormat::Avif),
+            Some(&avif_still_cancel),
+        );
+    }
     #[cfg(feature = "tiff")]
     let _ = encode_sequence_format_with_token(
         &two_frame_sequence,

@@ -18,11 +18,22 @@ use crate::types::ImageMode;
 
 /// Encode one image with Pillow's AVIF defaults and option mapping.
 pub fn encode(image: &DecodedImage, options: &AvifEncodeOptions) -> CodecResult<Vec<u8>> {
+    encode_with_token(image, options, None)
+}
+
+/// Encode one image while polling an optional cooperative cancellation token.
+pub fn encode_with_token(
+    image: &DecodedImage,
+    options: &AvifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     image.validate().map_err(CodecError::from_image_error)?;
     encode_images(
         std::slice::from_ref(image),
         std::slice::from_ref(&FrameDuration::from_milliseconds(0)),
         options,
+        token,
     )
 }
 
@@ -81,9 +92,10 @@ fn encode_images(
     images: &[DecodedImage],
     durations: &[FrameDuration],
     options: &AvifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     let references = images.iter().collect::<Vec<_>>();
-    encode_image_refs(&references, durations, options, None)
+    encode_image_refs(&references, durations, options, token)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -91,6 +103,7 @@ fn encode_images(
     _images: &[DecodedImage],
     _durations: &[FrameDuration],
     _options: &AvifEncodeOptions,
+    _token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     Err(CodecError::TargetUnavailable(
         "AVIF encoding requires the native extra module".to_owned(),
