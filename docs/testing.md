@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`9838ae5ea80c28bf8ed87aff08572e2f4c789144`; the claim-ledger baseline remains
+`447cc034eaccf85843b59e18310778310b22c5f8`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -309,10 +309,11 @@ is emitted; the contract proves the resulting typed interior rejection and
 untouched sink. Lossy WebP VP8 additionally charges after color conversion,
 padding, analysis, segment parameters, mode selection, coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
-VP8L additionally charges around pixel conversion, entropy analysis,
-transform selection/application, bounded backward-reference
-search/match-length/cache/trace, token-stream histogram/group/token intervals,
-and bitstream assembly; the same contract
+VP8L additionally charges around predictor tile scans/mode application,
+cross-color multiplier search/transform tiles, entropy analysis, transform
+selection/application, bounded backward-reference search/match-length/cache/
+trace, histogram clustering, Huffman-tree/group emission, token-stream
+intervals, and bitstream assembly; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
 untouched sink. This is still Rust-only work-control
 evidence: no Pillow row,
@@ -346,8 +347,9 @@ boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints; WebP still encoding polls preparation, lossy VP8
 analysis/mode-selection/coefficient-probability/bitstream stages, lossless
-VP8L pixel/entropy/transform/bounded backward-reference search/match-length/
-cache/trace/token-stream histogram/group/token/bitstream stages, codec-result,
+VP8L predictor/cross-color/entropy/transform, bounded backward-reference
+search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
+stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
@@ -358,10 +360,8 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row subsegments, lossy WebP VP8 stages, and
-lossless WebP VP8L stages plus bounded backward-reference/token-stream
-intervals, remaining predictor/cross-color/analyze-entropy and histogram/Huffman
-interior work, finer WebP work, deeper deflate/structural interruption, progress callbacks, short-write
+beyond the implemented PNG row subsegments and WebP VP8L stages, finer WebP
+work, deeper deflate/structural interruption, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
@@ -389,7 +389,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`9838ae5ea80c28bf8ed87aff08572e2f4c789144`, the generated matrix reports:
+`447cc034eaccf85843b59e18310778310b22c5f8`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1352,40 +1352,41 @@ Pillow parity. Finer WebP interior work, remaining predictor/cross-color/
 analyze-entropy and histogram/Huffman loops, other codec interior work, deeper
 Deflate/structural interruption, allocation accounting, and rollback remain open.
 
-The current deeper lossless WebP/VP8L search and token-stream slice is implemented
-in `db6603b658e0e58649cfccfa46c59c9e56b9a57e`, with coverage-hook compatibility
-fixed in current revision `9838ae5ea80c28bf8ed87aff08572e2f4c789144`:
-backward-reference hash-chain construction, match-length scans, LZ77/RLE/box
-candidate search, cache conversion, backward tracing, and token-stream
-histogram/group/token intervals now poll the caller token and charge the same
-work budget. The no-token path remains byte-preserving. This is Rust-only
-work-control evidence: Pillow has no caller token, work-budget result, or
-diagnostic field, so no parity row, fixture, diagnostic origin, or
-coverage-only hook is added.
+The current lossless WebP/VP8L interior checkpoint slice is implemented at
+`447cc034eaccf85843b59e18310778310b22c5f8`, following the backward-reference
+and token-stream work at `9838ae5ea80c28bf8ed87aff08572e2f4c789144`:
+predictor tile scans/mode application, cross-color multiplier search and
+transform tiles, entropy analysis, histogram clustering, and Huffman-tree/group
+emission now poll the same caller token and charge the same work budget. The
+no-token path remains byte-preserving. The Rust-only contract adds a materially
+larger bounded lossless probe that reaches the long VP8L path before the typed
+rejection; Pillow has no caller token, work-budget result, or diagnostic field,
+so no parity row, fixture, diagnostic origin, or coverage-only hook is added.
 
-Managed Pillow parity run `29e46653-abca-41a5-8b32-64bde44978a1` passed
-1,445/1,445 checks with zero failures or skips in 50,309 ms. Coverage MCP run
-`ee885460-5eee-4f58-a6d7-b2734e5d5ddc` passed 83/83 tests in 79,574 ms and
-ingested snapshot `1e48e6a6-b11e-49bc-abd0-c117a3349b58`; it reports
-49,005/49,385 lines, 6,730/6,792 branches, 2,737/2,804 functions, and
-76,247/76,825 regions. The backward-reference file is 1,068/1,070 lines,
-299/300 branches, 51/51 functions, and 1,590/1,627 regions; the native VP8L
-encoder is 1,311/1,316 lines, 218/218 branches, 69/69 functions, and
-1,945/1,980 regions; the WebP dispatcher is 552/581 lines, 69/74 branches,
-44/54 functions, and 918/975 regions. Compared with snapshot
-`7f037e01-f037-47e5-9bb7-2f03a1132625`, this adds 167 covered lines and 51
-covered branches (+2 covered functions and +217 covered regions), with the
-small rate decrease attributable to the added code. The aggregate snapshot
+Managed Pillow parity run `2484431d-f90d-4616-a837-0268e268b58c` passed
+1,445/1,445 checks with zero failures or skips in 1,113 ms. Coverage MCP run
+`feb96568-c64f-4b4d-96a0-1e9a348ad602` passed 83/83 tests in 50,814 ms and
+ingested snapshot `33a651a8-3d60-4793-84e6-b08edaa5ecca`; it reports
+49,167/49,562 lines, 6,769/6,832 branches, 2,740/2,807 functions, and
+76,480/77,126 regions. Predictor is 286/287 lines, 48/48 branches, 23/23
+functions, and 522/531 regions; cross-color is 466/475 lines, 73/74
+branches, 25/25 functions, and 589/610 regions; histogram is 611/611 lines,
+130/130 branches, 32/32 functions, and 945/963 regions; the native VP8L
+encoder is 1,350/1,360 lines, 222/222 branches, 69/69 functions, and
+1,992/2,045 regions; and the WebP dispatcher is 552/581 lines, 69/74
+branches, 44/54 functions, and 918/975 regions. Compared with snapshot
+`1e48e6a6-b11e-49bc-abd0-c117a3349b58`, this adds 162 covered lines and 39
+covered branches (+3 covered functions and +233 covered regions); the small
+rate decreases are attributable to the added code. The aggregate snapshot
 retains the LLVM segment-normalization warning; uncovered lines are defensive
 unreachable/error-propagation edges, not a reason to add a synthetic hook.
-Feature-matrix run `effe7241-57c1-4abe-a3a6-8f79a800903a` passed 947/947 checks
-in 71,208 ms; its retained log has no package-cache or build-directory
+Feature-matrix run `e430da34-5662-456d-b745-9e60b884c658` passed 947/947 checks
+in 60,673 ms; its retained log has no package-cache or build-directory
 lock-wait matches and ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees`. These are observed implementation and target
-evidence, separate from Pillow parity. Remaining predictor/cross-color/
-analyze-entropy and histogram/Huffman interior work, finer WebP work, other
-codec interior work, deeper Deflate/structural interruption, allocation
-accounting, and rollback remain open.
+evidence, separate from Pillow parity. Remaining finer WebP work, other codec
+interior work, deeper Deflate/structural interruption, allocation accounting,
+and rollback remain open.
 
 Historical claim-ledger acceptance record:
 
