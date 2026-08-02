@@ -202,8 +202,9 @@ add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
 generic whole-buffer fallback for every enabled JPEG, GIF, TIFF, and native AVIF
-still encoder. WebP still, ICO still, and one-frame sequence delivery use the
-structural paths described below. Each real public call must normalize a
+still encoder. WebP still, WebP one-frame sequence, ICO still, and the other
+one-frame sequence deliveries use the structural paths described below. Each
+real public call must normalize a
 rejecting destination to `OutputWrite` with the selected format and
 `StillEncode` stage, without an input offset, container identity, or
 `UnsupportedReason`. These are Rust-only destination contracts: Pillow has no
@@ -275,10 +276,11 @@ interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
 They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
-native AVIF still, GIF-sequence output, and one-frame ICO sequence sink output;
+native AVIF still, GIF-sequence output, and one-frame WebP/ICO sequence sink
+output;
 stable pre-cancelled errors, successful token-aware sink writes, and
-PNG/BMP/WebP/ICO/TIFF still sinks plus the one-frame TIFF sequence sink that
-can cancel between structural writes while retaining only the
+PNG/BMP/WebP/ICO/TIFF still sinks plus the one-frame WebP/TIFF sequence sinks
+that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
@@ -639,9 +641,10 @@ exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
 `encode_sequence_to_sink` over PNG/BMP/WebP/ICO/TIFF still, one-frame
-BMP/ICO/TIFF sequence, and GIF sequence fixtures must write bytes identical to
-`encode`/`encode_sequence` with matching lengths for both `Vec<u8>` and
-`&mut Vec<u8>` sinks. PNG, BMP, WebP, ICO, and TIFF still additionally prove
+BMP/WebP/ICO/TIFF sequence, and GIF sequence fixtures must write bytes
+identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
+and `&mut Vec<u8>` sinks. PNG, BMP, WebP, ICO, and TIFF still, plus one-frame WebP
+sequence, additionally prove
 multiple structural writes, policy preflight before the first write, and
 cancellation between writes; one-frame BMP, ICO, and TIFF sequence additionally
 prove multiple structural writes and policy preflight, while GIF sequence
@@ -807,20 +810,22 @@ parity scope passed 1,434 checks with zero failures and zero skips in
 `531ac749-7aaa-4910-bfed-262e1eb66a20` (33,095 ms). No parity row or fixture
 was added.
 
-The WebP still structural-sink slice is implemented at revision
-`e632222badda34fb29913473556da99b8128d0f8`; the follow-up feature-gate fix is
-`63d801c93eabee36e8ec87f22ad20df940283be7`. It retains the complete WebP
-working buffer but delivers a validated RIFF header followed by chunk headers
-and payload/padding spans, with exact-length preflight and cancellation between
-segments. This is an ordinary Rust-only sink contract: Pillow has no
-caller-owned destination, so no parity row or fixture was added. Coverage MCP
-run `0cc54eb8-645c-4ef9-86ce-9bd3b7d3ddc7`, snapshot
-`94c15f68-788e-40bb-9f33-25245b5d692a`, passed 72 tests with zero failures and
-retained 48,149/48,183 lines, 6,598/6,604 branches, 2,697/2,709 functions,
-and 74,958/75,011 regions. The corrected feature matrix passed 947 checks
-with zero failures in run `8a317040-d51d-4a8e-8fb4-f799215ac083` (98,890 ms),
+The WebP still and one-frame sequence structural-sink slice is implemented at
+revision `e632222badda34fb29913473556da99b8128d0f8`; the follow-up feature-gate
+fix is `63d801c93eabee36e8ec87f22ad20df940283be7`, and the sequence dispatch
+extension is `93a790a53f806baafd7d5a9c9b0376c7e93e54da`. It retains the
+complete WebP working buffer but delivers a validated RIFF header followed by
+chunk headers and payload/padding spans, with exact-length preflight and
+cancellation between segments for both still and one-frame sequence stages.
+This is an ordinary Rust-only sink contract: Pillow has no caller-owned
+destination, so no parity row or fixture was added. Coverage MCP run
+`fbc8cb3f-2bb5-4de1-8813-c80bab47d8e4`, snapshot
+`503f5ab7-da40-4388-baa0-3cda313d8213`, passed 72 tests with zero failures and
+retained 48,166/48,205 lines, 6,601/6,608 branches, 2,698/2,710 functions,
+and 74,982/75,039 regions. The corrected feature matrix passed 947 checks
+with zero failures in run `75fdf3ca-326e-45f4-8b53-f850541dd626` (117,368 ms),
 and the unchanged Pillow parity scope passed 1,434 checks with zero failures
-and zero skips in run `87077d7c-9cdb-4b70-b5bd-0890cdc2379e` (63,221 ms).
+and zero skips in run `f91b2369-fd69-47f7-9486-f79c76bbb10a` (76,056 ms).
 The managed parity scope and Pillow provenance remain unchanged.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
