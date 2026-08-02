@@ -6213,6 +6213,136 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 Some(ImageErrorStage::StillEncode)
             );
             assert_eq!(failing_webp.writes, 2);
+
+            // A one-frame WebP sequence uses the same structural RIFF
+            // delivery while retaining SequenceEncode error context. This is
+            // a Rust-only sink contract; Pillow has no caller-owned sink.
+            let webp_sequence =
+                image_slash_star::DecodedSequence::from_image(decoded.content.clone());
+            let webp_sequence_expected = image_slash_star::encode_sequence(
+                &webp_sequence,
+                ImageFormat::WebP,
+                &webp_options,
+            )?;
+            let mut webp_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink(
+                    &webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &mut webp_sequence_sink,
+                )?,
+                webp_sequence_expected.len()
+            );
+            assert_eq!(webp_sequence_sink.bytes, webp_sequence_expected);
+            assert!(webp_sequence_sink.writes > 1);
+
+            let webp_sequence_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_webp_sequence = CancellingSink {
+                bytes: Vec::new(),
+                token: webp_sequence_token.clone(),
+                writes: 0,
+            };
+            let cancelling_webp_sequence_error =
+                match image_slash_star::encode_sequence_to_sink_with_token(
+                    &webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &webp_sequence_token,
+                    &mut cancelling_webp_sequence,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                        "WebP sequence sink-triggered cancellation unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                    }
+                    Err(error) => error,
+                };
+            assert_eq!(
+                cancelling_webp_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(
+                cancelling_webp_sequence_error.format(),
+                Some(ImageFormat::WebP)
+            );
+            assert_eq!(
+                cancelling_webp_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(cancelling_webp_sequence.writes, 1);
+            assert_eq!(
+                cancelling_webp_sequence.bytes,
+                webp_sequence_expected[..12].to_vec()
+            );
+
+            let too_small_webp_sequence = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(webp_sequence_expected.len() - 1)?);
+            let mut limited_webp_sequence = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let limited_webp_sequence_error =
+                match image_slash_star::encode_sequence_to_sink_with_policy(
+                    &webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &too_small_webp_sequence,
+                    &mut limited_webp_sequence,
+                ) {
+                    Ok(length) => {
+                        return Err(format!(
+                            "WebP sequence output policy unexpectedly admitted {length} bytes"
+                        )
+                        .into());
+                    }
+                    Err(error) => error,
+                };
+            assert!(matches!(
+                limited_webp_sequence_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::WebP),
+                    operation: image_slash_star::CodecOperation::SequenceEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_webp_sequence.writes, 0);
+
+            let mut failing_webp_sequence = FailingAfterWrites {
+                fail_at: 2,
+                writes: 0,
+            };
+            let failing_webp_sequence_error = match image_slash_star::encode_sequence_to_sink(
+                &webp_sequence,
+                ImageFormat::WebP,
+                &webp_options,
+                &mut failing_webp_sequence,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("WebP sequence sink unexpectedly accepted {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                failing_webp_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(
+                failing_webp_sequence_error.format(),
+                Some(ImageFormat::WebP)
+            );
+            assert_eq!(
+                failing_webp_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(failing_webp_sequence.writes, 2);
         }
 
         if cfg!(feature = "jpeg") {
