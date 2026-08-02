@@ -109,6 +109,16 @@ pub use encode_policy::EncodePolicy;
 pub use source::{EncodedImage, EncodedImageView};
 pub use types::*;
 
+fn work_budget_token(
+    policy: &EncodePolicy,
+    source: Option<&CancellationToken>,
+) -> Option<CancellationToken> {
+    policy.max_work_units().map(|maximum| match source {
+        Some(source) => CancellationToken::with_work_budget_from(source, maximum),
+        None => CancellationToken::with_work_budget(maximum),
+    })
+}
+
 /// Detect an encoded image format from its magic bytes.
 ///
 /// AVIF uses `avif`/`avis` major brands directly. Generic `mif1`/`msf1`
@@ -818,21 +828,28 @@ pub fn encode(
 ///
 /// The policy is checked after the selected codec has produced its complete
 /// validated buffer and before that buffer is returned. It therefore bounds
-/// caller-visible output size, but does not yet bound transient allocations
-/// inside the whole-buffer encoder.
+/// caller-visible output size. When configured, its cooperative work budget
+/// also bounds the number of documented encode checkpoints admitted before
+/// the codec continues. Neither field bounds transient allocations or
+/// recoverable out-of-memory behavior inside a whole-buffer encoder.
 ///
 /// # Errors
 ///
 /// Returns the same errors as [`encode`], plus
 /// [`ImageError::LimitExceeded`] with [`ResourceLimit::EncodedOutputBytes`]
-/// when the complete result exceeds `policy`.
+/// when the complete result exceeds `policy`, or with
+/// [`ResourceLimit::EncodeWorkUnits`] when its checkpoint budget is exhausted.
 pub fn encode_with_policy(
     img: &DecodedImage,
     format: ImageFormat,
     opts: &EncodeOptions,
     policy: &EncodePolicy,
 ) -> ImageResult<Vec<u8>> {
-    let encoded = codecs::encode_format(img, format, opts)?;
+    let budget_token = work_budget_token(policy, None);
+    let encoded = match budget_token.as_ref() {
+        Some(token) => codecs::encode_format_with_token(img, format, opts, Some(token))?,
+        None => codecs::encode_format(img, format, opts)?,
+    };
     policy.check_output(&encoded, format, CodecOperation::StillEncode)?;
     Ok(encoded)
 }
@@ -869,6 +886,8 @@ pub fn encode_with_token(
 ///
 /// The policy check runs only after cancellation has been checked by the
 /// codec boundary, so a cancelled operation never returns an oversized result.
+/// A configured work budget is layered over the caller token and reports a
+/// typed limit error separately from caller cancellation.
 pub fn encode_with_token_and_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -876,7 +895,9 @@ pub fn encode_with_token_and_policy(
     policy: &EncodePolicy,
     token: &CancellationToken,
 ) -> ImageResult<Vec<u8>> {
-    let encoded = codecs::encode_format_with_token(img, format, opts, Some(token))?;
+    let budget_token = work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
+    let encoded = codecs::encode_format_with_token(img, format, opts, Some(effective_token))?;
     policy.check_output(&encoded, format, CodecOperation::StillEncode)?;
     Ok(encoded)
 }
@@ -904,21 +925,30 @@ pub fn encode_sequence(
 ///
 /// The policy is checked after the selected codec has produced its complete
 /// validated buffer and before that buffer is returned. It therefore bounds
-/// caller-visible output size, but does not yet bound transient allocations
-/// inside the whole-buffer encoder.
+/// caller-visible output size. When configured, its cooperative work budget
+/// also bounds the number of documented encode checkpoints admitted before
+/// the codec continues. Neither field bounds transient allocations or
+/// recoverable out-of-memory behavior inside a whole-buffer encoder.
 ///
 /// # Errors
 ///
 /// Returns the same errors as [`encode_sequence`], plus
 /// [`ImageError::LimitExceeded`] with [`ResourceLimit::EncodedOutputBytes`]
-/// when the complete result exceeds `policy`.
+/// when the complete result exceeds `policy`, or with
+/// [`ResourceLimit::EncodeWorkUnits`] when its checkpoint budget is exhausted.
 pub fn encode_sequence_with_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
     opts: &EncodeOptions,
     policy: &EncodePolicy,
 ) -> ImageResult<Vec<u8>> {
-    let encoded = codecs::encode_sequence_format(sequence, format, opts)?;
+    let budget_token = work_budget_token(policy, None);
+    let encoded = match budget_token.as_ref() {
+        Some(token) => {
+            codecs::encode_sequence_format_with_token(sequence, format, opts, Some(token))?
+        }
+        None => codecs::encode_sequence_format(sequence, format, opts)?,
+    };
     policy.check_output(&encoded, format, CodecOperation::SequenceEncode)?;
     Ok(encoded)
 }
@@ -947,6 +977,8 @@ pub fn encode_sequence_with_token(
 }
 
 /// [`encode_sequence_with_token`] with an explicit output-result policy.
+/// A configured work budget is layered over the caller token and reports a
+/// typed limit error separately from caller cancellation.
 pub fn encode_sequence_with_token_and_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -954,7 +986,10 @@ pub fn encode_sequence_with_token_and_policy(
     policy: &EncodePolicy,
     token: &CancellationToken,
 ) -> ImageResult<Vec<u8>> {
-    let encoded = codecs::encode_sequence_format_with_token(sequence, format, opts, Some(token))?;
+    let budget_token = work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
+    let encoded =
+        codecs::encode_sequence_format_with_token(sequence, format, opts, Some(effective_token))?;
     policy.check_output(&encoded, format, CodecOperation::SequenceEncode)?;
     Ok(encoded)
 }
@@ -1015,7 +1050,9 @@ pub fn encode_to_sink(
 /// # Errors
 ///
 /// Returns the same errors as [`encode_with_policy`], plus
-/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment.
+/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment, or
+/// [`ImageError::LimitExceeded`] when the output or checkpoint budget rejects
+/// the operation before delivery.
 pub fn encode_to_sink_with_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1033,9 +1070,15 @@ fn encode_to_sink_with_policy_impl(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    if let Some(written) =
-        codecs::encode_format_to_sink_with_token(img, format, opts, *policy, None, sink)?
-    {
+    let budget_token = work_budget_token(policy, None);
+    if let Some(written) = codecs::encode_format_to_sink_with_token(
+        img,
+        format,
+        opts,
+        *policy,
+        budget_token.as_ref(),
+        sink,
+    )? {
         return Ok(written);
     }
     let encoded = encode_with_policy(img, format, opts, policy)?;
@@ -1057,6 +1100,8 @@ pub fn encode_to_sink_with_token(
 
 /// Encode a still image with cooperative cancellation and an output-result
 /// policy before delivering the admitted result to a caller-owned sink.
+/// A configured work budget is layered over the caller token and reports a
+/// typed limit error separately from caller cancellation.
 pub fn encode_to_sink_with_token_and_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1076,9 +1121,16 @@ fn encode_to_sink_with_token_and_policy_impl(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    if let Some(written) =
-        codecs::encode_format_to_sink_with_token(img, format, opts, *policy, Some(token), sink)?
-    {
+    let budget_token = work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
+    if let Some(written) = codecs::encode_format_to_sink_with_token(
+        img,
+        format,
+        opts,
+        *policy,
+        Some(effective_token),
+        sink,
+    )? {
         return Ok(written);
     }
     let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
@@ -1107,7 +1159,9 @@ pub fn encode_sequence_to_sink(
 /// # Errors
 ///
 /// Returns the same errors as [`encode_sequence_with_policy`], plus
-/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment.
+/// [`ImageError::OutputWrite`] when the sink rejects an admitted segment, or
+/// [`ImageError::LimitExceeded`] when the output or checkpoint budget rejects
+/// the operation before delivery.
 pub fn encode_sequence_to_sink_with_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1125,9 +1179,15 @@ fn encode_sequence_to_sink_with_policy_impl(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    if let Some(written) =
-        codecs::encode_sequence_to_sink_with_token(sequence, format, opts, *policy, None, sink)?
-    {
+    let budget_token = work_budget_token(policy, None);
+    if let Some(written) = codecs::encode_sequence_to_sink_with_token(
+        sequence,
+        format,
+        opts,
+        *policy,
+        budget_token.as_ref(),
+        sink,
+    )? {
         return Ok(written);
     }
     let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
@@ -1156,6 +1216,8 @@ pub fn encode_sequence_to_sink_with_token(
 
 /// Encode a still image or animation with cooperative cancellation and an
 /// output-result policy before delivering the admitted result to a sink.
+/// A configured work budget is layered over the caller token and reports a
+/// typed limit error separately from caller cancellation.
 pub fn encode_sequence_to_sink_with_token_and_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1175,12 +1237,14 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
+    let budget_token = work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
     if let Some(written) = codecs::encode_sequence_to_sink_with_token(
         sequence,
         format,
         opts,
         *policy,
-        Some(token),
+        Some(effective_token),
         sink,
     )? {
         return Ok(written);
@@ -1330,6 +1394,16 @@ pub fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(b"not an image");
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let _ = encode_default(&image, ImageFormat::Png);
+    let fresh = CancellationToken::new();
+    assert!(!fresh.is_cancelled());
+    let countdown = CancellationToken::new();
+    countdown.cancel_after(2);
+    assert!(!countdown.is_cancelled());
+    assert!(!countdown.is_cancelled());
+    assert!(countdown.is_cancelled());
+    let cancelled = CancellationToken::new();
+    cancelled.cancel();
+    assert!(cancelled.is_cancelled());
     capabilities::__coverage_exercise_private_branches();
     codecs::__coverage_exercise_private_branches();
     decode_policy::__coverage_exercise_private_branches();

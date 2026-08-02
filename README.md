@@ -149,7 +149,7 @@ capabilities and setup.
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
-| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and return a typed `EncodedOutputBytes` limit failure when the complete result is too large |
+| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; JPEG polls internal row/block/scan checkpoints, while other whole-buffer still codecs retain their public boundary |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
@@ -203,8 +203,11 @@ still sink encoding poll while preparing rows and between emitted segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
 may leave its delivered prefix; progress callbacks, work-budget exhaustion,
-and universal structural writing remain separate roadmap work. Legacy APIs
-never cancel.
+and universal structural writing remain separate roadmap work. An
+`EncodePolicy::max_work_units` budget counts those documented encode
+checkpoints and reports a typed limit error before the checkpoint that would
+exceed it; it is not a CPU-time or allocation guarantee. Legacy APIs never
+cancel and remain unlimited.
 
 Signature detection is feature-independent. Disabled codec operations report
 `Unavailable(FeatureDisabled)` through capability discovery and return
@@ -457,8 +460,12 @@ complete `Vec<u8>` first. The PNG and BMP still sink paths preflight their
 complete lengths, then emit validated container structures without assembling a
 second final `Vec<u8>`; PNG's filtered rows and compressed payload remain
 transient working allocations, while BMP prepares bounded palette/row segments.
-Neither path yet provides a transient-allocation cap, recoverable OOM behavior,
-or universal incremental encoding.
+`EncodePolicy::max_work_units` is a separate inclusive bound on the documented
+cooperative encode checkpoints. It reports `ResourceLimit::EncodeWorkUnits`
+when the next checkpoint would exceed the budget; it is deterministic work
+control, not CPU-time, allocation, or recoverable-OOM accounting. Neither
+policy yet provides a transient-allocation cap, recoverable OOM behavior, or
+universal incremental encoding.
 
 `inspect_with_policy`, `decode_sequence_with_policy`,
 `EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the

@@ -6366,6 +6366,113 @@ fn encoded_output_policy_is_a_non_parity_result_contract() -> Result<(), Box<dyn
 }
 
 #[test]
+fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn std::error::Error>> {
+    // Pillow has no caller-controlled checkpoint budget or equivalent result.
+    // This is a Rust-only work-control contract, not a generated parity row.
+    if cfg!(feature = "png") {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::Png);
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(unlimited.max_work_units(), Some(u64::MAX));
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &unlimited,
+            )?,
+            expected,
+            "an ample checkpoint budget preserves the ordinary result"
+        );
+        let caller_token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &unlimited,
+                &caller_token,
+            )?,
+            expected,
+            "a budget layered over a caller token preserves the ordinary result"
+        );
+
+        let zero = image_slash_star::EncodePolicy::new().with_max_work_units(0);
+        let error = match image_slash_star::encode_with_policy(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &zero,
+        ) {
+            Ok(_) => return Err("zero work budget unexpectedly encoded PNG".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 0,
+                observed: 1,
+            }
+        ));
+
+        let mut sink = vec![0xA5];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &zero,
+            &mut sink,
+        ) {
+            Ok(_) => return Err("zero work budget unexpectedly wrote PNG".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                operation: image_slash_star::CodecOperation::StillEncode,
+                ..
+            }
+        ));
+        assert_eq!(sink, vec![0xA5]);
+    }
+
+    if cfg!(feature = "gif") {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        let options = EncodeOptions::for_format(ImageFormat::Gif);
+        let zero = image_slash_star::EncodePolicy::new().with_max_work_units(0);
+        let error = match image_slash_star::encode_sequence_with_policy(
+            &sequence,
+            ImageFormat::Gif,
+            &options,
+            &zero,
+        ) {
+            Ok(_) => return Err("zero work budget unexpectedly encoded GIF".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::SequenceEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 0,
+                observed: 1,
+            }
+        ));
+    }
+    Ok(())
+}
+
+#[test]
 fn unsupported_reasons_are_non_parity_capability_contracts()
 -> Result<(), Box<dyn std::error::Error>> {
     // These reason fields classify the Rust API's capability boundary. Pillow

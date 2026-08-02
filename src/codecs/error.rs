@@ -1,7 +1,8 @@
 //! Private codec failures retained until format dispatch selects a public error.
 
+use crate::CodecOperation;
 use crate::types::ImageErrorStage;
-use crate::types::{ImageError, ImageFormat, ImageResult, UnsupportedReason};
+use crate::types::{ImageError, ImageFormat, ImageResult, ResourceLimit, UnsupportedReason};
 
 /// Operational failure produced below the public format dispatcher.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +24,8 @@ pub(crate) enum CodecError {
     /// A caller-configured resource maximum was exceeded; the structured
     /// [`ImageError::LimitExceeded`] value is retained verbatim.
     LimitExceeded(ImageError),
+    /// The deterministic cooperative checkpoint budget was exhausted.
+    WorkBudgetExceeded { maximum: u64, observed: u64 },
     /// The operation stopped at a cooperative checkpoint because the
     /// caller's cancellation token fired.
     Cancelled,
@@ -109,6 +112,15 @@ impl CodecError {
         format: ImageFormat,
         stage: ImageErrorStage,
     ) -> ImageError {
+        self.into_image_error_with_mode(format, stage, false)
+    }
+
+    fn into_image_error_with_mode(
+        self,
+        format: ImageFormat,
+        stage: ImageErrorStage,
+        incremental: bool,
+    ) -> ImageError {
         match self {
             Self::Malformed(message) => ImageError::Malformed {
                 format,
@@ -116,6 +128,13 @@ impl CodecError {
                 stage: Some(stage),
                 offset: None,
                 identity: None,
+            },
+            Self::NeedMore { minimum, .. } if incremental => ImageError::NeedMoreData {
+                format: Some(format),
+                stage: Some(stage),
+                offset: None,
+                identity: None,
+                minimum: u64::try_from(minimum).unwrap_or(u64::MAX),
             },
             Self::NeedMore { message, .. } => ImageError::Malformed {
                 format,
@@ -164,12 +183,19 @@ impl CodecError {
                 identity: None,
             },
             Self::LimitExceeded(error) => error,
+            Self::WorkBudgetExceeded { maximum, observed } => ImageError::LimitExceeded {
+                format: Some(format),
+                operation: operation_for_stage(stage),
+                resource: ResourceLimit::EncodeWorkUnits,
+                maximum,
+                observed,
+            },
             Self::At {
                 error,
                 offset,
                 identity,
             } => {
-                let mut converted = error.into_image_error(format, stage);
+                let mut converted = error.into_image_error_with_mode(format, stage, incremental);
                 match &mut converted {
                     ImageError::Malformed {
                         offset: target,
@@ -194,10 +220,17 @@ impl CodecError {
                         *target = Some(offset);
                         *target_identity = Some(identity);
                     }
+                    ImageError::NeedMoreData {
+                        offset: target,
+                        identity: target_identity,
+                        ..
+                    } => {
+                        *target = Some(offset);
+                        *target_identity = Some(identity);
+                    }
                     ImageError::UnknownFormat
                     | ImageError::FeatureDisabled { .. }
                     | ImageError::LimitExceeded { .. }
-                    | ImageError::NeedMoreData { .. }
                     | ImageError::Cancelled { .. }
                     | ImageError::OutputWrite { .. } => {}
                 }
@@ -213,105 +246,7 @@ impl CodecError {
         format: ImageFormat,
         stage: ImageErrorStage,
     ) -> ImageError {
-        match self {
-            Self::Malformed(message) => ImageError::Malformed {
-                format,
-                message,
-                stage: Some(stage),
-                offset: None,
-                identity: None,
-            },
-            Self::NeedMore { minimum, .. } => ImageError::NeedMoreData {
-                format: Some(format),
-                stage: Some(stage),
-                offset: None,
-                identity: None,
-                minimum: u64::try_from(minimum).unwrap_or(u64::MAX),
-            },
-            Self::Cancelled => ImageError::Cancelled {
-                format: Some(format),
-                stage: Some(stage),
-            },
-            Self::OutputWrite(message) => ImageError::OutputWrite {
-                format: Some(format),
-                message,
-                stage: Some(stage),
-            },
-            Self::Unsupported(message) => ImageError::Unsupported {
-                format: Some(format),
-                message,
-                stage: Some(stage),
-                reason: None,
-                offset: None,
-                identity: None,
-            },
-            Self::TargetUnavailable(message) => ImageError::Unsupported {
-                format: Some(format),
-                message,
-                stage: Some(stage),
-                reason: Some(UnsupportedReason::TargetUnavailable),
-                offset: None,
-                identity: None,
-            },
-            Self::Dimensions(message) => ImageError::Dimensions {
-                format: Some(format),
-                message,
-                stage: Some(stage),
-                offset: None,
-                identity: None,
-            },
-            Self::Parameter(message) => ImageError::Parameter {
-                format: Some(format),
-                message,
-                stage: Some(stage),
-                offset: None,
-                identity: None,
-            },
-            Self::LimitExceeded(error) => error,
-            Self::At {
-                error,
-                offset,
-                identity,
-            } => {
-                let mut converted = error.into_incremental_image_error(format, stage);
-                match &mut converted {
-                    ImageError::Malformed {
-                        offset: target,
-                        identity: target_identity,
-                        ..
-                    }
-                    | ImageError::Unsupported {
-                        offset: target,
-                        identity: target_identity,
-                        ..
-                    }
-                    | ImageError::Dimensions {
-                        offset: target,
-                        identity: target_identity,
-                        ..
-                    }
-                    | ImageError::Parameter {
-                        offset: target,
-                        identity: target_identity,
-                        ..
-                    }
-                    | ImageError::NeedMoreData {
-                        offset: target,
-                        identity: target_identity,
-                        ..
-                    } => {
-                        *target = Some(offset);
-                        *target_identity = Some(identity);
-                    }
-                    ImageError::UnknownFormat
-                    | ImageError::FeatureDisabled { .. }
-                    | ImageError::LimitExceeded { .. }
-                    | ImageError::Cancelled { .. }
-                    | ImageError::OutputWrite { .. } => {}
-                }
-                converted
-            }
-        }
+        self.into_image_error_with_mode(format, stage, true)
     }
 
     /// Prefix a lower-level failure with its caller's pipeline stage.
@@ -329,6 +264,9 @@ impl CodecError {
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
+            Self::WorkBudgetExceeded { maximum, observed } => {
+                Self::WorkBudgetExceeded { maximum, observed }
+            }
             Self::Cancelled => Self::Cancelled,
             Self::OutputWrite(message) => Self::OutputWrite(message),
             Self::At {
@@ -350,8 +288,25 @@ impl CodecError {
 /// attached when the token fires so the public error is actionable.
 pub(crate) fn check_cancelled(token: Option<&crate::CancellationToken>) -> CodecResult<()> {
     match token {
-        Some(token) if token.is_cancelled() => Err(CodecError::Cancelled),
-        Some(_) | None => Ok(()),
+        Some(token) => match token.poll() {
+            crate::cancel::PollResult::Continue => Ok(()),
+            crate::cancel::PollResult::Cancelled => Err(CodecError::Cancelled),
+            crate::cancel::PollResult::WorkBudgetExceeded { maximum, observed } => {
+                Err(CodecError::WorkBudgetExceeded { maximum, observed })
+            }
+        },
+        None => Ok(()),
+    }
+}
+
+fn operation_for_stage(stage: ImageErrorStage) -> CodecOperation {
+    match stage {
+        ImageErrorStage::SequenceEncode => CodecOperation::SequenceEncode,
+        // Work budgets are only installed by public encode entry points. A
+        // non-sequence encode stage is therefore the only other valid input;
+        // keeping the fallback defensive avoids pretending decode or
+        // verification paths can consume an encode budget.
+        _ => CodecOperation::StillEncode,
     }
 }
 
