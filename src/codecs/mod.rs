@@ -1387,6 +1387,9 @@ pub(crate) fn encode_sequence_to_sink_with_token(
                 target_arch = "wasm32"
             ))]
             ensure_available(format)?;
+            if sequence.frames.len() != 1 {
+                return Ok(None);
+            }
             let frame = single_frame_for_sink(sequence, format)?;
             let EncodeOptions::WebP(options) = options else {
                 return Err(option_format_mismatch(
