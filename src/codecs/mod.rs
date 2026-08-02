@@ -1495,6 +1495,29 @@ pub(crate) fn encode_sequence_to_sink_with_token(
                 target_arch = "wasm32"
             ))]
             ensure_available(format)?;
+            if sequence.frames.len() > 1 {
+                let EncodeOptions::WebP(options) = options else {
+                    return Err(option_format_mismatch(
+                        format,
+                        options,
+                        ImageErrorStage::SequenceEncode,
+                    ));
+                };
+                let encoded = webp::encode::encode_sequence_to_sink(
+                    sequence,
+                    options,
+                    policy,
+                    CodecOperation::SequenceEncode,
+                    token,
+                    sink,
+                );
+                return into_image_result(
+                    encoded.map_err(|error| error.context("encode sequence")),
+                    format,
+                    ImageErrorStage::SequenceEncode,
+                )
+                .map(Some);
+            }
             if sequence.frames.len() != 1 {
                 return Ok(None);
             }
