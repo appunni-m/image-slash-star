@@ -97,42 +97,81 @@ else:
     node scripts/wasm_test_runner.js "$binary"
 }
 
-wait_matrix_batch() {
-    batch_status=0
-    for pid in $matrix_pending_pids; do
-        if ! wait "$pid"; then
-            batch_status=1
-        fi
-    done
-    for lane in $matrix_pending_lanes; do
-        cat "$matrix_log_dir/$matrix_group-$lane.log"
-    done
-    matrix_pending_pids=
-    matrix_pending_lanes=
-    matrix_pending_count=0
-    return "$batch_status"
-}
-
 run_parallel_lanes() {
     matrix_group=$1
     matrix_runner=$2
     shift 2
-    matrix_pending_pids=
-    matrix_pending_lanes=
+    matrix_pending_jobs=
     matrix_pending_count=0
-    for lane in "$@"; do
-        "$matrix_runner" "$lane" \
-            >"$matrix_log_dir/$matrix_group-$lane.log" 2>&1 &
-        matrix_pending_pids="$matrix_pending_pids $!"
-        matrix_pending_lanes="$matrix_pending_lanes $lane"
+
+    # Keep the concurrency bound, but admit work whenever any lane finishes
+    # instead of waiting for the slowest lane in a batch. The status marker is
+    # written by the child before it exits because POSIX sh has no portable
+    # non-blocking wait primitive.
+    wait_matrix_lane() {
+        while :; do
+            for matrix_job in $matrix_pending_jobs; do
+                matrix_lane=${matrix_job#*:}
+                matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
+                if [ -f "$matrix_status_path" ]; then
+                    matrix_pid=${matrix_job%%:*}
+                    matrix_status=$(sed -n '1p' "$matrix_status_path")
+                    wait "$matrix_pid" || :
+
+                    cat "$matrix_log_dir/$matrix_group-$matrix_lane.log"
+
+                    matrix_remaining_jobs=
+                    for matrix_remaining_job in $matrix_pending_jobs; do
+                        if [ "$matrix_remaining_job" != "$matrix_job" ]; then
+                            matrix_remaining_jobs="$matrix_remaining_jobs $matrix_remaining_job"
+                        fi
+                    done
+                    matrix_pending_jobs=$matrix_remaining_jobs
+                    matrix_pending_count=$((matrix_pending_count - 1))
+                    return "$matrix_status"
+                fi
+            done
+            sleep 0.1
+        done
+    }
+
+    launch_matrix_lane() {
+        matrix_lane=$1
+        matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
+        matrix_status_tmp="$matrix_status_path.tmp"
+        (
+            matrix_status=0
+            "$matrix_runner" "$matrix_lane" \
+                >"$matrix_log_dir/$matrix_group-$matrix_lane.log" 2>&1 \
+                || matrix_status=$?
+            printf '%s\n' "$matrix_status" >"$matrix_status_tmp"
+            mv "$matrix_status_tmp" "$matrix_status_path"
+            exit "$matrix_status"
+        ) &
+        matrix_pending_jobs="$matrix_pending_jobs $!:$matrix_lane"
         matrix_pending_count=$((matrix_pending_count + 1))
-        if [ "$matrix_pending_count" -ge "$MATRIX_JOBS" ]; then
-            wait_matrix_batch || return 1
+    }
+
+    matrix_failed=0
+    for lane in "$@"; do
+        while [ "$matrix_pending_count" -ge "$MATRIX_JOBS" ]; do
+            if ! wait_matrix_lane; then
+                matrix_failed=1
+            fi
+        done
+        if [ "$matrix_failed" -ne 0 ]; then
+            break
         fi
+        launch_matrix_lane "$lane"
     done
     if [ "$matrix_pending_count" -gt 0 ]; then
-        wait_matrix_batch || return 1
+        while [ "$matrix_pending_count" -gt 0 ]; do
+            if ! wait_matrix_lane; then
+                matrix_failed=1
+            fi
+        done
     fi
+    return "$matrix_failed"
 }
 
 run_parallel_lanes native run_native_lane \
