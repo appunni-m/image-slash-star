@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`7d735af15cc448bd1be76b1569c317b8dcd0d9e7`; the claim-ledger baseline remains
+`045a908a580024212a03a1bb96dd83bdc27aa4ba`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -368,7 +368,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`7d735af15cc448bd1be76b1569c317b8dcd0d9e7`, the generated matrix reports:
+`045a908a580024212a03a1bb96dd83bdc27aa4ba`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1177,7 +1177,7 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-The current implementation revision is
+The preceding implementation revision was
 `7d735af15cc448bd1be76b1569c317b8dcd0d9e7`. The runtime-first parity follow-up
 is committed at `8c87e1d`: it keeps the active manifest at 1,417 rows and
 partitions the expensive GIF/WebP encode work into hot-row workers while
@@ -1190,11 +1190,11 @@ The worker partition changes scheduling only: no manifest row, fixture,
 assertion, or Pillow provenance boundary changed. Managed durations are
 runner/cache-sensitive execution records, not a controlled speedup claim.
 
-The current managed parity run
+The subsequent managed parity run
 `a7791521-25e0-405e-9826-c0f3c3745d6c` passed 1,445 checks with zero failures
 or skips in 60,053 ms at `7d735af`. Its retained output again reports 28
 worker tests with zero failed or skipped rows; the managed total is 1,417
-active rows plus 28 worker test functions. This confirms the JPEG sequence
+active rows plus 28 worker test functions. This confirmed the JPEG sequence
 sink change did not alter the Pillow-parity manifest or its oracle boundary.
 
 The multi-page TIFF structural-sink implementation landed in
@@ -1225,6 +1225,24 @@ its retained log has no package-cache or build-directory lock-wait matches
 and ends with `capability tables OK: every native and wasm32-wasip1 lane
 agrees`. These aggregate and target-matrix results remain implementation
 evidence, separate from Pillow parity.
+
+The current implementation revision is
+`045a908a580024212a03a1bb96dd83bdc27aa4ba`. The test-runtime follow-up adds a
+lightly optimized Cargo test profile (`opt-level = 1`) for the codec-heavy
+parity and coverage binaries; the feature-matrix script explicitly resets its
+compile-heavy capability probes to `MATRIX_TEST_OPT_LEVEL=0`. No manifest row,
+fixture, assertion, diagnostic-origin boundary, or production profile changed.
+At this revision, managed Pillow parity run
+`88c2db36-221f-4b1c-bb60-17a04cf12d70` passed 1,445/1,445 checks with zero
+failures or skips in 844 ms. Coverage MCP run
+`58803e1c-2c6d-401d-9376-825710e8a2cf` passed 83/83 tests in 48,676 ms and
+ingested snapshot `a893e8ad-895b-40cb-9106-f776d44b62a8`; it retains
+48,738/49,108 lines, 6,671/6,732 branches, 2,735/2,802 functions, and
+75,913/76,394 regions. Feature-matrix run
+`6c079600-9d20-4ed9-92a0-517068587d84` passed 947/947 checks in 56,641 ms;
+its log has no package-cache or build-directory lock-wait matches and ends
+with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+These are observed execution records, not universal benchmark claims.
 
 Historical claim-ledger acceptance record:
 

@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`7d735af15cc448bd1be76b1569c317b8dcd0d9e7`; the claim-ledger baseline remains
+`045a908a580024212a03a1bb96dd83bdc27aa4ba`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1603,7 +1603,7 @@ Pillow parity run `4ed3cd5c-3e92-4f2b-bd02-1b71a97ad0ed` with 1,420 rows and
 zero failures. These durations are execution evidence rather than a controlled
 benchmark because managed cache and build state can differ.
 
-The current implementation revision is
+The preceding implementation revision was
 `7d735af15cc448bd1be76b1569c317b8dcd0d9e7`. The runtime-first parity follow-up
 is committed at `8c87e1d`: the active manifest remains 1,417 rows, while the
 expensive GIF/WebP encode work is partitioned into hot-row workers with
@@ -1646,6 +1646,23 @@ retained logs show no package-cache or build-directory lock-wait matches and
 end with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
 These are implementation and target-evidence records, separate from Pillow
 parity.
+
+The current implementation revision is
+`045a908a580024212a03a1bb96dd83bdc27aa4ba`. The test-runtime follow-up adds a
+lightly optimized Cargo test profile (`opt-level = 1`) for the codec-heavy
+parity and coverage binaries and keeps the compile-heavy feature probes at
+`MATRIX_TEST_OPT_LEVEL=0`. It changes no production profile, manifest row,
+fixture, assertion, or Pillow/Rust evidence origin. Managed parity run
+`88c2db36-221f-4b1c-bb60-17a04cf12d70` passed 1,445/1,445 checks in 844 ms;
+Coverage MCP run `58803e1c-2c6d-401d-9376-825710e8a2cf` passed 83/83 tests in
+48,676 ms and ingested snapshot `a893e8ad-895b-40cb-9106-f776d44b62a8` with
+the same 48,738/49,108 lines, 6,671/6,732 branches, 2,735/2,802 functions,
+and 75,913/76,394 regions. Feature-matrix run
+`6c079600-9d20-4ed9-92a0-517068587d84` passed 947/947 checks in 56,641 ms;
+its retained log has no package-cache or build-directory lock-wait matches
+and ends with `capability tables OK: every native and wasm32-wasip1 lane
+agrees`. These are observed execution records, not universal benchmark
+claims.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
