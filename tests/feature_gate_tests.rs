@@ -6604,6 +6604,37 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 ..
             }
         ));
+
+        // These two budgets reach the post-tokenization and post-output
+        // checkpoints respectively. They prove that either late rejection
+        // still publishes no returned bytes, rather than merely exercising
+        // the first row-boundary failure.
+        for maximum in [513, 514] {
+            let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(maximum);
+            let error = match image_slash_star::encode_with_policy(
+                &image,
+                ImageFormat::Tiff,
+                &options,
+                &bounded,
+            ) {
+                Ok(_) => {
+                    return Err(
+                        format!("TIFF Deflate budget {maximum} unexpectedly completed").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Tiff),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                    maximum: observed_maximum,
+                    ..
+                } if observed_maximum == maximum
+            ));
+        }
     }
     Ok(())
 }
