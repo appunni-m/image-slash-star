@@ -294,7 +294,7 @@ translation cannot be bypassed.
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
-| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
+| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and deflate boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
@@ -438,6 +438,15 @@ palette/row segments and ICO prepares its embedded payload. Neither path is a
 transient-allocation or recoverable-OOM guarantee, and other codecs remain
 whole-buffer.
 
+`EncodePolicy::max_work_units` is an independent inclusive bound on the
+documented cooperative encode checkpoints. A checkpoint charges one unit
+before it continues; when the next charge would exceed the maximum, encoding
+returns `ImageError::LimitExceeded` with
+`ResourceLimit::EncodeWorkUnits`. The budget is layered over a caller token,
+so caller cancellation still has precedence and remains `Cancelled`. This is
+deterministic work control, not CPU-time, instruction-count, transient-memory,
+or recoverable-OOM accounting.
+
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
@@ -450,8 +459,9 @@ boundaries. GIF, TIFF, WebP,
 and native AVIF sequence encoders
 additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
-prefix because no rollback contract exists. Progress callbacks, work-budget
-exhaustion, and full structural writing for the remaining codecs remain open.
+prefix because no rollback contract exists. Progress callbacks, full
+structural writing for the remaining codecs, and interruption beyond the
+documented checkpoints remain open.
 
 ### Codec work is bounded by the resource set
 

@@ -14,6 +14,32 @@ case "$MATRIX_JOBS" in
         exit 2
         ;;
 esac
+# The Rust test harness otherwise starts one worker per logical CPU in every
+# active lane. With several lanes running concurrently that multiplies into a
+# heavily oversubscribed matrix. Keep the default test-worker total close to
+# the host CPU count while allowing a caller to tune it explicitly.
+MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
+if [ -z "$MATRIX_TEST_THREADS" ]; then
+    matrix_cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '%s\n' 1)
+    case "$matrix_cpu_count" in
+        ''|*[!0-9]*|0)
+            matrix_cpu_count=1
+            ;;
+    esac
+    MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
+    if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
+        MATRIX_TEST_THREADS=1
+    fi
+    if [ "$MATRIX_TEST_THREADS" -gt 8 ]; then
+        MATRIX_TEST_THREADS=8
+    fi
+fi
+case "$MATRIX_TEST_THREADS" in
+    ''|*[!0-9]*|0)
+        echo "MATRIX_TEST_THREADS must be a positive integer" >&2
+        exit 2
+        ;;
+esac
 CAPABILITY_JOBS=${CAPABILITY_JOBS:-$MATRIX_JOBS}
 case "$CAPABILITY_JOBS" in
     ''|*[!0-9]*|0)
@@ -60,7 +86,8 @@ run_native_lane() {
     set -- $(feature_args "$features")
     cargo clippy --workspace --all-targets --locked "$@" -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked "$@"
-    cargo test --locked --test feature_gate_tests "$@" -- --nocapture
+    cargo test --locked --test feature_gate_tests "$@" -- --nocapture \
+        --test-threads "$MATRIX_TEST_THREADS"
 }
 
 run_wasm_unknown_lane() {
@@ -103,13 +130,34 @@ for line in open(sys.argv[1], encoding="utf-8"):
 else:
     raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
 ' "$build_log")
-    node scripts/wasm_test_runner.js "$binary" --nocapture
+    node scripts/wasm_test_runner.js "$binary" --nocapture \
+        --test-threads "$MATRIX_TEST_THREADS"
 }
 
-run_parallel_lanes() {
-    matrix_group=$1
-    matrix_runner=$2
-    shift 2
+run_matrix_lane() {
+    matrix_job=$1
+    matrix_group=${matrix_job%%:*}
+    matrix_lane=${matrix_job#*:}
+    case "$matrix_group" in
+        native)
+            run_native_lane "$matrix_lane"
+            ;;
+        wasm-unknown)
+            run_wasm_unknown_lane "$matrix_lane"
+            ;;
+        wasm-wasi)
+            run_wasi_lane "$matrix_lane"
+            ;;
+        *)
+            echo "unknown matrix group: $matrix_group" >&2
+            return 2
+            ;;
+    esac
+}
+
+run_parallel_jobs() {
+    matrix_runner=$1
+    shift
     matrix_pending_jobs=
     matrix_pending_count=0
 
@@ -119,25 +167,30 @@ run_parallel_lanes() {
     # non-blocking wait primitive.
     wait_matrix_lane() {
         while :; do
-            for matrix_job in $matrix_pending_jobs; do
-                matrix_lane=${matrix_job#*:}
-                matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
-                if [ -f "$matrix_status_path" ]; then
-                    matrix_pid=${matrix_job%%:*}
-                    matrix_status=$(sed -n '1p' "$matrix_status_path")
-                    wait "$matrix_pid" || :
+            for matrix_pending_entry in $matrix_pending_jobs; do
+                matrix_pending_spec=${matrix_pending_entry#*|}
+                matrix_pending_group=${matrix_pending_spec%%:*}
+                matrix_pending_lane=${matrix_pending_spec#*:}
+                matrix_pending_status_path="$matrix_log_dir/$matrix_pending_group-$matrix_pending_lane.status"
+                if [ -f "$matrix_pending_status_path" ]; then
+                    matrix_pending_pid=${matrix_pending_entry%%|*}
+                    matrix_pending_status=$(sed -n '1p' "$matrix_pending_status_path")
+                    wait "$matrix_pending_pid" || :
 
-                    cat "$matrix_log_dir/$matrix_group-$matrix_lane.log"
+                    cat "$matrix_log_dir/$matrix_pending_group-$matrix_pending_lane.log"
+                    if [ "$matrix_pending_status" -ne 0 ]; then
+                        echo "matrix lane $matrix_pending_group/$matrix_pending_lane failed with status $matrix_pending_status" >&2
+                    fi
 
                     matrix_remaining_jobs=
-                    for matrix_remaining_job in $matrix_pending_jobs; do
-                        if [ "$matrix_remaining_job" != "$matrix_job" ]; then
-                            matrix_remaining_jobs="$matrix_remaining_jobs $matrix_remaining_job"
+                    for matrix_remaining_entry in $matrix_pending_jobs; do
+                        if [ "$matrix_remaining_entry" != "$matrix_pending_entry" ]; then
+                            matrix_remaining_jobs="$matrix_remaining_jobs $matrix_remaining_entry"
                         fi
                     done
                     matrix_pending_jobs=$matrix_remaining_jobs
                     matrix_pending_count=$((matrix_pending_count - 1))
-                    return "$matrix_status"
+                    return "$matrix_pending_status"
                 fi
             done
             sleep 0.1
@@ -145,26 +198,28 @@ run_parallel_lanes() {
     }
 
     launch_matrix_lane() {
-        matrix_lane=$1
-        matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
-        matrix_status_tmp="$matrix_status_path.tmp"
-        matrix_target_dir="$matrix_target_root/target-$matrix_group-$matrix_lane"
+        matrix_launch_spec=$1
+        matrix_launch_group=${matrix_launch_spec%%:*}
+        matrix_launch_lane=${matrix_launch_spec#*:}
+        matrix_launch_status_path="$matrix_log_dir/$matrix_launch_group-$matrix_launch_lane.status"
+        matrix_launch_status_tmp="$matrix_launch_status_path.tmp"
+        matrix_launch_target_dir="$matrix_target_root/target-$matrix_launch_group-$matrix_launch_lane"
         (
-            export CARGO_TARGET_DIR="$matrix_target_dir"
+            export CARGO_TARGET_DIR="$matrix_launch_target_dir"
             matrix_status=0
-            "$matrix_runner" "$matrix_lane" \
-                >"$matrix_log_dir/$matrix_group-$matrix_lane.log" 2>&1 \
+            "$matrix_runner" "$matrix_launch_spec" \
+                >"$matrix_log_dir/$matrix_launch_group-$matrix_launch_lane.log" 2>&1 \
                 || matrix_status=$?
-            printf '%s\n' "$matrix_status" >"$matrix_status_tmp"
-            mv "$matrix_status_tmp" "$matrix_status_path"
+            printf '%s\n' "$matrix_status" >"$matrix_launch_status_tmp"
+            mv "$matrix_launch_status_tmp" "$matrix_launch_status_path"
             exit "$matrix_status"
         ) &
-        matrix_pending_jobs="$matrix_pending_jobs $!:$matrix_lane"
+        matrix_pending_jobs="$matrix_pending_jobs $!|$matrix_launch_spec"
         matrix_pending_count=$((matrix_pending_count + 1))
     }
 
     matrix_failed=0
-    for lane in "$@"; do
+    for matrix_requested_job in "$@"; do
         while [ "$matrix_pending_count" -ge "$MATRIX_JOBS" ]; do
             if ! wait_matrix_lane; then
                 matrix_failed=1
@@ -173,7 +228,7 @@ run_parallel_lanes() {
         if [ "$matrix_failed" -ne 0 ]; then
             break
         fi
-        launch_matrix_lane "$lane"
+        launch_matrix_lane "$matrix_requested_job"
     done
     if [ "$matrix_pending_count" -gt 0 ]; then
         while [ "$matrix_pending_count" -gt 0 ]; do
@@ -185,29 +240,30 @@ run_parallel_lanes() {
     return "$matrix_failed"
 }
 
-run_parallel_lanes native run_native_lane \
-    none jpeg png gif bmp tiff webp ico avif default all
+if command -v node >/dev/null 2>&1; then
+    :
+else
+    echo "node is required for the wasm32-wasip1 runtime lanes" >&2
+    exit 1
+fi
 
-run_parallel_lanes wasm-unknown run_wasm_unknown_lane \
-    none jpeg png gif bmp tiff webp ico avif default all
+run_parallel_jobs run_matrix_lane \
+    native:none wasm-unknown:none wasm-wasi:none \
+    native:jpeg wasm-unknown:jpeg wasm-wasi:jpeg \
+    native:png wasm-unknown:png wasm-wasi:png \
+    native:gif wasm-unknown:gif wasm-wasi:gif \
+    native:bmp wasm-unknown:bmp wasm-wasi:bmp \
+    native:tiff wasm-unknown:tiff wasm-wasi:tiff \
+    native:webp wasm-unknown:webp wasm-wasi:webp \
+    native:ico wasm-unknown:ico wasm-wasi:ico \
+    native:avif wasm-unknown:avif wasm-wasi:avif \
+    native:default wasm-unknown:default wasm-wasi:default \
+    native:all wasm-unknown:all wasm-wasi:all
 
 cargo test --locked --target wasm32-unknown-unknown --test feature_gate_tests \
     --no-default-features --no-run
 cargo test --locked --target wasm32-unknown-unknown --test feature_gate_tests \
     --no-default-features --features avif --no-run
-
-# Execute the feature-gate contract in a real WASM runtime: every native lane
-# is built for wasm32-wasip1 and run under Node's WASI preview1 runtime.
-if command -v node >/dev/null 2>&1; then
-    # Keep the real runtime coverage, but do not serialize independent lanes.
-    # Each lane extracts its own Cargo-reported executable so concurrent builds
-    # cannot accidentally run a neighboring feature configuration.
-    run_parallel_lanes wasm-wasi run_wasi_lane \
-        none jpeg png gif bmp tiff webp ico avif default all
-else
-    echo "node is required for the wasm32-wasip1 runtime lanes" >&2
-    exit 1
-fi
 
 # Cross-target determinism: encoded bytes and decoded pixels executed in the
 # WASM runtime must match the golden hashes committed from the native host.

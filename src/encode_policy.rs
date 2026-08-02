@@ -4,15 +4,16 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 
 /// Policy applied to complete encoded output before it is returned or written.
 ///
-/// An absent limit is unlimited for backward compatibility. The current
-/// whole-buffer encoders still allocate their internal result before this
-/// policy can measure it, so this is an output-result bound rather than a
-/// recoverable out-of-memory guarantee. Incremental structural writing and
-/// transient internal-allocation accounting remain separate roadmap work.
+/// An absent limit is unlimited for backward compatibility. The output-result
+/// bound does not account for transient allocations or recoverable out-of-
+/// memory failure. `max_work_units` counts the deterministic cooperative
+/// checkpoints reached by an encode; it is a work-control bound, not a CPU-time
+/// or allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct EncodePolicy {
     max_output_bytes: Option<u64>,
+    max_work_units: Option<u64>,
 }
 
 impl EncodePolicy {
@@ -21,6 +22,7 @@ impl EncodePolicy {
     pub const fn new() -> Self {
         Self {
             max_output_bytes: None,
+            max_work_units: None,
         }
     }
 
@@ -34,6 +36,23 @@ impl EncodePolicy {
     #[must_use]
     pub const fn with_max_output_bytes(mut self, maximum: u64) -> Self {
         self.max_output_bytes = Some(maximum);
+        self
+    }
+
+    /// Return the maximum number of cooperative encode checkpoints admitted.
+    #[must_use]
+    pub const fn max_work_units(self) -> Option<u64> {
+        self.max_work_units
+    }
+
+    /// Set the inclusive maximum number of cooperative encode checkpoints.
+    ///
+    /// One work unit is charged at each documented cancellation checkpoint.
+    /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
+    /// performs further codec work.
+    #[must_use]
+    pub const fn with_max_work_units(mut self, maximum: u64) -> Self {
+        self.max_work_units = Some(maximum);
         self
     }
 

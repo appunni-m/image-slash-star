@@ -226,6 +226,18 @@ structural delivery. It does not prove transient allocation limits or
 recoverable OOM behavior. Its aggregate coverage is incidental evidence, not
 Pillow parity coverage, and no coverage-only hook is added.
 
+`EncodePolicy::max_work_units` follows the same boundary. Pillow has no
+caller-controlled checkpoint budget or equivalent result, so
+`encode_work_budget_is_a_non_parity_result_contract` is an ordinary Rust-only
+contract rather than a generated parity row. It proves that an ample budget
+preserves PNG bytes, a zero budget returns the typed
+`ResourceLimit::EncodeWorkUnits` error for still and sequence dispatch, and a
+zero-budget sink remains untouched. A work unit is one documented cooperative
+encode checkpoint; the budget is deterministic work control, not CPU-time,
+instruction-count, transient-allocation, or recoverable-OOM accounting. The
+test's aggregate coverage is incidental evidence, and no coverage-only hook
+or synthetic Pillow row is added.
+
 Encode cancellation follows the same evidence boundary. Pillow has no
 `CancellationToken`, no caller-owned `OutputSink`, and no equivalent
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
@@ -661,14 +673,14 @@ The counts are reproducible from the generated artifact:
 jq '.summary' tests/fixtures/coverage_matrix.json
 ```
 
-The accepted Coverage MCP result for the same implementation state is:
+The accepted Coverage MCP result for the current implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,855 | 47,855 |
-| Branches | 6,572 | 6,572 |
-| Functions | 2,674 | 2,674 |
-| Regions | 74,493 | 74,493 |
+| Lines | 47,929 | 47,929 |
+| Branches | 6,578 | 6,578 |
+| Functions | 2,684 | 2,684 |
+| Regions | 74,621 | 74,621 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -792,17 +804,30 @@ in 15,766 ms. Every run passed the terminal capability record
 waits can still occur while lanes initialize. The timings are execution and
 cache-retention evidence, not a universal benchmark claim.
 
-Coverage MCP run: `d89084be-de5c-47c5-8a44-efbc891f110d`
+The test-thread and completion-scheduler follow-up was validated by run
+`2489ce0e-ba43-48ff-8617-9317e55f52d1`: 947 checks passed with zero failures in
+14,023 ms. It retained the same terminal capability record and had zero
+build-directory lock-wait matches; package-cache lock waits remain observable
+while isolated lanes initialize. The previous warm run with the same 947-check
+scope (`1eff0861-ffde-4be0-96c7-b297dea9384c`) took 15,307 ms. This is observed
+runtime evidence rather than a universal benchmark claim because managed
+cache/build state can differ. The harness now derives `--test-threads` from
+host CPUs and the lane bound (capped at eight), and interleaves native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes under one
+completion-driven scheduler without dropping a lane or assertion.
 
-Snapshot: `8cbb887e-6c60-4af6-8236-4499a45b0d29`
+Coverage MCP run: `96198d23-1269-4158-9db1-0a814b709c96`
 
-Coverage revision: `ecbd9c2e3f17491f55737ad10a4518bf19518a91`
+Snapshot: `216271ad-e9bc-498d-b8b5-881882881a13`
 
-Coverage MCP recorded 55 passed tests with zero failures and 100% line,
-branch, function, and region coverage: 47,855 lines, 6,572 branches, 2,674
-functions, and 74,493 regions. The ICO still and one-frame ICO sequence sink
-cases execute the real dispatcher and structural writer; this is internal Rust
-evidence, not a synthetic Pillow parity case.
+Coverage revision: `deb04fd5a5a1e27634824fffa202b075c5aaea0d`
+
+Coverage MCP recorded 56 passed tests with zero failures and 100% line, branch,
+function, and region coverage: 47,929 lines, 6,578 branches, 2,684 functions,
+and 74,621 regions. The ICO still and one-frame ICO sequence sink cases and
+the deterministic encode work-budget contract execute the real dispatcher and
+structural/error paths; this is internal Rust evidence, not a synthetic Pillow
+parity case.
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -966,6 +991,14 @@ Run:
 scripts/test_feature_matrix.sh
 ```
 
+The matrix uses isolated retained Cargo target roots to avoid build-directory
+lock contention and interleaves native, `wasm32-unknown-unknown`, and
+`wasm32-wasip1` lanes under one bounded completion-driven scheduler. It derives
+the Rust test-harness worker count from the host CPU count and `MATRIX_JOBS`
+(capped at eight). `MATRIX_TEST_THREADS` can override that derived value for a
+constrained CI runner. This bounds aggregate test-thread fan-out without
+dropping any lane or assertion.
+
 Cross-compilation proves compilation, not semantic browser or WASM runtime
 parity. The `wasm32-wasip1` lanes are real runtime evidence for feature-gate
 and capability-table behavior; full semantic manifest execution in a WASM
@@ -978,7 +1011,7 @@ branch, function, and region metrics. CI independently runs `cargo llvm-cov`
 and `scripts/verify_llvm_coverage.py`.
 
 The coverage-origin inventory is a static source check, not a Rust test and not
-a coverage hook. It currently accounts for 217 exact `#[cfg(coverage)]` guards
+a coverage hook. It currently accounts for 219 exact `#[cfg(coverage)]` guards
 across 74 Rust files. Each guard is assigned to `defensive_model`,
 `independent_implementation`, or `specification_reference`; the verifier
 rejects a Pillow-parity origin. This keeps aggregate LLVM execution evidence

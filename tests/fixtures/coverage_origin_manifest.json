@@ -7,7 +7,7 @@
     "specification_reference": "A format-state or contract branch justified by the format specification rather than by a Pillow-observable field."
   },
   "entries": [
-    {"path": "src/cancel.rs", "guard_count": 3, "origin": "defensive_model"},
+    {"path": "src/cancel.rs", "guard_count": 5, "origin": "defensive_model"},
     {"path": "src/capabilities.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/avif/av1/bit_reader.rs", "guard_count": 2, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/block.rs", "guard_count": 7, "origin": "independent_implementation"},

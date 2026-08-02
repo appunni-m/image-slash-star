@@ -35,6 +35,8 @@ pub enum ResourceLimit {
     EncodedBytes,
     /// Complete encoded output length admitted to the caller.
     EncodedOutputBytes,
+    /// Number of cooperative encode checkpoints admitted to the operation.
+    EncodeWorkUnits,
     /// Inspected image canvas width in pixels.
     Width,
     /// Inspected image canvas height in pixels.

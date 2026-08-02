@@ -10,6 +10,19 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct WorkBudget {
+    maximum: u64,
+    consumed: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PollResult {
+    Continue,
+    Cancelled,
+    WorkBudgetExceeded { maximum: u64, observed: u64 },
+}
+
 /// Cooperative cancellation handle for token-aware operations.
 ///
 /// Clones share the same cancellation state. The token is neither `Send` nor
@@ -17,6 +30,7 @@ use std::rc::Rc;
 #[derive(Clone, Default)]
 pub struct CancellationToken {
     cancelled: Rc<Cell<bool>>,
+    work_budget: Rc<Cell<Option<WorkBudget>>>,
     #[cfg(coverage)]
     cancel_after: Rc<Cell<Option<usize>>>,
 }
@@ -57,6 +71,59 @@ impl CancellationToken {
         {
             self.cancelled.get()
         }
+    }
+
+    pub(crate) fn with_work_budget(maximum: u64) -> Self {
+        Self {
+            work_budget: Rc::new(Cell::new(Some(WorkBudget {
+                maximum,
+                consumed: 0,
+            }))),
+            ..Self::new()
+        }
+    }
+
+    pub(crate) fn with_work_budget_from(source: &Self, maximum: u64) -> Self {
+        Self {
+            cancelled: source.cancelled.clone(),
+            work_budget: Rc::new(Cell::new(Some(WorkBudget {
+                maximum,
+                consumed: 0,
+            }))),
+            #[cfg(coverage)]
+            cancel_after: source.cancel_after.clone(),
+        }
+    }
+
+    pub(crate) fn poll(&self) -> PollResult {
+        if self.cancelled.get() {
+            return PollResult::Cancelled;
+        }
+        #[cfg(coverage)]
+        {
+            match self.cancel_after.get() {
+                Some(0) => {
+                    self.cancelled.set(true);
+                    return PollResult::Cancelled;
+                }
+                Some(remaining) => {
+                    self.cancel_after.set(Some(remaining.saturating_sub(1)));
+                }
+                None => {}
+            }
+        }
+        let Some(mut budget) = self.work_budget.get() else {
+            return PollResult::Continue;
+        };
+        if budget.consumed >= budget.maximum {
+            return PollResult::WorkBudgetExceeded {
+                maximum: budget.maximum,
+                observed: budget.consumed.saturating_add(1),
+            };
+        }
+        budget.consumed = budget.consumed.saturating_add(1);
+        self.work_budget.set(Some(budget));
+        PollResult::Continue
     }
 
     /// Coverage-only hook: automatically cancel after `checks` more polls.
