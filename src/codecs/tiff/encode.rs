@@ -506,7 +506,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = encode_with_token(&checkpoint_image, &deflate_options, Some(&token));
     }
     let token = crate::CancellationToken::new();
-    token.cancel_after(6);
+    token.cancel_after(7);
     let _ = encode_sequence_with_token(&single_sequence, &raw_options, Some(&token));
     for checks in [13, 14] {
         let token = crate::CancellationToken::new();
@@ -514,7 +514,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = encode_sequence_with_token(&sequence, &raw_options, Some(&token));
     }
     let token = crate::CancellationToken::new();
-    token.cancel_after(9);
+    token.cancel_after(7);
     let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
     // Successful token-bearing calls cover the post-compression and output
     // relocation checkpoints that cancellation drills intentionally exit
