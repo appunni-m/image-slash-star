@@ -958,7 +958,7 @@ pub fn encode_sequence_with_policy(
 /// Sequence-capable codecs poll at retained-frame and finalization
 /// boundaries. Still-image codecs and one-frame fallback encodes generally
 /// observe cancellation only at the public codec boundary; PNG still and
-/// one-frame sink encodes additionally poll row preparation and emitted
+/// structural sink encodes additionally poll row preparation and emitted
 /// structural segments, and BMP one-frame sequence sinks use the same
 /// structural path.
 ///
@@ -997,11 +997,12 @@ pub fn encode_sequence_with_token_and_policy(
 /// Dependency-free destination for encoded output.
 ///
 /// Whole-buffer codecs validate and produce their complete encoded bytes
-/// before the first write. The PNG still path additionally emits its already
-/// validated signature and container structures through separate writes. A
-/// sink failure or cancellation after a write may therefore leave a prefix in
-/// the destination; `flush` failure likewise does not roll the prefix back.
-/// The trait does not provide rollback or short-write recovery.
+/// before the first write. Structural writers additionally emit validated
+/// container structures through separate writes; this includes the PNG still
+/// path and the TIFF still and multi-page sequence paths. A sink failure or
+/// cancellation after a write may therefore leave a prefix in the
+/// destination; `flush` failure likewise does not roll the prefix back. The
+/// trait does not provide rollback or short-write recovery.
 pub trait OutputSink {
     /// Append one fully accepted encoded segment to this sink.
     ///
@@ -1039,7 +1040,9 @@ impl OutputSink for &mut Vec<u8> {
 ///
 /// The encoded bytes are produced exactly as by [`encode`] and delivered to
 /// the sink. Whole-buffer codecs use one write; structural writers may use
-/// multiple writes after their validated working state is ready.
+/// multiple writes after their validated working state is ready. TIFF still
+/// and multi-page sequence encodes deliver their validated header,
+/// strip/padding, and IFD/value spans separately.
 ///
 /// # Errors
 ///
@@ -1153,6 +1156,9 @@ fn encode_to_sink_with_token_and_policy_impl(
 ///
 /// Returns the same errors as [`encode_sequence`], plus an
 /// [`ImageError::OutputWrite`] when the sink rejects an emitted segment.
+/// Structural writers may leave an already-delivered prefix; TIFF still and
+/// multi-page sequence writers check cancellation between their structural
+/// segments.
 pub fn encode_sequence_to_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,
