@@ -291,7 +291,8 @@ Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
 Pillow-tolerated indexed-palette shape damage is likewise retained with the
 first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
 `png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame
-APNG declaration reports `png_apng_zero_frames`, malformed APNG declarations
+APNG declaration reports `png_apng_zero_frames`, an out-of-range APNG frame
+count reports `png_apng_frame_count_out_of_range`, malformed APNG declarations
 that fall back to the default image report `png_duplicate_actl` or
 `png_actl_after_idat`; an overlong `acTL` payload reports
 `png_actl_overlong`, and valid inflated bytes past the first PNG raster report
