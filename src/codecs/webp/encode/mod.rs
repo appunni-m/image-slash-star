@@ -155,7 +155,7 @@ fn encode_pixels(
     let prepared = prepare_pixels(img)?;
     crate::codecs::error::check_cancelled(token)?;
     let encoded = if opts.lossless == Some(true) {
-        encode_lossless(&prepared, img.width, img.height)
+        encode_lossless(&prepared, img.width, img.height, token)
     } else {
         encode_lossy(&prepared, img.width, img.height, opts, token)
     }?;
@@ -549,9 +549,14 @@ fn attach_metadata(
 }
 
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
-fn encode_lossless(pixels: &PreparedPixels<'_>, width: u32, height: u32) -> CodecResult<Vec<u8>> {
+fn encode_lossless(
+    pixels: &PreparedPixels<'_>,
+    width: u32,
+    height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     super::native::WebPEncoder::new()
-        .encode(&pixels.bytes, width, height, pixels.color)
+        .encode_with_token(&pixels.bytes, width, height, pixels.color, token)
         .map_err(encode_error)
 }
 
@@ -609,6 +614,10 @@ fn encode_error(error: super::native::EncodingError) -> CodecError {
     match error {
         super::native::EncodingError::InvalidDimensions => {
             CodecError::Dimensions("WebP lossless dimensions are invalid".to_owned())
+        }
+        super::native::EncodingError::Cancelled => CodecError::Cancelled,
+        super::native::EncodingError::WorkBudgetExceeded { maximum, observed } => {
+            CodecError::WorkBudgetExceeded { maximum, observed }
         }
     }
 }

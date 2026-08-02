@@ -48,6 +48,19 @@ pub enum ColorType {
 #[derive(Debug)]
 pub enum EncodingError {
     InvalidDimensions,
+    Cancelled,
+    WorkBudgetExceeded { maximum: u64, observed: u64 },
+}
+
+fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingError> {
+    match crate::codecs::error::check_cancelled(token) {
+        Ok(()) => Ok(()),
+        Err(crate::codecs::CodecError::Cancelled) => Err(EncodingError::Cancelled),
+        Err(crate::codecs::CodecError::WorkBudgetExceeded { maximum, observed }) => {
+            Err(EncodingError::WorkBudgetExceeded { maximum, observed })
+        }
+        Err(error) => unreachable!("token polling returned an unexpected error: {error:?}"),
+    }
 }
 
 struct BitWriter<'a> {
@@ -988,7 +1001,9 @@ fn encode_frame(
     width: u32,
     height: u32,
     color: ColorType,
+    token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
+    check_token(token)?;
     let (is_alpha, bytes_per_pixel) = match color {
         ColorType::Rgb8 => (false, 3),
         ColorType::Rgba8 => (true, 4),
@@ -1023,6 +1038,7 @@ fn encode_frame(
             })
             .collect(),
     };
+    check_token(token)?;
 
     // Pillow's lossless WebP path uses libwebp's default `exact=false`.
     // libwebp therefore replaces hidden RGB values of fully transparent
@@ -1034,6 +1050,7 @@ fn encode_frame(
             }
         }
     }
+    check_token(token)?;
 
     let palette = pixels
         .iter()
@@ -1050,6 +1067,7 @@ fn encode_frame(
         palette_size,
         transform_bits,
     );
+    check_token(token)?;
 
     let mut frame = Vec::new();
     {
@@ -1067,6 +1085,7 @@ fn encode_frame(
 
         if entropy_mode == EntropyMode::Palette {
             apply_palette(w, &pixels, width as usize, height as usize, palette);
+            check_token(token)?;
         } else {
             let grayscale = pixels.iter().all(|&pixel| {
                 let red = (pixel >> 16) & 0xff;
@@ -1086,6 +1105,7 @@ fn encode_frame(
                 w.write_bits(1, 1);
                 w.write_bits(2, 2);
                 subtract_green(&mut pixels);
+                check_token(token)?;
             }
 
             if use_predictor {
@@ -1111,6 +1131,7 @@ fn encode_frame(
                 let predictor_width =
                     (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
                 write_image_stream(w, &predictor_map, predictor_width, false);
+                check_token(token)?;
             }
 
             if use_predictor && !red_and_blue_zero {
@@ -1126,14 +1147,17 @@ fn encode_frame(
                 w.write_bits(u64::from(color_bits - 2), 3);
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
                 write_image_stream(w, &color_map, color_width, false);
+                check_token(token)?;
             }
 
             w.write_bits(0, 1); // transforms done
             write_image_stream(w, &pixels, width as usize, true);
+            check_token(token)?;
         }
 
         w.flush();
     }
+    check_token(token)?;
     Ok(frame)
 }
 
@@ -1278,25 +1302,24 @@ impl WebPEncoder {
         Self
     }
 
-    /// Encode image data with the indicated color type.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the image data is not of the indicated dimensions.
-    pub fn encode(
+    /// Encode image data while polling an optional cooperative work token.
+    pub(crate) fn encode_with_token(
         self,
         data: &[u8],
         width: u32,
         height: u32,
         color: ColorType,
+        token: Option<&crate::CancellationToken>,
     ) -> Result<Vec<u8>, EncodingError> {
-        let frame = encode_frame(data, width, height, color)?;
+        let frame = encode_frame(data, width, height, color, token)?;
+        check_token(token)?;
 
         let mut output = Vec::with_capacity(frame.len().saturating_add(20));
         output.extend_from_slice(b"RIFF");
         output.extend_from_slice(&(chunk_size(frame.len()) + 4).to_le_bytes());
         output.extend_from_slice(b"WEBP");
         write_chunk(&mut output, b"VP8L", &frame);
+        check_token(token)?;
         Ok(output)
     }
 }
@@ -1491,20 +1514,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1);
 
     WebPEncoder::new()
-        .encode(&[], 0, 1, ColorType::Rgb8)
+        .encode_with_token(&[], 0, 1, ColorType::Rgb8, None)
         .expect_err("zero-width WebP must be rejected");
     WebPEncoder::new()
-        .encode(&[], 1, 0, ColorType::Rgb8)
+        .encode_with_token(&[], 1, 0, ColorType::Rgb8, None)
         .expect_err("zero-height WebP must be rejected");
     WebPEncoder::new()
-        .encode(&vec![0; 16_385 * 3], 16_385, 1, ColorType::Rgb8)
+        .encode_with_token(&vec![0; 16_385 * 3], 16_385, 1, ColorType::Rgb8, None)
         .expect_err("too-wide WebP must be rejected");
     WebPEncoder::new()
-        .encode(&vec![0; 16_385 * 3], 1, 16_385, ColorType::Rgb8)
+        .encode_with_token(&vec![0; 16_385 * 3], 1, 16_385, ColorType::Rgb8, None)
         .expect_err("too-tall WebP must be rejected");
 
     let rgb = [0, 0, 0];
     WebPEncoder::new()
-        .encode(&rgb, 1, 1, ColorType::Rgb8)
+        .encode_with_token(&rgb, 1, 1, ColorType::Rgb8, None)
         .expect("one-pixel in-memory WebP must encode");
 }
