@@ -8349,6 +8349,74 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(sink, vec![0xBD]);
     }
 
+    if cfg!(feature = "bmp") {
+        // BMP true-color/indexed row conversion now charges a checkpoint
+        // inside a wide row. Pillow has no caller token or work-budget result,
+        // so this remains Rust-only work-control evidence and adds no parity
+        // row. The ordinary path and an ample budget must remain byte-identical.
+        let image = DecodedImage::new(2_048, 1, vec![128; 2_048 * 3], ColorType::Rgb8);
+        let options = EncodeOptions::for_format(ImageFormat::Bmp);
+        let expected = image_slash_star::encode(&image, ImageFormat::Bmp, &options)?;
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Bmp, &options, &unlimited)?,
+            expected,
+            "an ample BMP row budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(4);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Bmp,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("bounded BMP row work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Bmp),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 4,
+                observed: 5,
+            }
+        ));
+
+        // The structural sink calls the BMP writer directly, so its same
+        // row-conversion interval is reached after one fewer dispatcher poll.
+        let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3);
+        let mut sink = vec![0xBE];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Bmp,
+            &options,
+            &sink_policy,
+            &mut sink,
+        ) {
+            Ok(_) => return Err("bounded BMP row sink budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Bmp),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        let mut expected_prefix = vec![0xBE];
+        expected_prefix.extend_from_slice(&expected[..54]);
+        assert_eq!(
+            sink, expected_prefix,
+            "interior BMP work rejection preserves the delivered header prefix"
+        );
+    }
+
     if cfg!(feature = "tiff") {
         use image_slash_star::TiffCompression;
 

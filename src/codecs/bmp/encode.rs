@@ -10,6 +10,7 @@ const FILE_HEADER_SIZE: usize = 14;
 const INFO_HEADER_SIZE: u32 = 40;
 const BMP_HEADER_SIZE: usize = FILE_HEADER_SIZE + INFO_HEADER_SIZE as usize;
 const BI_RGB: u32 = 0;
+const ROW_CHECKPOINT_PIXELS: usize = 1_024;
 // Pillow 12.2.0 BmpImagePlugin.py:437-440 defaults to 96 DPI and converts
 // using round(96 * 39.3701), yielding 3,780 pixels per meter on both axes.
 const DEFAULT_PIXELS_PER_METER: i32 = 3_780;
@@ -485,8 +486,11 @@ fn write_rows(
             .get(start..end)
             .ok_or_else(|| CodecError::Dimensions("BMP pixel buffer is too short".to_owned()))?;
         let mut row = Vec::with_capacity(stride);
-        for pixel in source_row.chunks_exact(channels) {
+        for (pixel_index, pixel) in source_row.chunks_exact(channels).enumerate() {
             convert(pixel, &mut row);
+            if pixel_index != 0 && pixel_index.is_multiple_of(ROW_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
         row.resize(stride, 0);
         emit(&row, token, writer, written)?;

@@ -8,7 +8,7 @@
 //! analysis/bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, bitstream, and
 //! bounded backward-reference/token-stream intervals, plus GIF LZW
-//! input-symbol intervals) and stop with
+//! input-symbol intervals and BMP row-conversion subsegments) and stop with
 //! [`ImageError::Cancelled`] without publishing partial state.
 //! The crate remains single-threaded by design, so the token uses `Rc<Cell>`
 //! and adds no synchronization overhead on native or WASM targets.
