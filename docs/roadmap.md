@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`430e33d3f5dc12319c39b66c7f43f3c39e7306e1`; the claim-ledger baseline remains
+`f6ce32f26516c6403970247f1fbd442ab23b4962`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -225,7 +225,7 @@ public reusable conversion layer would violate project scope.
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
 | API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Recognized AVIF `Exif` items and `mime` items with content type `application/rdf+xml` are now retained as ordered raw `OpaqueMetadata` records on still and sequence decode; primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, primary `av1C` chroma sample position, and `irot`/`imir`/`pasp`/`clap` item properties remain typed source descriptors. Non-primary/auxiliary item relationships, unknown item properties, and other item metadata remain open. | Extend the opaque model to the remaining AVIF item/property graph and exact color fields; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
-| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. `EncodePolicy::max_output_bytes` caps the complete encoded result after whole-buffer codec work and before return or sink write; `EncodePolicy::max_work_units` independently caps the number of documented cooperative encode checkpoints before the next checkpoint proceeds. Every current sink path computes and checks its complete length before the first structural write and flushes once after complete delivery; TIFF token-aware Deflate additionally charges each input-row boundary and level-six matcher candidate, insertion, fizzle, and position interval plus token expansion, Huffman analysis/tree emission, stored/fixed/dynamic bitstream emission, stored-block copying, and Adler-32 checksum work, PNG adaptive filtering/filtered-row emission additionally charges after each 1,024 row bytes, BMP row conversion additionally charges each 1,024-pixel interval, GIF LZW additionally charges each input-symbol interval in its dictionary pass, lossy WebP VP8 additionally charges after RGB/RGBA-to-YUV conversion, padding, analysis, segment parameters, mode selection, coefficient-probability adaptation, partition emission, and final container assembly, and lossless WebP VP8L additionally charges after predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy analysis, transform selection/application, bounded backward-reference search/match-length/cache/trace intervals, histogram clustering, Huffman-tree/group emission, token-stream intervals, and bitstream assembly. The current structural writers retain complete codec working state, so transient encoder allocations, ICO embedded payload working buffers, interior CPU/instruction work in other codec rows, and remaining non-structural sink assembly remain outside both public policies. Lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including transient encoded-output accounting, the remaining WebP and other interior work and deeper interruption, and short-write/rollback cleanup. Preserve the unlimited convenience wrappers, reject before any future bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
+| API-023 | Partial capability | One typed, defaulted `DecodePolicy` now bounds encoded bytes, the inspected primary canvas width/height/pixels, primary decoded transfer bytes, the inspected frame/page count, every later frame/page's decoded bytes, the cumulative retained sequence bytes, and the encoded metadata extent across inspect/still/sequence/lazy paths. `EncodePolicy::max_output_bytes` caps the complete encoded result after whole-buffer codec work and before return or sink write; `EncodePolicy::max_work_units` independently caps the number of documented cooperative encode checkpoints before the next checkpoint proceeds. Every current sink path computes and checks its complete length before the first structural write and flushes once after complete delivery; TIFF token-aware Deflate additionally charges each input-row boundary and level-six matcher candidate, insertion, fizzle, and position interval plus token expansion, Huffman analysis/tree emission, stored/fixed/dynamic bitstream emission, stored-block copying, and Adler-32 checksum work, PNG adaptive filtering/filtered-row emission additionally charges after each 1,024 row bytes, BMP row conversion additionally charges each 1,024-pixel interval, GIF LZW additionally charges each input-symbol interval in its dictionary pass, lossy WebP VP8 additionally charges after each 1,024 RGB/RGBA-to-YUV conversion item and then after color conversion, padding, analysis, segment parameters, mode selection, coefficient-probability adaptation, partition emission, and final container assembly, and lossless WebP VP8L additionally charges after predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy analysis, transform selection/application, bounded backward-reference search/match-length/cache/trace intervals, histogram clustering, Huffman-tree/group emission, token-stream intervals, and bitstream assembly. The current structural writers retain complete codec working state, so transient encoder allocations, ICO embedded payload working buffers, interior CPU/instruction work in other codec rows, and remaining non-structural sink assembly remain outside both public policies. Lenient-versus-strict parsing and requested output mode are result-shaping policy belonging with the API-033 family. | Extend the resource contract one independently enforceable allocation/work dimension at a time, including transient encoded-output accounting, the remaining WebP and other interior work and deeper interruption, and short-write/rollback cleanup. Preserve the unlimited convenience wrappers, reject before any future bounded allocation/work begins, and fixture every inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
 | API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` or `EncodeWorkUnits` resource, maximum, and observed result/checkpoint value. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context, TIFF compressed strip/tile payload failures now retain `tiff_strip`/`tiff_tile` context, and WebP inspection/container-chunk failures now retain stable WebP context. WebP still and sequence payload-decoder failures now retain `webp_bitstream` at the validated VP8/VP8L payload start, or the current ANMF container offset for animation; finer decoder-internal cursors remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
@@ -1141,7 +1141,8 @@ source-size validation, embedded PNG work or BMP row assembly, and directory
 finalization;
 TIFF still and multi-page TIFF sequence sink delivery additionally poll between
 the header, each page's strip/padding, and IFD/value segments; lossy WebP still
-encoding now polls its VP8 analysis, mode-selection, coefficient-probability,
+encoding now polls its RGB/RGBA-to-YUV conversion subsegments plus VP8 analysis,
+mode-selection, coefficient-probability,
 bitstream, and finalization stages, lossless WebP VP8L encoding now polls its
 predictor tile scans/mode application, cross-color multiplier search/transform
 tiles, entropy analysis, transform, bounded backward-reference
@@ -1154,7 +1155,8 @@ flush failures reported as `OutputWrite` and no rollback. The first public
 `EncodePolicy::max_work_units` contract now bounds those documented
 checkpoints and reports `ResourceLimit::EncodeWorkUnits`; remaining
 sequence-structural/interior interruption beyond the implemented PNG row, BMP
-row-conversion subsegments, GIF LZW input-symbol interval, and WebP stages, finer WebP work, Deflate
+row-conversion subsegments, GIF LZW input-symbol interval, WebP
+RGB/RGBA-to-YUV conversion subsegments, and WebP stages, finer WebP work, Deflate
 emission/structural interruption, progress, transient
 allocation accounting, and universal
 streaming semantics remain open.
@@ -1731,6 +1733,35 @@ Pillow parity. Finer WebP interior work, remaining predictor/cross-color/
 analyze-entropy and histogram/Huffman loops, other codec interior work, deeper
 Deflate/structural interruption, allocation accounting, and rollback remain open.
 
+The current lossy WebP/VP8 RGB/RGBA-to-YUV interior checkpoint slice is
+implemented at `f6ce32f26516c6403970247f1fbd442ab23b4962`. Token-aware lossy VP8
+conversion now charges after each 1,024 Y/UV conversion item before analysis.
+The Rust-only `encode_work_budget_is_a_non_parity_result_contract` contract
+proves ample-budget byte identity, typed whole-buffer `EncodeWorkUnits`
+rejection at the conversion checkpoint, the same direct-sink rejection, and an
+untouched sink. Pillow exposes neither caller token nor work-budget result, so
+no parity row, fixture, diagnostic origin, or coverage-only hook was added.
+
+Managed Pillow parity run `842329fc-922a-4fb5-95f8-7e85e96967c7` passed
+1,445/1,445 checks with zero failures or skips in 44,892 ms. Feature-matrix run
+`4795a291-6d9e-47bf-ae0c-7b1b192d5610` passed 991/991 checks in 99,671 ms; its
+retained logs show no package-cache or build-directory lock waits and end with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. Coverage MCP
+run `98a6658f-cfd2-4eba-a23b-8823a2172d0d` passed 85/85 tests in 74,829 ms and
+ingested snapshot `b007350f-a2b0-4969-b051-8ed3694cb161`, reporting
+49,378/49,775 lines, 6,787/6,850 branches, 2,751/2,818 functions, and
+76,777/77,488 regions. Compared with
+`b6d31c5c-e885-48fb-ad48-09a7e153e254`, this adds 18 covered lines (+18 total),
+eight covered branches (+8 total), no functions, and 35 covered regions (+38
+total). The WebP VP8 encoder is 614/615 lines, 42/42 branches, 34/34
+functions, and 1,137/1,146 regions; its only uncovered line 86 is a
+pre-existing defensive bridge, not a reason for a synthetic coverage hook. The
+aggregate snapshot retains the LLVM segment-normalization warning. These are
+Rust-only implementation and target records separate from Pillow parity.
+Remaining finer WebP loops, other codec interior work, Deflate
+emission/structural interruption, transient allocation accounting,
+short-write/rollback, and non-checkpointed work-budget semantics remain open.
+
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now
 charges checkpoints around pixel conversion, entropy analysis, transform
@@ -2063,8 +2094,9 @@ result admission before return or the first sink write, and
 checkpoints with a typed `EncodeWorkUnits` failure, including PNG's adaptive
 filter and filtered-row subsegments after each 1,024 row bytes, BMP row
 conversion after each 1,024 pixels, and GIF LZW's input-symbol intervals
-inside its dictionary pass. Lossy WebP VP8
-analysis, mode selection, coefficient-probability adaptation, and bitstream
+inside its dictionary pass. Lossy WebP VP8 RGB/RGBA-to-YUV conversion
+subsegments, analysis, mode selection, coefficient-probability adaptation, and
+bitstream
 assembly, plus lossless WebP VP8L predictor/cross-color/entropy/transform,
 bounded backward-reference search/match-length/cache/trace, histogram/Huffman,
 token-stream, and bitstream stages, now charge additional checkpoints.
@@ -2075,7 +2107,8 @@ with PNG retaining filtered/compressed
 working buffers, BMP preparing bounded palette/row segments, ICO retaining its
 embedded payload, and TIFF retaining its complete page/compressed-pixel
 working state. Transient encoded-output allocation, interior interruption
-beyond the implemented PNG row, BMP row-conversion, GIF LZW input-symbol, and WebP VP8/VP8L stages, finer WebP work,
+beyond the implemented PNG row, BMP row-conversion, GIF LZW input-symbol,
+WebP RGB/RGBA-to-YUV conversion, and WebP VP8/VP8L stages, finer WebP work,
 remaining work-budget semantics, and short-write/rollback cleanup remain the next resource/I/O
 boundaries.
 Complete those remaining
