@@ -257,6 +257,66 @@
       "offset": 3643,
       "identity": "png_missing_iend",
       "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_duplicate_plte_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/duplicate_plte.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 51,
+      "identity": "png_duplicate_plte",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_duplicate_plte_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/duplicate_plte.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 51,
+      "identity": "png_duplicate_plte",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_duplicate_trns_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/duplicate_trns.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 65,
+      "identity": "png_duplicate_trns",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_duplicate_trns_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/duplicate_trns.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 65,
+      "identity": "png_duplicate_trns",
+      "pillow_outcome": "ok"
     }
   ]
 }

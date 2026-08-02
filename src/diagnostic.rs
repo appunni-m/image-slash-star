@@ -3,8 +3,8 @@
 //! Decoders tolerate a small, manifest-proven set of recoverable conditions
 //! without failing: well-formed trailing bytes after the container extent, a
 //! non-standard-but-accepted GIF graphic-control size, a PNG stream accepted
-//! without its `IEND` terminator, and invalid compressed PNG ancillary
-//! metadata whose pixels remain usable.
+//! without its `IEND` terminator, duplicate PNG palette/transparency chunks,
+//! and invalid compressed PNG ancillary metadata whose pixels remain usable.
 //! These conditions are reported as stable [`ImageDiagnostic`] records on the
 //! [`crate::Decoded`] envelope. Fields are contractual; there is deliberately
 //! no free-form prose.
