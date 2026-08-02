@@ -6998,37 +6998,123 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         );
     }
 
-    // Every remaining enabled whole-buffer still codec uses the same generic
-    // destination boundary. This is a Rust-only OutputWrite contract:
-    // Pillow has no caller-owned sink, so these cases must not become parity
-    // rows or alter the oracle-based coverage count.
-    let sink_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
-    for (format, enabled) in [
-        (ImageFormat::Jpeg, cfg!(feature = "jpeg")),
-        (ImageFormat::Tiff, cfg!(feature = "tiff")),
-        (ImageFormat::Avif, cfg!(feature = "avif")),
-    ] {
-        if !enabled || (format == ImageFormat::Avif && cfg!(target_arch = "wasm32")) {
-            continue;
-        }
-        let options = EncodeOptions::for_format(format);
-        let mut failing = FailingSink;
-        let error =
-            match image_slash_star::encode_to_sink(&sink_image, format, &options, &mut failing) {
-                Ok(length) => {
-                    return Err(format!(
-                        "failing {format} whole-buffer sink unexpectedly wrote {length} bytes"
-                    )
-                    .into());
-                }
-                Err(error) => error,
-            };
-        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
-        assert_eq!(error.format(), Some(format));
-        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
-        assert_eq!(error.unsupported_reason(), None);
-        assert_eq!(error.offset(), None);
-        assert_eq!(error.identity(), None);
+    if cfg!(feature = "avif") && !cfg!(target_arch = "wasm32") {
+        // Native AVIF top-level ISO-BMFF delivery is a Rust-only structural
+        // sink contract. Pillow has no caller-owned sink, so this adds no
+        // parity row or fixture and retains the complete native output buffer.
+        let avif_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+        let avif_options = EncodeOptions::for_format(ImageFormat::Avif);
+        let avif_expected =
+            image_slash_star::encode(&avif_image, ImageFormat::Avif, &avif_options)?;
+        assert!(
+            avif_expected.len() >= 8,
+            "AVIF output must contain one box header"
+        );
+        let mut avif_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &avif_image,
+                ImageFormat::Avif,
+                &avif_options,
+                &mut avif_sink,
+            )?,
+            avif_expected.len()
+        );
+        assert_eq!(avif_sink.bytes, avif_expected);
+        assert!(
+            avif_sink.writes > 1,
+            "AVIF output must cross box boundaries"
+        );
+
+        let avif_token = image_slash_star::CancellationToken::new();
+        let mut cancelling_avif = CancellingSink {
+            bytes: Vec::new(),
+            token: avif_token.clone(),
+            writes: 0,
+        };
+        let avif_cancel_error = match image_slash_star::encode_to_sink_with_token(
+            &avif_image,
+            ImageFormat::Avif,
+            &avif_options,
+            &avif_token,
+            &mut cancelling_avif,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("AVIF sink cancellation unexpectedly wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            avif_cancel_error.kind(),
+            image_slash_star::ImageErrorKind::Cancelled
+        );
+        assert_eq!(avif_cancel_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(
+            avif_cancel_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(cancelling_avif.writes, 1);
+        assert_eq!(cancelling_avif.bytes, avif_expected[..8].to_vec());
+
+        let too_small_avif =
+            EncodePolicy::default().with_max_output_bytes(u64::try_from(avif_expected.len() - 1)?);
+        let mut limited_avif = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let avif_limit_error = match image_slash_star::encode_to_sink_with_policy(
+            &avif_image,
+            ImageFormat::Avif,
+            &avif_options,
+            &too_small_avif,
+            &mut limited_avif,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("AVIF output policy unexpectedly admitted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            avif_limit_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Avif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            }
+        ));
+        assert_eq!(limited_avif.writes, 0);
+        assert!(limited_avif.bytes.is_empty());
+
+        let mut failing_avif = FailingAfterWrites {
+            fail_at: 2,
+            writes: 0,
+        };
+        let avif_write_error = match image_slash_star::encode_to_sink(
+            &avif_image,
+            ImageFormat::Avif,
+            &avif_options,
+            &mut failing_avif,
+        ) {
+            Ok(length) => {
+                return Err(format!("AVIF sink unexpectedly accepted {length} bytes").into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            avif_write_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(avif_write_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(avif_write_error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(failing_avif.writes, 2);
     }
     Ok(())
 }
