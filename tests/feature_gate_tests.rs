@@ -5508,6 +5508,210 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert_eq!(invalid_bmp_token_sink.writes, 0);
         }
 
+        if cfg!(feature = "ico") {
+            // ICO still and one-frame sequence delivery now split the fixed
+            // directory header from the embedded PNG/DIB payload. This is a
+            // Rust-only destination contract: Pillow has no caller-owned
+            // sink, so the parity matrix remains unchanged.
+            let ico_options = EncodeOptions::for_format(ImageFormat::Ico);
+            let expected_ico =
+                image_slash_star::encode(&decoded.content, ImageFormat::Ico, &ico_options)?;
+            let mut ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &decoded.content,
+                    ImageFormat::Ico,
+                    &ico_options,
+                    &mut ico_sink,
+                )?,
+                expected_ico.len()
+            );
+            assert_eq!(ico_sink.bytes, expected_ico);
+            assert_eq!(ico_sink.writes, 2);
+            assert_eq!(&ico_sink.bytes[..6], &[0, 0, 1, 0, 1, 0]);
+
+            let ico_token = image_slash_star::CancellationToken::new();
+            let mut token_ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink_with_token(
+                    &decoded.content,
+                    ImageFormat::Ico,
+                    &ico_options,
+                    &ico_token,
+                    &mut token_ico_sink,
+                )?,
+                expected_ico.len()
+            );
+            assert_eq!(token_ico_sink.bytes, expected_ico);
+            assert_eq!(token_ico_sink.writes, 2);
+
+            let mut failing_ico = FailingAfterWrites {
+                fail_at: 2,
+                writes: 0,
+            };
+            let failing_ico_error = match image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Ico,
+                &ico_options,
+                &mut failing_ico,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("failing ICO sink unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                failing_ico_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(failing_ico_error.format(), Some(ImageFormat::Ico));
+            assert_eq!(
+                failing_ico_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(failing_ico.writes, 2);
+
+            let cancelling_ico_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_ico = CancellingSink {
+                bytes: Vec::new(),
+                token: cancelling_ico_token.clone(),
+                writes: 0,
+            };
+            let cancelling_ico_error = match image_slash_star::encode_to_sink_with_token(
+                &decoded.content,
+                ImageFormat::Ico,
+                &ico_options,
+                &cancelling_ico_token,
+                &mut cancelling_ico,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("cancelled ICO sink unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                cancelling_ico_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(cancelling_ico_error.format(), Some(ImageFormat::Ico));
+            assert_eq!(
+                cancelling_ico_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(cancelling_ico.writes, 1);
+            assert_eq!(cancelling_ico.bytes, expected_ico[..22].to_vec());
+
+            let too_small_ico = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(expected_ico.len() - 1)?);
+            let mut limited_ico = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let limited_ico_error = match image_slash_star::encode_to_sink_with_policy(
+                &decoded.content,
+                ImageFormat::Ico,
+                &ico_options,
+                &too_small_ico,
+                &mut limited_ico,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("ICO output policy unexpectedly admitted {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                limited_ico_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Ico),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_ico.writes, 0);
+            assert!(limited_ico.bytes.is_empty());
+
+            let sequence = DecodedSequence::from_image(decoded.content.clone());
+            let mut sequence_ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink(
+                    &sequence,
+                    ImageFormat::Ico,
+                    &ico_options,
+                    &mut sequence_ico_sink,
+                )?,
+                expected_ico.len()
+            );
+            assert_eq!(sequence_ico_sink.bytes, expected_ico);
+            assert_eq!(sequence_ico_sink.writes, 2);
+
+            let mismatch_options = EncodeOptions::for_format(ImageFormat::Gif);
+            let mut mismatch_ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let mismatch_ico_error = match image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Ico,
+                &mismatch_options,
+                &mut mismatch_ico_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "ICO accepted mismatched options and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                mismatch_ico_error.kind(),
+                image_slash_star::ImageErrorKind::Parameter
+            );
+            assert_eq!(
+                mismatch_ico_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(mismatch_ico_sink.writes, 0);
+
+            let mut ico_bmp_options = EncodeOptions::for_format(ImageFormat::Ico);
+            if let EncodeOptions::Ico(options) = &mut ico_bmp_options {
+                options.entry_type = image_slash_star::IcoEntryType::Bmp;
+            }
+            let expected_ico_bmp =
+                image_slash_star::encode(&decoded.content, ImageFormat::Ico, &ico_bmp_options)?;
+            let mut ico_bmp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &decoded.content,
+                    ImageFormat::Ico,
+                    &ico_bmp_options,
+                    &mut ico_bmp_sink,
+                )?,
+                expected_ico_bmp.len()
+            );
+            assert_eq!(ico_bmp_sink.bytes, expected_ico_bmp);
+            assert_eq!(ico_bmp_sink.writes, 2);
+        }
+
         if cfg!(feature = "jpeg") {
             // Exercise the generic whole-buffer sink fallback so the
             // structural-writer dispatch remains explicit and complete.
@@ -5684,7 +5888,6 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         (ImageFormat::Gif, cfg!(feature = "gif")),
         (ImageFormat::Tiff, cfg!(feature = "tiff")),
         (ImageFormat::WebP, cfg!(feature = "webp")),
-        (ImageFormat::Ico, cfg!(feature = "ico")),
         (ImageFormat::Avif, cfg!(feature = "avif")),
     ] {
         if !enabled || (format == ImageFormat::Avif && cfg!(target_arch = "wasm32")) {

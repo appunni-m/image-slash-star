@@ -7,7 +7,9 @@ use crate::codecs::{CodecError, CodecResult};
 #[cfg(coverage)]
 use crate::encode_options::IcoSize;
 use crate::encode_options::{IcoEncodeOptions, IcoEntryType, PngEncodeOptions};
+use crate::encode_policy::EncodePolicy;
 use crate::types::{ColorType, DecodedImage};
+use crate::{CodecOperation, ImageFormat};
 /// Encode one source-sized image as one Pillow-compatible ICO entry.
 pub fn encode(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
@@ -142,6 +144,41 @@ fn encode_png_entries(
     encode_directory(size, &frame, 32, token)
 }
 
+/// Encode one source-sized ICO entry directly to a caller-owned sink.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &IcoEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> CodecResult<usize> {
+    crate::codecs::error::check_cancelled(token)?;
+    img.validate().map_err(CodecError::from_image_error)?;
+    let size = source_entry_size(img, opts)?;
+    let (bits, payload) = if opts.entry_type == IcoEntryType::Bmp {
+        encode_bmp_payload(img, token)?
+    } else {
+        let payload =
+            crate::codecs::png::encode::encode_with_token(img, &PngEncodeOptions::default(), token)
+                .map_err(|error| error.context("embedded ICO PNG encode"))?;
+        (32, payload)
+    };
+    crate::codecs::error::check_cancelled(token)?;
+    let output_len = 22usize
+        .checked_add(payload.len())
+        .ok_or_else(|| CodecError::Dimensions("ICO output length overflows".to_owned()))?;
+    policy
+        .check_output_len(output_len, ImageFormat::Ico, operation)
+        .map_err(CodecError::from_image_error)?;
+    let header = directory_header(size, payload.len(), bits, token)?;
+    let mut written = 0usize;
+    write_segment(sink, &header, token, &mut written)?;
+    write_segment(sink, &payload, token, &mut written)?;
+    debug_assert_eq!(written, output_len);
+    Ok(written)
+}
+
 fn source_entry_size(img: &DecodedImage, opts: &IcoEncodeOptions) -> CodecResult<(usize, usize)> {
     let source = (bounded_usize_u32(img.width), bounded_usize_u32(img.height));
     if source.0 > 256 || source.1 > 256 {
@@ -169,26 +206,37 @@ fn encode_directory(
     bits: u16,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    let header = directory_header((width, height), frame.len(), bits, token)?;
+    // This codec intentionally writes one source-sized entry. Its default PNG
+    // and BMP encoders are bounded by the 256x256 ceiling, so both the payload
+    // length and the fixed offset fit in an ICO u32 field.
+    let mut output = Vec::with_capacity(22usize.saturating_add(frame.len()));
+    output.extend_from_slice(&header);
+    crate::codecs::error::check_cancelled(token)?;
+    output.extend_from_slice(frame);
+    Ok(output)
+}
+
+fn directory_header(
+    (width, height): (usize, usize),
+    frame_len: usize,
+    bits: u16,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<[u8; 22]> {
     crate::codecs::error::check_cancelled(token)?;
     if width == 0 || height == 0 || width > 256 || height > 256 {
         return Err(CodecError::Dimensions(
             "ICO entry dimensions must be between 1 and 256".to_owned(),
         ));
     }
-    // This codec intentionally writes one source-sized entry. Its default PNG
-    // and BMP encoders are bounded by the 256x256 ceiling, so both the payload
-    // length and the fixed offset fit in an ICO u32 field.
-    let mut output = Vec::with_capacity(22usize.saturating_add(frame.len()));
-    output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
-    output.push(directory_dimension(width));
-    output.push(directory_dimension(height));
-    output.extend_from_slice(&[0, 0, 0, 0]);
-    output.extend_from_slice(&bits.to_le_bytes());
-    output.extend_from_slice(&low_u32(frame.len()).to_le_bytes());
-    output.extend_from_slice(&22u32.to_le_bytes());
-    crate::codecs::error::check_cancelled(token)?;
-    output.extend_from_slice(frame);
-    Ok(output)
+    let mut header = [0u8; 22];
+    header[..6].copy_from_slice(&[0, 0, 1, 0, 1, 0]);
+    header[6] = directory_dimension(width);
+    header[7] = directory_dimension(height);
+    header[12..14].copy_from_slice(&bits.to_le_bytes());
+    header[14..18].copy_from_slice(&low_u32(frame_len).to_le_bytes());
+    header[18..22].copy_from_slice(&22u32.to_le_bytes());
+    Ok(header)
 }
 
 fn directory_dimension(value: usize) -> u8 {
@@ -207,10 +255,9 @@ fn encode_bmp_entries(
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     let size = source_entry_size(img, opts)?;
-    let encoded = encode_bmp_single_entry(img, token)?;
-    let bits = u16::from_le_bytes([encoded[12], encoded[13]]);
+    let (bits, payload) = encode_bmp_payload(img, token)?;
     crate::codecs::error::check_cancelled(token)?;
-    encode_directory(size, &encoded[22..], bits, token)
+    encode_directory(size, &payload, bits, token)
 }
 
 fn bounded_usize_u32(value: u32) -> usize {
@@ -237,10 +284,21 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
+#[cfg(coverage)]
 fn encode_bmp_single_entry(
     img: &DecodedImage,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
+    let size = (bounded_usize_u32(img.width), bounded_usize_u32(img.height));
+    let (bits, payload) = encode_bmp_payload(img, token)?;
+    encode_directory(size, &payload, bits, token)
+}
+
+fn encode_bmp_payload(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(u16, Vec<u8>)> {
     crate::codecs::error::check_cancelled(token)?;
     let width = bounded_usize_u32(img.width);
     let height = bounded_usize_u32(img.height);
@@ -293,16 +351,7 @@ fn encode_bmp_single_entry(
         .saturating_add(pixel_bytes)
         .saturating_add(mask_bytes);
     // The largest supported RGBA entry is below 264 KiB.
-    let dib_size = low_u32(dib_bytes);
-    let mut output = Vec::with_capacity(22usize.saturating_add(dib_bytes));
-    output.extend_from_slice(&[0, 0, 1, 0, 1, 0]);
-    output.push(directory_dimension(width));
-    output.push(directory_dimension(height));
-    output.extend_from_slice(&[0, 0, 0, 0]);
-    output.extend_from_slice(&bits.to_le_bytes());
-    output.extend_from_slice(&dib_size.to_le_bytes());
-    output.extend_from_slice(&22u32.to_le_bytes());
-
+    let mut output = Vec::with_capacity(dib_bytes);
     output.extend_from_slice(&40u32.to_le_bytes());
     output.extend_from_slice(&img.width.to_le_bytes());
     output.extend_from_slice(&img.height.saturating_mul(2).to_le_bytes());
@@ -317,5 +366,20 @@ fn encode_bmp_single_entry(
     output.extend_from_slice(&pixels);
     output.resize(output.len().saturating_add(mask_bytes), 0);
     crate::codecs::error::check_cancelled(token)?;
-    Ok(output)
+    Ok((bits, output))
+}
+
+fn write_segment(
+    sink: &mut dyn crate::OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("ICO output length overflows".to_owned()))?;
+    Ok(())
 }
