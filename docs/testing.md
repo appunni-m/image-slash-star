@@ -727,9 +727,9 @@ skips in 27,932 ms. The timings are retained execution evidence rather than a
 universal benchmark claim because managed cache and build state can differ.
 
 The current committed TIFF structural-sink acceptance result is Coverage MCP
-run `31468b32-854b-474c-8cb6-8ac15603f13b`, snapshot
-`5c25e6ff-c4cd-4fb6-8699-54ada16c5624`, at revision
-`2826a2ceaac5e71316ad54709b65fb6702469c36`:
+run `c6231d19-598d-4706-bdfd-9385e3c05b50`, snapshot
+`62014cef-25be-485e-a32f-ee1f9e9b606d`, at revision
+`8e2b3e82d11c8aacfc8f2b05a3931d4464412d53`:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
@@ -743,11 +743,11 @@ itself is fully covered for lines, branches, and functions (1,321/1,323
 regions); the aggregate snapshot retains one uncovered line, one function,
 and seven regions. No coverage-only test was added. The same revision passed
 the adaptive feature matrix in run
-`93db1420-2245-48a6-b972-364ba8774182` with 947 checks and zero failures in
-108,677 ms, and the Pillow parity matrix in run
-`7397b2ac-7a1f-4ea6-8878-de3e11592e75` with 1,420 rows, zero failures, and zero
-skips in 88,935 ms. Those current matrix runs were concurrent, so their
-durations are execution evidence rather than a controlled runtime comparison;
+`a0cc505e-f44f-4b9e-9667-de52dca995b8` with 947 checks and zero failures in
+35,146 ms, and the Pillow parity matrix in run
+`d39ff85a-6d2e-41e8-b453-b4356943e3ff` with 1,420 rows, zero failures, and zero
+skips in 33,569 ms. These durations are execution evidence rather than a
+controlled runtime comparison;
 the TIFF sink, policy, and cancellation cases are Rust-only contracts, not
 Pillow-parity rows.
 
