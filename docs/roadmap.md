@@ -1350,20 +1350,19 @@ Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
 The current committed TIFF structural-sink acceptance revision is
-`2826a2ceaac5e71316ad54709b65fb6702469c36`. Coverage MCP run
-`31468b32-854b-474c-8cb6-8ac15603f13b`, snapshot
-`5c25e6ff-c4cd-4fb6-8699-54ada16c5624`, passes 58 tests with zero failures and
+`8e2b3e82d11c8aacfc8f2b05a3931d4464412d53`. Coverage MCP run
+`c6231d19-598d-4706-bdfd-9385e3c05b50`, snapshot
+`62014cef-25be-485e-a32f-ee1f9e9b606d`, passes 58 tests with zero failures and
 reports 48,061/48,062 lines, 6,588/6,588 branches, 2,692/2,693 functions,
 and 74,819/74,826 regions. The new `src/codecs/tiff/encode.rs` file is fully
 covered for lines, branches, and functions (1,321/1,323 regions); the
 aggregate snapshot retains one uncovered line, one function, and seven
 regions, and no coverage-only test was added. Feature-matrix run
-`93db1420-2245-48a6-b972-364ba8774182` passes 947/947 checks in 108,677 ms;
-Pillow parity run `7397b2ac-7a1f-4ea6-8878-de3e11592e75` passes 1,420/1,420
-rows with zero skips in 88,935 ms. The two current matrix runs were concurrent,
-so their durations are execution evidence rather than a controlled runtime
-comparison; the sink and policy/cancellation assertions remain ordinary
-Rust-only contracts, separate from Pillow parity.
+`a0cc505e-f44f-4b9e-9667-de52dca995b8` passes 947/947 checks in 35,146 ms;
+Pillow parity run `d39ff85a-6d2e-41e8-b453-b4356943e3ff` passes 1,420/1,420
+rows with zero skips in 33,569 ms. These durations are execution evidence
+rather than a controlled runtime comparison; the sink and policy/cancellation
+assertions remain ordinary Rust-only contracts, separate from Pillow parity.
 
 The final FTR-032 source revision also passed feature-matrix run
 `1a0c0f1c-d5d7-4210-a24f-503d001a3d8f` with 947 checks and zero failures, and
