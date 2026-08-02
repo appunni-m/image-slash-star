@@ -258,8 +258,11 @@ preserves PNG bytes, a zero budget returns the typed
 zero-budget sink remains untouched. A work unit is one documented cooperative
 encode checkpoint; the budget is deterministic work control, not CPU-time,
 instruction-count, transient-allocation, or recoverable-OOM accounting. The
-test's aggregate coverage is incidental evidence, and no coverage-only hook
-or synthetic Pillow row is added.
+same contract now also proves JPEG still byte identity under an ample budget,
+a bounded mid-encode rejection after more than one checkpoint, and a typed
+zero-budget no-write result through the generic whole-buffer sink path. The
+test's aggregate coverage is incidental evidence, and no coverage-only hook or
+synthetic Pillow row is added.
 
 Encode cancellation follows the same evidence boundary. Pillow has no
 `CancellationToken`, no caller-owned `OutputSink`, and no equivalent
@@ -769,6 +772,18 @@ parity run `d39ff85a-6d2e-41e8-b453-b4356943e3ff`; total managed wall time is
 not a controlled benchmark because build/cache state differs. The partition
 changes scheduling and diagnostics only: no parity row, fixture, assertion,
 or Pillow provenance boundary changed.
+
+The JPEG work-budget contract was then added at revision
+`df03084d90c790993a49364359ef31f11ebc50a2`. It remains an ordinary Rust-only
+contract: Pillow has no checkpoint budget, cancellation token, or caller-owned
+sink. Coverage MCP run `6309b1ae-4e4e-482d-9ee2-7472522bae19`, snapshot
+`bc799a47-9076-4c8f-ab2b-65b0cbd7c0d7`, passed 72 tests with zero failures and
+retained the same 48,061/48,062 lines, 6,588/6,588 branches, 2,692/2,693
+functions, and 74,819/74,826 regions. The feature matrix passed 947 checks in
+`70861b62-21e4-4aad-a4e0-249a1dc23d09` (40,936 ms), and the unchanged Pillow
+parity scope passed 1,434 checks with zero failures and zero skips in
+`66d39cf5-514a-46d9-b7a3-6ee4b7651c30` (23,106 ms). No parity row or fixture
+was added for the caller-controlled work-budget behavior.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
