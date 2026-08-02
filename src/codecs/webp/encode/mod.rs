@@ -558,6 +558,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // Sweep the still checkpoints, including metadata assembly, without
     // turning caller-controlled cancellation into a Pillow parity row.
     let still = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
+    let default_opts = WebPEncodeOptions::default();
+    for checks in 0..=8 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&still, &default_opts, Some(&token));
+    }
+
     let mut metadata_opts = WebPEncodeOptions::default();
     metadata_opts.icc = Some(vec![0]);
     metadata_opts.exif = Some(b"Exif\0\0metadata".to_vec());
