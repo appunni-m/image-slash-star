@@ -485,7 +485,9 @@ a stable structure identity (`ImageError::identity()`, for example
 bitfield, and RLE failures additionally expose stable BMP identities. ICO
 header, directory, entry-range, and embedded PNG/DIB/CUR failures likewise
 expose stable ICO identities. WebP inspection/container-chunk failures expose
-stable WebP identities; WebP bitstream decode internals remain detail-free.
+stable WebP identities, and still/sequence payload-decoder failures expose
+`webp_bitstream` at the validated payload start (or current ANMF container
+offset for animation); finer decoder-internal cursors remain detail-free.
 
 `ImageError` is non-exhaustive; downstream `match` expressions need a fallback
 arm. Unchanged malformed bytes should not be retried. Feature and unsupported
