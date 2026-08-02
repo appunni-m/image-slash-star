@@ -7948,6 +7948,32 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             } if observed > 8
         ));
         assert_eq!(lossless_sink, vec![0xA9]);
+
+        // A materially larger budget reaches the long predictor/cross-color,
+        // histogram/Huffman, backward-reference, and token-stream intervals
+        // before rejecting. This remains Rust-only work-control evidence:
+        // Pillow exposes no caller budget or equivalent result.
+        let deep_lossless_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(8_192);
+        let deep_lossless_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &deep_lossless_bounded,
+        ) {
+            Ok(_) => return Err("deep WebP VP8L budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            deep_lossless_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8_192,
+                observed,
+            } if observed > 8_192
+        ));
     }
 
     if cfg!(feature = "gif") {
