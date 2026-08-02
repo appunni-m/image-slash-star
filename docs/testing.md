@@ -664,10 +664,12 @@ scope. The current clean revision was then validated by run
 `bea69012-22a4-4b55-9ef9-e3859c73ef2e`: 903 checks passed with zero failures in
 1,296,952 ms, with the same capability-table terminal record. These are separate
 execution records rather than a controlled speed comparison because managed
-cache/build state differs. The matrix uses bounded parallel batches for
-independent native, `wasm32-unknown-unknown`, and `wasm32-wasip1` runtime lanes
-and interleaved capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS` default to
-three. After the probe-target reuse change, run
+cache/build state differs. The matrix uses a bounded completion-driven scheduler
+for independent native, `wasm32-unknown-unknown`, and `wasm32-wasip1` runtime
+lanes and interleaved capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS`
+default to three. A lane completion releases a slot immediately, rather than
+holding it until the slowest lane in a launch batch finishes. After the
+probe-target reuse change, run
 `0433b3d0-110e-4242-a088-c7acbc3cefa2` passed 925 checks with zero failures in
 865,050 ms and retained `capability tables OK: every native and
 wasm32-wasip1 lane agrees`. Its 22 additional checks are the capability probe
@@ -677,6 +679,15 @@ as `45e1922`. This remains target/runtime evidence rather than a controlled
 speed comparison because managed cache/build state differs. It does not turn
 aggregate coverage, defensive/specification contracts, or Rust-only diagnostic
 tests into Pillow-parity coverage.
+
+The completion-driven scheduler was then validated by run
+`de0619ff-e117-4d9d-bc3e-e9ee7fff01bf`: 925 checks passed with zero failures in
+298,267 ms and the terminal capability-table record was unchanged. That run was
+submitted against parent revision
+`65c3a4b5714f118e93b62b07b899f2ddc1c64d04` with the scheduler patch in the
+working tree; the patch was committed as `766a6dd`. The shorter duration is
+retained as runtime evidence, not a controlled speedup claim, because the
+managed target/cache state differs from the earlier 865,050 ms execution.
 
 Coverage MCP run: `d690cb20-f078-4652-8c83-4892a1a880bc`
 
