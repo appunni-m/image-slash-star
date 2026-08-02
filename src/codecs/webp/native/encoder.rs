@@ -481,12 +481,13 @@ fn write_image_stream(
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
-) {
-    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 3, 80, 11)
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 3, 80, 11, token)
 }
 
 // `backward_refs::candidates` always returns at least one crunch configuration.
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::too_many_arguments, clippy::unwrap_used)]
 fn write_image_stream_configured(
     w: &mut BitWriter<'_>,
     pixels: &[u32],
@@ -495,14 +496,16 @@ fn write_image_stream_configured(
     histogram_bits: u8,
     quality: u32,
     max_cache_bits: u8,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
     let candidates = backward_refs::candidates(
         pixels,
         width,
         write_meta_huffman_bit,
         quality,
         max_cache_bits,
-    );
+        token,
+    )?;
 
     let initial_bytes = w.writer.clone();
     let initial_buffer = w.buffer;
@@ -527,7 +530,8 @@ fn write_image_stream_configured(
                     histogram_bits,
                     quality,
                 },
-            );
+                token,
+            )?;
             (
                 trial.writer.len() + usize::from(trial.nbits).div_ceil(8),
                 trial.buffer,
@@ -545,6 +549,7 @@ fn write_image_stream_configured(
     *w.writer = bytes;
     w.buffer = buffer;
     w.nbits = nbits;
+    Ok(())
 }
 
 struct GroupCodes {
@@ -565,12 +570,14 @@ fn optimize_sampling(
     full_height: usize,
     input_bits: u8,
     maximum_bits: u8,
-) -> u8 {
+    token: Option<&crate::CancellationToken>,
+) -> Result<u8, EncodingError> {
     let mut width = full_width.div_ceil(1 << input_bits);
     let mut height = full_height.div_ceil(1 << input_bits);
     let mut best_bits = input_bits;
 
     while best_bits < maximum_bits {
+        check_token(token)?;
         let new_square_size = 1 << (best_bits + 1 - input_bits);
         let square_size = 1 << (best_bits - input_bits);
         let rows_match = (0..height)
@@ -586,10 +593,11 @@ fn optimize_sampling(
         best_bits += 1;
     }
     if best_bits == input_bits {
-        return input_bits;
+        return Ok(input_bits);
     }
 
     while best_bits > input_bits {
+        check_token(token)?;
         let square_size = 1 << (best_bits - input_bits);
         let columns_match = (0..height).all(|y| {
             (0..width).step_by(square_size).all(|x| {
@@ -604,7 +612,7 @@ fn optimize_sampling(
         best_bits -= 1;
     }
     if best_bits == input_bits {
-        return input_bits;
+        return Ok(input_bits);
     }
 
     let old_width = width;
@@ -612,12 +620,15 @@ fn optimize_sampling(
     width = full_width.div_ceil(1 << best_bits);
     height = full_height.div_ceil(1 << best_bits);
     for y in 0..height {
+        if y.is_multiple_of(64) {
+            check_token(token)?;
+        }
         for x in 0..width {
             symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
         }
     }
     symbols.truncate(width * height);
-    best_bits
+    Ok(best_bits)
 }
 
 fn write_group(w: &mut BitWriter<'_>, populations: &[Vec<u32>; 5]) -> GroupCodes {
@@ -643,7 +654,9 @@ fn write_token_stream(
     write_meta_huffman_bit: bool,
     tokens: &[backward_refs::Token],
     config: TokenStreamConfig,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    check_token(token)?;
     let TokenStreamConfig {
         cache_bits,
         histogram_bits,
@@ -659,30 +672,44 @@ fn write_token_stream(
     } else {
         histogram::cluster(tokens, width, height, cache_bits, quality, 31)
     };
+    check_token(token)?;
     let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
     let mut encoded_histogram_bits = histogram_bits;
     if write_meta_huffman_bit {
         w.write_bits(u64::from(multiple_groups), 1);
         if multiple_groups {
             encoded_histogram_bits =
-                optimize_sampling(&mut symbols, width, height, histogram_bits, 9);
+                optimize_sampling(&mut symbols, width, height, histogram_bits, 9, token)?;
             w.write_bits(u64::from(encoded_histogram_bits - 2), 3);
             let meta_pixels = symbols
                 .iter()
                 .map(|&symbol| u32::from(symbol) << 8)
                 .collect::<Vec<_>>();
             let meta_width = width.div_ceil(1 << encoded_histogram_bits);
-            write_image_stream_configured(w, &meta_pixels, meta_width, false, 3, quality, 0);
+            write_image_stream_configured(
+                w,
+                &meta_pixels,
+                meta_width,
+                false,
+                3,
+                quality,
+                0,
+                token,
+            )?;
         }
     }
     let mut groups = Vec::with_capacity(histograms.len());
     for histogram in &histograms {
+        check_token(token)?;
         groups.push(write_group(w, &histogram.populations));
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
-    let mut position = 0;
-    for &token in tokens {
+    let mut position: usize = 0;
+    for &reference in tokens {
+        if position.is_multiple_of(1024) {
+            check_token(token)?;
+        }
         let group_index = if multiple_groups {
             let x = position % width;
             let y = position / width;
@@ -694,7 +721,7 @@ fn write_token_stream(
         };
         let lengths = &groups[group_index].lengths;
         let codes = &groups[group_index].codes;
-        match token {
+        match reference {
             backward_refs::Token::Literal(pixel) => {
                 let [red, green, blue, alpha] = channels(pixel);
                 let green_length = lengths[0][green];
@@ -727,6 +754,7 @@ fn write_token_stream(
             }
         }
     }
+    Ok(())
 }
 
 fn subtract_pixels(color: u32, previous: u32) -> u32 {
@@ -945,7 +973,9 @@ fn apply_palette(
     width: usize,
     height: usize,
     mut palette: Vec<u32>,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    check_token(token)?;
     minimize_palette_deltas(&mut palette);
     let encoded_length = if palette.len() > 17 && palette.last() == Some(&0) {
         palette.len() - 1
@@ -964,7 +994,7 @@ fn apply_palette(
             difference
         })
         .collect::<Vec<_>>();
-    write_image_stream_configured(w, &palette_delta, encoded_length, false, 3, 20, 0);
+    write_image_stream_configured(w, &palette_delta, encoded_length, false, 3, 20, 0, token)?;
 
     let packing_bits = match palette.len() {
         0..=2 => 3,
@@ -976,7 +1006,10 @@ fn apply_palette(
     let bits_per_pixel = 8 >> packing_bits;
     let packed_width = width.div_ceil(pixels_per_group);
     let mut packed = Vec::with_capacity(packed_width * height);
-    for row in pixels.chunks_exact(width) {
+    for (row_index, row) in pixels.chunks_exact(width).enumerate() {
+        if row_index.is_multiple_of(64) {
+            check_token(token)?;
+        }
         for group in row.chunks(pixels_per_group) {
             let mut packed_pixel = 0xff00_0000_u32;
             for (index, &color) in group.iter().enumerate() {
@@ -988,7 +1021,16 @@ fn apply_palette(
     }
     w.write_bits(0, 1);
     let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
-    write_image_stream_configured(w, &packed, packed_width, true, 5, 80, maximum_cache_bits)
+    write_image_stream_configured(
+        w,
+        &packed,
+        packed_width,
+        true,
+        5,
+        80,
+        maximum_cache_bits,
+        token,
+    )
 }
 
 /// Encode image data with the indicated color type.
@@ -1084,8 +1126,7 @@ fn encode_frame(
         w.write_bits(0x0, 3); // version
 
         if entropy_mode == EntropyMode::Palette {
-            apply_palette(w, &pixels, width as usize, height as usize, palette);
-            check_token(token)?;
+            apply_palette(w, &pixels, width as usize, height as usize, palette, token)?;
         } else {
             let grayscale = pixels.iter().all(|&pixel| {
                 let red = (pixel >> 16) & 0xff;
@@ -1130,8 +1171,7 @@ fn encode_frame(
                 w.write_bits(u64::from(predictor_bits - 2), 3);
                 let predictor_width =
                     (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
-                write_image_stream(w, &predictor_map, predictor_width, false);
-                check_token(token)?;
+                write_image_stream(w, &predictor_map, predictor_width, false, token)?;
             }
 
             if use_predictor && !red_and_blue_zero {
@@ -1146,13 +1186,11 @@ fn encode_frame(
                 w.write_bits(1, 2);
                 w.write_bits(u64::from(color_bits - 2), 3);
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
-                write_image_stream(w, &color_map, color_width, false);
-                check_token(token)?;
+                write_image_stream(w, &color_map, color_width, false, token)?;
             }
 
             w.write_bits(0, 1); // transforms done
-            write_image_stream(w, &pixels, width as usize, true);
-            check_token(token)?;
+            write_image_stream(w, &pixels, width as usize, true, token)?;
         }
 
         w.flush();
@@ -1163,7 +1201,13 @@ fn encode_frame(
 
 // Every sorted palette suffix is non-empty by construction.
 #[allow(clippy::unwrap_used)]
-pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
+pub(crate) fn encode_alpha(
+    alpha: &[u8],
+    width: u32,
+    height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u8>, EncodingError> {
+    check_token(token)?;
     assert_eq!(alpha.len(), width as usize * height as usize);
 
     let mut palette_values = alpha
@@ -1174,7 +1218,10 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
         .collect::<Vec<_>>();
     let mut signs = 0u8;
     let mut predicted = 0u8;
-    for &value in &palette_values {
+    for (index, &value) in palette_values.iter().enumerate() {
+        if index.is_multiple_of(64) {
+            check_token(token)?;
+        }
         let delta = value.wrapping_sub(predicted);
         if delta != 0 {
             signs |= if delta < 0x80 { 1 } else { 2 };
@@ -1189,6 +1236,9 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
         }
         predicted = 0;
         for index in 0..sortable_len {
+            if index.is_multiple_of(64) {
+                check_token(token)?;
+            }
             let (offset, _) = palette_values[index..sortable_len]
                 .iter()
                 .enumerate()
@@ -1208,11 +1258,17 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
         .collect::<Vec<_>>();
     let mut palette_indices = [0u8; 256];
     for (index, &value) in palette_values.iter().enumerate() {
+        if index.is_multiple_of(64) {
+            check_token(token)?;
+        }
         palette_indices[usize::from(value)] = index as u8;
     }
     let mut palette_delta = Vec::with_capacity(palette.len());
     let mut previous = 0u32;
-    for &pixel in &palette {
+    for (index, &pixel) in palette.iter().enumerate() {
+        if index.is_multiple_of(64) {
+            check_token(token)?;
+        }
         let alpha = (pixel >> 24).wrapping_sub(previous >> 24) & 0xff;
         let red = ((pixel >> 16) & 0xff).wrapping_sub((previous >> 16) & 0xff) & 0xff;
         let green = ((pixel >> 8) & 0xff).wrapping_sub((previous >> 8) & 0xff) & 0xff;
@@ -1230,7 +1286,16 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     writer.write_bits(1, 1); // transform present
     writer.write_bits(3, 2); // color-indexing transform
     writer.write_bits((palette.len() - 1) as u64, 8);
-    write_image_stream_configured(&mut writer, &palette_delta, palette.len(), false, 3, 20, 0);
+    write_image_stream_configured(
+        &mut writer,
+        &palette_delta,
+        palette.len(),
+        false,
+        3,
+        20,
+        0,
+        token,
+    )?;
 
     let xbits = match palette.len() {
         0..=2 => 3,
@@ -1242,7 +1307,10 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     let bits_per_pixel = 8 >> xbits;
     let packed_width = width.div_ceil(pixels_per_group as u32) as usize;
     let mut packed = Vec::with_capacity(packed_width * height as usize);
-    for row in alpha.chunks_exact(width as usize) {
+    for (row_index, row) in alpha.chunks_exact(width as usize).enumerate() {
+        if row_index.is_multiple_of(64) {
+            check_token(token)?;
+        }
         for group in row.chunks(pixels_per_group) {
             let mut pixel = 0xff00_0000u32;
             for (index, &value) in group.iter().enumerate() {
@@ -1254,7 +1322,7 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     }
 
     writer.write_bits(0, 1); // transforms done
-    write_image_stream_configured(&mut writer, &packed, packed_width, true, 5, 32, 2);
+    write_image_stream_configured(&mut writer, &packed, packed_width, true, 5, 32, 2, token)?;
     writer.flush();
 
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
@@ -1265,11 +1333,12 @@ pub(crate) fn encode_alpha(alpha: &[u8], width: u32, height: u32) -> Vec<u8> {
     uncompressed.push(0); // no compression, no filtering, no preprocessing
     uncompressed.extend_from_slice(alpha);
 
-    if uncompressed.len() <= compressed.len() {
+    check_token(token)?;
+    Ok(if uncompressed.len() <= compressed.len() {
         uncompressed
     } else {
         compressed
-    }
+    })
 }
 
 const fn chunk_size(inner_bytes: usize) -> u32 {
@@ -1414,6 +1483,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             histogram_bits: 3,
             quality: 1,
         },
+        None,
     );
     token_writer.flush();
 
@@ -1447,12 +1517,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
         .collect::<Vec<_>>();
     palette.push(0);
-    apply_palette(
+    let _ = apply_palette(
         &mut palette_writer,
         &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
         2,
         2,
         palette,
+        None,
     );
     palette_writer.flush();
 
@@ -1462,7 +1533,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         buffer: 0,
         nbits: 0,
     };
-    apply_palette(&mut palette_trim_writer, &[0; 4], 2, 2, vec![0; 18]);
+    let _ = apply_palette(&mut palette_trim_writer, &[0; 4], 2, 2, vec![0; 18], None);
     palette_trim_writer.flush();
 
     let mut palette4_bytes = Vec::new();
@@ -1471,12 +1542,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         buffer: 0,
         nbits: 0,
     };
-    apply_palette(
+    let _ = apply_palette(
         &mut palette4_writer,
         &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
         2,
         2,
         vec![0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        None,
     );
     palette4_writer.flush();
 
@@ -1489,29 +1561,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let palette16 = (0..16)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
         .collect::<Vec<_>>();
-    apply_palette(
+    let _ = apply_palette(
         &mut palette16_writer,
         &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
         2,
         2,
         palette16,
+        None,
     );
     palette16_writer.flush();
 
     let alpha = [
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
     ];
-    let _ = encode_alpha(&alpha, alpha.len() as u32, 1);
+    let _ = encode_alpha(&alpha, alpha.len() as u32, 1, None);
     let short_alpha = [
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8,
     ];
-    let _ = encode_alpha(&short_alpha, short_alpha.len() as u32, 1);
+    let _ = encode_alpha(&short_alpha, short_alpha.len() as u32, 1, None);
     let nonzero_alpha = [
         1, 255, 2, 254, 3, 253, 4, 252, 5, 251, 6, 250, 7, 249, 8, 248, 9, 247, 10, 246,
     ];
-    let _ = encode_alpha(&nonzero_alpha, nonzero_alpha.len() as u32, 1);
+    let _ = encode_alpha(&nonzero_alpha, nonzero_alpha.len() as u32, 1, None);
     let two_value_alpha = [0, 255, 0, 255];
-    let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1);
+    let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1, None);
 
     WebPEncoder::new()
         .encode_with_token(&[], 0, 1, ColorType::Rgb8, None)

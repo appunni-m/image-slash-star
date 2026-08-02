@@ -585,7 +585,8 @@ fn encode_lossy(
                     .chunks_exact(4)
                     .map(|pixel| pixel[3])
                     .collect::<Vec<_>>();
-                let alpha_chunk = super::native::encode_alpha(&alpha, width, height);
+                let alpha_chunk = super::native::encode_alpha(&alpha, width, height, token)
+                    .map_err(encode_error)?;
                 crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy_rgba(
                     &pixels.bytes,

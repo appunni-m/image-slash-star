@@ -7873,9 +7873,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(sink, vec![0xA8]);
 
         // Lossless VP8L now charges checkpoints around its pixel, entropy,
-        // transform, and bitstream stages. Pillow has no caller-controlled
-        // checkpoint budget or equivalent result, so this remains ordinary
-        // Rust-only work-control evidence and adds no parity row.
+        // transform, and bitstream stages plus bounded backward-reference and
+        // token-stream intervals. Pillow has no caller-controlled checkpoint
+        // budget or equivalent result, so this remains ordinary Rust-only
+        // work-control evidence and adds no parity row.
         let mut lossless_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;

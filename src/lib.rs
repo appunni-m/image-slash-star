@@ -865,7 +865,8 @@ pub fn encode_with_policy(
 /// and structural segments; GIF still encoding also polls block/frame/coalescing/output-assembly
 /// checkpoints, and WebP still encoding polls preparation, lossy VP8
 /// analysis/mode-selection/probability/bitstream stages, lossless VP8L
-/// pixel/entropy/transform/bitstream stages, codec-result, and metadata-
+/// pixel/entropy/transform/bitstream stages plus bounded
+/// backward-reference/token-stream intervals, codec-result, and metadata-
 /// assembly boundaries; native AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence

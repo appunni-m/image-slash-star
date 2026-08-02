@@ -4,7 +4,8 @@
 //! own control flow. Token-aware operations poll it at documented structural
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
 //! strip/tile loops, lossy WebP VP8 analysis/bitstream stages, and lossless
-//! WebP VP8L pixel/entropy/transform/bitstream stages) and stop with
+//! WebP VP8L pixel/entropy/transform/bitstream stages plus bounded
+//! backward-reference/token-stream intervals) and stop with
 //! [`ImageError::Cancelled`] without publishing partial state.
 //! The crate remains single-threaded by design, so the token uses `Rc<Cell>`
 //! and adds no synchronization overhead on native or WASM targets.
