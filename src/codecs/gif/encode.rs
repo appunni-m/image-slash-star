@@ -1656,7 +1656,7 @@ fn write_gif_with_token(
         } else {
             prepared.indices
         };
-        let compressed = encode_lzw(&encoded_indices, minimum_code_size);
+        let compressed = encode_lzw_with_token(&encoded_indices, minimum_code_size, token)?;
         output.push(minimum_code_size);
         write_sub_blocks(&mut output, &compressed);
         crate::codecs::error::check_cancelled(token)?;
@@ -1729,7 +1729,16 @@ fn interlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
 }
 
 /// Encode indices using the GIF89a Appendix F LZW code-width rules.
-fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
+/// Encode GIF LZW while polling once per input-symbol interval.
+///
+/// The ordinary encoder passes `None`, preserving its existing byte path. A
+/// token-aware call can therefore stop inside a long dictionary pass without
+/// claiming that the complete GIF working buffer is incrementally streamed.
+fn encode_lzw_with_token(
+    indices: &[u8],
+    minimum_code_size: u8,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     debug_assert!(!indices.is_empty());
     debug_assert!((2..=8).contains(&minimum_code_size));
 
@@ -1745,6 +1754,7 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
 
     let mut prefix = u16::from(indices[0]);
     for &suffix in &indices[1..] {
+        crate::codecs::error::check_cancelled(token)?;
         if let Some(&code) = dictionary.get(&(prefix, suffix)) {
             prefix = code;
             continue;
@@ -1770,7 +1780,7 @@ fn encode_lzw(indices: &[u8], minimum_code_size: u8) -> Vec<u8> {
 
     writer.write(prefix, code_size);
     writer.write(end_code, code_size);
-    writer.finish()
+    Ok(writer.finish())
 }
 
 fn write_sub_blocks(output: &mut Vec<u8>, data: &[u8]) {

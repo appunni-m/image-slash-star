@@ -8283,6 +8283,70 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xBC],
             "caller cancellation precedes sequence work-budget delivery"
         );
+
+        // GIF LZW now charges an input-symbol checkpoint inside its
+        // dictionary pass. Pillow has no caller token or work-budget result,
+        // so this remains Rust-only work-control evidence and adds no parity
+        // row. The ordinary path and an ample budget must remain byte-identical.
+        let mut pixels = Vec::with_capacity(64 * 64);
+        for index in 0..64 * 64 {
+            pixels.push(u8::try_from(index % 256)?);
+        }
+        let image = DecodedImage::new(64, 64, pixels, ColorType::L8);
+        let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Gif, &options, &unlimited)?,
+            expected,
+            "an ample GIF LZW budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(7);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("bounded GIF LZW work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 7,
+                observed: 8,
+            }
+        ));
+
+        // The structural sink calls the GIF writer directly, so its same
+        // input-symbol interval is reached after one fewer dispatcher poll.
+        let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6);
+        let mut sink = vec![0xBD];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &sink_policy,
+            &mut sink,
+        ) {
+            Ok(_) => return Err("bounded GIF LZW sink budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6,
+                observed: 7,
+            }
+        ));
+        assert_eq!(sink, vec![0xBD]);
     }
 
     if cfg!(feature = "tiff") {

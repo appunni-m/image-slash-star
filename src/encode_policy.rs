@@ -12,7 +12,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// the PNG adaptive-filter and filtered-row checkpoints charged after each
 /// 1,024 row bytes, the lossy WebP VP8 analysis/partition stages, and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, bitstream, and token-stream stages; it is a
+/// histogram/Huffman, bitstream, and token-stream stages, and GIF LZW
+/// input-symbol intervals; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,7 +63,8 @@ impl EncodePolicy {
     /// mode-selection, probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
-    /// token-stream intervals.
+    /// token-stream intervals. GIF LZW encoding charges an interval for each
+    /// input symbol considered by its dictionary pass.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]

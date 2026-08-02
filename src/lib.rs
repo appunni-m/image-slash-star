@@ -865,7 +865,7 @@ pub fn encode_with_policy(
 /// preparation, adaptive-filter and filtered-row subsegments, and structural
 /// segments in still and one-frame fallback paths; BMP polls row preparation
 /// and structural segments; GIF still encoding also polls block/frame/coalescing/output-assembly
-/// checkpoints, and WebP still encoding polls preparation, lossy VP8
+/// checkpoints plus LZW input-symbol intervals, and WebP still encoding polls preparation, lossy VP8
 /// analysis/mode-selection/probability/bitstream stages, lossless VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, codec-result, and
