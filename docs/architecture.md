@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`; the claim-ledger baseline remains
+`78439ccc44480df892dfdf81c62dfb337ddb0570`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -297,7 +297,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/bitstream stages, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and Deflate input-row boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/bitstream stages, lossless VP8L pixel/entropy/transform/bitstream stages, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and Deflate input-row boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -456,7 +456,9 @@ public checkpoints. PNG adaptive filtering and filtered-row emission charge
 additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. Lossy WebP VP8 additionally charges after color conversion,
 padding, analysis, segment parameters, mode selection, coefficient-probability
-adaptation, partition emission, and final container assembly. This is
+adaptation, partition emission, and final container assembly. Lossless WebP
+VP8L additionally charges around pixel conversion, entropy analysis, transform
+selection/application, and bitstream assembly. This is
 deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
 
@@ -464,8 +466,9 @@ Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
 checkpoints, the WebP still writer polls at preparation, lossy VP8
-analysis/mode-selection/coefficient-probability/bitstream stages, codec-result,
-and metadata-assembly boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
+analysis/mode-selection/coefficient-probability/bitstream stages, lossless VP8L
+pixel/entropy/transform/bitstream stages, codec-result, and metadata-assembly
+boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while
 preparing rows, embedded payloads, or TIFF page state, including PNG adaptive
@@ -480,9 +483,9 @@ prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
-documented checkpoints—including finer/lossless WebP work, CPU work inside
-codec rows other than the implemented PNG adaptive-filter subsegments, and
-deeper TIFF Deflate/structural work—remain open.
+documented checkpoints—including finer WebP work, deeper lossless VP8L loops,
+CPU work inside codec rows other than the implemented PNG adaptive-filter
+subsegments, and deeper TIFF Deflate/structural work—remain open.
 
 ### Codec work is bounded by the resource set
 
