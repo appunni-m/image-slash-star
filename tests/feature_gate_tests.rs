@@ -1894,9 +1894,12 @@ fn png_iend_crc_recovery_keeps_verification_strict() -> Result<(), Box<dyn std::
     );
 
     let source = EncodedImage::new(bytes)?;
-    let error = source
-        .verify()
-        .expect_err("Rust structural verification must keep rejecting the bad IEND CRC");
+    let error = source.verify().err().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Rust structural verification must keep rejecting the bad IEND CRC",
+        )
+    })?;
     assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
     assert_eq!(error.stage(), Some(ImageErrorStage::Verification));
     assert_eq!(error.offset(), Some(iend_offset as u64));
