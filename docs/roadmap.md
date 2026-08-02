@@ -1141,9 +1141,9 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`47a6aa5c-2d9f-49e7-920d-2e99905e4ebd`, submitted against
+`570661f6-f628-427a-8663-505ee665707e`, submitted against
 `0bc56ba272307e789be49c91761189f63e3ce3b0`; it passed 859 checks with zero
-failures in 980,114 ms, and its terminal log records `capability tables OK: every native
+failures in 1,453,001 ms, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
 
