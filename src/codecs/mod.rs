@@ -1010,12 +1010,15 @@ pub(crate) fn encode_format_to_sink_with_token(
             image
                 .validate()
                 .map_err(|error| error.with_format(format))?;
-            let EncodeOptions::Tiff(options) = options else {
-                return Err(option_format_mismatch(
-                    format,
-                    options,
-                    ImageErrorStage::StillEncode,
-                ));
+            let options = match options {
+                EncodeOptions::Tiff(options) => options,
+                options => {
+                    return Err(option_format_mismatch(
+                        format,
+                        options,
+                        ImageErrorStage::StillEncode,
+                    ));
+                }
             };
             let encoded = tiff::encode::encode_to_sink(
                 image,
@@ -1221,12 +1224,15 @@ pub(crate) fn encode_sequence_to_sink_with_token(
             ))]
             ensure_available(format)?;
             let frame = single_frame_for_sink(sequence, format)?;
-            let EncodeOptions::Tiff(options) = options else {
-                return Err(option_format_mismatch(
-                    format,
-                    options,
-                    ImageErrorStage::SequenceEncode,
-                ));
+            let options = match options {
+                EncodeOptions::Tiff(options) => options,
+                options => {
+                    return Err(option_format_mismatch(
+                        format,
+                        options,
+                        ImageErrorStage::SequenceEncode,
+                    ));
+                }
             };
             let encoded = tiff::encode::encode_to_sink(
                 &frame.image,
