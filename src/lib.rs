@@ -845,7 +845,8 @@ pub fn encode_with_policy(
 /// row prediction, and PackBits/LZW compression checkpoints; PNG and BMP poll
 /// row preparation and structural segments in still and one-frame fallback
 /// paths; GIF still encoding also polls block/frame/coalescing/output-assembly
-/// checkpoints. Other whole-buffer still codecs currently observe only the public
+/// checkpoints, and WebP still encoding polls preparation, codec-result, and
+/// metadata-assembly boundaries. Other whole-buffer still codecs currently observe only the public
 /// boundary. The sequence API additionally checks at retained-frame
 /// boundaries and codec-specific checkpoints.
 ///
