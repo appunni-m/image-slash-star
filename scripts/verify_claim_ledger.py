@@ -35,6 +35,7 @@ HASHED_FILES = {
     "capability_tables": "tests/fixtures/capability_tables.json",
     "incremental_input": "tests/fixtures/incremental_input_manifest.json",
     "diagnostic": "tests/fixtures/diagnostic_manifest.json",
+    "coverage_origins": "tests/fixtures/coverage_origin_manifest.json",
 }
 
 DOCS = [

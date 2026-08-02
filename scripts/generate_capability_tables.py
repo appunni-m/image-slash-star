@@ -115,7 +115,7 @@ def wasi_executable(args: list[str]) -> Path:
             and message.get("executable", "").endswith(".wasm")
         ):
             return Path(message["executable"])
-    raise RuntimeError("cargo did not report a capability_table WASM executable")
+    raise RuntimeError("cargo did not report a feature_gate_tests WASM executable")
 
 
 def run_wasi_probe(lane: str, triple: str) -> dict:
