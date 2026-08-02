@@ -10,8 +10,9 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// checkpoints reached by an encode, including the PNG adaptive-filter and
 /// filtered-row checkpoints charged after each 1,024 row bytes, the lossy
 /// WebP VP8 analysis/partition stages, and the lossless WebP VP8L
-/// pixel/entropy/transform/bitstream stages; it is a work-control bound, not a
-/// CPU-time or allocation guarantee.
+/// pixel/entropy/transform/bitstream stages plus bounded backward-reference
+/// and token-stream intervals; it is a work-control bound, not a CPU-time or
+/// allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct EncodePolicy {
@@ -56,7 +57,8 @@ impl EncodePolicy {
     /// WebP VP8 encoding charges checkpoints between its major analysis,
     /// mode-selection, probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around its pixel, entropy, transform, and
-    /// bitstream stages.
+    /// bitstream stages plus bounded backward-reference and token-stream
+    /// intervals.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]

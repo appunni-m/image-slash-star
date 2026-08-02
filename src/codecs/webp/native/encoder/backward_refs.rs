@@ -35,6 +35,14 @@ const HASH_MULTIPLIER_HI: u32 = 0xc6a4_a793;
 const HASH_MULTIPLIER_LO: u32 = 0x5bd1_e996;
 const COLOR_HASH_MUL: u32 = 0x1e35_a7bd;
 
+type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
+type CheckpointResult<T> = Result<T, super::EncodingError>;
+
+#[inline]
+fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
+    super::check_token(token)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Token {
     Literal(u32),
@@ -49,33 +57,53 @@ fn pair_hash(pixels: &[u32], position: usize) -> usize {
     (key >> (32 - HASH_BITS)) as usize
 }
 
-fn match_length(pixels: &[u32], first: usize, second: usize, limit: usize) -> usize {
+fn match_length(
+    pixels: &[u32],
+    first: usize,
+    second: usize,
+    limit: usize,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<usize> {
     let mut length = 0;
     while length < limit && pixels[first + length] == pixels[second + length] {
         length += 1;
+        if length.is_multiple_of(256) {
+            checkpoint(token)?;
+        }
     }
-    length
+    Ok(length)
 }
 
 /// Builds the same best-distance/best-length table as `VP8LHashChainFill()`.
-fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, usize)> {
+fn fill_hash_chain(
+    pixels: &[u32],
+    width: usize,
+    quality: u32,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<(usize, usize)>> {
     let size = pixels.len();
     let mut result = vec![(0, 0); size];
     if size <= 2 {
-        return result;
+        return Ok(result);
     }
 
     let mut first = vec![-1_i32; HASH_SIZE];
     let mut chain = vec![-1_i32; size];
-    let mut position = 0;
+    let mut position: usize = 0;
     let mut equal_pair = pixels[0] == pixels[1];
     while position < size - 2 {
+        if position != 0 && position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         let next_equal_pair = pixels[position + 1] == pixels[position + 2];
         if equal_pair && next_equal_pair {
             let color = pixels[position];
             let mut run = 1;
             while position + run + 2 < size && pixels[position + run + 2] == color {
                 run += 1;
+                if run.is_multiple_of(256) {
+                    checkpoint(token)?;
+                }
             }
             if run > MAX_LENGTH {
                 position += run - MAX_LENGTH;
@@ -114,6 +142,9 @@ fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, us
     .min(WINDOW_SIZE);
     let mut base = size - 2;
     while base > 0 {
+        if base.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         let max_length = MAX_LENGTH.min(size - 1 - base);
         let mut remaining = iterations;
         let mut best_length = 0;
@@ -121,14 +152,14 @@ fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, us
         let minimum = base.saturating_sub(window_size);
 
         if base >= width {
-            let current = match_length(pixels, base - width, base, max_length);
+            let current = match_length(pixels, base - width, base, max_length, token)?;
             if current > best_length {
                 best_length = current;
                 best_distance = width;
             }
             remaining -= 1;
         }
-        let current = match_length(pixels, base - 1, base, max_length);
+        let current = match_length(pixels, base - 1, base, max_length, token)?;
         if current > best_length {
             best_length = current;
             best_distance = 1;
@@ -141,7 +172,7 @@ fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, us
             remaining -= 1;
             let candidate_index = candidate as usize;
             if pixels[candidate_index + best_length] == pixels[base + best_length] {
-                let current = match_length(pixels, candidate_index, base, max_length);
+                let current = match_length(pixels, candidate_index, base, max_length, token)?;
                 if current > best_length {
                     best_length = current;
                     best_distance = base - candidate_index;
@@ -173,14 +204,24 @@ fn fill_hash_chain(pixels: &[u32], width: usize, quality: u32) -> Vec<(usize, us
             }
         }
     }
-    result
+    Ok(result)
 }
 
-fn lz77(pixels: &[u32], width: usize, chain: &[(usize, usize)]) -> Vec<Token> {
+fn lz77(
+    pixels: &[u32],
+    width: usize,
+    chain: &[(usize, usize)],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<Token>> {
     let mut refs = Vec::new();
     let mut position = 0;
     let mut last_check: isize = -1;
+    let mut next_checkpoint = 1024;
     while position < pixels.len() {
+        if position >= next_checkpoint {
+            checkpoint(token)?;
+            next_checkpoint = position.saturating_add(1024);
+        }
         let (distance, initial_length) = chain[position];
         let mut length = initial_length;
         if length >= MIN_LENGTH {
@@ -191,6 +232,10 @@ fn lz77(pixels: &[u32], width: usize, chain: &[(usize, usize)]) -> Vec<Token> {
             for (offset, &(_, next_length)) in chain[check_start..=maximum_check].iter().enumerate()
             {
                 let next = check_start + offset;
+                if next >= next_checkpoint {
+                    checkpoint(token)?;
+                    next_checkpoint = next.saturating_add(1024);
+                }
                 let reach = next
                     + if next_length >= MIN_LENGTH {
                         next_length
@@ -216,19 +261,22 @@ fn lz77(pixels: &[u32], width: usize, chain: &[(usize, usize)]) -> Vec<Token> {
         position += length;
     }
     let _ = width;
-    refs
+    Ok(refs)
 }
 
-fn rle(pixels: &[u32], width: usize) -> Vec<Token> {
+fn rle(pixels: &[u32], width: usize, token: CheckpointToken<'_>) -> CheckpointResult<Vec<Token>> {
     let mut refs = vec![Token::Literal(pixels[0])];
     let mut position = 1;
     while position < pixels.len() {
+        if position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         let maximum = MAX_LENGTH.min(pixels.len() - position);
-        let run_length = match_length(pixels, position, position - 1, maximum);
+        let run_length = match_length(pixels, position, position - 1, maximum, token)?;
         let previous_row_length = if position < width {
             0
         } else {
-            match_length(pixels, position, position - width, maximum)
+            match_length(pixels, position, position - width, maximum, token)?
         };
         if run_length >= previous_row_length && run_length >= MIN_LENGTH {
             refs.push(Token::Copy {
@@ -247,19 +295,27 @@ fn rle(pixels: &[u32], width: usize) -> Vec<Token> {
             position += 1;
         }
     }
-    refs
+    Ok(refs)
 }
 
-fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec<(usize, usize)> {
+fn box_chain(
+    pixels: &[u32],
+    width: usize,
+    best_chain: &[(usize, usize)],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<(usize, usize)>> {
     const WINDOW_OFFSETS_SIZE_MAX: usize = 32;
 
     let mut chain = vec![(0, 0); pixels.len()];
     if pixels.len() < 2 {
-        return chain;
+        return Ok(chain);
     }
 
     let mut counts = vec![1_u16; pixels.len()];
     for position in (0..pixels.len() - 1).rev() {
+        if position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         if pixels[position] == pixels[position + 1] {
             counts[position] = counts[position + 1]
                 .saturating_add(u16::from(usize::from(counts[position + 1]) != MAX_LENGTH));
@@ -299,6 +355,9 @@ fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec
     let mut previous_offset = 0;
     let mut previous_length = 0;
     for position in 1..pixels.len() {
+        if position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         let (mut best_offset, mut best_length) = best_chain[position];
         let recompute = best_length < MAX_LENGTH || !window_offsets.contains(&best_offset);
         if recompute {
@@ -319,6 +378,7 @@ fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec
                 }
                 let mut current = position;
                 let mut length = 0;
+                let mut next_checkpoint = 256;
                 loop {
                     let candidate_count = usize::from(counts[candidate]);
                     let current_count = usize::from(counts[current]);
@@ -327,6 +387,10 @@ fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec
                         break;
                     }
                     length += candidate_count;
+                    if length >= next_checkpoint {
+                        checkpoint(token)?;
+                        next_checkpoint = length.saturating_add(256);
+                    }
                     candidate += candidate_count;
                     current += current_count;
                     if length > MAX_LENGTH
@@ -355,34 +419,42 @@ fn box_chain(pixels: &[u32], width: usize, best_chain: &[(usize, usize)]) -> Vec
             previous_length = best_length;
         }
     }
-    chain
+    Ok(chain)
 }
 
 fn color_hash(pixel: u32, bits: u8) -> usize {
     (pixel.wrapping_mul(COLOR_HASH_MUL) >> (32 - bits)) as usize
 }
 
-fn with_cache(pixels: &[u32], refs: &[Token], bits: u8) -> Vec<Token> {
+fn with_cache(
+    pixels: &[u32],
+    refs: &[Token],
+    bits: u8,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<Token>> {
     if bits == 0 {
-        return refs.to_vec();
+        return Ok(refs.to_vec());
     }
     let mut cache = vec![0_u32; 1 << bits];
     let mut output = Vec::with_capacity(refs.len());
-    let mut position = 0;
-    for &token in refs {
-        match token {
+    let mut position: usize = 0;
+    for &reference in refs {
+        if position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
+        match reference {
             Token::Literal(pixel) => {
                 let key = color_hash(pixel, bits);
                 if cache[key] == pixel {
                     output.push(Token::Cache(key));
                 } else {
-                    output.push(token);
+                    output.push(reference);
                     cache[key] = pixel;
                 }
                 position += 1;
             }
             Token::Copy { length, .. } => {
-                output.push(token);
+                output.push(reference);
                 for &pixel in &pixels[position..position + length] {
                     let key = color_hash(pixel, bits);
                     cache[key] = pixel;
@@ -392,7 +464,7 @@ fn with_cache(pixels: &[u32], refs: &[Token], bits: u8) -> Vec<Token> {
             Token::Cache(_) => unreachable!(),
         }
     }
-    output
+    Ok(output)
 }
 
 fn prefix(value: usize) -> (usize, u8) {
@@ -807,10 +879,13 @@ fn trace_backwards(
     chain: &[(usize, usize)],
     source: &[Token],
     cache_bits: u8,
-) -> Vec<Token> {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<Token>> {
+    checkpoint(token)?;
     const SCALE: i64 = 1 << 23;
     let model = cost_model(source, cache_bits, width);
     let mut manager = CostManager::new(pixels.len(), &model);
+    checkpoint(token)?;
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
 
     let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
@@ -843,7 +918,12 @@ fn trace_backwards(
     let mut first_constant = false;
     let mut reach = 0_usize;
 
+    let mut next_checkpoint = 1024;
     for position in 1..pixels.len() {
+        if position >= next_checkpoint {
+            checkpoint(token)?;
+            next_checkpoint = position.saturating_add(1024);
+        }
         let previous_cost = manager.costs[position - 1];
         let (distance, maximum_length) = chain[position];
         add_literal(position, previous_cost, &mut manager);
@@ -864,7 +944,12 @@ fn trace_backwards(
                 if position + maximum_length - 1 > reach {
                     let mut split = position;
                     let mut split_length = 0;
+                    let mut split_checkpoint = split.saturating_add(256);
                     while split <= reach {
+                        if split >= split_checkpoint {
+                            checkpoint(token)?;
+                            split_checkpoint = split.saturating_add(256);
+                        }
                         let (next_offset, next_length) = chain[split + 1];
                         split_length = next_length;
                         if next_offset != distance {
@@ -888,6 +973,9 @@ fn trace_backwards(
     let mut path = Vec::new();
     let mut end = pixels.len();
     while end != 0 {
+        if end.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         let length = manager.lengths[end - 1];
         path.push(length);
         end -= length;
@@ -896,8 +984,11 @@ fn trace_backwards(
 
     let mut output = Vec::with_capacity(path.len());
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
-    let mut position = 0;
+    let mut position: usize = 0;
     for length in path {
+        if position.is_multiple_of(1024) {
+            checkpoint(token)?;
+        }
         if length == 1 {
             let pixel = pixels[position];
             if cache_bits != 0 {
@@ -925,7 +1016,7 @@ fn trace_backwards(
         }
         position += length;
     }
-    output
+    Ok(output)
 }
 
 pub(super) fn candidates(
@@ -934,41 +1025,59 @@ pub(super) fn candidates(
     allow_cache: bool,
     quality: u32,
     max_cache_bits: u8,
-) -> Vec<(Vec<Token>, u8)> {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<(Vec<Token>, u8)>> {
     if pixels.is_empty() {
-        return vec![(Vec::new(), 0)];
+        return Ok(vec![(Vec::new(), 0)]);
     }
-    let chain = fill_hash_chain(pixels, width, quality);
-    let choose_cache = |source: Vec<Token>| {
+    let chain = fill_hash_chain(pixels, width, quality, token)?;
+    let choose_cache = |source: Vec<Token>| -> CheckpointResult<(Vec<Token>, u8, u64)> {
         let maximum = if allow_cache { max_cache_bits } else { 0 };
         // The inclusive range always contains cache-bit value zero.
-        #[allow(clippy::unwrap_used)]
-        let (tokens, bits, _) = (0..=maximum)
-            .map(|bits| {
-                let cached = with_cache(pixels, &source, bits);
-                let cost = cache_estimated_bits(&cached, bits);
-                (cached, bits, cost)
-            })
-            .min_by_key(|candidate| candidate.2)
-            .unwrap();
+        let mut best = None;
+        for bits in 0..=maximum {
+            checkpoint(token)?;
+            let cached = with_cache(pixels, &source, bits, token)?;
+            let cost = cache_estimated_bits(&cached, bits);
+            if best
+                .as_ref()
+                .is_none_or(|(_, _, best_cost)| cost < *best_cost)
+            {
+                best = Some((cached, bits, cost));
+            }
+        }
+        let Some((tokens, bits, _)) = best else {
+            unreachable!("the inclusive cache-bit range is never empty");
+        };
         let cost = estimated_bits(&tokens, bits);
-        (tokens, bits, cost)
+        checkpoint(token)?;
+        Ok((tokens, bits, cost))
     };
-    let improve = |mut candidate: (Vec<Token>, u8, u64), source_chain: &[(usize, usize)]| {
+    let improve = |mut candidate: (Vec<Token>, u8, u64),
+                   source_chain: &[(usize, usize)]|
+     -> CheckpointResult<(Vec<Token>, u8, u64)> {
         if quality >= 25 {
-            let traced = trace_backwards(pixels, width, source_chain, &candidate.0, candidate.1);
+            checkpoint(token)?;
+            let traced = trace_backwards(
+                pixels,
+                width,
+                source_chain,
+                &candidate.0,
+                candidate.1,
+                token,
+            )?;
             let cost = estimated_bits(&traced, candidate.1);
             if cost < candidate.2 {
                 candidate = (traced, candidate.1, cost);
             }
         }
-        candidate
+        Ok(candidate)
     };
 
-    let standard = choose_cache(lz77(pixels, width, &chain));
-    let rle = choose_cache(rle(pixels, width));
+    let standard = choose_cache(lz77(pixels, width, &chain, token)?)?;
+    let rle = choose_cache(rle(pixels, width, token)?)?;
     let mut primary = if standard.2 <= rle.2 {
-        improve(standard, &chain)
+        improve(standard, &chain)?
     } else {
         rle
     };
@@ -977,17 +1086,21 @@ pub(super) fn candidates(
     // libwebp evaluates its low-distance "box" chain as a separate crunch
     // configuration for palette images containing at most sixteen colors.
     if allow_cache && max_cache_bits <= 4 {
-        let chain = box_chain(pixels, width, &chain);
-        let mut box_candidate = improve(choose_cache(lz77(pixels, width, &chain)), &chain);
+        let chain = box_chain(pixels, width, &chain, token)?;
+        let mut box_candidate =
+            improve(choose_cache(lz77(pixels, width, &chain, token)?)?, &chain)?;
         result.push((std::mem::take(&mut box_candidate.0), box_candidate.1));
     }
-    result
+    Ok(result)
 }
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    assert_eq!(candidates(&[], 1, true, 80, 0).len(), 1);
-    let _ = candidates(&[0xff00_0000; MAX_LENGTH + 4], 1, false, 60, 0);
+    assert_eq!(
+        candidates(&[], 1, true, 80, 0, None).map(|items| items.len()),
+        Ok(1)
+    );
+    let _ = candidates(&[0xff00_0000; MAX_LENGTH + 4], 1, false, 60, 0, None);
     let alternating = (0..MAX_LENGTH + 260)
         .map(|index| {
             if index % 2 == 0 {
@@ -997,7 +1110,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }
         })
         .collect::<Vec<_>>();
-    let _ = candidates(&alternating, 2, false, 100, 0);
+    let _ = candidates(&alternating, 2, false, 100, 0, None);
     let long_periodic = (0..(MAX_LENGTH * 3 + 8))
         .map(|index| {
             if index % 2 == 0 {
@@ -1007,7 +1120,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }
         })
         .collect::<Vec<_>>();
-    let _ = candidates(&long_periodic, 2, false, 100, 0);
+    let _ = candidates(&long_periodic, 2, false, 100, 0, None);
 
     // Defensive optimizer-state model (TST-010), not Pillow parity evidence.
     // `box_chain` consumes a hash-chain heuristic whose retained offset/length
@@ -1019,7 +1132,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut retained_chain = vec![(0, 0); long_uniform.len()];
     retained_chain[1] = (1, MAX_LENGTH);
     retained_chain[MAX_LENGTH + 1] = (MAX_LENGTH + 1, MAX_LENGTH);
-    let _ = box_chain(&long_uniform, 1, &retained_chain);
+    let _ = box_chain(&long_uniform, 1, &retained_chain, None);
 
     let _ = fast_slog(70_000);
     let _ = prefix(300);
@@ -1135,10 +1248,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 length: 5,
             },
         ];
-        let _ = trace_backwards(&pixels, 1, &chain, &source, 0);
+        let _ = trace_backwards(&pixels, 1, &chain, &source, 0, None);
     });
     let _ = std::panic::catch_unwind(|| {
-        let _ = with_cache(&[0xff00_0000], &[Token::Cache(0)], 1);
+        let _ = with_cache(&[0xff00_0000], &[Token::Cache(0)], 1, None);
     });
 }
 
