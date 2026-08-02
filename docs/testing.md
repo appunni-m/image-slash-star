@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`045a908a580024212a03a1bb96dd83bdc27aa4ba`; the claim-ledger baseline remains
+`0e647e9b3eab31b704b7d2262525ab90a2f835e5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -374,7 +374,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`045a908a580024212a03a1bb96dd83bdc27aa4ba`, the generated matrix reports:
+`0e647e9b3eab31b704b7d2262525ab90a2f835e5`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1232,7 +1232,7 @@ and ends with `capability tables OK: every native and wasm32-wasip1 lane
 agrees`. These aggregate and target-matrix results remain implementation
 evidence, separate from Pillow parity.
 
-The current implementation revision is
+The runtime optimization acceptance revision was
 `045a908a580024212a03a1bb96dd83bdc27aa4ba`. The test-runtime follow-up adds a
 lightly optimized Cargo test profile (`opt-level = 1`) for the codec-heavy
 parity and coverage binaries; the feature-matrix script explicitly resets its
@@ -1249,6 +1249,31 @@ ingested snapshot `a893e8ad-895b-40cb-9106-f776d44b62a8`; it retains
 its log has no package-cache or build-directory lock-wait matches and ends
 with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
 These are observed execution records, not universal benchmark claims.
+
+The current PNG interior work-budget slice is implemented at
+`0e647e9b3eab31b704b7d2262525ab90a2f835e5`: adaptive filter scoring and
+filtered-row emission charge a checkpoint after each 1,024 row bytes in still
+and one-frame sequence paths. This is Rust-only evidence because Pillow
+exposes neither a caller token nor a work-budget result; the contract test
+proves the typed `EncodeWorkUnits` error and an untouched sink before any
+structural write. The no-token encoder path is unchanged, so no parity row,
+fixture, diagnostic field, or coverage-only hook was added.
+
+Managed Pillow parity run `bad36d4a-c88f-4384-91ba-5f9df79eea6e` passed
+1,445/1,445 checks with zero failures or skips in 761 ms. Coverage MCP run
+`af8efaba-fdb4-4c89-bb4d-577a9881a958` passed 83/83 tests in 44,235 ms and
+ingested snapshot `a00cbf8e-c8f8-491e-981f-95ab9a34c358`; it reports
+48,755/49,125 lines, 6,679/6,740 branches, 2,734/2,801 functions, and
+75,938/76,421 regions. The changed PNG encoder file is 599/599 lines,
+62/62 branches, 44/44 functions, and 1,014/1,016 regions; Coverage MCP
+records the LLVM segment normalization warning for aggregate regions. Feature
+matrix run `a1a01a8d-f719-42b7-930e-ffcc97273c36` passed 947/947 checks in
+64,537 ms; its retained log has no package-cache or build-directory lock-wait
+matches and ends with `capability tables OK: every native and wasm32-wasip1
+lane agrees`. These are observed implementation and target-matrix records,
+separate from Pillow parity. Interior work in other codec rows, deeper
+Deflate/structural interruption, allocation accounting, and rollback remain
+open.
 
 Historical claim-ledger acceptance record:
 
