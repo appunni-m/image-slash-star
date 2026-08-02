@@ -1753,11 +1753,10 @@ fn encode_lzw_with_token(
     writer.write(clear_code, code_size);
 
     let mut prefix = u16::from(indices[0]);
-    for &suffix in &indices[1..] {
-        crate::codecs::error::check_cancelled(token)?;
+    let mut encode_suffix = |suffix: u8| {
         if let Some(&code) = dictionary.get(&(prefix, suffix)) {
             prefix = code;
-            continue;
+            return;
         }
 
         writer.write(prefix, code_size);
@@ -1776,6 +1775,16 @@ fn encode_lzw_with_token(
             next_code = end_code.saturating_add(1);
         }
         prefix = u16::from(suffix);
+    };
+    if let Some(token) = token {
+        for &suffix in &indices[1..] {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            encode_suffix(suffix);
+        }
+    } else {
+        for &suffix in &indices[1..] {
+            encode_suffix(suffix);
+        }
     }
 
     writer.write(prefix, code_size);
