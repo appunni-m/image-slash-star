@@ -757,10 +757,18 @@ pub(super) fn compress_level6_tiff(
     crate::codecs::error::check_cancelled(token)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
-    emit_blocks(&tokens, 16_383, &mut writer);
-    output.extend_from_slice(&writer.finish());
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    crate::codecs::error::check_cancelled(token)?;
+    if let Some(token) = token {
+        let mut checkpoint = CancellationMatcherCheckpoint { token };
+        emit_blocks_with(&tokens, 16_383, &mut writer, &mut checkpoint)?;
+        checkpoint.poll()?;
+        output.extend_from_slice(&writer.finish());
+        output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+        checkpoint.poll()?;
+    } else {
+        emit_blocks(&tokens, 16_383, &mut writer);
+        output.extend_from_slice(&writer.finish());
+        output.extend_from_slice(&adler32(data).to_be_bytes());
+    }
     Ok(output)
 }
 
@@ -1878,11 +1886,25 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; BIT_COUNT_
     }
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) {
+    let mut checkpoint = NoopMatcherCheckpoint;
+    emit_blocks_with(tokens, block_tokens, writer, &mut checkpoint)
+        .expect("the no-op matcher checkpoint cannot fail");
+}
+
+fn emit_blocks_with<P: MatcherCheckpoint>(
+    tokens: &[Token],
+    block_tokens: usize,
+    writer: &mut BitWriter,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
+    checkpoint.poll()?;
     let block_count = tokens.len().div_ceil(block_tokens);
-    let uncompressed = expand_tokens(tokens);
+    let uncompressed = expand_tokens_with(tokens, checkpoint)?;
     let mut uncompressed_start = 0usize;
     for (index, block) in tokens.chunks(block_tokens).enumerate() {
+        checkpoint.poll()?;
         let stored_length = block.iter().fold(0usize, |length, token| {
             length.wrapping_add(match token {
                 Token::Literal(_) => 1,
@@ -1892,30 +1914,47 @@ fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) {
         let uncompressed_end = uncompressed_start.wrapping_add(stored_length);
         let uncompressed_block = &uncompressed[uncompressed_start..uncompressed_end];
         let final_block = index.wrapping_add(1) == block_count;
-        write_block(block, uncompressed_block, final_block, writer);
+        write_block_with(block, uncompressed_block, final_block, writer, checkpoint)?;
         uncompressed_start = uncompressed_end;
+        checkpoint.poll()?;
     }
+    Ok(())
 }
 
-fn expand_tokens(tokens: &[Token]) -> Vec<u8> {
+fn expand_tokens_with<P: MatcherCheckpoint>(
+    tokens: &[Token],
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<Vec<u8>> {
     let mut output = Vec::new();
     for token in tokens {
+        checkpoint.poll()?;
         match token {
             Token::Literal(value) => output.push(*value),
             Token::Match { length, distance } => {
-                for _ in 0..*length {
+                for (offset, _) in (0..*length).enumerate() {
+                    if offset % 1_024 == 0 {
+                        checkpoint.poll()?;
+                    }
                     let source = output.len().wrapping_sub(*distance);
                     output.push(output[source]);
                 }
             }
         }
     }
-    output
+    checkpoint.poll()?;
+    Ok(output)
 }
 
-fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer: &mut BitWriter) {
+fn write_block_with<P: MatcherCheckpoint>(
+    tokens: &[Token],
+    uncompressed: &[u8],
+    final_block: bool,
+    writer: &mut BitWriter,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:628-707.
-    let (literal_frequencies, distance_frequencies) = frequencies(tokens);
+    checkpoint.poll()?;
+    let (literal_frequencies, distance_frequencies) = frequencies_with(tokens, checkpoint)?;
     let static_literal_lengths = static_literal_lengths();
     let static_distance_lengths = [5u8; DISTANCE_CODES];
     let literal_spec = TreeSpec {
@@ -1926,6 +1965,7 @@ fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer:
         static_lengths: Some(&static_literal_lengths),
     };
     let literal_tree = build_tree(&literal_frequencies, literal_spec);
+    checkpoint.poll()?;
     let distance_spec = TreeSpec {
         elements: DISTANCE_CODES,
         max_length: MAX_BITS,
@@ -1934,12 +1974,23 @@ fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer:
         static_lengths: Some(&static_distance_lengths),
     };
     let distance_tree = build_tree(&distance_frequencies, distance_spec);
+    checkpoint.poll()?;
 
     let mut bit_frequencies = [0u32; BIT_LENGTH_CODES];
     let literal_nodes = &literal_tree.nodes;
-    scan_tree(literal_nodes, literal_tree.max_code, &mut bit_frequencies);
+    scan_tree_with(
+        literal_nodes,
+        literal_tree.max_code,
+        &mut bit_frequencies,
+        checkpoint,
+    )?;
     let distance_nodes = &distance_tree.nodes;
-    scan_tree(distance_nodes, distance_tree.max_code, &mut bit_frequencies);
+    scan_tree_with(
+        distance_nodes,
+        distance_tree.max_code,
+        &mut bit_frequencies,
+        checkpoint,
+    )?;
     let bit_length_spec = TreeSpec {
         elements: BIT_LENGTH_CODES,
         max_length: MAX_BIT_LENGTH_BITS,
@@ -1948,6 +1999,7 @@ fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer:
         static_lengths: None,
     };
     let bit_length_tree = build_tree(&bit_frequencies, bit_length_spec);
+    checkpoint.poll()?;
     let max_bit_length_index = (3..BIT_LENGTH_CODES)
         .rev()
         .find(|&index| bit_length_tree.nodes[CODE_LENGTH_ORDER[index]].length != 0)
@@ -1976,29 +2028,37 @@ fn write_block(tokens: &[Token], uncompressed: &[u8], final_block: bool, writer:
         // The stored-cost guard above proves this conversion cannot truncate.
         #[allow(clippy::cast_possible_truncation)]
         let length = uncompressed.len() as u16;
+        checkpoint.poll()?;
         writer.write_bits(u32::from(final_block), 3); // BTYPE=stored (00).
         writer.align_to_byte();
         writer.write_aligned_bytes(&length.to_le_bytes());
-        writer.write_aligned_bytes(&(!length).to_le_bytes());
-        writer.write_aligned_bytes(uncompressed);
-        return;
+        write_aligned_bytes_with(writer, &(!length).to_le_bytes(), checkpoint)?;
+        write_aligned_bytes_with(writer, uncompressed, checkpoint)?;
+        return Ok(());
     }
     if static_bytes <= dynamic_bytes {
-        emit_fixed_block(tokens, final_block, writer);
+        emit_fixed_block_with(tokens, final_block, writer, checkpoint)?;
     } else {
+        checkpoint.poll()?;
         writer.write_bits(4 | u32::from(final_block), 3); // BTYPE=dynamic (10).
         let trees = [&literal_tree, &distance_tree, &bit_length_tree];
-        send_trees(trees, max_bit_length_index, writer);
-        emit_tokens(tokens, &literal_tree, &distance_tree, writer);
+        send_trees_with(trees, max_bit_length_index, writer, checkpoint)?;
+        emit_tokens_with(tokens, &literal_tree, &distance_tree, writer, checkpoint)?;
         send_code(writer, &literal_tree, 256);
     }
+    checkpoint.poll()?;
+    Ok(())
 }
 
-fn frequencies(tokens: &[Token]) -> ([u32; LITERAL_CODES], [u32; DISTANCE_CODES]) {
+fn frequencies_with<P: MatcherCheckpoint>(
+    tokens: &[Token],
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<([u32; LITERAL_CODES], [u32; DISTANCE_CODES])> {
     let mut literal = [0u32; LITERAL_CODES];
     let mut distance = [0u32; DISTANCE_CODES];
     literal[256] = 1;
     for token in tokens {
+        checkpoint.poll()?;
         match token {
             Token::Literal(value) => {
                 let index = usize::from(*value);
@@ -2016,10 +2076,16 @@ fn frequencies(tokens: &[Token]) -> ([u32; LITERAL_CODES], [u32; DISTANCE_CODES]
             }
         }
     }
-    (literal, distance)
+    checkpoint.poll()?;
+    Ok((literal, distance))
 }
 
-fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) {
+fn scan_tree_with<P: MatcherCheckpoint>(
+    nodes: &[Node],
+    max_code: usize,
+    frequencies: &mut [u32; 19],
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:348-396.
     let mut previous_length = usize::MAX;
     let mut current_length;
@@ -2029,6 +2095,7 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) {
     let mut min_count = if next_length == 0 { 3 } else { 4 };
 
     for index in 0..=max_code {
+        checkpoint.poll()?;
         current_length = next_length;
         next_length = if index == max_code {
             u16::MAX.into()
@@ -2064,10 +2131,18 @@ fn scan_tree(nodes: &[Node], max_code: usize, frequencies: &mut [u32; 19]) {
             min_count = 4;
         }
     }
+    checkpoint.poll()?;
+    Ok(())
 }
 
-fn send_trees(trees: [&HuffmanTree; 3], max_bit_length_index: usize, writer: &mut BitWriter) {
+fn send_trees_with<P: MatcherCheckpoint>(
+    trees: [&HuffmanTree; 3],
+    max_bit_length_index: usize,
+    writer: &mut BitWriter,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     let [literal, distance, bit_length] = trees;
+    checkpoint.poll()?;
     writer.write_bits(
         low_u32(literal.max_code.wrapping_add(1).wrapping_sub(257)),
         5,
@@ -2078,18 +2153,22 @@ fn send_trees(trees: [&HuffmanTree; 3], max_bit_length_index: usize, writer: &mu
         4,
     );
     for &code in &CODE_LENGTH_ORDER[..=max_bit_length_index] {
+        checkpoint.poll()?;
         writer.write_bits(u32::from(bit_length.nodes[code].length), 3);
     }
-    send_tree(literal, literal.max_code, bit_length, writer);
-    send_tree(distance, distance.max_code, bit_length, writer);
+    send_tree_with(literal, literal.max_code, bit_length, writer, checkpoint)?;
+    send_tree_with(distance, distance.max_code, bit_length, writer, checkpoint)?;
+    checkpoint.poll()?;
+    Ok(())
 }
 
-fn send_tree(
+fn send_tree_with<P: MatcherCheckpoint>(
     tree: &HuffmanTree,
     max_code: usize,
     bit_length: &HuffmanTree,
     writer: &mut BitWriter,
-) {
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     // ⚠️ UNVERIFIED: zlib-ng 2.3.3 trees.c:401-466.
     let mut previous_length = usize::MAX;
     let mut next_length = usize::from(tree.nodes[0].length);
@@ -2097,6 +2176,7 @@ fn send_tree(
     let mut max_count = if next_length == 0 { 138 } else { 7 };
     let mut min_count = if next_length == 0 { 3 } else { 4 };
     for index in 0..=max_code {
+        checkpoint.poll()?;
         let current_length = next_length;
         next_length = if index == max_code {
             u16::MAX.into()
@@ -2138,15 +2218,19 @@ fn send_tree(
             min_count = 4;
         }
     }
+    checkpoint.poll()?;
+    Ok(())
 }
 
-fn emit_tokens(
+fn emit_tokens_with<P: MatcherCheckpoint>(
     tokens: &[Token],
     literal_tree: &HuffmanTree,
     distance_tree: &HuffmanTree,
     writer: &mut BitWriter,
-) {
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     for token in tokens {
+        checkpoint.poll()?;
         match token {
             Token::Literal(value) => send_code(writer, literal_tree, usize::from(*value)),
             Token::Match { length, distance } => {
@@ -2165,11 +2249,27 @@ fn emit_tokens(
             }
         }
     }
+    checkpoint.poll()?;
+    Ok(())
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) {
+    let mut checkpoint = NoopMatcherCheckpoint;
+    emit_fixed_block_with(tokens, final_block, writer, &mut checkpoint)
+        .expect("the no-op matcher checkpoint cannot fail");
+}
+
+fn emit_fixed_block_with<P: MatcherCheckpoint>(
+    tokens: &[Token],
+    final_block: bool,
+    writer: &mut BitWriter,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
+    checkpoint.poll()?;
     writer.write_bits(2 | u32::from(final_block), 3); // BTYPE=fixed (01).
     for token in tokens {
+        checkpoint.poll()?;
         match token {
             Token::Literal(value) => write_fixed_symbol(writer, u16::from(*value)),
             Token::Match { length, distance } => {
@@ -2189,6 +2289,8 @@ fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter)
         }
     }
     write_fixed_symbol(writer, 256);
+    checkpoint.poll()?;
+    Ok(())
 }
 
 fn send_code(writer: &mut BitWriter, tree: &HuffmanTree, symbol: usize) {
@@ -2287,11 +2389,35 @@ impl BitWriter {
     }
 }
 
+fn write_aligned_bytes_with<P: MatcherCheckpoint>(
+    writer: &mut BitWriter,
+    bytes: &[u8],
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
+    debug_assert_eq!(writer.used, 0);
+    for chunk in bytes.chunks(1_024) {
+        checkpoint.poll()?;
+        writer.write_aligned_bytes(chunk);
+    }
+    checkpoint.poll()?;
+    Ok(())
+}
+
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn adler32(data: &[u8]) -> u32 {
+    let mut checkpoint = NoopMatcherCheckpoint;
+    adler32_with(data, &mut checkpoint).expect("the no-op matcher checkpoint cannot fail")
+}
+
+fn adler32_with<P: MatcherCheckpoint>(
+    data: &[u8],
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<u32> {
     const MODULUS: u32 = 65_521;
     let mut first = 1u32;
     let mut second = 0u32;
     for chunk in data.chunks(5_552) {
+        checkpoint.poll()?;
         for &byte in chunk {
             first = first.wrapping_add(u32::from(byte));
             second = second.wrapping_add(first);
@@ -2299,5 +2425,6 @@ fn adler32(data: &[u8]) -> u32 {
         first %= MODULUS;
         second %= MODULUS;
     }
-    second.wrapping_shl(16) | first
+    checkpoint.poll()?;
+    Ok(second.wrapping_shl(16) | first)
 }
