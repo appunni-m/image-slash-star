@@ -5,8 +5,9 @@
 //! non-standard-but-accepted GIF graphic-control size, a PNG stream accepted
 //! without its `IEND` terminator, duplicate PNG palette/transparency chunks,
 //! tolerated PNG palette-shape and APNG declaration damage, an oversized PNG
-//! scanline stream whose first raster remains usable, and invalid compressed
-//! PNG ancillary metadata whose pixels remain usable.
+//! scanline stream whose first raster remains usable, invalid compressed PNG
+//! ancillary metadata whose pixels remain usable, and Pillow-deferred PNG CRC
+//! failures in image-data, terminator, APNG, and post-`IDAT` ancillary chunks.
 //! These conditions are reported as stable [`ImageDiagnostic`] records on the
 //! [`crate::Decoded`] envelope. Fields are contractual; there is deliberately
 //! no free-form prose.

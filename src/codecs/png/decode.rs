@@ -173,35 +173,29 @@ fn record_invalid_compressed_metadata(
     Ok(true)
 }
 
-fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
-    // Pillow accepts the image through `load()` but reports this CRC from
-    // `verify()`. Decode intentionally defers IDAT CRC failure to that
-    // verification boundary, so successful decode records the recovery
-    // without changing the Pillow-parity result.
-    if chunk.kind == *b"IDAT" && !chunk.crc_valid {
-        diagnostics.push(crate::ImageDiagnostic {
-            kind: crate::DiagnosticKind::RecoveredStructure,
-            format: crate::ImageFormat::Png,
-            stage: None,
-            offset: Some(chunk.offset),
-            identity: Some("png_IDAT_crc"),
-        });
+fn record_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
+    // Pillow defers CRC validation for IDAT and every chunk after the first
+    // IDAT until `verify()`. Decode keeps the usable result while exposing the
+    // invalid member through the Rust-only diagnostic contract; Rust
+    // structural verification remains strict.
+    if chunk.crc_valid {
+        return;
     }
-}
-
-fn record_iend_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
-    // Pillow accepts a bad IEND CRC through both load() and verify(). Keep the
-    // successful decode result while exposing the invalid structural member to
-    // Rust callers; the explicit Rust verify() path remains strict.
-    if chunk.kind == *b"IEND" && !chunk.crc_valid {
-        diagnostics.push(crate::ImageDiagnostic {
-            kind: crate::DiagnosticKind::RecoveredStructure,
-            format: crate::ImageFormat::Png,
-            stage: None,
-            offset: Some(chunk.offset),
-            identity: Some("png_IEND_crc"),
-        });
-    }
+    let identity = match &chunk.kind {
+        b"IDAT" => "png_IDAT_crc",
+        b"IEND" => "png_IEND_crc",
+        b"acTL" => "png_acTL_crc",
+        b"fcTL" => "png_fcTL_crc",
+        b"fdAT" => "png_fdAT_crc",
+        _ => "png_post_idat_crc",
+    };
+    diagnostics.push(crate::ImageDiagnostic {
+        kind: crate::DiagnosticKind::RecoveredStructure,
+        format: crate::ImageFormat::Png,
+        stage: None,
+        offset: Some(chunk.offset),
+        identity: Some(identity),
+    });
 }
 
 fn record_duplicate_palette_diagnostic(
@@ -512,8 +506,7 @@ pub fn decode(
     for chunk in &mut chunks {
         crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
-        record_idat_crc_diagnostic(&chunk, &mut diagnostics);
-        record_iend_crc_diagnostic(&chunk, &mut diagnostics);
+        record_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
@@ -894,6 +887,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
         position: PNG_SIGNATURE.len(),
         failed: false,
         verify_crc: false,
+        saw_idat: false,
     };
     let header = read_header(&mut chunks)?;
     let mut animation = None;
@@ -918,8 +912,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
 
     for chunk in &mut chunks {
         let chunk = chunk?;
-        record_idat_crc_diagnostic(&chunk, &mut diagnostics);
-        record_iend_crc_diagnostic(&chunk, &mut diagnostics);
+        record_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
@@ -1305,6 +1298,7 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
         position: 33,
         failed: false,
         verify_crc: true,
+        saw_idat: false,
     };
     let mut saw_image_data = false;
     for chunk in &mut chunks {
@@ -1844,6 +1838,7 @@ struct Chunks<'a> {
     position: usize,
     failed: bool,
     verify_crc: bool,
+    saw_idat: bool,
 }
 
 impl<'a> Chunks<'a> {
@@ -1854,6 +1849,7 @@ impl<'a> Chunks<'a> {
                 position: 8,
                 failed: false,
                 verify_crc,
+                saw_idat: false,
             })
         } else {
             Err(CodecError::Malformed(
@@ -1892,13 +1888,15 @@ impl<'a> Iterator for Chunks<'a> {
             )?;
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
             let start = self.position.saturating_add(8);
-            // Pillow validates construction-critical chunk CRCs while opening
-            // the file, but defers IDAT and IEND CRC validation to its later
-            // verification boundary (IEND is accepted even there by Pillow).
-            let verify_crc = self.verify_crc || !matches!(&kind, b"IDAT" | b"IEND");
+            // Pillow validates construction-critical CRCs before the first
+            // IDAT, then defers IDAT and every later chunk to its verification
+            // boundary. The explicit Rust verifier sets `verify_crc` and
+            // remains strict for all chunks.
+            let verify_crc = self.verify_crc || (!self.saw_idat && kind != *b"IDAT");
             let (payload, crc_end, crc_valid) =
                 chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
             self.position = crc_end;
+            self.saw_idat |= kind == *b"IDAT";
             Ok(Chunk {
                 kind,
                 data: payload,

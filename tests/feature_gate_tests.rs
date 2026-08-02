@@ -54,6 +54,7 @@ struct DiagnosticCase {
     stage: String,
     offset: u64,
     identity: String,
+    diagnostic_identities: Vec<String>,
     pillow_outcome: String,
 }
 
@@ -143,6 +144,7 @@ impl FromJson for DiagnosticCase {
             stage: object.take("stage")?,
             offset: object.take("offset")?,
             identity: object.take("identity")?,
+            diagnostic_identities: object.take_or_default("diagnostic_identities")?,
             pillow_outcome: object.take("pillow_outcome")?,
         })
     }
@@ -1406,6 +1408,31 @@ fn png_chunk_offset(data: &[u8], kind: &[u8; 4]) -> Result<usize, Box<dyn std::e
     Err(format!("PNG chunk {kind:?} not found").into())
 }
 
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "offsets are bounds-checked against the in-memory fixture slice"
+)]
+fn png_chunk_offset_after(
+    data: &[u8],
+    kind: &[u8; 4],
+    after: usize,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let mut position = after;
+    while position.wrapping_add(8) <= data.len() {
+        let length = u32::from_be_bytes([
+            data[position],
+            data[position + 1],
+            data[position + 2],
+            data[position + 3],
+        ]) as usize;
+        if position > after && &data[position.wrapping_add(4)..position.wrapping_add(8)] == kind {
+            return Ok(position);
+        }
+        position = position.wrapping_add(12).wrapping_add(length);
+    }
+    Err(format!("PNG chunk {kind:?} after offset {after} not found").into())
+}
+
 fn contains_chunk_type(data: &[u8], kind: &[u8; 4]) -> bool {
     data.windows(4).any(|window| window == kind)
 }
@@ -1702,31 +1729,6 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "sequence_decode" => ImageErrorStage::SequenceDecode,
             other => panic!("{}: unknown diagnostic stage `{other}`", case.id),
         };
-        let expected_identity = match case.identity.as_str() {
-            "gif_graphic_control" => "gif_graphic_control",
-            "png_zTXt" => "png_zTXt",
-            "png_iCCP" => "png_iCCP",
-            "png_iTXt" => "png_iTXt",
-            "png_IDAT_crc" => "png_IDAT_crc",
-            "png_IEND_crc" => "png_IEND_crc",
-            "png_reserved_bit" => "png_reserved_bit",
-            "png_ancillary_after_idat" => "png_ancillary_after_idat",
-            "png_missing_iend" => "png_missing_iend",
-            "png_duplicate_plte" => "png_duplicate_plte",
-            "png_duplicate_trns" => "png_duplicate_trns",
-            "png_trns_overlong" => "png_trns_overlong",
-            "png_missing_plte" => "png_missing_plte",
-            "png_empty_plte" => "png_empty_plte",
-            "png_partial_plte" => "png_partial_plte",
-            "png_trns_without_plte" => "png_trns_without_plte",
-            "png_apng_zero_frames" => "png_apng_zero_frames",
-            "png_apng_frame_count_out_of_range" => "png_apng_frame_count_out_of_range",
-            "png_duplicate_actl" => "png_duplicate_actl",
-            "png_actl_after_idat" => "png_actl_after_idat",
-            "png_actl_overlong" => "png_actl_overlong",
-            "png_oversized_scanline" => "png_oversized_scanline",
-            other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
-        };
         let base = fs::read(root.join(&case.asset_path))?;
         let bytes = match case.mutation.as_str() {
             "none" => base.clone(),
@@ -1791,16 +1793,99 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .ok_or_else(|| format!("{}: CRC is truncated", case.id))? ^= 1;
                 mutated
             }
+            "png_bad_crc_after_idat" => {
+                let kind: [u8; 4] = case
+                    .chunk_kind
+                    .as_bytes()
+                    .try_into()
+                    .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
+                let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+                let chunk_offset = png_chunk_offset_after(&base, &kind, idat_offset)?;
+                let length = u32::from_be_bytes([
+                    base[chunk_offset],
+                    base[chunk_offset + 1],
+                    base[chunk_offset + 2],
+                    base[chunk_offset + 3],
+                ]) as usize;
+                let crc_offset = chunk_offset
+                    .checked_add(8)
+                    .and_then(|offset| offset.checked_add(length))
+                    .ok_or_else(|| format!("{}: CRC offset overflow", case.id))?;
+                let mut mutated = base.clone();
+                *mutated
+                    .get_mut(crc_offset)
+                    .ok_or_else(|| format!("{}: CRC is truncated", case.id))? ^= 1;
+                mutated
+            }
+            "png_after_idat_bad_crc" => {
+                let kind: [u8; 4] = case
+                    .chunk_kind
+                    .as_bytes()
+                    .try_into()
+                    .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
+                let payload = case
+                    .chunk_payload
+                    .iter()
+                    .copied()
+                    .map(u8::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                let iend_offset = png_chunk_offset(&base, b"IEND")?;
+                let mut chunk = png_chunk(&kind, &payload);
+                *chunk
+                    .last_mut()
+                    .ok_or_else(|| format!("{}: generated chunk has no CRC", case.id))? ^= 1;
+                let mut mutated = Vec::with_capacity(base.len() + chunk.len());
+                mutated.extend_from_slice(&base[..iend_offset]);
+                mutated.extend_from_slice(&chunk);
+                mutated.extend_from_slice(&base[iend_offset..]);
+                mutated
+            }
             other => panic!("{}: unknown mutation `{other}`", case.id),
         };
 
-        let expected = ImageDiagnostic {
-            kind: expected_kind,
-            format: expected_format,
-            stage: Some(expected_stage),
-            offset: Some(case.offset),
-            identity: Some(expected_identity),
+        let diagnostic_identities = if case.diagnostic_identities.is_empty() {
+            vec![case.identity.clone()]
+        } else {
+            case.diagnostic_identities.clone()
         };
+        let expected = diagnostic_identities
+            .iter()
+            .map(|identity| ImageDiagnostic {
+                kind: expected_kind,
+                format: expected_format,
+                stage: Some(expected_stage),
+                offset: Some(case.offset),
+                identity: Some(match identity.as_str() {
+                    "gif_graphic_control" => "gif_graphic_control",
+                    "png_zTXt" => "png_zTXt",
+                    "png_iCCP" => "png_iCCP",
+                    "png_iTXt" => "png_iTXt",
+                    "png_IDAT_crc" => "png_IDAT_crc",
+                    "png_IEND_crc" => "png_IEND_crc",
+                    "png_acTL_crc" => "png_acTL_crc",
+                    "png_fcTL_crc" => "png_fcTL_crc",
+                    "png_fdAT_crc" => "png_fdAT_crc",
+                    "png_post_idat_crc" => "png_post_idat_crc",
+                    "png_reserved_bit" => "png_reserved_bit",
+                    "png_ancillary_after_idat" => "png_ancillary_after_idat",
+                    "png_missing_iend" => "png_missing_iend",
+                    "png_duplicate_plte" => "png_duplicate_plte",
+                    "png_duplicate_trns" => "png_duplicate_trns",
+                    "png_trns_overlong" => "png_trns_overlong",
+                    "png_missing_plte" => "png_missing_plte",
+                    "png_empty_plte" => "png_empty_plte",
+                    "png_partial_plte" => "png_partial_plte",
+                    "png_trns_without_plte" => "png_trns_without_plte",
+                    "png_apng_zero_frames" => "png_apng_zero_frames",
+                    "png_apng_frame_count_out_of_range" => "png_apng_frame_count_out_of_range",
+                    "png_duplicate_actl" => "png_duplicate_actl",
+                    "png_actl_after_idat" => "png_actl_after_idat",
+                    "png_actl_overlong" => "png_actl_overlong",
+                    "png_oversized_scanline" => "png_oversized_scanline",
+                    other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
+                }),
+            })
+            .collect::<Vec<_>>();
         match case.operation.as_str() {
             "decode" => {
                 let base_decoded = image_slash_star::decode(&base)?;
@@ -1811,12 +1896,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     "{} pixels",
                     case.id
                 );
-                assert_eq!(
-                    decoded.diagnostics,
-                    vec![expected],
-                    "{} diagnostic",
-                    case.id
-                );
+                assert_eq!(decoded.diagnostics, expected, "{} diagnostic", case.id);
                 if expected_format == ImageFormat::Png {
                     assert!(decoded.content.metadata.is_empty(), "{} metadata", case.id);
                     assert!(decoded.content.source_color.is_empty(), "{} color", case.id);
@@ -1831,12 +1911,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     "{} frames",
                     case.id
                 );
-                assert_eq!(
-                    sequence.diagnostics,
-                    vec![expected],
-                    "{} diagnostic",
-                    case.id
-                );
+                assert_eq!(sequence.diagnostics, expected, "{} diagnostic", case.id);
                 if expected_format == ImageFormat::Png {
                     assert!(sequence.content.metadata.is_empty(), "{} metadata", case.id);
                     assert!(
@@ -1901,6 +1976,50 @@ fn png_iend_crc_recovery_keeps_verification_strict() -> Result<(), Box<dyn std::
     assert_eq!(error.stage(), Some(ImageErrorStage::Verification));
     assert_eq!(error.offset(), Some(iend_offset as u64));
     assert_eq!(error.identity(), Some("png_chunk"));
+    Ok(())
+}
+
+#[test]
+fn png_post_idat_crc_recovery_keeps_verification_strict() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/apng_animated.png"))?;
+    let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+    for (kind, identity) in [(b"fcTL", "png_fcTL_crc"), (b"fdAT", "png_fdAT_crc")] {
+        let chunk_offset = png_chunk_offset_after(&base, kind, idat_offset)?;
+        let length = u32::from_be_bytes([
+            base[chunk_offset],
+            base[chunk_offset + 1],
+            base[chunk_offset + 2],
+            base[chunk_offset + 3],
+        ]) as usize;
+        let crc_offset = chunk_offset + 8 + length;
+        let mut bytes = base.clone();
+        bytes[crc_offset] ^= 1;
+
+        let decoded = image_slash_star::decode(&bytes)?;
+        assert_eq!(
+            decoded.diagnostics,
+            vec![ImageDiagnostic {
+                kind: DiagnosticKind::RecoveredStructure,
+                format: ImageFormat::Png,
+                stage: Some(ImageErrorStage::StillDecode),
+                offset: Some(chunk_offset as u64),
+                identity: Some(identity),
+            }]
+        );
+        let source = EncodedImage::new(bytes)?;
+        let error = source.verify().err().ok_or_else(|| {
+            std::io::Error::other("Rust structural verification must reject a bad post-IDAT CRC")
+        })?;
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+        assert_eq!(error.stage(), Some(ImageErrorStage::Verification));
+        assert_eq!(error.offset(), Some(chunk_offset as u64));
+        assert_eq!(error.identity(), Some("png_chunk"));
+    }
     Ok(())
 }
 
