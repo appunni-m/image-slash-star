@@ -14,6 +14,13 @@ use image_slash_star::{
 
 mod support;
 
+// The feature matrix already builds this test target in every native and
+// WASI lane. Keeping the capability probe here lets the runtime-table check
+// reuse those compiled artifacts instead of compiling a second integration
+// test target after the matrix completes.
+#[path = "capability_table.rs"]
+mod capability_table;
+
 use support::json::{self, FromJson, Object, Value};
 
 struct CoverageMatrix {
