@@ -802,9 +802,10 @@ pub(crate) fn encode_format_with_token(
             #[cfg(feature = "bmp")]
             (ImageFormat::Bmp, EncodeOptions::Bmp(options)) => bmp::encode::encode(_image, options),
             #[cfg(feature = "tiff")]
-            (ImageFormat::Tiff, EncodeOptions::Tiff(options)) => {
-                tiff::encode::encode(_image, options)
-            }
+            (ImageFormat::Tiff, EncodeOptions::Tiff(options)) => match token {
+                Some(token) => tiff::encode::encode_with_token(_image, options, Some(token)),
+                None => tiff::encode::encode(_image, options),
+            },
             #[cfg(feature = "webp")]
             (ImageFormat::WebP, EncodeOptions::WebP(options)) => {
                 webp::encode::encode(_image, options)
