@@ -5398,6 +5398,45 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert_eq!(mismatched_bmp_sequence_sink.writes, 0);
             assert!(mismatched_bmp_sequence_sink.bytes.is_empty());
 
+            let mut multiple_bmp_sequence = bmp_sequence.clone();
+            multiple_bmp_sequence
+                .frames
+                .push(multiple_bmp_sequence.frames[0].clone());
+            multiple_bmp_sequence.kind = image_slash_star::SequenceKind::TimedAnimation;
+            let mut multiple_bmp_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let multiple_bmp_sequence_error = match image_slash_star::encode_sequence_to_sink(
+                &multiple_bmp_sequence,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &mut multiple_bmp_sequence_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "BMP sequence accepted multiple frames and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                multiple_bmp_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::Unsupported
+            );
+            assert_eq!(
+                multiple_bmp_sequence_error.unsupported_reason(),
+                Some(UnsupportedReason::NotImplemented)
+            );
+            assert_eq!(multiple_bmp_sequence_error.format(), Some(ImageFormat::Bmp));
+            assert_eq!(
+                multiple_bmp_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(multiple_bmp_sequence_sink.writes, 0);
+            assert!(multiple_bmp_sequence_sink.bytes.is_empty());
+
             let mut limited_bmp_sequence = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
