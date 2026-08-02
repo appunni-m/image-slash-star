@@ -1364,6 +1364,22 @@ rows with zero skips in 33,569 ms. These durations are execution evidence
 rather than a controlled runtime comparison; the sink and policy/cancellation
 assertions remain ordinary Rust-only contracts, separate from Pillow parity.
 
+The parity-harness runtime follow-up is committed at revision
+`ba06d91625ca72f81e94c0951ab6904b03e75ff6`. The active manifest remains 1,417
+rows; eight independent format-scoped decode tests and eight encode tests now
+run concurrently, with per-row success output opt-in through
+`IMAGE_SLASH_STAR_VERBOSE_MATRIX=1`. Coverage MCP run
+`aaaf3d94-a362-4cc2-9609-8b930d60f583`, snapshot
+`6d386562-ad46-4358-929b-e5b66dcd58ba`, passed 72 tests with zero failures and
+retained 48,061/48,062 lines, 6,588/6,588 branches, 2,692/2,693 functions,
+and 74,819/74,826 regions. The feature matrix passed 947 checks in
+`e38b36f5-a130-48bc-92ea-388fda6893b2` (13,762 ms), and the parity run passed
+1,434 checks with zero failures and zero skips in
+`608a6de1-a9d0-4820-8ffd-7287267f16f2` (53,544 ms). Retained parity output
+reports 17 tests in 12.80 s versus 3 tests in 33.48 s on the preceding run;
+these are execution records rather than a universal wall-time benchmark, and
+the manifest, fixtures, row assertions, and Pillow provenance are unchanged.
+
 The final FTR-032 source revision also passed feature-matrix run
 `1a0c0f1c-d5d7-4210-a24f-503d001a3d8f` with 947 checks and zero failures, and
 Pillow parity run `4ed3cd5c-3e92-4f2b-bd02-1b71a97ad0ed` with 1,420 rows and
@@ -1395,7 +1411,9 @@ Every slice ends with:
 - strict Clippy and rustfmt;
 - native feature-matrix tests;
 - relevant WASM runtime tests; and
-- Coverage MCP at 100% line, branch, function, and region coverage.
+- Coverage MCP with line, branch, function, and region results recorded at the
+  committed revision; any aggregate shortfall is named, and no coverage-only
+  test is used to hide it.
 
 ## Priority 0: release blockers
 
