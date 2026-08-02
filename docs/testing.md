@@ -162,9 +162,9 @@ used to manufacture these paths: real fixtures and the defensive manifest
 drive them. The oversized-scanline status is returned by the existing bounded
 one-pass inflater; no second decompression or coverage-only hook is used.
 
-The overlap between the two inventories is deliberately narrow. Of the 54
+The overlap between the two inventories is deliberately narrow. Of the 61
 diagnostic cases, 38 use committed bytes that also have a Pillow parity row, so
-those rows prove only the shared outer success/pixel result. The other 16 cases
+those rows prove only the shared outer success/pixel result. The other 23 cases
 construct runtime mutations from parity baselines (bad CRCs, reserved-bit or
 ordering changes, and invalid compressed metadata); those mutated bytes are
 not `coverage_matrix.json` rows and must not be counted as Pillow-parity
@@ -173,6 +173,14 @@ with the unmodified baseline only to assert the Rust recovery invariant. Its
 `pillow_outcome` field is supporting fixture annotation, not a live Pillow
 diagnostic result, and no parity row can legitimately assert `DiagnosticKind`,
 stage, offset, or identity because Pillow does not return those fields.
+
+`python3 scripts/verify_diagnostic_provenance.py` performs this distinction as
+a static audit: it checks the `defensive_model` origin, confirms the 38
+unchanged cases map to active parity baselines, confirms the 23 named cases are
+runtime mutations, rejects Rust-only diagnostic or mutation fields in the
+Pillow matrix, and checks these counts in the maintained docs. It executes no
+Rust test and contributes no coverage; it prevents the provenance statement
+from becoming stale as the defensive manifest grows.
 
 The separate `png_unsupported_compressed_metadata_methods_remain_fatal`
 contract covers that Pillow-observable fatal boundary for valid-shape non-zero
@@ -993,6 +1001,7 @@ report answers "which implementation paths executed?"; it does not answer
 | Defensive/specification contracts | `diagnostic_manifest.json`, decode/sequence policy manifests, feature-gate and other table-driven contract tests | Stable Rust fields and behavior that are required even when Pillow has no equivalent result field; unchanged Pillow output is supporting fixture evidence where available | A Pillow warning/diagnostic that the oracle never returned |
 | Aggregate coverage | CI/Coverage MCP `cargo llvm-cov --all-features --branch --json` over the complete test suite | Execution coverage across parity tests, defensive contracts, and permitted private `cfg(coverage)` state models | Parity completeness, semantic correctness, security, or production readiness |
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
+| Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
