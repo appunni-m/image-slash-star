@@ -624,6 +624,10 @@ fn rgb_to_ycbcr(
 // libjpeg's default smoothing factor is zero, so its h2v1/h2v2 box filters
 // use alternating rounding biases to avoid a systematic upward bias.
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the helper mirrors libjpeg's sampling routine and the token is an independent checkpoint input"
+)]
 fn downsample(
     plane: &[u8],
     sw: usize,
@@ -745,6 +749,10 @@ fn fdct_quantize(
 
 // ── Baseline entropy coding (jchuff.c) ───────────────────────────────────
 
+#[allow(
+    clippy::type_complexity,
+    reason = "the pair of fixed-size DC and AC frequency tables mirrors the JPEG encoder state"
+)]
 fn baseline_frequencies(
     comps: &[CompData],
     max_h: u8,
@@ -826,6 +834,10 @@ fn baseline_frequencies(
     Ok((dc, ac))
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the helper mirrors libjpeg's entropy routine and the token is an independent checkpoint input"
+)]
 fn encode_baseline_entropy(
     out: &mut Vec<u8>,
     comps: &[CompData],
@@ -1119,6 +1131,10 @@ fn progressive_events(
     }
 }
 
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "max(1) proves the modulo divisor is non-zero for row checkpoint scheduling"
+)]
 fn dc_progressive_events(
     scan: &ProgScan,
     components: &[CompData],
@@ -1209,6 +1225,10 @@ fn dc_progressive_events(
     Ok(events)
 }
 
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "max(1) proves the modulo divisor is non-zero for row checkpoint scheduling"
+)]
 fn ac_progressive_events(
     scan: &ProgScan,
     components: &[CompData],
