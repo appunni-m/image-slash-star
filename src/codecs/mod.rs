@@ -816,9 +816,10 @@ pub(crate) fn encode_format_with_token(
                 None => tiff::encode::encode(_image, options),
             },
             #[cfg(feature = "webp")]
-            (ImageFormat::WebP, EncodeOptions::WebP(options)) => {
-                webp::encode::encode(_image, options)
-            }
+            (ImageFormat::WebP, EncodeOptions::WebP(options)) => match token {
+                Some(token) => webp::encode::encode_with_token(_image, options, Some(token)),
+                None => webp::encode::encode(_image, options),
+            },
             #[cfg(feature = "ico")]
             (ImageFormat::Ico, EncodeOptions::Ico(options)) => ico::encode::encode(_image, options),
             #[cfg(feature = "avif")]
