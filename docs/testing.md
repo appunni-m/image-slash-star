@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `574cf282be0fb7074c663116cfa575820f4ba2b7`
+Reviewed: 2026-08-02 on the working tree based on revision `a6ddb134344e6a352bf04732b87e0833e7102b7f`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -119,6 +119,12 @@ type character violates PNG's reserved-bit rule but Pillow accepts. The
 defensive manifest also records a Pillow-tolerated unknown ancillary `teSt`
 chunk after `IDAT` at offset `57`; valid APNG control and frame-data chunks
 (`acTL`, `fcTL`, and `fdAT`) are not treated as ordering recoveries. The
+manifest also records Pillow-tolerated indexed-palette shape damage
+(`png_trns_overlong`, `png_missing_plte`, `png_empty_plte`, `png_partial_plte`,
+and `png_trns_without_plte`), an APNG declaration with zero animation frames
+(`png_apng_zero_frames`), and valid inflated PNG bytes beyond the first raster
+(`png_oversized_scanline`). These cases retain the usable Pillow-observed
+pixels while their Rust-only diagnostics expose the recovered structure.
 `bad_idat_crc.png` parity row still owns the outer success/pixel result and the
 separate diagnostic rows own only the Rust `RecoveredStructure` records. The
 `missing_iend.png` parity row owns Pillow's load-success/pixel result and
@@ -131,7 +137,8 @@ Unsupported compression methods in PNG
 `zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
 remain outside this contract. No coverage-only unit or `cfg(coverage)` test is
 used to manufacture these paths: real fixtures and the defensive manifest
-drive them.
+drive them. The oversized-scanline status is returned by the existing bounded
+one-pass inflater; no second decompression or coverage-only hook is used.
 
 The separate `png_unsupported_compressed_metadata_methods_remain_fatal`
 contract covers that Pillow-observable fatal boundary for valid-shape non-zero
@@ -231,7 +238,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`574cf282be0fb7074c663116cfa575820f4ba2b7`, the generated matrix reports:
+`a6ddb134344e6a352bf04732b87e0833e7102b7f`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -609,26 +616,26 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,166 | 47,166 |
-| Branches | 6,518 | 6,518 |
-| Functions | 2,648 | 2,648 |
-| Regions | 73,511 | 73,511 |
+| Lines | 47,309 | 47,309 |
+| Branches | 6,538 | 6,538 |
+| Functions | 2,654 | 2,654 |
+| Regions | 73,651 | 73,651 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`fd4f909d-9c5b-476d-bc25-65f994802f45`, submitted against
-`574cf282be0fb7074c663116cfa575820f4ba2b7`: 859 checks passed with zero
-failures in 1,352,212 ms, and its terminal capability-table record says
+`ec3c4c20-fac4-427c-ae8f-3d996ddafbcb`, submitted against
+`a6ddb134344e6a352bf04732b87e0833e7102b7f`: 859 checks passed with zero
+failures in 1,588,924 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `e02c362c-a707-4ab5-b740-f0f157e37b6d`
+Coverage MCP run: `1512cf7a-97cb-45ba-8dd2-58b8492399a7`
 
-Snapshot: `f587cccd-4160-42aa-bc49-d02e4cf27268`
+Snapshot: `20325f1d-7f9b-464d-9e0a-f71617203cb6`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -658,7 +665,7 @@ Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 Diagnostic manifest SHA-256:
-`d924bf03e410c108703812bc07c0d68956d1cc7ceded88aebc31fa94236d95d0`
+`23d52eb92e4faa36bb2e6f371649bb0ef6d5a7e1fda19d1d52bcf26535373b74`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

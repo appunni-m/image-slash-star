@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `574cf282be0fb7074c663116cfa575820f4ba2b7`
+Reviewed: 2026-08-02 against the working tree based on `a6ddb134344e6a352bf04732b87e0833e7102b7f`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -154,6 +154,13 @@ static ordering diagnostic. A static PNG stream that reaches EOF without an
 the EOF offset; structural verification still rejects the missing terminator.
 Duplicate `PLTE` and `tRNS` chunks keep the first palette result and produce
 `png_duplicate_plte` or `png_duplicate_trns` at the ignored chunk offset.
+Pillow-tolerated indexed-palette shape damage keeps the usable first result and
+produces `png_trns_overlong`, `png_missing_plte`, `png_empty_plte`,
+`png_partial_plte`, or `png_trns_without_plte`. A zero-frame APNG declaration
+falls back to the default PNG image with `png_apng_zero_frames`, and valid
+inflated bytes beyond the first raster produce `png_oversized_scanline`. These
+are Rust-only defensive diagnostics because Pillow exposes the successful
+pixels but no equivalent structured warning field.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
