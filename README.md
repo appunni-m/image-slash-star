@@ -155,7 +155,7 @@ capabilities and setup.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; write or flush rejection is reported as `ImageError::OutputWrite`; PNG and BMP still output cross structural write boundaries |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; write or flush rejection is reported as `ImageError::OutputWrite`; JPEG, PNG, BMP, and TIFF still plus one-frame JPEG/BMP and multi-page TIFF sequence output cross structural write boundaries |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Combine token-aware encoding with a caller-owned sink; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
@@ -198,8 +198,9 @@ progress-aware otherwise.
 page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
 without publishing partial state. Token-aware encode APIs check before and
 after whole-buffer codecs; JPEG also polls internal color, sampling,
-quantization, entropy, and progressive-scan checkpoints, while PNG and BMP
-still sink encoding poll while preparing rows and between emitted segments.
+quantization, entropy, and progressive-scan checkpoints, while JPEG, PNG, and
+BMP still sink encoding poll while preparing rows and between emitted segments;
+one-frame JPEG sequence sinks reuse the same marker/scan checkpoints.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
 may leave its delivered prefix; successful sink delivery calls the sink's
@@ -458,8 +459,9 @@ is inclusive and applies to still and sequence encodes, including their sink
 wrappers: the complete encoded length must fit before it is returned or the
 first sink write, or the operation returns `LimitExceeded` with
 `ResourceLimit::EncodedOutputBytes`. Whole-buffer codecs still build their
-complete `Vec<u8>` first. The PNG and BMP still sink paths preflight their
-complete lengths, then emit validated container structures without assembling a
+complete `Vec<u8>` first. The JPEG, PNG, BMP, and TIFF still sink paths, plus
+one-frame JPEG and multi-page TIFF sequence sinks, preflight their complete
+lengths, then emit validated container structures without assembling a
 second final `Vec<u8>`; PNG's filtered rows and compressed payload remain
 transient working allocations, while BMP prepares bounded palette/row segments.
 `EncodePolicy::max_work_units` is a separate inclusive bound on the documented
@@ -512,8 +514,9 @@ contracts (`LimitExceeded` already carries the typed operation). Sink failures
 from `encode_to_sink` and `encode_sequence_to_sink` carry the selected output
 format and encode stage through `OutputWrite`; their offset and identity are
 `None` because the failure is on the destination side. Whole-buffer codecs
-still write one complete validated buffer, while the PNG and BMP still paths
-write validated structural segments. Every sink path calls `OutputSink::flush`
+still write one complete validated buffer, while the JPEG, PNG, BMP, and TIFF
+still paths plus one-frame JPEG and multi-page TIFF sequence paths write
+validated structural segments. Every sink path calls `OutputSink::flush`
 once after complete delivery; a flush failure is also `OutputWrite` and may
 leave the delivered prefix. Short-write and rollback cleanup semantics remain
 future incremental-writer work.
