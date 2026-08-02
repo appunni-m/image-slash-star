@@ -30,8 +30,9 @@ case "$MATRIX_JOBS" in
 esac
 # The Rust test harness otherwise starts one worker per logical CPU in every
 # active lane. With several lanes running concurrently that multiplies into a
-# heavily oversubscribed matrix. Keep the default test-worker total close to
-# the host CPU count while allowing a caller to tune it explicitly.
+# heavily oversubscribed matrix. Keep both the default test-worker total and
+# the concurrent Cargo compiler-job total close to the host CPU count while
+# allowing a caller to tune either budget explicitly.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
     MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
@@ -48,6 +49,22 @@ case "$MATRIX_TEST_THREADS" in
         exit 2
         ;;
 esac
+MATRIX_BUILD_JOBS=${MATRIX_BUILD_JOBS:-${CARGO_BUILD_JOBS:-}}
+if [ -z "$MATRIX_BUILD_JOBS" ]; then
+    MATRIX_BUILD_JOBS=$((matrix_cpu_count / MATRIX_JOBS))
+    if [ "$MATRIX_BUILD_JOBS" -lt 1 ]; then
+        MATRIX_BUILD_JOBS=1
+    fi
+    if [ "$MATRIX_BUILD_JOBS" -gt 8 ]; then
+        MATRIX_BUILD_JOBS=8
+    fi
+fi
+case "$MATRIX_BUILD_JOBS" in
+    ''|*[!0-9]*|0)
+        echo "MATRIX_BUILD_JOBS must be a positive integer" >&2
+        exit 2
+        ;;
+esac
 CAPABILITY_JOBS=${CAPABILITY_JOBS:-$MATRIX_JOBS}
 case "$CAPABILITY_JOBS" in
     ''|*[!0-9]*|0)
@@ -56,6 +73,7 @@ case "$CAPABILITY_JOBS" in
         ;;
 esac
 export CAPABILITY_JOBS
+echo "feature matrix: lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
 
 matrix_log_dir=$(mktemp -d "${TMPDIR:-/tmp}/image-slash-star-feature-matrix.XXXXXX")
 # Keep build artifacts between invocations by default. Every matrix lane still
@@ -214,6 +232,7 @@ run_parallel_jobs() {
         matrix_launch_target_dir="$matrix_target_root/target-$matrix_launch_group-$matrix_launch_lane"
         (
             export CARGO_TARGET_DIR="$matrix_launch_target_dir"
+            export CARGO_BUILD_JOBS="$MATRIX_BUILD_JOBS"
             matrix_status=0
             "$matrix_runner" "$matrix_launch_spec" \
                 >"$matrix_log_dir/$matrix_launch_group-$matrix_launch_lane.log" 2>&1 \
