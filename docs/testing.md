@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `8def2b5f5c634c7a5ed8449a9a70d407ec7bcf8b`
+Reviewed: 2026-08-02 on the working tree based on revision `9a4a493e2c22bfd65b82c598061a3aacd0e066fa`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -249,7 +249,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`8def2b5f5c634c7a5ed8449a9a70d407ec7bcf8b`, the generated matrix reports:
+`9a4a493e2c22bfd65b82c598061a3aacd0e066fa`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -627,25 +627,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,339 | 47,339 |
-| Branches | 6,546 | 6,546 |
-| Functions | 2,655 | 2,655 |
-| Regions | 73,687 | 73,687 |
+| Lines | 47,352 | 47,352 |
+| Branches | 6,550 | 6,550 |
+| Functions | 2,656 | 2,656 |
+| Regions | 73,704 | 73,704 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Managed runtime evidence comes from feature-matrix run
-`978137a6-4840-4115-8cd9-34b8cadb4484`: 859 checks passed with zero
-failures in 1,139,869 ms, and its terminal capability-table record says
+`d9fcf0d3-8702-45d5-8184-665b2cb18624`: 859 checks passed with zero
+failures in 1,511,776 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `35c6e8de-c409-402a-bd7a-a582cd20bf43`
+Coverage MCP run: `74b245fc-9a5e-4015-a46f-6b21883281b0`
 
-Snapshot: `ce37972f-bed2-4c14-b068-8d5461365558`
+Snapshot: `a8792567-857e-4082-992b-dac6caaf584c`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
