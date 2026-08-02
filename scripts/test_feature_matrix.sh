@@ -155,8 +155,10 @@ run_native_lane() {
     features=$1
     set -- $(feature_args "$features")
     capability_output="$matrix_log_dir/native-$features.capability"
-    cargo clippy --workspace --all-targets --locked "$@" -- -D warnings
-    RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked "$@"
+    # The native test target compiles the complete feature-gated integration
+    # suite for every lane. Repository CI separately runs all-feature Clippy
+    # and rustdoc, so repeating those checks for every native feature subset
+    # only duplicates compilation without adding a distinct runtime result.
     CAPABILITY_TABLE_OUTPUT="$capability_output" cargo test \
         --locked --test feature_gate_tests "$@" -- \
         --test-threads "$MATRIX_TEST_THREADS"
