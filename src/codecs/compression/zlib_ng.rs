@@ -997,8 +997,7 @@ impl Level6Matcher {
         }
     }
 
-    #[cfg(coverage)]
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
     fn find_match(&mut self, position: usize, lookahead: usize) -> MediumMatch {
         let mut checkpoint = NoopMatcherCheckpoint;
         self.find_match_with(position, lookahead, &mut checkpoint)
@@ -1394,7 +1393,7 @@ fn medium_candidate_can_improve(
                 [position.wrapping_add(offset)..position.wrapping_add(offset).saturating_add(width)]
 }
 
-#[cfg(coverage)]
+#[allow(dead_code, clippy::expect_used)]
 fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
     let mut checkpoint = NoopMatcherCheckpoint;
     fizzle_matches_with(data, current, next, &mut checkpoint)
