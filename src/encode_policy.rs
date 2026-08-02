@@ -7,10 +7,10 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// An absent limit is unlimited for backward compatibility. The output-result
 /// bound does not account for transient allocations or recoverable out-of-
 /// memory failure. `max_work_units` counts the deterministic cooperative
-/// checkpoints reached by an encode, including TIFF Deflate input-row and
-/// level-six matcher intervals, the PNG adaptive-filter and filtered-row
-/// checkpoints charged after each 1,024 row bytes, the lossy WebP VP8 analysis/
-/// partition stages, and the lossless WebP VP8L
+/// checkpoints reached by an encode, including TIFF Deflate input-row,
+/// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
+/// the PNG adaptive-filter and filtered-row checkpoints charged after each
+/// 1,024 row bytes, the lossy WebP VP8 analysis/partition stages, and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
@@ -56,7 +56,8 @@ impl EncodePolicy {
     /// PNG long-row filtering charges additional checkpoints after each 1,024
     /// filtered bytes while adaptive candidates are scored or emitted. TIFF
     /// Deflate charges input-row and level-six matcher candidate, insertion,
-    /// fizzle, window, and position intervals. Lossy
+    /// fizzle, window, and position intervals plus expansion, Huffman,
+    /// bitstream, stored-block, and checksum intervals. Lossy
     /// WebP VP8 encoding charges checkpoints between its major analysis,
     /// mode-selection, probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around predictor, cross-color, entropy, transform,

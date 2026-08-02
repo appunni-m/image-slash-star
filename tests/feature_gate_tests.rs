@@ -8116,8 +8116,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
 
         // A single wide row leaves no row boundary inside the compression
-        // pass. The bounded result therefore proves that matcher-internal
-        // checkpoints, rather than only the public row cadence, are active.
+        // pass. The smaller budget above proves matcher-internal checkpoints;
+        // this materially larger budget reaches the Deflate expansion,
+        // Huffman, and bitstream checkpoints before rejecting. Pillow has no
+        // caller budget or equivalent result, so this remains Rust-only
+        // work-control evidence.
         let mut interior_pixels = Vec::with_capacity(4_096 * 3);
         for position in 0..4_096usize {
             let value =
@@ -8129,26 +8132,48 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let interior_image = DecodedImage::new(4_096, 1, interior_pixels, ColorType::Rgb8);
-        let interior_policy = image_slash_star::EncodePolicy::new().with_max_work_units(64);
-        let interior_error = match image_slash_star::encode_with_policy(
+        let emission_policy = image_slash_star::EncodePolicy::new().with_max_work_units(36_000);
+        let emission_error = match image_slash_star::encode_with_policy(
             &interior_image,
             ImageFormat::Tiff,
             &options,
-            &interior_policy,
+            &emission_policy,
         ) {
-            Ok(_) => return Err("interior TIFF Deflate budget unexpectedly completed".into()),
+            Ok(_) => return Err("emission TIFF Deflate budget unexpectedly completed".into()),
             Err(error) => error,
         };
         assert!(matches!(
-            interior_error,
+            emission_error,
             ImageError::LimitExceeded {
                 format: Some(ImageFormat::Tiff),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 64,
+                maximum: 36_000,
                 observed,
-            } if observed > 64
+            } if observed > 36_000
         ));
+        let mut emission_sink = vec![0xAA];
+        let emission_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &interior_image,
+            ImageFormat::Tiff,
+            &options,
+            &emission_policy,
+            &mut emission_sink,
+        ) {
+            Ok(_) => return Err("emission TIFF Deflate sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            emission_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Tiff),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 36_000,
+                observed,
+            } if observed > 36_000
+        ));
+        assert_eq!(emission_sink, vec![0xAA]);
     }
     Ok(())
 }
