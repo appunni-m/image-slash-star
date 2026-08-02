@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`748358a1810cfc00f686f6cc0a056fd9c1e669da`; the claim-ledger baseline remains
+`430e33d3f5dc12319c39b66c7f43f3c39e7306e1`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -1582,6 +1582,32 @@ segment-normalization warning. These are implementation and target-lane
 records separate from Pillow parity. Remaining other codec interior work,
 finer WebP work, transient allocation accounting, short/interrupted output,
 rollback, and remaining non-checkpointed work-budget semantics remain open.
+
+The GIF LZW no-token runtime follow-up is implemented at
+`430e33d3f5dc12319c39b66c7f43f3c39e7306e1`. The ordinary encoder now takes a
+no-poll branch, avoiding an optional cancellation-token check for every input
+symbol, while token-aware encoding retains the same per-symbol cancellation
+and work-budget checkpoints. The emitted bytes and the Rust-only work-control
+contract are unchanged. This implementation-only optimization adds no parity
+row, fixture, diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `ecae85e1-0584-44aa-8028-fcc1e865e386` passed
+1,445/1,445 checks with zero failures or skips in 791 ms. Feature-matrix run
+`3fe7a570-cae3-4ef0-9e8d-65a4d645fd59` passed 991/991 checks in 36,648 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `9949a87c-d645-47d3-b95e-0d5578bb7663` passed 85/85 tests in
+53,685 ms and ingested snapshot
+`b6d31c5c-e885-48fb-ad48-09a7e153e254`, reporting 49,360/49,757 lines,
+6,779/6,842 branches, 2,751/2,818 functions, and 76,742/77,450 regions.
+Compared with snapshot `b1cb1124-85b3-4b40-994f-7b9f8a4f831e`, this adds
+eight covered lines (+8 total), two covered branches (+2 total), one covered
+function (+1 total), and nine covered regions (+9 total); every new fast-path
+line and branch is covered. The aggregate snapshot retains the LLVM
+segment-normalization warning. These are execution and implementation records
+separate from Pillow parity. Remaining other codec interior work, finer WebP
+work, transient allocation accounting, short/interrupted output, rollback, and
+remaining non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
