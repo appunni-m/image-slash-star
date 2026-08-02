@@ -8226,6 +8226,65 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 observed,
             } if observed > 8_192
         ));
+
+        // Lossy VP8 RGB-to-YUV conversion now charges an interior checkpoint
+        // after each 1,024 conversion items. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence and adds no
+        // parity row. The ordinary path and an ample budget remain identical.
+        let yuv_image = DecodedImage::new(2_048, 1, vec![128; 2_048 * 3], ColorType::Rgb8);
+        let yuv_expected = image_slash_star::encode(&yuv_image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &yuv_image,
+                ImageFormat::WebP,
+                &options,
+                &unlimited,
+            )?,
+            yuv_expected,
+            "an ample WebP YUV-conversion budget preserves byte identity"
+        );
+        let yuv_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(3);
+        let yuv_error = match image_slash_star::encode_with_policy(
+            &yuv_image,
+            ImageFormat::WebP,
+            &options,
+            &yuv_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP YUV conversion unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            yuv_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        let mut yuv_sink = vec![0xAA];
+        let yuv_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &yuv_image,
+            ImageFormat::WebP,
+            &options,
+            &yuv_bounded,
+            &mut yuv_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP YUV sink budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            yuv_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        assert_eq!(yuv_sink, vec![0xAA]);
     }
 
     if cfg!(feature = "gif") {
