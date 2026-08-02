@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`430e33d3f5dc12319c39b66c7f43f3c39e7306e1`; the claim-ledger baseline remains
+`f6ce32f26516c6403970247f1fbd442ab23b4962`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -463,8 +463,9 @@ PNG adaptive filtering and filtered-row emission charge
 additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. BMP row conversion additionally charges after each 1,024
 pixels. GIF LZW additionally charges an input-symbol interval for each
-dictionary-pass input symbol. Lossy WebP VP8 additionally charges after color conversion,
-padding, analysis, segment parameters, mode selection, coefficient-probability
+dictionary-pass input symbol. Lossy WebP VP8 additionally charges after each
+1,024 RGB/RGBA-to-YUV conversion item, then after color conversion, padding,
+analysis, segment parameters, mode selection, coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
@@ -477,7 +478,8 @@ instruction-count, transient-memory, or recoverable-OOM accounting.
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
-checkpoints and GIF LZW input-symbol intervals, the WebP still writer polls at preparation, lossy VP8
+checkpoints and GIF LZW input-symbol intervals, the WebP still writer polls at
+preparation, lossy VP8 RGB/RGBA-to-YUV conversion subsegments and
 analysis/mode-selection/coefficient-probability/bitstream stages, lossless VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
@@ -499,8 +501,8 @@ not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including finer WebP work and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
-row-conversion subsegments, GIF LZW input-symbol intervals, and TIFF Deflate
-path—remain open.
+row-conversion subsegments, GIF LZW input-symbol intervals, WebP
+RGB/RGBA-to-YUV conversion subsegments, and TIFF Deflate path—remain open.
 
 ### Codec work is bounded by the resource set
 
