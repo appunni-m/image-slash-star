@@ -62,7 +62,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&rgb, &exact_size);
 
-    for checks in 0..=5 {
+    // The embedded PNG encoder has nested row, compression, and chunk polls;
+    // sweep through the nested call so ICO's post-embed and directory polls
+    // are covered as well as its early exits.
+    for checks in 0..=40 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&rgb, &exact_size, Some(&token));
@@ -79,10 +82,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut bmp = exact_size.clone();
     bmp.entry_type = IcoEntryType::Bmp;
-    for checks in 0..=5 {
+    // BMP has one poll per source row plus final payload and directory polls.
+    for checks in 0..=23 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&rgb, &bmp, Some(&token));
+    }
+    for checks in 0..=23 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&rgba, &bmp, Some(&token));
     }
     let _ = encode(&rgb, &bmp);
     let _ = encode(&rgba, &bmp);
