@@ -5,6 +5,9 @@ The probe test in ``tests/capability_table.rs`` emits one
 ``CAPABILITY_TABLE_JSON`` line per feature lane. This script executes the
 probe in every native lane and in every ``wasm32-wasip1`` lane under Node's
 WASI runtime, then assembles ``tests/fixtures/capability_tables.json``.
+Independent probe jobs run concurrently with the bounded
+``CAPABILITY_JOBS`` setting so this acceptance check does not serialize every
+feature lane.
 
 ``--generate`` rewrites the committed fixture. ``--check`` regenerates it in
 memory and fails on any semantic diff, so capability drift between feature
@@ -22,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -38,6 +42,17 @@ OPERATIONS = [
 ]
 FORMATS = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
 MARKER = "CAPABILITY_TABLE_JSON "
+
+
+def capability_jobs() -> int:
+    raw = os.environ.get("CAPABILITY_JOBS", "3")
+    try:
+        jobs = int(raw)
+    except ValueError as error:
+        raise RuntimeError("CAPABILITY_JOBS must be a positive integer") from error
+    if jobs < 1:
+        raise RuntimeError("CAPABILITY_JOBS must be a positive integer")
+    return jobs
 
 
 def host_triple() -> str:
@@ -151,9 +166,24 @@ def normalize_row(row: dict) -> dict:
 def generate() -> dict:
     triple = host_triple()
     table: dict = {"format_version": 1, "native": {}, "wasm32-wasip1": {}}
+    jobs = capability_jobs()
+    native_rows: dict[str, dict] = {}
+    wasi_rows: dict[str, dict] = {}
+    with ThreadPoolExecutor(max_workers=jobs) as executor:
+        native_futures = {}
+        wasi_futures = {}
+        for lane in LANES:
+            native_futures[lane] = executor.submit(run_native_probe, lane, triple)
+            wasi_futures[lane] = executor.submit(
+                run_wasi_probe, lane, "wasm32-wasip1"
+            )
+        for lane in LANES:
+            native_rows[lane] = normalize_row(native_futures[lane].result())
+            wasi_rows[lane] = normalize_row(wasi_futures[lane].result())
+
     for lane in LANES:
-        native = normalize_row(run_native_probe(lane, triple))
-        wasi = normalize_row(run_wasi_probe(lane, "wasm32-wasip1"))
+        native = native_rows[lane]
+        wasi = wasi_rows[lane]
         table["native"].setdefault("host_triple", triple)
         table["wasm32-wasip1"].setdefault("host_triple", "wasm32-wasip1")
         table["native"].setdefault("lanes", {})[lane] = native
