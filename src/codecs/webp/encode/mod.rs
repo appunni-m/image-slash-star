@@ -549,9 +549,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ));
     sequence.frames.push(sequence.frames[0].clone());
     sequence.kind = crate::types::SequenceKind::TimedAnimation;
-    for checks in [0, 1, 2, 5, 7] {
+    for checks in 0..=16 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_sequence_with_token(&sequence, &WebPEncodeOptions::default(), Some(&token));
+    }
+
+    // Sweep the still checkpoints, including metadata assembly, without
+    // turning caller-controlled cancellation into a Pillow parity row.
+    let still = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
+    let mut metadata_opts = WebPEncodeOptions::default();
+    metadata_opts.icc = Some(vec![0]);
+    metadata_opts.exif = Some(b"Exif\0\0metadata".to_vec());
+    metadata_opts.xmp = Some(b"xmp".to_vec());
+    for checks in 0..=14 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&still, &metadata_opts, Some(&token));
     }
 }
