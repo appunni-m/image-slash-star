@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`447cc034eaccf85843b59e18310778310b22c5f8`; the claim-ledger baseline remains
+`e2b060dff1758749a498bc98919143f6d4c2ca6c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -306,7 +306,10 @@ zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
-untouched sink. Lossy WebP VP8 additionally charges after color conversion,
+untouched sink. TIFF Deflate additionally charges at each supplied input-row
+boundary and inside the level-six matcher; the TIFF contract uses a single wide
+row to prove a bounded rejection inside that matcher. Lossy WebP VP8
+additionally charges after color conversion,
 padding, analysis, segment parameters, mode selection, coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application,
@@ -342,8 +345,8 @@ timing-sensitive interruption. The PNG and BMP still paths poll while
 preparing rows; PNG additionally polls adaptive-filter and filtered-row
 subsegments after each 1,024 row bytes, and the still and sink paths poll
 between emitted structural segments; TIFF still encoding now polls page
-preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row
-boundaries;
+preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
+level-six matcher candidate/insertion/fizzle/position boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints; WebP still encoding polls preparation, lossy VP8
 analysis/mode-selection/coefficient-probability/bitstream stages, lossless
@@ -360,8 +363,9 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row subsegments and WebP VP8L stages, finer WebP
-work, deeper deflate/structural interruption, progress callbacks, short-write
+beyond the implemented PNG row subsegments, TIFF Deflate matcher, and WebP
+VP8L stages, finer WebP work, Deflate emission/structural interruption,
+progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
@@ -1387,6 +1391,38 @@ wasm32-wasip1 lane agrees`. These are observed implementation and target
 evidence, separate from Pillow parity. Remaining finer WebP work, other codec
 interior work, deeper Deflate/structural interruption, allocation accounting,
 and rollback remain open.
+
+The current TIFF Deflate interior checkpoint slice is implemented at
+`e2b060dff1758749a498bc98919143f6d4c2ca6c`: the token-aware level-six matcher
+now charges checkpoints inside candidate-chain search, match insertion,
+fizzle adjustment, window maintenance, and per-position processing. The
+ordinary PNG/general level-six helper remains on its no-token path, so the
+existing byte model does not acquire caller-token polling overhead. The
+Rust-only contract extends the TIFF page probe with a single wide row whose
+bounded budget rejects inside the matcher; Pillow exposes neither a caller
+token nor a work-budget result, so this adds no parity row, diagnostic origin,
+or coverage-only hook.
+
+Managed Pillow parity run `d1181fff-199c-4bfd-a2ed-aec4f643a7b7` passed
+1,445/1,445 checks with zero failures or skips in 814 ms. Coverage MCP run
+`46703f57-b9d8-4c27-857e-deda300b162f` passed 83/83 tests in 46,061 ms and
+ingested snapshot `abe2f77d-d2e5-4137-91d7-b71f7160ad4e`; it reports
+49,232/49,627 lines, 6,769/6,832 branches, 2,746/2,813 functions, and
+76,571/77,234 regions. Compared with snapshot
+`33a651a8-3d60-4793-84e6-b08edaa5ecca`, this adds 65 covered lines (+65 total),
+six covered functions (+6 total), and 91 covered regions (+108 total), with
+branch counts unchanged; the small region-rate decrease is attributable to
+the new checkpoint error branches. `src/codecs/compression/zlib_ng.rs` is
+1,812/1,812 lines, 390/390 branches, 89/89 functions, and 2,818/2,835
+regions. The aggregate snapshot retains the LLVM segment-normalization
+warning; no coverage-only hook was added. Isolated warm feature-matrix run
+`a3967a0c-3758-43b5-a744-620703c367a4` passed 947/947 checks in 15,462 ms,
+with no package-cache or build-directory lock-wait matches and the terminal
+`capability tables OK: every native and wasm32-wasip1 lane agrees` marker.
+These are observed runtime and target-evidence records, not universal
+benchmarks and not Pillow-parity coverage. Remaining other codec interior
+work, finer WebP work, Deflate emission/structural interruption, transient
+allocation accounting, and rollback remain open.
 
 Historical claim-ledger acceptance record:
 

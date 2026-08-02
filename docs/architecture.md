@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`447cc034eaccf85843b59e18310778310b22c5f8`; the claim-ledger baseline remains
+`e2b060dff1758749a498bc98919143f6d4c2ca6c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -297,7 +297,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, token-stream/bitstream stages, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and Deflate input-row boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, token-stream/bitstream stages, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, and level-six matcher candidate/insertion/fizzle/position boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -346,7 +346,8 @@ current input length.
 Cooperative cancellation polls a caller token at structural and selected
 codec-internal checkpoints: dispatch entry, PNG chunk boundaries and
 1,024-byte adaptive-filter/filtered-row subsegments, GIF block and frame boundaries, TIFF
-still page preparation/predictor/PackBits/LZW work plus sequence page and
+still page preparation/predictor/PackBits/LZW work, Deflate level-six matcher
+intervals, plus sequence page and
 strip/tile boundaries, JPEG color/sampling/quantization rows and
 entropy/progressive scan batches, WebP frame boundaries, BMP RLE commands,
 ICO directory entries, and AVIF frames. A fired token returns
@@ -450,9 +451,10 @@ before it continues; when the next charge would exceed the maximum, encoding
 returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodeWorkUnits`. The budget is layered over a caller token,
 so caller cancellation still has precedence and remains `Cancelled`. TIFF
-Deflate tokenization additionally charges at each supplied input-row boundary,
-so a bounded page cannot consume the complete multi-row matcher pass between
-public checkpoints. PNG adaptive filtering and filtered-row emission charge
+Deflate tokenization additionally charges at each supplied input-row boundary
+and inside the level-six matcher candidate, insertion, fizzle, window, and
+position intervals, so a bounded page cannot consume the complete matcher pass
+between public checkpoints. PNG adaptive filtering and filtered-row emission charge
 additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. Lossy WebP VP8 additionally charges after color conversion,
 padding, analysis, segment parameters, mode selection, coefficient-probability
@@ -489,8 +491,8 @@ is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including finer WebP work, CPU work inside codec rows
-other than the implemented PNG adaptive-filter subsegments, and deeper TIFF
-Deflate/structural work—remain open.
+other than the implemented PNG adaptive-filter subsegments and TIFF matcher,
+and Deflate emission/structural work—remain open.
 
 ### Codec work is bounded by the resource set
 
