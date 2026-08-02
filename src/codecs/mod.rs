@@ -801,7 +801,10 @@ pub(crate) fn encode_format_with_token(
                 None => png::encode::encode(_image, options),
             },
             #[cfg(feature = "gif")]
-            (ImageFormat::Gif, EncodeOptions::Gif(options)) => gif::encode::encode(_image, options),
+            (ImageFormat::Gif, EncodeOptions::Gif(options)) => match token {
+                Some(token) => gif::encode::encode_with_token(_image, options, Some(token)),
+                None => gif::encode::encode(_image, options),
+            },
             #[cfg(feature = "bmp")]
             (ImageFormat::Bmp, EncodeOptions::Bmp(options)) => match token {
                 Some(token) => bmp::encode::encode_with_token(_image, options, Some(token)),
