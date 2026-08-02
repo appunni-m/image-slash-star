@@ -5746,6 +5746,45 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert_eq!(mismatch_sequence_ico_sink.writes, 0);
             assert!(mismatch_sequence_ico_sink.bytes.is_empty());
 
+            let mut multiple_ico_sequence = sequence.clone();
+            multiple_ico_sequence
+                .frames
+                .push(multiple_ico_sequence.frames[0].clone());
+            multiple_ico_sequence.kind = image_slash_star::SequenceKind::TimedAnimation;
+            let mut multiple_ico_sequence_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let multiple_ico_sequence_error = match image_slash_star::encode_sequence_to_sink(
+                &multiple_ico_sequence,
+                ImageFormat::Ico,
+                &ico_options,
+                &mut multiple_ico_sequence_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "ICO sequence accepted multiple frames and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                multiple_ico_sequence_error.kind(),
+                image_slash_star::ImageErrorKind::Unsupported
+            );
+            assert_eq!(
+                multiple_ico_sequence_error.unsupported_reason(),
+                Some(UnsupportedReason::NotImplemented)
+            );
+            assert_eq!(multiple_ico_sequence_error.format(), Some(ImageFormat::Ico));
+            assert_eq!(
+                multiple_ico_sequence_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(multiple_ico_sequence_sink.writes, 0);
+            assert!(multiple_ico_sequence_sink.bytes.is_empty());
+
             let mismatch_options = EncodeOptions::for_format(ImageFormat::Gif);
             let mut mismatch_ico_sink = RecordingSink {
                 bytes: Vec::new(),

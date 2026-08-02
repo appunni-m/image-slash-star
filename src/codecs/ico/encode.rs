@@ -72,6 +72,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
         token.cancel_after(checks);
         let _ = encode_with_token(&rgb, &exact_size, Some(&token));
     }
+    // The sink path has the same embedded-PNG checkpoints plus a
+    // post-payload cancellation boundary that an ordinary caller cannot fire
+    // deterministically without racing another thread. Exercise that real
+    // boundary through the existing private coverage model, not a parity row.
+    for checks in 0..=40 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sink = Vec::new();
+        let _ = encode_to_sink(
+            &rgb,
+            &IcoEncodeOptions::default(),
+            EncodePolicy::default(),
+            CodecOperation::StillEncode,
+            Some(&token),
+            &mut sink,
+        );
+    }
 
     let wrong_size = IcoEncodeOptions {
         sizes: vec![IcoSize {
