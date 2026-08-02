@@ -288,6 +288,13 @@ Pillow has no equivalent structured warning field. Pillow-tolerated duplicate
 `PLTE` and `tRNS` members keep the first palette result and produce separate
 Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
 `png_duplicate_trns`) at the ignored chunk offsets.
+Pillow-tolerated indexed-palette shape damage is likewise retained with the
+first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
+`png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame
+APNG declaration reports `png_apng_zero_frames`, and valid inflated bytes past
+the first PNG raster report `png_oversized_scanline`. These are Rust-only
+defensive diagnostics: Pillow exposes the successful pixels but no equivalent
+structured warning field.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
 extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
