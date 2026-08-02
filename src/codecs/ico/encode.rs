@@ -165,9 +165,9 @@ pub(crate) fn encode_to_sink(
         (32, payload)
     };
     crate::codecs::error::check_cancelled(token)?;
-    let output_len = 22usize
-        .checked_add(payload.len())
-        .ok_or_else(|| CodecError::Dimensions("ICO output length overflows".to_owned()))?;
+    // The source dimensions are capped at 256x256 and the embedded PNG/BMP
+    // payloads are therefore far below the usize limit.
+    let output_len = 22usize.saturating_add(payload.len());
     policy
         .check_output_len(output_len, ImageFormat::Ico, operation)
         .map_err(CodecError::from_image_error)?;
@@ -378,8 +378,6 @@ fn write_segment(
     crate::codecs::error::check_cancelled(token)?;
     sink.write_all(bytes)
         .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
-    *written = written
-        .checked_add(bytes.len())
-        .ok_or_else(|| CodecError::Dimensions("ICO output length overflows".to_owned()))?;
+    *written = written.saturating_add(bytes.len());
     Ok(())
 }

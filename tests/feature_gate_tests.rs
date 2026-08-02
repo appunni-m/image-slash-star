@@ -5660,6 +5660,36 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert_eq!(sequence_ico_sink.bytes, expected_ico);
             assert_eq!(sequence_ico_sink.writes, 2);
 
+            let mismatch_sequence_ico_options = EncodeOptions::for_format(ImageFormat::Gif);
+            let mut mismatch_sequence_ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let mismatch_sequence_ico_error = match image_slash_star::encode_sequence_to_sink(
+                &sequence,
+                ImageFormat::Ico,
+                &mismatch_sequence_ico_options,
+                &mut mismatch_sequence_ico_sink,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "ICO sequence accepted mismatched options and wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                mismatch_sequence_ico_error.kind(),
+                image_slash_star::ImageErrorKind::Parameter
+            );
+            assert_eq!(
+                mismatch_sequence_ico_error.stage(),
+                Some(ImageErrorStage::SequenceEncode)
+            );
+            assert_eq!(mismatch_sequence_ico_sink.writes, 0);
+            assert!(mismatch_sequence_ico_sink.bytes.is_empty());
+
             let mismatch_options = EncodeOptions::for_format(ImageFormat::Gif);
             let mut mismatch_ico_sink = RecordingSink {
                 bytes: Vec::new(),
@@ -5710,6 +5740,33 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             );
             assert_eq!(ico_bmp_sink.bytes, expected_ico_bmp);
             assert_eq!(ico_bmp_sink.writes, 2);
+
+            let unsupported_ico_image =
+                image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8);
+            let mut unsupported_ico_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let unsupported_ico_error = match image_slash_star::encode_to_sink(
+                &unsupported_ico_image,
+                ImageFormat::Ico,
+                &ico_options,
+                &mut unsupported_ico_sink,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("unsupported ICO mode unexpectedly wrote {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                unsupported_ico_error.kind(),
+                image_slash_star::ImageErrorKind::Unsupported
+            );
+            assert_eq!(unsupported_ico_error.format(), Some(ImageFormat::Ico));
+            assert_eq!(unsupported_ico_sink.writes, 0);
+            assert!(unsupported_ico_sink.bytes.is_empty());
         }
 
         if cfg!(feature = "jpeg") {
