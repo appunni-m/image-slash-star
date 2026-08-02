@@ -186,6 +186,24 @@ fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::Im
     }
 }
 
+fn record_reserved_bit_diagnostic(
+    chunk: &Chunk<'_>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    // Pillow accepts unknown ancillary chunks whose reserved third type
+    // character is lowercase. Keep that compatibility result while exposing
+    // the structural recovery through the Rust-only diagnostic contract.
+    if chunk.kind[2] & 0x20 != 0 {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_reserved_bit"),
+        });
+    }
+}
+
 fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     match value {
         0 => Some(crate::types::SrgbIntent::Perceptual),
@@ -287,6 +305,7 @@ pub fn decode(
         crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
+        record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
                 saw_idat = true;
@@ -611,6 +630,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     for chunk in &mut chunks {
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
+        record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_rgb = Some(chunk.data.to_vec());

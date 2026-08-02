@@ -64,6 +64,36 @@
       "pillow_outcome": "ok"
     },
     {
+      "id": "png_reserved_bit_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "mutation": "png_before_idat",
+      "chunk_kind": "prvt",
+      "chunk_payload": [112, 97, 121, 108, 111, 97, 100],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 33,
+      "identity": "png_reserved_bit",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_reserved_bit_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/1x1.png",
+      "mutation": "png_before_idat",
+      "chunk_kind": "prvt",
+      "chunk_payload": [112, 97, 121, 108, 111, 97, 100],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 33,
+      "identity": "png_reserved_bit",
+      "pillow_outcome": "ok"
+    },
+    {
       "id": "png_invalid_ztxt_still",
       "feature": "png",
       "format": "png",
