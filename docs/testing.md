@@ -201,10 +201,10 @@ mode, and destination results are Rust-only structured contracts; they do not
 add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
-generic whole-buffer fallback for enabled JPEG, TIFF, and native AVIF still
-encoders. GIF still and GIF sequence, WebP still, WebP one-frame sequence, ICO
-still, and the other one-frame sequence deliveries use the structural paths
-described below. Each real public call must normalize a
+remaining generic whole-buffer fallback for the enabled native AVIF still
+encoder. JPEG and TIFF still, GIF still and GIF sequence, WebP still, WebP
+one-frame sequence, ICO still, and the other one-frame sequence deliveries use
+the structural paths described below. Each real public call must normalize a
 rejecting destination to `OutputWrite` with the selected format and
 `StillEncode` stage, without an input offset, container identity, or
 `UnsupportedReason`. These are Rust-only destination contracts: Pillow has no
@@ -264,7 +264,7 @@ encode checkpoint; the budget is deterministic work control, not CPU-time,
 instruction-count, transient-allocation, or recoverable-OOM accounting. The
 same contract now also proves JPEG still byte identity under an ample budget,
 a bounded mid-encode rejection after more than one checkpoint, and a typed
-zero-budget no-write result through the generic whole-buffer sink path. The
+zero-budget no-write result through the JPEG structural sink path. The
 contract also proves that a pre-cancelled caller token takes precedence over a
 zero work budget for still PNG and sequence GIF, without touching the sink.
 The test's aggregate coverage is incidental evidence, and no coverage-only
@@ -279,7 +279,7 @@ They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
 native AVIF still, GIF-sequence output, and one-frame WebP/ICO sequence sink
 output;
 stable pre-cancelled errors, successful token-aware sink writes, and
-PNG/BMP/WebP/ICO/TIFF still sinks plus the one-frame WebP/TIFF sequence sinks
+JPEG/PNG/BMP/GIF/WebP/ICO/TIFF still sinks plus the one-frame WebP/TIFF sequence sinks
 that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
@@ -640,11 +640,11 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over PNG/BMP/GIF/WebP/ICO/TIFF still, one-frame
+`encode_sequence_to_sink` over JPEG/PNG/BMP/GIF/WebP/ICO/TIFF still, one-frame
 BMP/WebP/ICO/TIFF sequence, GIF sequence, and multi-frame WebP sequence
 fixtures must write bytes
 identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
-and `&mut Vec<u8>` sinks. PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
+and `&mut Vec<u8>` sinks. JPEG, PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
 sequence, one-frame WebP sequence, and multi-frame WebP sequence additionally
 prove
 multiple structural writes, policy preflight before the first write, and
@@ -656,14 +656,16 @@ sequence delivery. WebP's structural split is its 12-byte RIFF
 header followed by each validated chunk header and payload/padding span. ICO's
 structural split is a fixed 22-byte directory header followed by the complete
 embedded PNG/DIB payload. TIFF's split is its header, strip/padding span, and
-IFD/value tail. A deterministic failing write or flush must be reported as
-`ImageError::OutputWrite` with the selected format and encode stage. The
-current contract proves one post-delivery flush call and explicitly preserves
+IFD/value tail. JPEG's split is its validated marker segments, SOS headers,
+entropy-coded scan spans, restart markers, and EOI. A deterministic failing
+write or flush must be reported as `ImageError::OutputWrite` with the selected
+format and encode stage. The current contract proves one post-delivery flush
+call and explicitly preserves
 the delivered prefix on flush failure. Short writes and rollback cleanup remain
 future writer evidence, not claims made by this contract.
-The same contract exercises invalid-input errors through the generic JPEG
-whole-buffer fallback, with no sink write; those cases are Rust API/error
-evidence and are not added to the Pillow parity matrix.
+The same contract exercises invalid-input errors through the JPEG structural
+writer, with no sink write; those cases are Rust API/error evidence and are not
+added to the Pillow parity matrix.
 
 The cross-target determinism contract is machine-checked: a
 `determinism_tests` target computes SHA-256 over exact encoder output and
@@ -1043,6 +1045,26 @@ parity row or fixture was added. Coverage MCP run
 `831cdfc1-1c26-4584-a39e-e13fead8d2fa` (102,142 ms), and the unchanged Pillow
 parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
 `90f11ef9-cc48-4e9f-a036-1f6017ad25d3` (72,614 ms). The feature-matrix log
+records `lanes=6 test_threads=2 build_jobs=2`, no build-directory lock waits,
+and the terminal native/WASI capability-table agreement; package-cache waits
+remain possible. These durations are execution evidence rather than a
+universal speed comparison because managed cache and runner state can differ.
+
+The JPEG still structural-sink slice is committed at revision
+`df2053ffec2a1c84d0b2d2fb1bd90f91f16cc001`. It retains the complete JPEG
+working buffer but delivers the validated SOI/marker segments, SOS headers,
+entropy-coded scan spans, restart markers, and EOI as separately cancelable
+segments after exact output-length preflight. Progressive JPEG output uses the
+same marker/scan parser. This is an ordinary Rust-only destination contract
+because Pillow has no caller-owned sink; no parity row or fixture was added.
+Coverage MCP run `d95983e6-b73b-42b3-aa0a-38b162069320`, snapshot
+`165e14d0-c196-4e0a-8902-b83aa23f3e41`, passed 72 tests with zero failures in
+76,006 ms and retained 48,521/48,761 lines, 6,645/6,688 branches,
+2,722/2,765 functions, and 75,541/75,851 regions. The feature matrix passed
+947/947 checks with zero failures in run
+`de84cca3-57ad-4fab-9d41-ff48fd6d4c24` (57,822 ms), and the unchanged Pillow
+parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
+`592f4dca-87e5-49d2-a9be-a4441380a66c` (60,047 ms). The feature-matrix log
 records `lanes=6 test_threads=2 build_jobs=2`, no build-directory lock waits,
 and the terminal native/WASI capability-table agreement; package-cache waits
 remain possible. These durations are execution evidence rather than a
