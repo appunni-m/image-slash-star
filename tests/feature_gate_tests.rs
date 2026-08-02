@@ -7888,6 +7888,166 @@ fn tiff_capability_and_destination_failures_are_structured()
     assert_eq!(encode_error.stage(), Some(ImageErrorStage::StillEncode));
     assert_eq!(encode_error.unsupported_reason(), None);
 
+    use image_slash_star::TiffCompression;
+    struct RecordingTiffSink {
+        bytes: Vec<u8>,
+        writes: usize,
+    }
+    impl image_slash_star::OutputSink for RecordingTiffSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+    }
+
+    let decoded = image_slash_star::decode(&fs::read(
+        root.join("tests/fixtures/input/images/tiff/8bit.tiff"),
+    )?)?;
+    // TIFF still delivery is a Rust-only structural sink contract. Pillow has
+    // no caller-owned destination, so these assertions do not add parity rows.
+    for compression in [TiffCompression::Raw, TiffCompression::Deflate] {
+        let mut options = EncodeOptions::for_format(ImageFormat::Tiff);
+        if let EncodeOptions::Tiff(options) = &mut options {
+            options.compression = Some(compression);
+        }
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::Tiff, &options)?;
+        let mut structural = RecordingTiffSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Tiff,
+                &options,
+                &mut structural,
+            )?,
+            expected.len()
+        );
+        assert_eq!(structural.bytes, expected);
+        assert!(
+            structural.writes > 1,
+            "TIFF output must cross structural write boundaries"
+        );
+
+        let limited = image_slash_star::EncodePolicy::new()
+            .with_max_output_bytes(expected.len().saturating_sub(1) as u64);
+        let mut policy_sink = RecordingTiffSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let policy_error = match image_slash_star::encode_to_sink_with_policy(
+            &decoded.content,
+            ImageFormat::Tiff,
+            &options,
+            &limited,
+            &mut policy_sink,
+        ) {
+            Ok(length) => panic!("limited TIFF sink unexpectedly accepted {length} bytes"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            policy_error.kind(),
+            image_slash_star::ImageErrorKind::LimitExceeded
+        );
+        assert!(matches!(
+            policy_error,
+            ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                ..
+            }
+        ));
+        assert_eq!(policy_sink.writes, 0);
+        assert!(policy_sink.bytes.is_empty());
+    }
+
+    let mismatch_options = EncodeOptions::for_format(ImageFormat::Png);
+    let mut mismatch_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    let mismatch_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Tiff,
+        &mismatch_options,
+        &mut mismatch_sink,
+    ) {
+        Ok(length) => panic!("mismatched TIFF sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        mismatch_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    assert_eq!(mismatch_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(mismatch_sink.writes, 0);
+
+    let tiff_sequence = DecodedSequence::from_image(decoded.content.clone());
+    let mut sequence_mismatch_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    let sequence_mismatch_error = match image_slash_star::encode_sequence_to_sink(
+        &tiff_sequence,
+        ImageFormat::Tiff,
+        &mismatch_options,
+        &mut sequence_mismatch_sink,
+    ) {
+        Ok(length) => panic!("mismatched TIFF sequence sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        sequence_mismatch_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    assert_eq!(
+        sequence_mismatch_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(sequence_mismatch_sink.writes, 0);
+
+    struct CancellingTiffSink {
+        bytes: Vec<u8>,
+        token: image_slash_star::CancellationToken,
+        writes: usize,
+    }
+    impl image_slash_star::OutputSink for CancellingTiffSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            self.bytes.extend_from_slice(bytes);
+            if self.writes == 1 {
+                self.token.cancel();
+            }
+            Ok(())
+        }
+    }
+
+    let raw_options = EncodeOptions::for_format(ImageFormat::Tiff);
+    let expected_raw = image_slash_star::encode(&decoded.content, ImageFormat::Tiff, &raw_options)?;
+    let token = image_slash_star::CancellationToken::new();
+    let mut cancelling = CancellingTiffSink {
+        bytes: Vec::new(),
+        token: token.clone(),
+        writes: 0,
+    };
+    let cancellation_error = match image_slash_star::encode_to_sink_with_token(
+        &decoded.content,
+        ImageFormat::Tiff,
+        &raw_options,
+        &token,
+        &mut cancelling,
+    ) {
+        Ok(length) => panic!("cancelling TIFF sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        cancellation_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(cancelling.writes, 1);
+    assert_eq!(cancelling.bytes, &expected_raw[..8]);
+
     struct RejectingTiffSink;
     impl image_slash_star::OutputSink for RejectingTiffSink {
         fn write_all(&mut self, _bytes: &[u8]) -> image_slash_star::ImageResult<()> {
@@ -7902,9 +8062,6 @@ fn tiff_capability_and_destination_failures_are_structured()
         }
     }
 
-    let decoded = image_slash_star::decode(&fs::read(
-        root.join("tests/fixtures/input/images/tiff/8bit.tiff"),
-    )?)?;
     let mut still_sink = RejectingTiffSink;
     let sink_error = match image_slash_star::encode_to_sink(
         &decoded.content,
