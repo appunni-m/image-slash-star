@@ -812,20 +812,22 @@ was added.
 
 The WebP still and one-frame sequence structural-sink slice is implemented at
 revision `e632222badda34fb29913473556da99b8128d0f8`; the follow-up feature-gate
-fix is `63d801c93eabee36e8ec87f22ad20df940283be7`, and the sequence dispatch
-extension is `93a790a53f806baafd7d5a9c9b0376c7e93e54da`. It retains the
-complete WebP working buffer but delivers a validated RIFF header followed by
-chunk headers and payload/padding spans, with exact-length preflight and
-cancellation between segments for both still and one-frame sequence stages.
+fix is `63d801c93eabee36e8ec87f22ad20df940283be7`, the sequence dispatch
+extension is `93a790a53f806baafd7d5a9c9b0376c7e93e54da`, and the final
+multi-frame fallback guard is `745c0af6bc4f4d10ddfebcafa8ef131d88097811`. It
+retains the complete WebP working buffer but delivers a validated RIFF header
+followed by chunk headers and payload/padding spans, with exact-length
+preflight and cancellation between segments for both still and one-frame
+sequence stages. Multi-frame WebP remains the generic whole-buffer path.
 This is an ordinary Rust-only sink contract: Pillow has no caller-owned
 destination, so no parity row or fixture was added. Coverage MCP run
-`fbc8cb3f-2bb5-4de1-8813-c80bab47d8e4`, snapshot
-`503f5ab7-da40-4388-baa0-3cda313d8213`, passed 72 tests with zero failures and
-retained 48,166/48,205 lines, 6,601/6,608 branches, 2,698/2,710 functions,
-and 74,982/75,039 regions. The corrected feature matrix passed 947 checks
-with zero failures in run `75fdf3ca-326e-45f4-8b53-f850541dd626` (117,368 ms),
+`c92f3ac8-7122-487e-a374-a97f9a497813`, snapshot
+`2d14db3c-a464-4768-960b-ec6d4c8e8c00`, passed 72 tests with zero failures and
+retained 48,169/48,208 lines, 6,603/6,610 branches, 2,698/2,710 functions,
+and 74,985/75,042 regions. The corrected feature matrix passed 947 checks
+with zero failures in run `b480a67a-f626-4656-aefa-3a47e8521a32` (119,749 ms),
 and the unchanged Pillow parity scope passed 1,434 checks with zero failures
-and zero skips in run `f91b2369-fd69-47f7-9486-f79c76bbb10a` (76,056 ms).
+and zero skips in run `5196a8d9-7c7b-43b8-b621-1a1a1812ebfa` (79,583 ms).
 The managed parity scope and Pillow provenance remain unchanged.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
