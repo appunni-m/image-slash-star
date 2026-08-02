@@ -51,6 +51,15 @@ pub fn encode(img: &DecodedImage, opts: &GifEncodeOptions) -> CodecResult<Vec<u8
     encode_sequence(&DecodedSequence::from_image(img.clone()), opts)
 }
 
+/// Encode a still GIF while polling an optional cooperative cancellation token.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &GifEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    encode_sequence_with_token(&DecodedSequence::from_image(img.clone()), opts, token)
+}
+
 #[cfg(coverage)]
 #[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
