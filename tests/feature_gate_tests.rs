@@ -1713,6 +1713,13 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_missing_iend" => "png_missing_iend",
             "png_duplicate_plte" => "png_duplicate_plte",
             "png_duplicate_trns" => "png_duplicate_trns",
+            "png_trns_overlong" => "png_trns_overlong",
+            "png_missing_plte" => "png_missing_plte",
+            "png_empty_plte" => "png_empty_plte",
+            "png_partial_plte" => "png_partial_plte",
+            "png_trns_without_plte" => "png_trns_without_plte",
+            "png_apng_zero_frames" => "png_apng_zero_frames",
+            "png_oversized_scanline" => "png_oversized_scanline",
             other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
         };
         let base = fs::read(root.join(&case.asset_path))?;
