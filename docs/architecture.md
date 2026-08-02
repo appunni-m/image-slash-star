@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`9cef5ca66de48d78f2754fb246886cb0eb27eb09`; the claim-ledger baseline remains
+`ac22bf1cbdb43922969bb35172a9515430e753b8`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -631,12 +631,12 @@ output format, the `StillEncode` or `SequenceEncode` stage, and the sink's diagn
 input offset and container identity are `None` because the failure is on the
 destination side. This boundary defines one post-delivery `OutputSink::flush`
 call; a flush failure is also `ImageError::OutputWrite` and may follow a
-complete prefix. The Rust-only PNG still contract additionally proves that a
-sink may reject after accepting a five-byte structural prefix: the delivered
-prefix remains observable and finalization is not called. Short-write behavior
-on other paths, rollback, and partial-container cleanup remain open. Every
-current codec sink writer reports the same structured cause if any validated
-emitted segment is rejected.
+complete prefix. The Rust-only still-writer contract additionally proves that
+every available still codec may reject after accepting a partial structural
+prefix: the delivered prefix remains observable and finalization is not called.
+Short-write behavior on other paths, rollback, and partial-container cleanup
+remain open. Every current codec sink writer reports the same structured cause
+if any validated emitted segment is rejected.
 
 Non-fatal recovery is separate from `ImageError`: successful decode returns
 `Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
