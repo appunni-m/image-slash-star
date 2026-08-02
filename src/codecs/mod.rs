@@ -1703,13 +1703,7 @@ pub(crate) fn encode_sequence_to_sink_with_token(
     Ok(None)
 }
 
-#[cfg(any(
-    feature = "bmp",
-    feature = "ico",
-    feature = "png",
-    feature = "tiff",
-    feature = "webp"
-))]
+#[cfg(any(feature = "bmp", feature = "ico", feature = "png", feature = "webp"))]
 fn single_frame_for_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,
