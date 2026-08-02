@@ -7,7 +7,9 @@ The probe test in ``tests/capability_table.rs`` is included by the
 probe in every native lane and in every ``wasm32-wasip1`` lane under Node's
 WASI runtime, then assembles ``tests/fixtures/capability_tables.json``.
 Reusing ``feature_gate_tests`` lets these cargo invocations reuse artifacts
-already built by ``scripts/test_feature_matrix.sh``. When
+already built by ``scripts/test_feature_matrix.sh``. The feature-matrix
+command instead consumes the capability rows emitted by its full lane tests,
+so it does not launch a second probe process for every lane. When
 ``CAPABILITY_TARGET_ROOT`` is set by that matrix, each probe also selects the
 lane-local Cargo target directory used by the matrix, avoiding a second build
 root while keeping independent lanes free of build-directory lock contention.
@@ -174,6 +176,42 @@ def run_probe(args: list[str], env: dict, lane: str, target: str) -> dict:
     )
 
 
+def row_from_matrix_log(path: Path, lane: str, target: str) -> dict:
+    try:
+        output = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise RuntimeError(f"cannot read {target}/{lane} matrix log {path}: {error}") from error
+
+    rows = []
+    for line in output.splitlines():
+        if MARKER not in line:
+            continue
+        try:
+            row = json.loads(line.split(MARKER, 1)[1].strip())
+        except json.JSONDecodeError as error:
+            raise RuntimeError(
+                f"invalid capability row in {target}/{lane} matrix log {path}: {error}"
+            ) from error
+        rows.append(row)
+
+    if len(rows) != 1:
+        raise RuntimeError(
+            f"expected one capability row in {target}/{lane} matrix log {path}, "
+            f"found {len(rows)}"
+        )
+    row = rows[0]
+    if row.get("lane") != lane:
+        raise RuntimeError(
+            f"{target} matrix log for lane {lane} reported lane {row.get('lane')}"
+        )
+    if row.get("target") != target:
+        raise RuntimeError(
+            f"matrix log for lane {lane} reported target {row.get('target')}, "
+            f"expected {target}"
+        )
+    return row
+
+
 def normalize_row(row: dict) -> dict:
     row = dict(row)
     row.pop("triple", None)
@@ -210,6 +248,25 @@ def generate() -> dict:
     return table
 
 
+def generate_from_matrix_logs(log_dir: Path) -> dict:
+    triple = host_triple()
+    table: dict = {"format_version": 1, "native": {}, "wasm32-wasip1": {}}
+    for group, target, table_target in (
+        ("native", "native", "native"),
+        ("wasm-wasi", "wasm32", "wasm32-wasip1"),
+    ):
+        for lane in LANES:
+            path = log_dir / f"{group}-{lane}.log"
+            row = normalize_row(row_from_matrix_log(path, lane, target))
+            table[table_target].setdefault(
+                "host_triple", triple if target == "native" else "wasm32-wasip1"
+            )
+            table[table_target].setdefault("lanes", {})[lane] = row
+            print(f"read {lane}: {table_target} from {path.name}")
+    validate(table)
+    return table
+
+
 def validate(table: dict) -> None:
     if table.get("format_version") != 1:
         raise RuntimeError("capability table format_version must be 1")
@@ -242,11 +299,19 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="fail on any drift")
     parser.add_argument("--generate", action="store_true", help="rewrite the fixture")
+    parser.add_argument(
+        "--matrix-log-dir",
+        type=Path,
+        help="read capability rows emitted by an already-completed feature matrix",
+    )
     args = parser.parse_args()
     if args.check == args.generate:
         parser.error("exactly one of --check or --generate is required")
 
-    regenerated = generate()
+    if args.matrix_log_dir is None:
+        regenerated = generate()
+    else:
+        regenerated = generate_from_matrix_logs(args.matrix_log_dir)
     if args.generate:
         FIXTURE.write_text(
             json.dumps(regenerated, indent=2, sort_keys=True) + "\n", encoding="utf-8"

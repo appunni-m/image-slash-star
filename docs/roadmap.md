@@ -1208,6 +1208,12 @@ roots. Run `91155ed7-9729-4877-8433-d14146428137` passed 925 checks with zero
 failures in 110,405 ms, retained the same terminal capability-table record,
 and had no build-directory lock-wait records. This is harness correctness and
 contention evidence rather than a controlled speed comparison because managed
+cache/build state differs. The final capability-table check now consumes the
+single row emitted by each full lane test instead of relaunching 22 one-test
+probe processes. Run `120f465d-fd8b-43af-8ce2-76497d99fb80` passed the same 925
+checks with zero failures in 77,855 ms, retained the same table record, and
+again had no build-directory lock-wait records. The observed difference is
+execution evidence rather than a controlled speedup claim because managed
 cache/build state differs.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
