@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `3039d5dc3519e8247db2f76d61ea064ff6f1e74b`
+Reviewed: 2026-08-02 against the working tree based on `0c6e7c287ee6c9b4b95d7b34711b46d17dcb44f5`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -534,10 +534,12 @@ Where a codec parser can name the failing container structure, it also attaches
 the encoded-input byte offset (`ImageError::offset()`) and a stable structure
 identity (`ImageError::identity()`): PNG chunk boundaries, GIF blocks/images/
 extensions, JPEG markers/segments, TIFF IFDs, WebP chunks on the metadata-scan
-path, AVIF boxes, BMP header/palette/pixel-span/bitfield/RLE boundaries, and
-ICO header/directory/entry-range/embedded PNG/DIB/CUR boundaries, and WebP
-inspection/container-chunk boundaries. WebP bitstream decode internals remain
-detail-free. Both fields are stable recovery data, never prose.
+path, AVIF boxes, BMP header/palette/pixel-span/bitfield/RLE boundaries, ICO
+header/directory/entry-range/embedded PNG/DIB/CUR boundaries, and WebP
+inspection/container-chunk boundaries. Still and sequence WebP payload-decoder
+failures also retain `webp_bitstream` at the validated payload start (or the
+current ANMF container offset for an animation). The decoder does not promise a
+finer inner bitstream cursor. Both fields are stable recovery data, never prose.
 
 When `encode_to_sink` or `encode_sequence_to_sink` receives an error from its
 caller-owned `OutputSink`, it normalizes that rejection to

@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `3039d5dc3519e8247db2f76d61ea064ff6f1e74b`
+Reviewed: 2026-08-02 on the working tree based on revision `0c6e7c287ee6c9b4b95d7b34711b46d17dcb44f5`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -224,7 +224,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`3039d5dc3519e8247db2f76d61ea064ff6f1e74b`, the generated matrix reports:
+`0c6e7c287ee6c9b4b95d7b34711b46d17dcb44f5`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -560,10 +560,13 @@ identity on codec-dispatched failures: truncated PNG chunks across
 inspect/still/sequence/source/verify, GIF image descriptors, JPEG markers,
 TIFF IFDs, truncated AVIF boxes, BMP header/palette/pixel-span/bitfield/RLE
 cases, ICO header/directory/entry-range/embedded PNG/DIB/CUR cases, and WebP
-inspection/container-chunk cases all carry `identity` values with offsets,
-while encode and option-construction errors stay offset-free. WebP bitstream
-decode internals remain detail-free. The BMP, ICO, and WebP witnesses are
-ordinary Rust error-contract cases, not generated Pillow-parity rows.
+inspection/container-chunk cases all carry `identity` values with offsets.
+Still and sequence WebP payload-decoder failures carry
+`webp_bitstream` at the validated payload start (or current ANMF container
+offset); finer decoder-internal cursors remain outside the contract. Encode
+and option-construction errors stay offset-free. The BMP, ICO, and WebP
+witnesses are ordinary Rust error-contract cases, not generated Pillow-parity
+rows.
 
 The malformed-class ledger is generated from the coverage matrix by
 `scripts/generate_malformed_ledger.py` and checked in CI with `--check`, so
@@ -606,17 +609,17 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`81c3c487-3fb0-4942-9b3f-8123e221f943`, submitted against
-`3039d5dc3519e8247db2f76d61ea064ff6f1e74b`: 859 checks passed with zero
-failures in 1,044,260 ms, and its terminal capability-table record says
+`47a6aa5c-2d9f-49e7-920d-2e99905e4ebd`, submitted against
+`0c6e7c287ee6c9b4b95d7b34711b46d17dcb44f5`: 859 checks passed with zero
+failures in 980,114 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `cc267c2a-6e03-4e13-99ab-a320e09afab5`
+Coverage MCP run: `7209e672-dda4-4b40-b32b-c94bca372b59`
 
-Snapshot: `66371bbe-b0e2-45b2-a481-0e83149aaba4`
+Snapshot: `4dff21bf-a675-4166-b1de-02b3bc9be791`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
