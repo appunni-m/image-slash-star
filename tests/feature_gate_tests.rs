@@ -7806,6 +7806,28 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample WebP VP8 budget preserves byte identity"
         );
 
+        let mut alpha_pixels = Vec::with_capacity(64 * 64 * 4);
+        for index in 0..64 * 64 {
+            alpha_pixels.extend_from_slice(&[
+                128,
+                128,
+                128,
+                if index % 2 == 0 { u8::MAX } else { 127 },
+            ]);
+        }
+        let alpha_image = DecodedImage::new(64, 64, alpha_pixels, ColorType::Rgba8);
+        let alpha_expected = image_slash_star::encode(&alpha_image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &alpha_image,
+                ImageFormat::WebP,
+                &options,
+                &unlimited,
+            )?,
+            alpha_expected,
+            "an ample WebP VP8 alpha budget preserves byte identity"
+        );
+
         let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
         let error = match image_slash_star::encode_with_policy(
             &image,
