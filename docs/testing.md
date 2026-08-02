@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `44abdb7697344897430973fe380408ccfadd4f22`
+Reviewed: 2026-08-02 on the working tree based on revision `208b5a3f2482d71d95eb02ded6c08f78963dd0a9`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -260,7 +260,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`44abdb7697344897430973fe380408ccfadd4f22`, the generated matrix reports:
+`208b5a3f2482d71d95eb02ded6c08f78963dd0a9`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -649,14 +649,17 @@ The same managed run executed every active manifest case with zero failures or
 skips.
 
 Managed runtime evidence comes from feature-matrix run
-`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`: 903 checks passed with zero
-failures in 351,555 ms, and its terminal capability-table record says
+`f74e711f-c9a2-4327-bc74-d834b6bf399a`: 903 checks passed with zero
+failures in 298,766 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. The matrix
-uses bounded parallel batches for independent native and
-`wasm32-unknown-unknown` lanes and interleaved capability probes;
-`MATRIX_JOBS` and `CAPABILITY_JOBS` default to three. This is target/runtime
-evidence; it does not turn aggregate coverage, defensive/specification
-contracts, or Rust-only diagnostic tests into Pillow-parity coverage.
+uses bounded parallel batches for independent native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` runtime lanes and interleaved
+capability probes; `MATRIX_JOBS` and `CAPABILITY_JOBS` default to three. This
+is 52,789 ms faster than the previous managed run
+(`e7755afd-eedf-4fe7-b56d-f24ea54a55e1`, 351,555 ms) with the same 903-check
+scope. This is target/runtime evidence; it does not turn aggregate coverage,
+defensive/specification contracts, or Rust-only diagnostic tests into
+Pillow-parity coverage.
 
 Coverage MCP run: `1bf81abe-cd2c-41dd-897e-9ff09b9b92a8`
 
