@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `1a4419e307b8041d65c4735209496c099e140f64`
+Reviewed: 2026-08-02 on the working tree based on revision `723c68209e992ce65501d6ed5f827308b30ebfa8`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`1a4419e307b8041d65c4735209496c099e140f64`, identified by manifest SHA-256
+`723c68209e992ce65501d6ed5f827308b30ebfa8`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -127,10 +127,10 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`ef022042-faad-4b17-8a45-78eace739061`, snapshot
-`f13c8a73-f466-43c6-885d-0e2e80d9b3da`, passed 52 tests with zero failures
-or skips and reports 47,069/47,069 lines, 6,506/6,506 branches,
-2,642/2,642 functions, and 73,420/73,420 regions.
+`f9dc5f1d-a76e-4d7c-a0fe-51ddb0b46fdf`, snapshot
+`0b7d6985-7afb-48e3-a0bf-227f5e1b1c3d`, passed 52 tests with zero failures
+or skips and reports 47,085/47,085 lines, 6,508/6,508 branches,
+2,643/2,643 functions, and 73,436/73,436 regions.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -361,7 +361,7 @@ Minute gaps:
 | PNG-004 | Pillow 12.2.0 still accepts `I` source save, with a deprecation warning for Pillow 13. | Freeze the pinned behavior in a fixture and decide whether compatibility outweighs a soon-removed oracle path. |
 | PNG-005 | Encoder always emits non-Adam7 PNG because pinned Pillow ignores the tested interlace option. | Keep behavior, but document this as oracle compatibility rather than general PNG encoder capability. |
 | PNG-006 | Inspection scans through pre-IDAT chunks and validates selected CRCs; it is not a fixed 33-byte metadata read. | Document complexity and add limits before advertising cheap inspection on arbitrary inputs. |
-| PNG-007 | Critical/ancillary CRC behavior, reserved-bit handling, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs now produce a Rust-only `RecoveredStructure` diagnostic during decode while `verify()` remains fatal. | Complete the minimized decision matrix for construction-critical CRCs, reserved bits, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
+| PNG-007 | Critical/ancillary CRC behavior, chunk ordering, and most recoverable ancillary damage still lack one explicit strictness/diagnostic policy. Pillow-tolerated bad `IDAT` CRCs and an invalid reserved-bit character in an unknown ancillary chunk now produce Rust-only `RecoveredStructure` diagnostics during decode; `verify()` remains fatal for the IDAT CRC. | Complete the minimized decision matrix for construction-critical CRCs, ordering, and the remaining recoverable damage; retain warnings separately from fatal `Malformed` errors. |
 | PNG-008 | Text and ICC payloads are not decompressed or parsed, and chunk count and per-chunk size limits are still absent. The total ancillary extent, including retained opaque blocks, is bounded by `max_metadata_bytes` when a caller sets it. | Add explicit compressed-metadata and chunk-count limits under API-023 before semantic parsing. |
 | PNG-010 | `sBIT`, `cICP`, `mDCV`, `cLLI`, `iCCP`, `sRGB`, `gAMA`, and `cHRM` precedence is not represented. | Preserve exact fields first and publish a precedence statement without performing color conversion. |
 | PNG-011 | Direct 16-bit LA/RGB/RGBA encode modes are absent even though the decoder observes those source depths. | Add one mode at a time with big-endian sample fixtures and exact Pillow/reference output. |
@@ -1104,8 +1104,8 @@ still-codec interruption, progress, work budgets, and universal structural
 writers remain open.
 Successful decodes now carry stable non-fatal diagnostics for accepted
 recoveries, invalid compressed PNG ancillary metadata, an accepted bad `IDAT`
-CRC, and ignored trailing input; their Rust-only fields are tested through a
-separate defensive-model
+CRC, an accepted invalid PNG reserved-bit character, and ignored trailing
+input; their Rust-only fields are tested through a separate defensive-model
 manifest rather than the Pillow parity matrix. Unsupported valid-shape non-zero
 PNG `zTXt`/`iCCP` compression methods remain fatal with `png_chunk` context;
 that Pillow-observable boundary is asserted separately without a synthetic
@@ -1136,8 +1136,8 @@ metadata output is only a source witness, and no synthetic parity row is added.
 Their EXIF bytes include the stored AVIF TIFF-header offset prefix. Non-primary/
 auxiliary metadata relationships remain open.
 Revision-bound managed feature-matrix runtime evidence comes from run
-`87582660-2fe5-427f-9e20-136fb3375919`, submitted against
-`1a4419e307b8041d65c4735209496c099e140f64`; it passed 859 checks with zero
+`f49721a6-fb53-4a4c-86f7-4f3554c3c29a`, submitted against
+`723c68209e992ce65501d6ed5f827308b30ebfa8`; it passed 859 checks with zero
 failures, and its terminal log records `capability tables OK: every native
 and wasm32-wasip1 lane agrees`. Aggregate coverage and runtime matrix results
 are implementation evidence, not Pillow-parity coverage.
