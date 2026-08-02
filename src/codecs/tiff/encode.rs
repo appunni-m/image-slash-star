@@ -491,6 +491,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         token.cancel_after(checks);
         let _ = encode_with_token(&checkpoint_image, &predicted_lzw, Some(&token));
     }
+    // Successful token-bearing calls cover the post-compression and output
+    // relocation checkpoints that cancellation drills intentionally exit
+    // before reaching.
+    let token = crate::CancellationToken::new();
+    let _ = encode_with_token(
+        &checkpoint_image,
+        &TiffEncodeOptions::default(),
+        Some(&token),
+    );
+    let mut deflate_options = TiffEncodeOptions::default();
+    deflate_options.compression = Some(TiffCompression::Deflate);
+    let _ = encode_with_token(&checkpoint_image, &deflate_options, Some(&token));
+    let _ = encode_sequence_with_token(
+        &single_sequence,
+        &TiffEncodeOptions::default(),
+        Some(&token),
+    );
+    let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
+    let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
     let mut forced_sequence_overflow = TiffEncodeOptions::default();
     forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);
