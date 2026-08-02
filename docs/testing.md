@@ -697,17 +697,29 @@ The counts are reproducible from the generated artifact:
 jq '.summary' tests/fixtures/coverage_matrix.json
 ```
 
-The accepted Coverage MCP result for the current implementation state is:
+The current committed acceptance result is Coverage MCP run
+`822bf053-61cb-4488-af1c-d2e23b15785c`, snapshot
+`512dce77-6eda-4b2d-b8aa-9cbfcdd6a8a6`, at revision
+`07f7a0977149803f96eec16ac8c2f3c1cb073eee`:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,943 | 47,943 |
-| Branches | 6,578 | 6,578 |
-| Functions | 2,686 | 2,686 |
-| Regions | 74,654 | 74,654 |
+| Lines | 47,977 | 47,977 |
+| Branches | 6,582 | 6,582 |
+| Functions | 2,687 | 2,687 |
+| Regions | 74,704 | 74,704 |
 
-The same managed run executed every active manifest case with zero failures or
-skips.
+The same managed run executed 58 tests with zero failures or skips. The
+TIFF Deflate work-budget contract includes distinct late row, tokenization,
+and output checkpoints; these are ordinary Rust work-control evidence, not
+synthetic Pillow parity rows.
+
+The same committed revision passed the adaptive feature matrix in run
+`0d19674c-4a01-4a06-9e54-2831a16c10d7` with 947 checks and zero failures in
+30,478 ms, and the Pillow parity matrix in run
+`888ba305-ff93-41c4-8d96-05c12f033c64` with 1,420 rows, zero failures, and zero
+skips in 27,932 ms. The timings are retained execution evidence rather than a
+universal benchmark claim because managed cache and build state can differ.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
@@ -862,6 +874,8 @@ The sink-finalization follow-up was validated on committed revision
 in 65,458 ms, retained the same terminal capability record, and had zero
 build-directory lock-wait matches. This is execution evidence rather than a
 controlled speed comparison because the managed cache state differed.
+
+Historical claim-ledger acceptance record:
 
 Coverage MCP run: `9bbe6760-7aa9-4ed8-8b31-bbf65444b85a`
 

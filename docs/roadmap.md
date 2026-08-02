@@ -126,7 +126,7 @@ testing contract, rustdoc, committed fixtures, and claim ledger. New confirmed
 defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
-The current all-feature Coverage MCP run
+The claim-ledger baseline all-feature Coverage MCP run
 `9bbe6760-7aa9-4ed8-8b31-bbf65444b85a`, snapshot
 `f9a2fc69-ad68-493e-9c46-8837d0dd8d52`, passed 58 tests with zero failures
 or skips and reports 47,943/47,943 lines, 6,578/6,578 branches,
@@ -1333,7 +1333,15 @@ branches, 2,686 functions, and 74,654 regions). The ICO still and one-frame
 ICO sequence sink paths, the deterministic encode work-budget contract, and
 their real defensive/error branches, including sink finalization failures, are
 covered through ordinary Rust contracts; aggregate coverage remains
-implementation evidence rather than Pillow-parity coverage.
+implementation evidence rather than Pillow-parity coverage. The current
+committed acceptance revision is `07f7a0977149803f96eec16ac8c2f3c1cb073eee`:
+Coverage MCP run `822bf053-61cb-4488-af1c-d2e23b15785c`, snapshot
+`512dce77-6eda-4b2d-b8aa-9cbfcdd6a8a6`, passes 58 tests with zero failures or
+skips and reports 47,977/47,977 lines, 6,582/6,582 branches, 2,687/2,687
+functions, and 74,704/74,704 regions. The feature matrix run
+`0d19674c-4a01-4a06-9e54-2831a16c10d7` passes 947/947 checks, and the Pillow
+parity run `888ba305-ff93-41c4-8d96-05c12f033c64` passes 1,420/1,420 rows;
+those matrices remain separate from the Rust-only TIFF work-budget contract.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
