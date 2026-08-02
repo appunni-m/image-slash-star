@@ -1,6 +1,6 @@
 //! Cargo-feature and target-capability behavior driven by Pillow fixtures.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::fs;
 use std::path::Path;
 
@@ -1966,6 +1966,13 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
     assert_eq!(manifest.assertion_origin, "defensive_model");
     assert_eq!(manifest.pillow_version, "12.2.0");
 
+    // Multiple rows intentionally derive mutations from the same committed
+    // baseline. Keep the fixture bytes and unmodified decode result hot so the
+    // contract spends its time checking the mutation rather than reparsing
+    // identical inputs for every row.
+    let mut base_cache = HashMap::new();
+    let mut still_baselines = HashMap::new();
+    let mut sequence_baselines = HashMap::new();
     for case in manifest.cases {
         let enabled = match case.feature.as_str() {
             "gif" => cfg!(feature = "gif"),
@@ -1991,9 +1998,14 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "sequence_decode" => ImageErrorStage::SequenceDecode,
             other => panic!("{}: unknown diagnostic stage `{other}`", case.id),
         };
-        let base = fs::read(root.join(&case.asset_path))?;
+        if let Entry::Vacant(entry) = base_cache.entry(case.asset_path.clone()) {
+            entry.insert(fs::read(root.join(&case.asset_path))?);
+        }
+        let base = base_cache
+            .get(&case.asset_path)
+            .expect("diagnostic baseline cache entry");
         let bytes = match case.mutation.as_str() {
-            "none" => base.clone(),
+            "none" => base.to_vec(),
             "png_before_idat" => {
                 let kind: [u8; 4] = case
                     .chunk_kind
@@ -2049,7 +2061,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .checked_add(8)
                     .and_then(|offset| offset.checked_add(length))
                     .ok_or_else(|| format!("{}: CRC offset overflow", case.id))?;
-                let mut mutated = base.clone();
+                let mut mutated = base.to_vec();
                 *mutated
                     .get_mut(crc_offset)
                     .ok_or_else(|| format!("{}: CRC is truncated", case.id))? ^= 1;
@@ -2073,7 +2085,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .checked_add(8)
                     .and_then(|offset| offset.checked_add(length))
                     .ok_or_else(|| format!("{}: CRC offset overflow", case.id))?;
-                let mut mutated = base.clone();
+                let mut mutated = base.to_vec();
                 *mutated
                     .get_mut(crc_offset)
                     .ok_or_else(|| format!("{}: CRC is truncated", case.id))? ^= 1;
@@ -2150,7 +2162,10 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             .collect::<Vec<_>>();
         match case.operation.as_str() {
             "decode" => {
-                let base_decoded = image_slash_star::decode(&base)?;
+                let base_decoded = match still_baselines.entry(case.asset_path.clone()) {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(entry) => entry.insert(image_slash_star::decode(base)?),
+                };
                 let decoded = image_slash_star::decode(&bytes)?;
                 assert_eq!(decoded.format, expected_format, "{} format", case.id);
                 assert_eq!(
@@ -2165,7 +2180,10 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                 }
             }
             "decode_sequence" => {
-                let base_sequence = image_slash_star::decode_sequence(&base)?;
+                let base_sequence = match sequence_baselines.entry(case.asset_path.clone()) {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(entry) => entry.insert(image_slash_star::decode_sequence(base)?),
+                };
                 let sequence = image_slash_star::decode_sequence(&bytes)?;
                 assert_eq!(sequence.format, expected_format, "{} format", case.id);
                 assert_eq!(

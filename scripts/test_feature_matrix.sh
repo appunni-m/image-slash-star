@@ -76,6 +76,34 @@ export CAPABILITY_JOBS
 echo "feature matrix: lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
 
 matrix_log_dir=$(mktemp -d "${TMPDIR:-/tmp}/image-slash-star-feature-matrix.XXXXXX")
+# Cargo's package-cache lock lives under CARGO_HOME even when the dependency
+# graph is already fetched and every lane uses a private target directory.
+# Keep the fetched registry and git sources shared, but give each concurrent
+# lane its own lock files so read-only offline builds do not queue behind one
+# another. The lane homes are retained alongside the lane target roots so
+# Cargo fingerprints remain stable across warm matrix invocations.
+matrix_cargo_home_source=${CARGO_HOME:-$HOME/.cargo}
+matrix_cargo_home_source=$(cd "$matrix_cargo_home_source" && pwd)
+prepare_matrix_cargo_home() {
+    lane_cargo_home=$1
+    mkdir -p "$lane_cargo_home"
+    for cargo_shared_directory in registry git; do
+        if [ -e "$matrix_cargo_home_source/$cargo_shared_directory" ] \
+            && [ ! -e "$lane_cargo_home/$cargo_shared_directory" ] \
+            && [ ! -L "$lane_cargo_home/$cargo_shared_directory" ]; then
+            ln -s "$matrix_cargo_home_source/$cargo_shared_directory" \
+                "$lane_cargo_home/$cargo_shared_directory"
+        fi
+    done
+    for cargo_shared_file in config config.toml credentials.toml; do
+        if [ -e "$matrix_cargo_home_source/$cargo_shared_file" ] \
+            && [ ! -e "$lane_cargo_home/$cargo_shared_file" ] \
+            && [ ! -L "$lane_cargo_home/$cargo_shared_file" ]; then
+            ln -s "$matrix_cargo_home_source/$cargo_shared_file" \
+                "$lane_cargo_home/$cargo_shared_file"
+        fi
+    done
+}
 # Keep build artifacts between invocations by default. Every matrix lane still
 # receives an isolated target root, so feature configurations never share
 # Cargo's build-directory lock. Set MATRIX_TARGET_ROOT to a temporary path for
@@ -235,8 +263,11 @@ run_parallel_jobs() {
         matrix_launch_status_path="$matrix_log_dir/$matrix_launch_group-$matrix_launch_lane.status"
         matrix_launch_status_tmp="$matrix_launch_status_path.tmp"
         matrix_launch_target_dir="$matrix_target_root/target-$matrix_launch_group-$matrix_launch_lane"
+        matrix_launch_cargo_home="$matrix_target_root/cargo-home-$matrix_launch_group-$matrix_launch_lane"
+        prepare_matrix_cargo_home "$matrix_launch_cargo_home"
         (
             export CARGO_TARGET_DIR="$matrix_launch_target_dir"
+            export CARGO_HOME="$matrix_launch_cargo_home"
             export CARGO_BUILD_JOBS="$MATRIX_BUILD_JOBS"
             matrix_status=0
             "$matrix_runner" "$matrix_launch_spec" \
