@@ -676,7 +676,7 @@ execution records rather than a controlled speed comparison because managed
 cache/build state differs. The matrix uses a bounded completion-driven scheduler
 for independent native, `wasm32-unknown-unknown`, and `wasm32-wasip1` runtime
 lanes; each full native/WASI lane emits its capability row and the final check
-reads those logs. `MATRIX_JOBS` and `CAPABILITY_JOBS` default to three. A lane
+reads those logs. `MATRIX_JOBS` and `CAPABILITY_JOBS` default to four. A lane
 completion releases a slot immediately, rather than holding it until the
 slowest lane in a launch batch finishes. After the
 probe-target reuse change, run
@@ -739,6 +739,14 @@ and the retained log again had zero build-directory lock-wait matches. The
 lanes; only the second probe launches were removed. The observed 32,550 ms
 difference from the preceding run is execution evidence rather than a
 controlled speedup claim because managed cache/build state can differ.
+
+The bounded lane-concurrency follow-up was validated by run
+`5e438aba-378e-4a33-b03f-d4ecd047865e`: 925 checks passed with zero failures in
+67,609 ms, the capability-table terminal record remained
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and the
+retained log had zero build-directory lock-wait matches. Raising the default
+from three to four is retained as execution evidence rather than a controlled
+speedup claim because managed cache/build state can differ.
 
 Coverage MCP run: `1874d075-0f81-4dd5-af27-33076f32d582`
 

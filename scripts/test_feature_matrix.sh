@@ -7,7 +7,7 @@ set -eu
 # roots still reuse clippy, rustdoc, and test artifacts within that lane, and
 # the capability-table probe is pointed at the same roots below.
 # Set MATRIX_JOBS higher on machines with more spare CPU and memory.
-MATRIX_JOBS=${MATRIX_JOBS:-3}
+MATRIX_JOBS=${MATRIX_JOBS:-4}
 case "$MATRIX_JOBS" in
     ''|*[!0-9]*|0)
         echo "MATRIX_JOBS must be a positive integer" >&2
