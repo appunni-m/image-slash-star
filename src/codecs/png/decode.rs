@@ -186,6 +186,27 @@ fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::Im
     }
 }
 
+fn record_duplicate_palette_diagnostic(
+    chunk: &Chunk<'_>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    // Pillow keeps the first PLTE/tRNS member's observable palette result and
+    // accepts the duplicate. Preserve that result while exposing the ignored
+    // structural member through the Rust-only diagnostic contract.
+    let identity = match &chunk.kind {
+        b"PLTE" => "png_duplicate_plte",
+        b"tRNS" => "png_duplicate_trns",
+        _ => return,
+    };
+    diagnostics.push(crate::ImageDiagnostic {
+        kind: crate::DiagnosticKind::RecoveredStructure,
+        format: crate::ImageFormat::Png,
+        stage: None,
+        offset: Some(chunk.offset),
+        identity: Some(identity),
+    });
+}
+
 fn record_reserved_bit_diagnostic(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
@@ -313,6 +334,7 @@ pub fn decode(
     let mut compressed = Vec::new();
     let mut palette_rgb = None;
     let mut palette_alpha = Vec::new();
+    let mut saw_trns = false;
     let mut saw_idat = false;
     let mut saw_post_idat_control = false;
     let mut next_sequence = 0;
@@ -332,8 +354,21 @@ pub fn decode(
                 saw_idat = true;
                 compressed.extend_from_slice(chunk.data);
             }
-            b"PLTE" if palette_rgb.is_none() => palette_rgb = Some(chunk.data.to_vec()),
-            b"tRNS" if palette_alpha.is_empty() => palette_alpha.extend_from_slice(chunk.data),
+            b"PLTE" => {
+                if palette_rgb.is_none() {
+                    palette_rgb = Some(chunk.data.to_vec());
+                } else {
+                    record_duplicate_palette_diagnostic(&chunk, &mut diagnostics);
+                }
+            }
+            b"tRNS" => {
+                if !saw_trns {
+                    palette_alpha.extend_from_slice(chunk.data);
+                    saw_trns = true;
+                } else {
+                    record_duplicate_palette_diagnostic(&chunk, &mut diagnostics);
+                }
+            }
             b"acTL" if chunk.data.len() < 8 => {
                 return Err(CodecError::Malformed(
                     "PNG acTL chunk has an invalid length".to_owned(),

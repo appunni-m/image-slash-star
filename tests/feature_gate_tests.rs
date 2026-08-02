@@ -1711,6 +1711,8 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_reserved_bit" => "png_reserved_bit",
             "png_ancillary_after_idat" => "png_ancillary_after_idat",
             "png_missing_iend" => "png_missing_iend",
+            "png_duplicate_plte" => "png_duplicate_plte",
+            "png_duplicate_trns" => "png_duplicate_trns",
             other => panic!("{}: unknown diagnostic identity `{other}`", case.id),
         };
         let base = fs::read(root.join(&case.asset_path))?;
