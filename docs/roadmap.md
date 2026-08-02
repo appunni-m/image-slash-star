@@ -2,7 +2,7 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-02 on the working tree based on revision `45e19227bfbd1d1c9b21f03d2171955efd4f600c`
+Reviewed: 2026-08-02 on the working tree based on revision `391f50aea8668771eaca61709945df943ce3e028`
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -57,7 +57,7 @@ creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
 The correction evidence below is the working-tree state based on
-`45e19227bfbd1d1c9b21f03d2171955efd4f600c`, identified by manifest SHA-256
+`391f50aea8668771eaca61709945df943ce3e028`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
@@ -127,10 +127,12 @@ defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
 The current all-feature Coverage MCP run
-`d690cb20-f078-4652-8c83-4892a1a880bc`, snapshot
-`5b2addef-2953-4d3c-8e50-be66bb7e470d`, passed 55 tests with zero failures
-or skips and reports 47,475/47,475 lines, 6,556/6,556 branches,
-2,657/2,657 functions, and 73,904/73,904 regions.
+`8d23fb4f-d3d2-440d-a29c-5f88c8b837c6`, snapshot
+`50225988-71f1-473e-a0bc-3662f19e53de`, passed 55 tests with zero failures
+or skips and reports 47,575/47,575 lines, 6,558/6,558 branches,
+2,658/2,658 functions, and 74,085/74,085 regions. The same exact-revision
+run includes the TIFF still cancellation checkpoints and passes the strict
+LLVM coverage verifier.
 Strict Clippy, rustfmt, every isolated native feature lane, and every supported
 WASM compile/rustdoc lane also pass. The WebP root-cause trace additionally
 corrected VP8L histogram-map sampling/box references for small palettes and
@@ -225,7 +227,7 @@ public reusable conversion layer would violate project scope.
 | API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` resource, maximum, and observed result length. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context, TIFF compressed strip/tile payload failures now retain `tiff_strip`/`tiff_tile` context, and WebP inspection/container-chunk failures now retain stable WebP context. WebP still and sequence payload-decoder failures now retain `webp_bitstream` at the validated VP8/VP8L payload start, or the current ANMF container offset for animation; finer decoder-internal cursors remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms. Non-primary/auxiliary item color properties, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
-| API-036 | Work control | Cooperative cancellation now exists for still and sequence decode and for a partial encode surface: JPEG still encoding polls color/sampling/quantization rows plus entropy/progressive scan batches, PNG and BMP still encoding poll row preparation and sink segments, and GIF/TIFF/WebP/native-AVIF sequence encoders poll implemented frame/coalescing/page/finalization checkpoints. A structural sink cancellation may leave the delivered prefix. Progress callbacks, work-budget exhaustion, and interior interruption for the remaining still codecs remain future work. | Extend polling into the remaining long still codecs and structural writers, then define progress/work-budget semantics and destination rollback without claiming that boundary cancellation is universal interior interruption. |
+| API-036 | Work control | Cooperative cancellation now exists for still and sequence decode and for a partial encode surface: JPEG still encoding polls color/sampling/quantization rows plus entropy/progressive scan batches; TIFF still encoding polls page preparation, row prediction, raw/PackBits/LZW checkpoints, and deflate boundaries; PNG and BMP still encoding poll row preparation and sink segments; and GIF/TIFF/WebP/native-AVIF sequence encoders poll implemented frame/coalescing/page/finalization checkpoints. A structural sink cancellation may leave the delivered prefix. Progress callbacks, work-budget exhaustion, deeper deflate/structural interruption, and interior interruption for the remaining still codecs remain future work. | Extend polling into the remaining long still codecs and structural writers, then define progress/work-budget semantics and destination rollback without claiming that boundary cancellation is universal interior interruption. |
 | API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set or supplied a trusted format hint. This matters for partial data and downstream policy. | Let a decode policy carry an optional format hint/allow-list while retaining signature validation and feature-independent `detect_format`. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
 | API-043 | Partial-input contract | The non-terminal `NeedMoreData { minimum }` state now exists for detection, basic inspection, still decode, and sequence decode, with exact minimum-byte or progress semantics; terminal results must never be retried. | Keep the status stable for any future streaming surface and document per-operation progress. |
@@ -738,7 +740,7 @@ union. That has several consequences for this crate.
 | QA-022 | WASM compile success provides no browser evidence for boundary copies, memory growth, exceptions, worker use, or real artifact size. | Run a small Playwright/WebDriver-free JS harness in a pinned browser runtime and Node for every published artifact target. |
 | QA-023 | Emitted bytes are primarily re-opened through Pillow, which can share libjpeg/libwebp/libtiff/libavif implementations with the oracle path. | Decode representative outputs with an independent implementation or browser and record that evidence separately from Pillow parity. |
 | QA-024 | Round-trip tests do not publish a uniform rule separating lossless exact samples, lossy decoded tolerances, and deterministic encoded bytes. | Add an assertion policy per format/mode/option row and reject ambiguous generic “round trip passed” claims. |
-| QA-026 | Decode output-size limits and cumulative sequence limits have boundary, cache-state, and retry tests under API-023. `EncodePolicy` has exact-result, one-byte-below, and no-sink-write coverage; JPEG still encoding now has deterministic coverage-only interior checkpoint drills, PNG/BMP structural writers add exact-length preflight and sink-triggered cancellation evidence, and implemented sequence cancellation remains covered at its public and codec checkpoints. Interior interruption for the remaining encoders, work-budget exhaustion, short/interrupted output, and cleanup remain under API-036 and API-017/QA-016. | Add full encode interruption/work-budget tests and structural-writer cleanup cases for every codec; preserve both the output-write cause and output-policy no-write guarantee across every destination failure. |
+| QA-026 | Decode output-size limits and cumulative sequence limits have boundary, cache-state, and retry tests under API-023. `EncodePolicy` has exact-result, one-byte-below, and no-sink-write coverage; JPEG and TIFF still encoding now have deterministic Rust-only checkpoint drills, PNG/BMP structural writers add exact-length preflight and sink-triggered cancellation evidence, and implemented sequence cancellation remains covered at its public and codec checkpoints. Interior interruption for the remaining encoders, work-budget exhaustion, short/interrupted output, and cleanup remain under API-036 and API-017/QA-016. | Add full encode interruption/work-budget tests and structural-writer cleanup cases for every codec; preserve both the output-write cause and output-policy no-write guarantee across every destination failure. |
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
 | QA-030 | No benchmark checks output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocation/peak-memory measurements alongside time and artifact size; never optimize from source line count. |
@@ -975,7 +977,7 @@ slice at a time:
 | 1 | API-023/030; QA-026 | Prevent unbounded work and evidence overclaims before adding more accepted inputs. TST-001 through TST-010, QA-032, the verification-strength contract, the trailing-input policy, the malformed-class ledger, the near-limit/allocation policy, the operation-stage contract, and the work-budget analysis are complete. | Fixture fails first, stable structured outcome is defined, exact oracle/model evidence is retained, and the completed no-panic matrix remains green. |
 | 2 | API-019/034/040 plus the matching PNG/GIF/TIFF/WebP/ICO/AVIF metadata and sequence rows | Avoid implementing remaining multipage, multi-entry, or animated surfaces into a lossy common model. The sequence/container kind (API-028), source alpha semantics (API-035), PNG opaque blocks (API-040), PNG opaque metadata (API-019), PNG source color descriptors (API-034), GIF extension retention (API-019/040), JPEG marker retention (API-019), WebP chunk retention (API-019/040), TIFF tag retention (API-019/040), and AVIF box plus recognized EXIF/XMP retention (API-040) are complete; API-019/034 remain for non-primary/auxiliary AVIF item properties and color items. | Exact source/container state survives decode and, where supported, encode without public processing. |
 | 3 | API-027 and codec row/strip/tile/frame slices | Bound memory and enable large/sequence inputs without a second unrelated API family. The checked output-size preflight, exact-size still destination API (API-024), minimal transfer-layout descriptor (API-025), basic/deep inspection split (API-032), borrowed source views (API-037), and the source-bound frame-decode contract with TIFF per-page decoding (API-027) are complete. | Whole-buffer convenience wraps the same bounded engine; caller buffers and eager results are byte-identical. |
-| 4 | API-017/018/036; FTR-017 through FTR-024/027/029; QA-016/019/020/022/030 | Complete native/WASM integration, incremental I/O, cancellation, packaging and measurements. The dependency-free output-sink contract (API-017), the ARM64-native versus WASI cross-target determinism evidence (QA-019), the incremental input contract through still/sequence decode (API-018/043), decode cancellation, and the partial encode-cancellation boundary plus JPEG interior checkpoint slice (API-036) are complete; PNG/BMP still structural writing, incremental structural writing for the remaining codecs, full encode interruption/work budgets, and the remaining measurements remain. | Real native and WASM runtime lanes pass with reproducible artifacts and measured copy/memory behavior. |
+| 4 | API-017/018/036; FTR-017 through FTR-024/027/029; QA-016/019/020/022/030 | Complete native/WASM integration, incremental I/O, cancellation, packaging and measurements. The dependency-free output-sink contract (API-017), the ARM64-native versus WASI cross-target determinism evidence (QA-019), the incremental input contract through still/sequence decode (API-018/043), decode cancellation, and the partial encode-cancellation boundary plus JPEG and TIFF still checkpoint slices (API-036) are complete; PNG/BMP still structural writing, incremental structural writing for the remaining codecs, full encode interruption/work budgets, deeper deflate interruption, and the remaining measurements remain. | Real native and WASM runtime lanes pass with reproducible artifacts and measured copy/memory behavior. |
 | 5 | FMT-000 through FMT-013 | Format expansion adds the most maintenance and least value while current contracts remain incomplete. | Start only after a separate acceptance decision records every eligibility field listed below. |
 
 Within a row, choose the smallest reverse-mappable codec case and finish its
@@ -1103,10 +1105,13 @@ Cooperative cancellation (`CancellationToken`) stops token-aware decodes at
 structural checkpoints with `ImageError::Cancelled` and no partial state.
 Token-aware encodes now cover the public still boundary; JPEG additionally
 polls internal color/sampling/quantization and entropy/progressive-scan
-checkpoints; sequence frame/coalescing/page/finalization boundaries are
-implemented where supported; and PNG/BMP still sink encoding also poll row
-preparation and structural segments. Remaining still-codec interruption,
-progress, work budgets, and universal structural writers remain open.
+checkpoints; TIFF still encoding polls page preparation, row prediction,
+raw/PackBits/LZW work, and deflate boundaries; sequence
+frame/coalescing/page/finalization boundaries are implemented where supported;
+and PNG/BMP still sink encoding also poll row preparation and structural
+segments. Remaining still-codec interruption, deeper deflate/structural
+interruption, progress, work budgets, and universal structural writers remain
+open.
 Successful decodes now carry stable non-fatal diagnostics for accepted
 recoveries, invalid compressed PNG ancillary metadata, an accepted bad `IDAT`
 CRC, an accepted bad `IEND` CRC, an accepted invalid PNG reserved-bit
