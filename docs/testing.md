@@ -261,8 +261,10 @@ instruction-count, transient-allocation, or recoverable-OOM accounting. The
 same contract now also proves JPEG still byte identity under an ample budget,
 a bounded mid-encode rejection after more than one checkpoint, and a typed
 zero-budget no-write result through the generic whole-buffer sink path. The
-test's aggregate coverage is incidental evidence, and no coverage-only hook or
-synthetic Pillow row is added.
+contract also proves that a pre-cancelled caller token takes precedence over a
+zero work budget for still PNG and sequence GIF, without touching the sink.
+The test's aggregate coverage is incidental evidence, and no coverage-only
+hook or synthetic Pillow row is added.
 
 Encode cancellation follows the same evidence boundary. Pillow has no
 `CancellationToken`, no caller-owned `OutputSink`, and no equivalent
@@ -784,6 +786,20 @@ functions, and 74,819/74,826 regions. The feature matrix passed 947 checks in
 parity scope passed 1,434 checks with zero failures and zero skips in
 `66d39cf5-514a-46d9-b7a3-6ee4b7651c30` (23,106 ms). No parity row or fixture
 was added for the caller-controlled work-budget behavior.
+
+The work-budget precedence follow-up is committed at revision
+`754416b786be09803991b5f04c1d275de49b299a`. It proves that caller cancellation
+remains distinct from `EncodeWorkUnits` exhaustion for still and sequence
+dispatch, including the no-write sink boundary; this is Rust-only behavior
+because Pillow has no caller token or checkpoint budget. Coverage MCP run
+`525f42b2-2cb9-49be-8e65-063eec7a0256`, snapshot
+`31401e79-faa2-4244-add2-5697811a08d9`, passed 72 tests with zero failures and
+retained 48,061/48,062 lines, 6,588/6,588 branches, 2,692/2,693 functions,
+and 74,819/74,826 regions. The feature matrix passed 947 checks in
+`30593a22-9120-4319-9552-0ae7a68be7b7` (48,022 ms), and the unchanged Pillow
+parity scope passed 1,434 checks with zero failures and zero skips in
+`531ac749-7aaa-4910-bfed-262e1eb66a20` (33,095 ms). No parity row or fixture
+was added.
 
 The bounded feature-matrix runtime optimization was benchmarked by run
 `f74e711f-c9a2-4327-bc74-d834b6bf399a` at the pre-JPEG harness revision: 903
