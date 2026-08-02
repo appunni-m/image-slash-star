@@ -6525,6 +6525,36 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(sink, vec![0xA5]);
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        assert!(matches!(
+            image_slash_star::encode_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &zero,
+                &cancelled,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        let mut cancelled_sink = vec![0xA6];
+        assert!(matches!(
+            image_slash_star::encode_to_sink_with_token_and_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &zero,
+                &cancelled,
+                &mut cancelled_sink,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        assert_eq!(
+            cancelled_sink,
+            vec![0xA6],
+            "caller cancellation precedes work-budget delivery"
+        );
     }
 
     if cfg!(feature = "jpeg") {
@@ -6616,6 +6646,36 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 observed: 1,
             }
         ));
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        assert!(matches!(
+            image_slash_star::encode_sequence_with_token_and_policy(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &zero,
+                &cancelled,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        let mut cancelled_sink = vec![0xBC];
+        assert!(matches!(
+            image_slash_star::encode_sequence_to_sink_with_token_and_policy(
+                &sequence,
+                ImageFormat::Gif,
+                &options,
+                &zero,
+                &cancelled,
+                &mut cancelled_sink,
+            ),
+            Err(ImageError::Cancelled { .. })
+        ));
+        assert_eq!(
+            cancelled_sink,
+            vec![0xBC],
+            "caller cancellation precedes sequence work-budget delivery"
+        );
     }
 
     if cfg!(feature = "tiff") {
