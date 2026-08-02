@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`0e647e9b3eab31b704b7d2262525ab90a2f835e5`; the claim-ledger baseline remains
+`90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -306,7 +306,12 @@ zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
-untouched sink. This is still Rust-only work-control evidence: no Pillow row,
+untouched sink. Lossy WebP VP8 additionally charges after color conversion,
+padding, analysis, segment parameters, mode selection, coefficient-probability
+adaptation, partition emission, and final container assembly; the same
+contract proves ample RGB and non-opaque RGBA byte identity, bounded typed
+rejection, and an untouched sink. This is still Rust-only work-control
+evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
 The test's aggregate coverage is incidental evidence, and no coverage-only
 hook or synthetic Pillow row is added.
@@ -335,7 +340,8 @@ between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row
 boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
-checkpoints; WebP still encoding polls preparation, codec-result,
+checkpoints; WebP still encoding polls preparation, lossy VP8
+analysis/mode-selection/coefficient-probability/bitstream stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
@@ -346,8 +352,9 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row subsegments, deeper deflate/structural
-interruption, progress callbacks, short-write semantics, or rollback cleanup;
+beyond the implemented PNG row subsegments and lossy WebP VP8 stages, finer
+WebP work, deeper deflate/structural interruption, progress callbacks,
+short-write semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
 delivery; a flush failure is a typed `OutputWrite` and does not roll back an
@@ -1274,6 +1281,39 @@ lane agrees`. These are observed implementation and target-matrix records,
 separate from Pillow parity. Interior work in other codec rows, deeper
 Deflate/structural interruption, allocation accounting, and rollback remain
 open.
+
+The current lossy WebP/VP8 work-budget slice is implemented at
+`a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
+at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now
+charges checkpoints after color conversion, padding, analysis, segment
+parameters, mode selection, coefficient-probability adaptation, partition
+emission, and final container assembly. The ordinary no-token encoder path is
+unchanged. This remains Rust-only evidence because Pillow exposes neither a
+caller token nor a work-budget result; the contract proves unlimited RGB and
+non-opaque RGBA byte identity, typed bounded `EncodeWorkUnits` rejection, and
+an untouched sink. No parity row, fixture, diagnostic origin, or
+coverage-only hook was added.
+
+Managed Pillow parity run `b4ca4d5c-41b1-4a86-889f-99b328e1a09c` passed
+1,445/1,445 checks with zero failures or skips in 1,239 ms. Coverage MCP run
+`4c9db66e-57f4-475c-ab37-66cbb419b971` passed 83/83 tests in 44,944 ms and
+ingested snapshot `e8bb4f5b-53bc-4a4e-b007-b8b36e209888`; it reports
+48,812/49,184 lines, 6,679/6,740 branches, 2,734/2,801 functions, and
+75,982/76,486 regions. The VP8 encoder file is 596/597 lines, 34/34
+branches, 34/34 functions, and 1,102/1,108 regions; the WebP dispatcher
+remains 544/572 lines, 69/74 branches, 44/54 functions, and 911/966 regions
+because its pre-existing structural sink error edges remain uncovered. The
+aggregate snapshot carries the LLVM segment-normalization warning. The first
+exact-head coverage attempt observed one concurrent AVIF sink-byte assertion;
+the focused/full feature tests and this managed retry passed, so this retry is
+the accepted coverage record. Feature-matrix run
+`a5f91636-2289-4d3a-bad6-eb4022605fcf` passed 947/947 checks in 38,521 ms;
+its retained log has no package-cache or build-directory lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+These are observed implementation and target-matrix records, separate from
+Pillow parity. Finer/lossless WebP interior work, other codec interior work,
+deeper Deflate/structural interruption, allocation accounting, and rollback
+remain open.
 
 Historical claim-ledger acceptance record:
 
