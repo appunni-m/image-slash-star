@@ -2,10 +2,12 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::WebPEncodeOptions;
+use crate::encode_policy::EncodePolicy;
 use crate::types::{
     AnimationBackground, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FramePixelLayout, ImageMode,
 };
+use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
 
 pub mod vp8;
@@ -29,6 +31,100 @@ pub fn encode_with_token(
     let (encoded, alpha) = encode_pixels(img, opts, token)?;
     crate::codecs::error::check_cancelled(token)?;
     attach_metadata(encoded, img.width, img.height, alpha, opts, token)
+}
+
+/// Encode a still WebP into validated RIFF segments owned by the caller's
+/// sink. The codec still retains its complete working buffer; this boundary
+/// makes container delivery and cancellation observable without claiming
+/// interior VP8/VP8L streaming.
+pub(crate) fn encode_to_sink(
+    img: &DecodedImage,
+    opts: &WebPEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_with_token(img, opts, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::WebP, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_riff_to_sink(&encoded, token, sink)
+}
+
+fn write_riff_to_sink(
+    encoded: &[u8],
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    if encoded.len() < 12
+        || encoded.get(..4) != Some(b"RIFF")
+        || encoded.get(8..12) != Some(b"WEBP")
+    {
+        return Err(CodecError::Malformed(
+            "WebP encoder produced an invalid RIFF header".to_owned(),
+        ));
+    }
+    let declared_size = u32::from_le_bytes(
+        encoded[4..8]
+            .try_into()
+            .map_err(|_| CodecError::Malformed("WebP RIFF size is unavailable".to_owned()))?,
+    );
+    let expected_size = u32::try_from(encoded.len().saturating_sub(8)).map_err(|_| {
+        CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
+    })?;
+    if declared_size != expected_size {
+        return Err(CodecError::Malformed(
+            "WebP encoder produced an inconsistent RIFF size".to_owned(),
+        ));
+    }
+
+    let mut written = 0usize;
+    write_sink_segment(sink, &encoded[..12], token, &mut written)?;
+    let mut offset = 12usize;
+    while offset < encoded.len() {
+        let header_end = offset
+            .checked_add(8)
+            .ok_or_else(|| CodecError::Dimensions("WebP chunk header overflows".to_owned()))?;
+        let header = encoded.get(offset..header_end).ok_or_else(|| {
+            CodecError::Malformed("WebP chunk header extends beyond the RIFF output".to_owned())
+        })?;
+        let payload_len =
+            usize::try_from(u32::from_le_bytes(header[4..8].try_into().map_err(
+                |_| CodecError::Malformed("WebP chunk size is unavailable".to_owned()),
+            )?))
+            .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))?;
+        let payload_end = header_end
+            .checked_add(payload_len)
+            .ok_or_else(|| CodecError::Dimensions("WebP chunk payload overflows".to_owned()))?;
+        let chunk_end = payload_end
+            .checked_add(usize::from(u8::from(payload_len % 2 != 0)))
+            .ok_or_else(|| CodecError::Dimensions("WebP chunk padding overflows".to_owned()))?;
+        let payload = encoded.get(header_end..chunk_end).ok_or_else(|| {
+            CodecError::Malformed("WebP chunk payload extends beyond the RIFF output".to_owned())
+        })?;
+        write_sink_segment(sink, header, token, &mut written)?;
+        if !payload.is_empty() {
+            write_sink_segment(sink, payload, token, &mut written)?;
+        }
+        offset = chunk_end;
+    }
+    Ok(written)
+}
+
+fn write_sink_segment(
+    sink: &mut dyn OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("WebP sink output length overflows".to_owned()))?;
+    Ok(())
 }
 
 fn encode_pixels(

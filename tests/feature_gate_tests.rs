@@ -6099,6 +6099,122 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             assert!(unsupported_ico_sequence_sink.bytes.is_empty());
         }
 
+        if cfg!(feature = "webp") {
+            // WebP still delivery now splits the validated RIFF header and
+            // chunks while retaining the complete codec working buffer. This
+            // is a Rust-only sink contract: Pillow has no caller-owned sink.
+            let webp_options = EncodeOptions::for_format(ImageFormat::WebP);
+            let expected_webp =
+                image_slash_star::encode(&decoded.content, ImageFormat::WebP, &webp_options)?;
+            let mut webp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_to_sink(
+                    &decoded.content,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &mut webp_sink,
+                )?,
+                expected_webp.len()
+            );
+            assert_eq!(webp_sink.bytes, expected_webp);
+            assert!(webp_sink.writes > 1);
+            assert_eq!(&webp_sink.bytes[..4], b"RIFF");
+            assert_eq!(&webp_sink.bytes[8..12], b"WEBP");
+
+            let webp_token = image_slash_star::CancellationToken::new();
+            let mut cancelling_webp = CancellingSink {
+                bytes: Vec::new(),
+                token: webp_token.clone(),
+                writes: 0,
+            };
+            let cancelling_webp_error = match image_slash_star::encode_to_sink_with_token(
+                &decoded.content,
+                ImageFormat::WebP,
+                &webp_options,
+                &webp_token,
+                &mut cancelling_webp,
+            ) {
+                Ok(length) => {
+                    return Err(format!(
+                        "WebP sink-triggered cancellation unexpectedly wrote {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                cancelling_webp_error.kind(),
+                image_slash_star::ImageErrorKind::Cancelled
+            );
+            assert_eq!(cancelling_webp_error.format(), Some(ImageFormat::WebP));
+            assert_eq!(
+                cancelling_webp_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(cancelling_webp.writes, 1);
+            assert_eq!(cancelling_webp.bytes, expected_webp[..12].to_vec());
+
+            let too_small_webp = EncodePolicy::default()
+                .with_max_output_bytes(u64::try_from(expected_webp.len() - 1)?);
+            let mut limited_webp = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            let limited_webp_error = match image_slash_star::encode_to_sink_with_policy(
+                &decoded.content,
+                ImageFormat::WebP,
+                &webp_options,
+                &too_small_webp,
+                &mut limited_webp,
+            ) {
+                Ok(length) => {
+                    return Err(
+                        format!("WebP output policy unexpectedly admitted {length} bytes").into(),
+                    );
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                limited_webp_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::WebP),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+                    ..
+                }
+            ));
+            assert_eq!(limited_webp.writes, 0);
+
+            let mut failing_webp = FailingAfterWrites {
+                fail_at: 2,
+                writes: 0,
+            };
+            let failing_webp_error = match image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::WebP,
+                &webp_options,
+                &mut failing_webp,
+            ) {
+                Ok(length) => {
+                    return Err(format!("WebP sink unexpectedly accepted {length} bytes").into());
+                }
+                Err(error) => error,
+            };
+            assert_eq!(
+                failing_webp_error.kind(),
+                image_slash_star::ImageErrorKind::OutputWrite
+            );
+            assert_eq!(failing_webp_error.format(), Some(ImageFormat::WebP));
+            assert_eq!(
+                failing_webp_error.stage(),
+                Some(ImageErrorStage::StillEncode)
+            );
+            assert_eq!(failing_webp.writes, 2);
+        }
+
         if cfg!(feature = "jpeg") {
             // Exercise the generic whole-buffer sink fallback so the
             // structural-writer dispatch remains explicit and complete.
@@ -6274,7 +6390,6 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         (ImageFormat::Jpeg, cfg!(feature = "jpeg")),
         (ImageFormat::Gif, cfg!(feature = "gif")),
         (ImageFormat::Tiff, cfg!(feature = "tiff")),
-        (ImageFormat::WebP, cfg!(feature = "webp")),
         (ImageFormat::Avif, cfg!(feature = "avif")),
     ] {
         if !enabled || (format == ImageFormat::Avif && cfg!(target_arch = "wasm32")) {
