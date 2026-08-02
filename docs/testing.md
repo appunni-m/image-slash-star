@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `a6ddb134344e6a352bf04732b87e0833e7102b7f`
+Reviewed: 2026-08-02 on the working tree based on revision `8def2b5f5c634c7a5ed8449a9a70d407ec7bcf8b`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -246,7 +246,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`a6ddb134344e6a352bf04732b87e0833e7102b7f`, the generated matrix reports:
+`8def2b5f5c634c7a5ed8449a9a70d407ec7bcf8b`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -624,26 +624,25 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,309 | 47,309 |
-| Branches | 6,538 | 6,538 |
-| Functions | 2,654 | 2,654 |
-| Regions | 73,651 | 73,651 |
+| Lines | 47,339 | 47,339 |
+| Branches | 6,546 | 6,546 |
+| Functions | 2,655 | 2,655 |
+| Regions | 73,687 | 73,687 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
-Revision-bound managed runtime evidence comes from feature-matrix run
-`ec3c4c20-fac4-427c-ae8f-3d996ddafbcb`, submitted against
-`a6ddb134344e6a352bf04732b87e0833e7102b7f`: 859 checks passed with zero
-failures in 1,588,924 ms, and its terminal capability-table record says
+Managed runtime evidence comes from feature-matrix run
+`978137a6-4840-4115-8cd9-34b8cadb4484`: 859 checks passed with zero
+failures in 1,139,869 ms, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `1512cf7a-97cb-45ba-8dd2-58b8492399a7`
+Coverage MCP run: `35c6e8de-c409-402a-bd7a-a582cd20bf43`
 
-Snapshot: `20325f1d-7f9b-464d-9e0a-f71617203cb6`
+Snapshot: `ce37972f-bed2-4c14-b068-8d5461365558`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
