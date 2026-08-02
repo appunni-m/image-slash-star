@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`18a8f42297c2ba247b29e8c3c8d4fec2fff51abd`; the claim-ledger baseline remains
+`9cef5ca66de48d78f2754fb246886cb0eb27eb09`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -736,8 +736,14 @@ span; the complete native encoder buffer remains working state. A deterministic
 failing write or flush must be reported as `ImageError::OutputWrite` with the
 selected format and encode stage. The current contract proves one
 post-delivery flush call and explicitly preserves
-the delivered prefix on flush failure. Short writes and rollback cleanup remain
-future writer evidence, not claims made by this contract.
+the delivered prefix on flush failure. The Rust-only
+`partial_structural_sink_write_preserves_prefix_without_flush` contract also
+proves that a PNG still sink can accept a five-byte prefix of a structural
+segment, reject the write as `OutputWrite`, preserve the 13-byte delivered
+prefix, and avoid `flush`. Pillow has no caller-owned `OutputSink`, so this is
+not a parity row; short-write behavior on other paths, rollback, and
+partial-container cleanup remain future writer evidence, not claims made by
+this contract.
 The same contract exercises invalid-input errors through the JPEG structural
 writer, with no sink write; those cases are Rust API/error evidence and are not
 added to the Pillow parity matrix.
@@ -1478,6 +1484,30 @@ These are observed implementation and target-evidence records, separate from
 Pillow parity. Remaining other codec interior work, finer WebP work, transient
 allocation accounting, short/interrupted output, rollback, and any remaining
 non-checkpointed work-budget semantics remain open.
+
+The current partial structural sink-write slice is implemented at
+`9cef5ca66de48d78f2754fb246886cb0eb27eb09`. The Rust-only
+`partial_structural_sink_write_preserves_prefix_without_flush` contract sends a
+PNG signature, accepts only the first five bytes of the next structural
+segment, then rejects; the encoder reports `ImageError::OutputWrite`, leaves
+the 13-byte delivered prefix observable, and does not call `flush`. This is a
+focused accepted-prefix contract, not universal short-write or rollback
+behavior. Managed Pillow parity run
+`48adee5a-f937-4a9a-9b09-b179709c6729` passed 1,445/1,445 checks with zero
+skips in 42,117 ms. Feature-matrix run
+`8ce7e19b-ea73-4cb0-b38c-835bfa24a366` passed 969/969 checks in 54,526 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `1c9cf8a3-0fee-493f-ac80-dd3a9fd43a11` passed 84/84 tests in
+54,032 ms and ingested snapshot `0e46066a-762c-47a5-89d3-69c76ca81d52`,
+reporting 49,345/49,742 lines, 6,773/6,836 branches, 2,750/2,817 functions,
+and 76,720/77,428 regions, unchanged in aggregate from snapshot
+`8316ea85-bbc0-4d25-ba9f-fb49bd82b9fe`. That unchanged coverage is expected:
+the slice changes public rustdoc and an integration-test contract, not a
+measured library execution path. Pillow has no caller-owned `OutputSink`, so
+this evidence adds no parity row, fixture, diagnostic origin, or
+coverage-only hook. Other structural paths, interrupted writes, rollback, and
+partial-container cleanup remain open.
 
 Historical claim-ledger acceptance record:
 
