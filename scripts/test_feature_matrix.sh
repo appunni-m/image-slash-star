@@ -1,9 +1,12 @@
 #!/bin/sh
 set -eu
 
-# Cargo lanes share a target directory, so use bounded process-level
-# concurrency instead of allowing every feature configuration to contend at
-# once. Set MATRIX_JOBS higher on machines with more spare CPU and memory.
+# Give each bounded lane its own temporary Cargo target directory. Cargo
+# serializes writers that share a target directory, so a shared target turns
+# independent feature configurations into lock contention. The lane-local
+# roots still reuse clippy, rustdoc, and test artifacts within that lane, and
+# the capability-table probe is pointed at the same roots below.
+# Set MATRIX_JOBS higher on machines with more spare CPU and memory.
 MATRIX_JOBS=${MATRIX_JOBS:-3}
 case "$MATRIX_JOBS" in
     ''|*[!0-9]*|0)
@@ -21,6 +24,7 @@ esac
 export CAPABILITY_JOBS
 
 matrix_log_dir=$(mktemp -d "${TMPDIR:-/tmp}/image-slash-star-feature-matrix.XXXXXX")
+export CAPABILITY_TARGET_ROOT="$matrix_log_dir"
 cleanup_matrix_logs() {
     rm -rf "$matrix_log_dir"
 }
@@ -139,7 +143,9 @@ run_parallel_lanes() {
         matrix_lane=$1
         matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
         matrix_status_tmp="$matrix_status_path.tmp"
+        matrix_target_dir="$matrix_log_dir/target-$matrix_group-$matrix_lane"
         (
+            export CARGO_TARGET_DIR="$matrix_target_dir"
             matrix_status=0
             "$matrix_runner" "$matrix_lane" \
                 >"$matrix_log_dir/$matrix_group-$matrix_lane.log" 2>&1 \
