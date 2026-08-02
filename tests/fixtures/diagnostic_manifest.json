@@ -227,6 +227,36 @@
       "offset": 33,
       "identity": "png_iTXt",
       "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_missing_iend_still",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/missing_iend.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "still_decode",
+      "offset": 3643,
+      "identity": "png_missing_iend",
+      "pillow_outcome": "ok"
+    },
+    {
+      "id": "png_missing_iend_sequence",
+      "feature": "png",
+      "format": "png",
+      "asset_path": "tests/fixtures/input/images/png/missing_iend.png",
+      "mutation": "none",
+      "chunk_kind": "",
+      "chunk_payload": [],
+      "operation": "decode_sequence",
+      "diagnostic_kind": "recovered_structure",
+      "stage": "sequence_decode",
+      "offset": 3643,
+      "identity": "png_missing_iend",
+      "pillow_outcome": "ok"
     }
   ]
 }

@@ -405,6 +405,18 @@ pub fn decode(
     .with_opaque_blocks(opaque_blocks)
     .with_metadata(metadata)
     .with_source_color(source_color);
+    if !saw_iend {
+        // Pillow accepts this through `load()` but reports the missing
+        // container terminator from `verify()`. Keep successful decode
+        // compatible while identifying the first missing byte at EOF.
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunks.position as u64),
+            identity: Some("png_missing_iend"),
+        });
+    }
     Ok((image, chunks.position, diagnostics))
 }
 
