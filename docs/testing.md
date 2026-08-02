@@ -641,10 +641,12 @@ exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
 `encode_sequence_to_sink` over PNG/BMP/GIF/WebP/ICO/TIFF still, one-frame
-BMP/WebP/ICO/TIFF sequence, and GIF sequence fixtures must write bytes
+BMP/WebP/ICO/TIFF sequence, GIF sequence, and multi-frame WebP sequence
+fixtures must write bytes
 identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
 and `&mut Vec<u8>` sinks. PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
-sequence, plus one-frame WebP sequence, additionally prove
+sequence, one-frame WebP sequence, and multi-frame WebP sequence additionally
+prove
 multiple structural writes, policy preflight before the first write, and
 cancellation between writes; one-frame BMP, ICO, and TIFF sequence additionally
 prove multiple structural writes and policy preflight. GIF's structural split
@@ -820,7 +822,8 @@ multi-frame fallback guard is `745c0af6bc4f4d10ddfebcafa8ef131d88097811`. It
 retains the complete WebP working buffer but delivers a validated RIFF header
 followed by chunk headers and payload/padding spans, with exact-length
 preflight and cancellation between segments for both still and one-frame
-sequence stages. Multi-frame WebP remains the generic whole-buffer path.
+sequence stages. At that revision, multi-frame WebP remained the generic
+whole-buffer path.
 This is an ordinary Rust-only sink contract: Pillow has no caller-owned
 destination, so no parity row or fixture was added. Coverage MCP run
 `c92f3ac8-7122-487e-a374-a97f9a497813`, snapshot
@@ -1019,6 +1022,27 @@ MCP run `96d01110-737c-40e4-9db3-d976f456e4ac`, snapshot
 `b9267f1d-be16-4214-a2a9-86f129354213` (112,313 ms), and the unchanged Pillow
 parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
 `9625c19e-86ad-4365-835d-f76c2d5a6b33` (69,210 ms). The feature-matrix log
+records `lanes=6 test_threads=2 build_jobs=2`, no build-directory lock waits,
+and the terminal native/WASI capability-table agreement; package-cache waits
+remain possible. These durations are execution evidence rather than a
+universal speed comparison because managed cache and runner state can differ.
+
+The multi-frame WebP structural-sink slice is committed at revision
+`ea96e6cb7a2f2e846f251944f4e182e8cab8ef22`. It extends the existing RIFF
+delivery parser from still and one-frame sequence output to animated WebP:
+the complete animation working buffer is retained, while the RIFF header and
+validated chunk headers/payloads/padding are delivered as separately
+cancelable segments after exact output-length preflight. This is an ordinary
+Rust-only destination contract because Pillow has no caller-owned sink; no
+parity row or fixture was added. Coverage MCP run
+`ba892b20-8a96-45e6-ae1c-7f7497752631`, snapshot
+`613b3652-9444-4c09-8833-8913de472e51`, passed 72 tests with zero failures in
+76,095 ms and retained 48,366/48,539 lines, 6,620/6,642 branches,
+2,711/2,749 functions, and 75,318/75,552 regions. The feature matrix passed
+947/947 checks with zero failures in run
+`831cdfc1-1c26-4584-a39e-e13fead8d2fa` (102,142 ms), and the unchanged Pillow
+parity scope passed 1,434/1,434 checks with zero failures and zero skips in run
+`90f11ef9-cc48-4e9f-a036-1f6017ad25d3` (72,614 ms). The feature-matrix log
 records `lanes=6 test_threads=2 build_jobs=2`, no build-directory lock waits,
 and the terminal native/WASI capability-table agreement; package-cache waits
 remain possible. These durations are execution evidence rather than a
