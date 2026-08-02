@@ -8,8 +8,9 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// bound does not account for transient allocations or recoverable out-of-
 /// memory failure. `max_work_units` counts the deterministic cooperative
 /// checkpoints reached by an encode, including the PNG adaptive-filter and
-/// filtered-row checkpoints charged after each 1,024 row bytes; it is a
-/// work-control bound, not a CPU-time or allocation guarantee.
+/// filtered-row checkpoints charged after each 1,024 row bytes and the lossy
+/// WebP VP8 analysis/partition stages; it is a work-control bound, not a
+/// CPU-time or allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct EncodePolicy {
@@ -50,7 +51,9 @@ impl EncodePolicy {
     ///
     /// One work unit is charged at each documented cancellation checkpoint.
     /// PNG long-row filtering charges additional checkpoints after each 1,024
-    /// filtered bytes while adaptive candidates are scored or emitted.
+    /// filtered bytes while adaptive candidates are scored or emitted. Lossy
+    /// WebP VP8 encoding charges checkpoints between its major analysis,
+    /// mode-selection, probability, and bitstream stages.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]

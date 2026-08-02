@@ -12,6 +12,8 @@
 //! The decoder reads the first partition into the main bool decoder (`self.b`),
 //! and the remaining bytes become `self.partitions[0]` for coefficient decoding.
 
+use crate::codecs::CodecResult;
+
 use super::{
     analysis::{FrameParams, analyze, segment_params},
     frame::select_frame,
@@ -21,13 +23,41 @@ use super::{
     tokenize::COEFF_PROBS,
 };
 
+#[derive(Clone, Copy)]
+struct Vp8EncodeContext<'a> {
+    quality: u8,
+    method: u8,
+    token: Option<&'a crate::CancellationToken>,
+}
+
 /// Encode an RGB image to a lossy VP8 WebP bitstream.
 ///
 /// Returns the complete RIFF/WEBP container bytes.
-pub fn encode_vp8_lossy(rgb: &[u8], width: u32, height: u32, quality: u8, method: u8) -> Vec<u8> {
+pub(crate) fn encode_vp8_lossy(
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+    quality: u8,
+    method: u8,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height);
-    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality, method);
-    build_webp_container(&vp8_data, width, height)
+    crate::codecs::error::check_cancelled(token)?;
+    let vp8_data = encode_vp8_planes(
+        y_plane,
+        u_plane,
+        v_plane,
+        width,
+        height,
+        Vp8EncodeContext {
+            quality,
+            method,
+            token,
+        },
+    )?;
+    crate::codecs::error::check_cancelled(token)?;
+    Ok(build_webp_container(&vp8_data, width, height))
 }
 
 pub(crate) fn encode_vp8_lossy_rgba(
@@ -37,10 +67,30 @@ pub(crate) fn encode_vp8_lossy_rgba(
     quality: u8,
     method: u8,
     alpha_chunk: &[u8],
-) -> Vec<u8> {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
     let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height);
-    let vp8_data = encode_vp8_planes(y_plane, u_plane, v_plane, width, height, quality, method);
-    build_extended_webp_container(&vp8_data, alpha_chunk, width, height)
+    crate::codecs::error::check_cancelled(token)?;
+    let vp8_data = encode_vp8_planes(
+        y_plane,
+        u_plane,
+        v_plane,
+        width,
+        height,
+        Vp8EncodeContext {
+            quality,
+            method,
+            token,
+        },
+    )?;
+    crate::codecs::error::check_cancelled(token)?;
+    Ok(build_extended_webp_container(
+        &vp8_data,
+        alpha_chunk,
+        width,
+        height,
+    ))
 }
 
 fn encode_vp8_planes(
@@ -49,9 +99,13 @@ fn encode_vp8_planes(
     v_plane: Vec<u8>,
     width: u32,
     height: u32,
-    quality: u8,
-    method: u8,
-) -> Vec<u8> {
+    context: Vp8EncodeContext<'_>,
+) -> CodecResult<Vec<u8>> {
+    let Vp8EncodeContext {
+        quality,
+        method,
+        token,
+    } = context;
     let padded_width = width.div_ceil(16).wrapping_mul(16);
     let padded_height = height.div_ceil(16).wrapping_mul(16);
     let chroma_width = width.div_ceil(2);
@@ -79,6 +133,7 @@ fn encode_vp8_planes(
         padded_chroma_width as usize,
         padded_chroma_height as usize,
     );
+    crate::codecs::error::check_cancelled(token)?;
     let analysis = analyze(
         &y_plane,
         &u_plane,
@@ -88,7 +143,9 @@ fn encode_vp8_planes(
         quality,
         method,
     );
+    crate::codecs::error::check_cancelled(token)?;
     let mut params = segment_params(&analysis, f64::from(quality));
+    crate::codecs::error::check_cancelled(token)?;
     let mut decisions = select_frame(
         [&y_plane, &u_plane, &v_plane],
         (padded_width as usize, padded_height as usize),
@@ -97,6 +154,7 @@ fn encode_vp8_planes(
         &COEFF_PROBS,
         false,
     );
+    crate::codecs::error::check_cancelled(token)?;
     let segment_map = simplify_segments(&mut params);
     for decision in &mut decisions {
         decision.segment = segment_map[usize::from(decision.segment)];
@@ -112,6 +170,7 @@ fn encode_vp8_planes(
         macroblock_width,
         method >= 3,
     );
+    crate::codecs::error::check_cancelled(token)?;
     if method >= 6 {
         decisions = select_frame(
             [&y_plane, &u_plane, &v_plane],
@@ -121,10 +180,12 @@ fn encode_vp8_planes(
             &COEFF_PROBS,
             true,
         );
+        crate::codecs::error::check_cancelled(token)?;
         for decision in &mut decisions {
             decision.segment = segment_map[usize::from(decision.segment)];
         }
         probabilities = adapt_coefficients(&decisions, macroblock_width, true);
+        crate::codecs::error::check_cancelled(token)?;
     }
     let header_data = encode_first_partition(
         &decisions,
@@ -133,14 +194,16 @@ fn encode_vp8_planes(
         &probabilities,
         method >= 3,
     );
+    crate::codecs::error::check_cancelled(token)?;
     let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities);
+    crate::codecs::error::check_cancelled(token)?;
     let frame_header = build_frame_header(width, height, low_u32(header_data.len()));
 
     let mut vp8_data = frame_header;
     vp8_data.extend_from_slice(&header_data);
     vp8_data.extend_from_slice(&coeff_data);
 
-    vp8_data
+    Ok(vp8_data)
 }
 
 fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {

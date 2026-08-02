@@ -7790,6 +7790,67 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         );
     }
 
+    if cfg!(feature = "webp") {
+        // The lossy VP8 encoder now charges checkpoints between its major
+        // analysis, mode-selection, probability, and bitstream stages. Pillow
+        // has no caller-controlled checkpoint budget or equivalent result, so
+        // this is Rust-only work-control evidence and must not become a parity
+        // row.
+        let image = DecodedImage::new(64, 64, vec![128; 64 * 64 * 3], ColorType::Rgb8);
+        let options = EncodeOptions::for_format(ImageFormat::WebP);
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        let expected = image_slash_star::encode(&image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::WebP, &options, &unlimited,)?,
+            expected,
+            "an ample WebP VP8 budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::WebP,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP VP8 work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed,
+            } if observed > 8
+        ));
+
+        let mut sink = vec![0xA8];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::WebP,
+            &options,
+            &bounded,
+            &mut sink,
+        ) {
+            Ok(_) => return Err("bounded WebP VP8 budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed,
+            } if observed > 8
+        ));
+        assert_eq!(sink, vec![0xA8]);
+    }
+
     if cfg!(feature = "gif") {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;

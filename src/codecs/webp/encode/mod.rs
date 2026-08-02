@@ -157,7 +157,7 @@ fn encode_pixels(
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(&prepared, img.width, img.height)
     } else {
-        encode_lossy(&prepared, img.width, img.height, opts)
+        encode_lossy(&prepared, img.width, img.height, opts, token)
     }?;
     crate::codecs::error::check_cancelled(token)?;
     let alpha = prepared.has_nonopaque_alpha();
@@ -563,22 +563,25 @@ fn encode_lossy(
     width: u32,
     height: u32,
     opts: &WebPEncodeOptions,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80);
     let method = opts.method.unwrap_or(4);
     let encoded = match pixels.color {
         super::native::ColorType::Rgb8 => {
-            vp8::encoder::encode_vp8_lossy(&pixels.bytes, width, height, quality, method)
+            vp8::encoder::encode_vp8_lossy(&pixels.bytes, width, height, quality, method, token)?
         }
         super::native::ColorType::Rgba8 => {
             let has_alpha = pixels.has_nonopaque_alpha();
             if has_alpha {
+                crate::codecs::error::check_cancelled(token)?;
                 let alpha = pixels
                     .bytes
                     .chunks_exact(4)
                     .map(|pixel| pixel[3])
                     .collect::<Vec<_>>();
                 let alpha_chunk = super::native::encode_alpha(&alpha, width, height);
+                crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy_rgba(
                     &pixels.bytes,
                     width,
@@ -586,14 +589,16 @@ fn encode_lossy(
                     quality,
                     method,
                     &alpha_chunk,
-                )
+                    token,
+                )?
             } else {
                 let rgb = pixels
                     .bytes
                     .chunks_exact(4)
                     .flat_map(|pixel| pixel[..3].iter().copied())
                     .collect::<Vec<_>>();
-                vp8::encoder::encode_vp8_lossy(&rgb, width, height, quality, method)
+                crate::codecs::error::check_cancelled(token)?;
+                vp8::encoder::encode_vp8_lossy(&rgb, width, height, quality, method, token)?
             }
         }
     };
