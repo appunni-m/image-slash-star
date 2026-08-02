@@ -1483,6 +1483,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &EncodeOptions::for_format(ImageFormat::Png),
         Some(&post_codec_cancel),
     );
+    // Token-aware PNG work can finish before the dispatcher performs its
+    // final public-boundary check; keep that successful continuation covered
+    // separately from the deterministic cancellation drill above.
+    let post_codec_complete = crate::CancellationToken::new();
+    let _ = encode_format_with_token(
+        &luma,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        Some(&post_codec_complete),
+    );
 
     let two_frame_sequence = DecodedSequence {
         width: 1,
