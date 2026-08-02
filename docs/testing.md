@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `a148f2b8ff953a3a3f5194a08553a24d3c7fd916`
+Reviewed: 2026-08-02 on the working tree based on revision `f90d28927b8e9461c712fa65431b1265b2f272cb`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -274,7 +274,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`a148f2b8ff953a3a3f5194a08553a24d3c7fd916`, the generated matrix reports:
+`f90d28927b8e9461c712fa65431b1265b2f272cb`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -588,12 +588,13 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over PNG/BMP still and GIF sequence fixtures must
-write bytes identical to `encode`/`encode_sequence` with matching lengths for
-both `Vec<u8>` and `&mut Vec<u8>` sinks. PNG and BMP still additionally prove
-multiple structural writes, policy preflight before the first write, and
-cancellation between writes; GIF sequence and BMP sequence remain
-whole-buffer comparisons. A
+`encode_sequence_to_sink` over PNG/BMP still, one-frame BMP sequence, and GIF
+sequence fixtures must write bytes identical to `encode`/`encode_sequence`
+with matching lengths for both `Vec<u8>` and `&mut Vec<u8>` sinks. PNG and BMP
+still additionally prove multiple structural writes, policy preflight before
+the first write, and cancellation between writes; one-frame BMP sequence
+additionally proves multiple structural writes and policy preflight, while GIF
+sequence remains a whole-buffer comparison. A
 deterministic failing sink must be reported as `ImageError::OutputWrite` with
 the selected format and encode stage. Short writes, flush/finalize failures,
 and rollback cleanup remain future writer evidence, not claims made by this
@@ -661,10 +662,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,671 | 47,671 |
-| Branches | 6,558 | 6,558 |
-| Functions | 2,663 | 2,663 |
-| Regions | 74,245 | 74,245 |
+| Lines | 47,747 | 47,747 |
+| Branches | 6,562 | 6,562 |
+| Functions | 2,666 | 2,666 |
+| Regions | 74,366 | 74,366 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -760,21 +761,30 @@ The ICO still-token matrix run
 the terminal record remained `capability tables OK: every native and
 wasm32-wasip1 lane agrees`, and the retained log had zero build-directory
 lock-wait matches. It ran against clean revision
-`112a26868428278cf49c12a64451c3ccbc156d30`; the later coverage-drill-only
+`112a26868428278cf49c12a64451c3ccbc156d30`; the later all-feature coverage
 revision is recorded below. This is ordinary Rust operation-boundary evidence,
 not a generated Pillow parity row.
 
-Coverage MCP run: `58fdfa09-45c5-405f-98ca-696b2b626882`
+The final BMP-sequence sink matrix run
+`caeb1194-d307-4305-9e87-e0eef94b205a` passed 925 checks with zero failures in
+82,978 ms. Its terminal record remained
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and the
+retained log had zero target-directory lock-wait matches. The one-frame BMP
+sequence structural sink, option mismatch, multi-frame rejection, exact-length
+policy preflight, and sink-delivery cases are ordinary Rust output contracts;
+the Pillow parity matrix is unchanged.
 
-Snapshot: `5fc602a3-79ca-431e-adf3-b56b70413c4b`
+Coverage MCP run: `7136e155-b551-4fcc-b6fc-8a1d0a9ddd56`
 
-Coverage revision: `a148f2b8ff953a3a3f5194a08553a24d3c7fd916`
+Snapshot: `4876dd0c-e4ad-407e-a2f4-ab4dd0c67a34`
+
+Coverage revision: `f90d28927b8e9461c712fa65431b1265b2f272cb`
 
 Coverage MCP recorded 55 passed tests with zero failures and 100% line,
-branch, function, and region coverage: 47,719 lines, 6,558 branches, 2,664
-functions, and 74,330 regions. The ICO coverage-only sweep reaches nested
-embedded-PNG and BMP row/payload/directory cancellation edges; it is internal
-Rust evidence, not a synthetic Pillow parity case.
+branch, function, and region coverage: 47,747 lines, 6,562 branches, 2,666
+functions, and 74,366 regions. The BMP sequence sink cases execute the real
+dispatcher and structural writer; this is internal Rust evidence, not a
+synthetic Pillow parity case.
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
