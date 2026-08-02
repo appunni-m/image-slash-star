@@ -956,11 +956,10 @@ pub fn encode_sequence_with_policy(
 /// Encode a still image or animation with cooperative cancellation.
 ///
 /// Sequence-capable codecs poll at retained-frame and finalization
-/// boundaries. Still-image codecs and one-frame fallback encodes generally
-/// observe cancellation only at the public codec boundary; PNG still and
-/// structural sink encodes additionally poll row preparation and emitted
-/// structural segments, and JPEG, BMP, and TIFF one-frame sequence sinks use
-/// the same validated structural paths as their still encoders.
+/// boundaries. One-frame sequence encodes reuse their still encoder's
+/// checkpoints, while their sink paths reuse the corresponding validated
+/// structural writers; multi-frame GIF, TIFF, WebP, and native AVIF encodes
+/// poll their sequence/container boundaries.
 ///
 /// # Errors
 ///
@@ -996,14 +995,14 @@ pub fn encode_sequence_with_token_and_policy(
 
 /// Dependency-free destination for encoded output.
 ///
-/// Whole-buffer codecs validate and produce their complete encoded bytes
-/// before the first write. Structural writers additionally emit validated
-/// container structures through separate writes; this includes the PNG still,
-/// JPEG still and one-frame sequence, and TIFF still and multi-page sequence
-/// paths. A sink failure or cancellation after a write may therefore leave a
-/// prefix in the destination; `flush` failure likewise does not roll the
-/// prefix back. The
-/// trait does not provide rollback or short-write recovery.
+/// Codecs may retain complete encoded working state before the first write.
+/// Current sink writers additionally emit validated container structures
+/// through separate writes: JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native
+/// AVIF still paths, plus one-frame JPEG/PNG/BMP/ICO sequences and supported
+/// GIF/TIFF/WebP/AVIF sequences. A sink failure or cancellation after a write
+/// may therefore leave a prefix in the destination; `flush` failure likewise
+/// does not roll the prefix back. The trait does not provide rollback or
+/// short-write recovery.
 pub trait OutputSink {
     /// Append one fully accepted encoded segment to this sink.
     ///
@@ -1040,10 +1039,11 @@ impl OutputSink for &mut Vec<u8> {
 /// Encode a still image into a caller-owned output sink.
 ///
 /// The encoded bytes are produced exactly as by [`encode`] and delivered to
-/// the sink. Whole-buffer codecs use one write; structural writers may use
-/// multiple writes after their validated working state is ready. TIFF still
-/// and multi-page sequence encodes deliver their validated header,
-/// strip/padding, and IFD/value spans separately.
+/// the sink. Current codec writers validate their container structure and may
+/// use multiple writes after their working state is ready; the structure
+/// boundaries are format-specific, such as JPEG marker/scan, PNG chunk,
+/// GIF block, WebP RIFF/chunk, ICO directory/payload, TIFF page, and AVIF box
+/// spans.
 ///
 /// # Errors
 ///
@@ -1157,9 +1157,8 @@ fn encode_to_sink_with_token_and_policy_impl(
 ///
 /// Returns the same errors as [`encode_sequence`], plus an
 /// [`ImageError::OutputWrite`] when the sink rejects an emitted segment.
-/// Structural writers may leave an already-delivered prefix; JPEG still and
-/// one-frame sequence writers, and TIFF still and multi-page sequence writers,
-/// check cancellation between their structural segments.
+/// Structural writers may leave an already-delivered prefix and check
+/// cancellation between their validated structural segments.
 pub fn encode_sequence_to_sink(
     sequence: &DecodedSequence,
     format: ImageFormat,

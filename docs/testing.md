@@ -232,13 +232,13 @@ mode, and destination results are Rust-only structured contracts; they do not
 add fields or caller-owned encoder state to the Pillow parity matrix.
 
 The final part of `output_sinks_receive_the_exact_encoded_bytes` covers the
-format-specific structural paths for the enabled still and supported sequence
-encoders. The remaining generic whole-buffer fallback is limited to sequence
-or codec paths that have not yet been assigned a structural writer. JPEG still
-and one-frame sequence, TIFF still and multi-page sequence, GIF still
-and GIF sequence, WebP still and sequence, ICO still, native AVIF still and
-sequence, and the other one-frame sequence deliveries use the structural paths
-described below. Each real public
+format-specific structural paths for every enabled still and supported
+sequence encoder. The generic whole-buffer fallback remains only as defensive
+dispatcher behavior for a future or unassigned path; no current enabled format
+uses it. JPEG still and one-frame sequence, TIFF still and multi-page sequence,
+GIF still and GIF sequence, WebP still and sequence, ICO still, native AVIF
+still and sequence, and the other one-frame sequence deliveries use the
+structural paths described below. Each real public
 call must normalize a rejecting destination to
 `OutputWrite` with the selected format and corresponding `StillEncode` or
 `SequenceEncode` stage, without an input offset, container identity, or
