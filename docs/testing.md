@@ -721,7 +721,9 @@ execution records rather than a controlled speed comparison because managed
 cache/build state differs. The matrix uses a bounded completion-driven scheduler
 for independent native, `wasm32-unknown-unknown`, and `wasm32-wasip1` runtime
 lanes; each full native/WASI lane emits its capability row and the final check
-reads those logs. `MATRIX_JOBS` and `CAPABILITY_JOBS` default to four. A lane
+reads those logs. By default `MATRIX_JOBS` derives roughly two logical CPUs per
+active lane, capped at six; `CAPABILITY_JOBS` follows that bound. Both values
+remain explicit overrides for constrained or unusually large runners. A lane
 completion releases a slot immediately, rather than holding it until the
 slowest lane in a launch batch finishes. After the
 probe-target reuse change, run
@@ -811,6 +813,15 @@ retained log had zero target-directory lock-wait matches. The one-frame BMP
 sequence structural sink, option mismatch, multi-frame rejection, exact-length
 policy preflight, and sink-delivery cases are ordinary Rust output contracts;
 the Pillow parity matrix is unchanged.
+
+The adaptive lane-bound follow-up was validated by managed runs
+`790238ad-e8d8-4fce-9974-71560ffaac5d` and
+`53c23521-c3d1-4b4b-9914-4b8d8f50883c`: both passed all 947 checks with zero
+failures in 13,136 ms and 12,116 ms. The preceding four-lane baseline
+`91c9bc98-5f22-41d2-95ad-d981957f1f82` also passed all 947 checks in 16,844 ms
+on the same managed environment. This is observed scheduling evidence rather
+than a universal benchmark claim; the retained run logs show no build-directory
+lock waits and the capability-table result remains unchanged.
 
 The feature-matrix harness now retains each isolated lane target root between
 invocations by default under `target/feature-matrix`; `MATRIX_TARGET_ROOT` can
@@ -1033,11 +1044,13 @@ scripts/test_feature_matrix.sh
 
 The matrix uses isolated retained Cargo target roots to avoid build-directory
 lock contention and interleaves native, `wasm32-unknown-unknown`, and
-`wasm32-wasip1` lanes under one bounded completion-driven scheduler. It derives
-the Rust test-harness worker count from the host CPU count and `MATRIX_JOBS`
-(capped at eight). `MATRIX_TEST_THREADS` can override that derived value for a
-constrained CI runner. This bounds aggregate test-thread fan-out without
-dropping any lane or assertion.
+`wasm32-wasip1` lanes under one bounded completion-driven scheduler. By default
+it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs per
+lane, capped at six), then derives the Rust test-harness worker count from the
+same values (capped at eight). `MATRIX_JOBS` and `MATRIX_TEST_THREADS` can both
+override the derived values for a constrained or unusually large CI runner.
+This bounds aggregate process and test-thread fan-out without dropping any
+lane or assertion.
 
 Cross-compilation proves compilation, not semantic browser or WASM runtime
 parity. The `wasm32-wasip1` lanes are real runtime evidence for feature-gate
