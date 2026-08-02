@@ -1203,6 +1203,13 @@ in 1,093,331 ms and retained the terminal capability-table record. It ran
 against clean revision `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`; the
 duration is execution evidence rather than a controlled speed comparison
 because managed cache/build state differs.
+The feature-matrix harness then moved each bounded lane to a temporary
+lane-local Cargo target root and pointed the capability probes at those same
+roots. Run `91155ed7-9729-4877-8433-d14146428137` passed 925 checks with zero
+failures in 110,405 ms, retained the same terminal capability-table record,
+and had no build-directory lock-wait records. This is harness correctness and
+contention evidence rather than a controlled speed comparison because managed
+cache/build state differs.
 Aggregate coverage and runtime matrix results are implementation evidence, not
 Pillow-parity coverage.
 
