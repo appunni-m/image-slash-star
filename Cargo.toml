@@ -15,6 +15,8 @@ include = [
     "/src/**/*",
     "/third_party/**/*",
     "/build.rs",
+    "/build_tool.rs",
+    "/tests/build_script_tests.rs",
     "/CHANGELOG.md",
     "/CODE_OF_CONDUCT.md",
     "/CONTRIBUTING.md",
@@ -44,6 +46,10 @@ path = "tests/capability_table.rs"
 [[test]]
 name = "determinism_tests"
 path = "tests/determinism_tests.rs"
+
+[[test]]
+name = "build_script_tests"
+path = "tests/build_script_tests.rs"
 
 [dependencies]
 bytemuck = "1"
