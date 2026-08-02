@@ -7567,12 +7567,12 @@ fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
         }
 
         let mut options = EncodeOptions::for_format(format);
-        if format == ImageFormat::Avif {
-            if let EncodeOptions::Avif(avif_options) = &mut options {
-                // Native AVIF comparisons are intentionally single-worker so
-                // concurrent contract tests cannot perturb byte identity.
-                avif_options.max_threads = Some(1);
-            }
+        if format == ImageFormat::Avif
+            && let EncodeOptions::Avif(avif_options) = &mut options
+        {
+            // Native AVIF comparisons are intentionally single-worker so
+            // concurrent contract tests cannot perturb byte identity.
+            avif_options.max_threads = Some(1);
         }
         let expected = image_slash_star::encode(&image, format, &options)?;
         let mut sink = PartialWriteSink {
@@ -7625,12 +7625,12 @@ fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
             image_slash_star::SequenceKind::TimedAnimation
         };
         let mut options = EncodeOptions::for_format(format);
-        if format == ImageFormat::Avif {
-            if let EncodeOptions::Avif(avif_options) = &mut options {
-                // Keep sequence byte identity deterministic beside the native
-                // AVIF sequence tests in the same feature-gate process.
-                avif_options.max_threads = Some(1);
-            }
+        if format == ImageFormat::Avif
+            && let EncodeOptions::Avif(avif_options) = &mut options
+        {
+            // Keep sequence byte identity deterministic beside the native
+            // AVIF sequence tests in the same feature-gate process.
+            avif_options.max_threads = Some(1);
         }
         let expected = image_slash_star::encode_sequence(&sequence, format, &options)?;
         let mut sink = PartialWriteSink {
