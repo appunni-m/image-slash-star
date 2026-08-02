@@ -15,7 +15,18 @@ const COMPRESSION_PACKBITS: u16 = 32_773;
 
 /// Encode an image as a single-strip classic TIFF.
 pub fn encode(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<Vec<u8>> {
-    encode_page(img, opts).map(|page| page.bytes)
+    encode_with_token(img, opts, None)
+}
+
+/// Encode a single TIFF page while polling an optional cancellation token at
+/// row and compression checkpoints.
+pub fn encode_with_token(
+    img: &DecodedImage,
+    opts: &TiffEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(token)?;
+    encode_page_with_token(img, opts, token).map(|page| page.bytes)
 }
 
 struct EncodedPage {
@@ -25,8 +36,14 @@ struct EncodedPage {
     next_position: usize,
 }
 
-fn encode_page(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<EncodedPage> {
+fn encode_page_with_token(
+    img: &DecodedImage,
+    opts: &TiffEncodeOptions,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<EncodedPage> {
+    crate::codecs::error::check_cancelled(token)?;
     img.validate().map_err(CodecError::from_image_error)?;
+    crate::codecs::error::check_cancelled(token)?;
     let width = img.width as usize;
     let height = img.height as usize;
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
@@ -64,19 +81,30 @@ fn encode_page(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<Enco
     }
 
     let mut raw = img.pixels.clone();
+    crate::codecs::error::check_cancelled(token)?;
     if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
-        apply_horizontal_predictor(&mut raw, row_len, usize::from(channels), bits_per_sample);
+        apply_horizontal_predictor(
+            &mut raw,
+            row_len,
+            usize::from(channels),
+            bits_per_sample,
+            token,
+        )?;
     }
     let encoded = if compression == COMPRESSION_NONE {
+        crate::codecs::error::check_cancelled(token)?;
         raw
     } else if compression == COMPRESSION_LZW {
-        encode_lzw(&raw)
+        encode_lzw(&raw, token)?
     } else if compression == COMPRESSION_DEFLATE {
-        let input_chunks = vec![row_len; height];
-        compress_zlib_tiff(&raw, &input_chunks)
+        crate::codecs::error::check_cancelled(token)?;
+        let encoded = compress_zlib_tiff(&raw, &vec![row_len; height]);
+        crate::codecs::error::check_cancelled(token)?;
+        encoded
     } else {
-        encode_packbits(&raw, row_len)
+        encode_packbits(&raw, row_len, token)?
     };
+    crate::codecs::error::check_cancelled(token)?;
 
     let has_sample_format = matches!(img.mode, ImageMode::F32 | ImageMode::I32);
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
@@ -240,7 +268,7 @@ pub fn encode_sequence_with_token(
     crate::codecs::error::check_cancelled(token)?;
     validate_sequence_semantics(sequence)?;
     if sequence.frames.len() == 1 {
-        let encoded = encode(&sequence.frames[0].image, opts)?;
+        let encoded = encode_with_token(&sequence.frames[0].image, opts, token)?;
         crate::codecs::error::check_cancelled(token)?;
         return Ok(encoded);
     }
@@ -248,7 +276,7 @@ pub fn encode_sequence_with_token(
     let mut pages = Vec::with_capacity(sequence.frames.len());
     for frame in &sequence.frames {
         crate::codecs::error::check_cancelled(token)?;
-        pages.push(encode_page(&frame.image, opts)?);
+        pages.push(encode_page_with_token(&frame.image, opts, token)?);
     }
     let page_lengths = pages
         .iter()
@@ -438,6 +466,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
         token.cancel_after(checks);
         let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
     }
+    // Still-page cancellation is a Rust-only checkpoint contract. Exercise
+    // row preparation, PackBits rows, horizontal prediction, and the long
+    // LZW input loop without adding timing-sensitive public-test cases.
+    let checkpoint_image = DecodedImage::new(512, 16, vec![0; 512 * 16 * 3], ColorType::Rgb8);
+    let mut packbits_options = TiffEncodeOptions::default();
+    packbits_options.compression = Some(TiffCompression::PackBits);
+    for checks in [0, 1, 2, 3, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&checkpoint_image, &packbits_options, Some(&token));
+    }
+    let mut lzw_options = TiffEncodeOptions::default();
+    lzw_options.compression = Some(TiffCompression::Lzw);
+    for checks in [0, 1, 2, 3, 4, 5] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
+    }
+    let mut predicted_lzw = lzw_options.clone();
+    predicted_lzw.predictor = Some(TiffPredictor::Horizontal);
+    for checks in [3, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_with_token(&checkpoint_image, &predicted_lzw, Some(&token));
+    }
     let mut forced_sequence_overflow = TiffEncodeOptions::default();
     forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);
@@ -451,25 +504,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&i32, &predicted);
 
     let mut bytes8 = vec![1, 2, 5, 9, 3, 4];
-    apply_horizontal_predictor(&mut bytes8, 6, 3, 8);
+    let _ = apply_horizontal_predictor(&mut bytes8, 6, 3, 8, None);
     let mut bytes16 = vec![1, 0, 2, 0, 5, 0, 9, 0];
-    apply_horizontal_predictor(&mut bytes16, 8, 2, 16);
+    let _ = apply_horizontal_predictor(&mut bytes16, 8, 2, 16, None);
     let mut bytes32 = vec![1, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0];
-    apply_horizontal_predictor(&mut bytes32, 16, 2, 32);
+    let _ = apply_horizontal_predictor(&mut bytes32, 16, 2, 32, None);
 
     let literal: Vec<u8> = (0u8..=130).collect();
     let run = vec![7u8; 260];
     let mixed = [1u8, 2, 2, 3, 4, 4, 4, 5];
-    let _ = encode_packbits(&literal, literal.len());
-    let _ = encode_packbits(&run, run.len());
-    let _ = encode_packbits(&mixed, mixed.len());
+    let _ = encode_packbits(&literal, literal.len(), None);
+    let _ = encode_packbits(&run, run.len(), None);
+    let _ = encode_packbits(&mixed, mixed.len(), None);
     let mut packbits = Vec::new();
     encode_packbits_row(&literal, &mut packbits);
     encode_packbits_row(&run, &mut packbits);
     encode_packbits_row(&mixed, &mut packbits);
 
-    let _ = encode_lzw(&[]);
-    let _ = encode_lzw(b"TOBEORNOTTOBEORTOBEORNOT");
+    let _ = encode_lzw(&[], None);
+    let _ = encode_lzw(b"TOBEORNOTTOBEORTOBEORNOT", None);
     let mut writer = MsbWriter::default();
     writer.write(0x1ff, 9);
     writer.write(0, 1);
@@ -485,10 +538,12 @@ fn apply_horizontal_predictor(
     row_len: usize,
     channels: usize,
     bits_per_sample: u16,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     let sample_bytes = usize::from(bits_per_sample / 8);
     let stride = channels.wrapping_mul(sample_bytes);
     for row in data.chunks_exact_mut(row_len) {
+        crate::codecs::error::check_cancelled(token)?;
         for offset in (stride..row.len()).step_by(sample_bytes).rev() {
             let previous = offset.wrapping_sub(stride);
             let mut borrow = 0u16;
@@ -502,14 +557,20 @@ fn apply_horizontal_predictor(
             }
         }
     }
+    Ok(())
 }
 
-fn encode_packbits(data: &[u8], row_len: usize) -> Vec<u8> {
+fn encode_packbits(
+    data: &[u8],
+    row_len: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut output = Vec::with_capacity(data.len().saturating_add(data.len().div_ceil(128)));
     for row in data.chunks_exact(row_len) {
+        crate::codecs::error::check_cancelled(token)?;
         encode_packbits_row(row, &mut output);
     }
-    output
+    Ok(output)
 }
 
 fn encode_packbits_row(row: &[u8], output: &mut Vec<u8>) {
@@ -606,7 +667,7 @@ fn emit_packbits_run(output: &mut Vec<u8>, byte: u8, run_len: &mut usize) {
     *run_len = run_len.wrapping_sub(emitted);
 }
 
-fn encode_lzw(data: &[u8]) -> Vec<u8> {
+fn encode_lzw(data: &[u8], token: Option<&crate::CancellationToken>) -> CodecResult<Vec<u8>> {
     const CLEAR: u16 = 256;
     const END: u16 = 257;
     const FIRST: u16 = 258;
@@ -614,7 +675,7 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
     const CHECK_GAP: usize = 10_000;
 
     let Some((&first, rest)) = data.split_first() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let mut writer = MsbWriter::default();
 
@@ -633,6 +694,9 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
 
     for &byte in rest {
         input_count = input_count.wrapping_add(1);
+        if input_count.is_multiple_of(4096) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
         if let Some(&code) = dictionary.get(&(entry, byte)) {
             entry = code;
             continue;
@@ -689,7 +753,8 @@ fn encode_lzw(data: &[u8]) -> Vec<u8> {
         width = width.wrapping_add(1);
     }
     writer.write(END, width);
-    writer.finish()
+    crate::codecs::error::check_cancelled(token)?;
+    Ok(writer.finish())
 }
 
 #[derive(Default)]

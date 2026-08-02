@@ -841,10 +841,12 @@ pub fn encode_with_policy(
 ///
 /// The token is checked before codec dispatch and after encoding. JPEG also
 /// polls between color-conversion rows, sampling rows, quantized block rows,
-/// entropy rows, and progressive event batches; PNG and BMP poll their
-/// structural preparation and sink segments. Other whole-buffer still codecs
-/// currently observe only the public boundary. The sequence API additionally
-/// checks at retained-frame boundaries and codec-specific checkpoints.
+/// entropy rows, and progressive event batches; TIFF polls page preparation,
+/// row prediction, and PackBits/LZW compression checkpoints; PNG and BMP poll
+/// their structural preparation and sink segments. Other whole-buffer still
+/// codecs currently observe only the public boundary. The sequence API
+/// additionally checks at retained-frame boundaries and codec-specific
+/// checkpoints.
 ///
 /// # Errors
 ///
