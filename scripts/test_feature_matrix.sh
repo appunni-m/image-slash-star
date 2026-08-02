@@ -63,6 +63,40 @@ run_wasm_unknown_lane() {
         --target wasm32-unknown-unknown "$@"
 }
 
+run_wasi_lane() {
+    features=$1
+    set -- $(feature_args "$features")
+    build_log="$matrix_log_dir/wasm-wasi-$features.jsonl"
+    build_status=0
+    cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
+        --no-run --message-format=json --color never "$@" \
+        >"$build_log" 2>&1 || build_status=$?
+    cat "$build_log"
+    if [ "$build_status" -ne 0 ]; then
+        return "$build_status"
+    fi
+    binary=$(python3 -c '
+import json
+import sys
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    try:
+        message = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if (
+        message.get("reason") == "compiler-artifact"
+        and message.get("target", {}).get("name") == "feature_gate_tests"
+        and (message.get("executable") or "").endswith(".wasm")
+    ):
+        print(message["executable"])
+        break
+else:
+    raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
+' "$build_log")
+    node scripts/wasm_test_runner.js "$binary"
+}
+
 wait_matrix_batch() {
     batch_status=0
     for pid in $matrix_pending_pids; do
@@ -115,28 +149,11 @@ cargo test --locked --target wasm32-unknown-unknown --test feature_gate_tests \
 # Execute the feature-gate contract in a real WASM runtime: every native lane
 # is built for wasm32-wasip1 and run under Node's WASI preview1 runtime.
 if command -v node >/dev/null 2>&1; then
-    for features in none jpeg png gif bmp tiff webp ico avif default all; do
-        case "$features" in
-            none)
-                cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
-                    --no-default-features --no-run
-                ;;
-            jpeg|png|gif|bmp|tiff|webp|ico|avif)
-                cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
-                    --no-default-features --features "$features" --no-run
-                ;;
-            default)
-                cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
-                    --no-run
-                ;;
-            all)
-                cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
-                    --all-features --no-run
-                ;;
-        esac
-        binary=$(ls -t target/wasm32-wasip1/debug/deps/feature_gate_tests-*.wasm | head -1)
-        node scripts/wasm_test_runner.js "$binary"
-    done
+    # Keep the real runtime coverage, but do not serialize independent lanes.
+    # Each lane extracts its own Cargo-reported executable so concurrent builds
+    # cannot accidentally run a neighboring feature configuration.
+    run_parallel_lanes wasm-wasi run_wasi_lane \
+        none jpeg png gif bmp tiff webp ico avif default all
 else
     echo "node is required for the wasm32-wasip1 runtime lanes" >&2
     exit 1
