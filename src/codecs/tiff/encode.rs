@@ -45,19 +45,84 @@ pub(crate) fn encode_to_sink(
         .check_output_len(page.bytes.len(), ImageFormat::Tiff, operation)
         .map_err(CodecError::from_image_error)?;
 
-    // The page is already fully validated before delivery. Keep the
-    // container's header, encoded strip/padding, and IFD/value area as
-    // separate sink writes so cancellation and destination failure have
-    // deterministic structural boundaries. The compressed/pixel working
-    // buffer remains owned by this bounded page plan; this is not a
-    // transient-allocation or rollback guarantee.
     let mut written = 0usize;
-    write_sink_segment(sink, &page.bytes[..8], token, &mut written)?;
-    if page.ifd_offset > 8 {
-        write_sink_segment(sink, &page.bytes[8..page.ifd_offset], token, &mut written)?;
-    }
-    write_sink_segment(sink, &page.bytes[page.ifd_offset..], token, &mut written)?;
+    write_page_to_sink(&page, token, sink, &mut written)?;
     debug_assert_eq!(written, page.bytes.len());
+    Ok(written)
+}
+
+/// Encode ordered TIFF pages directly to a caller-owned sink.
+pub(crate) fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
+    opts: &TiffEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+) -> CodecResult<usize> {
+    crate::codecs::error::check_cancelled(token)?;
+    sequence.validate().map_err(CodecError::from_image_error)?;
+    validate_sequence_semantics(sequence)?;
+    if sequence.frames.len() == 1 {
+        return encode_to_sink(
+            &sequence.frames[0].image,
+            opts,
+            policy,
+            operation,
+            token,
+            sink,
+        );
+    }
+
+    let mut pages = Vec::with_capacity(sequence.frames.len());
+    for frame in &sequence.frames {
+        crate::codecs::error::check_cancelled(token)?;
+        pages.push(encode_page_with_token(&frame.image, opts, token)?);
+    }
+    let page_lengths = pages
+        .iter()
+        .map(|page| page.bytes.len())
+        .collect::<Vec<_>>();
+    let final_len = sequence_output_len(&page_lengths)?;
+    policy
+        .check_output_len(final_len, ImageFormat::Tiff, operation)
+        .map_err(CodecError::from_image_error)?;
+    crate::codecs::error::check_cancelled(token)?;
+
+    let page_bases = sequence_page_bases(&pages)?;
+    relocate_pages(&mut pages, &page_bases)?;
+
+    // Classic TIFF aligns each page start to a 16-byte boundary. Padding is
+    // delivered explicitly so the sink receives the exact same bytes as the
+    // whole-buffer sequence encoder, including inter-page and final padding.
+    let zero_padding = [0u8; 15];
+    let mut written = 0usize;
+    for (page, &base) in pages.iter().zip(&page_bases) {
+        let padding = base
+            .checked_sub(written)
+            .ok_or_else(|| CodecError::Dimensions("TIFF page layout regressed".to_owned()))?;
+        if padding > zero_padding.len() {
+            return Err(CodecError::Dimensions(
+                "TIFF page padding exceeds alignment".to_owned(),
+            ));
+        }
+        if padding != 0 {
+            write_sink_segment(sink, &zero_padding[..padding], token, &mut written)?;
+        }
+        write_page_to_sink(page, token, sink, &mut written)?;
+    }
+    let final_padding = final_len
+        .checked_sub(written)
+        .ok_or_else(|| CodecError::Dimensions("TIFF sequence layout regressed".to_owned()))?;
+    if final_padding > zero_padding.len() {
+        return Err(CodecError::Dimensions(
+            "TIFF final padding exceeds alignment".to_owned(),
+        ));
+    }
+    if final_padding != 0 {
+        write_sink_segment(sink, &zero_padding[..final_padding], token, &mut written)?;
+    }
+    debug_assert_eq!(written, final_len);
     Ok(written)
 }
 
@@ -410,6 +475,68 @@ fn sequence_output_len(page_lengths: &[usize]) -> CodecResult<usize> {
     Ok(total)
 }
 
+fn sequence_page_bases(pages: &[EncodedPage]) -> CodecResult<Vec<usize>> {
+    let mut end = 0usize;
+    let mut bases = Vec::with_capacity(pages.len());
+    for page in pages {
+        let base = checked_align_16(end)?;
+        bases.push(base);
+        end = base
+            .checked_add(page.bytes.len())
+            .ok_or_else(|| CodecError::Dimensions("TIFF sequence length overflows".to_owned()))?;
+    }
+    Ok(bases)
+}
+
+fn relocate_pages(pages: &mut [EncodedPage], bases: &[usize]) -> CodecResult<()> {
+    if pages.len() != bases.len() {
+        return Err(CodecError::Dimensions(
+            "TIFF page layout count mismatch".to_owned(),
+        ));
+    }
+    for index in 0..pages.len() {
+        let base = bases[index];
+        let next_ifd = index
+            .checked_add(1)
+            .and_then(|next_index| bases.get(next_index).zip(pages.get(next_index)))
+            .map(|(next_base, next_page)| {
+                next_base.checked_add(next_page.ifd_offset).ok_or_else(|| {
+                    CodecError::Dimensions("TIFF next-IFD offset overflows".to_owned())
+                })
+            })
+            .transpose()?;
+        let page = &mut pages[index];
+        if let Some(next_ifd) = next_ifd {
+            let end = page.next_position.checked_add(4).ok_or_else(|| {
+                CodecError::Dimensions("TIFF next-IFD field overflows".to_owned())
+            })?;
+            let next_field = page.bytes.get_mut(page.next_position..end).ok_or_else(|| {
+                CodecError::Dimensions("TIFF next-IFD field is outside the page".to_owned())
+            })?;
+            next_field.copy_from_slice(&bounded_u32(next_ifd).to_le_bytes());
+        }
+        for &position in &page.offset_positions {
+            let end = position
+                .checked_add(4)
+                .ok_or_else(|| CodecError::Dimensions("TIFF offset field overflows".to_owned()))?;
+            let local = page.bytes.get(position..end).ok_or_else(|| {
+                CodecError::Dimensions("TIFF offset field is outside the page".to_owned())
+            })?;
+            let local = u32::from_le_bytes(local.try_into().map_err(|_| {
+                CodecError::Dimensions("TIFF offset field is not four bytes".to_owned())
+            })?) as usize;
+            let relocated = base.checked_add(local).ok_or_else(|| {
+                CodecError::Dimensions("TIFF relocated offset overflows".to_owned())
+            })?;
+            let relocated_field = page.bytes.get_mut(position..end).ok_or_else(|| {
+                CodecError::Dimensions("TIFF offset field is outside the page".to_owned())
+            })?;
+            relocated_field.copy_from_slice(&bounded_u32(relocated).to_le_bytes());
+        }
+    }
+    Ok(())
+}
+
 fn checked_align_16(value: usize) -> CodecResult<usize> {
     value
         .checked_add(15)
@@ -433,6 +560,25 @@ fn write_sink_segment(
         .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
     *written = written.saturating_add(bytes.len());
     Ok(())
+}
+
+fn write_page_to_sink(
+    page: &EncodedPage,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn crate::OutputSink,
+    written: &mut usize,
+) -> CodecResult<()> {
+    // The page is already fully validated before delivery. Keep the
+    // container's header, encoded strip/padding, and IFD/value area as
+    // separate sink writes so cancellation and destination failure have
+    // deterministic structural boundaries. The compressed/pixel working
+    // buffer remains owned by this bounded page plan; this is not a
+    // transient-allocation or rollback guarantee.
+    write_sink_segment(sink, &page.bytes[..8], token, written)?;
+    if page.ifd_offset > 8 {
+        write_sink_segment(sink, &page.bytes[8..page.ifd_offset], token, written)?;
+    }
+    write_sink_segment(sink, &page.bytes[page.ifd_offset..], token, written)
 }
 
 #[cfg(coverage)]

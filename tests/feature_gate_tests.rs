@@ -2003,7 +2003,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
         }
         let base = base_cache
             .get(&case.asset_path)
-            .expect("diagnostic baseline cache entry");
+            .ok_or_else(|| format!("{}: diagnostic baseline cache entry", case.id))?;
         let bytes = match case.mutation.as_str() {
             "none" => base.to_vec(),
             "png_before_idat" => {
@@ -2018,7 +2018,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .copied()
                     .map(u8::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
-                let idat_offset = png_chunk_offset(&base, b"IDAT")?;
+                let idat_offset = png_chunk_offset(base, b"IDAT")?;
                 let mut mutated = Vec::with_capacity(base.len() + payload.len() + 12);
                 mutated.extend_from_slice(&base[..idat_offset]);
                 mutated.extend_from_slice(&png_chunk(&kind, &payload));
@@ -2037,7 +2037,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .copied()
                     .map(u8::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
-                let iend_offset = png_chunk_offset(&base, b"IEND")?;
+                let iend_offset = png_chunk_offset(base, b"IEND")?;
                 let mut mutated = Vec::with_capacity(base.len() + payload.len() + 12);
                 mutated.extend_from_slice(&base[..iend_offset]);
                 mutated.extend_from_slice(&png_chunk(&kind, &payload));
@@ -2050,7 +2050,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .as_bytes()
                     .try_into()
                     .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
-                let chunk_offset = png_chunk_offset(&base, &kind)?;
+                let chunk_offset = png_chunk_offset(base, &kind)?;
                 let length = u32::from_be_bytes([
                     base[chunk_offset],
                     base[chunk_offset + 1],
@@ -2073,8 +2073,8 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .as_bytes()
                     .try_into()
                     .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
-                let idat_offset = png_chunk_offset(&base, b"IDAT")?;
-                let chunk_offset = png_chunk_offset_after(&base, &kind, idat_offset)?;
+                let idat_offset = png_chunk_offset(base, b"IDAT")?;
+                let chunk_offset = png_chunk_offset_after(base, &kind, idat_offset)?;
                 let length = u32::from_be_bytes([
                     base[chunk_offset],
                     base[chunk_offset + 1],
@@ -2103,7 +2103,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                     .copied()
                     .map(u8::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
-                let iend_offset = png_chunk_offset(&base, b"IEND")?;
+                let iend_offset = png_chunk_offset(base, b"IEND")?;
                 let mut chunk = png_chunk(&kind, &payload);
                 *chunk
                     .last_mut()
@@ -9232,6 +9232,99 @@ fn tiff_capability_and_destination_failures_are_structured()
     );
     assert_eq!(sequence_cancelling.writes, 1);
     assert_eq!(sequence_cancelling.bytes, &expected_sequence[..8]);
+
+    let multipage_sequence = image_slash_star::decode_sequence(&fs::read(
+        root.join("tests/fixtures/input/images/tiff/multipage.tiff"),
+    )?)?
+    .into_inner();
+    assert!(
+        multipage_sequence.frames.len() > 1,
+        "multipage TIFF fixture must retain multiple pages"
+    );
+    let mut multipage_options = EncodeOptions::for_format(ImageFormat::Tiff);
+    if let EncodeOptions::Tiff(options) = &mut multipage_options {
+        options.compression = Some(TiffCompression::Deflate);
+    }
+    let expected_multipage = image_slash_star::encode_sequence(
+        &multipage_sequence,
+        ImageFormat::Tiff,
+        &multipage_options,
+    )?;
+    let mut multipage_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    assert_eq!(
+        image_slash_star::encode_sequence_to_sink(
+            &multipage_sequence,
+            ImageFormat::Tiff,
+            &multipage_options,
+            &mut multipage_sink,
+        )?,
+        expected_multipage.len()
+    );
+    assert_eq!(multipage_sink.bytes, expected_multipage);
+    assert!(
+        multipage_sink.writes >= multipage_sequence.frames.len() * 3,
+        "multi-page TIFF delivery must retain per-page structural boundaries"
+    );
+
+    let limited_multipage = image_slash_star::EncodePolicy::new()
+        .with_max_output_bytes(expected_multipage.len().saturating_sub(1) as u64);
+    let mut limited_multipage_sink = RecordingTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+    };
+    let limited_multipage_error = match image_slash_star::encode_sequence_to_sink_with_policy(
+        &multipage_sequence,
+        ImageFormat::Tiff,
+        &multipage_options,
+        &limited_multipage,
+        &mut limited_multipage_sink,
+    ) {
+        Ok(length) => panic!("limited multi-page TIFF sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        limited_multipage_error,
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Tiff),
+            operation: image_slash_star::CodecOperation::SequenceEncode,
+            resource: image_slash_star::ResourceLimit::EncodedOutputBytes,
+            ..
+        }
+    ));
+    assert_eq!(limited_multipage_sink.writes, 0);
+    assert!(limited_multipage_sink.bytes.is_empty());
+
+    let multipage_token = image_slash_star::CancellationToken::new();
+    let mut cancelling_multipage = CancellingTiffSink {
+        bytes: Vec::new(),
+        token: multipage_token.clone(),
+        writes: 0,
+    };
+    let multipage_cancellation_error = match image_slash_star::encode_sequence_to_sink_with_token(
+        &multipage_sequence,
+        ImageFormat::Tiff,
+        &multipage_options,
+        &multipage_token,
+        &mut cancelling_multipage,
+    ) {
+        Ok(length) => {
+            panic!("cancelling multi-page TIFF sink unexpectedly accepted {length} bytes")
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        multipage_cancellation_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(
+        multipage_cancellation_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(cancelling_multipage.writes, 1);
+    assert_eq!(cancelling_multipage.bytes, &expected_multipage[..8]);
 
     struct RejectingTiffSink;
     impl image_slash_star::OutputSink for RejectingTiffSink {
