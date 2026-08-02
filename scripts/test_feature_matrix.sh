@@ -55,7 +55,7 @@ run_native_lane() {
     set -- $(feature_args "$features")
     cargo clippy --workspace --all-targets --locked "$@" -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked "$@"
-    cargo test --locked --test feature_gate_tests "$@"
+    cargo test --locked --test feature_gate_tests "$@" -- --nocapture
 }
 
 run_wasm_unknown_lane() {
@@ -98,7 +98,7 @@ for line in open(sys.argv[1], encoding="utf-8"):
 else:
     raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
 ' "$build_log")
-    node scripts/wasm_test_runner.js "$binary"
+    node scripts/wasm_test_runner.js "$binary" --nocapture
 }
 
 run_parallel_lanes() {
@@ -213,4 +213,5 @@ node scripts/wasm_test_runner.js "$binary"
 
 # Regenerate the capability tables in memory and reject any drift between the
 # committed fixture and the native or WASI runtime tables.
-python3 scripts/generate_capability_tables.py --check
+python3 scripts/generate_capability_tables.py --check \
+    --matrix-log-dir "$matrix_log_dir"
