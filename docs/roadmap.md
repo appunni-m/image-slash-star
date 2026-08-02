@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`e2b060dff1758749a498bc98919143f6d4c2ca6c`; the claim-ledger baseline remains
+`3c10f9ccaf494c96d42982006be1434050bd9c5c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1826,6 +1826,29 @@ These are observed runtime and target-evidence records, not universal
 benchmarks and not Pillow-parity coverage. Remaining other codec interior
 work, finer WebP work, Deflate emission/structural interruption, transient
 allocation accounting, and rollback remain open.
+
+The feature-matrix runtime follow-up is implemented at
+`3c10f9ccaf494c96d42982006be1434050bd9c5c`. Native lanes still compile and
+execute all 43 feature-gate tests for each of the 11 feature configurations;
+they no longer repeat native Clippy and rustdoc, because the repository
+quality job already runs those all-feature checks and the lane's test build
+already compiles the selected feature set. The matching
+`wasm32-unknown-unknown` Clippy/rustdoc lanes, two WASM test-compilation
+checks, all 11 `wasm32-wasip1` runtime lanes, the determinism probe, and the
+capability-table no-drift check remain unchanged. Managed run
+`070f12d9-38e7-4626-94f6-40f19321fc67` passed 947/947 checks in 11,854 ms with
+no retained build-directory or package-cache lock-wait matches and the
+terminal `capability tables OK: every native and wasm32-wasip1 lane agrees`
+marker. A local warm repeat took 11.937 seconds versus 16.788 seconds before
+the change; both are observed executions rather than universal benchmarks.
+The exact-head Pillow parity run `d70e6d45-b6b1-4b6f-a6e1-ae400adf7e92`
+passed 1,445/1,445 checks in 683 ms. Coverage MCP run
+`5f409090-d912-4748-98ee-81ab56c91099` passed 83/83 tests in 44,299 ms and
+ingested snapshot `30bfa31d-99e7-45b7-bd62-322c2139210f`, retaining
+49,232/49,627 lines, 6,769/6,832 branches, 2,746/2,813 functions, and
+76,571/77,234 regions. The snapshot is unchanged from the prior Rust source
+revision because this slice changes only the test harness; it adds no parity
+row, fixture, diagnostic origin, or coverage-only hook.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
