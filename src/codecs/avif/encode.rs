@@ -6,7 +6,9 @@ use crate::encode_options::AvifAdvancedOption;
 use crate::encode_options::AvifEncodeOptions;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::encode_options::{AvifCodec, AvifRange, AvifSubsampling};
+use crate::encode_policy::EncodePolicy;
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration};
+use crate::{CodecOperation, ImageFormat, OutputSink};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::borrow::Cow;
@@ -35,6 +37,118 @@ pub fn encode_with_token(
         options,
         token,
     )
+}
+
+/// Encode AVIF into validated ISO-BMFF top-level box segments owned by the
+/// caller's sink. The native encoder retains its complete working buffer; this
+/// boundary makes container delivery and cancellation observable without
+/// claiming AV1 interior streaming or destination rollback. WASM encoding
+/// remains target-unavailable and therefore never reaches box delivery.
+pub(crate) fn encode_to_sink(
+    image: &DecodedImage,
+    options: &AvifEncodeOptions,
+    policy: EncodePolicy,
+    operation: CodecOperation,
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let encoded = encode_with_token(image, options, token)?;
+    policy
+        .check_output_len(encoded.len(), ImageFormat::Avif, operation)
+        .map_err(CodecError::from_image_error)?;
+    write_bmff_to_sink(&encoded, token, sink)
+}
+
+fn write_bmff_to_sink(
+    encoded: &[u8],
+    token: Option<&crate::CancellationToken>,
+    sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    let mut offset = 0usize;
+    let mut written = 0usize;
+    while offset < encoded.len() {
+        let header_end = offset
+            .checked_add(8)
+            .ok_or_else(|| CodecError::Dimensions("AVIF box header overflows".to_owned()))?;
+        let header = encoded.get(offset..header_end).ok_or_else(|| {
+            CodecError::Malformed("AVIF box header extends beyond the encoded output".to_owned())
+        })?;
+        let small_size = u32::from_be_bytes([header[0], header[1], header[2], header[3]]);
+        let header_len = if small_size == 1 { 16usize } else { 8usize };
+        let header_end = offset.checked_add(header_len).ok_or_else(|| {
+            CodecError::Dimensions("AVIF extended box header overflows".to_owned())
+        })?;
+        let header = encoded.get(offset..header_end).ok_or_else(|| {
+            CodecError::Malformed("AVIF extended box size is unavailable".to_owned())
+        })?;
+        let (box_size, box_end) = if small_size == 0 {
+            (encoded.len().saturating_sub(offset), encoded.len())
+        } else if small_size == 1 {
+            let size_bytes = header.get(8..16).ok_or_else(|| {
+                CodecError::Malformed("AVIF extended box size is unavailable".to_owned())
+            })?;
+            let size = u64::from_be_bytes([
+                size_bytes[0],
+                size_bytes[1],
+                size_bytes[2],
+                size_bytes[3],
+                size_bytes[4],
+                size_bytes[5],
+                size_bytes[6],
+                size_bytes[7],
+            ]);
+            let size = usize::try_from(size)
+                .map_err(|_| CodecError::Dimensions("AVIF box size exceeds usize".to_owned()))?;
+            let end = offset
+                .checked_add(size)
+                .ok_or_else(|| CodecError::Dimensions("AVIF box size overflows".to_owned()))?;
+            (size, end)
+        } else {
+            let size = usize::try_from(small_size).map_err(|_| {
+                CodecError::Dimensions("AVIF box size does not fit usize".to_owned())
+            })?;
+            let end = offset
+                .checked_add(size)
+                .ok_or_else(|| CodecError::Dimensions("AVIF box size overflows".to_owned()))?;
+            (size, end)
+        };
+        if box_size < header_len {
+            return Err(CodecError::Malformed(
+                "AVIF box size is smaller than its header".to_owned(),
+            ));
+        }
+        if box_end > encoded.len() {
+            return Err(CodecError::Malformed(
+                "AVIF box extends beyond the encoded output".to_owned(),
+            ));
+        }
+        write_avif_sink_segment(sink, header, token, &mut written)?;
+        if box_end > header_end {
+            write_avif_sink_segment(sink, &encoded[header_end..box_end], token, &mut written)?;
+        }
+        offset = box_end;
+    }
+    if offset != encoded.len() || written != encoded.len() {
+        return Err(CodecError::Malformed(
+            "AVIF box delivery did not cover the encoded output".to_owned(),
+        ));
+    }
+    Ok(written)
+}
+
+fn write_avif_sink_segment(
+    sink: &mut dyn OutputSink,
+    bytes: &[u8],
+    token: Option<&crate::CancellationToken>,
+    written: &mut usize,
+) -> CodecResult<()> {
+    crate::codecs::error::check_cancelled(token)?;
+    sink.write_all(bytes)
+        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
+    *written = written
+        .checked_add(bytes.len())
+        .ok_or_else(|| CodecError::Dimensions("AVIF sink output length overflows".to_owned()))?;
+    Ok(())
 }
 
 /// Encode all frames in an AVIF image sequence.

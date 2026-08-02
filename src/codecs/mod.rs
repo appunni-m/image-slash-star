@@ -10,7 +10,8 @@ use crate::SequenceDecodeBudget;
     feature = "gif",
     feature = "png",
     feature = "tiff",
-    feature = "webp"
+    feature = "webp",
+    feature = "avif"
 ))]
 use crate::capabilities::CodecOperation;
 use crate::encode_options::EncodeOptions;
@@ -884,7 +885,8 @@ pub(crate) fn encode_format_with_token(
         feature = "ico",
         feature = "png",
         feature = "tiff",
-        feature = "webp"
+        feature = "webp",
+        feature = "avif"
     )),
     allow(unused_variables)
 )]
@@ -896,6 +898,57 @@ pub(crate) fn encode_format_to_sink_with_token(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn crate::OutputSink,
 ) -> ImageResult<Option<usize>> {
+    if format == ImageFormat::Avif {
+        #[cfg(not(feature = "avif"))]
+        {
+            return Err(ImageError::FeatureDisabled {
+                format,
+                feature: "avif",
+            });
+        }
+        #[cfg(feature = "avif")]
+        {
+            #[cfg(any(
+                not(all(
+                    feature = "jpeg",
+                    feature = "png",
+                    feature = "gif",
+                    feature = "bmp",
+                    feature = "tiff",
+                    feature = "webp",
+                    feature = "ico",
+                    feature = "avif"
+                )),
+                target_arch = "wasm32"
+            ))]
+            ensure_available(format)?;
+            image
+                .validate()
+                .map_err(|error| error.with_format(format))?;
+            let EncodeOptions::Avif(options) = options else {
+                return Err(option_format_mismatch(
+                    format,
+                    options,
+                    ImageErrorStage::StillEncode,
+                ));
+            };
+            let encoded = avif::encode::encode_to_sink(
+                image,
+                options,
+                policy,
+                CodecOperation::StillEncode,
+                token,
+                sink,
+            );
+            return into_image_result(
+                encoded.map_err(|error| error.context("encode")),
+                format,
+                ImageErrorStage::StillEncode,
+            )
+            .map(Some);
+        }
+    }
+
     if format == ImageFormat::Jpeg {
         #[cfg(not(feature = "jpeg"))]
         {
