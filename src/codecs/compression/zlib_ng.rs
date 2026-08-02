@@ -744,14 +744,24 @@ impl SlowMatcher {
 
 #[cfg(feature = "tiff")]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6_tiff(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16);
+pub(super) fn compress_level6_tiff(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: Option<&crate::CancellationToken>,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let tokens = if let Some(token) = token {
+        tokenize_lookahead_medium_with_token(data, input_chunks, 128, 128, 16, token)?
+    } else {
+        tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
+    };
+    crate::codecs::error::check_cancelled(token)?;
     let mut output = vec![0x78, 0x9c];
     let mut writer = BitWriter::default();
     emit_blocks(&tokens, 16_383, &mut writer);
     output.extend_from_slice(&writer.finish());
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
+    crate::codecs::error::check_cancelled(token)?;
+    Ok(output)
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
@@ -778,6 +788,37 @@ fn tokenize_lookahead_medium(
     debug_assert_eq!(available, data.len());
     matcher.process(available, true);
     matcher.tokens
+}
+
+/// Tokenize TIFF Deflate input with cancellation checkpoints at each input
+/// row boundary. The ordinary PNG/general level-six path stays on the
+/// existing helper above so token-aware TIFF control does not add polling
+/// overhead to ordinary encodes.
+#[cfg(feature = "tiff")]
+fn tokenize_lookahead_medium_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        if available != 0 {
+            matcher.refill_boundary();
+        }
+        available = available.wrapping_add(chunk_length);
+        debug_assert!(available <= data.len());
+        matcher.process(available, false);
+        crate::codecs::error::check_cancelled(Some(token))?;
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process(available, true);
+    crate::codecs::error::check_cancelled(Some(token))?;
+    Ok(matcher.tokens)
 }
 
 #[derive(Clone, Copy, Default)]

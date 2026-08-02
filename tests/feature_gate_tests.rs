@@ -6553,6 +6553,58 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
     }
+
+    if cfg!(feature = "tiff") {
+        use image_slash_star::TiffCompression;
+
+        // TIFF Deflate now polls at input-row boundaries, so a bounded page
+        // cannot consume an entire large compression pass between public
+        // checkpoints. This is a Rust work-control contract: Pillow has no
+        // caller-owned checkpoint budget or equivalent result.
+        let mut pixels = Vec::with_capacity(256 * 256 * 3);
+        for row in 0..256u16 {
+            for column in 0..256u16 {
+                pixels.extend_from_slice(&[
+                    row.wrapping_add(column).to_le_bytes()[0],
+                    row.wrapping_mul(3).wrapping_add(column).to_le_bytes()[0],
+                    row.wrapping_add(column.wrapping_mul(5)).to_le_bytes()[0],
+                ]);
+            }
+        }
+        let image = DecodedImage::new(256, 256, pixels, ColorType::Rgb8);
+        let mut options = EncodeOptions::for_format(ImageFormat::Tiff);
+        if let EncodeOptions::Tiff(options) = &mut options {
+            options.compression = Some(TiffCompression::Deflate);
+        }
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        let expected = image_slash_star::encode(&image, ImageFormat::Tiff, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Tiff, &options, &unlimited,)?,
+            expected,
+            "an ample TIFF Deflate budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(32);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Tiff,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("row-bounded TIFF Deflate unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Tiff),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 32,
+                ..
+            }
+        ));
+    }
     Ok(())
 }
 

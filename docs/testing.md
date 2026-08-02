@@ -272,7 +272,8 @@ internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
 preparing rows and between emitted structural segments in both return and sink
 paths; TIFF still encoding now polls page
-preparation, row prediction, raw/PackBits/LZW work, and deflate boundaries;
+preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row
+boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints; WebP still encoding polls preparation, codec-result, and
 metadata-assembly boundaries; native AVIF still encoding polls its preparation,
