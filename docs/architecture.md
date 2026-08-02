@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the committed tree based on `cb0f67d2e76e99eefc2595317fd49fb5202a7162`
+Reviewed: 2026-08-02 against the committed tree based on `775263335df9680e4c453f666708745f53083e8f`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -300,7 +300,7 @@ translation cannot be bypassed.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer or structural segment reaches a caller-owned sink |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; whole-buffer codecs use one write, while PNG, BMP, and ICO still plus one-frame BMP and ICO sequences output across structural header/payload boundaries |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; whole-buffer codecs use one write, while PNG, BMP, and ICO still plus one-frame BMP and ICO sequences output across structural header/payload boundaries, then every path calls `OutputSink::flush` once |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Token-aware sink encoding; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
@@ -459,8 +459,10 @@ boundaries. GIF, TIFF, WebP,
 and native AVIF sequence encoders
 additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
-prefix because no rollback contract exists. Progress callbacks, full
-structural writing for the remaining codecs, and interruption beyond the
+prefix because no rollback contract exists. A sink flush/finalization failure
+is normalized to `ImageError::OutputWrite` after delivery and likewise does
+not roll the prefix back. Progress callbacks, full structural writing for the
+remaining codecs, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints remain open.
 
 ### Codec work is bounded by the resource set
@@ -595,8 +597,10 @@ caller-owned `OutputSink`, it normalizes that rejection to
 explicit Rust contract for this normalization. The error retains the selected
 output format, the `StillEncode` or `SequenceEncode` stage, and the sink's diagnostic message;
 input offset and container identity are `None` because the failure is on the
-destination side. This boundary does not define short-write/flush semantics
-or rollback. The whole-buffer sink fallback still delivers one complete
+destination side. This boundary defines one post-delivery `OutputSink::flush`
+call; a flush failure is also `ImageError::OutputWrite` and may follow a
+complete prefix. Short-write and rollback semantics remain open. The
+whole-buffer sink fallback still delivers one complete
 buffer; the PNG, BMP, and ICO structural writers report the same structured
 cause if any emitted segment is rejected.
 

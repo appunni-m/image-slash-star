@@ -155,7 +155,7 @@ capabilities and setup.
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; sink rejection is reported as `ImageError::OutputWrite`; PNG and BMP still output cross structural write boundaries |
+| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; write or flush rejection is reported as `ImageError::OutputWrite`; PNG and BMP still output cross structural write boundaries |
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Combine token-aware encoding with a caller-owned sink; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
@@ -202,8 +202,10 @@ quantization, entropy, and progressive-scan checkpoints, while PNG and BMP
 still sink encoding poll while preparing rows and between emitted segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
-may leave its delivered prefix; progress callbacks, work-budget exhaustion,
-and universal structural writing remain separate roadmap work. An
+may leave its delivered prefix; successful sink delivery calls the sink's
+finalization hook once, and a flush failure is reported as `OutputWrite`
+without rollback. Progress callbacks, work-budget exhaustion, and universal
+structural writing remain separate roadmap work. An
 `EncodePolicy::max_work_units` budget counts those documented encode
 checkpoints and reports a typed limit error before the checkpoint that would
 exceed it; it is not a CPU-time or allocation guarantee. Legacy APIs never
@@ -511,8 +513,10 @@ from `encode_to_sink` and `encode_sequence_to_sink` carry the selected output
 format and encode stage through `OutputWrite`; their offset and identity are
 `None` because the failure is on the destination side. Whole-buffer codecs
 still write one complete validated buffer, while the PNG and BMP still paths
-write validated structural segments. Short-write, flush, and structural
-cleanup semantics remain future incremental-writer work.
+write validated structural segments. Every sink path calls `OutputSink::flush`
+once after complete delivery; a flush failure is also `OutputWrite` and may
+leave the delivered prefix. Short-write and rollback cleanup semantics remain
+future incremental-writer work.
 
 Where the parser can name the failing container structure, codec-dispatched
 errors also report the encoded-input byte offset (`ImageError::offset()`) and

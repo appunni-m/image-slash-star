@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the committed tree based on revision `cb0f67d2e76e99eefc2595317fd49fb5202a7162`
+Reviewed: 2026-08-02 on the committed tree based on revision `775263335df9680e4c453f666708745f53083e8f`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -263,8 +263,11 @@ assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim
 universal interior interruption, deeper deflate/structural interruption,
-progress callbacks, work budgets, short-write/flush semantics, or rollback
-cleanup.
+progress callbacks, short-write semantics, or rollback cleanup; the separate
+checkpoint work-budget contract is covered below.
+Every current sink path does call `OutputSink::flush` once after complete
+delivery; a flush failure is a typed `OutputWrite` and does not roll back an
+already-delivered prefix.
 
 The codec-local `#[cfg(coverage)]` cancellation drills fire deterministic
 checkpoint counts so the implemented error edges are executed in the managed
@@ -287,7 +290,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current committed tree based on revision
-`cb0f67d2e76e99eefc2595317fd49fb5202a7162`, the generated matrix reports:
+`775263335df9680e4c453f666708745f53083e8f`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -609,11 +612,11 @@ before the first write, and cancellation between writes; one-frame BMP and ICO
 sequence additionally prove multiple structural writes and policy preflight,
 while GIF sequence remains a whole-buffer comparison. ICO's structural split is
 a fixed 22-byte directory header followed by the complete embedded PNG/DIB
-payload. A
-deterministic failing sink must be reported as `ImageError::OutputWrite` with
-the selected format and encode stage. Short writes, flush/finalize failures,
-and rollback cleanup remain future writer evidence, not claims made by this
-contract.
+payload. A deterministic failing write or flush must be reported as
+`ImageError::OutputWrite` with the selected format and encode stage. The
+current contract proves one post-delivery flush call and explicitly preserves
+the delivered prefix on flush failure. Short writes and rollback cleanup remain
+future writer evidence, not claims made by this contract.
 The same contract exercises invalid-input errors through the generic JPEG
 whole-buffer fallback, with no sink write; those cases are Rust API/error
 evidence and are not added to the Pillow parity matrix.
@@ -677,10 +680,10 @@ The accepted Coverage MCP result for the current implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,926 | 47,926 |
+| Lines | 47,943 | 47,943 |
 | Branches | 6,578 | 6,578 |
-| Functions | 2,683 | 2,683 |
-| Regions | 74,618 | 74,618 |
+| Functions | 2,686 | 2,686 |
+| Regions | 74,654 | 74,654 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -817,15 +820,23 @@ host CPUs and the lane bound (capped at eight), and interleaves native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes under one
 completion-driven scheduler without dropping a lane or assertion.
 
-Coverage MCP run: `f47985c1-50c8-4752-8d83-ad71973fc7c7`
+The sink-finalization follow-up was validated on committed revision
+`775263335df9680e4c453f666708745f53083e8f` by run
+`6ef08e71-abcf-4841-b30f-649529bb3bfc`: 947 checks passed with zero failures
+in 65,458 ms, retained the same terminal capability record, and had zero
+build-directory lock-wait matches. This is execution evidence rather than a
+controlled speed comparison because the managed cache state differed.
 
-Snapshot: `14b3897e-1477-4a60-96bf-4ddff5d56e02`
+Coverage MCP run: `f8875a27-27a0-4cec-85cc-be73e8e8e552`
 
-Coverage revision: `cb0f67d2e76e99eefc2595317fd49fb5202a7162`
+Snapshot: `78e65eb9-1f09-4a3f-9a65-e1c25d23f1a8`
+
+Coverage revision: `775263335df9680e4c453f666708745f53083e8f`
 
 Coverage MCP recorded 56 passed tests with zero failures and 100% line, branch,
-function, and region coverage: 47,926 lines, 6,578 branches, 2,683 functions,
-and 74,618 regions. The ICO still and one-frame ICO sequence sink cases and
+function, and region coverage: 47,943 lines, 6,578 branches, 2,686 functions,
+and 74,654 regions. The ICO still and one-frame ICO sequence sink cases,
+sink finalization errors, and
 the deterministic encode work-budget contract execute the real dispatcher and
 structural/error paths; this is internal Rust evidence, not a synthetic Pillow
 parity case.
