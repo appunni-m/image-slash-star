@@ -1708,6 +1708,7 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             "png_iCCP" => "png_iCCP",
             "png_iTXt" => "png_iTXt",
             "png_IDAT_crc" => "png_IDAT_crc",
+            "png_IEND_crc" => "png_IEND_crc",
             "png_reserved_bit" => "png_reserved_bit",
             "png_ancillary_after_idat" => "png_ancillary_after_idat",
             "png_missing_iend" => "png_missing_iend",
@@ -1765,6 +1766,29 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
                 mutated.extend_from_slice(&base[..iend_offset]);
                 mutated.extend_from_slice(&png_chunk(&kind, &payload));
                 mutated.extend_from_slice(&base[iend_offset..]);
+                mutated
+            }
+            "png_bad_crc" => {
+                let kind: [u8; 4] = case
+                    .chunk_kind
+                    .as_bytes()
+                    .try_into()
+                    .map_err(|_| format!("{}: chunk kind is not four bytes", case.id))?;
+                let chunk_offset = png_chunk_offset(&base, &kind)?;
+                let length = u32::from_be_bytes([
+                    base[chunk_offset],
+                    base[chunk_offset + 1],
+                    base[chunk_offset + 2],
+                    base[chunk_offset + 3],
+                ]) as usize;
+                let crc_offset = chunk_offset
+                    .checked_add(8)
+                    .and_then(|offset| offset.checked_add(length))
+                    .ok_or_else(|| format!("{}: CRC offset overflow", case.id))?;
+                let mut mutated = base.clone();
+                *mutated
+                    .get_mut(crc_offset)
+                    .ok_or_else(|| format!("{}: CRC is truncated", case.id))? ^= 1;
                 mutated
             }
             other => panic!("{}: unknown mutation `{other}`", case.id),
@@ -1825,6 +1849,58 @@ fn diagnostic_manifest_matches_the_non_parity_contract() -> Result<(), Box<dyn s
             other => panic!("{}: unknown operation `{other}`", case.id),
         }
     }
+    Ok(())
+}
+
+#[test]
+fn png_iend_crc_recovery_keeps_verification_strict() -> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let iend_offset = png_chunk_offset(&base, b"IEND")?;
+    let length = u32::from_be_bytes([
+        base[iend_offset],
+        base[iend_offset + 1],
+        base[iend_offset + 2],
+        base[iend_offset + 3],
+    ]) as usize;
+    let crc_offset = iend_offset + 8 + length;
+    let mut bytes = base;
+    bytes[crc_offset] ^= 1;
+
+    let decoded = image_slash_star::decode(&bytes)?;
+    assert_eq!(
+        decoded.diagnostics,
+        vec![ImageDiagnostic {
+            kind: DiagnosticKind::RecoveredStructure,
+            format: ImageFormat::Png,
+            stage: Some(ImageErrorStage::StillDecode),
+            offset: Some(iend_offset as u64),
+            identity: Some("png_IEND_crc"),
+        }]
+    );
+    let sequence = image_slash_star::decode_sequence(&bytes)?;
+    assert_eq!(
+        sequence.diagnostics,
+        vec![ImageDiagnostic {
+            kind: DiagnosticKind::RecoveredStructure,
+            format: ImageFormat::Png,
+            stage: Some(ImageErrorStage::SequenceDecode),
+            offset: Some(iend_offset as u64),
+            identity: Some("png_IEND_crc"),
+        }]
+    );
+
+    let source = EncodedImage::new(bytes)?;
+    let error = source
+        .verify()
+        .expect_err("Rust structural verification must keep rejecting the bad IEND CRC");
+    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
+    assert_eq!(error.stage(), Some(ImageErrorStage::Verification));
+    assert_eq!(error.offset(), Some(iend_offset as u64));
+    assert_eq!(error.identity(), Some("png_chunk"));
     Ok(())
 }
 

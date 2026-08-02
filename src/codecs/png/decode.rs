@@ -189,6 +189,21 @@ fn record_idat_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::Im
     }
 }
 
+fn record_iend_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
+    // Pillow accepts a bad IEND CRC through both load() and verify(). Keep the
+    // successful decode result while exposing the invalid structural member to
+    // Rust callers; the explicit Rust verify() path remains strict.
+    if chunk.kind == *b"IEND" && !chunk.crc_valid {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_IEND_crc"),
+        });
+    }
+}
+
 fn record_duplicate_palette_diagnostic(
     chunk: &Chunk<'_>,
     identity: &'static str,
@@ -498,6 +513,7 @@ pub fn decode(
         crate::codecs::error::check_cancelled(token)?;
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
+        record_iend_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
@@ -903,6 +919,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     for chunk in &mut chunks {
         let chunk = chunk?;
         record_idat_crc_diagnostic(&chunk, &mut diagnostics);
+        record_iend_crc_diagnostic(&chunk, &mut diagnostics);
         record_reserved_bit_diagnostic(&chunk, &mut diagnostics);
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
@@ -1876,8 +1893,9 @@ impl<'a> Iterator for Chunks<'a> {
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
             let start = self.position.saturating_add(8);
             // Pillow validates construction-critical chunk CRCs while opening
-            // the file, but defers IDAT CRC validation to `verify()`.
-            let verify_crc = self.verify_crc || kind != *b"IDAT";
+            // the file, but defers IDAT and IEND CRC validation to its later
+            // verification boundary (IEND is accepted even there by Pillow).
+            let verify_crc = self.verify_crc || !matches!(&kind, b"IDAT" | b"IEND");
             let (payload, crc_end, crc_valid) =
                 chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
             self.position = crc_end;
