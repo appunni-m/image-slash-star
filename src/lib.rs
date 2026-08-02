@@ -1000,8 +1000,8 @@ pub fn encode_sequence_with_token_and_policy(
 /// before the first write. The PNG still path additionally emits its already
 /// validated signature and container structures through separate writes. A
 /// sink failure or cancellation after a write may therefore leave a prefix in
-/// the destination; the trait does not provide rollback or short-write
-/// recovery.
+/// the destination; `flush` failure likewise does not roll the prefix back.
+/// The trait does not provide rollback or short-write recovery.
 pub trait OutputSink {
     /// Append one fully accepted encoded segment to this sink.
     ///
@@ -1009,6 +1009,16 @@ pub trait OutputSink {
     ///
     /// Returns a structured error when the destination rejects the write.
     fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()>;
+
+    /// Finalize delivery after the complete encoded result has been written.
+    ///
+    /// The default is suitable for in-memory sinks and preserves compatibility
+    /// with existing implementations. A buffered or externally owned sink can
+    /// override this hook to surface its finalization error. A failure does
+    /// not roll back earlier writes.
+    fn flush(&mut self) -> ImageResult<()> {
+        Ok(())
+    }
 }
 
 impl OutputSink for Vec<u8> {
@@ -1079,7 +1089,7 @@ fn encode_to_sink_with_policy_impl(
         budget_token.as_ref(),
         sink,
     )? {
-        return Ok(written);
+        return finish_sink(sink, format, ImageErrorStage::StillEncode, written);
     }
     let encoded = encode_with_policy(img, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
@@ -1131,7 +1141,7 @@ fn encode_to_sink_with_token_and_policy_impl(
         Some(effective_token),
         sink,
     )? {
-        return Ok(written);
+        return finish_sink(sink, format, ImageErrorStage::StillEncode, written);
     }
     let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
@@ -1188,7 +1198,7 @@ fn encode_sequence_to_sink_with_policy_impl(
         budget_token.as_ref(),
         sink,
     )? {
-        return Ok(written);
+        return finish_sink(sink, format, ImageErrorStage::SequenceEncode, written);
     }
     let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
@@ -1247,7 +1257,7 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
         Some(effective_token),
         sink,
     )? {
-        return Ok(written);
+        return finish_sink(sink, format, ImageErrorStage::SequenceEncode, written);
     }
     let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
     write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
@@ -1267,7 +1277,21 @@ fn write_sink_all(
             message: error.to_string(),
             stage: Some(stage),
         })?;
-    Ok(bytes.len())
+    finish_sink(sink, format, stage, bytes.len())
+}
+
+fn finish_sink(
+    sink: &mut dyn OutputSink,
+    format: ImageFormat,
+    stage: ImageErrorStage,
+    written: usize,
+) -> ImageResult<usize> {
+    sink.flush().map_err(|error| ImageError::OutputWrite {
+        format: Some(format),
+        message: error.to_string(),
+        stage: Some(stage),
+    })?;
+    Ok(written)
 }
 
 /// Encode with default options.

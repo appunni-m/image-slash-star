@@ -4720,6 +4720,34 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    struct FlushSink {
+        bytes: Vec<u8>,
+        flushes: usize,
+        fail: bool,
+    }
+
+    impl OutputSink for FlushSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            if self.fail {
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "sink rejected finalization".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            Ok(())
+        }
+    }
+
     // Exercise both standard-library sink impls directly, because the generic
     // encode functions only ever select the `&mut Vec<u8>` implementation.
     let mut direct = Vec::new();
@@ -4748,6 +4776,59 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             "owned sink length"
         );
         assert_eq!(owned, expected, "owned sink bytes");
+
+        let mut finalized = FlushSink {
+            bytes: Vec::new(),
+            flushes: 0,
+            fail: false,
+        };
+        assert_eq!(
+            image_slash_star::encode_to_sink(
+                &decoded.content,
+                ImageFormat::Png,
+                &options,
+                &mut finalized,
+            )?,
+            expected.len(),
+            "finalized sink length"
+        );
+        assert_eq!(finalized.bytes, expected, "finalized sink bytes");
+        assert_eq!(finalized.flushes, 1, "finalized sink flush count");
+
+        let mut rejected_finalization = FlushSink {
+            bytes: Vec::new(),
+            flushes: 0,
+            fail: true,
+        };
+        let finalization_error = match image_slash_star::encode_to_sink(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &mut rejected_finalization,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("flush-rejecting sink unexpectedly accepted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            finalization_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(
+            finalization_error.format(),
+            Some(ImageFormat::Png),
+            "flush error format"
+        );
+        assert_eq!(
+            finalization_error.stage(),
+            Some(ImageErrorStage::StillEncode),
+            "flush error stage"
+        );
+        assert_eq!(rejected_finalization.flushes, 1);
+        assert_eq!(rejected_finalization.bytes, expected);
 
         let mut borrowed = Vec::new();
         let mut borrowed_ref: &mut Vec<u8> = &mut borrowed;
