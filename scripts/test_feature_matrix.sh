@@ -24,7 +24,12 @@ esac
 export CAPABILITY_JOBS
 
 matrix_log_dir=$(mktemp -d "${TMPDIR:-/tmp}/image-slash-star-feature-matrix.XXXXXX")
-export CAPABILITY_TARGET_ROOT="$matrix_log_dir"
+# Keep build artifacts between invocations by default. Every matrix lane still
+# receives an isolated target root, so feature configurations never share
+# Cargo's build-directory lock. Set MATRIX_TARGET_ROOT to a temporary path for
+# a deliberately cold or disposable run.
+matrix_target_root=${MATRIX_TARGET_ROOT:-${CARGO_TARGET_DIR:-target}/feature-matrix}
+export CAPABILITY_TARGET_ROOT="$matrix_target_root"
 cleanup_matrix_logs() {
     rm -rf "$matrix_log_dir"
 }
@@ -143,7 +148,7 @@ run_parallel_lanes() {
         matrix_lane=$1
         matrix_status_path="$matrix_log_dir/$matrix_group-$matrix_lane.status"
         matrix_status_tmp="$matrix_status_path.tmp"
-        matrix_target_dir="$matrix_log_dir/target-$matrix_group-$matrix_lane"
+        matrix_target_dir="$matrix_target_root/target-$matrix_group-$matrix_lane"
         (
             export CARGO_TARGET_DIR="$matrix_target_dir"
             matrix_status=0
