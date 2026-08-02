@@ -7509,11 +7509,12 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
 }
 
 #[test]
-fn partial_structural_sink_write_preserves_prefix_across_still_codecs()
+fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
 -> Result<(), Box<dyn std::error::Error>> {
     // Pillow has no caller-owned OutputSink. This loops over the real still
-    // writers available in each feature/target lane, so it is Rust-only
-    // contract evidence rather than a synthetic parity or coverage row.
+    // and supported multi-frame sequence writers available in each
+    // feature/target lane, so it is Rust-only contract evidence rather than a
+    // synthetic parity or coverage row.
     struct PartialWriteSink {
         bytes: Vec<u8>,
         writes: usize,
@@ -7598,8 +7599,67 @@ fn partial_structural_sink_write_preserves_prefix_across_still_codecs()
         assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
     }
 
-    // Feature-matrix lanes with no still encoder are compile/capability lanes;
-    // the all-feature and default lanes exercise the full writer set above.
+    let sequence_formats = [
+        ImageFormat::Gif,
+        ImageFormat::Tiff,
+        ImageFormat::WebP,
+        ImageFormat::Avif,
+    ];
+    for format in sequence_formats {
+        if !format.capabilities().sequence_encode().is_available() {
+            continue;
+        }
+
+        let mut sequence = image_slash_star::DecodedSequence::from_image(image.clone());
+        sequence.frames.push(sequence.frames[0].clone());
+        sequence.kind = if format == ImageFormat::Tiff {
+            image_slash_star::SequenceKind::UntimedPages
+        } else {
+            image_slash_star::SequenceKind::TimedAnimation
+        };
+        let options = EncodeOptions::for_format(format);
+        let expected = image_slash_star::encode_sequence(&sequence, format, &options)?;
+        let mut sink = PartialWriteSink {
+            bytes: Vec::new(),
+            writes: 0,
+            flushes: 0,
+            failed_segment_len: 0,
+            accepted_prefix_len: 0,
+        };
+        let error =
+            match image_slash_star::encode_sequence_to_sink(&sequence, format, &options, &mut sink)
+            {
+                Ok(length) => {
+                    return Err(format!(
+                    "{format:?} sequence accepted a partial sink write and returned {length} bytes"
+                )
+                .into());
+                }
+                Err(error) => error,
+            };
+
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceEncode));
+        assert_eq!(
+            sink.writes, 2,
+            "{format:?} sequence must reject at a later segment"
+        );
+        assert_eq!(
+            sink.flushes, 0,
+            "{format:?} sequence must not finalize failed delivery"
+        );
+        assert!(sink.failed_segment_len > sink.accepted_prefix_len);
+        assert!(
+            !sink.bytes.is_empty(),
+            "{format:?} sequence must deliver a prefix"
+        );
+        assert!(sink.bytes.len() < expected.len());
+        assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
+    }
+
+    // Feature-matrix lanes with no encoder are compile/capability lanes; the
+    // all-feature and default lanes exercise the full available writer set.
     Ok(())
 }
 
