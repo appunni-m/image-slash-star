@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `cc1d5c8b109736217a71875d0333d4602e5fb4c1`
+Reviewed: 2026-08-02 on the working tree based on revision `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -230,7 +230,7 @@ Encode cancellation follows the same evidence boundary. Pillow has no
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
-They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF still and GIF-sequence output,
+They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP still and GIF-sequence output,
 stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP
 still sinks that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
@@ -240,7 +240,8 @@ preparing rows and between emitted structural segments in both return and sink
 paths; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and deflate boundaries;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
-checkpoints, while GIF, TIFF, WebP, and native AVIF sequence paths poll their implemented
+checkpoints; WebP still encoding polls preparation, codec-result, and
+metadata-assembly boundaries; GIF, TIFF, WebP, and native AVIF sequence paths poll their implemented
 frame/coalescing/page/finalization checkpoints. This slice does not claim
 universal interior interruption, deeper deflate/structural interruption,
 progress callbacks, work budgets, short-write/flush semantics, or rollback
@@ -267,7 +268,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`cc1d5c8b109736217a71875d0333d4602e5fb4c1`, the generated matrix reports:
+`2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -650,10 +651,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,604 | 47,604 |
+| Lines | 47,647 | 47,647 |
 | Branches | 6,558 | 6,558 |
-| Functions | 2,661 | 2,661 |
-| Regions | 74,125 | 74,125 |
+| Functions | 2,662 | 2,662 |
+| Regions | 74,220 | 74,220 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -707,9 +708,16 @@ submitted against parent revision
 `cc1d5c8`; this remains execution provenance rather than a controlled speed
 comparison.
 
-Coverage MCP run: `e2df96a8-2774-4876-bb67-31ecefc0e794`
+The WebP still-token matrix run
+`d323e738-d2ce-4523-bec8-563c2421ad0a` passed 925 checks with zero failures in
+1,093,331 ms and retained the terminal capability-table record. It ran against
+clean revision `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`; this duration is
+execution evidence rather than a controlled speed comparison because managed
+cache/build state differs.
 
-Snapshot: `5c0eb573-e87f-4e3b-8f8f-88162aefc011`
+Coverage MCP run: `1874d075-0f81-4dd5-af27-33076f32d582`
+
+Snapshot: `da721d61-16f9-4bca-bcc8-a44e553e610c`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`

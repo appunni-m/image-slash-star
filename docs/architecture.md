@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `cc1d5c8b109736217a71875d0333d4602e5fb4c1`
+Reviewed: 2026-08-02 against the working tree based on `2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -295,7 +295,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and return typed `ResourceLimit::EncodedOutputBytes` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and deflate boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly checkpoints, WebP polls preparation, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, and deflate boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -438,9 +438,10 @@ whole-buffer.
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
-checkpoints, and the PNG and BMP still writers poll while preparing rows and
-between emitted structural segments in both return and sink paths. GIF, TIFF,
-WebP, and native AVIF sequence encoders
+checkpoints, the WebP still writer polls at preparation, codec-result, and
+metadata-assembly boundaries, and the PNG and BMP still writers poll while
+preparing rows and between emitted structural segments in both return and sink
+paths. GIF, TIFF, WebP, and native AVIF sequence encoders
 additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
 prefix because no rollback contract exists. Progress callbacks, work-budget

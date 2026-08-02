@@ -1,11 +1,11 @@
 {
   "format_version": 1,
-  "base_revision": "cc1d5c8b109736217a71875d0333d4602e5fb4c1",
+  "base_revision": "2ffb338217cfb71223fb81dfe3b0cdf59b9f9aed",
   "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
   "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
   "coverage": {
-    "run_id": "e2df96a8-2774-4876-bb67-31ecefc0e794",
-    "snapshot_id": "5c0eb573-e87f-4e3b-8f8f-88162aefc011",
+    "run_id": "1874d075-0f81-4dd5-af27-33076f32d582",
+    "snapshot_id": "da721d61-16f9-4bca-bcc8-a44e553e610c",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
