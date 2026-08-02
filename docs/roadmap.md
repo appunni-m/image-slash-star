@@ -1315,7 +1315,10 @@ Runs `790238ad-e8d8-4fce-9974-71560ffaac5d` and
 passed the same scope in 16,844 ms on the same managed environment. These are
 observed scheduling results rather than universal benchmark claims; the
 capability-table record remained unchanged and the retained logs had no
-build-directory lock waits.
+build-directory lock waits. The committed revision `125b1b0` then passed the
+same scope in runs `b016dd0f-6460-4bcf-8add-765b6ec8a8ee` (16,317 ms) and
+`b4bf4180-f72c-4969-a66e-c355c402d9ac` (11,648 ms), confirming the change while
+also showing the managed runner's timing variance.
 The sink-finalization follow-up was validated on committed revision
 `775263335df9680e4c453f666708745f53083e8f` by run
 `6ef08e71-abcf-4841-b30f-649529bb3bfc`: 947 checks passed with zero failures
