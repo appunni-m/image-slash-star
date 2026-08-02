@@ -791,9 +791,9 @@ fn tokenize_lookahead_medium(
 }
 
 /// Tokenize TIFF Deflate input with cancellation checkpoints at each input
-/// row boundary. The ordinary PNG/general level-six path stays on the
-/// existing helper above so token-aware TIFF control does not add polling
-/// overhead to ordinary encodes.
+/// row boundary and inside the level-six matcher. The ordinary PNG/general
+/// level-six path stays on the existing helper above so token-aware TIFF
+/// control does not add polling overhead to ordinary encodes.
 #[cfg(feature = "tiff")]
 fn tokenize_lookahead_medium_with_token(
     data: &[u8],
@@ -803,21 +803,22 @@ fn tokenize_lookahead_medium_with_token(
     max_insert: usize,
     token: &crate::CancellationToken,
 ) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
     let mut available = 0usize;
     for &chunk_length in input_chunks {
-        crate::codecs::error::check_cancelled(Some(token))?;
+        checkpoint.poll()?;
         if available != 0 {
-            matcher.refill_boundary();
+            matcher.refill_boundary_with(&mut checkpoint)?;
         }
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
-        matcher.process(available, false);
-        crate::codecs::error::check_cancelled(Some(token))?;
+        matcher.process_with(available, false, &mut checkpoint)?;
+        checkpoint.poll()?;
     }
     debug_assert_eq!(available, data.len());
-    matcher.process(available, true);
-    crate::codecs::error::check_cancelled(Some(token))?;
+    matcher.process_with(available, true, &mut checkpoint)?;
+    checkpoint.poll()?;
     Ok(matcher.tokens)
 }
 
@@ -827,6 +828,32 @@ struct MediumMatch {
     length: usize,
     start: usize,
     original_start: usize,
+}
+
+trait MatcherCheckpoint {
+    fn poll(&mut self) -> crate::codecs::CodecResult<()>;
+}
+
+struct NoopMatcherCheckpoint;
+
+impl MatcherCheckpoint for NoopMatcherCheckpoint {
+    #[inline(always)]
+    fn poll(&mut self) -> crate::codecs::CodecResult<()> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "tiff")]
+struct CancellationMatcherCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+}
+
+#[cfg(feature = "tiff")]
+impl MatcherCheckpoint for CancellationMatcherCheckpoint<'_> {
+    #[inline(always)]
+    fn poll(&mut self) -> crate::codecs::CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
 }
 
 struct Level6Matcher {
@@ -864,39 +891,67 @@ impl Level6Matcher {
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn refill_boundary(&mut self) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.refill_boundary_with(&mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn refill_boundary_with<P: MatcherCheckpoint>(
+        &mut self,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:1213-1237. fill_window()
         // re-inserts strstart-1 when new input makes a three-byte hash valid.
-        self.slide_window_if_needed();
+        self.slide_window_if_needed_with(checkpoint)?;
         if self.position >= 1 {
             self.quick_insert(self.position.wrapping_sub(1));
         }
+        checkpoint.poll()
     }
 
-    fn slide_window_if_needed(&mut self) {
+    fn slide_window_if_needed_with<P: MatcherCheckpoint>(
+        &mut self,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         debug_assert!(self.position >= self.window_base);
         if self.position.wrapping_sub(self.window_base) >= 32_768_usize.wrapping_add(MAX_DISTANCE) {
+            checkpoint.poll()?;
             self.window_base = self.window_base.wrapping_add(32_768);
             for position in self.head.iter_mut().chain(&mut self.previous) {
                 if *position < self.window_base {
                     *position = 0;
                 }
             }
+            checkpoint.poll()?;
         }
+        Ok(())
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.process_with(available, finishing, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn process_with<P: MatcherCheckpoint>(
+        &mut self,
+        available: usize,
+        finishing: bool,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         let mut following = None::<MediumMatch>;
         loop {
-            self.slide_window_if_needed();
+            checkpoint.poll()?;
+            self.slide_window_if_needed_with(checkpoint)?;
             debug_assert!(self.position <= available);
             let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 {
-                return;
+                return Ok(());
             }
             if lookahead < MIN_LOOKAHEAD {
                 if !finishing {
-                    return;
+                    return Ok(());
                 }
                 // deflate_medium clears its speculative next match after
                 // fill_window observes the final short lookahead. That match
@@ -907,9 +962,9 @@ impl Level6Matcher {
 
             let mut current = match following.take() {
                 Some(found) => found,
-                None => self.find_match(self.position, lookahead),
+                None => self.find_match_with(self.position, lookahead, checkpoint)?,
             };
-            self.insert_match(current, lookahead);
+            self.insert_match_with(current, lookahead, checkpoint)?;
 
             if lookahead > MIN_LOOKAHEAD
                 && current.start.wrapping_add(current.length)
@@ -919,9 +974,9 @@ impl Level6Matcher {
                         .wrapping_sub(MIN_LOOKAHEAD)
             {
                 let future = current.start.wrapping_add(current.length);
-                let mut next = self.find_match(future, lookahead);
+                let mut next = self.find_match_with(future, lookahead, checkpoint)?;
                 if next.length >= MIN_MATCH {
-                    fizzle_matches(&self.data, &mut current, &mut next);
+                    fizzle_matches_with(&self.data, &mut current, &mut next, checkpoint)?;
                 }
                 following = Some(next);
             }
@@ -942,8 +997,21 @@ impl Level6Matcher {
         }
     }
 
+    #[cfg(coverage)]
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn find_match(&mut self, position: usize, lookahead: usize) -> MediumMatch {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.find_match_with(position, lookahead, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail")
+    }
+
+    fn find_match_with<P: MatcherCheckpoint>(
+        &mut self,
+        position: usize,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<MediumMatch> {
+        checkpoint.poll()?;
         let candidate = if lookahead >= MIN_MATCH {
             self.quick_insert(position)
         } else {
@@ -959,7 +1027,8 @@ impl Level6Matcher {
             && candidate < position
             && position.wrapping_sub(candidate) <= MAX_DISTANCE
         {
-            let (length, match_start) = self.longest_match(candidate, position, lookahead);
+            let (length, match_start) =
+                self.longest_match_with(candidate, position, lookahead, checkpoint)?;
             if length >= MIN_MATCH {
                 // `longest_match` can only return a match start from a prior
                 // candidate accepted by the guard above.
@@ -967,7 +1036,7 @@ impl Level6Matcher {
                 found.length = length;
             }
         }
-        found
+        Ok(found)
     }
 
     fn hash(&self, position: usize) -> usize {
@@ -986,12 +1055,18 @@ impl Level6Matcher {
         candidate
     }
 
-    fn insert_match(&mut self, found: MediumMatch, lookahead: usize) {
+    fn insert_match_with<P: MatcherCheckpoint>(
+        &mut self,
+        found: MediumMatch,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
+        checkpoint.poll()?;
         // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94. In particular,
         // original_start prevents a left-fizzled match from reinserting old
         // positions and creating a cyclic hash chain.
         if lookahead <= found.length.wrapping_add(MIN_MATCH) || found.length < MIN_MATCH {
-            return;
+            return Ok(());
         }
         if found.length <= 16_usize.wrapping_mul(self.max_insert) {
             let start = found.start.wrapping_add(1);
@@ -999,19 +1074,22 @@ impl Level6Matcher {
             let insertion_start = start.max(found.original_start);
             let insertion_end = start.wrapping_add(count);
             for position in insertion_start..insertion_end {
+                checkpoint.poll()?;
                 self.quick_insert(position);
             }
         } else {
             self.quick_insert(found.start.wrapping_add(found.length).wrapping_sub(1));
         }
+        Ok(())
     }
 
-    fn longest_match(
+    fn longest_match_with<P: MatcherCheckpoint>(
         &self,
         mut candidate: usize,
         position: usize,
         lookahead: usize,
-    ) -> (usize, usize) {
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<(usize, usize)> {
         // ✅ VERIFIED: zlib-ng 2.3.3 match_tpl.h:38-247 with level-six
         // {good: 8, lazy: 16, nice: 128, chain: 128} configuration.
         let mut best_length = 2usize;
@@ -1019,6 +1097,7 @@ impl Level6Matcher {
         let mut chain_length = self.max_chain;
         let limit = position.saturating_sub(MAX_DISTANCE);
         loop {
+            checkpoint.poll()?;
             if candidate >= position {
                 break;
             }
@@ -1042,7 +1121,7 @@ impl Level6Matcher {
                 break;
             }
         }
-        (best_length, best_start)
+        Ok((best_length, best_start))
     }
 }
 
@@ -1315,13 +1394,26 @@ fn medium_candidate_can_improve(
                 [position.wrapping_add(offset)..position.wrapping_add(offset).saturating_add(width)]
 }
 
+#[cfg(coverage)]
 fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
+    let mut checkpoint = NoopMatcherCheckpoint;
+    fizzle_matches_with(data, current, next, &mut checkpoint)
+        .expect("the no-op matcher checkpoint cannot fail");
+}
+
+fn fizzle_matches_with<P: MatcherCheckpoint>(
+    data: &[u8],
+    current: &mut MediumMatch,
+    next: &mut MediumMatch,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
     // ✅ VERIFIED: zlib-ng 2.3.3 deflate_medium.c:96-158.
+    checkpoint.poll()?;
     if current.length <= 1
         || current.length > next.match_start.saturating_add(1)
         || current.length > next.start.saturating_add(1)
     {
-        return;
+        return Ok(());
     }
     let quick_match = next
         .match_start
@@ -1329,7 +1421,7 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
         .wrapping_sub(current.length);
     let quick_original = next.start.wrapping_add(1).wrapping_sub(current.length);
     if data.get(quick_match) != data.get(quick_original) {
-        return;
+        return Ok(());
     }
 
     let mut adjusted_current = *current;
@@ -1341,6 +1433,7 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
         && data.get(adjusted_next.match_start.wrapping_sub(1))
             == data.get(adjusted_next.start.wrapping_sub(1))
     {
+        checkpoint.poll()?;
         adjusted_next.start = adjusted_next.start.wrapping_sub(1);
         adjusted_next.match_start = adjusted_next.match_start.wrapping_sub(1);
         adjusted_next.length = adjusted_next.length.wrapping_add(1);
@@ -1352,6 +1445,7 @@ fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch
         *current = adjusted_current;
         *next = adjusted_next;
     }
+    Ok(())
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
