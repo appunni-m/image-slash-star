@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `391f50aea8668771eaca61709945df943ce3e028`
+Reviewed: 2026-08-02 on the working tree based on revision `108914614759503f5c5cca01c2c2ec9f0ce06a9a`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -230,13 +230,14 @@ Encode cancellation follows the same evidence boundary. Pillow has no
 interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
-They check byte identity for uncancelled JPEG/still and GIF-sequence output,
+They check byte identity for uncancelled JPEG/PNG/BMP/TIFF still and GIF-sequence output,
 stable pre-cancelled errors, successful token-aware sink writes, and PNG/BMP
 still sinks that can cancel between structural writes while retaining only the
 delivered prefix. JPEG's codec-local coverage drill fires deterministic
 internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
-preparing rows and between sink segments; TIFF still encoding now polls page
+preparing rows and between emitted structural segments in both return and sink
+paths; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and deflate boundaries;
 GIF, TIFF, WebP, and native AVIF sequence paths poll their implemented
 frame/coalescing/page/finalization checkpoints. This slice does not claim
@@ -265,7 +266,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current working tree based on revision
-`391f50aea8668771eaca61709945df943ce3e028`, the generated matrix reports:
+`108914614759503f5c5cca01c2c2ec9f0ce06a9a`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -648,10 +649,10 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,575 | 47,575 |
+| Lines | 47,595 | 47,595 |
 | Branches | 6,558 | 6,558 |
-| Functions | 2,658 | 2,658 |
-| Regions | 74,085 | 74,085 |
+| Functions | 2,660 | 2,660 |
+| Regions | 74,112 | 74,112 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
@@ -690,10 +691,16 @@ submitted against parent revision
 working tree; the patch was committed as `766a6dd`. The shorter duration is
 retained as runtime evidence, not a controlled speedup claim, because the
 managed target/cache state differs from the earlier 865,050 ms execution.
+The subsequent PNG/BMP still-token validation run
+`a545e1bb-ec85-4f8d-93c1-3e0e778907c2` passed 925 checks with zero failures in
+1,102,400 ms and retained the same terminal capability-table record. It was
+submitted against parent revision
+`66f6159c39f6deae1c98d8bf3da5277f76a2d780` before the implementation commit;
+this remains execution provenance rather than a controlled speed comparison.
 
-Coverage MCP run: `8d23fb4f-d3d2-440d-a29c-5f88c8b837c6`
+Coverage MCP run: `eadf344a-dea9-47af-9fd7-32aeb54b7a61`
 
-Snapshot: `50225988-71f1-473e-a0bc-3662f19e53de`
+Snapshot: `94751296-6a03-4ae1-8a2c-07d4bf97e5a9`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
