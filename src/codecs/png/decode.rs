@@ -1,7 +1,9 @@
 //! PNG decoder implemented from the PNG chunk and filtering specifications.
 
 use crate::SequenceDecodeBudget;
-use crate::codecs::compression::deflate::decompress_zlib_prefix;
+use crate::codecs::compression::deflate::{
+    decompress_zlib_prefix, decompress_zlib_prefix_with_status,
+};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
@@ -203,6 +205,97 @@ fn record_duplicate_palette_diagnostic(
     });
 }
 
+fn record_palette_shape_diagnostics(
+    png_color: u8,
+    palette_rgb: Option<&[u8]>,
+    palette_offset: Option<u64>,
+    palette_alpha: &[u8],
+    alpha_offset: Option<u64>,
+    idat_offset: Option<u64>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    if png_color != 3 {
+        return;
+    }
+
+    let Some(rgb) = palette_rgb else {
+        let identity = if palette_alpha.is_empty() {
+            "png_missing_plte"
+        } else {
+            "png_trns_without_plte"
+        };
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: alpha_offset.or(idat_offset),
+            identity: Some(identity),
+        });
+        return;
+    };
+
+    let entries = rgb.len() / 3;
+    let identity = if rgb.is_empty() {
+        Some("png_empty_plte")
+    } else if !rgb.len().is_multiple_of(3) {
+        Some("png_partial_plte")
+    } else {
+        None
+    };
+    if let Some(identity) = identity {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: palette_offset,
+            identity: Some(identity),
+        });
+    }
+    if palette_alpha.len() > entries {
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: alpha_offset,
+            identity: Some("png_trns_overlong"),
+        });
+    }
+}
+
+fn record_zero_frame_apng_diagnostic(
+    chunk: &Chunk<'_>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    if read_u32(chunk.data, 0) == 0 {
+        // Pillow falls back to the default PNG image for an APNG declaration
+        // with no animation frames. Keep that successful result while making
+        // the ignored animation declaration observable to Rust callers.
+        diagnostics.push(crate::ImageDiagnostic {
+            kind: crate::DiagnosticKind::RecoveredStructure,
+            format: crate::ImageFormat::Png,
+            stage: None,
+            offset: Some(chunk.offset),
+            identity: Some("png_apng_zero_frames"),
+        });
+    }
+}
+
+fn record_oversized_scanline_diagnostic(
+    offset: Option<u64>,
+    diagnostics: &mut Vec<crate::ImageDiagnostic>,
+) {
+    // Pillow stops after filling the raster buffer and accepts valid zlib
+    // output that continues beyond it. The decoder keeps that prefix result
+    // while making the ignored output observable to Rust callers.
+    diagnostics.push(crate::ImageDiagnostic {
+        kind: crate::DiagnosticKind::RecoveredStructure,
+        format: crate::ImageFormat::Png,
+        stage: None,
+        offset,
+        identity: Some("png_oversized_scanline"),
+    });
+}
+
 fn record_reserved_bit_diagnostic(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
@@ -329,9 +422,12 @@ pub fn decode(
 
     let mut compressed = Vec::new();
     let mut palette_rgb = None;
+    let mut palette_offset = None;
     let mut palette_alpha = Vec::new();
+    let mut alpha_offset = None;
     let mut saw_trns = false;
     let mut saw_idat = false;
+    let mut idat_offset = None;
     let mut saw_post_idat_control = false;
     let mut next_sequence = 0;
     let mut opaque_blocks = Vec::new();
@@ -347,11 +443,13 @@ pub fn decode(
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         match &chunk.kind {
             b"IDAT" => {
+                idat_offset.get_or_insert(chunk.offset);
                 saw_idat = true;
                 compressed.extend_from_slice(chunk.data);
             }
             b"PLTE" => {
                 if palette_rgb.is_none() {
+                    palette_offset = Some(chunk.offset);
                     palette_rgb = Some(chunk.data.to_vec());
                 } else {
                     record_duplicate_palette_diagnostic(
@@ -363,6 +461,7 @@ pub fn decode(
             }
             b"tRNS" => {
                 if !saw_trns {
+                    alpha_offset = Some(chunk.offset);
                     palette_alpha.extend_from_slice(chunk.data);
                     saw_trns = true;
                 } else {
@@ -373,10 +472,13 @@ pub fn decode(
                     );
                 }
             }
-            b"acTL" if chunk.data.len() < 8 => {
-                return Err(CodecError::Malformed(
-                    "PNG acTL chunk has an invalid length".to_owned(),
-                ));
+            b"acTL" => {
+                if chunk.data.len() < 8 {
+                    return Err(CodecError::Malformed(
+                        "PNG acTL chunk has an invalid length".to_owned(),
+                    ));
+                }
+                record_zero_frame_apng_diagnostic(&chunk, &mut diagnostics);
             }
             b"fcTL" => {
                 if saw_idat {
@@ -413,6 +515,15 @@ pub fn decode(
             _ => {}
         }
     }
+    record_palette_shape_diagnostics(
+        header.png_color,
+        palette_rgb.as_deref(),
+        palette_offset,
+        &palette_alpha,
+        alpha_offset,
+        idat_offset,
+        &mut diagnostics,
+    );
     if compressed.is_empty() {
         if saw_iend {
             return Err(CodecError::Malformed(
@@ -425,7 +536,7 @@ pub fn decode(
         });
     }
 
-    let image = decode_image_data(
+    let (image, oversized_scanline) = decode_image_data_with_status(
         header.image_spec(header.width, header.height),
         header.channels,
         header.interlace,
@@ -440,10 +551,14 @@ pub fn decode(
             message,
         },
         other => other,
-    })?
-    .with_opaque_blocks(opaque_blocks)
-    .with_metadata(metadata)
-    .with_source_color(source_color);
+    })?;
+    if oversized_scanline {
+        record_oversized_scanline_diagnostic(idat_offset, &mut diagnostics);
+    }
+    let image = image
+        .with_opaque_blocks(opaque_blocks)
+        .with_metadata(metadata)
+        .with_source_color(source_color);
     if !saw_iend {
         // Pillow accepts this through `load()` but reports the missing
         // container terminator from `verify()`. Keep successful decode
@@ -467,9 +582,29 @@ fn decode_image_data(
     palette_rgb: Option<Vec<u8>>,
     palette_alpha: Vec<u8>,
 ) -> CodecResult<DecodedImage> {
+    decode_image_data_with_status(
+        spec,
+        channels,
+        interlace,
+        compressed,
+        palette_rgb,
+        palette_alpha,
+    )
+    .map(|(image, _)| image)
+}
+
+fn decode_image_data_with_status(
+    spec: PngImageSpec,
+    channels: usize,
+    interlace: u8,
+    compressed: &[u8],
+    palette_rgb: Option<Vec<u8>>,
+    palette_alpha: Vec<u8>,
+) -> CodecResult<(DecodedImage, bool)> {
     let expected_inflated = inflated_len(spec.width, spec.height, channels, spec.depth, interlace);
-    let inflated = decompress_zlib_prefix(compressed, expected_inflated)
-        .map_err(|error| error.context("decode PNG zlib stream"))?;
+    let (inflated, oversized_scanline) =
+        decompress_zlib_prefix_with_status(compressed, expected_inflated)
+            .map_err(|error| error.context("decode PNG zlib stream"))?;
     if inflated.len() != expected_inflated {
         return Err(CodecError::Malformed(
             "PNG image data has an unexpected decompressed length".to_owned(),
@@ -484,7 +619,7 @@ fn decode_image_data(
         spec.depth,
         interlace,
     )?;
-    build_image(spec, &samples, palette_rgb, palette_alpha)
+    build_image(spec, &samples, palette_rgb, palette_alpha).map(|image| (image, oversized_scanline))
 }
 
 #[derive(Clone)]
@@ -685,8 +820,11 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let header = read_header(&mut chunks)?;
     let mut animation = None;
     let mut saw_idat = false;
+    let mut idat_offset = None;
     let mut palette_rgb = None;
+    let mut palette_offset = None;
     let mut palette_alpha = Vec::new();
+    let mut alpha_offset = None;
     let mut default_compressed = Vec::new();
     let mut default_control = None;
     let mut current = None::<ApngCompressedFrame>;
@@ -706,9 +844,11 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
+                palette_offset = Some(chunk.offset);
                 palette_rgb = Some(chunk.data.to_vec());
             }
             b"tRNS" if !saw_idat && palette_alpha.is_empty() => {
+                alpha_offset = Some(chunk.offset);
                 palette_alpha.extend_from_slice(chunk.data);
             }
             b"acTL" if !saw_idat => {
@@ -726,6 +866,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                 }
                 let frame_count = read_u32(chunk.data, 0);
                 if frame_count == 0 || frame_count > 0x8000_0000 {
+                    if frame_count == 0 {
+                        record_zero_frame_apng_diagnostic(&chunk, &mut diagnostics);
+                    }
                     continue;
                 }
                 animation = Some((frame_count, read_u32(chunk.data, 4)));
@@ -754,6 +897,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                 }
             }
             b"IDAT" => {
+                idat_offset.get_or_insert(chunk.offset);
                 saw_idat = true;
                 default_compressed.extend_from_slice(chunk.data);
             }
@@ -793,6 +937,15 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let Some((declared_frames, loop_count)) = animation else {
         return Ok(None);
     };
+    record_palette_shape_diagnostics(
+        header.png_color,
+        palette_rgb.as_deref(),
+        palette_offset,
+        &palette_alpha,
+        alpha_offset,
+        idat_offset,
+        &mut diagnostics,
+    );
     if let Some(frame) = current {
         if !current_has_data {
             return Err(CodecError::Malformed(

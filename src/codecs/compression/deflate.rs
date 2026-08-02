@@ -28,6 +28,15 @@ const CODE_LENGTH_ORDER: [usize; 19] = [
 /// extra inflated bytes and the remainder of that zlib stream are deliberately
 /// ignored.
 pub(crate) fn decompress_zlib_prefix(data: &[u8], max_output: usize) -> CompressionResult<Vec<u8>> {
+    decompress_zlib_prefix_with_status(data, max_output).map(|(output, _)| output)
+}
+
+/// Inflate a zlib prefix and report whether valid output continued past the
+/// requested prefix length.
+pub(crate) fn decompress_zlib_prefix_with_status(
+    data: &[u8],
+    max_output: usize,
+) -> CompressionResult<(Vec<u8>, bool)> {
     decompress_zlib_with_limit(data, max_output)
 }
 
@@ -255,7 +264,10 @@ enum DecodeStatus {
 
 // The fixed RFC 1951 distance table is statically valid.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn decompress_zlib_with_limit(data: &[u8], max_output: usize) -> CompressionResult<Vec<u8>> {
+fn decompress_zlib_with_limit(
+    data: &[u8],
+    max_output: usize,
+) -> CompressionResult<(Vec<u8>, bool)> {
     if data.len() < 6 {
         return Err(CodecError::NeedMore {
             minimum: 6,
@@ -301,7 +313,7 @@ fn decompress_zlib_with_limit(data: &[u8], max_output: usize) -> CompressionResu
             _ => return Err(malformed("DEFLATE block type is reserved")),
         };
         if status == DecodeStatus::OutputFull {
-            return Ok(output);
+            return Ok((output, true));
         }
         if final_block {
             break;
@@ -313,7 +325,7 @@ fn decompress_zlib_with_limit(data: &[u8], max_output: usize) -> CompressionResu
     if adler32(&output) != expected {
         return Err(malformed("zlib Adler-32 checksum does not match"));
     }
-    Ok(output)
+    Ok((output, false))
 }
 
 /// Compress TIFF scanlines with zlib-ng's default memLevel-eight buffer.
