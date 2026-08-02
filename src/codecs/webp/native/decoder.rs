@@ -443,6 +443,21 @@ impl<'a> WebPDecoder<'a> {
             .is_some_and(|extended| extended.animation)
     }
 
+    /// Returns the stable context used for failures raised while decoding an
+    /// image payload. The offset identifies the validated VP8/VP8L payload
+    /// (or the current ANMF container for an animation); the bitstream
+    /// decoder does not expose a more granular byte position.
+    pub(crate) fn bitstream_context(&self) -> Option<(u64, &'static str)> {
+        if self.is_animated() {
+            return Some((self.animation.next_frame_start, "webp_bitstream"));
+        }
+
+        self.chunks
+            .get(&WebPRiffChunk::VP8L)
+            .or_else(|| self.chunks.get(&WebPRiffChunk::VP8))
+            .map(|range| (range.start, "webp_bitstream"))
+    }
+
     /// Returns the number of frames of a single loop of the animation, or zero if the image is not
     /// animated.
     pub fn num_frames(&self) -> u32 {

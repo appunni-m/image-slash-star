@@ -23,8 +23,8 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let cursor = Cursor::new(data);
 
-    let mut decoder =
-        super::native::WebPDecoder::new(cursor).map_err(|error| decode_error(error, data.len()))?;
+    let mut decoder = super::native::WebPDecoder::new(cursor)
+        .map_err(|error| decode_error(error, data.len(), None))?;
     let consumed = riff_consumed(data);
     let (width, height) = decoder.dimensions();
     let has_alpha = decoder.has_alpha();
@@ -32,9 +32,10 @@ pub fn decode(
     let buf_size = decoder.output_buffer_size();
     let mut pixels = vec![0u8; buf_size];
     crate::codecs::error::check_cancelled(token)?;
+    let bitstream_context = decoder.bitstream_context();
     decoder
         .read_image(&mut pixels)
-        .map_err(|error| decode_error(error, data.len()))?;
+        .map_err(|error| decode_error(error, data.len(), bitstream_context))?;
 
     let color = if has_alpha {
         ColorType::Rgba8
@@ -61,7 +62,7 @@ pub fn decode(
 /// Validate the RIFF container and encoded frame headers without decoding pixels.
 pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
     super::native::WebPDecoder::new(Cursor::new(data))
-        .map_err(|error| decode_error(error, data.len()))
+        .map_err(|error| decode_error(error, data.len(), None))
         .map(|_| ())
 }
 
@@ -73,8 +74,8 @@ pub fn decode_sequence(
 ) -> CodecResult<(DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let cursor = Cursor::new(data);
-    let mut decoder =
-        super::native::WebPDecoder::new(cursor).map_err(|error| decode_error(error, data.len()))?;
+    let mut decoder = super::native::WebPDecoder::new(cursor)
+        .map_err(|error| decode_error(error, data.len(), None))?;
     let consumed = riff_consumed(data);
     if !decoder.is_animated() {
         let (mut image, consumed) = decode(data, token)?;
@@ -110,9 +111,10 @@ pub fn decode_sequence(
                 .map_err(CodecError::LimitExceeded)?;
         }
         let mut pixels = vec![0; buffer_size];
+        let bitstream_context = decoder.bitstream_context();
         let frame = decoder
             .read_frame(&mut pixels)
-            .map_err(|error| decode_error(error, data.len()))?;
+            .map_err(|error| decode_error(error, data.len(), bitstream_context))?;
         let source_descriptor = if decoder.has_alpha() {
             crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
         } else {
@@ -236,13 +238,21 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     Ok(metadata)
 }
 
-fn decode_error(error: DecodingError, input_len: usize) -> CodecError {
-    match error {
+fn decode_error(
+    error: DecodingError,
+    input_len: usize,
+    bitstream_context: Option<(u64, &'static str)>,
+) -> CodecError {
+    let error = match error {
         DecodingError::IoError => CodecError::NeedMore {
             minimum: input_len.saturating_add(1),
             message: "WebP decoder failure: IoError".to_owned(),
         },
         other => CodecError::Malformed(format!("WebP decoder failure: {other:?}")),
+    };
+    match bitstream_context {
+        Some((offset, identity)) => error.at(offset, identity),
+        None => error,
     }
 }
 
