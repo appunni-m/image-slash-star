@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-02 on the working tree based on revision `d90ee46030d6b299f2034a220b4ce57681548fbd`
+Reviewed: 2026-08-02 on the working tree based on revision `1a4419e307b8041d65c4735209496c099e140f64`
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -110,8 +110,12 @@ asserts the Rust-only `DiagnosticKind`, operation stage, byte offset, and
 stable structure identity. Its `pillow_outcome: "ok"` and unchanged pixels are
 supporting fixture evidence, not proof that Pillow returned an equivalent
 diagnostic. The accepted cases are a non-standard GIF graphic-control size,
-Pillow-tolerated invalid compressed payloads in PNG `zTXt`/`iCCP`/`iTXt`, and
-the existing trailing-input policy. Unsupported compression methods in PNG
+Pillow-tolerated invalid compressed payloads in PNG `zTXt`/`iCCP`/`iTXt`, a bad
+PNG `IDAT` CRC that Pillow accepts through `load()`, and the existing
+trailing-input policy. The `bad_idat_crc.png` parity row still owns the outer
+success/pixel result and the separate diagnostic rows own only the Rust
+`RecoveredStructure` record; `verify()` remains a fatal CRC boundary.
+Unsupported compression methods in PNG
 `zTXt`/`iCCP` are not accepted recoveries: Pillow rejects those files, so they
 remain outside this contract. No coverage-only unit or `cfg(coverage)` test is
 used to manufacture these paths: real fixtures and the defensive manifest
@@ -214,8 +218,8 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current working tree based on revision `d90ee46030d6b299f2034a220b4ce57681548fbd`, the generated matrix
-reports:
+For the current working tree based on revision
+`1a4419e307b8041d65c4735209496c099e140f64`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -356,9 +360,11 @@ in `opaque_blocks`; valid compressed payloads are bounded-validated and then
 asserted byte-for-byte without exposing inflated text/profile bytes. Separate
 diagnostic-manifest rows prove that Pillow-tolerated invalid compressed
 `zTXt`/`iCCP`/`iTXt` payloads are ignored with usable pixels and a stable
-diagnostic instead of being retained as metadata. Still, fallback-sequence,
-and APNG sequence decode must agree, and default encoding must not replay any
-metadata chunk.
+diagnostic instead of being retained as metadata. The same defensive manifest
+records the accepted bad-`IDAT`-CRC recovery at chunk offset `33` with
+`png_IDAT_crc`; the Pillow parity matrix does not gain a diagnostic field.
+Still, fallback-sequence, and APNG sequence decode must agree, and default
+encoding must not replay any metadata chunk.
 
 The source-color contract is table-driven: well-formed PNG sRGB/gAMA/cHRM/iCCP
 chunks are parsed into `SourceColor` (intent, gamma, chromaticities, raw
@@ -584,26 +590,26 @@ The accepted Coverage MCP result for the same implementation state is:
 
 | Metric | Covered | Total |
 | --- | ---: | ---: |
-| Lines | 47,054 | 47,054 |
-| Branches | 6,502 | 6,502 |
-| Functions | 2,641 | 2,641 |
-| Regions | 73,398 | 73,398 |
+| Lines | 47,069 | 47,069 |
+| Branches | 6,506 | 6,506 |
+| Functions | 2,642 | 2,642 |
+| Regions | 73,420 | 73,420 |
 
 The same managed run executed every active manifest case with zero failures or
 skips.
 
 Revision-bound managed runtime evidence comes from feature-matrix run
-`4506b285-7124-4399-bd3e-b79224063274`, submitted against
-`d90ee46030d6b299f2034a220b4ce57681548fbd`: 859 checks passed with zero
+`87582660-2fe5-427f-9e20-136fb3375919`, submitted against
+`1a4419e307b8041d65c4735209496c099e140f64`: 859 checks passed with zero
 failures, and its terminal capability-table record says
 `capability tables OK: every native and wasm32-wasip1 lane agrees`. This is
 target/runtime evidence; it does not turn aggregate coverage,
 defensive/specification contracts, or Rust-only diagnostic tests into
 Pillow-parity coverage.
 
-Coverage MCP run: `dd82711a-396e-4243-be63-4450097e357e`
+Coverage MCP run: `ef022042-faad-4b17-8a45-78eace739061`
 
-Snapshot: `6f26a724-deae-4d71-ba02-299965427f60`
+Snapshot: `f13c8a73-f466-43c6-885d-0e2e80d9b3da`
 
 Manifest SHA-256:
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
@@ -633,7 +639,7 @@ Metadata-policy manifest SHA-256:
 `5f7ccbf7303a2152c6dcc69f7f82d97b2dfa8a329e61f82ff51e7eb1a814b0ef`
 
 Diagnostic manifest SHA-256:
-`d56f8710d8bb57bb7e6ffb8f440656d53f808fab15d88efeb28b2a2f99cf5ce0`
+`a8556753f743b496133512a04e7b7ab9b3fb55706badbe28d09ed171f879c7dd`
 
 The TIFF source-descriptor slice contains 93 successful inspection assertions
 (88 little-endian and 5 big-endian), 71 successful still-decode assertions

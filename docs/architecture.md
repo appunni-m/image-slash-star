@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-02 against the working tree based on `d90ee46030d6b299f2034a220b4ce57681548fbd`
+Reviewed: 2026-08-02 against the working tree based on `1a4419e307b8041d65c4735209496c099e140f64`
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -107,9 +107,10 @@ records returned beside successful still or sequence decode. Each
 `ImageDiagnostic` carries a `DiagnosticKind`, format, operation stage, encoded
 byte offset, and container-structure identity; prose is intentionally absent.
 The current manifest-proven kinds are ignored trailing data, accepted
-non-standard GIF graphic-control size, and ignored invalid compressed PNG
-ancillary metadata. A diagnostic reports a recoverable condition; it does not
-change pixels or turn Pillow's result into a new parity field.
+non-standard GIF graphic-control size, ignored invalid compressed PNG
+ancillary metadata, and an accepted bad PNG `IDAT` CRC. A diagnostic reports a
+recoverable condition; it does not change pixels or turn Pillow's result into
+a new parity field. The `IDAT` CRC remains fatal at `verify()`.
 
 `SourceDescriptor::alpha()` records the alpha association declared by the
 encoded source: straight (PNG, WebP, AVIF, TIFF `ExtraSamples` 2),
@@ -136,7 +137,9 @@ payloads in structurally recognizable `zTXt`, `iTXt`, and `iCCP` members are
 omitted and produce an `InvalidMetadataIgnored` diagnostic; malformed field
 shapes retain their raw bytes. Method-only `zTXt`/`iCCP` mutations are outside
 this recovery contract because Pillow rejects them. The encoded metadata extent
-remains bounded by `max_metadata_bytes`.
+remains bounded by `max_metadata_bytes`. Pillow-tolerated bad `IDAT` CRCs are
+decoded with a `RecoveredStructure` diagnostic (`png_IDAT_crc`) and remain
+rejected by structural verification.
 
 Exact PNG color fields are retained in `source_color` (`SourceColor`): the
 sRGB rendering intent, the gAMA value (scaled by 100,000), the eight cHRM
