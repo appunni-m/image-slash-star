@@ -1315,7 +1315,9 @@ completion-driven scheduler without dropping a lane or assertion.
 
 The next scheduling follow-up makes that lane bound host-aware: by default
 `MATRIX_JOBS` uses roughly two logical CPUs per active lane, capped at six,
-while retaining explicit `MATRIX_JOBS` and `MATRIX_TEST_THREADS` overrides.
+while retaining explicit `MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and
+`MATRIX_BUILD_JOBS` overrides. The latter is exported as `CARGO_BUILD_JOBS`
+inside each lane so concurrent Cargo compiler fan-out follows the same bound.
 Runs `790238ad-e8d8-4fce-9974-71560ffaac5d` and
 `53c23521-c3d1-4b4b-9914-4b8d8f50883c` passed all 947 checks in 13,136 ms and
 12,116 ms. The four-lane baseline `91c9bc98-5f22-41d2-95ad-d981957f1f82`
@@ -1430,6 +1432,20 @@ with zero failures in run `b480a67a-f626-4656-aefa-3a47e8521a32` (119,749 ms),
 and the unchanged Pillow parity scope passed 1,434 checks with zero failures
 and zero skips in run `5196a8d9-7c7b-43b8-b621-1a1a1812ebfa` (79,583 ms); no
 parity row or fixture was added.
+
+The feature-matrix compiler-budget follow-up is committed at revision
+`87510c76b1bfdafb8bde97d9d8b00427ee428a10`. The harness now records its
+selected `lanes=6 test_threads=2 build_jobs=2` budget and exports the bounded
+compiler-job count inside every native and WASM lane; no lane, target, or
+assertion was removed. Runs `2dac27fc-8b57-401e-a29f-14f78b771813` and
+`4d040ed1-79a3-45e0-9eba-1bb794638808` each passed all 947 checks with zero
+failures in 14,818 ms and 11,871 ms. Their retained logs contain zero
+`Blocking waiting for file lock on build directory` matches; package-cache
+waits remain possible while independent lanes initialize. These are same-scope
+execution records rather than a universal speedup claim because managed cache
+and runner state can differ. The change affects feature-matrix scheduling only;
+the Pillow parity manifest, fixtures, row assertions, and provenance boundary
+are unchanged.
 
 The final FTR-032 source revision also passed feature-matrix run
 `1a0c0f1c-d5d7-4210-a24f-503d001a3d8f` with 947 checks and zero failures, and
