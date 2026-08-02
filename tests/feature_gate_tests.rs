@@ -6343,6 +6343,35 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
                 Some(ImageErrorStage::SequenceEncode)
             );
             assert_eq!(failing_webp_sequence.writes, 2);
+
+            // Multi-frame WebP remains the intentionally generic whole-buffer
+            // sequence path until animation delivery gets its own rollback and
+            // interruption contract.
+            let mut multiple_webp_sequence = webp_sequence.clone();
+            multiple_webp_sequence
+                .frames
+                .push(multiple_webp_sequence.frames[0].clone());
+            multiple_webp_sequence.kind = image_slash_star::SequenceKind::TimedAnimation;
+            let multiple_webp_expected = image_slash_star::encode_sequence(
+                &multiple_webp_sequence,
+                ImageFormat::WebP,
+                &webp_options,
+            )?;
+            let mut multiple_webp_sink = RecordingSink {
+                bytes: Vec::new(),
+                writes: 0,
+            };
+            assert_eq!(
+                image_slash_star::encode_sequence_to_sink(
+                    &multiple_webp_sequence,
+                    ImageFormat::WebP,
+                    &webp_options,
+                    &mut multiple_webp_sink,
+                )?,
+                multiple_webp_expected.len()
+            );
+            assert_eq!(multiple_webp_sink.bytes, multiple_webp_expected);
+            assert_eq!(multiple_webp_sink.writes, 1);
         }
 
         if cfg!(feature = "jpeg") {
