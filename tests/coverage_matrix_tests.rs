@@ -19,6 +19,23 @@ use support::json::{self, FromJson, Object, Value};
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
 
+fn matrix_verbose() -> bool {
+    static MATRIX_VERBOSE: OnceLock<bool> = OnceLock::new();
+    *MATRIX_VERBOSE.get_or_init(|| std::env::var_os("IMAGE_SLASH_STAR_VERBOSE_MATRIX").is_some())
+}
+
+macro_rules! matrix_success {
+    ($($arg:tt)*) => {
+        if matrix_verbose() {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
+// Each format owns an independent slice of the manifest. Keeping those slices
+// as separate integration tests lets the Rust harness overlap codec work while
+// preserving every active row and the same per-format contract assertions.
+
 #[track_caller]
 fn require_some<T>(value: Option<T>, context: &str) -> T {
     match value {
@@ -2507,7 +2524,47 @@ fn result_matches_oracle<T>(
 }
 
 #[test]
-fn test_decode_matrix() {
+fn test_decode_matrix_jpeg() {
+    run_decode_matrix(Some("jpeg"));
+}
+
+#[test]
+fn test_decode_matrix_png() {
+    run_decode_matrix(Some("png"));
+}
+
+#[test]
+fn test_decode_matrix_gif() {
+    run_decode_matrix(Some("gif"));
+}
+
+#[test]
+fn test_decode_matrix_bmp() {
+    run_decode_matrix(Some("bmp"));
+}
+
+#[test]
+fn test_decode_matrix_tiff() {
+    run_decode_matrix(Some("tiff"));
+}
+
+#[test]
+fn test_decode_matrix_webp() {
+    run_decode_matrix(Some("webp"));
+}
+
+#[test]
+fn test_decode_matrix_ico() {
+    run_decode_matrix(Some("ico"));
+}
+
+#[test]
+fn test_decode_matrix_avif() {
+    run_decode_matrix(Some("avif"));
+}
+
+#[allow(clippy::arithmetic_side_effects)]
+fn run_decode_matrix(format_filter: Option<&str>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
         coverage_matrix(),
@@ -2526,6 +2583,9 @@ fn test_decode_matrix() {
     let mut source_lifecycle_formats = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
+        if format_filter.is_some_and(|filter| filter != fmt_name) {
+            continue;
+        }
         for row in &fmt_data.decode {
             if row.status == "planned" {
                 skipped += 1;
@@ -2867,7 +2927,7 @@ fn test_decode_matrix() {
                         }
                     };
                 if structured_error && sequence_rejected && source_error_is_stable {
-                    eprintln!("  OK   [{}] rejected as Pillow does", row.id);
+                    matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -3090,7 +3150,7 @@ fn test_decode_matrix() {
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
             {
                 Ok(()) => {
-                    eprintln!(
+                    matrix_success!(
                         "  OK   [{}] {} bytes pixel-parity (mode={})",
                         expected.id,
                         decoded.as_bytes().len(),
@@ -3115,7 +3175,47 @@ fn test_decode_matrix() {
 // ── Encode Tests ─────────────────────────────────────────────────────────
 
 #[test]
-fn test_encode_matrix() {
+fn test_encode_matrix_jpeg() {
+    run_encode_matrix(Some("jpeg"));
+}
+
+#[test]
+fn test_encode_matrix_png() {
+    run_encode_matrix(Some("png"));
+}
+
+#[test]
+fn test_encode_matrix_gif() {
+    run_encode_matrix(Some("gif"));
+}
+
+#[test]
+fn test_encode_matrix_bmp() {
+    run_encode_matrix(Some("bmp"));
+}
+
+#[test]
+fn test_encode_matrix_tiff() {
+    run_encode_matrix(Some("tiff"));
+}
+
+#[test]
+fn test_encode_matrix_webp() {
+    run_encode_matrix(Some("webp"));
+}
+
+#[test]
+fn test_encode_matrix_ico() {
+    run_encode_matrix(Some("ico"));
+}
+
+#[test]
+fn test_encode_matrix_avif() {
+    run_encode_matrix(Some("avif"));
+}
+
+#[allow(clippy::arithmetic_side_effects)]
+fn run_encode_matrix(format_filter: Option<&str>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
         coverage_matrix(),
@@ -3135,6 +3235,9 @@ fn test_encode_matrix() {
     let mut decoded_cache: HashMap<PathBuf, img::DecodedSequence> = HashMap::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
+        if format_filter.is_some_and(|filter| filter != fmt_name) {
+            continue;
+        }
         if fmt_data.encode.is_empty() {
             continue;
         }
@@ -3654,7 +3757,7 @@ fn test_encode_matrix() {
                     && fixture_has_oracle_success
                     && operation_contract_matches
                 {
-                    eprintln!(
+                    matrix_success!(
                         "  OK   [{}] all public unsupported modes and invalid state returned structured errors",
                         row.id
                     );
@@ -3764,7 +3867,7 @@ fn test_encode_matrix() {
                         format,
                     )
                 {
-                    eprintln!(
+                    matrix_success!(
                         "  OK   [{}] rejected retained sequence semantics: {}",
                         row.id,
                         row.rust_error_reason.as_deref().unwrap_or("unspecified")
@@ -3800,7 +3903,7 @@ fn test_encode_matrix() {
                         format,
                     )
                 {
-                    eprintln!("  OK   [{}] rejected as Pillow does", row.id);
+                    matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -3943,7 +4046,7 @@ fn test_encode_matrix() {
                 }
             }
             if row.params.get("encoded_only").and_then(Value::as_bool) == Some(true) {
-                eprintln!(
+                matrix_success!(
                     "  OK   [{}] {}B, encoded-byte parity",
                     row.id,
                     encoded.len()
@@ -3978,7 +4081,7 @@ fn test_encode_matrix() {
                         }
                         match assert_pixel_parity(&expected, &redecoded) {
                             Ok(()) => {
-                                eprintln!(
+                                matrix_success!(
                                     "  OK   [{}] {}B, re-decoded {}x{} pixel-parity (mode={})",
                                     row.id,
                                     encoded.len(),
