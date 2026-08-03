@@ -892,14 +892,14 @@ pub enum SourceAlpha {
     Auxiliary,
 }
 
-/// A bounded direct relationship between an AVIF auxiliary item and the item
-/// it targets.
+/// A bounded relationship between an AVIF alpha auxiliary item and the color
+/// item it targets.
 ///
 /// Item identifiers are local to the encoded container; they are source
-/// provenance, not globally stable image identifiers. The current AVIF
-/// parser exposes this relation for a direct alpha `auxl` association to the
-/// primary item. Derived, grid, per-frame, and non-alpha auxiliary graphs are
-/// not represented by this descriptor yet.
+/// provenance, not globally stable image identifiers. The AVIF parser exposes
+/// direct primary-item associations and alpha associations to the derived
+/// color items of a supported grid. Non-alpha auxiliary, per-frame, and other
+/// item graphs are not represented by this descriptor yet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AvifAuxiliaryRelationship {
     auxiliary_item_id: u32,
@@ -940,6 +940,7 @@ pub struct SourceDescriptor {
     byte_order: Option<SourceByteOrder>,
     alpha: Option<SourceAlpha>,
     avif_auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
+    avif_auxiliary_relationships: Option<Vec<AvifAuxiliaryRelationship>>,
     avif_transform: Option<AvifTransformProperties>,
 }
 
@@ -952,6 +953,7 @@ impl SourceDescriptor {
             byte_order: None,
             alpha: None,
             avif_auxiliary_relationship: None,
+            avif_auxiliary_relationships: None,
             avif_transform: None,
         }
     }
@@ -1000,6 +1002,35 @@ impl SourceDescriptor {
         self.avif_auxiliary_relationship
     }
 
+    /// Record bounded alpha auxiliary-item relationships for derived color
+    /// items such as a supported AVIF grid.
+    ///
+    /// The relationships are source-local provenance and do not request any
+    /// composition or other pixel transformation.
+    #[must_use]
+    pub fn with_avif_auxiliary_relationships(
+        mut self,
+        relationships: Vec<AvifAuxiliaryRelationship>,
+    ) -> Self {
+        self.avif_auxiliary_relationships = (!relationships.is_empty()).then_some(relationships);
+        self
+    }
+
+    /// Return all retained bounded AVIF alpha auxiliary-item relationships.
+    ///
+    /// A direct primary-item relationship is returned as a one-element slice
+    /// when no multi-target relationship list is needed.
+    #[must_use]
+    pub fn avif_auxiliary_relationships(&self) -> &[AvifAuxiliaryRelationship] {
+        if let Some(relationships) = &self.avif_auxiliary_relationships {
+            relationships.as_slice()
+        } else if let Some(relationship) = &self.avif_auxiliary_relationship {
+            std::slice::from_ref(relationship)
+        } else {
+            &[]
+        }
+    }
+
     /// Record the AVIF item transforms declared by the encoded source.
     ///
     /// These properties describe source presentation metadata only. Decoded
@@ -1022,6 +1053,7 @@ impl SourceDescriptor {
         self.byte_order.is_none()
             && self.alpha.is_none()
             && self.avif_auxiliary_relationship.is_none()
+            && self.avif_auxiliary_relationships.is_none()
             && self.avif_transform.is_none()
     }
 }
