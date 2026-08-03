@@ -14,7 +14,7 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// copied bytes, BMP row-conversion checkpoints charged after each 1,024
 /// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
 /// stages, 1,024-bit logical and 16,384-boolean first-partition-bit intervals,
-/// 4,096-bit logical and 16,384-boolean coefficient-bit intervals,
+/// 1,024-bit logical and 16,384-boolean coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, 1,024-bit logical bitstream, 1,024-byte bitstream-output,
@@ -72,7 +72,7 @@ impl EncodePolicy {
     /// bitstream, stored-block, and checksum intervals. Lossy
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
     /// conversion items, after each 1,024-bit logical and 16,384-boolean
-    /// first-partition interval, after each 4,096-bit logical and 16,384-boolean
+    /// first-partition interval, after each 1,024-bit logical and 16,384-boolean
     /// coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
     /// encoding charges checkpoints around predictor, cross-color, entropy,
