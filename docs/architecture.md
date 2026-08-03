@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
+`8607dca5cf813448a8f95bbe62c6e5c07733ecef`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -92,7 +92,9 @@ descriptor. AVIF direct alpha `auxl` relationships are retained as
 source-local item IDs through `SourceDescriptor::avif_auxiliary_relationship()`
 when present, and the bounded
 `SourceDescriptor::avif_auxiliary_relationships()` list also retains alpha
-links to supported grid-derived color items. A source descriptor is structural provenance, not opaque
+links to supported grid-derived color items. For a primary grid,
+`SourceDescriptor::avif_grid_item_ids()` also retains its ordered derived
+color-item list. A source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
@@ -241,8 +243,9 @@ Recognized `Exif` item types and `mime` items with content type exactly
 still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
 includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
 orientation application, or implicit encode replay is performed. Direct and
-supported grid-derived alpha `auxl` relationships are retained in
-`SourceDescriptor`; non-alpha, grid topology, track-only,
+supported grid-derived alpha `auxl` relationships and the bounded grid-derived
+item list are retained in `SourceDescriptor`; non-alpha, full grid topology,
+track-only,
 unknown-item-property, and other item-relationship semantics remain outside
 this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample

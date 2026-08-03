@@ -268,7 +268,9 @@ alpha fixtures, `SourceDescriptor::avif_auxiliary_relationship()` retains the
 direct source-local auxiliary-item relationship, while
 `SourceDescriptor::avif_auxiliary_relationships()` returns the bounded list for
 direct and supported grid-derived color-item targets. These are provenance
-only and do not alter decoded pixels.
+only and do not alter decoded pixels. For a primary grid,
+`SourceDescriptor::avif_grid_item_ids()` returns the ordered derived color-item
+IDs; tile placement and composition remain private to decoding.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
@@ -357,8 +359,9 @@ prefix. This is source retention only: default encoding never replays it, and
 the direct alpha auxiliary relationship is retained separately through
 `SourceDescriptor::avif_auxiliary_relationship()` and the bounded plural
 relationship list also retains the committed grid fixture's alpha links
-(auxiliary items `5`→`2` and `6`→`3`). Non-alpha, track-only, richer item
-graphs, and grid topology/composition remain open.
+(auxiliary items `5`→`2` and `6`→`3`); its grid item-ID list retains `[2, 3]`.
+Non-alpha, track-only, richer item graphs, and full grid topology/composition
+remain open.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
+`8607dca5cf813448a8f95bbe62c6e5c07733ecef`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2837,20 +2837,25 @@ lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
 segment-normalization warning remains. These are Rust-only implementation and
 target records separate from Pillow parity.
 
-Current acceptance record: grid-derived AVIF alpha relationships and warm matrix fanout
+Current acceptance record: grid-derived AVIF item provenance and warm matrix fanout
 
 The bounded AVIF source-provenance slice is implemented at
-`c8c18221d1d3126ac320cfc9a097386ddd007289` and its existing feature-gated
-fixture contract was completed at `82a937f74b2255b51415924dc9033f8a43ccafa0`.
+`c8c18221d1d3126ac320cfc9a097386ddd007289` and its ordered primary-grid item
+list plus existing feature-gated fixture contract were completed at
+`fdd7afe988cf9a6b57de9bb69a98cc7dc8d690ca`. Coverage compilation completeness
+for the existing structural-state initializers was fixed at
+`8607dca5cf813448a8f95bbe62c6e5c07733ecef`.
 The committed `grid.avif` fixture has primary item `1`, derived color items
 `2` and `3`, and alpha auxiliary items `5` and `6` targeting `2` and `3`.
 `SourceDescriptor::avif_auxiliary_relationships()` retains those exact
 source-local links on inspection, still decode, and the still-sequence
 fallback; the scalar getter remains `None` because the grid has no direct
-primary-item alpha link. The existing `alpha.avif` contract also verifies the
-scalar direct link `2`→`1` and the plural getter's one-element fallback.
-These descriptors record source provenance only; they do not compose the grid,
-transform decoded pixels, or claim non-alpha graph support.
+primary-item alpha link. `SourceDescriptor::avif_grid_item_ids()` retains the
+ordered derived color-item IDs `[2, 3]` on the same three surfaces. The
+existing `alpha.avif` contract also verifies the scalar direct link `2`→`1`
+and the plural getter's one-element fallback. These descriptors record source
+provenance only; they do not compose the grid, transform decoded pixels, or
+claim non-alpha graph support.
 
 This evidence deliberately stays outside Pillow parity: the parity schema has
 no source descriptor or AVIF item-relationship field. The unchanged Pillow
@@ -2865,11 +2870,11 @@ profile or evidence origin. The follow-up at
 artifacts while retaining `MATRIX_DEBUG=1` or `2` for local debugging. This
 does not change the production profile or any coverage command.
 
-Managed Pillow parity run `20e9ecf2-076d-4a04-9d34-88e331d67769` passed
-1,445/1,445 checks with zero failures or skips in 53,969 ms at the AVIF
+Managed Pillow parity run `c87f6380-690e-4387-96ca-4ae49d1f45a3` passed
+1,445/1,445 checks with zero failures or skips in 52,001 ms at the AVIF
 implementation revision. Final feature-matrix run
-`11b56746-1c02-4888-93d6-57e387175114` passed 991/991 checks in 19,998 ms at
-the source-contract revision; its retained log ends with
+`00558bec-d1de-4a10-9a2d-58b6dc7c5caa` passed 991/991 checks in 82,543 ms at
+the source-contract revision; its retained log records `debug=0` and ends with
 `capability tables OK: every native and wasm32-wasip1 lane agrees` and has no
 build-directory or package-cache lock-wait matches. The runtime tuning itself
 was validated separately by managed run `b78b4c94-72cb-45fb-a9e8-1fb4bb49be9e`
@@ -2886,17 +2891,21 @@ runtime follow-up revision passed 991/991 checks in 3,522 ms. Its retained log
 records `debug=0`, ends with the native/WASI capability agreement marker, and
 has no `lock-wait` match.
 
-Coverage MCP run `6fa86e87-831b-4c7d-a273-94f509018eb5` passed 85/85 tests in
-50,815 ms and ingested snapshot `529006bb-3484-4bc7-b595-53a2a6dce421`:
-51,204/51,678 lines, 7,070/7,158 branches, 2,862/2,931 functions, and
-79,476/80,534 regions. Against baseline snapshot
-`92f6ba37-f4eb-4ee8-aeb3-88e94856501a`, covered totals increased by 99 lines,
-27 branches, 6 functions, and 155 regions, with no changed-to-uncovered line
-in the line-only comparison. The remaining named gaps are the defensive
-duplicate-alpha-association branch at `src/codecs/avif/container.rs:1109` and
-two partial `SourceDescriptor::is_empty` outcomes at
-`src/types/mod.rs:1055-1056`; they remain visible rather than being hidden by
-synthetic tests.
+Coverage MCP run `44dfb288-00ce-4bb7-ab3a-723b57e67761` passed 85/85 tests in
+47,453 ms and ingested snapshot `65e67f5a-a459-40f1-ae93-0fc91a233f39`:
+51,285/51,764 lines, 7,083/7,176 branches, 2,871/2,941 functions, and
+79,591/80,656 regions. Against baseline snapshot
+`92f6ba37-f4eb-4ee8-aeb3-88e94856501a`, covered totals increased by 180 lines,
+40 branches, 15 functions, and 270 regions. The line-only comparison reports
+two displaced changed-to-uncovered records at
+`src/codecs/avif/container.rs:1067` and `src/codecs/avif/container.rs:1079`.
+The remaining named gaps are the duplicate-mirror and duplicate-clean-aperture
+defensive branches at `src/codecs/avif/container.rs:1066-1067` and
+`1078-1079`, the duplicate-alpha-association branch at
+`src/codecs/avif/container.rs:1133-1134`, and three partial
+`SourceDescriptor::is_empty` outcomes at `src/types/mod.rs:1075-1077`; they
+remain visible rather than being hidden by synthetic tests. The LLVM JSON
+segment-normalization warning remains.
 
 Remaining AVIF categories are non-alpha and richer auxiliary graphs, grid
 topology/composition, gain maps/depth/thumbnails/supplementary content,
