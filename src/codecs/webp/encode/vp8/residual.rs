@@ -22,6 +22,7 @@ const COEFFICIENT_64_BIT_CHECKPOINT_BITS: usize = 64;
 const COEFFICIENT_FINER_CHECKPOINT_BITS: usize = 128;
 const COEFFICIENT_FINEST_CHECKPOINT_BITS: usize = 256;
 const COEFFICIENT_FINE_CHECKPOINT_BITS: usize = 512;
+const COEFFICIENT_1024_CHECKPOINT_BITS: usize = 1_024;
 const COEFFICIENT_CHECKPOINT_BITS: usize = 16_384;
 const COEFFICIENT_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
@@ -172,8 +173,19 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
                                     .is_multiple_of(COEFFICIENT_FINE_CHECKPOINT_BITS)
                                 {
                                     crate::codecs::error::check_cancelled(Some(self.token))?;
-                                    if self.bit_items.is_multiple_of(COEFFICIENT_CHECKPOINT_BITS) {
+                                    if self
+                                        .bit_items
+                                        .is_multiple_of(COEFFICIENT_1024_CHECKPOINT_BITS)
+                                    {
                                         crate::codecs::error::check_cancelled(Some(self.token))?;
+                                        if self
+                                            .bit_items
+                                            .is_multiple_of(COEFFICIENT_CHECKPOINT_BITS)
+                                        {
+                                            crate::codecs::error::check_cancelled(Some(
+                                                self.token,
+                                            ))?;
+                                        }
                                     }
                                 }
                             }
