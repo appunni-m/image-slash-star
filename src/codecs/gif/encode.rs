@@ -2757,10 +2757,60 @@ fn insertion_sort_buckets(values: &mut [OctreeBucket], swap_limit: Option<usize>
     true
 }
 
+fn charge_octree_sort_work(
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<()> {
+    if *work_items != 0 && (*work_items).is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS) {
+        crate::codecs::error::check_cancelled(Some(token))?;
+    }
+    *work_items = (*work_items).saturating_add(1);
+    Ok(())
+}
+
+fn insertion_sort_buckets_with_token(
+    values: &mut [OctreeBucket],
+    swap_limit: Option<usize>,
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<bool> {
+    let mut swaps = 0usize;
+    for right in 1..values.len() {
+        charge_octree_sort_work(token, work_items)?;
+        let mut cursor = right;
+        while cursor > 0 && bucket_order(&values[cursor.saturating_sub(1)], &values[cursor]).is_gt()
+        {
+            charge_octree_sort_work(token, work_items)?;
+            values.swap(cursor, cursor.saturating_sub(1));
+            swaps = swaps.saturating_add(1);
+            if swap_limit.is_some_and(|limit| swaps > limit) {
+                return Ok(false);
+            }
+            cursor = cursor.saturating_sub(1);
+        }
+    }
+    Ok(true)
+}
+
 fn swap_bucket_ranges(values: &mut [OctreeBucket], left: usize, right: usize, length: usize) {
     for offset in 0..length {
         values.swap(left.saturating_add(offset), right.saturating_add(offset));
     }
+}
+
+fn swap_bucket_ranges_with_token(
+    values: &mut [OctreeBucket],
+    left: usize,
+    right: usize,
+    length: usize,
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<()> {
+    for offset in 0..length {
+        charge_octree_sort_work(token, work_items)?;
+        values.swap(left.saturating_add(offset), right.saturating_add(offset));
+    }
+    Ok(())
 }
 
 fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
@@ -2883,10 +2933,167 @@ fn apple_qsort_buckets(values: &mut [OctreeBucket]) {
     }
 }
 
-fn sorted_octree_buckets(cube: &OctreeCube) -> Vec<OctreeBucket> {
+fn apple_qsort_buckets_with_token(
+    values: &mut [OctreeBucket],
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<()> {
+    let mut start = 0usize;
+    let mut length = values.len();
+    loop {
+        if length <= 7 {
+            insertion_sort_buckets_with_token(
+                &mut values[start..start.saturating_add(length)],
+                None,
+                token,
+                work_items,
+            )?;
+            return Ok(());
+        }
+        let mut low = start;
+        let mut middle = start.saturating_add(length.div_euclid(2));
+        let mut high = start.saturating_add(length).saturating_sub(1);
+        if length > 40 {
+            let distance = length.div_euclid(8);
+            low = median_of_three(
+                values,
+                low,
+                low.saturating_add(distance),
+                low.saturating_add(distance.saturating_mul(2)),
+            );
+            middle = median_of_three(
+                values,
+                middle.saturating_sub(distance),
+                middle,
+                middle.saturating_add(distance),
+            );
+            high = median_of_three(
+                values,
+                high.saturating_sub(distance.saturating_mul(2)),
+                high.saturating_sub(distance),
+                high,
+            );
+        }
+        middle = median_of_three(values, low, middle, high);
+        values.swap(start, middle);
+        let mut equal_left = start.saturating_add(1);
+        let mut scan_left = start.saturating_add(1);
+        let mut scan_right = start.saturating_add(length).saturating_sub(1);
+        let mut equal_right = scan_right;
+        let mut swapped = false;
+        loop {
+            while scan_left <= scan_right {
+                charge_octree_sort_work(token, work_items)?;
+                let ordering = bucket_order(&values[scan_left], &values[start]);
+                if ordering.is_gt() {
+                    break;
+                }
+                if ordering.is_eq() {
+                    values.swap(equal_left, scan_left);
+                    equal_left = equal_left.saturating_add(1);
+                    swapped = true;
+                }
+                scan_left = scan_left.saturating_add(1);
+            }
+            while scan_left <= scan_right {
+                charge_octree_sort_work(token, work_items)?;
+                let ordering = bucket_order(&values[scan_right], &values[start]);
+                if ordering.is_lt() {
+                    break;
+                }
+                if ordering.is_eq() {
+                    values.swap(scan_right, equal_right);
+                    equal_right = equal_right.saturating_sub(1);
+                    swapped = true;
+                }
+                scan_right = scan_right.saturating_sub(1);
+            }
+            if scan_left > scan_right {
+                break;
+            }
+            charge_octree_sort_work(token, work_items)?;
+            values.swap(scan_left, scan_right);
+            swapped = true;
+            scan_left = scan_left.saturating_add(1);
+            scan_right = scan_right.saturating_sub(1);
+        }
+        let end = start.saturating_add(length);
+        let left_equal = equal_left
+            .saturating_sub(start)
+            .min(scan_left.saturating_sub(equal_left));
+        swap_bucket_ranges_with_token(
+            values,
+            start,
+            scan_left.saturating_sub(left_equal),
+            left_equal,
+            token,
+            work_items,
+        )?;
+        let right_equal = equal_right
+            .saturating_sub(scan_right)
+            .min(end.saturating_sub(equal_right).saturating_sub(1));
+        swap_bucket_ranges_with_token(
+            values,
+            scan_left,
+            end.saturating_sub(right_equal),
+            right_equal,
+            token,
+            work_items,
+        )?;
+        if !swapped {
+            let limit = 1usize.saturating_add(length.div_euclid(4));
+            if insertion_sort_buckets_with_token(
+                &mut values[start..end],
+                Some(limit),
+                token,
+                work_items,
+            )? {
+                return Ok(());
+            }
+        }
+        let left_length = scan_left.saturating_sub(equal_left);
+        let right_length = equal_right.saturating_sub(scan_right);
+        if left_length <= right_length {
+            if left_length > 1 {
+                apple_qsort_buckets_with_token(
+                    &mut values[start..start.saturating_add(left_length)],
+                    token,
+                    work_items,
+                )?;
+            }
+            if right_length <= 1 {
+                return Ok(());
+            }
+            start = end.saturating_sub(right_length);
+            length = right_length;
+        } else {
+            if right_length > 1 {
+                apple_qsort_buckets_with_token(
+                    &mut values[end.saturating_sub(right_length)..end],
+                    token,
+                    work_items,
+                )?;
+            }
+            if left_length <= 1 {
+                return Ok(());
+            }
+            length = left_length;
+        }
+    }
+}
+
+fn sorted_octree_buckets(
+    cube: &OctreeCube,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<OctreeBucket>> {
     let mut buckets = cube.buckets.clone();
-    apple_qsort_buckets(&mut buckets);
-    buckets
+    if let Some(token) = token {
+        let mut work_items = 0usize;
+        apple_qsort_buckets_with_token(&mut buckets, token, &mut work_items)?;
+    } else {
+        apple_qsort_buckets(&mut buckets);
+    }
+    Ok(buckets)
 }
 
 fn subtract_octree_buckets(
@@ -2970,7 +3177,7 @@ fn pillow_fast_octree(
     let mut coarse = copy_octree_cube(&fine, coarse_bits, token)?;
     let mut coarse_count = coarse.used().min(target);
     let mut fine_count = target.saturating_sub(coarse_count);
-    let fine_palette = sorted_octree_buckets(&fine);
+    let fine_palette = sorted_octree_buckets(&fine, token)?;
     subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token)?;
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
@@ -2982,7 +3189,7 @@ fn pillow_fast_octree(
             token,
         )?;
     }
-    let coarse_palette = sorted_octree_buckets(&coarse);
+    let coarse_palette = sorted_octree_buckets(&coarse, token)?;
     let mut buckets = coarse_palette[..coarse_count].to_vec();
     buckets.extend_from_slice(&fine_palette[..fine_count]);
     let mut coarse_lookup = OctreeCube::new(coarse_bits);
