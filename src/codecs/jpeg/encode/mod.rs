@@ -33,6 +33,7 @@ const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
 const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
 const HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS: usize = 1_024;
+const PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS: usize = 1_024;
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -179,6 +180,56 @@ impl HuffmanFrequencyCheckpoint for TokenHuffmanFrequencyCheckpoint<'_> {
         if self.coefficients_until_checkpoint == 0 {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             self.coefficients_until_checkpoint = HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS;
+        }
+        Ok(())
+    }
+}
+
+trait ProgressiveScanCheckpoint {
+    fn row(&mut self) -> CodecResult<()>;
+    fn block(&mut self) -> CodecResult<()>;
+}
+
+struct NoopProgressiveScanCheckpoint;
+
+impl ProgressiveScanCheckpoint for NoopProgressiveScanCheckpoint {
+    #[inline(always)]
+    fn row(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenProgressiveScanCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    blocks_until_checkpoint: usize,
+}
+
+impl<'a> TokenProgressiveScanCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            blocks_until_checkpoint: PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS,
+        }
+    }
+}
+
+impl ProgressiveScanCheckpoint for TokenProgressiveScanCheckpoint<'_> {
+    #[inline]
+    fn row(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn block(&mut self) -> CodecResult<()> {
+        self.blocks_until_checkpoint = self.blocks_until_checkpoint.saturating_sub(1);
+        if self.blocks_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.blocks_until_checkpoint = PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS;
         }
         Ok(())
     }
@@ -613,6 +664,7 @@ pub(crate) fn encode_with_token(
     } else {
         if let Some(token) = token {
             let mut checkpoint = TokenEntropyOutputCheckpoint::new(token);
+            let mut scan_checkpoint = TokenProgressiveScanCheckpoint::new(token);
             encode_progressive_scans_exact(
                 &mut out,
                 &comps,
@@ -622,9 +674,11 @@ pub(crate) fn encode_with_token(
                 &params,
                 Some(token),
                 &mut checkpoint,
+                &mut scan_checkpoint,
             )?;
         } else {
             let mut checkpoint = NoopEntropyOutputCheckpoint;
+            let mut scan_checkpoint = NoopProgressiveScanCheckpoint;
             encode_progressive_scans_exact(
                 &mut out,
                 &comps,
@@ -634,6 +688,7 @@ pub(crate) fn encode_with_token(
                 &params,
                 None,
                 &mut checkpoint,
+                &mut scan_checkpoint,
             )?;
         }
     }
@@ -1008,7 +1063,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ac_tbl: 1,
     };
     let progressive_components = [y_component, cb_component, cr_component];
-    let _ = dc_progressive_events(&progressive_dc_scan, &progressive_components, None);
+    let mut progressive_checkpoint = NoopProgressiveScanCheckpoint;
+    let _ = dc_progressive_events(
+        &progressive_dc_scan,
+        &progressive_components,
+        &mut progressive_checkpoint,
+    );
     let single_dc_scan = ProgScan {
         comps: vec![0],
         ss: 0,
@@ -1019,10 +1079,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let single_dc_token = crate::CancellationToken::new();
     single_dc_token.cancel_after(0);
+    let mut single_progressive_checkpoint = TokenProgressiveScanCheckpoint::new(&single_dc_token);
     let _ = dc_progressive_events(
         &single_dc_scan,
         &progressive_components,
-        Some(&single_dc_token),
+        &mut single_progressive_checkpoint,
     );
 
     let scan = ProgScan {
@@ -1637,7 +1698,7 @@ enum ProgressiveEvent {
     clippy::too_many_arguments,
     reason = "the helper mirrors libjpeg's progressive scan routine and the token is an independent checkpoint input"
 )]
-fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint>(
+fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScanCheckpoint>(
     output: &mut Vec<u8>,
     components: &[CompData],
     component_count: u8,
@@ -1646,12 +1707,13 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint>(
     _params: &quant::EncodeParams,
     token: Option<&crate::CancellationToken>,
     checkpoint: &mut P,
+    scan_checkpoint: &mut C,
 ) -> CodecResult<()> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
     // jcmaster.c's jpeg_simple_progression scan script.
     for scan in default_progression_script(component_count) {
         crate::codecs::error::check_cancelled(token)?;
-        let events = progressive_events(&scan, components, token)?;
+        let events = progressive_events(&scan, components, scan_checkpoint)?;
         let mut frequencies = [[0u64; 256]; 4];
         for &event in &events {
             if let ProgressiveEvent::Symbol { table, value } = event {
@@ -1718,15 +1780,15 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint>(
     Ok(())
 }
 
-fn progressive_events(
+fn progressive_events<C: ProgressiveScanCheckpoint>(
     scan: &ProgScan,
     components: &[CompData],
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut C,
 ) -> CodecResult<Vec<ProgressiveEvent>> {
     if scan.ss == 0 {
-        dc_progressive_events(scan, components, token)
+        dc_progressive_events(scan, components, checkpoint)
     } else {
-        ac_progressive_events(scan, components, token)
+        ac_progressive_events(scan, components, checkpoint)
     }
 }
 
@@ -1734,10 +1796,10 @@ fn progressive_events(
     clippy::arithmetic_side_effects,
     reason = "max(1) proves the modulo divisor is non-zero for row checkpoint scheduling"
 )]
-fn dc_progressive_events(
+fn dc_progressive_events<C: ProgressiveScanCheckpoint>(
     scan: &ProgScan,
     components: &[CompData],
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut C,
 ) -> CodecResult<Vec<ProgressiveEvent>> {
     let mut events = Vec::new();
     let interleaved = scan.comps.len() > 1;
@@ -1783,7 +1845,7 @@ fn dc_progressive_events(
 
     if interleaved {
         for mcu_row in 0..mcu_rows {
-            crate::codecs::error::check_cancelled(token)?;
+            checkpoint.row()?;
             for mcu_column in 0..mcu_columns {
                 for (scan_index, &component_index) in scan.comps.iter().enumerate() {
                     let component = &components[component_index];
@@ -1806,6 +1868,7 @@ fn dc_progressive_events(
                                         .saturating_add(block_column)],
                                 );
                             }
+                            checkpoint.block()?;
                         }
                     }
                 }
@@ -1816,9 +1879,10 @@ fn dc_progressive_events(
         let component = &components[component_index];
         for (block_index, block) in component.blocks.iter().enumerate() {
             if block_index % component.blocks_per_row.max(1) == 0 {
-                crate::codecs::error::check_cancelled(token)?;
+                checkpoint.row()?;
             }
             append(0, component_index, block);
+            checkpoint.block()?;
         }
     }
     Ok(events)
@@ -1828,10 +1892,10 @@ fn dc_progressive_events(
     clippy::arithmetic_side_effects,
     reason = "max(1) proves the modulo divisor is non-zero for row checkpoint scheduling"
 )]
-fn ac_progressive_events(
+fn ac_progressive_events<C: ProgressiveScanCheckpoint>(
     scan: &ProgScan,
     components: &[CompData],
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut C,
 ) -> CodecResult<Vec<ProgressiveEvent>> {
     let component = &components[scan.comps[0]];
     let table = usize::from(component.ac_tbl);
@@ -1840,7 +1904,7 @@ fn ac_progressive_events(
     let mut correction_bits = Vec::<u8>::new();
     for (block_index, block) in component.blocks.iter().enumerate() {
         if block_index % component.blocks_per_row.max(1) == 0 {
-            crate::codecs::error::check_cancelled(token)?;
+            checkpoint.row()?;
         }
         if scan.ah == 0 {
             append_ac_first_events(
@@ -1861,6 +1925,7 @@ fn ac_progressive_events(
                 &mut correction_bits,
             );
         }
+        checkpoint.block()?;
     }
     flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
     Ok(events)

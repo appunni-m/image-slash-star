@@ -859,7 +859,8 @@ pub fn encode_with_policy(
 /// The token is checked before codec dispatch and after encoding. JPEG also
 /// polls between color-conversion rows, sampling rows, quantized block rows,
 /// optimized baseline Huffman frequency intervals after each 1,024 AC
-/// coefficients, entropy rows, after each 1,024 emitted entropy bytes, and
+/// coefficients, progressive scan block slots after each 1,024 blocks, entropy
+/// rows, after each 1,024 emitted entropy bytes, and
 /// progressive event batches; TIFF polls page preparation,
 /// row prediction, PackBits/LZW compression checkpoints, and Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, stored-block, and checksum
