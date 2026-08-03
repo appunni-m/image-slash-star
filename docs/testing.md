@@ -390,9 +390,9 @@ analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
-adaptation, partition emission, after each 128-bit, 256-bit, and 512-bit logical first-partition
+adaptation, partition emission, after each 64-bit, 128-bit, 256-bit, and 512-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
-128-bit, 256-bit and 512-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
+64-bit, 128-bit, 256-bit and 512-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
@@ -449,9 +449,9 @@ bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 128-bit, 256-bit, and 512-bit
+mode-selection subsegments plus analysis/coefficient-probability, 64-bit, 128-bit, 256-bit, and 512-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
-128-bit, 256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+64-bit, 128-bit, 256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
@@ -481,8 +481,8 @@ token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability adaptation and
-128-bit, 256-bit, and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
-128-bit, 256-bit, and 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
+64-bit, 128-bit, 256-bit, and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
+64-bit, 128-bit, 256-bit, and 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 64-bit, 128-bit, 256-bit, and 512-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
@@ -3493,7 +3493,7 @@ Pillow-oracle evidence; the policy assertions and aggregate coverage are
 implementation/Rust-only evidence.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 64-bit/128-bit/256-bit/512-bit VP8L
+current 64-bit/128-bit/256-bit/512-bit first-partition, 64-bit/128-bit/256-bit/512-bit coefficient, 64-bit/128-bit/256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
