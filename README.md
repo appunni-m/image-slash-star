@@ -201,8 +201,9 @@ after whole-buffer codecs; codec-specific checkpoints cover JPEG color,
 sampling, quantization, entropy, and progressive scans, PNG rows and adaptive
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
-subsegments plus VP8 stages, lossless VP8L 4,096-bit logical bitstream and
-1,024-byte output intervals, and each writer's structural segments.
+subsegments plus VP8's 4,096-bit logical and 16,384-boolean first-partition
+intervals, lossless VP8L 4,096-bit logical bitstream and 1,024-byte output
+intervals, and each writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
 may leave its delivered prefix; successful sink delivery calls the sink's
