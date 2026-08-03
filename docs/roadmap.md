@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`c430f7be25c17b103a4aed7f7e8462a3ecf8c230`; the claim-ledger baseline remains
+`99abec03c2a478bc167caea881980fbf596887c9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -2210,6 +2210,43 @@ bitstream work, TIFF Deflate matcher/emission, transient allocation accounting,
 short-write/rollback, and remaining non-checkpointed work-budget semantics
 remain open.
 
+The current GIF transparent-pixel normalization checkpoint contract is
+implemented and tested at `99abec03c2a478bc167caea881980fbf596887c9`.
+Token-aware RGBA preparation now proves the 1,024-pixel normalization interval
+with 2,048 fully transparent pixels whose RGB channels vary before Pillow's
+normalization. The Rust-only `encode_work_budget_is_a_non_parity_result_contract`
+contract proves ordinary and ample-budget byte identity, whole-buffer rejection
+at the normalization checkpoint (`maximum: 2`, `observed: 3`), the same direct-
+sink rejection (`maximum: 1`, `observed: 2`), and untouched sink state. Pillow
+has no caller token or work-budget result, so this adds no parity row, fixture,
+diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `49bf1363-d6ce-49ef-890b-7f3194d810b8` passed
+1,445/1,445 checks with zero failures or skips in 41,509 ms. Feature-matrix run
+`116aef69-7d74-40e2-b942-0d8d96db3529` passed 991/991 checks in 74,584 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `b96340a3-712e-4f32-b57a-9a412c64d4ea` passed 85/85 tests in
+47,058 ms and ingested snapshot `3e3f5663-e2ae-4199-9fc1-8a91b4778532`,
+reporting 49,972/50,398 lines, 6,973/7,048 branches, 2,767/2,835 functions,
+and 77,773/78,576 regions. Compared with snapshot
+`cbc19eaa-3399-457f-acc5-81bc29bc279f`, this adds eight covered lines, six
+covered branches, no covered functions, and 15 covered regions with no
+total-count change. `src/codecs/gif/encode.rs` reports 2,654/2,788 lines,
+420/440 branches, 156/182 functions, and 4,283/4,495 regions. The
+transparent-normalization checkpoint is covered; its remaining managed edge is
+the non-transparent skip branch (current lines 2487-2489). The remaining GIF
+gaps are the token-aware insertion-sort swap/limit edges (2781-2789),
+short-range/range-swap/fallback/recursive sorter edges (2950, 3031,
+3042-3052, 3062, and 3075), the 1,024-entry octree subtraction and lookup
+cancellation edges (3106-3107 and 3140-3141), and the second coarse-reduction
+call (line 3190). No synthetic coverage-only input was added. The aggregate
+snapshot retains the LLVM segment-normalization warning. These are Rust-only
+implementation and target records separate from Pillow parity. Remaining other
+codec interior work, finer WebP bitstream work, TIFF Deflate matcher/emission,
+transient allocation accounting, short-write/rollback, and remaining
+non-checkpointed work-budget semantics remain open.
+
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now
 charges checkpoints around pixel conversion, entropy analysis, transform
@@ -2477,7 +2514,7 @@ remaining non-checkpointed work-budget semantics remain open.
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
    beyond the implemented PNG 1,024-byte row, BMP row-conversion subsegments,
-   transparent-normalization coverage, TIFF Deflate
+   TIFF Deflate
    matcher/emission, and WebP bitstream stages, remaining
    work-budget semantics, and short-write/rollback cleanup. Keep
    allocation accounting and structural writing as distinct open resource
