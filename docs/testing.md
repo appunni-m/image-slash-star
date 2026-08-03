@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`4779c6aedfe8b9decdb994cf3ddb8751ce68da8e`; the claim-ledger baseline remains
+`7383a00c051badbcff99fdb24365f9360cb73a30`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -319,8 +319,9 @@ analyzing Huffman trees, emitting stored/fixed/dynamic bitstreams, copying
 stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
 a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
-after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
-1,024 analyzed macroblocks, then after color conversion, padding, analysis,
+after each batch of 1,024 RGB/RGBA-to-YUV conversion items, each batch of 1,024
+analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
+after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
@@ -362,8 +363,8 @@ level-six matcher candidate/insertion/fizzle/position boundaries;
 BMP still encoding also polls 1,024-pixel row-conversion subsegments;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
 checkpoints and polls GIF LZW input-symbol intervals; WebP still encoding polls
-preparation, lossy VP8 RGB/RGBA-to-YUV conversion and macroblock-analysis
-subsegments plus analysis/mode-selection/coefficient-probability/bitstream
+preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
+mode-selection subsegments plus analysis/coefficient-probability/bitstream
 stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
@@ -379,8 +380,8 @@ assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented PNG row subsegments, TIFF Deflate matcher/emission
-checkpoints, WebP RGB/RGBA-to-YUV conversion and macroblock-analysis
-subsegments, and WebP VP8L stages, finer WebP mode-selection, probability, and
+checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
+mode-selection subsegments, and WebP VP8L stages, finer WebP probability and
 bitstream work, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -1418,6 +1419,40 @@ Remaining finer WebP mode-selection, probability, and bitstream loops, other
 codec interior work, Deflate emission/structural interruption, transient
 allocation accounting, short-write/rollback, and non-checkpointed work-budget
 semantics remain open.
+
+The current lossy WebP/VP8 mode-selection checkpoint slice is implemented at
+`7383a00c051badbcff99fdb24365f9360cb73a30`. Token-aware VP8 frame selection now
+charges after each batch of 1,024 selected macroblocks in both the ordinary and
+trellis branches. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract uses the same
+512x512 RGB probe to prove typed whole-buffer rejection at the first selection
+checkpoint (`maximum: 329`, `observed: 330`), the same direct-sink rejection,
+and an untouched sink; the already-covered ample-budget identity remains
+unchanged. Pillow exposes neither caller token nor work-budget result, so no
+parity row, fixture, diagnostic origin, or coverage-only hook was added.
+
+Managed Pillow parity run `95546cee-c243-4bbf-8dba-ed6c7859a4a1` passed
+1,445/1,445 checks with zero failures or skips in 44,173 ms. Feature-matrix run
+`676a68b6-6716-421f-8f76-08f5b3eb3156` passed 991/991 checks in 77,896 ms; its
+retained logs show no package-cache or build-directory lock waits and end with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. Coverage MCP
+run `419ae162-8617-4b45-bb26-d7eea8238873` passed 85/85 tests in 48,808 ms and
+ingested snapshot `884e7ae0-ec2c-43d2-9e54-56c338b31576`, reporting
+49,391/49,789 lines, 6,791/6,854 branches, 2,750/2,817 functions, and
+76,798/77,510 regions. Compared with
+`b6f21c5b-55e3-43d4-98e6-8081c86634af`, this adds 17 covered lines (+18 total),
+two covered branches (+2 total), no functions, and 16 covered regions (+17
+total). The WebP VP8 frame file is 327/327 lines, 18/18 branches, 14/14
+functions, and 542/542 regions. The VP8 encoder is 624/626 lines, 42/42
+branches, 34/34 functions, and 1,140/1,150 regions; uncovered lines 86 and 188
+are the pre-existing defensive bridge and the unexercised `method >= 6` second-
+selection result bridge, respectively, not reasons for a synthetic coverage
+hook. The aggregate snapshot retains the LLVM segment-normalization warning.
+These are Rust-only implementation and target records separate from Pillow
+parity. Remaining finer WebP probability/bitstream loops, other codec interior
+work, Deflate emission/structural interruption, transient allocation
+accounting, short-write/rollback, and non-checkpointed work-budget semantics
+remain open.
 
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now
