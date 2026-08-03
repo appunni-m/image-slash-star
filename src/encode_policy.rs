@@ -14,9 +14,9 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
 /// stages, 16,384-boolean first-partition-bit and coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
-/// VP8L
-/// predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, bitstream, and token-stream stages, GIF RGB
+/// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
+/// histogram/Huffman, bitstream, 1,024-byte bitstream-output, and token-stream
+/// stages, GIF RGB
 /// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
 /// copy/subtraction/lookup intervals, and LZW input-symbol intervals; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
@@ -68,10 +68,11 @@ impl EncodePolicy {
     /// bitstream, stored-block, and checksum intervals. Lossy
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
     /// conversion items, after each 16,384 coefficient bits, and between its
-    /// major analysis, mode-selection, probability, and bitstream stages; VP8L encoding
-    /// charges checkpoints around predictor, cross-color, entropy, transform,
-    /// bounded backward-reference, histogram/Huffman, bitstream, and
-    /// token-stream intervals. GIF RGB/RGBA palette quantization charges after
+    /// major analysis, mode-selection, probability, and bitstream stages; VP8L
+    /// encoding charges checkpoints around predictor, cross-color, entropy,
+    /// transform, bounded backward-reference, histogram/Huffman, bitstream,
+    /// 1,024-byte bitstream-output, and token-stream intervals. GIF RGB/RGBA
+    /// palette quantization charges after
     /// each 1,024 pixels while preparing palette/index data; high-color RGB
     /// median-cut preparation additionally charges around hash/order setup,
     /// axis ordering, split stages, and 1,024-item partition intervals; RGBA
