@@ -9367,6 +9367,60 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .collect();
         let partition_probe = DecodedImage::new(896, 512, partition_probe_pixels, ColorType::Rgb8);
         // First-partition boolean coding now charges a finer logical
+        // checkpoint after each 128 coded bits. This 512x512 analysis probe
+        // reaches that interval before the existing 256-bit interval. Pillow
+        // has no caller token or work-budget result, so this remains Rust-only
+        // evidence with no parity row or coverage-only hook.
+        let finer_partition_bit_policy_128 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(333);
+        let finer_partition_bit_error_128 = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &finer_partition_bit_policy_128,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP 128-bit partition budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            finer_partition_bit_error_128,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 333,
+                observed: 334,
+            }
+        ));
+        let mut finer_partition_bit_sink_128 = vec![0xB8];
+        let finer_partition_bit_sink_error_128 = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &finer_partition_bit_policy_128,
+            &mut finer_partition_bit_sink_128,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 128-bit partition sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            finer_partition_bit_sink_error_128,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 333,
+                observed: 334,
+            }
+        ));
+        assert_eq!(finer_partition_bit_sink_128, vec![0xB8]);
+        // First-partition boolean coding now charges a finer logical
         // checkpoint after each 256 coded bits. This patterned 896x512 probe
         // reaches that interval before the existing 512-bit interval. Pillow
         // has no caller token or work-budget result, so this remains Rust-only
