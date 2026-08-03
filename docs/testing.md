@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`bf9dda0de0ce8214cf525ccdba395fa99246d8a6`; the claim-ledger baseline remains
+`da3dfbe43c90320c6cbf92ac7bcfea6bec71c1fe`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2701,13 +2701,23 @@ records remain separate from Pillow parity; no coverage-only test was added.
 
 The remaining AVIF metadata work is non-alpha auxiliary relationships and
 properties, item identity/plane-range/quality details, premultiplication, and
-invisible RGB semantics. The runtime-first matrix follow-up remains the
-cache-aware scheduler at `3a24dd85e507a777492267dfd13a01c508f392d3`: the current
-revision passes all 991 checks in 7,053 ms managed, while a cold local
-shared-target experiment exceeded 150 seconds before termination because
-Cargo serialized competing feature builds. The existing isolated-lane policy
-therefore remains the measured safe default; no matrix scope or test-origin
-claim was reduced.
+invisible RGB semantics. The feature-matrix serial-tail overlap is implemented
+at `da3dfbe43c90320c6cbf92ac7bcfea6bec71c1fe`: the two
+`wasm32-unknown-unknown` `feature_gate_tests --no-run` checks now run in their
+matching `none` and `avif` lanes, and the all-feature
+`wasm32-wasip1` determinism compile/run runs in the `all` lane. The command
+still covers all 33 target/feature lanes, with 45 feature-gate assertions in
+each native and WASI runtime lane (990 total), plus the determinism test and
+the capability-table no-drift check. In a
+controlled fresh-root local comparison using `MATRIX_JOBS=6`,
+`MATRIX_TEST_THREADS=2`, and `MATRIX_BUILD_JOBS=2`, the pre-change harness at
+`842f8edbc2325022108e7fd494b2ec6b7f11c69d` took 81.21 seconds and the new
+harness took 69.61 seconds. Managed run
+`1569fabd-04b5-483a-b971-20fd3e8aca76` passed 991/991 in 3,353 ms and retained
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, with no
+`lock-wait` match. This is a cache- and runner-sensitive harness measurement,
+not a universal speedup claim; it changes no production profile, fixture,
+parity row, diagnostic origin, or coverage scope.
 
 Historical claim-ledger acceptance record:
 
