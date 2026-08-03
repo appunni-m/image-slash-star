@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`99abec03c2a478bc167caea881980fbf596887c9`; the claim-ledger baseline remains
+`cb262736c050d7ea1736c45541b77bf019ef1547`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -329,7 +329,8 @@ analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
-adaptation, partition emission, and final container assembly. Lossless WebP
+adaptation, partition emission, and after each 16,384-boolean coefficient-bit
+interval before final container assembly. Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
@@ -371,8 +372,8 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability/bitstream
-stages, lossless
+mode-selection subsegments plus analysis/coefficient-probability/16,384-boolean
+coefficient-bit intervals and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
 stages, codec-result,
@@ -389,8 +390,8 @@ target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented PNG row subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
-coefficient-bitstream emission checkpoints plus VP8L stages, finer WebP
-bitstream work, progress callbacks, short-write
+16,384-boolean coefficient-bitstream intervals plus VP8L stages, remaining
+finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete
@@ -418,7 +419,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`99abec03c2a478bc167caea881980fbf596887c9`, the generated matrix reports:
+`cb262736c050d7ea1736c45541b77bf019ef1547`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -2136,6 +2137,39 @@ segment-normalization warning. These are execution and implementation records
 separate from Pillow parity. Remaining other codec interior work, finer WebP
 work, transient allocation accounting, short/interrupted output, rollback, and
 remaining non-checkpointed work-budget semantics remain open.
+
+The current lossy WebP/VP8 coefficient-bit interval slice is implemented at
+`cb262736c050d7ea1736c45541b77bf019ef1547`. Token-aware coefficient emission
+now charges cancellation and work-budget checkpoints after each 16,384
+boolean-coded coefficient bits. The ordinary no-token path uses a
+monomorphized no-op checkpoint controller, preserving the existing bytes
+without per-bit optional-token polling. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract proves the new
+typed rejection at `maximum: 401`, `observed: 402`, in both whole-buffer and
+direct-sink paths while leaving the sink unchanged. Pillow has no caller token,
+work-budget result, or caller-owned sink, so this adds no parity row, fixture,
+diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `76e7a249-15c4-4232-9c30-42c5ca9ad545` passed
+1,445/1,445 checks with zero failures or skips in 1,288 ms. Feature-matrix run
+`c86d57e1-ccbb-4b42-8669-e4865f2ae243` passed 991/991 checks in 68,765 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `158ab5f4-0c45-4855-844d-244c698741d8` passed 85/85 tests in
+54,337 ms and ingested snapshot `d5d5e314-b269-4667-8824-48e917c026de`,
+reporting 50,022/50,455 lines, 6,973/7,048 branches, 2,775/2,843 functions,
+and 77,860/78,693 regions. Compared with snapshot
+`3e3f5663-e2ae-4199-9fc1-8a91b4778532`, this adds 50 covered lines (+57 total),
+no covered or total branch changes, eight covered functions (+8 total), and 87
+covered regions (+117 total). The aggregate snapshot retains the LLVM
+segment-normalization warning. `src/codecs/webp/encode/vp8/residual.rs` is
+296/306 lines, 34/34 branches, 15/15 functions, and 446/485 regions; its ten
+uncovered lines are defensive checkpoint-error propagation sites, not a reason
+for a synthetic coverage hook. These are implementation and target records
+separate from Pillow parity. Remaining finer WebP bitstream work beyond this
+coefficient-bit interval, other codec interior work, transient allocation
+accounting, short/interrupted output, rollback, and remaining non-checkpointed
+work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
