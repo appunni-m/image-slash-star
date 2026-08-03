@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`d6b4dac5a5775af713935186b07b221751c72f06`; the claim-ledger baseline remains
+`62508a58b1a16fde150067b6cd43930b6e798dd3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1225,15 +1225,15 @@ result treats the Rust-only diagnostic fields as Pillow parity. The diagnostic
 contract passed in all 22 retained feature-lane executions, and the provenance
 verifier passed separately.
 Current COR-061 revalidation is against implementation revision
-`d6b4dac5a5775af713935186b07b221751c72f06`. Managed feature-matrix run
-`860dd502-4c2a-40fc-8b0e-a1a23ba39906` passed 991/991 checks; its retained log
+`62508a58b1a16fde150067b6cd43930b6e798dd3`. Managed feature-matrix run
+`f817e089-b339-43b1-9bbc-1f234d8e35ba` passed 991/991 checks; its retained log
 contains 22 successful executions of
 `diagnostic_manifest_matches_the_non_parity_contract`, one per feature lane,
 with no build-directory or package-cache lock-wait matches. Managed Coverage
-MCP run `a210578b-12ca-4ca9-ab6b-f2bedf0c1b52` passed 85/85 tests in 54,289 ms;
+MCP run `a6e382b2-44d2-43a1-9105-7739009328eb` passed 85/85 tests in 53,222 ms;
 its retained log explicitly records the same diagnostic contract as `ok` and
-ingested snapshot `42300a0d-e7c9-4025-aafd-6f4b93757706`. The current managed
-Pillow parity run `cb56a877-b7ff-42a9-b25b-d400b233aabc` passed 1,445/1,445
+ingested snapshot `5b366b41-e605-43cb-9936-a081644cb707`. The current managed
+Pillow parity run `07fd0f3d-d120-4cd8-8d9f-c6ded05a68b9` passed 1,445/1,445
 outer-result checks separately; it contains no diagnostic field or claim.
 These current records revalidate COR-061 without converting Rust-only
 diagnostic execution into Pillow-parity coverage.
@@ -2628,6 +2628,31 @@ Remaining finer WebP bitstream work beyond the first-partition, coefficient-bit,
 and 1,024-byte output intervals, other codec interior work, transient allocation
 accounting, short/interrupted output, rollback, and remaining non-checkpointed
 work-budget semantics remain open.
+
+The test-matrix runtime follow-up is implemented at revision
+`62508a58b1a16fde150067b6cd43930b6e798dd3`. The feature-matrix harness now
+defaults its isolated feature-gate test binaries to `MATRIX_TEST_OPT_LEVEL=1`
+instead of level 0 because those lanes execute real codec work-budget and
+cancellation contracts. All 33 target/feature lanes, all 45 feature-gate
+assertions per lane, and the capability-table no-drift check remain unchanged;
+this is a harness-only change with no production profile, manifest row,
+fixture, assertion, or provenance-origin change.
+
+On the same host and source tree, the all-feature WASI work-budget contract
+took 8.66 seconds at level 0 and 0.60 seconds at level 1; the complete
+45-test WASI lane took 16.26 seconds and 1.31 seconds respectively. These are
+controlled local optimization observations, not universal benchmarks. Managed
+Pillow parity run `07fd0f3d-d120-4cd8-8d9f-c6ded05a68b9` passed 1,445/1,445
+checks with zero failures or skips in 1,923 ms. Managed feature-matrix run
+`f817e089-b339-43b1-9bbc-1f234d8e35ba` passed 991/991 checks in 6,847 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `a6e382b2-44d2-43a1-9105-7739009328eb` passed 85/85 tests
+in 53,222 ms and ingested snapshot
+`5b366b41-e605-43cb-9936-a081644cb707`, retaining 50,260/50,702 lines,
+6,984/7,060 branches, 2,799/2,867 functions, and 78,142/79,032 regions.
+The snapshot retains the existing LLVM segment-normalization warning. This is
+harness runtime evidence, not a new codec capability or Pillow-parity row.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
