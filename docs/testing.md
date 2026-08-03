@@ -392,7 +392,7 @@ segment parameters,
 mode selection, coefficient-probability
 adaptation, partition emission, after each 128-bit, 256-bit, and 512-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
-256-bit and 512-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
+128-bit, 256-bit and 512-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
@@ -449,9 +449,9 @@ bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 512-bit
+mode-selection subsegments plus analysis/coefficient-probability, 128-bit, 256-bit, and 512-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
-256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+128-bit, 256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
