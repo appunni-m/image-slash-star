@@ -22,7 +22,7 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// RGB/RGBA-to-YUV conversion items and RGBA transparent-area cleanup after
 /// each 1,024 scanned or flattened pixels, analysis/partition
 /// stages, 128-bit, 256-bit and 512-bit logical and 16,384-boolean first-partition-bit intervals,
-/// 256-bit and 512-bit logical and 16,384-boolean coefficient-bit intervals,
+/// 128-bit, 256-bit and 512-bit logical and 16,384-boolean coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, 256-bit and 512-bit logical bitstream, 1,024-byte bitstream-output,

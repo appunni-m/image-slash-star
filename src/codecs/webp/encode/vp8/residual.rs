@@ -15,6 +15,7 @@ const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 13
 const COEFFICIENT_CHECKPOINT_TOKENS: usize = 4_000;
 const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
+const COEFFICIENT_FINER_CHECKPOINT_BITS: usize = 128;
 const COEFFICIENT_FINEST_CHECKPOINT_BITS: usize = 256;
 const COEFFICIENT_FINE_CHECKPOINT_BITS: usize = 512;
 const COEFFICIENT_CHECKPOINT_BITS: usize = 16_384;
@@ -85,6 +86,7 @@ struct TokenCoefficientCheckpoint<'a> {
     token_items: usize,
     block_items: usize,
     macroblock_items: usize,
+    finer_bit_items: usize,
     finest_bit_items: usize,
     fine_bit_items: usize,
     bit_items: usize,
@@ -130,6 +132,13 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
 
     #[inline]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        self.finer_bit_items = self.finer_bit_items.saturating_add(1);
+        if self
+            .finer_bit_items
+            .is_multiple_of(COEFFICIENT_FINER_CHECKPOINT_BITS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
         self.finest_bit_items = self.finest_bit_items.saturating_add(1);
         if self
             .finest_bit_items
@@ -477,6 +486,7 @@ pub(super) fn encode_coefficients(
             token_items: 0,
             block_items: 0,
             macroblock_items: 0,
+            finer_bit_items: 0,
             finest_bit_items: 0,
             fine_bit_items: 0,
             bit_items: 0,
