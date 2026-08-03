@@ -877,7 +877,8 @@ pub fn encode_with_policy(
 /// 4,096-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, 4,096-bit logical bitstream, 1,024-byte bitstream-output,
+/// histogram/Huffman, 1,024-bit logical bitstream intervals, 1,024-byte
+/// bitstream-output,
 /// and token-stream stages, codec-result, and
 /// metadata-assembly boundaries; native AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size

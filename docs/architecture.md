@@ -490,7 +490,7 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, each 4,096-bit logical bitstream interval, and each 1,024-byte
+intervals, each 1,024-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. This is
 deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
@@ -508,8 +508,8 @@ logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 4,096-bit
-logical bitstream, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
+search/match-length/cache/trace, histogram/Huffman, token-stream, 1,024-bit
+logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while
@@ -528,8 +528,8 @@ reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including remaining finer WebP bitstream work beyond the
 implemented 4,096-bit logical VP8 first-partition interval, the
 16,384-boolean first-partition-bit, coefficient-bit, and 1,024-byte
-boolean-bitstream-output intervals, the 4,096-bit logical VP8L bitstream
-interval, and CPU work inside codec
+boolean-bitstream-output intervals, the 1,024-bit logical VP8L bitstream
+intervals, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP
