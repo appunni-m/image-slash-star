@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`4779c6aedfe8b9decdb994cf3ddb8751ce68da8e`; the claim-ledger baseline remains
+`7383a00c051badbcff99fdb24365f9360cb73a30`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -464,8 +464,8 @@ additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. BMP row conversion additionally charges after each 1,024
 pixels. GIF LZW additionally charges an input-symbol interval for each
 dictionary-pass input symbol. Lossy WebP VP8 additionally charges after each
-each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of 1,024
-analyzed macroblocks, then
+each batch of 1,024 RGB/RGBA-to-YUV conversion items, each batch of 1,024
+analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, partition emission, and final container assembly. Lossless WebP
@@ -481,8 +481,8 @@ Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly
 checkpoints and GIF LZW input-symbol intervals, the WebP still writer polls at
-preparation, lossy VP8 RGB/RGBA-to-YUV conversion and macroblock-analysis
-subsegments plus analysis/mode-selection/coefficient-probability/bitstream
+preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
+mode-selection subsegments plus analysis/coefficient-probability/bitstream
 stages, lossless VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
@@ -502,12 +502,12 @@ prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
-documented checkpoints—including finer WebP mode-selection, probability, and
+documented checkpoints—including finer WebP probability and bitstream
 bitstream work and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, GIF LZW input-symbol intervals, WebP
-RGB/RGBA-to-YUV conversion and macroblock-analysis subsegments, and TIFF
-Deflate path—remain open.
+RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
+subsegments, and TIFF Deflate path—remain open.
 
 ### Codec work is bounded by the resource set
 
