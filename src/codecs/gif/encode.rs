@@ -22,6 +22,7 @@ const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
 const GRAPHIC_CONTROL_LABEL: u8 = 0xf9;
 const MAX_LZW_CODE: u16 = 4095;
+const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
 
 #[cfg(coverage)]
 fn coverage_frame(
@@ -535,7 +536,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = composite_frame(&mut canvas, 1, &bad_index_frame);
     }));
 
-    let _ = prepare_image(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8));
+    let _ = prepare_image_with_token(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8), None);
     let _ = indexed_rgb(&[0], &[0, 0, 0]);
     let _ = add_frame_durations(
         FrameDuration {
@@ -1077,8 +1078,7 @@ fn coalesce_identical_frames_with_token(
                         .collect();
                     DecodedImage::new(sequence.width, sequence.height, rgb, ColorType::Rgb8)
                 };
-                let mut prepared =
-                    prepare_image(&full_image).expect("coalesced full GIF canvas is RGB/RGBA");
+                let mut prepared = prepare_image_with_token(&full_image, token)?;
                 let can_mask_unchanged = previous_disposal != Some(2);
                 if can_mask_unchanged
                     && prepared.transparent.is_none()
@@ -1325,7 +1325,10 @@ fn composite_image(
     Ok(())
 }
 
-fn prepare_image(img: &DecodedImage) -> CodecResult<PreparedImage> {
+fn prepare_image_with_token(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedImage> {
     let (palette, indices, transparent) = match (img.mode, img.color) {
         (ImageMode::P8, ColorType::L8) => {
             let palette = img.palette.as_ref().ok_or_else(|| {
@@ -1370,7 +1373,7 @@ fn prepare_image(img: &DecodedImage) -> CodecResult<PreparedImage> {
             (palette, indices, None)
         }
         (ImageMode::Rgb8, ColorType::Rgb8) => {
-            let (palette, indices) = quantize_rgb(&img.pixels);
+            let (palette, indices) = quantize_rgb(&img.pixels, token)?;
             (palette, indices, None)
         }
         (ImageMode::Rgba8, ColorType::Rgba8) => {
@@ -1506,7 +1509,7 @@ fn write_gif_with_token(
     let mut prepared_frames = Vec::with_capacity(frames.len());
     for frame in frames {
         crate::codecs::error::check_cancelled(token)?;
-        prepared_frames.push(prepare_image(&frame.image)?);
+        prepared_frames.push(prepare_image_with_token(&frame.image, token)?);
     }
     // `first_frame` above proves the prepared vector has the same nonzero
     // length as `frames`.
@@ -1839,21 +1842,29 @@ impl BitWriter {
 ///
 /// Returns `(palette, indices)` where palette is a flat vec of RGB triplets
 /// and indices are the per-pixel palette index values.
-fn quantize_rgb(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
+fn quantize_rgb(
+    pixels: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>)> {
     debug_assert!(pixels.len().is_multiple_of(3));
     let mut palette: Vec<[u8; 3]> = Vec::new();
     let mut counts = Vec::<u32>::new();
-    for chunk in pixels.chunks_exact(3) {
-        let color = [chunk[0], chunk[1], chunk[2]];
-        match find_color(&palette, &color) {
-            Some(idx) => counts[idx] = counts[idx].saturating_add(1),
-            None => {
-                if palette.len() < 256 {
-                    palette.push(color);
-                    counts.push(1);
-                } else {
-                    return quantize_rgb_nearest(pixels);
-                }
+
+    if let Some(token) = token {
+        for (pixel_index, chunk) in pixels.chunks_exact(3).enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            let color = [chunk[0], chunk[1], chunk[2]];
+            if !record_rgb_color(&mut palette, &mut counts, color) {
+                return quantize_rgb_nearest(pixels, Some(token));
+            }
+        }
+    } else {
+        for chunk in pixels.chunks_exact(3) {
+            let color = [chunk[0], chunk[1], chunk[2]];
+            if !record_rgb_color(&mut palette, &mut counts, color) {
+                return quantize_rgb_nearest(pixels, None);
             }
         }
     }
@@ -1870,34 +1881,89 @@ fn quantize_rgb(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
         remap[old_index] = palette_index(new_index);
         flat.extend_from_slice(&palette[old_index]);
     }
-    let indices = pixels
-        .chunks_exact(3)
-        .map(|chunk| {
+    let indices = if let Some(token) = token {
+        let mut indices = Vec::with_capacity(pixels.len().div_euclid(3));
+        for (pixel_index, chunk) in pixels.chunks_exact(3).enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
             let color = [chunk[0], chunk[1], chunk[2]];
-            // `palette` was constructed from these exact source pixels.
-            #[allow(clippy::expect_used)]
-            let index =
-                find_color(&palette, &color).expect("RGB GIF palette was built from source pixels");
-            remap[index]
-        })
-        .collect();
-    (flat, indices)
+            indices.push(remap_rgb_index(&palette, &remap, color));
+        }
+        indices
+    } else {
+        pixels
+            .chunks_exact(3)
+            .map(|chunk| remap_rgb_index(&palette, &remap, [chunk[0], chunk[1], chunk[2]]))
+            .collect()
+    };
+    Ok((flat, indices))
 }
 
-fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
+fn record_rgb_color(palette: &mut Vec<[u8; 3]>, counts: &mut Vec<u32>, color: [u8; 3]) -> bool {
+    match find_color(palette, &color) {
+        Some(index) => counts[index] = counts[index].saturating_add(1),
+        None if palette.len() < 256 => {
+            palette.push(color);
+            counts.push(1);
+        }
+        None => return false,
+    }
+    true
+}
+
+#[allow(clippy::expect_used)]
+fn remap_rgb_index(palette: &[[u8; 3]], remap: &[u8], color: [u8; 3]) -> u8 {
+    // `palette` was constructed from these exact source pixels.
+    let index = find_color(palette, &color).expect("RGB GIF palette was built from source pixels");
+    remap[index]
+}
+
+fn record_rgb_nearest_color(
+    colors: &mut Vec<[u8; 3]>,
+    counts: &mut Vec<u32>,
+    color_indices: &mut HashMap<u32, usize>,
+    color: [u8; 3],
+) {
+    let hash = pillow_pixel_hash(color);
+    if let Some(&index) = color_indices.get(&hash) {
+        counts[index] = counts[index].saturating_add(1);
+    } else {
+        let index = colors.len();
+        colors.push(color);
+        counts.push(1);
+        color_indices.insert(hash, index);
+    }
+}
+
+fn quantize_rgb_nearest(
+    pixels: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>)> {
     let mut colors = Vec::<[u8; 3]>::new();
     let mut counts = Vec::<u32>::new();
     let mut color_indices = HashMap::<u32, usize>::new();
-    for chunk in pixels.chunks_exact(3) {
-        let color = [chunk[0], chunk[1], chunk[2]];
-        let hash = pillow_pixel_hash(color);
-        if let Some(&index) = color_indices.get(&hash) {
-            counts[index] = counts[index].saturating_add(1);
-        } else {
-            let index = colors.len();
-            colors.push(color);
-            counts.push(1);
-            color_indices.insert(hash, index);
+
+    if let Some(token) = token {
+        for (pixel_index, chunk) in pixels.chunks_exact(3).enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            record_rgb_nearest_color(
+                &mut colors,
+                &mut counts,
+                &mut color_indices,
+                [chunk[0], chunk[1], chunk[2]],
+            );
+        }
+    } else {
+        for chunk in pixels.chunks_exact(3) {
+            record_rgb_nearest_color(
+                &mut colors,
+                &mut counts,
+                &mut color_indices,
+                [chunk[0], chunk[1], chunk[2]],
+            );
         }
     }
     let leaves = pillow_median_cut_leaves(&colors, &counts, colors.len().min(256));
@@ -1924,11 +1990,26 @@ fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
             )
         }));
     }
-    let mapped = colors
-        .iter()
-        .enumerate()
-        .map(|(index, color)| find_nearest_from(&palette, color, initial_palette[index]))
-        .collect::<Vec<_>>();
+    let mapped = if let Some(token) = token {
+        let mut mapped = Vec::with_capacity(colors.len());
+        for (color_index, color) in colors.iter().enumerate() {
+            if color_index != 0 && color_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            mapped.push(find_nearest_from(
+                &palette,
+                color,
+                initial_palette[color_index],
+            ));
+        }
+        mapped
+    } else {
+        colors
+            .iter()
+            .enumerate()
+            .map(|(index, color)| find_nearest_from(&palette, color, initial_palette[index]))
+            .collect::<Vec<_>>()
+    };
     let mut used = vec![false; palette.len()];
     for &index in &mapped {
         used[index] = true;
@@ -1941,15 +2022,28 @@ fn quantize_rgb_nearest(pixels: &[u8]) -> (Vec<u8>, Vec<u8>) {
             optimized.push(color);
         }
     }
-    let indices = pixels
-        .chunks_exact(3)
-        .map(|chunk| {
+    let indices = if let Some(token) = token {
+        let mut indices = Vec::with_capacity(pixels.len().div_euclid(3));
+        for (pixel_index, chunk) in pixels.chunks_exact(3).enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
             let color = [chunk[0], chunk[1], chunk[2]];
             let index = color_indices[&pillow_pixel_hash(color)];
-            palette_index(remap[mapped[index]])
-        })
-        .collect();
-    (optimized.into_iter().flatten().collect(), indices)
+            indices.push(palette_index(remap[mapped[index]]));
+        }
+        indices
+    } else {
+        pixels
+            .chunks_exact(3)
+            .map(|chunk| {
+                let color = [chunk[0], chunk[1], chunk[2]];
+                let index = color_indices[&pillow_pixel_hash(color)];
+                palette_index(remap[mapped[index]])
+            })
+            .collect()
+    };
+    Ok((optimized.into_iter().flatten().collect(), indices))
 }
 
 #[derive(Clone)]
