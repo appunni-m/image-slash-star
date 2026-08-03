@@ -13,7 +13,8 @@
 //! 16,384-boolean first-partition bit intervals, 256-bit and 512-bit logical
 //! and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
 //! intervals, JPEG optimized-Huffman frequency coefficients after each 1,024
-//! coefficients and progressive scan block slots after each 1,024 blocks,
+//! coefficients, progressive scan block slots after each 1,024 blocks, and
+//! progressive scan-event frequency items after each 1,024 events,
 //! forward-DCT/quantization blocks, and bitstream stages, and
 //! lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, 256-bit and
