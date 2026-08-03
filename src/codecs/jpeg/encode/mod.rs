@@ -31,6 +31,7 @@ const ZIGZAG: [usize; 64] = [
 ];
 const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
+const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -77,6 +78,56 @@ impl RgbConversionCheckpoint for TokenRgbConversionCheckpoint<'_> {
         if self.pixels_until_checkpoint == 0 {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             self.pixels_until_checkpoint = RGB_TO_YCBCR_CHECKPOINT_PIXELS;
+        }
+        Ok(())
+    }
+}
+
+trait DownsampleCheckpoint {
+    fn row(&mut self) -> CodecResult<()>;
+    fn observe(&mut self) -> CodecResult<()>;
+}
+
+struct NoopDownsampleCheckpoint;
+
+impl DownsampleCheckpoint for NoopDownsampleCheckpoint {
+    #[inline(always)]
+    fn row(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn observe(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenDownsampleCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    pixels_until_checkpoint: usize,
+}
+
+impl<'a> TokenDownsampleCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            pixels_until_checkpoint: DOWNSAMPLE_CHECKPOINT_PIXELS,
+        }
+    }
+}
+
+impl DownsampleCheckpoint for TokenDownsampleCheckpoint<'_> {
+    #[inline]
+    fn row(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn observe(&mut self) -> CodecResult<()> {
+        self.pixels_until_checkpoint = self.pixels_until_checkpoint.saturating_sub(1);
+        if self.pixels_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.pixels_until_checkpoint = DOWNSAMPLE_CHECKPOINT_PIXELS;
         }
         Ok(())
     }
@@ -1059,24 +1110,48 @@ fn downsample(
     vr: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenDownsampleCheckpoint::new(token);
+        downsample_with_checkpoint(plane, sw, sh, dw, dh, hr, vr, &mut checkpoint)
+    } else {
+        let mut checkpoint = NoopDownsampleCheckpoint;
+        downsample_with_checkpoint(plane, sw, sh, dw, dh, hr, vr, &mut checkpoint)
+    }
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the helper mirrors libjpeg's sampling routine and the checkpoint is an independent input"
+)]
+fn downsample_with_checkpoint<C: DownsampleCheckpoint>(
+    plane: &[u8],
+    sw: usize,
+    sh: usize,
+    dw: usize,
+    dh: usize,
+    hr: usize,
+    vr: usize,
+    checkpoint: &mut C,
+) -> CodecResult<Vec<u8>> {
     let mut out = vec![0u8; dw.saturating_mul(dh)];
     if hr == 1 && vr == 1 {
         // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:99-113,145-174.
         // Full-size components duplicate their right and bottom edge samples
         // through the padded DCT extent.
         for y in 0..dh {
-            crate::codecs::error::check_cancelled(token)?;
+            checkpoint.row()?;
             for x in 0..dw {
                 let source_y = y.min(sh.saturating_sub(1));
                 let source_x = x.min(sw.saturating_sub(1));
                 out[y.saturating_mul(dw).saturating_add(x)] =
                     plane[source_y.saturating_mul(sw).saturating_add(source_x)];
+                checkpoint.observe()?;
             }
         }
         return Ok(out);
     }
     for y in 0..dh {
-        crate::codecs::error::check_cancelled(token)?;
+        checkpoint.row()?;
         for x in 0..dw {
             let mut sum = 0u32;
             for vy in 0..vr {
@@ -1101,6 +1176,7 @@ fn downsample(
             let divisor = low_u32(hr.saturating_mul(vr));
             out[y.saturating_mul(dw).saturating_add(x)] =
                 sum.saturating_add(bias).div_euclid(divisor).to_le_bytes()[0];
+            checkpoint.observe()?;
         }
     }
     Ok(out)
