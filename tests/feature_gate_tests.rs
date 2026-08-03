@@ -8913,6 +8913,77 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(sink, vec![0xBF]);
+
+        // GIF RGBA FASTOCTREE palette preparation now charges checkpoints in
+        // pixel accumulation and final index emission. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only work-control
+        // evidence and adds no parity row. The ordinary path and an ample
+        // budget must remain byte-identical.
+        let mut rgba_pixels = Vec::with_capacity(2_048 * 4);
+        for _ in 0..2_048 {
+            rgba_pixels.extend_from_slice(&[128, 64, 32, 255]);
+        }
+        let image = DecodedImage::new(2_048, 1, rgba_pixels, ColorType::Rgba8);
+        let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Gif, &options, &unlimited)?,
+            expected,
+            "an ample GIF RGBA quantization budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(6);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => {
+                return Err("bounded GIF RGBA quantization budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6,
+                observed: 7,
+            }
+        ));
+
+        // The structural sink calls the GIF writer directly, so the same
+        // quantization interval is reached after one fewer dispatcher poll.
+        let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(5);
+        let mut sink = vec![0xC0];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &sink_policy,
+            &mut sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF RGBA quantization sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 5,
+                observed: 6,
+            }
+        ));
+        assert_eq!(sink, vec![0xC0]);
     }
 
     if cfg!(feature = "bmp") {
