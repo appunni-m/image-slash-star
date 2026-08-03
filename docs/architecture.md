@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`eb458390406a8904bd3d435c1d72c7973b57da22`; the claim-ledger baseline remains
+`d238b427d979102f8dd4e09aa4c079f8861eb13c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -463,7 +463,9 @@ PNG adaptive filtering and filtered-row emission charge
 additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. BMP row conversion additionally charges after each 1,024
 pixels. GIF RGB/RGBA palette quantization additionally charges after each 1,024
-pixels while preparing palette/index data; RGBA FASTOCTREE preparation also
+pixels while preparing palette/index data. High-color RGB median-cut preparation
+also charges around hash/order setup, axis ordering, median-cut split stages,
+and 1,024-item split/partition scans. RGBA FASTOCTREE preparation also
 charges after each 1,024-cell, bucket, or lookup-entry interval. GIF LZW charges
 an input-symbol interval for each dictionary-pass input symbol. Lossy WebP VP8 additionally charges after each
 each batch of 1,024 RGB/RGBA-to-YUV conversion items, each batch of 1,024
@@ -482,7 +484,8 @@ instruction-count, transient-memory, or recoverable-OOM accounting.
 Token-aware encode variants are a separate cooperative work-control boundary.
 Still encodes check the token before dispatch and after the codec returns; the
 GIF still writer also polls at its block/frame/coalescing/output-assembly and
-RGB/RGBA palette quantization and fixed RGBA FASTOCTREE cell/bucket/lookup
+RGB/RGBA palette quantization, RGB median-cut hash/order, axis-ordering,
+split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments plus analysis/coefficient-probability/bitstream
@@ -507,7 +510,7 @@ not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including finer WebP bitstream work and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
-row-conversion subsegments, remaining GIF FASTOCTREE bucket-sort/high-color median-cut work
+row-conversion subsegments, remaining GIF FASTOCTREE bucket-sort work
 and LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
 subsegments, and TIFF Deflate path—remain open.

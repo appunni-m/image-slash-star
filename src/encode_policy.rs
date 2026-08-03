@@ -70,8 +70,10 @@ impl EncodePolicy {
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
     /// token-stream intervals. GIF RGB/RGBA palette quantization charges after
-    /// each 1,024 pixels while preparing palette/index data; RGBA FASTOCTREE
-    /// preparation additionally charges after each 1,024-cell, bucket, or
+    /// each 1,024 pixels while preparing palette/index data; high-color RGB
+    /// median-cut preparation additionally charges around hash/order setup,
+    /// axis ordering, split stages, and 1,024-item partition intervals; RGBA
+    /// FASTOCTREE preparation additionally charges after each 1,024-cell, bucket, or
     /// lookup-entry interval; and GIF LZW encoding charges an interval for each
     /// input symbol considered by its dictionary pass.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
