@@ -355,7 +355,7 @@ analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
-adaptation, partition emission, after each 4,096-bit logical first-partition
+adaptation, partition emission, after each 1,024-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
 4,096-bit logical coefficient interval, after each 16,384-boolean coefficient-bit
 interval, and after each
@@ -407,7 +407,7 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 4,096-bit
+mode-selection subsegments plus analysis/coefficient-probability, 1,024-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 4,096-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 and
@@ -429,7 +429,7 @@ beyond the implemented PNG row and token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
-4,096-bit logical first-partition, 16,384-boolean first-partition-bit,
+1,024-bit logical first-partition, 16,384-boolean first-partition-bit,
 4,096-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 1,024-bit logical VP8L bitstream intervals, and VP8L stages,
@@ -2621,7 +2621,7 @@ remains. These implementation and target records remain separate from Pillow
 parity; aggregate coverage includes the ordinary Rust work-budget contract
 incidentally.
 
-Remaining finer VP8 bitstream work beyond its 4,096-bit logical first-partition,
+Remaining finer VP8 bitstream work beyond its 1,024-bit logical first-partition,
 16,384-boolean first-partition/coefficient-bit, and 1,024-byte output intervals;
 finer VP8L bitstream work beyond its 1,024-bit logical and 1,024-byte output
 intervals; other codec interior work, transient allocation accounting,
