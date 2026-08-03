@@ -941,6 +941,7 @@ pub struct SourceDescriptor {
     alpha: Option<SourceAlpha>,
     avif_auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     avif_auxiliary_relationships: Option<Vec<AvifAuxiliaryRelationship>>,
+    avif_grid_item_ids: Option<Vec<u32>>,
     avif_transform: Option<AvifTransformProperties>,
 }
 
@@ -954,6 +955,7 @@ impl SourceDescriptor {
             alpha: None,
             avif_auxiliary_relationship: None,
             avif_auxiliary_relationships: None,
+            avif_grid_item_ids: None,
             avif_transform: None,
         }
     }
@@ -1031,6 +1033,24 @@ impl SourceDescriptor {
         }
     }
 
+    /// Record the ordered source-local item identifiers derived from a
+    /// primary AVIF grid item.
+    ///
+    /// This retains only the bounded `dimg` child list. It does not expose
+    /// tile placement, composition, or decoded pixel transformation.
+    #[must_use]
+    pub fn with_avif_grid_item_ids(mut self, item_ids: Vec<u32>) -> Self {
+        self.avif_grid_item_ids = (!item_ids.is_empty()).then_some(item_ids);
+        self
+    }
+
+    /// Return the ordered source-local item identifiers derived from a
+    /// primary AVIF grid item, when the bounded list is retained.
+    #[must_use]
+    pub fn avif_grid_item_ids(&self) -> &[u32] {
+        self.avif_grid_item_ids.as_deref().unwrap_or(&[])
+    }
+
     /// Record the AVIF item transforms declared by the encoded source.
     ///
     /// These properties describe source presentation metadata only. Decoded
@@ -1054,6 +1074,7 @@ impl SourceDescriptor {
             && self.alpha.is_none()
             && self.avif_auxiliary_relationship.is_none()
             && self.avif_auxiliary_relationships.is_none()
+            && self.avif_grid_item_ids.is_none()
             && self.avif_transform.is_none()
     }
 }

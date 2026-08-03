@@ -1049,6 +1049,10 @@ impl Meta {
         {
             source = source.with_avif_auxiliary_relationships(relationships);
         }
+        let grid_item_ids = self.grid_item_ids(primary)?;
+        if !grid_item_ids.is_empty() {
+            source = source.with_avif_grid_item_ids(grid_item_ids);
+        }
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(primary) {
             match property {
@@ -1083,6 +1087,27 @@ impl Meta {
             source = source.with_avif_transform(transform);
         }
         Ok(source)
+    }
+
+    fn grid_item_ids(&self, primary: u32) -> ParseResult<Vec<u32>> {
+        let item = self
+            .items
+            .iter()
+            .find(|item| item.id == primary)
+            .ok_or_else(|| parse_failure!())?;
+        if item.kind != *b"grid" {
+            return Ok(Vec::new());
+        }
+        let item_ids = self
+            .references
+            .iter()
+            .filter(|reference| reference.kind == *b"dimg" && reference.from_id == primary)
+            .map(|reference| reference.to_id)
+            .collect::<Vec<_>>();
+        if item_ids.is_empty() {
+            return Err(parse_failure!());
+        }
+        Ok(item_ids)
     }
 
     fn associated(&self, item_id: u32) -> impl Iterator<Item = &Property> {
