@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`b4dcba7e2840bf65c829872dc45a2938c5089f48`; the claim-ledger baseline remains
+`54af9374f8e322409ebbd87be46f7c5056c89c50`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -309,10 +309,10 @@ is emitted; the contract proves the resulting typed interior rejection and
 untouched sink. BMP row conversion additionally charges an interior checkpoint
 after each 1,024 pixels; the contract proves ample-budget byte identity and a
 typed whole-buffer rejection, while its direct structural sink preserves the
-validated header prefix before the same interior rejection. GIF RGB quantization
+validated header prefix before the same interior rejection. GIF RGB/RGBA palette quantization
 additionally charges after each 1,024 pixels while preparing palette/index data;
 GIF LZW charges an input-symbol checkpoint inside its dictionary pass. The
-contract proves ample-budget byte identity and typed RGB-quantization rejection
+contract proves ample-budget byte identity and typed RGB/RGBA palette-quantization rejection
 in both whole-buffer and direct-sink paths, as well as the existing LZW
 interior rejection and untouched sink. TIFF Deflate
 additionally charges at each supplied input-row
@@ -364,7 +364,7 @@ preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
 level-six matcher candidate/insertion/fizzle/position boundaries;
 BMP still encoding also polls 1,024-pixel row-conversion subsegments;
 GIF still encoding reuses the GIF block/frame/coalescing/output-assembly
-checkpoints, polls RGB quantization intervals and GIF LZW input-symbol
+checkpoints, polls RGB/RGBA palette quantization intervals and GIF LZW input-symbol
 intervals; WebP still encoding polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments plus analysis/coefficient-probability/bitstream
@@ -414,7 +414,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`b4dcba7e2840bf65c829872dc45a2938c5089f48`, the generated matrix reports:
+`54af9374f8e322409ebbd87be46f7c5056c89c50`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1671,10 +1671,49 @@ token-aware collection/mapping/index intervals (current lines 1859-1860,
 1947-1956, 1993-2005, and 2025-2035); no synthetic coverage-only input was
 added. The aggregate snapshot retains the LLVM segment-normalization warning.
 These are Rust-only implementation and target records separate from Pillow
-parity. Remaining GIF RGBA/octree and high-color RGB quantizer loops, other
+parity. At that RGB-only revision, remaining GIF RGBA/octree and high-color RGB
+quantizer loops, other
 codec interior work, finer WebP bitstream work, transient allocation
 accounting, short-write/rollback, and remaining non-checkpointed work-budget
 semantics remain open.
+
+The current GIF RGBA FASTOCTREE palette-preparation checkpoint slice is
+implemented at `54af9374f8e322409ebbd87be46f7c5056c89c50`. Token-aware RGBA
+preparation now charges after each 1,024-pixel interval while collecting source
+colors, accumulating the fine octree, emitting palette indices, and remapping
+indices during palette compaction. The token is threaded through ordinary frame
+preparation and coalesced full-canvas normalization. Separate no-token branches
+preserve the existing tight loops and encoded bytes. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract proves ample-budget
+byte identity, a typed whole-buffer rejection at the first RGBA quantization
+interval (`maximum: 6`, `observed: 7`), the same direct-sink rejection
+(`maximum: 5`, `observed: 6`), and untouched sink state. Pillow has no caller
+token or work-budget result, so this adds no parity row, fixture, diagnostic
+origin, or coverage-only hook.
+
+Managed Pillow parity run `ca42340a-4676-4d2c-9b18-7204658b05a0` passed
+1,445/1,445 checks with zero failures or skips in 44,513 ms. Feature-matrix run
+`323d2793-2fce-4b45-936e-0ee677a68f0e` passed 991/991 checks in 24,121 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `4b267364-768c-44f6-be61-9116ed5c6e98` passed 85/85 tests in
+74,850 ms and ingested snapshot `a0798493-37c3-4990-9f55-ec2ab1fda92c`,
+reporting 49,565/50,003 lines, 6,850/6,936 branches, 2,756/2,823 functions,
+and 77,069/77,892 regions. Compared with snapshot
+`28da3c58-30d1-4038-bf0f-d4b0a3329cb7`, this adds 45 covered lines (+53 total),
+25 covered branches (+32 total), no function changes, and 90 covered regions
+(+112 total). `src/codecs/gif/encode.rs` reports 2,247/2,393 lines,
+297/328 branches, 145/170 functions, and 3,579/3,811 regions. The new
+managed coverage gap is the token-aware transparent-pixel normalization path
+(current lines 2315-2324), which the contract's opaque RGBA probe intentionally
+does not select. The fixed FASTOCTREE cube-copy, bucket-sort/subtraction, and
+lookup loops, plus the high-color RGB median-cut loops, remain non-checkpointed;
+no synthetic coverage-only input was added. The aggregate snapshot retains the
+LLVM segment-normalization warning. These are Rust-only implementation and
+target records separate from Pillow parity. Remaining fixed GIF octree work,
+high-color RGB quantizer work, other codec interior work, finer WebP bitstream
+work, transient allocation accounting, short-write/rollback, and remaining
+non-checkpointed work-budget semantics remain open.
 
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now

@@ -68,8 +68,8 @@ impl EncodePolicy {
     /// probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
-    /// token-stream intervals. GIF RGB quantization charges after each 1,024
-    /// pixels while preparing palette/index data, and GIF LZW encoding charges
+    /// token-stream intervals. GIF RGB/RGBA palette quantization charges after
+    /// each 1,024 pixels while preparing palette/index data, and GIF LZW encoding charges
     /// an interval for each input symbol considered by its dictionary pass.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.

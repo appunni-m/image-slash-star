@@ -7,8 +7,8 @@
 //! Deflate expansion/Huffman/bitstream/checksum stages, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items and analysis/bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, bitstream, and
-//! bounded backward-reference/token-stream intervals, plus GIF RGB quantization
-//! and LZW input-symbol intervals and BMP row-conversion subsegments) and stop with
+//! bounded backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
+//! quantization and LZW input-symbol intervals and BMP row-conversion subsegments) and stop with
 //! [`ImageError::Cancelled`] without publishing partial state.
 //! The crate remains single-threaded by design, so the token uses `Rc<Cell>`
 //! and adds no synchronization overhead on native or WASM targets.
