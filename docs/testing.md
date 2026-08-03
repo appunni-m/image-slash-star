@@ -198,7 +198,7 @@ correct acceptance boundary. Its executed lines may appear in aggregate LLVM
 coverage, but that execution is not Pillow-parity coverage and no
 coverage-only test is used to manufacture it.
 
-The COR-061 acceptance record was collected against implementation revision
+The original COR-061 acceptance record was collected against implementation revision
 `5c129baba0bfa044b0b79d3842af69736b269519` and is covered by Coverage MCP run
 `4f4cc8a0-c716-4667-8720-f0d96e1b77d5`, snapshot
 `24fe9c12-7cf7-4f2b-ac41-a1eda7e88828`: 72 tests passed with zero failures and
@@ -212,6 +212,20 @@ parity matrix passed 1,434/1,434 checks in run
 These records are separate: the diagnostic test contributes only ordinary
 Rust execution to the aggregate coverage snapshot, not a Pillow diagnostic
 claim.
+
+Current COR-061 revalidation is against implementation revision
+`10609f5020b1e35afabd3a9afad205a48957b5d6`. Managed feature-matrix run
+`967e4e71-4a2c-4113-a4e8-0de8a09a5a4a` passed 991/991 checks; its retained log
+contains 22 successful executions of
+`diagnostic_manifest_matches_the_non_parity_contract`, one per feature lane,
+with no build-directory or package-cache lock-wait matches. Managed Coverage
+MCP run `21545cac-2700-4ba2-863f-bb7770c39df0` passed 85/85 tests in 71,686 ms;
+its retained log explicitly records the same diagnostic contract as `ok` and
+ingested snapshot `d48d6537-f7c4-45ec-9d71-d072315d8eb6`. The current managed
+Pillow parity run `95c1e2f1-2e6f-40df-a07a-d31558580e3e` passed 1,445/1,445
+outer-result checks separately; it contains no diagnostic field or claim.
+These current records revalidate COR-061 without converting Rust-only
+diagnostic execution into Pillow-parity coverage.
 
 The separate `png_unsupported_compressed_metadata_methods_remain_fatal`
 contract covers that Pillow-observable fatal boundary for valid-shape non-zero
