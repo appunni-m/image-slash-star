@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`1378f119a65ebd06f1d848f4757684c83e597444`; the claim-ledger baseline remains
+`f3cf56ca2a562b9f6d6b068747efacf9a1e009f9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -3891,6 +3891,29 @@ retained output ended with `capability tables OK: every native and
 wasm32-wasip1 lane agrees`. The preceding run after invalidating the lane test
 artifacts took 21.20 s. These are local harness observations, not universal
 benchmarks.
+
+Current test-runtime acceptance record: reduced work-budget probe runtime
+
+The test-only runtime slice is implemented at
+`f3cf56ca2a562b9f6d6b068747efacf9a1e009f9`. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` retains every exact WebP
+logical/output boundary, whole-buffer rejection, and untouched direct-sink
+sentinel, while removing redundant ample-budget re-encodes for the late VP8L
+and 512x512 analysis fixtures. Their byte-identity contract is already covered
+by the smaller lossless and basic VP8 probes. The same test uses the first
+1,024-pixel GIF work interval for its palette/normalization probes, a 32x32
+LZW probe, and a tiny two-frame caller-built sequence for sequence admission and
+cancellation. These are Rust-only work-control probes, not Pillow parity rows
+or coverage-only inputs.
+
+Two warm exact all-feature contract repeats passed in 0.52–0.53 s of test-body
+time, compared with 0.59–0.60 s immediately before the change in the same
+workspace. The full all-feature test run passed 82/82 tests, and a warm
+feature-matrix repeat passed all configured native and WASI lanes in 7.93 s,
+ending with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+These are local execution observations, not universal benchmarks; no
+production codec behavior, Pillow manifest row, fixture provenance, diagnostic
+origin, or coverage-only hook changed.
 
 Current acceptance record: WebP 16-bit checkpoints and shared interval traversal
 
