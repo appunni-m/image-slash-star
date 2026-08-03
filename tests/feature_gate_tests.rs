@@ -8354,6 +8354,59 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(partition_bit_sink, vec![0xB4]);
+        // Coefficient-partition output now charges an interior checkpoint
+        // after each 1,024 emitted boolean-coder bytes. This reaches the first
+        // coefficient-output interval after the first-partition bit interval.
+        // Pillow has no caller token, work-budget result, or caller-owned
+        // sink, so this remains Rust-only evidence with no parity row or
+        // coverage-only hook.
+        let output_policy = image_slash_star::EncodePolicy::new().with_max_work_units(589);
+        let output_error = match image_slash_star::encode_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &output_policy,
+        ) {
+            Ok(_) => return Err("bounded WebP output-byte budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            output_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 589,
+                observed: 590,
+            }
+        ));
+        let output_sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(588);
+        let mut output_sink = vec![0xB5];
+        let output_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &output_sink_policy,
+            &mut output_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP output-byte sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            output_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 588,
+                observed: 589,
+            }
+        ));
+        assert_eq!(output_sink, vec![0xB5]);
         assert_eq!(
             image_slash_star::encode_with_policy(
                 &analysis_image,

@@ -17,11 +17,20 @@ use crate::codecs::CodecResult;
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
 const PARTITION_BIT_CHECKPOINT_BITS: usize = 16_384;
+const PARTITION_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait PartitionCheckpointControl {
     fn checkpoint_probability(&mut self) -> CodecResult<()>;
     fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_bit(&mut self) -> CodecResult<()>;
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()>;
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()>;
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>>;
 }
 
 struct NoopPartitionCheckpoint;
@@ -41,6 +50,27 @@ impl PartitionCheckpointControl for NoopPartitionCheckpoint {
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
         Ok(())
     }
+
+    #[inline(always)]
+    fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        writer.encode_bool(probability, value);
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        Ok(writer.finish())
+    }
 }
 
 struct TokenPartitionCheckpoint<'a> {
@@ -48,6 +78,7 @@ struct TokenPartitionCheckpoint<'a> {
     probability_items: usize,
     macroblock_items: usize,
     bit_items: usize,
+    output_bytes: usize,
 }
 
 impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
@@ -83,6 +114,36 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
         }
         Ok(())
     }
+
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()> {
+        let previous = self.output_bytes;
+        self.output_bytes = self.output_bytes.saturating_add(emitted);
+        let mut previous_interval = previous / PARTITION_OUTPUT_CHECKPOINT_BYTES;
+        let current_interval = self.output_bytes / PARTITION_OUTPUT_CHECKPOINT_BYTES;
+        while previous_interval < current_interval {
+            previous_interval = previous_interval.saturating_add(1);
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        writer.encode_bool_with_checkpoint(probability, value, &mut |emitted| {
+            self.checkpoint_output_bytes(emitted)
+        })?;
+        self.checkpoint_bit()
+    }
+
+    #[inline]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        writer.finish_with_checkpoint(|emitted| self.checkpoint_output_bytes(emitted))
+    }
 }
 
 #[inline]
@@ -92,8 +153,7 @@ fn encode_bool<P: PartitionCheckpointControl>(
     value: bool,
     checkpoint: &mut P,
 ) -> CodecResult<()> {
-    writer.encode_bool(probability, value);
-    checkpoint.checkpoint_bit()
+    checkpoint.encode_bool(writer, probability, value)
 }
 
 #[inline]
@@ -493,7 +553,7 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
         params.num_segments > 1,
         checkpoint,
     )?;
-    Ok(writer.finish())
+    checkpoint.finish(writer)
 }
 
 pub(super) fn encode_first_partition(
@@ -510,6 +570,7 @@ pub(super) fn encode_first_partition(
             probability_items: 0,
             macroblock_items: 0,
             bit_items: 0,
+            output_bytes: 0,
         };
         encode_first_partition_with_checkpoint(
             decisions,
