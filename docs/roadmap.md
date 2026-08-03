@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`fb0d1e1cabb23fbdf0d1c64b91bd72f14025f9ed`; the claim-ledger baseline remains
+`18a400a27d0a1c28299cbe1f71fb06dfa732b3b5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -2775,6 +2775,45 @@ finer VP8L bitstream work beyond its 4,096-bit logical and 1,024-byte output
 intervals; other codec interior work, transient allocation accounting,
 short/interrupted output, rollback, and remaining non-checkpointed work-budget
 semantics remain open.
+
+The current lossy VP8 coefficient logical-checkpoint slice is implemented at
+`18a400a27d0a1c28299cbe1f71fb06dfa732b3b5`. Token-aware coefficient boolean
+coding now charges a checkpoint after each 4,096 logical coded bits, while the
+existing 16,384-boolean coefficient-bit boundary and 1,024-byte emitted-output
+boundary remain independently charged. The no-token path remains a
+monomorphized no-op controller. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` uses the constant 512x512
+RGB probe to prove whole-buffer and direct-sink rejection at `maximum: 439`,
+`observed: 440` for the logical coefficient boundary, and retains the existing
+coarser coefficient assertion at `maximum: 401`, `observed: 402`; both sinks
+remain untouched. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this adds no parity row, fixture, diagnostic origin, or
+coverage-only hook.
+
+Managed Pillow parity run `9be396c7-6e6f-4d68-bfa8-73e735319559` passed
+1,445/1,445 checks with zero failures or skips in 44,322 ms. Feature-matrix run
+`4126647e-af51-4b03-854b-1e5e05d7b584` passed 991/991 checks in 103,270 ms;
+its retained log has no `lock-wait` matches and ends with `capability tables OK:
+every native and wasm32-wasip1 lane agrees`. Coverage MCP run
+`9d550c42-c050-4e1c-ac71-97a0e82a7110` passed 85/85 tests in 70,261 ms and
+ingested snapshot `d31517b4-00c5-4de3-9d38-e884424d9fa4`, reporting
+50,390/50,833 lines, 6,992/7,068 branches, 2,807/2,875 functions, and
+78,288/79,229 regions. Compared with snapshot
+`c12ed30e-2e3f-4c80-b8c7-14eb1eae417a`, this adds seven covered lines (+7 total),
+two covered branches (+2 total), no functions, and six covered regions (+7
+total). The VP8 residual file is 337/349 lines, 38/38 branches, 21/21
+functions, and 490/537 regions; its 11 uncovered lines are pre-existing
+defensive/error-propagation or boundary alternatives. The aggregate snapshot
+retains the LLVM segment-normalization warning. These implementation and target
+records remain separate from Pillow parity; aggregate coverage includes the
+ordinary Rust work-budget contract incidentally.
+
+Remaining finer VP8 bitstream work beyond the 4,096-bit logical first-partition
+and coefficient intervals, the 16,384-boolean first-partition/coefficient-bit
+intervals, and the 1,024-byte output intervals; finer VP8L bitstream work beyond
+its 4,096-bit logical and 1,024-byte output intervals; other codec interior work,
+transient allocation accounting, short/interrupted output, rollback, and
+remaining non-checkpointed work-budget semantics remain open.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
