@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`57d5bc3251c43ddc64857463a6faafaa91aaf2d3`; the claim-ledger baseline remains
+`64851f7167099721f05f6cb67872e1a20e5f20e6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -322,6 +322,9 @@ quantization checkpoint after a completed 8x8 block at `maximum: 70`,
 untouched. The patterned 64x64 JPEG probe additionally proves the 1,024-byte
 entropy-output interval rejection at `maximum: 150`, `observed: 151`, in both
 whole-buffer and direct-sink paths with the sink untouched. The
+fixture-derived `large.jpg` JPEG probe additionally proves the chroma-
+downsample output-pixel checkpoint at `maximum: 228`, `observed: 229`, in both
+whole-buffer and direct-sink paths with the sink untouched. The
 contract also proves that a pre-cancelled caller token takes precedence over a
 zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
@@ -400,7 +403,8 @@ still and sequence
 sink delivery polls between validated top-level ISO-BMFF box segments. JPEG's
 codec-local coverage
 drill fires deterministic
-internal RGB-to-YCbCr conversion, row/block/scan, and 1,024-byte entropy-output
+internal RGB-to-YCbCr conversion, chroma-downsample output, row/block/scan, and
+1,024-byte entropy-output
 checkpoints; the public
 test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
@@ -438,8 +442,9 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion and 1,024-byte
-entropy-output intervals, PNG row and token-aware stored-block/all-level Deflate
+beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion, 1,024-pixel
+chroma-downsample output, and 1,024-byte entropy-output intervals, PNG row and
+token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability adaptation and
@@ -3074,7 +3079,7 @@ propagation mappings, not a reason to add a synthetic coverage hook. These
 aggregate and source-provenance records remain separate from Pillow parity, and
 no coverage-only test was added.
 
-Current acceptance record: JPEG forward-DCT/quantization checkpoint
+Earlier acceptance record: JPEG forward-DCT/quantization checkpoint
 
 The JPEG forward-DCT and quantization checkpoint slice is implemented at
 `57d5bc3251c43ddc64857463a6faafaa91aaf2d3`. `FdctCheckpoint` keeps the
@@ -3113,10 +3118,47 @@ the roadmap. The LLVM JSON segment-normalization warning remains. These
 aggregate and source-provenance records remain separate from Pillow parity,
 and no coverage-only test was added.
 
+Current acceptance record: JPEG chroma-downsample checkpoint
+
+The JPEG chroma-downsample checkpoint slice is implemented at
+`64851f7167099721f05f6cb67872e1a20e5f20e6`. `DownsampleCheckpoint` keeps the
+ordinary no-token path on an inline no-op implementation while the token-aware
+path retains the row checks and adds a checkpoint after each 1,024 produced
+chroma pixels in both the full-size and filtered branches. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses the committed
+`tests/fixtures/input/images/jpeg/large.jpg` fixture (257x129), proves ample-
+budget byte identity, and rejects at `maximum: 228`, `observed: 229` in both
+whole-buffer and direct-sink paths; the direct sink remains `[0x5e]`. Pillow
+has no caller token, work-budget result, or caller-owned sink, so this is
+Rust-only resource-contract evidence: no parity row, parity fixture,
+diagnostic origin, new test function, or coverage-only hook was added.
+
+Managed Pillow parity run `a98203b5-3334-4267-b1fc-7897c55793bb` passed
+1,445/1,445 checks with zero failures or skips in 44,943 ms. The exact-head
+feature-matrix run `d3b167c1-6363-464d-abbe-94e4a7746385` passed 991/991
+checks in 50,749 ms; its retained log records
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+`lock-wait` match.
+
+Coverage MCP run `fe8d2ba4-ca03-4a24-857a-43dd910f5378` passed 85/85 tests
+in 101,186 ms and ingested snapshot
+`05d26dbd-c771-4e9c-bad6-2cad7dedb802`, reporting 51,353/51,833 lines,
+7,089/7,182 branches, 2,883/2,953 functions, and 79,674/80,753 regions.
+Against the prior accepted snapshot
+`a4c6cea0-6547-4ea4-9367-646832657586`, covered totals increased by 40 lines,
+4 branches, 6 functions, and 51 regions; source totals grew by 40 lines,
+4 branches, 6 functions, and 56 regions. The JPEG file is 1,414/1,477 lines,
+182/202 branches, 76/81 functions, and 2,295/2,373 regions covered, with 31
+uncovered lines and 21 partial branch lines. The line-only comparison retains
+19 displaced changed-to-uncovered JPEG line records from LLVM source remapping;
+the new downsample checkpoint functions and lines are covered. The
+segment-normalization warning remains, and no coverage-only test was added.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
-the current 1,024-pixel RGB-to-YCbCr, completed 8x8 JPEG
+the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, and 1,024-byte entropy intervals, other codec
 interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.
