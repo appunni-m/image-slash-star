@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`54af9374f8e322409ebbd87be46f7c5056c89c50`; the claim-ledger baseline remains
+`eb458390406a8904bd3d435c1d72c7973b57da22`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -2094,6 +2094,43 @@ high-color RGB quantizer work, other codec interior work, finer WebP bitstream
 work, transient allocation accounting, short-write/rollback, and remaining
 non-checkpointed work-budget semantics remain open.
 
+The current GIF RGBA FASTOCTREE fixed-cell checkpoint slice is implemented at
+`eb458390406a8904bd3d435c1d72c7973b57da22`. Token-aware RGBA preparation now
+charges after each 1,024-cell, bucket, or lookup-entry interval while copying
+fine/coarse octree cubes, subtracting bucket ranges, and building coarse/fine
+lookup cubes. Separate no-token branches preserve the previous tight loops and
+encoded bytes. The Rust-only `encode_work_budget_is_a_non_parity_result_contract`
+contract proves ample-budget byte identity, typed whole-buffer rejection at the
+first RGBA octree cell interval (`maximum: 6`, `observed: 7`), the same direct-
+sink rejection (`maximum: 5`, `observed: 6`), and untouched sink state. Pillow
+has no caller token or work-budget result, so this adds no parity row, fixture,
+diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `0b64a36b-fec3-4d83-949a-432bc903c937` passed
+1,445/1,445 checks with zero failures or skips in 42,406 ms. Feature-matrix run
+`0a721689-c4b3-41fa-917e-642053d25cdb` passed 991/991 checks in 23,962 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `6e473598-4246-40f6-a3ae-78d26883939b` passed 85/85 tests in
+72,760 ms and ingested snapshot `7398b4ba-7c01-4fed-8538-d6747853ffa7`,
+reporting 49,622/50,063 lines, 6,868/6,956 branches, 2,758/2,825 functions,
+and 77,172/78,005 regions. Compared with snapshot
+`a0798493-37c3-4990-9f55-ec2ab1fda92c`, this adds 57 covered lines (+60 total),
+18 covered branches (+20 total), two covered functions (+2 total), and 103
+covered regions (+113 total). `src/codecs/gif/encode.rs` reports 2,304/2,453
+lines, 315/348 branches, 147/172 functions, and 3,682/3,924 regions. The new
+managed gaps are the 1,024-entry cancellation edges in token-aware bucket
+subtraction and lookup (current lines 2735-2736 and 2769-2770), plus the
+second coarse-reduction call at line 2819; transparent-pixel normalization
+remains uncovered at lines 2315-2324. The FASTOCTREE bucket-sort and high-color
+RGB median-cut loops remain non-checkpointed; no synthetic coverage-only input
+was added. The aggregate snapshot retains the LLVM segment-normalization
+warning. These are Rust-only implementation and target records separate from
+Pillow parity. Remaining GIF bucket-sort work, transparent-normalization
+coverage, high-color RGB quantizer work, other codec interior work, finer WebP
+bitstream work, transient allocation accounting, short-write/rollback, and
+remaining non-checkpointed work-budget semantics remain open.
+
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now
 charges checkpoints around pixel conversion, entropy analysis, transform
@@ -2361,7 +2398,7 @@ remaining non-checkpointed work-budget semantics remain open.
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
    beyond the implemented PNG 1,024-byte row, BMP row-conversion subsegments,
-   remaining fixed FASTOCTREE cube-copy, bucket-sort/subtraction/lookup loops, transparent-normalization coverage, and high-color RGB median-cut loops, TIFF Deflate
+   remaining fixed FASTOCTREE bucket-sort loops, transparent-normalization coverage, and high-color RGB median-cut loops, TIFF Deflate
    matcher/emission, and WebP bitstream stages, remaining
    work-budget semantics, and short-write/rollback cleanup. Keep
    allocation accounting and structural writing as distinct open resource
@@ -2439,7 +2476,7 @@ with PNG retaining filtered/compressed
 working buffers, BMP preparing bounded palette/row segments, ICO retaining its
 embedded payload, and TIFF retaining its complete page/compressed-pixel
 working state. Transient encoded-output allocation, interior interruption
-beyond the implemented PNG row, BMP row-conversion, GIF RGB/RGBA palette/index intervals and LZW input-symbol, remaining fixed GIF octree/high-color median-cut work, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
+beyond the implemented PNG row, BMP row-conversion, GIF RGB/RGBA palette/index intervals, RGBA FASTOCTREE cell/bucket/lookup intervals, and LZW input-symbol, remaining fixed GIF FASTOCTREE bucket-sort/high-color median-cut work, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
 subsegments, and WebP VP8/VP8L stages, finer WebP bitstream work,
 remaining work-budget semantics, and short-write/rollback cleanup remain the next resource/I/O
 boundaries.
