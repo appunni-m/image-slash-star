@@ -22,6 +22,7 @@ pub fn decode(
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
+    let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -57,6 +58,12 @@ pub fn decode(
     } else {
         image
     };
+    let image = if grid_item_ids.is_empty() {
+        image
+    } else {
+        let source = image.source.clone().with_avif_grid_item_ids(grid_item_ids);
+        image.with_source_descriptor(source)
+    };
     Ok((
         image
             .with_opaque_blocks(retained_boxes)
@@ -80,6 +87,7 @@ pub fn decode_sequence(
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
+    let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -108,6 +116,16 @@ pub fn decode_sequence(
                 .source
                 .clone()
                 .with_avif_auxiliary_relationship(relationship);
+            frame.image.source = source;
+        }
+    }
+    if !grid_item_ids.is_empty() {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_grid_item_ids(grid_item_ids.clone());
             frame.image.source = source;
         }
     }

@@ -1666,6 +1666,10 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             );
         } else if name == "avif opaque" {
             assert!(
+                info.source.avif_grid_item_ids().is_empty(),
+                "{name} inspect grid item IDs"
+            );
+            assert!(
                 info.source.avif_auxiliary_relationships().is_empty(),
                 "{name} inspect auxiliary relationships"
             );
@@ -1705,12 +1709,22 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             expected.as_slice(),
             "grid inspect auxiliary relationships"
         );
+        assert_eq!(
+            inspected.source.avif_grid_item_ids(),
+            [2, 3].as_slice(),
+            "grid inspect derived item IDs"
+        );
 
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(
             decoded.content.source.avif_auxiliary_relationships(),
             expected.as_slice(),
             "grid decode auxiliary relationships"
+        );
+        assert_eq!(
+            decoded.content.source.avif_grid_item_ids(),
+            [2, 3].as_slice(),
+            "grid decode derived item IDs"
         );
         let sequence = image_slash_star::decode_sequence(&bytes)?;
         assert_eq!(
@@ -1720,6 +1734,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_auxiliary_relationships(),
             expected.as_slice(),
             "grid sequence auxiliary relationships"
+        );
+        assert_eq!(
+            sequence.content.frames[0].image.source.avif_grid_item_ids(),
+            [2, 3].as_slice(),
+            "grid sequence derived item IDs"
         );
     }
     Ok(())
