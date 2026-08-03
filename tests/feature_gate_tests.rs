@@ -1617,7 +1617,18 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(decoded.content.source.alpha(), expected, "{name} decode");
         if name == "avif auxiliary alpha" {
-            let expected_relationship = Some(AvifAuxiliaryRelationship::new(2, 1));
+            let relationship = AvifAuxiliaryRelationship::new(2, 1);
+            assert_eq!(
+                relationship.auxiliary_item_id(),
+                2,
+                "{name} auxiliary item identity"
+            );
+            assert_eq!(
+                relationship.target_item_id(),
+                1,
+                "{name} auxiliary target identity"
+            );
+            let expected_relationship = Some(relationship);
             assert_eq!(
                 info.source.avif_auxiliary_relationship(),
                 expected_relationship,
