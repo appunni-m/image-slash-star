@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`4bccbfe102d80c94a492a270a6605d5aaad4c645`; the claim-ledger baseline remains
+`bf9dda0de0ce8214cf525ccdba395fa99246d8a6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -3022,6 +3022,41 @@ and 1,024-byte output intervals; finer VP8L bitstream work beyond its 1,024-bit
 logical and 1,024-byte output intervals; other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
+
+The native AVIF auxiliary-alpha provenance slice is implemented at
+`bf9dda0de0ce8214cf525ccdba395fa99246d8a6`. The AVIF item graph now maps an
+alpha auxiliary item to `SourceAlpha::Auxiliary` in native inspection, still
+decode, and sequence decode. The committed `alpha.avif` fixture is asserted by
+the feature-gated integration contract
+`source_alpha_matches_the_container_contract`; this is Rust source-provenance
+evidence, not a Pillow-parity row or a unit/coverage-only test. Pillow's parity
+schema has no source descriptor or auxiliary-item provenance field, so parity
+cannot express this contract; its unchanged result below is retained only as
+outer-output regression evidence. Decoded normalized RGBA bytes are unchanged.
+
+Managed Pillow parity run `002ee279-806e-4de5-acb9-3485f009c2a1` passed
+1,445/1,445 checks with zero failures or skips in 41,696 ms. Feature-matrix run
+`b204b2a7-d4f4-470c-b6aa-3698ff3a97d1` passed 991/991 checks in 7,053 ms and
+retained `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `712ff626-3b86-4cb5-aaf2-14b554761541` passed 85/85 tests in
+49,016 ms and ingested snapshot `8e804ce4-ac81-4386-a283-c77a12dec7c5`:
+50,813/51,279 lines, 7,012/7,096 branches, 2,828/2,897 functions, and
+78,967/80,004 regions. Compared with snapshot
+`dcaab996-685d-4470-ae30-a8d96790261f`, there is no line regression or
+changed-to-uncovered line; the aggregate adds two covered/total branches and
+five covered/total regions. The AVIF container and decode files are fully
+covered in this snapshot. The LLVM normalization warning remains, and the
+coverage-origin verifier still accounts for all 219 exact guards without
+assigning any to Pillow parity.
+
+The completed portion removes auxiliary alpha from the open provenance gap.
+Remaining API-019/034/040 work is non-alpha auxiliary item properties and
+relationships, item identity/plane-range/quality details, premultiplication,
+and invisible RGB semantics. The runtime-first matrix check remains the
+cache-aware scheduler at `3a24dd85e507a777492267dfd13a01c508f392d3`; the
+current revision is green at 991/991 in 7,053 ms managed, while a cold local
+shared-target experiment exceeded 150 seconds because Cargo serialized
+competing feature builds, so the isolated-lane default remains in place.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
