@@ -8,6 +8,7 @@ use super::{
     intra16::{self, Intra16Candidate, Intra16Mode},
     quant::{SegmentMatrices, libwebp_segment_matrices},
 };
+use crate::codecs::CodecResult;
 
 const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 7)
@@ -23,6 +24,7 @@ const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 22)
     | (1 << 23)
     | (1 << 24);
+const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum LumaDecision {
@@ -45,6 +47,15 @@ pub(super) struct MacroblockDecision {
     pub(super) rate_cost: u32,
     pub(super) score: u64,
     pub(super) nonzero: u32,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct FrameSelectionOptions<'a> {
+    pub(super) quality: f64,
+    pub(super) method: u8,
+    pub(super) coefficient_probabilities: &'a [[[[u8; 11]; 3]; 8]; 4],
+    pub(super) trellis: bool,
+    pub(super) token: Option<&'a crate::CancellationToken>,
 }
 
 fn bit(value: u32, index: usize) -> u8 {
@@ -111,11 +122,15 @@ pub(super) fn select_frame(
     planes: [&[u8]; 3],
     dimensions: (usize, usize),
     analysis: &FrameAnalysis,
-    quality: f64,
-    method: u8,
-    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
-    trellis: bool,
-) -> Vec<MacroblockDecision> {
+    options: FrameSelectionOptions<'_>,
+) -> CodecResult<Vec<MacroblockDecision>> {
+    let FrameSelectionOptions {
+        quality,
+        method,
+        coefficient_probabilities,
+        trellis,
+        token,
+    } = options;
     let [y_plane, u_plane, v_plane] = planes;
     let (width, height) = dimensions;
     assert_eq!(width % 16, 0);
@@ -140,6 +155,7 @@ pub(super) fn select_frame(
         vec![Intra4Mode::Dc; mode_stride.wrapping_mul(macroblock_height).wrapping_mul(4)];
     let mut top_errors = vec![[[0i8; 2]; 2]; macroblock_width];
     let mut decisions = Vec::with_capacity(macroblock_width.wrapping_mul(macroblock_height));
+    let mut selection_items = 0usize;
 
     for macroblock_y in 0..macroblock_height {
         let mut y_left = [129; 16];
@@ -387,7 +403,11 @@ pub(super) fn select_frame(
                 left_errors =
                     store_diffusion_errors(decision.chroma.errors, &mut top_errors[macroblock_x]);
             }
+            selection_items = selection_items.saturating_add(1);
+            if selection_items.is_multiple_of(SELECTION_CHECKPOINT_MACROBLOCKS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
-    decisions
+    Ok(decisions)
 }

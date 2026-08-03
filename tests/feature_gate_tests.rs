@@ -8352,6 +8352,56 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(analysis_sink, vec![0xAB]);
+
+        // The following selection pass now charges its own 1,024-macroblock
+        // interior checkpoint. The preceding analysis checkpoint is allowed
+        // through, so the next charge is observed as 330. This remains
+        // Rust-only work-control evidence with no parity row or coverage-only
+        // hook.
+        let selection_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(329);
+        let selection_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &selection_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP selection budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            selection_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 329,
+                observed: 330,
+            }
+        ));
+        let mut selection_sink = vec![0xAC];
+        let selection_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &selection_bounded,
+            &mut selection_sink,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP selection sink budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            selection_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 329,
+                observed: 330,
+            }
+        ));
+        assert_eq!(selection_sink, vec![0xAC]);
     }
 
     if cfg!(feature = "gif") {
