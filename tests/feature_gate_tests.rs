@@ -9125,6 +9125,86 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample GIF varied-RGBA bucket-sort budget preserves byte identity"
         );
 
+        // Transparent-pixel RGB normalization is part of Pillow-compatible
+        // FASTOCTREE preparation. This real RGBA work-control probe exercises
+        // the token-aware normalization interval without adding a parity row.
+        let mut transparent_pixels = Vec::with_capacity(2_048 * 4);
+        for index in 0..2_048u32 {
+            transparent_pixels.extend_from_slice(&[
+                u8::try_from(index & 0xff)?,
+                u8::try_from((index >> 8) & 0xff)?,
+                u8::try_from((index >> 16) & 0xff)?,
+                0,
+            ]);
+        }
+        let transparent_image = DecodedImage::new(2_048, 1, transparent_pixels, ColorType::Rgba8);
+        let transparent_expected =
+            image_slash_star::encode(&transparent_image, ImageFormat::Gif, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &transparent_image,
+                ImageFormat::Gif,
+                &options,
+                &unlimited,
+            )?,
+            transparent_expected,
+            "an ample GIF transparent-normalization budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let error = match image_slash_star::encode_with_policy(
+            &transparent_image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF transparent-normalization budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+
+        let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(1);
+        let mut sink = vec![0xC4];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &transparent_image,
+            ImageFormat::Gif,
+            &options,
+            &sink_policy,
+            &mut sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF transparent-normalization sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1,
+                observed: 2,
+            }
+        ));
+        assert_eq!(sink, vec![0xC4]);
+
         // GIF high-color RGB median-cut preparation now charges its hash/order,
         // axis, split, and partition scans. This is a real Rust-only
         // work-control contract: Pillow has no caller token or work-budget
