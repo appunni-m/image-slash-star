@@ -3254,11 +3254,12 @@ row, fixture, diagnostic origin, or coverage-only hook.
 The runtime-first matrix slice keeps feature lanes isolated, avoids the shared
 Cargo lock, and propagates native/WASI child failures instead of masking them
 behind capability-table output. Warm retained roots on the measured
-12-logical-CPU host now use two Cargo build workers per lane; explicit
+12-logical-CPU host now use one Cargo build worker per lane; explicit
 overrides remain available. The exact-head managed matrix passed 991/991 in
-52,870 ms, and its retained log ends with the native/WASI capability agreement
-marker with no lock-wait matches. These are execution measurements, not
-controlled universal benchmarks.
+46,976 ms, down from the preceding 52,870 ms run at the same scope, and its
+retained log ends with the native/WASI capability agreement marker with no
+build-directory or package-cache lock-wait match. These are execution
+measurements, not controlled universal benchmarks.
 
 Managed Pillow parity run `95fa9817-5693-4a82-9188-3e2de83af18f` passed
 1,445/1,445 checks with zero failures or skips in 45,497 ms. Feature-matrix run
