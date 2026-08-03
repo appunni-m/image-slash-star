@@ -8227,6 +8227,79 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             } if observed > 8_192
         ));
 
+        // The VP8L boolean bitstream now charges each 1,024-byte output
+        // interval. This patterned probe reaches the first interval only
+        // after the earlier lossless stages, so the exact rejection proves
+        // that output emission—not a parity fixture or a synthetic coverage
+        // hook—owns this boundary. Pillow has no caller work budget or sink.
+        let mut output_lossless_pixels = Vec::with_capacity(128 * 128 * 3);
+        for index in 0..128 * 128 {
+            let x = u8::try_from(index % 128)?;
+            let y = u8::try_from(index / 128)?;
+            output_lossless_pixels.extend_from_slice(&[
+                x.wrapping_mul(3) ^ y.wrapping_mul(5),
+                x.wrapping_add(y.wrapping_mul(7)),
+                x.wrapping_mul(11).wrapping_add(y),
+            ]);
+        }
+        let output_lossless_image =
+            DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
+        let output_lossless_expected =
+            image_slash_star::encode(&output_lossless_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &output_lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &lossless_unlimited,
+            )?,
+            output_lossless_expected,
+            "an ample VP8L output budget preserves byte identity"
+        );
+        let output_checkpoint_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_000);
+        let output_checkpoint_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &output_checkpoint_policy,
+        ) {
+            Ok(_) => return Err("VP8L output checkpoint budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            output_checkpoint_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 56_000,
+                observed: 56_001,
+            }
+        ));
+        let mut output_checkpoint_sink = vec![0xAA];
+        let output_checkpoint_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &output_checkpoint_policy,
+            &mut output_checkpoint_sink,
+        ) {
+            Ok(_) => return Err("VP8L output checkpoint sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            output_checkpoint_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 56_000,
+                observed: 56_001,
+            }
+        ));
+        assert_eq!(output_checkpoint_sink, vec![0xAA]);
+
         // Lossy VP8 RGB-to-YUV conversion now charges an interior checkpoint
         // after each 1,024 conversion items. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence and adds no

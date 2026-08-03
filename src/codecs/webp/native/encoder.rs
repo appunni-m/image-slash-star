@@ -63,14 +63,52 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
     }
 }
 
-struct BitWriter<'a> {
+const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+
+trait BitWriterCheckpoint: Clone {
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError>;
+}
+
+#[derive(Clone, Copy, Default)]
+struct NoopBitWriterCheckpoint;
+
+impl BitWriterCheckpoint for NoopBitWriterCheckpoint {
+    #[inline(always)]
+    fn checkpoint_output_bytes(&mut self, _emitted: usize) -> Result<(), EncodingError> {
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+struct TokenBitWriterCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    output_bytes: usize,
+}
+
+impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError> {
+        let previous = self.output_bytes;
+        self.output_bytes = self.output_bytes.saturating_add(emitted);
+        let mut previous_interval = previous / VP8L_OUTPUT_CHECKPOINT_BYTES;
+        let current_interval = self.output_bytes / VP8L_OUTPUT_CHECKPOINT_BYTES;
+        while previous_interval < current_interval {
+            previous_interval = previous_interval.saturating_add(1);
+            check_token(Some(self.token))?;
+        }
+        Ok(())
+    }
+}
+
+struct BitWriter<'a, C: BitWriterCheckpoint> {
     writer: &'a mut Vec<u8>,
     buffer: u64,
     nbits: u8,
+    checkpoint: C,
 }
 
-impl BitWriter<'_> {
-    fn write_bits(&mut self, bits: u64, nbits: u8) {
+impl<C: BitWriterCheckpoint> BitWriter<'_, C> {
+    #[inline(always)]
+    fn write_bits_unchecked(&mut self, bits: u64, nbits: u8) {
         debug_assert!(nbits <= 64);
 
         self.buffer |= bits << self.nbits;
@@ -84,9 +122,18 @@ impl BitWriter<'_> {
         debug_assert!(self.nbits < 64);
     }
 
-    fn flush(&mut self) {
+    #[inline(always)]
+    fn write_bits(&mut self, bits: u64, nbits: u8) -> Result<(), EncodingError> {
+        let before = self.writer.len();
+        self.write_bits_unchecked(bits, nbits);
+        self.checkpoint
+            .checkpoint_output_bytes(self.writer.len().saturating_sub(before))
+    }
+
+    #[inline(always)]
+    fn flush_unchecked(&mut self) {
         if !self.nbits.is_multiple_of(8) {
-            self.write_bits(0, 8 - self.nbits % 8);
+            self.write_bits_unchecked(0, 8 - self.nbits % 8);
         }
         if self.nbits > 0 {
             self.writer
@@ -94,6 +141,14 @@ impl BitWriter<'_> {
             self.buffer = 0;
             self.nbits = 0;
         }
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> Result<(), EncodingError> {
+        let before = self.writer.len();
+        self.flush_unchecked();
+        self.checkpoint
+            .checkpoint_output_bytes(self.writer.len().saturating_sub(before))
     }
 }
 
@@ -340,8 +395,8 @@ fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
     tokens
 }
 
-fn write_huffman_tree(
-    w: &mut BitWriter<'_>,
+fn write_huffman_tree<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
@@ -356,17 +411,17 @@ fn write_huffman_tree(
         .collect::<Vec<_>>();
     if symbols.len() <= 2 && symbols.iter().all(|&symbol| symbol < 256) {
         let first = symbols.first().copied().unwrap_or(0);
-        w.write_bits(1, 1);
-        w.write_bits(u64::from(symbols.len() == 2), 1);
+        w.write_bits(1, 1)?;
+        w.write_bits(u64::from(symbols.len() == 2), 1)?;
         if first <= 1 {
-            w.write_bits(0, 1);
-            w.write_bits(first as u64, 1);
+            w.write_bits(0, 1)?;
+            w.write_bits(first as u64, 1)?;
         } else {
-            w.write_bits(1, 1);
-            w.write_bits(first as u64, 8);
+            w.write_bits(1, 1)?;
+            w.write_bits(first as u64, 8)?;
         }
         if symbols.len() == 2 {
-            w.write_bits(symbols[1] as u64, 8);
+            w.write_bits(symbols[1] as u64, 8)?;
         }
         lengths.fill(0);
         codes.fill(0);
@@ -396,15 +451,15 @@ fn write_huffman_tree(
     ];
 
     // Write the huffman tree
-    w.write_bits(0, 1); // normal huffman tree
+    w.write_bits(0, 1)?; // normal huffman tree
     let mut codes_to_store = 19;
     while codes_to_store > 4 && code_length_lengths[CODE_LENGTH_ORDER[codes_to_store - 1]] == 0 {
         check_token(token)?;
         codes_to_store -= 1;
     }
-    w.write_bits((codes_to_store - 4) as u64, 4);
+    w.write_bits((codes_to_store - 4) as u64, 4)?;
     for &symbol in &CODE_LENGTH_ORDER[..codes_to_store] {
-        w.write_bits(u64::from(code_length_lengths[symbol]), 3);
+        w.write_bits(u64::from(code_length_lengths[symbol]), 3)?;
     }
 
     if code_length_lengths
@@ -434,15 +489,15 @@ fn write_huffman_tree(
         };
     }
     let write_trimmed = trailing_zero_bits > 12;
-    w.write_bits(u64::from(write_trimmed), 1);
+    w.write_bits(u64::from(write_trimmed), 1)?;
     let token_count = if write_trimmed {
         if trimmed_length == 2 {
-            w.write_bits(0, 5);
+            w.write_bits(0, 5)?;
         } else {
             let nbits = (trimmed_length - 2).ilog2() as usize;
             let pairs = nbits / 2 + 1;
-            w.write_bits((pairs - 1) as u64, 3);
-            w.write_bits((trimmed_length - 2) as u64, (pairs * 2) as u8);
+            w.write_bits((pairs - 1) as u64, 3)?;
+            w.write_bits((trimmed_length - 2) as u64, (pairs * 2) as u8)?;
         }
         trimmed_length
     } else {
@@ -453,14 +508,14 @@ fn write_huffman_tree(
         let symbol = usize::from(huffman_token.code);
         let code = u64::from(code_length_codes[symbol]);
         let code_length = code_length_lengths[symbol];
-        w.write_bits(code, code_length);
+        w.write_bits(code, code_length)?;
         let bits = match huffman_token.code {
             16 => 2,
             17 => 3,
             18 => 7,
             _ => 0,
         };
-        w.write_bits(u64::from(huffman_token.extra), bits);
+        w.write_bits(u64::from(huffman_token.extra), bits)?;
     }
     Ok(())
 }
@@ -487,8 +542,8 @@ fn channels(pixel: u32) -> [usize; 4] {
     ]
 }
 
-fn write_image_stream(
-    w: &mut BitWriter<'_>,
+fn write_image_stream<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
@@ -499,8 +554,8 @@ fn write_image_stream(
 
 // `backward_refs::candidates` always returns at least one crunch configuration.
 #[allow(clippy::too_many_arguments, clippy::unwrap_used)]
-fn write_image_stream_configured(
-    w: &mut BitWriter<'_>,
+fn write_image_stream_configured<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
@@ -521,14 +576,16 @@ fn write_image_stream_configured(
     let initial_bytes = w.writer.clone();
     let initial_buffer = w.buffer;
     let initial_nbits = w.nbits;
-    let mut best: Option<(usize, Vec<u8>, u64, u8)> = None;
+    let initial_checkpoint = w.checkpoint.clone();
+    let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
     for (tokens, cache_bits) in candidates {
         let mut bytes = initial_bytes.clone();
-        let (byte_length, buffer, nbits) = {
+        let (byte_length, buffer, nbits, checkpoint) = {
             let mut trial = BitWriter {
                 writer: &mut bytes,
                 buffer: initial_buffer,
                 nbits: initial_nbits,
+                checkpoint: initial_checkpoint.clone(),
             };
             write_token_stream(
                 &mut trial,
@@ -543,23 +600,26 @@ fn write_image_stream_configured(
                 },
                 token,
             )?;
+            let checkpoint = trial.checkpoint.clone();
             (
                 trial.writer.len() + usize::from(trial.nbits).div_ceil(8),
                 trial.buffer,
                 trial.nbits,
+                checkpoint,
             )
         };
         if best
             .as_ref()
             .is_none_or(|(best_length, ..)| byte_length < *best_length)
         {
-            best = Some((byte_length, bytes, buffer, nbits));
+            best = Some((byte_length, bytes, buffer, nbits, checkpoint));
         }
     }
-    let (_, bytes, buffer, nbits) = best.unwrap();
+    let (_, bytes, buffer, nbits, checkpoint) = best.unwrap();
     *w.writer = bytes;
     w.buffer = buffer;
     w.nbits = nbits;
+    w.checkpoint = checkpoint;
     Ok(())
 }
 
@@ -642,8 +702,8 @@ fn optimize_sampling(
     Ok(best_bits)
 }
 
-fn write_group(
-    w: &mut BitWriter<'_>,
+fn write_group<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     populations: &[Vec<u32>; 5],
     token: Option<&crate::CancellationToken>,
 ) -> Result<GroupCodes, EncodingError> {
@@ -663,8 +723,8 @@ fn write_group(
     Ok(GroupCodes { lengths, codes })
 }
 
-fn write_token_stream(
-    w: &mut BitWriter<'_>,
+fn write_token_stream<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
@@ -678,9 +738,9 @@ fn write_token_stream(
         histogram_bits,
         quality,
     } = config;
-    w.write_bits(u64::from(cache_bits != 0), 1);
+    w.write_bits(u64::from(cache_bits != 0), 1)?;
     if cache_bits != 0 {
-        w.write_bits(u64::from(cache_bits), 4);
+        w.write_bits(u64::from(cache_bits), 4)?;
     }
     let height = pixels.len() / width;
     let (mut symbols, histograms) = if write_meta_huffman_bit {
@@ -700,11 +760,11 @@ fn write_token_stream(
     let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
     let mut encoded_histogram_bits = histogram_bits;
     if write_meta_huffman_bit {
-        w.write_bits(u64::from(multiple_groups), 1);
+        w.write_bits(u64::from(multiple_groups), 1)?;
         if multiple_groups {
             encoded_histogram_bits =
                 optimize_sampling(&mut symbols, width, height, histogram_bits, 9, token)?;
-            w.write_bits(u64::from(encoded_histogram_bits - 2), 3);
+            w.write_bits(u64::from(encoded_histogram_bits - 2), 3)?;
             let meta_pixels = symbols
                 .iter()
                 .map(|&symbol| u32::from(symbol) << 8)
@@ -756,24 +816,24 @@ fn write_token_stream(
                     | (u64::from(codes[1][red]) << green_length)
                     | (u64::from(codes[2][blue]) << (green_length + red_length))
                     | (u64::from(codes[3][alpha]) << (green_length + red_length + blue_length));
-                w.write_bits(code, green_length + red_length + blue_length + alpha_length);
+                w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
                 position += 1;
             }
             backward_refs::Token::Copy { distance, length } => {
                 let (symbol, extra_bits) = length_to_symbol(length);
                 let symbol = 256 + symbol;
-                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol]);
-                w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits);
+                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
+                w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
                 let distance = backward_refs::plane_code(width, distance);
                 let (symbol, extra_bits) = length_to_symbol(distance);
-                w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol]);
+                w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
                 let distance_extra_bits = ((distance - 1) & ((1 << extra_bits) - 1)) as u64;
-                w.write_bits(distance_extra_bits, extra_bits);
+                w.write_bits(distance_extra_bits, extra_bits)?;
                 position += length;
             }
             backward_refs::Token::Cache(index) => {
                 let symbol = 280 + index;
-                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol]);
+                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
                 position += 1;
             }
         }
@@ -999,8 +1059,8 @@ fn subtract_green(pixels: &mut [u32]) {
 
 // The palette is constructed from the same pixel set being packed.
 #[allow(clippy::unwrap_used)]
-fn apply_palette(
-    w: &mut BitWriter<'_>,
+fn apply_palette<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
     height: usize,
@@ -1014,9 +1074,9 @@ fn apply_palette(
     } else {
         palette.len()
     };
-    w.write_bits(1, 1);
-    w.write_bits(3, 2);
-    w.write_bits((encoded_length - 1) as u64, 8);
+    w.write_bits(1, 1)?;
+    w.write_bits(3, 2)?;
+    w.write_bits((encoded_length - 1) as u64, 8)?;
     let mut previous = 0;
     let palette_delta = palette[..encoded_length]
         .iter()
@@ -1051,7 +1111,7 @@ fn apply_palette(
             packed.push(packed_pixel);
         }
     }
-    w.write_bits(0, 1);
+    w.write_bits(0, 1)?;
     let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
     write_image_stream_configured(
         w,
@@ -1063,6 +1123,110 @@ fn apply_palette(
         maximum_cache_bits,
         token,
     )
+}
+
+fn encode_frame_stream<C: BitWriterCheckpoint>(
+    pixels: &mut [u32],
+    width: u32,
+    height: u32,
+    is_alpha: bool,
+    entropy_mode: EntropyMode,
+    red_and_blue_zero: bool,
+    transform_bits: u8,
+    palette: Vec<u32>,
+    token: Option<&crate::CancellationToken>,
+    checkpoint: C,
+) -> Result<Vec<u8>, EncodingError> {
+    let mut frame = Vec::new();
+    {
+        let w = &mut BitWriter {
+            writer: &mut frame,
+            buffer: 0,
+            nbits: 0,
+            checkpoint,
+        };
+        w.write_bits(0x2f, 8)?; // signature
+        w.write_bits(u64::from(width) - 1, 14)?;
+        w.write_bits(u64::from(height) - 1, 14)?;
+
+        w.write_bits(u64::from(is_alpha), 1)?; // alpha used
+        w.write_bits(0x0, 3)?; // version
+
+        if entropy_mode == EntropyMode::Palette {
+            apply_palette(w, pixels, width as usize, height as usize, palette, token)?;
+        } else {
+            let grayscale = pixels.iter().all(|&pixel| {
+                let red = (pixel >> 16) & 0xff;
+                let green = (pixel >> 8) & 0xff;
+                let blue = pixel & 0xff;
+                red == green && green == blue
+            });
+            let use_subtract_green = matches!(
+                entropy_mode,
+                EntropyMode::SubtractGreen | EntropyMode::SpatialSubtractGreen
+            );
+            let use_predictor = matches!(
+                entropy_mode,
+                EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
+            );
+            if use_subtract_green {
+                w.write_bits(1, 1)?;
+                w.write_bits(2, 2)?;
+                subtract_green(pixels);
+                check_token(token)?;
+            }
+
+            if use_predictor {
+                let (predictor_map, predictor_bits) = if grayscale {
+                    predictor::apply_fixed(
+                        pixels,
+                        width as usize,
+                        height as usize,
+                        transform_bits,
+                        12,
+                        token,
+                    )?
+                } else {
+                    predictor::select_and_apply(
+                        pixels,
+                        width as usize,
+                        height as usize,
+                        transform_bits,
+                        token,
+                    )?
+                };
+                w.write_bits(1, 1)?;
+                w.write_bits(0, 2)?;
+                w.write_bits(u64::from(predictor_bits - 2), 3)?;
+                let predictor_width =
+                    (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
+                write_image_stream(w, &predictor_map, predictor_width, false, token)?;
+            }
+
+            if use_predictor && !red_and_blue_zero {
+                let (color_map, color_bits) = cross_color::select_and_apply(
+                    pixels,
+                    width as usize,
+                    height as usize,
+                    transform_bits,
+                    80,
+                    token,
+                )?;
+                w.write_bits(1, 1)?;
+                w.write_bits(1, 2)?;
+                w.write_bits(u64::from(color_bits - 2), 3)?;
+                let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
+                write_image_stream(w, &color_map, color_width, false, token)?;
+            }
+
+            w.write_bits(0, 1)?; // transforms done
+            write_image_stream(w, pixels, width as usize, true, token)?;
+        }
+
+        w.flush()?;
+    }
+    check_token(token)?;
+    Ok(frame)
 }
 
 /// Encode image data with the indicated color type.
@@ -1144,95 +1308,85 @@ fn encode_frame(
     )?;
     check_token(token)?;
 
-    let mut frame = Vec::new();
-    {
-        let w = &mut BitWriter {
-            writer: &mut frame,
-            buffer: 0,
-            nbits: 0,
-        };
-        w.write_bits(0x2f, 8); // signature
-        w.write_bits(u64::from(width) - 1, 14);
-        w.write_bits(u64::from(height) - 1, 14);
-
-        w.write_bits(u64::from(is_alpha), 1); // alpha used
-        w.write_bits(0x0, 3); // version
-
-        if entropy_mode == EntropyMode::Palette {
-            apply_palette(w, &pixels, width as usize, height as usize, palette, token)?;
-        } else {
-            let grayscale = pixels.iter().all(|&pixel| {
-                let red = (pixel >> 16) & 0xff;
-                let green = (pixel >> 8) & 0xff;
-                let blue = pixel & 0xff;
-                red == green && green == blue
-            });
-            let use_subtract_green = matches!(
-                entropy_mode,
-                EntropyMode::SubtractGreen | EntropyMode::SpatialSubtractGreen
-            );
-            let use_predictor = matches!(
-                entropy_mode,
-                EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
-            );
-            if use_subtract_green {
-                w.write_bits(1, 1);
-                w.write_bits(2, 2);
-                subtract_green(&mut pixels);
-                check_token(token)?;
-            }
-
-            if use_predictor {
-                let (predictor_map, predictor_bits) = if grayscale {
-                    predictor::apply_fixed(
-                        &mut pixels,
-                        width as usize,
-                        height as usize,
-                        transform_bits,
-                        12,
-                        token,
-                    )?
-                } else {
-                    predictor::select_and_apply(
-                        &mut pixels,
-                        width as usize,
-                        height as usize,
-                        transform_bits,
-                        token,
-                    )?
-                };
-                w.write_bits(1, 1);
-                w.write_bits(0, 2);
-                w.write_bits(u64::from(predictor_bits - 2), 3);
-                let predictor_width =
-                    (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
-                write_image_stream(w, &predictor_map, predictor_width, false, token)?;
-            }
-
-            if use_predictor && !red_and_blue_zero {
-                let (color_map, color_bits) = cross_color::select_and_apply(
-                    &mut pixels,
-                    width as usize,
-                    height as usize,
-                    transform_bits,
-                    80,
-                    token,
-                )?;
-                w.write_bits(1, 1);
-                w.write_bits(1, 2);
-                w.write_bits(u64::from(color_bits - 2), 3);
-                let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
-                write_image_stream(w, &color_map, color_width, false, token)?;
-            }
-
-            w.write_bits(0, 1); // transforms done
-            write_image_stream(w, &pixels, width as usize, true, token)?;
-        }
-
-        w.flush();
+    match token {
+        Some(token) => encode_frame_stream(
+            &mut pixels,
+            width,
+            height,
+            is_alpha,
+            entropy_mode,
+            red_and_blue_zero,
+            transform_bits,
+            palette,
+            Some(token),
+            TokenBitWriterCheckpoint {
+                token,
+                output_bytes: 0,
+            },
+        ),
+        None => encode_frame_stream(
+            &mut pixels,
+            width,
+            height,
+            is_alpha,
+            entropy_mode,
+            red_and_blue_zero,
+            transform_bits,
+            palette,
+            None,
+            NoopBitWriterCheckpoint,
+        ),
     }
+}
+
+fn encode_alpha_stream<C: BitWriterCheckpoint>(
+    palette_delta: &[u32],
+    palette_len: usize,
+    packed: &[u32],
+    packed_width: usize,
+    alpha: &[u8],
+    token: Option<&crate::CancellationToken>,
+    checkpoint: C,
+) -> Result<Vec<u8>, EncodingError> {
+    let mut encoded = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut encoded,
+        buffer: 0,
+        nbits: 0,
+        checkpoint,
+    };
+    writer.write_bits(1, 1)?; // transform present
+    writer.write_bits(3, 2)?; // color-indexing transform
+    writer.write_bits((palette_len - 1) as u64, 8)?;
+    write_image_stream_configured(
+        &mut writer,
+        palette_delta,
+        palette_len,
+        false,
+        3,
+        20,
+        0,
+        token,
+    )?;
+
+    writer.write_bits(0, 1)?; // transforms done
+    write_image_stream_configured(&mut writer, packed, packed_width, true, 5, 32, 2, token)?;
+    writer.flush()?;
+
+    let mut compressed = Vec::with_capacity(encoded.len() + 1);
+    compressed.push(1); // lossless compression, no filtering, no preprocessing
+    compressed.extend_from_slice(&encoded);
+
+    let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
+    uncompressed.push(0); // no compression, no filtering, no preprocessing
+    uncompressed.extend_from_slice(alpha);
+
     check_token(token)?;
-    Ok(frame)
+    Ok(if uncompressed.len() <= compressed.len() {
+        uncompressed
+    } else {
+        compressed
+    })
 }
 
 // Every sorted palette suffix is non-empty by construction.
@@ -1313,26 +1467,6 @@ pub(crate) fn encode_alpha(
         previous = pixel;
     }
 
-    let mut encoded = Vec::new();
-    let mut writer = BitWriter {
-        writer: &mut encoded,
-        buffer: 0,
-        nbits: 0,
-    };
-    writer.write_bits(1, 1); // transform present
-    writer.write_bits(3, 2); // color-indexing transform
-    writer.write_bits((palette.len() - 1) as u64, 8);
-    write_image_stream_configured(
-        &mut writer,
-        &palette_delta,
-        palette.len(),
-        false,
-        3,
-        20,
-        0,
-        token,
-    )?;
-
     let xbits = match palette.len() {
         0..=2 => 3,
         3..=4 => 2,
@@ -1357,24 +1491,29 @@ pub(crate) fn encode_alpha(
         }
     }
 
-    writer.write_bits(0, 1); // transforms done
-    write_image_stream_configured(&mut writer, &packed, packed_width, true, 5, 32, 2, token)?;
-    writer.flush();
-
-    let mut compressed = Vec::with_capacity(encoded.len() + 1);
-    compressed.push(1); // lossless compression, no filtering, no preprocessing
-    compressed.extend_from_slice(&encoded);
-
-    let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
-    uncompressed.push(0); // no compression, no filtering, no preprocessing
-    uncompressed.extend_from_slice(alpha);
-
-    check_token(token)?;
-    Ok(if uncompressed.len() <= compressed.len() {
-        uncompressed
-    } else {
-        compressed
-    })
+    match token {
+        Some(token) => encode_alpha_stream(
+            &palette_delta,
+            palette.len(),
+            &packed,
+            packed_width,
+            alpha,
+            Some(token),
+            TokenBitWriterCheckpoint {
+                token,
+                output_bytes: 0,
+            },
+        ),
+        None => encode_alpha_stream(
+            &palette_delta,
+            palette.len(),
+            &packed,
+            packed_width,
+            alpha,
+            None,
+            NoopBitWriterCheckpoint,
+        ),
+    }
 }
 
 const fn chunk_size(inner_bytes: usize) -> u32 {
@@ -1453,6 +1592,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut tree_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let mut lengths = vec![0; 4];
     let mut codes = vec![0; 4];
@@ -1463,13 +1603,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut codes,
         None,
     );
-    tree_writer.flush();
+    let _ = tree_writer.flush();
 
     let mut trimmed_tree_bytes = Vec::new();
     let mut trimmed_tree_writer = BitWriter {
         writer: &mut trimmed_tree_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let mut trimmed_lengths = vec![0; 256];
     let mut trimmed_codes = vec![0; 256];
@@ -1482,7 +1623,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut trimmed_codes,
         None,
     );
-    trimmed_tree_writer.flush();
+    let _ = trimmed_tree_writer.flush();
 
     let populations = [
         vec![1; 281],
@@ -1496,15 +1637,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut group_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let _ = write_group(&mut group_writer, &populations, None);
-    group_writer.flush();
+    let _ = group_writer.flush();
 
     let mut token_bytes = Vec::new();
     let mut token_writer = BitWriter {
         writer: &mut token_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let _ = write_token_stream(
         &mut token_writer,
@@ -1528,7 +1671,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
         None,
     );
-    token_writer.flush();
+    let _ = token_writer.flush();
 
     let mut palette = (0..20)
         .map(|index| {
@@ -1555,6 +1698,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut palette_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let mut palette = (0..18)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
@@ -1568,22 +1712,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette,
         None,
     );
-    palette_writer.flush();
+    let _ = palette_writer.flush();
 
     let mut palette_trim_bytes = Vec::new();
     let mut palette_trim_writer = BitWriter {
         writer: &mut palette_trim_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let _ = apply_palette(&mut palette_trim_writer, &[0; 4], 2, 2, vec![0; 18], None);
-    palette_trim_writer.flush();
+    let _ = palette_trim_writer.flush();
 
     let mut palette4_bytes = Vec::new();
     let mut palette4_writer = BitWriter {
         writer: &mut palette4_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let _ = apply_palette(
         &mut palette4_writer,
@@ -1593,13 +1739,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
         None,
     );
-    palette4_writer.flush();
+    let _ = palette4_writer.flush();
 
     let mut palette16_bytes = Vec::new();
     let mut palette16_writer = BitWriter {
         writer: &mut palette16_bytes,
         buffer: 0,
         nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
     };
     let palette16 = (0..16)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
@@ -1612,7 +1759,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         palette16,
         None,
     );
-    palette16_writer.flush();
+    let _ = palette16_writer.flush();
 
     let alpha = [
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
