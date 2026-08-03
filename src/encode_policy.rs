@@ -12,7 +12,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// the PNG adaptive-filter and filtered-row checkpoints charged after each
 /// 1,024 row bytes, BMP row-conversion checkpoints charged after each 1,024
 /// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
-/// stages, and 16,384-boolean coefficient-bit intervals, and the lossless WebP VP8L
+/// stages, and 16,384-boolean first-partition-bit and coefficient-bit intervals,
+/// and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, GIF RGB
 /// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE

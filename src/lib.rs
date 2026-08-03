@@ -871,7 +871,8 @@ pub fn encode_with_policy(
 /// FASTOCTREE cell/bucket/lookup and bucket-sort intervals, and LZW input-symbol
 /// intervals, and WebP still encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
-/// probability, 16,384-boolean coefficient-bit, and bitstream stages, lossless VP8L
+/// probability, 16,384-boolean first-partition-bit and coefficient-bit, and
+/// bitstream stages, lossless VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, codec-result, and
 /// metadata-assembly boundaries; native AVIF still encoding polls preparation,
