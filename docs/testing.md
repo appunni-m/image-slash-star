@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`8607dca5cf813448a8f95bbe62c6e5c07733ecef`; the claim-ledger baseline remains
+`57d5bc3251c43ddc64857463a6faafaa91aaf2d3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -316,7 +316,10 @@ instruction-count, transient-allocation, or recoverable-OOM accounting. The
 same contract now also proves JPEG still byte identity under an ample budget,
 a bounded mid-encode rejection after more than one checkpoint, and a typed
 zero-budget no-write result through the JPEG structural sink path. The
-patterned 64x64 JPEG probe additionally proves the new 1,024-byte
+fixture-derived `33x33.jpg` JPEG probe additionally proves the forward-DCT and
+quantization checkpoint after a completed 8x8 block at `maximum: 70`,
+`observed: 71`, in both whole-buffer and direct-sink paths with the sink
+untouched. The patterned 64x64 JPEG probe additionally proves the 1,024-byte
 entropy-output interval rejection at `maximum: 150`, `observed: 151`, in both
 whole-buffer and direct-sink paths with the sink untouched. The
 contract also proves that a pre-cancelled caller token takes precedence over a
@@ -2837,7 +2840,7 @@ lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
 segment-normalization warning remains. These are Rust-only implementation and
 target records separate from Pillow parity.
 
-Current acceptance record: grid-derived AVIF item provenance and warm matrix fanout
+Historical acceptance record: grid-derived AVIF item provenance and warm matrix fanout
 
 The bounded AVIF source-provenance slice is implemented at
 `c8c18221d1d3126ac320cfc9a097386ddd007289` and its ordered primary-grid item
@@ -2948,7 +2951,7 @@ changed-to-uncovered line against the prior accepted snapshot is the defensive
 duplicate-alpha-association branch at `src/codecs/avif/container.rs:1102`; the
 shortfall is recorded rather than hidden.
 
-Current acceptance record: finer VP8 coefficient checkpoint
+Historical acceptance record: finer VP8 coefficient checkpoint
 
 The finer lossy WebP/VP8 coefficient logical-bitstream checkpoint slice is
 implemented at `7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`. Token-aware
@@ -2981,7 +2984,7 @@ The LLVM JSON segment-normalization warning remains. These aggregate and
 source-provenance records remain separate from Pillow parity, and no
 coverage-only test was added.
 
-Current acceptance record: JPEG and WebP interior checkpoints and runtime slice
+Historical acceptance record: JPEG and WebP interior checkpoints and runtime slice
 
 The JPEG baseline/progressive RGB-to-YCbCr and entropy-output checkpoint slice is
 implemented at `9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware RGB
@@ -3071,11 +3074,51 @@ propagation mappings, not a reason to add a synthetic coverage hook. These
 aggregate and source-provenance records remain separate from Pillow parity, and
 no coverage-only test was added.
 
+Current acceptance record: JPEG forward-DCT/quantization checkpoint
+
+The JPEG forward-DCT and quantization checkpoint slice is implemented at
+`57d5bc3251c43ddc64857463a6faafaa91aaf2d3`. `FdctCheckpoint` keeps the
+ordinary no-token path on an inline no-op implementation while the token-aware
+path checks at each block row and after every completed 8x8 forward-DCT and
+quantization block. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses the committed
+`tests/fixtures/input/images/jpeg/33x33.jpg` fixture, proves ample-budget byte
+identity, and rejects at `maximum: 70`, `observed: 71` in both whole-buffer and
+direct-sink paths; the direct sink remains `[0x5d]` because the checkpoint is
+reached before output admission. Pillow has no caller token, work-budget
+result, or caller-owned sink, so this is Rust-only resource-contract evidence:
+no parity row, fixture, diagnostic origin, new test function, or coverage-only
+hook was added.
+
+Managed Pillow parity run `7492a510-409c-4283-a493-906fd65d09c4` passed
+1,445/1,445 checks with zero failures or skips in 50,668 ms. The exact-head
+feature-matrix run `c8f0e3dc-9158-4c91-82f6-1a7f0ffa5713` passed 991/991 checks
+in 30,603 ms; its retained log records
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+`lock-wait` match.
+
+Coverage MCP rerun `43ec7eb4-9ad2-498c-bbd9-5bd16ce32b23` passed 85/85 tests
+in 48,333 ms and ingested snapshot
+`a4c6cea0-6547-4ea4-9367-646832657586`, reporting 51,313/51,793 lines,
+7,085/7,178 branches, 2,877/2,947 functions, and 79,623/80,697 regions.
+Against the prior accepted snapshot
+`65e67f5a-a459-40f1-ae93-0fc91a233f39`, covered totals increased by 28 lines,
+2 branches, 6 functions, and 32 regions. The line-only view records 20
+displaced JPEG line records after the source expansion; the new checkpoint
+functions are covered. The JPEG encoder retains 31 uncovered lines and 19
+partial branch lines in existing defensive sink/parser paths, while the
+AVIF duplicate-property and `SourceDescriptor::is_empty` gaps remain named in
+the roadmap. The LLVM JSON segment-normalization warning remains. These
+aggregate and source-provenance records remain separate from Pillow parity,
+and no coverage-only test was added.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
-bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG
-interior work beyond the current 1,024-pixel RGB-to-YCbCr and 1,024-byte entropy
-intervals, other codec interior and transient-allocation boundaries,
+bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
+the current 1,024-pixel RGB-to-YCbCr, completed 8x8 JPEG
+forward-DCT/quantization-block, and 1,024-byte entropy intervals, other codec
+interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.
 
 Historical claim-ledger acceptance record:

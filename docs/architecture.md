@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`8607dca5cf813448a8f95bbe62c6e5c07733ecef`; the claim-ledger baseline remains
+`57d5bc3251c43ddc64857463a6faafaa91aaf2d3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -502,7 +502,8 @@ each 256-bit and 512-bit logical coefficient interval, each 16,384-boolean coeff
 interval, each 1,024-byte boolean-bitstream
 output interval, and final container assembly.
 JPEG baseline and progressive RGB-to-YCbCr conversion additionally charge after
-each 1,024 converted pixels, and entropy coding charges after each 1,024 emitted
+each 1,024 converted pixels, forward-DCT/quantization charges after each
+completed 8x8 block, and entropy coding charges after each 1,024 emitted
 entropy bytes; its no-token path remains on the ordinary byte producer.
 Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application,
