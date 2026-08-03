@@ -4026,6 +4026,7 @@ fn coverage_structural_states() {
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
+        grid_item_ids: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -4052,6 +4053,7 @@ fn coverage_structural_states() {
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
+        grid_item_ids: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
