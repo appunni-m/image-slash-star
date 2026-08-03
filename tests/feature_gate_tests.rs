@@ -8493,6 +8493,70 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(dct_sink, vec![0x5D]);
 
+        // The committed 257x129 JPEG fixture reaches the chroma downsample
+        // inner loop after the row-level RGB conversion checkpoints. The
+        // token path now charges every 1,024 output pixels, while the
+        // no-token path remains monomorphized without polling overhead.
+        // Pillow has no caller work budget or equivalent sink/result contract,
+        // so this is Rust-only evidence with no parity row, parity fixture,
+        // diagnostic origin, or coverage-only hook.
+        let downsample_data = fs::read(root.join("tests/fixtures/input/images/jpeg/large.jpg"))?;
+        let downsample_image = image_slash_star::decode(&downsample_data)?.content;
+        let downsample_expected =
+            image_slash_star::encode(&downsample_image, ImageFormat::Jpeg, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &downsample_image,
+                ImageFormat::Jpeg,
+                &options,
+                &unlimited,
+            )?,
+            downsample_expected,
+            "an ample downsample budget preserves fixture-derived bytes"
+        );
+        let downsample_policy = image_slash_star::EncodePolicy::new().with_max_work_units(228);
+        let downsample_error = match image_slash_star::encode_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &options,
+            &downsample_policy,
+        ) {
+            Ok(_) => return Err("JPEG downsample work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            downsample_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 228,
+                observed: 229,
+            }
+        ));
+        let mut downsample_sink = vec![0x5E];
+        let downsample_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &options,
+            &downsample_policy,
+            &mut downsample_sink,
+        ) {
+            Ok(_) => return Err("JPEG downsample work budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            downsample_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 228,
+                observed: 229,
+            }
+        ));
+        assert_eq!(downsample_sink, vec![0x5E]);
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;
