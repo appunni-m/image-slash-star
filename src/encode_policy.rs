@@ -15,7 +15,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// stages, and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, GIF RGB
-/// quantization input/index intervals and LZW input-symbol intervals; it is a
+/// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
+/// copy/subtraction/lookup intervals, and LZW input-symbol intervals; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -69,8 +70,10 @@ impl EncodePolicy {
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
     /// token-stream intervals. GIF RGB/RGBA palette quantization charges after
-    /// each 1,024 pixels while preparing palette/index data, and GIF LZW encoding charges
-    /// an interval for each input symbol considered by its dictionary pass.
+    /// each 1,024 pixels while preparing palette/index data; RGBA FASTOCTREE
+    /// preparation additionally charges after each 1,024-cell, bucket, or
+    /// lookup-entry interval; and GIF LZW encoding charges an interval for each
+    /// input symbol considered by its dictionary pass.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]
