@@ -3739,6 +3739,41 @@ functions; ten source lines remain uncovered, and no coverage-only hook was
 used. The parity run is Pillow-oracle evidence; the policy assertions and
 aggregate coverage are implementation/Rust-only evidence.
 
+Current acceptance record: WebP VP8L 64-bit bitstream checkpoint
+
+The finer lossless WebP/VP8L logical bitstream checkpoint is implemented at
+`c0194045cb0a0b7f8d5a0b12c739a8ef46156624`. `TokenBitWriterCheckpoint` now
+charges a logical poll after each 64 written bit while retaining the 128-bit,
+256-bit, 512-bit, and 1,024-byte output intervals. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves the 64-bit
+boundary at `maximum: 56185`, `observed: 56186` in the whole-buffer path and
+at `maximum: 56184`, `observed: 56185` in the direct-sink path; it retains the
+128-bit boundary at 56186/56187 (return) and 56185/56186 (sink), the 256-bit
+boundary at 56190/56191 (return) and 56189/56190 (sink), the 512-bit boundary
+at 56191/56192 (return) and 56190/56191 (sink), and the 1,024-byte output
+boundary at 56237/56238 (return) and 56236/56237 (sink). The direct sink
+sentinel is `[0xAC]` for the new boundary and `[0xAB]`/`[0xAA]` remain for the
+existing probes. This is Rust-only work-control evidence: no Pillow row,
+parity fixture, diagnostic origin, new test function, or coverage-only hook
+was added.
+
+Managed Pillow parity run `f5dc4fdf-577d-4363-8497-a38935f8d1e9` passed
+1,445/1,445 checks in 44,621 ms. The exact-head feature-matrix run
+`5c76af1e-b77e-4b9b-b571-f021cd1976ca` passed in 52,947 ms; its retained log
+records `cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`,
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`,
+and has no `build-directory`, `package-cache`, or `lock-wait` matches.
+Coverage MCP run `239239da-cd7e-4ea0-a227-c43cd9ca693f` passed 85/85 tests
+in 81,591 ms and ingested snapshot `c603d5cc-6246-4e56-9716-5cc880232f0b`,
+reporting 51,486/51,968 lines, 7,106/7,200 branches, 2,898/2,968
+functions, and 79,837/80,934 regions. The known LLVM JSON
+segment-normalization warning remains. In that snapshot,
+`src/codecs/webp/native/encoder.rs` has 1,482/1,492 covered lines, 232/232
+covered branches, and 77/77 covered functions; ten source lines remain
+uncovered, and no coverage-only hook was used. The parity run is
+Pillow-oracle evidence; the policy assertions and aggregate coverage are
+implementation/Rust-only evidence.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 64-bit/128-bit/256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
