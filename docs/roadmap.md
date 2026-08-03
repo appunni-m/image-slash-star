@@ -3774,6 +3774,53 @@ uncovered, and no coverage-only hook was used. The parity run is
 Pillow-oracle evidence; the policy assertions and aggregate coverage are
 implementation/Rust-only evidence.
 
+Current acceptance record: WebP VP8 64-bit checkpoints and test-runtime reduction
+
+The lossy WebP/VP8 logical checkpoint slice is implemented at
+`fa12b4054f6dcb4784e142bce39ccbe66144fd4e`. `TokenPartitionCheckpoint` and
+`TokenCoefficientCheckpoint` now poll after each 64 coded bit while retaining
+the 128-bit, 256-bit, 512-bit, 16,384-bit, and 1,024-byte boundaries. Their
+larger logical intervals share one counter and are nested under the 64-bit
+poll, avoiding four redundant modulo tests per coded bit in the token-aware
+path. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves partition 64 at
+`maximum: 333`, `observed: 334` in both whole-buffer and direct-sink paths,
+with `[0xC4]` preserved in the sink. It retains partition 128 at 336/337
+(return) and 335/336 (sink), partition 256 at 340/341 and 339/340, partition
+512 at 588/589 and 587/588, the 16,384-bit partition interval at 1,062/1,063
+and 1,061/1,062, and the 1,024-byte output interval at 826/827 and 825/826.
+The corresponding coefficient boundaries are 64-bit at 820/821 (return) and
+819/820 (sink), 128-bit at 821/822 and 820/821, 256-bit at 827/828 and
+826/827, 512-bit at 835/836 and 834/835, and 16,384-bit at 1,294/1,295 and
+1,293/1,294. Sentinels `[0xC5]`, `[0xB5]`, `[0xB3]`, and `[0xB9]` retain the
+untouched direct-sink prefixes for the new and existing coefficient probes.
+This remains Rust-only work-control evidence: no Pillow row, parity fixture,
+diagnostic origin, new test function, or coverage-only hook was added.
+
+The same boundary observations remain unchanged after reducing the patterned
+partition probe from 896x512 to the smallest tested 272x272 geometry. In a
+clean local repeat of the exact WebP-only contract test, that change reduced
+the observed test time from 0.90 s to 0.73 s. This is an execution measurement
+for the local host, not a universal benchmark.
+
+Managed Pillow parity run `5a6b0943-5ba2-4526-bdd5-6e0090d9197d` passed
+1,445/1,445 checks in 44,608 ms. The exact-head feature-matrix run
+`d5b9e780-dd1f-40f8-ae92-575a41b8d529` passed in 49,722 ms; its retained log
+records `cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`,
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`,
+and has no `build-directory`, `package-cache`, or `lock-wait` matches.
+Coverage MCP run `ab3fd4b0-e4bc-43ea-93ab-00271fa965ed` passed 85/85 tests in
+74,731 ms and ingested snapshot `6e26d1e4-58d7-4af6-b728-aa30a657b0f3`,
+reporting 51,483/51,966 lines, 7,109/7,204 branches, 2,898/2,968 functions,
+and 79,840/80,940 regions. The known LLVM JSON segment-normalization warning
+remains. In that snapshot, `src/codecs/webp/encode/vp8/partition.rs` has
+471/480 covered lines, 64/66 covered branches, 30/30 covered functions, and
+694/751 covered regions; `src/codecs/webp/encode/vp8/residual.rs` has 353/362
+covered lines, 44/44 covered branches, 21/21 covered functions, and 515/554
+covered regions. The parity run is Pillow-oracle evidence; the policy
+assertions, runtime measurement, and aggregate coverage are
+implementation/Rust-only evidence.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 64-bit/128-bit/256-bit/512-bit first-partition, 64-bit/128-bit/256-bit/512-bit coefficient, 64-bit/128-bit/256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
