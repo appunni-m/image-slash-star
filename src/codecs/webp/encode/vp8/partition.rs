@@ -16,13 +16,118 @@ use crate::codecs::CodecResult;
 
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
+const PARTITION_BIT_CHECKPOINT_BITS: usize = 16_384;
 
-fn write_signed(writer: &mut BoolEncoder, value: i32, magnitude_bits: u8) {
-    writer.encode_bool(128, value != 0);
+trait PartitionCheckpointControl {
+    fn checkpoint_probability(&mut self) -> CodecResult<()>;
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
+    fn checkpoint_bit(&mut self) -> CodecResult<()>;
+}
+
+struct NoopPartitionCheckpoint;
+
+impl PartitionCheckpointControl for NoopPartitionCheckpoint {
+    #[inline(always)]
+    fn checkpoint_probability(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenPartitionCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    probability_items: usize,
+    macroblock_items: usize,
+    bit_items: usize,
+}
+
+impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
+    #[inline]
+    fn checkpoint_probability(&mut self) -> CodecResult<()> {
+        self.probability_items = self.probability_items.saturating_add(1);
+        if self
+            .probability_items
+            .is_multiple_of(PARTITION_PROBABILITY_CHECKPOINT_NODES)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        self.macroblock_items = self.macroblock_items.saturating_add(1);
+        if self
+            .macroblock_items
+            .is_multiple_of(PARTITION_MODE_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        self.bit_items = self.bit_items.saturating_add(1);
+        if self.bit_items.is_multiple_of(PARTITION_BIT_CHECKPOINT_BITS) {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+}
+
+#[inline]
+fn encode_bool<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    probability: u8,
+    value: bool,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
+    writer.encode_bool(probability, value);
+    checkpoint.checkpoint_bit()
+}
+
+#[inline]
+fn encode_literal<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    value: u32,
+    bits: u8,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
+    let n = bits.min(32);
+    for i in (0..n).rev() {
+        let bit = (value.wrapping_shr(u32::from(i)) & 1) != 0;
+        encode_bool(writer, 128, bit, checkpoint)?;
+    }
+    Ok(())
+}
+
+fn write_signed<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    value: i32,
+    magnitude_bits: u8,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
+    encode_bool(writer, 128, value != 0, checkpoint)?;
     if value != 0 {
         let magnitude_and_sign = value.unsigned_abs().wrapping_shl(1) | u32::from(value < 0);
-        writer.encode_literal(magnitude_and_sign, magnitude_bits.saturating_add(1));
+        encode_literal(
+            writer,
+            magnitude_and_sign,
+            magnitude_bits.saturating_add(1),
+            checkpoint,
+        )?;
     }
+    Ok(())
 }
 
 fn segment_probability(zero: usize, one: usize) -> u8 {
@@ -104,34 +209,40 @@ fn adjusted_frame_params(
     adjusted
 }
 
-fn write_segment_header(writer: &mut BoolEncoder, params: &FrameParams, probabilities: [u8; 3]) {
+fn write_segment_header<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    params: &FrameParams,
+    probabilities: [u8; 3],
+    checkpoint: &mut P,
+) -> CodecResult<()> {
     let segmentation_enabled = params.num_segments > 1;
-    writer.encode_bool(128, segmentation_enabled);
+    encode_bool(writer, 128, segmentation_enabled, checkpoint)?;
     if !segmentation_enabled {
-        return;
+        return Ok(());
     }
-    writer.encode_bool(128, true); // update map
-    writer.encode_bool(128, true); // update data
-    writer.encode_bool(128, true); // absolute feature values
+    encode_bool(writer, 128, true, checkpoint)?; // update map
+    encode_bool(writer, 128, true, checkpoint)?; // update data
+    encode_bool(writer, 128, true, checkpoint)?; // absolute feature values
     for segment in params.segments {
-        write_signed(writer, i32::from(segment.quantizer), 7);
+        write_signed(writer, i32::from(segment.quantizer), 7, checkpoint)?;
     }
     for segment in params.segments {
-        write_signed(writer, i32::from(segment.filter_strength), 6);
+        write_signed(writer, i32::from(segment.filter_strength), 6, checkpoint)?;
     }
     for probability in probabilities {
         let update = probability != 255;
-        writer.encode_bool(128, update);
+        encode_bool(writer, 128, update, checkpoint)?;
         if update {
-            writer.encode_literal(u32::from(probability), 8);
+            encode_literal(writer, u32::from(probability), 8, checkpoint)?;
         }
     }
+    Ok(())
 }
 
-fn write_coefficient_probabilities(
+fn write_coefficient_probabilities<P: PartitionCheckpointControl>(
     writer: &mut BoolEncoder,
     probabilities: &AdaptedProbabilities,
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut P,
 ) -> CodecResult<()> {
     let mut probability_items = 0usize;
     for coefficient_type in 0..4 {
@@ -139,79 +250,109 @@ fn write_coefficient_probabilities(
             for context in 0..3 {
                 for node in 0..11 {
                     let update = probabilities.updates[coefficient_type][band][context][node];
-                    writer.encode_bool(
+                    encode_bool(
+                        writer,
                         coefficient_update_probability(coefficient_type, band, context, node),
                         update,
-                    );
+                        checkpoint,
+                    )?;
                     if update {
-                        writer.encode_literal(
+                        encode_literal(
+                            writer,
                             u32::from(
                                 probabilities.coefficients[coefficient_type][band][context][node],
                             ),
                             8,
-                        );
+                            checkpoint,
+                        )?;
                     }
                     probability_items = probability_items.saturating_add(1);
-                    if probability_items.is_multiple_of(PARTITION_PROBABILITY_CHECKPOINT_NODES) {
-                        crate::codecs::error::check_cancelled(token)?;
-                    }
+                    checkpoint.checkpoint_probability()?;
                 }
             }
         }
     }
-    writer.encode_bool(128, false); // no skip probability
+    encode_bool(writer, 128, false, checkpoint)?; // no skip probability
     Ok(())
 }
 
-fn write_segment(writer: &mut BoolEncoder, segment: u8, probabilities: [u8; 3]) {
+fn write_segment<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    segment: u8,
+    probabilities: [u8; 3],
+    checkpoint: &mut P,
+) -> CodecResult<()> {
     let upper_half = segment >= 2;
-    writer.encode_bool(probabilities[0], upper_half);
-    writer.encode_bool(
+    encode_bool(writer, probabilities[0], upper_half, checkpoint)?;
+    encode_bool(
+        writer,
         probabilities[if upper_half { 2 } else { 1 }],
         segment & 1 != 0,
-    );
+        checkpoint,
+    )
 }
 
-fn write_intra4_mode(writer: &mut BoolEncoder, mode: Intra4Mode, probabilities: &[u8; 9]) {
+fn write_intra4_mode<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    mode: Intra4Mode,
+    probabilities: &[u8; 9],
+    checkpoint: &mut P,
+) -> CodecResult<()> {
     let mode = mode as u8;
-    if writer_bit(writer, probabilities[0], mode != 0)
-        && writer_bit(writer, probabilities[1], mode != 1)
-        && writer_bit(writer, probabilities[2], mode != 2)
+    if writer_bit(writer, probabilities[0], mode != 0, checkpoint)?
+        && writer_bit(writer, probabilities[1], mode != 1, checkpoint)?
+        && writer_bit(writer, probabilities[2], mode != 2, checkpoint)?
     {
-        if !writer_bit(writer, probabilities[3], mode >= 6) {
-            if writer_bit(writer, probabilities[4], mode != 3) {
-                writer_bit(writer, probabilities[5], mode != 4);
+        if !writer_bit(writer, probabilities[3], mode >= 6, checkpoint)? {
+            if writer_bit(writer, probabilities[4], mode != 3, checkpoint)? {
+                writer_bit(writer, probabilities[5], mode != 4, checkpoint)?;
             }
-        } else if writer_bit(writer, probabilities[6], mode != 6)
-            && writer_bit(writer, probabilities[7], mode != 7)
+        } else if writer_bit(writer, probabilities[6], mode != 6, checkpoint)?
+            && writer_bit(writer, probabilities[7], mode != 7, checkpoint)?
         {
-            writer_bit(writer, probabilities[8], mode != 8);
+            writer_bit(writer, probabilities[8], mode != 8, checkpoint)?;
         }
     }
+    Ok(())
 }
 
-fn writer_bit(writer: &mut BoolEncoder, probability: u8, bit: bool) -> bool {
-    writer.encode_bool(probability, bit);
-    bit
+fn writer_bit<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    probability: u8,
+    bit: bool,
+    checkpoint: &mut P,
+) -> CodecResult<bool> {
+    encode_bool(writer, probability, bit, checkpoint)?;
+    Ok(bit)
 }
 
-fn write_intra16_mode(writer: &mut BoolEncoder, mode: Intra16Mode) {
+fn write_intra16_mode<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    mode: Intra16Mode,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
     let horizontal_or_true_motion =
         matches!(mode, Intra16Mode::TrueMotion | Intra16Mode::Horizontal);
-    writer.encode_bool(156, horizontal_or_true_motion);
+    encode_bool(writer, 156, horizontal_or_true_motion, checkpoint)?;
     if horizontal_or_true_motion {
-        writer.encode_bool(128, mode == Intra16Mode::TrueMotion);
+        encode_bool(writer, 128, mode == Intra16Mode::TrueMotion, checkpoint)?;
     } else {
-        writer.encode_bool(163, mode == Intra16Mode::Vertical);
+        encode_bool(writer, 163, mode == Intra16Mode::Vertical, checkpoint)?;
     }
+    Ok(())
 }
 
-fn write_chroma_mode(writer: &mut BoolEncoder, mode: ChromaMode) {
-    if writer_bit(writer, 142, mode != ChromaMode::Dc)
-        && writer_bit(writer, 114, mode != ChromaMode::Vertical)
+fn write_chroma_mode<P: PartitionCheckpointControl>(
+    writer: &mut BoolEncoder,
+    mode: ChromaMode,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
+    if writer_bit(writer, 142, mode != ChromaMode::Dc, checkpoint)?
+        && writer_bit(writer, 114, mode != ChromaMode::Vertical, checkpoint)?
     {
-        writer_bit(writer, 183, mode != ChromaMode::Horizontal);
+        writer_bit(writer, 183, mode != ChromaMode::Horizontal, checkpoint)?;
     }
+    Ok(())
 }
 
 fn intra16_as_intra4(mode: Intra16Mode) -> Intra4Mode {
@@ -223,13 +364,13 @@ fn intra16_as_intra4(mode: Intra16Mode) -> Intra4Mode {
     }
 }
 
-fn write_modes(
+fn write_modes<P: PartitionCheckpointControl>(
     writer: &mut BoolEncoder,
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     segment_probabilities: [u8; 3],
     segmentation_enabled: bool,
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut P,
 ) -> CodecResult<()> {
     let mode_stride = macroblock_width.saturating_mul(4);
     let macroblock_height = decisions.len().div_euclid(macroblock_width);
@@ -242,12 +383,12 @@ fn write_modes(
     let mut macroblock_items = 0usize;
     for decision in decisions {
         if segmentation_enabled {
-            write_segment(writer, decision.segment, segment_probabilities);
+            write_segment(writer, decision.segment, segment_probabilities, checkpoint)?;
         }
         let is_intra16 = matches!(decision.luma, LumaDecision::Intra16(_));
-        writer.encode_bool(145, is_intra16);
+        encode_bool(writer, 145, is_intra16, checkpoint)?;
         match &decision.luma {
-            LumaDecision::Intra16(luma) => write_intra16_mode(writer, luma.mode),
+            LumaDecision::Intra16(luma) => write_intra16_mode(writer, luma.mode, checkpoint)?,
             LumaDecision::Intra4(luma) => {
                 for block_y in 0..4 {
                     for block_x in 0..4 {
@@ -274,7 +415,8 @@ fn write_modes(
                             writer,
                             mode,
                             &INTRA4_MODE_PROBABILITIES[top as usize][left as usize],
-                        );
+                            checkpoint,
+                        )?;
                         modes[grid_y.saturating_mul(mode_stride).saturating_add(grid_x)] = mode;
                     }
                 }
@@ -290,13 +432,68 @@ fn write_modes(
                 }
             }
         }
-        write_chroma_mode(writer, decision.chroma.mode);
+        write_chroma_mode(writer, decision.chroma.mode, checkpoint)?;
         macroblock_items = macroblock_items.saturating_add(1);
-        if macroblock_items.is_multiple_of(PARTITION_MODE_CHECKPOINT_MACROBLOCKS) {
-            crate::codecs::error::check_cancelled(token)?;
-        }
+        checkpoint.checkpoint_macroblock()?;
     }
     Ok(())
+}
+
+fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
+    decisions: &[MacroblockDecision],
+    macroblock_width: usize,
+    params: &FrameParams,
+    probabilities: &AdaptedProbabilities,
+    adjust_filter_edges: bool,
+    checkpoint: &mut P,
+) -> CodecResult<Vec<u8>> {
+    let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
+    let segment_probabilities = segment_probabilities(decisions);
+    let mut writer = BoolEncoder::default();
+    encode_bool(&mut writer, 128, false, checkpoint)?; // colorspace
+    encode_bool(&mut writer, 128, false, checkpoint)?; // clamp type
+    write_segment_header(&mut writer, &params, segment_probabilities, checkpoint)?;
+    encode_bool(&mut writer, 128, false, checkpoint)?; // strong loop filter
+    let filter_level = params
+        .segments
+        .iter()
+        .fold(0, |maximum, segment| maximum.max(segment.filter_strength));
+    encode_literal(&mut writer, u32::from(filter_level), 6, checkpoint)?;
+    encode_literal(&mut writer, 0, 3, checkpoint)?; // sharpness
+    encode_bool(&mut writer, 128, false, checkpoint)?; // no loop-filter deltas
+    encode_literal(&mut writer, 0, 2, checkpoint)?; // one coefficient partition
+    encode_literal(
+        &mut writer,
+        u32::from(params.segments[0].quantizer),
+        7,
+        checkpoint,
+    )?;
+    write_signed(&mut writer, 0, 4, checkpoint)?; // Y1 DC
+    write_signed(&mut writer, 0, 4, checkpoint)?; // Y2 DC
+    write_signed(&mut writer, 0, 4, checkpoint)?; // Y2 AC
+    write_signed(
+        &mut writer,
+        i32::from(params.chroma_dc_delta),
+        4,
+        checkpoint,
+    )?;
+    write_signed(
+        &mut writer,
+        i32::from(params.chroma_ac_delta),
+        4,
+        checkpoint,
+    )?;
+    encode_bool(&mut writer, 128, false, checkpoint)?; // no entropy refresh
+    write_coefficient_probabilities(&mut writer, probabilities, checkpoint)?;
+    write_modes(
+        &mut writer,
+        decisions,
+        macroblock_width,
+        segment_probabilities,
+        params.num_segments > 1,
+        checkpoint,
+    )?;
+    Ok(writer.finish())
 }
 
 pub(super) fn encode_first_partition(
@@ -307,36 +504,30 @@ pub(super) fn encode_first_partition(
     adjust_filter_edges: bool,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
-    let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
-    let segment_probabilities = segment_probabilities(decisions);
-    let mut writer = BoolEncoder::default();
-    writer.encode_bool(128, false); // colorspace
-    writer.encode_bool(128, false); // clamp type
-    write_segment_header(&mut writer, &params, segment_probabilities);
-    writer.encode_bool(128, false); // strong loop filter
-    let filter_level = params
-        .segments
-        .iter()
-        .fold(0, |maximum, segment| maximum.max(segment.filter_strength));
-    writer.encode_literal(u32::from(filter_level), 6);
-    writer.encode_literal(0, 3); // sharpness
-    writer.encode_bool(128, false); // no loop-filter deltas
-    writer.encode_literal(0, 2); // one coefficient partition
-    writer.encode_literal(u32::from(params.segments[0].quantizer), 7);
-    write_signed(&mut writer, 0, 4); // Y1 DC
-    write_signed(&mut writer, 0, 4); // Y2 DC
-    write_signed(&mut writer, 0, 4); // Y2 AC
-    write_signed(&mut writer, i32::from(params.chroma_dc_delta), 4);
-    write_signed(&mut writer, i32::from(params.chroma_ac_delta), 4);
-    writer.encode_bool(128, false); // no entropy refresh
-    write_coefficient_probabilities(&mut writer, probabilities, token)?;
-    write_modes(
-        &mut writer,
-        decisions,
-        macroblock_width,
-        segment_probabilities,
-        params.num_segments > 1,
-        token,
-    )?;
-    Ok(writer.finish())
+    if let Some(token) = token {
+        let mut checkpoint = TokenPartitionCheckpoint {
+            token,
+            probability_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+        };
+        encode_first_partition_with_checkpoint(
+            decisions,
+            macroblock_width,
+            params,
+            probabilities,
+            adjust_filter_edges,
+            &mut checkpoint,
+        )
+    } else {
+        let mut checkpoint = NoopPartitionCheckpoint;
+        encode_first_partition_with_checkpoint(
+            decisions,
+            macroblock_width,
+            params,
+            probabilities,
+            adjust_filter_edges,
+            &mut checkpoint,
+        )
+    }
 }
