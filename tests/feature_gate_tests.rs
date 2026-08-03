@@ -7861,6 +7861,20 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             stored_expected,
             "an ample budget preserves PNG stored-block bytes"
         );
+        let stored_interior_image =
+            DecodedImage::new(11_000, 1, vec![0; 11_000 * 3], ColorType::Rgb8);
+        let stored_interior_expected =
+            image_slash_star::encode(&stored_interior_image, ImageFormat::Png, &stored_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &stored_interior_image,
+                ImageFormat::Png,
+                &stored_options,
+                &unlimited,
+            )?,
+            stored_interior_expected,
+            "an ample budget preserves PNG non-final stored blocks"
+        );
         let mut maximum_options = image_slash_star::PngEncodeOptions::default();
         maximum_options.compression = Some(image_slash_star::PngCompression::Maximum);
         let maximum_options = EncodeOptions::from(maximum_options);
