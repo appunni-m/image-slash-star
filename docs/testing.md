@@ -177,12 +177,14 @@ diagnostic result, and no parity row can legitimately assert `DiagnosticKind`,
 stage, offset, or identity because Pillow does not return those fields.
 
 `python3 scripts/verify_diagnostic_provenance.py` performs this distinction as
-a static audit: it checks the `defensive_model` origin, confirms the 38
-unchanged cases map to active parity baselines, confirms the 23 named cases are
-runtime mutations, rejects Rust-only diagnostic or mutation fields in the
-Pillow matrix, and checks these counts in the maintained docs. It executes no
-Rust test and contributes no coverage; it prevents the provenance statement
-from becoming stale as the defensive manifest grows.
+a static audit: it checks the `defensive_model` origin, hashes every diagnostic
+baseline, requires exactly one active Pillow row with the same format, asset
+digest, successful operation, and `pillow_fixture` operation origin, confirms
+the 38 unchanged cases and 23 named runtime mutations, rejects Rust-only
+diagnostic or mutation fields in the Pillow matrix, and checks these counts in
+the maintained docs. It executes no Rust test and contributes no coverage; it
+prevents a basename collision or an unrelated unit test from being presented
+as Pillow-parity evidence as the defensive manifest grows.
 
 This is why COR-061 is not a parity-row expansion. The generated
 `coverage_matrix_tests.rs` harness can compare Pillow's outer success/error,
@@ -2547,6 +2549,21 @@ across 74 Rust files. Each guard is assigned to `defensive_model`,
 rejects a Pillow-parity origin. This keeps aggregate LLVM execution evidence
 separate from the 1,417-row Pillow manifest and from ordinary Rust-only
 diagnostic contracts.
+
+The test targets have separate evidence roles:
+
+| Target or command | Evidence origin | What its coverage means |
+| --- | --- | --- |
+| `pillow-byte-pixel-parity` (`cargo test --all-features --test coverage_matrix_tests`) | `pillow_fixture` | Generated outer-result assertions from the pinned Pillow matrix; it has no successful-decode diagnostic field. |
+| `feature_gate_tests` and `decode_policy_tests` | `defensive_model` or another explicit non-Pillow contract | Public Rust behavior such as diagnostics, policies, cancellation, and sink semantics; any LLVM execution is incidental aggregate coverage. |
+| `all-features-llvm-cov-json-nightly-branch` | aggregate instrumentation | Combined execution across parity and non-parity targets; it is not a Pillow-parity coverage number. |
+
+The first row can execute a shared baseline asset, and the second row can use
+the same asset or a runtime mutation derived from it, but those are different
+claims. A Pillow row proves only the fields Pillow returns; the Rust contract
+proves the additional defensive fields. Coverage percentages do not assign
+ownership to either origin, so the repository never labels the aggregate
+snapshot as parity coverage.
 
 Pillow-observable behavior should reach semantic acceptance through a complete
 parity manifest fixture. Rust-only behavior should reach acceptance through an
