@@ -49,8 +49,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = ImageFormat::from_path("fixture.unknown");
     let _ = ImageFormat::from_path("fixture");
 
-    // No decoder currently emits auxiliary alpha; exercise the reserved
-    // variant and descriptor round-trip so the semantic space stays covered.
+    // Exercise the auxiliary-alpha variant and descriptor round-trip so the
+    // semantic space stays covered even when the AVIF feature is disabled.
     let descriptor = SourceDescriptor::new()
         .with_alpha(SourceAlpha::Auxiliary)
         .with_byte_order(SourceByteOrder::Big);

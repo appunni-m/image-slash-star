@@ -1032,7 +1032,7 @@ impl Meta {
 
     fn source_descriptor(&self, primary: u32) -> ParseResult<SourceDescriptor> {
         let mut source = if self.has_alpha(primary) {
-            SourceDescriptor::new().with_alpha(SourceAlpha::Straight)
+            SourceDescriptor::new().with_alpha(SourceAlpha::Auxiliary)
         } else {
             SourceDescriptor::new()
         };
@@ -1359,7 +1359,11 @@ impl Movie {
             depth: main.depth.unwrap_or(8),
             has_alpha,
             frame_count: main.sample_count,
-            source: SourceDescriptor::new(),
+            source: if has_alpha {
+                SourceDescriptor::new().with_alpha(SourceAlpha::Auxiliary)
+            } else {
+                SourceDescriptor::new()
+            },
             source_color: SourceColor::new(),
         })
     }

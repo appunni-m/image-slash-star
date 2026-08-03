@@ -1508,6 +1508,9 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::SourceAlpha;
 
+    // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
+    // parity field. The AVIF case below uses the real committed fixture in
+    // this feature-gated integration contract and adds no parity row.
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
         (
@@ -1591,10 +1594,10 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     ];
     if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
         cases.push((
-            "avif straight alpha",
+            "avif auxiliary alpha",
             true,
             "tests/fixtures/input/images/avif/alpha.avif",
-            Some(SourceAlpha::Straight),
+            Some(SourceAlpha::Auxiliary),
         ));
         cases.push((
             "avif opaque",
@@ -1613,6 +1616,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         assert_eq!(info.source.alpha(), expected, "{name} inspect");
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(decoded.content.source.alpha(), expected, "{name} decode");
+        if name == "avif auxiliary alpha" {
+            let sequence = image_slash_star::decode_sequence(&bytes)?;
+            assert_eq!(
+                sequence.content.frames[0].image.source.alpha(),
+                expected,
+                "{name} sequence"
+            );
+        }
     }
     Ok(())
 }

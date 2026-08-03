@@ -394,7 +394,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
         (ColorType::Rgb8, ImageMode::Rgb8)
     };
     let source_descriptor = if has_alpha {
-        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Auxiliary)
     } else {
         crate::types::SourceDescriptor::new()
     };
