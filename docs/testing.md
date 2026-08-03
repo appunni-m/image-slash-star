@@ -365,7 +365,7 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, 4,096-bit logical bitstream intervals, and 1,024-byte bitstream
+intervals, 1,024-bit logical bitstream intervals, and 1,024-byte bitstream
 output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
 untouched sink, including separate exact-boundary probes for the logical
@@ -413,8 +413,8 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 4,096-bit
-logical bitstream, and 1,024-byte bitstream-output stages, codec-result,
+search/match-length/cache/trace, histogram/Huffman, token-stream, 1,024-bit
+logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
@@ -432,9 +432,8 @@ mode-selection subsegments, WebP coefficient-probability adaptation and
 4,096-bit logical first-partition, 16,384-boolean first-partition-bit,
 4,096-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 4,096-bit logical VP8L
-bitstream interval, and VP8L stages, remaining
-finer WebP bitstream work beyond those intervals, progress callbacks, short-write
+intervals, the 1,024-bit logical VP8L bitstream intervals, and VP8L stages,
+remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
 Every current sink path does call `OutputSink::flush` once after complete

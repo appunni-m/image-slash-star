@@ -8465,6 +8465,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             output_lossless_expected,
             "an ample VP8L output budget preserves byte identity"
         );
+
+        // The finer VP8L logical-bitstream interval rejects before the legacy
+        // 4,096-bit boundary. This remains Rust-only work-control evidence:
+        // Pillow has no caller budget or equivalent result.
+        let fine_bitstream_checkpoint_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(55_996);
+        let fine_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &fine_bitstream_checkpoint_policy,
+        ) {
+            Ok(_) => return Err("VP8L fine bitstream budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            fine_bitstream_checkpoint_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 55_996,
+                observed: 55_997,
+            }
+        ));
+        let mut fine_bitstream_checkpoint_sink = vec![0xAA];
+        let fine_bitstream_checkpoint_sink_error =
+            match image_slash_star::encode_to_sink_with_policy(
+                &output_lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &fine_bitstream_checkpoint_policy,
+                &mut fine_bitstream_checkpoint_sink,
+            ) {
+                Ok(_) => {
+                    return Err("VP8L fine bitstream sink budget unexpectedly completed".into());
+                }
+                Err(error) => error,
+            };
+        assert!(matches!(
+            fine_bitstream_checkpoint_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 55_996,
+                observed: 55_997,
+            }
+        ));
+        assert_eq!(fine_bitstream_checkpoint_sink, vec![0xAA]);
+
         let bitstream_checkpoint_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(56_000);
         let bitstream_checkpoint_error = match image_slash_star::encode_with_policy(

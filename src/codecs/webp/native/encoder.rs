@@ -64,7 +64,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
-const VP8L_BITSTREAM_CHECKPOINT_BITS: usize = 4_096;
+const VP8L_BITSTREAM_CHECKPOINT_BITS: usize = 1_024;
 
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
