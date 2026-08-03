@@ -8611,6 +8611,64 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(coefficient_sink, vec![0xAE]);
+
+        // The coarser coefficient macroblock checkpoint remains in place
+        // after the finer block checkpoint. On this 512x512 probe, 100 block
+        // checkpoints complete at the 256th macroblock, so the macroblock
+        // charge is observed as 440. This is Rust-only work-control evidence
+        // with no parity row or coverage-only hook.
+        let coefficient_macroblock_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(439);
+        let coefficient_macroblock_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_macroblock_bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP coefficient macroblock budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_macroblock_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 439,
+                observed: 440,
+            }
+        ));
+        let mut coefficient_macroblock_sink = vec![0xB1];
+        let coefficient_macroblock_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_macroblock_bounded,
+            &mut coefficient_macroblock_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP coefficient macroblock sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_macroblock_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 439,
+                observed: 440,
+            }
+        ));
+        assert_eq!(coefficient_macroblock_sink, vec![0xB1]);
     }
 
     if cfg!(feature = "gif") {

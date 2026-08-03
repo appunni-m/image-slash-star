@@ -12,7 +12,13 @@ const CAT3_PROBABILITIES: [u8; 3] = [173, 148, 140];
 const CAT4_PROBABILITIES: [u8; 4] = [176, 155, 140, 135];
 const CAT5_PROBABILITIES: [u8; 5] = [180, 157, 141, 134, 130];
 const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 133, 130, 129];
+const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
+
+struct CoefficientCheckpoint<'a> {
+    token: Option<&'a crate::CancellationToken>,
+    block_items: usize,
+}
 
 fn write_category_bits(
     writer: &mut BoolEncoder,
@@ -150,6 +156,36 @@ fn write_block(
     }
 }
 
+fn write_block_with_checkpoint(
+    writer: &mut BoolEncoder,
+    probabilities: &AdaptedProbabilities,
+    levels: &[i16; 16],
+    first: usize,
+    coefficient_type: usize,
+    initial_context: usize,
+    checkpoint: &mut CoefficientCheckpoint<'_>,
+) -> CodecResult<u8> {
+    let nonzero = write_block(
+        writer,
+        probabilities,
+        levels,
+        first,
+        coefficient_type,
+        initial_context,
+    );
+    let Some(token) = checkpoint.token else {
+        return Ok(nonzero);
+    };
+    checkpoint.block_items = checkpoint.block_items.saturating_add(1);
+    if checkpoint
+        .block_items
+        .is_multiple_of(COEFFICIENT_CHECKPOINT_BLOCKS)
+    {
+        crate::codecs::error::check_cancelled(Some(token))?;
+    }
+    Ok(nonzero)
+}
+
 pub(super) fn encode_coefficients(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
@@ -160,6 +196,10 @@ pub(super) fn encode_coefficients(
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
+    let mut coefficient_checkpoint = CoefficientCheckpoint {
+        token,
+        block_items: 0,
+    };
     let mut macroblock_items = 0usize;
 
     for row in decisions.chunks_exact(macroblock_width) {
@@ -170,27 +210,29 @@ pub(super) fn encode_coefficients(
             let x = decision.x;
             match &decision.luma {
                 LumaDecision::Intra16(luma) => {
-                    let nonzero = write_block(
+                    let nonzero = write_block_with_checkpoint(
                         &mut writer,
                         probabilities,
                         &luma.y2_levels,
                         0,
                         1,
                         usize::from(top_y2[x].saturating_add(left_y2)),
-                    );
+                        &mut coefficient_checkpoint,
+                    )?;
                     top_y2[x] = nonzero;
                     left_y2 = nonzero;
                     let top_row = &mut top_y[x];
                     for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
                         for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
-                            let nonzero = write_block(
+                            let nonzero = write_block_with_checkpoint(
                                 &mut writer,
                                 probabilities,
                                 &luma.y1_levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 1,
                                 0,
                                 usize::from(top_nonzero.saturating_add(*left_nonzero)),
-                            );
+                                &mut coefficient_checkpoint,
+                            )?;
                             *top_nonzero = nonzero;
                             *left_nonzero = nonzero;
                         }
@@ -200,14 +242,15 @@ pub(super) fn encode_coefficients(
                     let top_row = &mut top_y[x];
                     for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
                         for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
-                            let nonzero = write_block(
+                            let nonzero = write_block_with_checkpoint(
                                 &mut writer,
                                 probabilities,
                                 &luma.levels[block_y.saturating_mul(4).saturating_add(block_x)],
                                 0,
                                 3,
                                 usize::from(top_nonzero.saturating_add(*left_nonzero)),
-                            );
+                                &mut coefficient_checkpoint,
+                            )?;
                             *top_nonzero = nonzero;
                             *left_nonzero = nonzero;
                         }
@@ -220,7 +263,7 @@ pub(super) fn encode_coefficients(
                     for block_x in 0usize..2 {
                         let top_index = plane.saturating_mul(2).saturating_add(block_x);
                         let left_index = plane.saturating_mul(2).saturating_add(block_y);
-                        let nonzero = write_block(
+                        let nonzero = write_block_with_checkpoint(
                             &mut writer,
                             probabilities,
                             &decision.chroma.levels[plane
@@ -230,7 +273,8 @@ pub(super) fn encode_coefficients(
                             0,
                             2,
                             usize::from(top_uv[x][top_index].saturating_add(left_uv[left_index])),
-                        );
+                            &mut coefficient_checkpoint,
+                        )?;
                         top_uv[x][top_index] = nonzero;
                         left_uv[left_index] = nonzero;
                     }
