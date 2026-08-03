@@ -4,9 +4,9 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
+    AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
+    AvifContentLightLevel, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1151,6 +1151,17 @@ impl Meta {
         }
         Ok(result)
     }
+
+    fn alpha_auxiliary_relationship(
+        &self,
+        primary_item_id: u32,
+    ) -> ParseResult<Option<AvifAuxiliaryRelationship>> {
+        Ok(self
+            .alpha_targeting(primary_item_id)?
+            .map(|auxiliary_item_id| {
+                AvifAuxiliaryRelationship::new(auxiliary_item_id, primary_item_id)
+            }))
+    }
 }
 
 pub(super) struct EncodedSample {
@@ -1184,6 +1195,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) retained_boxes: Vec<crate::types::OpaqueBlock>,
     pub(super) metadata: Vec<OpaqueMetadata>,
     pub(super) source_color: SourceColor,
+    pub(super) auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     pub(super) transform: Option<AvifTransformProperties>,
 }
 
@@ -2019,6 +2031,11 @@ fn extract_inner_with_metadata(
         Vec::new()
     };
     let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
+    let auxiliary_relationship = meta
+        .as_ref()
+        .map(|meta| meta.alpha_auxiliary_relationship(meta.primary_item_id))
+        .transpose()?
+        .flatten();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2028,6 +2045,7 @@ fn extract_inner_with_metadata(
         retained_boxes,
         metadata,
         source_color,
+        auxiliary_relationship,
         transform,
     })
 }
@@ -3527,6 +3545,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&empty_payload), 0);
@@ -3545,6 +3564,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&mixed_payload), 12);
@@ -3768,6 +3788,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
     };
     let _ = empty.validate();
@@ -3818,6 +3839,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3834,6 +3856,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3857,6 +3880,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3893,6 +3917,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3915,6 +3940,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3932,6 +3958,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3956,6 +3983,7 @@ fn coverage_structural_states() {
         retained_boxes: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
+        auxiliary_relationship: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {

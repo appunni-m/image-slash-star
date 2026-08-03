@@ -6,10 +6,10 @@
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
-    SourceColor, SourceDescriptor,
+    AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
+    AvifContentLightLevel, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
+    SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1036,6 +1036,12 @@ impl Meta {
         } else {
             SourceDescriptor::new()
         };
+        if let Some(auxiliary_item_id) = self.alpha_targeting(primary)? {
+            source = source.with_avif_auxiliary_relationship(AvifAuxiliaryRelationship::new(
+                auxiliary_item_id,
+                primary,
+            ));
+        }
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(primary) {
             match property {
@@ -1077,6 +1083,25 @@ impl Meta {
             .iter()
             .filter(move |association| association.item_id == item_id)
             .filter_map(|association| self.properties.get(association.property_index))
+    }
+
+    fn alpha_targeting(&self, item_id: u32) -> ParseResult<Option<u32>> {
+        let mut matches = self
+            .references
+            .iter()
+            .filter(|reference| {
+                reference.kind == *b"auxl"
+                    && reference.to_id == item_id
+                    && self
+                        .associated(reference.from_id)
+                        .any(|property| matches!(property, Property::AuxC { is_alpha: true }))
+            })
+            .map(|reference| reference.from_id);
+        let result = matches.next();
+        if matches.next().is_some() {
+            return Err(parse_failure!());
+        }
+        Ok(result)
     }
 
     fn has_alpha(&self, primary: u32) -> bool {

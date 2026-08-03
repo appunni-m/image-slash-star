@@ -20,6 +20,7 @@ pub fn decode(
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
+    let auxiliary_relationship = extracted.auxiliary_relationship;
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -36,6 +37,15 @@ pub fn decode(
             image.with_source_descriptor(source)
         }
         None => image,
+    };
+    let image = if let Some(relationship) = auxiliary_relationship {
+        let source = image
+            .source
+            .clone()
+            .with_avif_auxiliary_relationship(relationship);
+        image.with_source_descriptor(source)
+    } else {
+        image
     };
     Ok((
         image
@@ -58,6 +68,7 @@ pub fn decode_sequence(
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
+    let auxiliary_relationship = extracted.auxiliary_relationship;
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -66,6 +77,16 @@ pub fn decode_sequence(
     if let Some(transform) = transform {
         for frame in &mut sequence.frames {
             let source = frame.image.source.clone().with_avif_transform(transform);
+            frame.image.source = source;
+        }
+    }
+    if let Some(relationship) = auxiliary_relationship {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_auxiliary_relationship(relationship);
             frame.image.source = source;
         }
     }

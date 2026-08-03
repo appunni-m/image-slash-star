@@ -892,6 +892,43 @@ pub enum SourceAlpha {
     Auxiliary,
 }
 
+/// A bounded direct relationship between an AVIF auxiliary item and the item
+/// it targets.
+///
+/// Item identifiers are local to the encoded container; they are source
+/// provenance, not globally stable image identifiers. The current AVIF
+/// parser exposes this relation for a direct alpha `auxl` association to the
+/// primary item. Derived, grid, per-frame, and non-alpha auxiliary graphs are
+/// not represented by this descriptor yet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifAuxiliaryRelationship {
+    auxiliary_item_id: u32,
+    target_item_id: u32,
+}
+
+impl AvifAuxiliaryRelationship {
+    /// Create a source-local AVIF auxiliary-to-target relationship.
+    #[must_use]
+    pub const fn new(auxiliary_item_id: u32, target_item_id: u32) -> Self {
+        Self {
+            auxiliary_item_id,
+            target_item_id,
+        }
+    }
+
+    /// Return the source-local auxiliary item identifier.
+    #[must_use]
+    pub const fn auxiliary_item_id(&self) -> u32 {
+        self.auxiliary_item_id
+    }
+
+    /// Return the source-local item identifier targeted by the auxiliary item.
+    #[must_use]
+    pub const fn target_item_id(&self) -> u32 {
+        self.target_item_id
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -902,6 +939,7 @@ pub enum SourceAlpha {
 pub struct SourceDescriptor {
     byte_order: Option<SourceByteOrder>,
     alpha: Option<SourceAlpha>,
+    avif_auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     avif_transform: Option<AvifTransformProperties>,
 }
 
@@ -913,6 +951,7 @@ impl SourceDescriptor {
         Self {
             byte_order: None,
             alpha: None,
+            avif_auxiliary_relationship: None,
             avif_transform: None,
         }
     }
@@ -944,6 +983,23 @@ impl SourceDescriptor {
         self.alpha
     }
 
+    /// Record a bounded direct AVIF auxiliary-item relationship.
+    #[must_use]
+    pub const fn with_avif_auxiliary_relationship(
+        mut self,
+        relationship: AvifAuxiliaryRelationship,
+    ) -> Self {
+        self.avif_auxiliary_relationship = Some(relationship);
+        self
+    }
+
+    /// Return the retained direct AVIF auxiliary-item relationship, when one
+    /// is available.
+    #[must_use]
+    pub const fn avif_auxiliary_relationship(&self) -> Option<AvifAuxiliaryRelationship> {
+        self.avif_auxiliary_relationship
+    }
+
     /// Record the AVIF item transforms declared by the encoded source.
     ///
     /// These properties describe source presentation metadata only. Decoded
@@ -963,7 +1019,10 @@ impl SourceDescriptor {
     /// Whether this source has no retained structural facts.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.byte_order.is_none() && self.alpha.is_none() && self.avif_transform.is_none()
+        self.byte_order.is_none()
+            && self.alpha.is_none()
+            && self.avif_auxiliary_relationship.is_none()
+            && self.avif_transform.is_none()
     }
 }
 
