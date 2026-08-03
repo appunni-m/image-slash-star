@@ -8453,6 +8453,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(probability_sink, vec![0xAD]);
+
+        // Coefficient bitstream emission charges after each batch of 256
+        // completed macroblocks. Pillow has no caller token or work-budget
+        // result, so this remains Rust-only evidence with no parity row or
+        // coverage-only hook.
+        let coefficient_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(334);
+        let coefficient_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP coefficient budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        let mut coefficient_sink = vec![0xAE];
+        let coefficient_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_bounded,
+            &mut coefficient_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP coefficient sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        assert_eq!(coefficient_sink, vec![0xAE]);
     }
 
     if cfg!(feature = "gif") {

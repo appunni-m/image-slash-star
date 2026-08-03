@@ -202,7 +202,7 @@ fn encode_vp8_planes(
         method >= 3,
     );
     crate::codecs::error::check_cancelled(token)?;
-    let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities);
+    let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let frame_header = build_frame_header(width, height, low_u32(header_data.len()));
 

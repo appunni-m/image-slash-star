@@ -6,11 +6,13 @@ use super::{
     probability::AdaptedProbabilities,
     tokenize::COEFF_BANDS,
 };
+use crate::codecs::CodecResult;
 
 const CAT3_PROBABILITIES: [u8; 3] = [173, 148, 140];
 const CAT4_PROBABILITIES: [u8; 4] = [176, 155, 140, 135];
 const CAT5_PROBABILITIES: [u8; 5] = [180, 157, 141, 134, 130];
 const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 133, 130, 129];
+const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
 
 fn write_category_bits(
     writer: &mut BoolEncoder,
@@ -152,11 +154,13 @@ pub(super) fn encode_coefficients(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     probabilities: &AdaptedProbabilities,
-) -> Vec<u8> {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut writer = BoolEncoder::default();
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
+    let mut macroblock_items = 0usize;
 
     for row in decisions.chunks_exact(macroblock_width) {
         let mut left_y = [0u8; 4];
@@ -232,7 +236,11 @@ pub(super) fn encode_coefficients(
                     }
                 }
             }
+            macroblock_items = macroblock_items.saturating_add(1);
+            if macroblock_items.is_multiple_of(COEFFICIENT_CHECKPOINT_MACROBLOCKS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
-    writer.finish()
+    Ok(writer.finish())
 }
