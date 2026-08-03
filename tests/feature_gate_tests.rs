@@ -9045,6 +9045,56 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(sink, vec![0xC1]);
 
+        // The token-aware Apple-compatible bucket sort now charges every
+        // 1,024 sorting operations. The already-tested ample token path keeps
+        // bytes identical; these bounds prove rejection inside the sorter,
+        // without adding a Pillow parity row or a coverage-only input.
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => return Err("bounded GIF bucket-sort budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+
+        let mut sink = vec![0xC3];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+            &mut sink,
+        ) {
+            Ok(_) => {
+                return Err("bounded GIF bucket-sort sink budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+        assert_eq!(sink, vec![0xC3]);
+
         // GIF high-color RGB median-cut preparation now charges its hash/order,
         // axis, split, and partition scans. This is a real Rust-only
         // work-control contract: Pillow has no caller token or work-budget
