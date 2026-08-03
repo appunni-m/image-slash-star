@@ -9,16 +9,17 @@
 //! pixels after each 1,024 converted or produced pixels, JPEG entropy-output
 //! intervals after each 1,024 emitted entropy bytes, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup after each
-//! 1,024 scanned or flattened pixels, analysis, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and
-//! 16,384-boolean first-partition bit intervals, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit
-//! logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
+//! 1,024 scanned or flattened pixels, analysis, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and
+//! 16,384-boolean first-partition bit intervals, 8-bit, 16-bit, 32-bit, 64-bit,
+//! 128-bit, 256-bit and 512-bit logical and 16,384-boolean coefficient-bit
+//! intervals, 1,024-byte boolean-bitstream output
 //! intervals, JPEG optimized-Huffman frequency coefficients after each 1,024
 //! coefficients, progressive scan block slots after each 1,024 blocks,
 //! progressive scan coefficient items after each 1,024 coefficients, and
 //! progressive scan-event frequency items after each 1,024 events,
 //! forward-DCT/quantization blocks, and bitstream stages, and
 //! lossless WebP VP8L
-//! predictor/cross-color/entropy/transform, histogram/Huffman, 16-bit, 32-bit, 64-bit, 128-bit,
+//! predictor/cross-color/entropy/transform, histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
 //! 256-bit, and 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
