@@ -8697,13 +8697,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .collect();
         let partition_probe = DecodedImage::new(896, 512, partition_probe_pixels, ColorType::Rgb8);
         // First-partition boolean coding now charges a logical checkpoint
-        // after each 1,024 coded bits. This patterned 896x512 probe reaches
+        // after each 512 coded bits. This patterned 896x512 probe reaches
         // that interval before residual emission. Pillow has no caller token
         // or work-budget result, so this remains Rust-only evidence with no
         // parity row or coverage-only hook; ordinary byte identity is covered
         // by the active parity matrix and the ample-budget probe above.
         let finer_partition_bit_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(577);
+            image_slash_star::EncodePolicy::new().with_max_work_units(593);
         let finer_partition_bit_error = match image_slash_star::encode_with_policy(
             &partition_probe,
             ImageFormat::WebP,
@@ -8723,8 +8723,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 577,
-                observed: 578,
+                maximum: 593,
+                observed: 594,
             }
         ));
         let mut finer_partition_bit_sink = vec![0xB5];
@@ -8748,8 +8748,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 577,
-                observed: 578,
+                maximum: 593,
+                observed: 594,
             }
         ));
         assert_eq!(finer_partition_bit_sink, vec![0xB5]);
@@ -8807,7 +8807,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // The existing coarser first-partition boundary remains separately
         // enforced after each 16,384 coded bits, after the finer logical
         // checkpoints above. This is the same Rust-only contract.
-        let partition_bit_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(598);
+        let partition_bit_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(613);
         let partition_bit_error = match image_slash_star::encode_with_policy(
             &partition_probe,
             ImageFormat::WebP,
@@ -8823,8 +8823,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 598,
-                observed: 599,
+                maximum: 613,
+                observed: 614,
             }
         ));
         let mut partition_bit_sink = vec![0xB4];
@@ -8848,8 +8848,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 598,
-                observed: 599,
+                maximum: 613,
+                observed: 614,
             }
         ));
         assert_eq!(partition_bit_sink, vec![0xB4]);
@@ -8906,6 +8906,34 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(output_sink, vec![0xB5]);
+
+        // A later budget reaches the coefficient partition after the first
+        // partition has completed. This keeps the residual writer's empty
+        // block and block-wrapper paths covered even though the finer first
+        // partition checkpoint now interrupts earlier probes. Pillow has no
+        // caller token or work-budget result, so this remains Rust-only
+        // evidence with no parity row or coverage-only hook.
+        let residual_policy = image_slash_star::EncodePolicy::new().with_max_work_units(700);
+        let residual_error = match image_slash_star::encode_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &residual_policy,
+        ) {
+            Ok(_) => return Err("bounded WebP residual budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            residual_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 700,
+                observed: 701,
+            }
+        ));
+
         assert_eq!(
             image_slash_star::encode_with_policy(
                 &analysis_image,
