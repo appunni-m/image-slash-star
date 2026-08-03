@@ -348,7 +348,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let opaque_rgba = [
         255u8, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255,
     ];
-    let _ = quantize_rgba(&opaque_rgba);
+    let _ = quantize_rgba(&opaque_rgba, None);
 
     let mut compact_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
     let mut compact_indices = vec![0u8, 1, 2];
@@ -357,11 +357,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut compact_palette,
         &mut compact_indices,
         &mut compact_transparent,
+        None,
     );
     let mut hole_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
     let mut hole_indices = vec![0u8, 2];
     let mut hole_transparent = None;
-    let _ = compact_rgba_palette(&mut hole_palette, &mut hole_indices, &mut hole_transparent);
+    let _ = compact_rgba_palette(
+        &mut hole_palette,
+        &mut hole_indices,
+        &mut hole_transparent,
+        None,
+    );
 
     let mut rgb_pixels = Vec::with_capacity(16 * 16 * 3);
     for value in 0u8..=255 {
@@ -1377,7 +1383,7 @@ fn prepare_image_with_token(
             (palette, indices, None)
         }
         (ImageMode::Rgba8, ColorType::Rgba8) => {
-            let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels);
+            let (palette, indices, transparent_idx) = quantize_rgba(&img.pixels, token)?;
             (palette, indices, transparent_idx)
         }
         _ => {
@@ -2282,23 +2288,50 @@ impl PillowBoxHeap {
 /// Quantize RGBA8 pixels to a palette with optional transparency.
 ///
 /// Returns `(palette, indices, optional_transparent_index)`.
-fn quantize_rgba(pixels: &[u8]) -> (Vec<u8>, Vec<u8>, Option<u8>) {
+fn quantize_rgba(
+    pixels: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<u8>, Vec<u8>, Option<u8>)> {
     debug_assert!(!pixels.is_empty());
     debug_assert!(pixels.len().is_multiple_of(4));
-    let mut colors = pixels
-        .chunks_exact(4)
-        .map(|pixel| [pixel[0], pixel[1], pixel[2], pixel[3]])
-        .collect::<Vec<_>>();
+    let mut colors = Vec::with_capacity(pixels.len().div_euclid(4));
+    if let Some(token) = token {
+        for (pixel_index, pixel) in pixels.chunks_exact(4).enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            colors.push([pixel[0], pixel[1], pixel[2], pixel[3]]);
+        }
+    } else {
+        colors.extend(
+            pixels
+                .chunks_exact(4)
+                .map(|pixel| [pixel[0], pixel[1], pixel[2], pixel[3]]),
+        );
+    }
     // Quant.c normalizes every fully transparent pixel to the first one's RGB
     // before FASTOCTREE, so transparent garbage channels cannot consume colors.
     if let Some(first) = colors.iter().find(|color| color[3] == 0).copied() {
-        for color in &mut colors {
-            if color[3] == 0 {
-                color[..3].copy_from_slice(&first[..3]);
+        if let Some(token) = token {
+            for (pixel_index, color) in colors.iter_mut().enumerate() {
+                if pixel_index != 0
+                    && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS)
+                {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                }
+                if color[3] == 0 {
+                    color[..3].copy_from_slice(&first[..3]);
+                }
+            }
+        } else {
+            for color in &mut colors {
+                if color[3] == 0 {
+                    color[..3].copy_from_slice(&first[..3]);
+                }
             }
         }
     }
-    let (mut rgba_palette, mut indices) = pillow_fast_octree(&colors, 256);
+    let (mut rgba_palette, mut indices) = pillow_fast_octree(&colors, 256, token)?;
     let mut transparent = colors
         .iter()
         .any(|color| color[3] == 0)
@@ -2313,19 +2346,20 @@ fn quantize_rgba(pixels: &[u8]) -> (Vec<u8>, Vec<u8>, Option<u8>) {
             index
         });
 
-    compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent);
+    compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token)?;
     let palette = rgba_palette
         .into_iter()
         .flat_map(|color| color[..3].to_vec())
         .collect();
-    (palette, indices, transparent)
+    Ok((palette, indices, transparent))
 }
 
 fn compact_rgba_palette(
     rgba_palette: &mut Vec<[u8; 4]>,
     indices: &mut [u8],
     transparent: &mut Option<u8>,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     // GifImagePlugin._get_optimize compacts holes, and also shrinks a palette
     // by one power-of-two step when at most half of its entries are used.
     let mut used = vec![false; rgba_palette.len()];
@@ -2347,12 +2381,24 @@ fn compact_rgba_palette(
             remap[old_index] = palette_index(new_index);
             compact.push(rgba_palette[old_index]);
         }
-        for index in indices.iter_mut() {
-            *index = remap[usize::from(*index)];
+        if let Some(token) = token {
+            for (pixel_index, index) in indices.iter_mut().enumerate() {
+                if pixel_index != 0
+                    && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS)
+                {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                }
+                *index = remap[usize::from(*index)];
+            }
+        } else {
+            for index in indices.iter_mut() {
+                *index = remap[usize::from(*index)];
+            }
         }
         *transparent = transparent.map(|index| remap[usize::from(index)]);
         *rgba_palette = compact;
     }
+    Ok(())
 }
 
 // Behavioral port of Pillow 12.2.0 src/libImaging/QuantOctree.c (MIT,
@@ -2668,12 +2714,25 @@ fn add_octree_lookup(cube: &mut OctreeCube, palette: &[OctreeBucket], offset: us
     }
 }
 
-fn pillow_fast_octree(colors: &[[u8; 4]], target: usize) -> (Vec<[u8; 4]>, Vec<u8>) {
+fn pillow_fast_octree(
+    colors: &[[u8; 4]],
+    target: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(Vec<[u8; 4]>, Vec<u8>)> {
     let fine_bits = [3, 4, 3, 3];
     let coarse_bits = [2, 2, 2, 2];
     let mut fine = OctreeCube::new(fine_bits);
-    for &color in colors {
-        fine.add_color(color);
+    if let Some(token) = token {
+        for (pixel_index, &color) in colors.iter().enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            fine.add_color(color);
+        }
+    } else {
+        for &color in colors {
+            fine.add_color(color);
+        }
     }
     let mut coarse = copy_octree_cube(&fine, coarse_bits);
     let mut coarse_count = coarse.used().min(target);
@@ -2693,12 +2752,25 @@ fn pillow_fast_octree(colors: &[[u8; 4]], target: usize) -> (Vec<[u8; 4]>, Vec<u
     add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0);
     let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits);
     add_octree_lookup(&mut lookup, &buckets, coarse_count);
-    let indices = colors
-        .iter()
-        .map(|&color| palette_index_u32(lookup.buckets[lookup.offset(color)].count))
-        .collect();
+    let indices = if let Some(token) = token {
+        let mut indices = Vec::with_capacity(colors.len());
+        for (pixel_index, &color) in colors.iter().enumerate() {
+            if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            indices.push(palette_index_u32(
+                lookup.buckets[lookup.offset(color)].count,
+            ));
+        }
+        indices
+    } else {
+        colors
+            .iter()
+            .map(|&color| palette_index_u32(lookup.buckets[lookup.offset(color)].count))
+            .collect()
+    };
     let palette = buckets.iter().map(OctreeBucket::average).collect();
-    (palette, indices)
+    Ok((palette, indices))
 }
 /// Find a color in the palette. Returns its index if found.
 fn find_color(palette: &[[u8; 3]], color: &[u8; 3]) -> Option<usize> {
