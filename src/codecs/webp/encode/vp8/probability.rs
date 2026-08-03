@@ -5,8 +5,11 @@ use super::{
     frame::{LumaDecision, MacroblockDecision},
     tokenize::{COEFF_BANDS, COEFF_PROBS, coefficient_update_probability},
 };
+use crate::codecs::CodecResult;
 
 type Statistics = [[[[u32; 11]; 3]; 8]; 4];
+
+const PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AdaptedProbabilities {
@@ -225,10 +228,12 @@ pub(super) fn adapt_coefficients(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     token_buffer: bool,
-) -> AdaptedProbabilities {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<AdaptedProbabilities> {
     let statistics = collect_statistics(decisions, macroblock_width, token_buffer);
     let mut coefficients = COEFF_PROBS;
     let mut updates = [[[[false; 11]; 3]; 8]; 4];
+    let mut probability_items: usize = 0;
     for coefficient_type in 0..4 {
         for band in 0..8 {
             for context in 0..3 {
@@ -263,12 +268,16 @@ pub(super) fn adapt_coefficients(
                         coefficients[coefficient_type][band][context][node] = new_probability;
                         updates[coefficient_type][band][context][node] = true;
                     }
+                    probability_items = probability_items.saturating_add(1);
+                    if probability_items.is_multiple_of(PROBABILITY_CHECKPOINT_NODES) {
+                        crate::codecs::error::check_cancelled(token)?;
+                    }
                 }
             }
         }
     }
-    AdaptedProbabilities {
+    Ok(AdaptedProbabilities {
         coefficients,
         updates,
-    }
+    })
 }
