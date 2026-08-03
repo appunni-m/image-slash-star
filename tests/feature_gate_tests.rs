@@ -8557,6 +8557,73 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(downsample_sink, vec![0x5E]);
 
+        // Optimized baseline JPEGs first gather Huffman symbol frequencies.
+        // The committed large fixture reaches that coefficient scan after the
+        // row/block/downsample checkpoints; charge one interval per 1,024 AC
+        // coefficients so a wide optimized encode cannot hide the scan behind
+        // one MCU-row poll. Pillow has no caller work budget or equivalent
+        // sink/result contract, so this remains Rust-only evidence with no
+        // parity row, parity fixture, diagnostic origin, or coverage-only hook.
+        let mut optimized_jpeg_options = image_slash_star::JpegEncodeOptions::default();
+        optimized_jpeg_options.optimize = Some(true);
+        let optimized_options = EncodeOptions::from(optimized_jpeg_options);
+        let optimized_expected =
+            image_slash_star::encode(&downsample_image, ImageFormat::Jpeg, &optimized_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &downsample_image,
+                ImageFormat::Jpeg,
+                &optimized_options,
+                &unlimited,
+            )?,
+            optimized_expected,
+            "an ample Huffman-frequency budget preserves fixture-derived bytes"
+        );
+        let frequency_policy = image_slash_star::EncodePolicy::new().with_max_work_units(1_220);
+        let frequency_error = match image_slash_star::encode_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &optimized_options,
+            &frequency_policy,
+        ) {
+            Ok(_) => return Err("JPEG Huffman-frequency budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            frequency_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_220,
+                observed: 1_221,
+            }
+        ));
+        let mut frequency_sink = vec![0x5F];
+        let frequency_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &optimized_options,
+            &frequency_policy,
+            &mut frequency_sink,
+        ) {
+            Ok(_) => {
+                return Err("JPEG Huffman-frequency budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            frequency_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_220,
+                observed: 1_221,
+            }
+        ));
+        assert_eq!(frequency_sink, vec![0x5F]);
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;

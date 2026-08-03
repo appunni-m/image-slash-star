@@ -32,6 +32,7 @@ const ZIGZAG: [usize; 64] = [
 const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
 const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
+const HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS: usize = 1_024;
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -128,6 +129,56 @@ impl DownsampleCheckpoint for TokenDownsampleCheckpoint<'_> {
         if self.pixels_until_checkpoint == 0 {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             self.pixels_until_checkpoint = DOWNSAMPLE_CHECKPOINT_PIXELS;
+        }
+        Ok(())
+    }
+}
+
+trait HuffmanFrequencyCheckpoint {
+    fn row(&mut self) -> CodecResult<()>;
+    fn observe(&mut self) -> CodecResult<()>;
+}
+
+struct NoopHuffmanFrequencyCheckpoint;
+
+impl HuffmanFrequencyCheckpoint for NoopHuffmanFrequencyCheckpoint {
+    #[inline(always)]
+    fn row(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn observe(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenHuffmanFrequencyCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    coefficients_until_checkpoint: usize,
+}
+
+impl<'a> TokenHuffmanFrequencyCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            coefficients_until_checkpoint: HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS,
+        }
+    }
+}
+
+impl HuffmanFrequencyCheckpoint for TokenHuffmanFrequencyCheckpoint<'_> {
+    #[inline]
+    fn row(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn observe(&mut self) -> CodecResult<()> {
+        self.coefficients_until_checkpoint = self.coefficients_until_checkpoint.saturating_sub(1);
+        if self.coefficients_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.coefficients_until_checkpoint = HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS;
         }
         Ok(())
     }
@@ -1274,6 +1325,26 @@ fn baseline_frequencies(
     restart_interval: u16,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<([[u64; 256]; 2], [[u64; 256]; 2])> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenHuffmanFrequencyCheckpoint::new(token);
+        baseline_frequencies_with_checkpoint(comps, max_h, max_v, restart_interval, &mut checkpoint)
+    } else {
+        let mut checkpoint = NoopHuffmanFrequencyCheckpoint;
+        baseline_frequencies_with_checkpoint(comps, max_h, max_v, restart_interval, &mut checkpoint)
+    }
+}
+
+#[allow(
+    clippy::type_complexity,
+    reason = "the pair of fixed-size DC and AC frequency tables mirrors the JPEG encoder state"
+)]
+fn baseline_frequencies_with_checkpoint<C: HuffmanFrequencyCheckpoint>(
+    comps: &[CompData],
+    max_h: u8,
+    max_v: u8,
+    restart_interval: u16,
+    checkpoint: &mut C,
+) -> CodecResult<([[u64; 256]; 2], [[u64; 256]; 2])> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jchuff.c's gather_statistics pass.
     // Traverse exactly the same MCU stream as encode_baseline_entropy so the
     // optimized table describes every symbol that the output pass will emit.
@@ -1287,7 +1358,7 @@ fn baseline_frequencies(
     let mut mcus_until_restart = usize::from(restart_interval);
 
     for my in 0..n_mcu_y {
-        crate::codecs::error::check_cancelled(token)?;
+        checkpoint.row()?;
         for mx in 0..n_mcu_x {
             if restart_interval != 0 && mcus_until_restart == 0 {
                 last_dc.fill(0);
@@ -1325,6 +1396,7 @@ fn baseline_frequencies(
                             let coefficient = i32::from(block[natural_index]);
                             if coefficient == 0 {
                                 run = run.saturating_add(1);
+                                checkpoint.observe()?;
                                 continue;
                             }
                             while run >= 16 {
@@ -1335,6 +1407,7 @@ fn baseline_frequencies(
                             let symbol = run.wrapping_shl(4) | width;
                             ac[ac_slot][symbol] = ac[ac_slot][symbol].saturating_add(1);
                             run = 0;
+                            checkpoint.observe()?;
                         }
                         if run != 0 {
                             ac[ac_slot][0] = ac[ac_slot][0].saturating_add(1);
