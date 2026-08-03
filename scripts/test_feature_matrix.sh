@@ -118,7 +118,16 @@ esac
 # callers can raise it for local debugging with MATRIX_DEBUG=1 or 2.
 export CARGO_PROFILE_DEV_DEBUG="$MATRIX_DEBUG"
 export CARGO_PROFILE_TEST_DEBUG="$MATRIX_DEBUG"
-echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS debug=$MATRIX_DEBUG"
+MATRIX_VERBOSE=${MATRIX_VERBOSE:-0}
+case "$MATRIX_VERBOSE" in
+    0|1)
+        ;;
+    *)
+        echo "MATRIX_VERBOSE must be 0 or 1" >&2
+        exit 2
+        ;;
+esac
+echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS debug=$MATRIX_DEBUG verbose=$MATRIX_VERBOSE"
 
 # The feature-gate suite includes real codec work-budget and cancellation
 # contracts, so unoptimized test binaries make the WASI runtime lane needlessly
@@ -352,7 +361,11 @@ run_parallel_jobs() {
                     matrix_pending_status=$(sed -n '1p' "$matrix_pending_status_path")
                     wait "$matrix_pending_pid" || :
 
-                    cat "$matrix_log_dir/$matrix_pending_group-$matrix_pending_lane.log"
+                    if [ "$MATRIX_VERBOSE" -eq 1 ] || [ "$matrix_pending_status" -ne 0 ]; then
+                        cat "$matrix_log_dir/$matrix_pending_group-$matrix_pending_lane.log"
+                    else
+                        echo "matrix lane $matrix_pending_group/$matrix_pending_lane passed"
+                    fi
                     if [ "$matrix_pending_status" -ne 0 ]; then
                         echo "matrix lane $matrix_pending_group/$matrix_pending_lane failed with status $matrix_pending_status" >&2
                     fi
