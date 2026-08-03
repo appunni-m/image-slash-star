@@ -874,7 +874,7 @@ pub fn encode_with_policy(
 /// intervals, and WebP still encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
 /// probability, 512-bit logical and 16,384-boolean first-partition-bit and
-/// 1,024-bit logical and 16,384-boolean coefficient-bit,
+/// 512-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, 512-bit logical bitstream intervals, 1,024-byte

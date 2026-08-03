@@ -9304,13 +9304,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(coefficient_token_sink, vec![0xB2]);
 
         // Coefficient boolean coding now charges a logical checkpoint after
-        // each 1,024 coded bits. On this 512x512 probe, the first such
-        // interval is observed as 362 in both whole-buffer and direct-sink
-        // paths. Pillow has no caller token or work-budget result, so this
-        // remains Rust-only work-control evidence with no parity row or
-        // coverage-only hook.
+        // each 512 coded bits. This 512x512 probe reaches a later logical
+        // interval after the earlier codec checkpoints. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only work-control
+        // evidence with no parity row or coverage-only hook.
         let coefficient_fine_bit_bounded =
-            image_slash_star::EncodePolicy::new().with_max_work_units(361);
+            image_slash_star::EncodePolicy::new().with_max_work_units(820);
         let coefficient_fine_bit_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -9330,8 +9329,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 361,
-                observed: 362,
+                maximum: 820,
+                observed: 821,
             }
         ));
         let mut coefficient_fine_bit_sink = vec![0xB3];
@@ -9356,8 +9355,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 361,
-                observed: 362,
+                maximum: 820,
+                observed: 821,
             }
         ));
         assert_eq!(coefficient_fine_bit_sink, vec![0xB3]);
@@ -9365,7 +9364,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // The existing coarser coefficient boolean checkpoint remains
         // independently enforced after each 16,384 coded bits.
         let coefficient_bit_bounded =
-            image_slash_star::EncodePolicy::new().with_max_work_units(401);
+            image_slash_star::EncodePolicy::new().with_max_work_units(647);
         let coefficient_bit_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -9383,8 +9382,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 401,
-                observed: 402,
+                maximum: 647,
+                observed: 648,
             }
         ));
         let mut coefficient_bit_sink = vec![0xB3];
@@ -9408,20 +9407,20 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 401,
-                observed: 402,
+                maximum: 647,
+                observed: 648,
             }
         ));
         assert_eq!(coefficient_bit_sink, vec![0xB3]);
 
         // The coarser coefficient macroblock checkpoint remains in place
-        // after the finer block checkpoint. On this 512x512 probe, 100 block
-        // checkpoints and one token checkpoint complete at the 256th
-        // macroblock, so the macroblock charge is observed as 441. This is
+        // after the finer block checkpoint. On this 512x512 probe, the
+        // macroblock charge is observed as 467 after the earlier residual
+        // checkpoints. This is
         // Rust-only work-control evidence
         // with no parity row or coverage-only hook.
         let coefficient_macroblock_bounded =
-            image_slash_star::EncodePolicy::new().with_max_work_units(440);
+            image_slash_star::EncodePolicy::new().with_max_work_units(466);
         let coefficient_macroblock_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -9441,8 +9440,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 440,
-                observed: 441,
+                maximum: 466,
+                observed: 467,
             }
         ));
         let mut coefficient_macroblock_sink = vec![0xB1];
@@ -9467,8 +9466,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 440,
-                observed: 441,
+                maximum: 466,
+                observed: 467,
             }
         ));
         assert_eq!(coefficient_macroblock_sink, vec![0xB1]);
