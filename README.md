@@ -150,7 +150,7 @@ capabilities and setup.
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG rows/blocks/scans and 1,024-byte entropy-output intervals, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection subsegments plus VP8 analysis, coefficient-probability adaptation, bitstream, and VP8L stages, and each format's documented boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG RGB-to-YCbCr conversion after each 1,024 pixels, rows/blocks/scans, and 1,024-byte entropy-output intervals, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection subsegments plus VP8 analysis, coefficient-probability adaptation, bitstream, and VP8L stages, and each format's documented boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
@@ -197,8 +197,9 @@ progress-aware otherwise.
 `cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
 page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
 without publishing partial state. Token-aware encode APIs check before and
-after whole-buffer codecs; codec-specific checkpoints cover JPEG color,
-sampling, quantization, entropy, 1,024-byte entropy-output intervals, and progressive scans, PNG rows and adaptive
+after whole-buffer codecs; codec-specific checkpoints cover JPEG RGB-to-YCbCr
+conversion after each 1,024 pixels, color, sampling, quantization, entropy,
+1,024-byte entropy-output intervals, and progressive scans, PNG rows and adaptive
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
 subsegments plus VP8's 512-bit logical and 16,384-boolean first-partition and
@@ -573,9 +574,10 @@ Encoded bytes and decoded pixels for a fixed encoder/decoder subset are also
 SHA-256-pinned in `tests/fixtures/determinism.json`, and the same test runs
 natively and in the WASM runtime so cross-target output stays byte-identical.
 
-The accepted Coverage MCP snapshot for that implementation state reports 100%
-line, branch, function, and region coverage. Coverage proves execution under
-the retained suite; it does not prove complete format support or security.
+The current accepted Coverage MCP snapshot is recorded in
+[oracle, fixtures, tests, and coverage](docs/testing.md) with aggregate line,
+branch, function, and region counts. Coverage proves execution under the
+retained suite; it does not prove complete format support or security.
 
 The oracle identity, regeneration workflow, exact comparison contract, test
 tiers, current run identifiers, and troubleshooting are in
