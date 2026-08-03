@@ -16,12 +16,21 @@ const COEFFICIENT_CHECKPOINT_TOKENS: usize = 4_000;
 const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
 const COEFFICIENT_CHECKPOINT_BITS: usize = 16_384;
+const COEFFICIENT_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait CoefficientCheckpointControl {
     fn checkpoint_token(&mut self) -> CodecResult<()>;
     fn checkpoint_block(&mut self) -> CodecResult<()>;
     fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_bit(&mut self) -> CodecResult<()>;
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()>;
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()>;
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>>;
 }
 
 struct NoopCoefficientCheckpoint;
@@ -46,6 +55,27 @@ impl CoefficientCheckpointControl for NoopCoefficientCheckpoint {
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
         Ok(())
     }
+
+    #[inline(always)]
+    fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        writer.encode_bool(probability, value);
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        Ok(writer.finish())
+    }
 }
 
 struct TokenCoefficientCheckpoint<'a> {
@@ -54,6 +84,7 @@ struct TokenCoefficientCheckpoint<'a> {
     block_items: usize,
     macroblock_items: usize,
     bit_items: usize,
+    output_bytes: usize,
 }
 
 impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
@@ -101,6 +132,36 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
         }
         Ok(())
     }
+
+    fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()> {
+        let previous = self.output_bytes;
+        self.output_bytes = self.output_bytes.saturating_add(emitted);
+        let mut previous_interval = previous / COEFFICIENT_OUTPUT_CHECKPOINT_BYTES;
+        let current_interval = self.output_bytes / COEFFICIENT_OUTPUT_CHECKPOINT_BYTES;
+        while previous_interval < current_interval {
+            previous_interval = previous_interval.saturating_add(1);
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        writer.encode_bool_with_checkpoint(probability, value, &mut |emitted| {
+            self.checkpoint_output_bytes(emitted)
+        })?;
+        self.checkpoint_bit()
+    }
+
+    #[inline]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        writer.finish_with_checkpoint(|emitted| self.checkpoint_output_bytes(emitted))
+    }
 }
 
 #[inline]
@@ -110,8 +171,7 @@ fn encode_bool<P: CoefficientCheckpointControl>(
     value: bool,
     checkpoint: &mut P,
 ) -> CodecResult<()> {
-    writer.encode_bool(probability, value);
-    checkpoint.checkpoint_bit()
+    checkpoint.encode_bool(writer, probability, value)
 }
 
 fn write_category_bits<P: CoefficientCheckpointControl>(
@@ -384,7 +444,7 @@ fn encode_coefficients_with_checkpoint<P: CoefficientCheckpointControl>(
             checkpoint.checkpoint_macroblock()?;
         }
     }
-    Ok(writer.finish())
+    checkpoint.finish(writer)
 }
 
 pub(super) fn encode_coefficients(
@@ -400,6 +460,7 @@ pub(super) fn encode_coefficients(
             block_items: 0,
             macroblock_items: 0,
             bit_items: 0,
+            output_bytes: 0,
         };
         encode_coefficients_with_checkpoint(
             decisions,

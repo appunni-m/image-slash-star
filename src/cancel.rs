@@ -6,7 +6,8 @@
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
 //! Deflate expansion/Huffman/bitstream/checksum stages, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, analysis, 16,384-boolean first-partition
-//! bit and coefficient-bit intervals, and bitstream stages, and lossless WebP VP8L
+//! bit and coefficient-bit intervals, 1,024-byte boolean-bitstream output
+//! intervals, and bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, bitstream, and
 //! bounded backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item

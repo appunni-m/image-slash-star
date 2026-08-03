@@ -87,6 +87,30 @@ impl BoolEncoder {
         }
     }
 
+    /// Encode one boolean value and report newly emitted bytes to a caller.
+    ///
+    /// The ordinary [`Self::encode_bool`] path remains allocation- and
+    /// callback-free. VP8's token-aware checkpoint controllers use this
+    /// variant to account for interior boolean-bitstream output without
+    /// changing the byte-exact arithmetic coding.
+    pub(crate) fn encode_bool_with_checkpoint<E, F>(
+        &mut self,
+        prob: u8,
+        value: bool,
+        checkpoint: &mut F,
+    ) -> Result<(), E>
+    where
+        F: FnMut(usize) -> Result<(), E>,
+    {
+        let before = self.output.len();
+        self.encode_bool(prob, value);
+        let emitted = self.output.len().saturating_sub(before);
+        if emitted != 0 {
+            checkpoint(emitted)?;
+        }
+        Ok(())
+    }
+
     fn flush(&mut self) {
         let shift = self.nb_bits.saturating_add(8);
         let bits = self.value.wrapping_shr(shift.cast_unsigned());
@@ -109,6 +133,19 @@ impl BoolEncoder {
         self.output.push(bits.to_le_bytes()[0]);
     }
 
+    fn flush_with_checkpoint<E, F>(&mut self, checkpoint: &mut F) -> Result<(), E>
+    where
+        F: FnMut(usize) -> Result<(), E>,
+    {
+        let before = self.output.len();
+        self.flush();
+        let emitted = self.output.len().saturating_sub(before);
+        if emitted != 0 {
+            checkpoint(emitted)?;
+        }
+        Ok(())
+    }
+
     /// Flush remaining state and return the encoded byte stream.
     ///
     /// Writes `9 - nb_bits` uniform zero bits and performs one final flush,
@@ -122,6 +159,20 @@ impl BoolEncoder {
         self.nb_bits = 0;
         self.flush();
         self.output
+    }
+
+    /// Finish the stream while reporting newly emitted bytes.
+    pub(crate) fn finish_with_checkpoint<E, F>(mut self, mut checkpoint: F) -> Result<Vec<u8>, E>
+    where
+        F: FnMut(usize) -> Result<(), E>,
+    {
+        let bits = 9i32.saturating_sub(self.nb_bits).to_le_bytes()[0].min(32);
+        for _ in 0..bits {
+            self.encode_bool_with_checkpoint(128, false, &mut checkpoint)?;
+        }
+        self.nb_bits = 0;
+        self.flush_with_checkpoint(&mut checkpoint)?;
+        Ok(self.output)
     }
 
     // ------------------------------------------------------------------
