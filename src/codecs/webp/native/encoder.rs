@@ -64,6 +64,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
 const VP8L_64_BITSTREAM_CHECKPOINT_BITS: usize = 64;
 const VP8L_128_BITSTREAM_CHECKPOINT_BITS: usize = 128;
 const VP8L_256_BITSTREAM_CHECKPOINT_BITS: usize = 256;
@@ -100,29 +101,34 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError> {
         let previous = self.written_bits;
         self.written_bits = self.written_bits.saturating_add(written);
-        let mut previous_64_interval = previous / VP8L_64_BITSTREAM_CHECKPOINT_BITS;
-        let current_64_interval = self.written_bits / VP8L_64_BITSTREAM_CHECKPOINT_BITS;
-        while previous_64_interval < current_64_interval {
-            previous_64_interval = previous_64_interval.saturating_add(1);
+        // Every logical interval counts the same written bits. Walk the
+        // finest 32-bit intervals once and nest the larger intervals so a
+        // token-aware write does not rescan the same range four times.
+        let mut previous_32_interval = previous / VP8L_32_BITSTREAM_CHECKPOINT_BITS;
+        let current_32_interval = self.written_bits / VP8L_32_BITSTREAM_CHECKPOINT_BITS;
+        while previous_32_interval < current_32_interval {
+            previous_32_interval = previous_32_interval.saturating_add(1);
             check_token(Some(self.token))?;
-        }
-        let mut previous_128_interval = previous / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
-        let current_128_interval = self.written_bits / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
-        while previous_128_interval < current_128_interval {
-            previous_128_interval = previous_128_interval.saturating_add(1);
-            check_token(Some(self.token))?;
-        }
-        let mut previous_256_interval = previous / VP8L_256_BITSTREAM_CHECKPOINT_BITS;
-        let current_256_interval = self.written_bits / VP8L_256_BITSTREAM_CHECKPOINT_BITS;
-        while previous_256_interval < current_256_interval {
-            previous_256_interval = previous_256_interval.saturating_add(1);
-            check_token(Some(self.token))?;
-        }
-        let mut previous_512_interval = previous / VP8L_512_BITSTREAM_CHECKPOINT_BITS;
-        let current_512_interval = self.written_bits / VP8L_512_BITSTREAM_CHECKPOINT_BITS;
-        while previous_512_interval < current_512_interval {
-            previous_512_interval = previous_512_interval.saturating_add(1);
-            check_token(Some(self.token))?;
+            if previous_32_interval.is_multiple_of(
+                VP8L_64_BITSTREAM_CHECKPOINT_BITS / VP8L_32_BITSTREAM_CHECKPOINT_BITS,
+            ) {
+                check_token(Some(self.token))?;
+                if previous_32_interval.is_multiple_of(
+                    VP8L_128_BITSTREAM_CHECKPOINT_BITS / VP8L_32_BITSTREAM_CHECKPOINT_BITS,
+                ) {
+                    check_token(Some(self.token))?;
+                    if previous_32_interval.is_multiple_of(
+                        VP8L_256_BITSTREAM_CHECKPOINT_BITS / VP8L_32_BITSTREAM_CHECKPOINT_BITS,
+                    ) {
+                        check_token(Some(self.token))?;
+                        if previous_32_interval.is_multiple_of(
+                            VP8L_512_BITSTREAM_CHECKPOINT_BITS / VP8L_32_BITSTREAM_CHECKPOINT_BITS,
+                        ) {
+                            check_token(Some(self.token))?;
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }
