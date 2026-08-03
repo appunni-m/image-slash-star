@@ -3706,6 +3706,39 @@ implementation/Rust-only evidence. In the same snapshot,
 42/42 covered branches, and 21/21 covered functions; nine source lines
 remain uncovered, and no coverage-only hook was used.
 
+Current acceptance record: WebP VP8L 128-bit bitstream checkpoint
+
+The finer lossless WebP/VP8L logical bitstream checkpoint is implemented at
+`22281579a15d99ead08ff40c6459620dfbc0fea6`. `TokenBitWriterCheckpoint` now
+charges a logical poll after each 128 written bit while retaining the
+256-bit, 512-bit, and 1,024-byte output intervals. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves the 128-bit
+boundary at `maximum: 56010`, `observed: 56011` in the whole-buffer path and
+at `maximum: 56009`, `observed: 56010` in the direct-sink path; it retains the
+256-bit boundary at 56185/56186 (return) and 56184/56185 (sink), the 512-bit
+boundary at 56186/56187, and the 1,024-byte output boundary at 56109/56110
+(return) and 56108/56109 (sink). The direct sink retains `[0xAB]`/`[0xAA]`
+prefixes. This is Rust-only work-control evidence: no Pillow row, parity
+fixture, diagnostic origin, new test function, or coverage-only hook was
+added.
+
+Managed Pillow parity run `2f3fe601-09a2-4189-b026-c8bd4cf868e1` passed
+1,445/1,445 checks in 43,801 ms. The exact-head feature-matrix run
+`484aa790-5c9d-4e92-9515-2ddfebb6a419` passed in 57,610 ms at the same
+revision; its retained log records
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`, ends
+with `capability tables OK: every native and wasm32-wasip1 lane agrees`, and
+has no build-directory, package-cache, or lock-wait matches. Coverage MCP run
+`9c398e10-9764-44b6-8709-f11cbcc46ffd` passed 85/85 tests in 67,406 ms and
+ingested snapshot `01402870-19bd-4468-81ae-a96b31b1da2d`, reporting
+51,482/51,963 lines, 7,104/7,198 branches, 2,898/2,968 functions, and
+79,830/80,925 regions. The known LLVM JSON segment-normalization warning
+remains. In that snapshot, `src/codecs/webp/native/encoder.rs` has
+1,477/1,487 covered lines, 230/230 covered branches, and 77/77 covered
+functions; ten source lines remain uncovered, and no coverage-only hook was
+used. The parity run is Pillow-oracle evidence; the policy assertions and
+aggregate coverage are implementation/Rust-only evidence.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 128-bit/256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
