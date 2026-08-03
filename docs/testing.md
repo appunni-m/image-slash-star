@@ -3304,7 +3304,7 @@ retains 21 displaced changed-to-uncovered JPEG/lib records from LLVM source
 remapping; the new event-frequency checkpoint lines are covered. The
 segment-normalization warning remains, and no coverage-only test was added.
 
-Current acceptance record: JPEG progressive coefficient checkpoint
+Earlier acceptance record: JPEG progressive coefficient checkpoint
 
 The JPEG progressive scan coefficient checkpoint slice is implemented at
 `907c8c88544ad56e06251737186c3a1eddfab183`. `ProgressiveScanCheckpoint` keeps
@@ -3344,13 +3344,34 @@ the new coefficient checkpoint lines are covered. The only coverage insight is
 the known LLVM JSON segment-normalization warning; no coverage-only test was
 added.
 
+Current acceptance record: feature-matrix successful-log reduction
+
+The feature-matrix harness follow-up is implemented at
+`24c1bf6dbf103bab30ac6499e27267361d28a494`. Successful native and WASI lanes
+now emit one compact status line by default while retaining their complete
+run-scoped logs for the capability-table no-drift check; a failed lane still
+replays its full log, and `MATRIX_VERBOSE=1` restores full successful-lane
+replay. This is a test-harness-only change: it removes parent-process output
+I/O without changing the 33 lanes, the 991-check scope, any fixture, parity
+row, assertion origin, diagnostic contract, production profile, or coverage
+hook.
+
+On the same warm local host, the pre-change successful-log replay took 7.37 s
+and the quiet default took 4.19 s in the first direct repeat. These are
+observed I/O-sensitive execution measurements, not universal benchmarks.
+Managed matrix run `3d0bb595-e7b3-4dc6-8f7e-6f4917df0854` passed in 6,037 ms;
+its retained log contains 33 passing lane markers, records
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+build-directory or package-cache lock-wait matches.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
-progressive scan block slots and event-frequency items, and 1,024-byte entropy
-intervals, other codec
+progressive scan block slots, event-frequency items, and coefficient traversal
+items, and 1,024-byte entropy intervals, other codec
 interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.
 
