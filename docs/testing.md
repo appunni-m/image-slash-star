@@ -3555,6 +3555,13 @@ for a constrained or unusually large CI runner. This bounds aggregate process,
 compiler, and test-thread fan-out without dropping any lane or assertion while
 avoiding a cold-build fan-out on disposable roots.
 
+Successful lanes report one compact status line by default. Their complete
+logs remain in the run-scoped directory so the capability-table no-drift check
+can consume the emitted rows, and a failed lane always replays its full log.
+Set `MATRIX_VERBOSE=1` to replay every successful lane log as well. Keeping
+successful compiler, test, and WASI output out of the parent process reduces
+test-run I/O without changing any lane, assertion, or retained evidence.
+
 The matrix defaults `MATRIX_TEST_OPT_LEVEL` to `1`, matching the repository's
 lightly optimized test profile. The feature-gate suite executes real codec
 work-budget and cancellation contracts, so an unoptimized level-0 binary makes
