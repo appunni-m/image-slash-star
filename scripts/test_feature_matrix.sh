@@ -195,6 +195,49 @@ run_wasm_unknown_lane() {
         --target wasm32-unknown-unknown "$@" -- -D warnings
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked \
         --target wasm32-unknown-unknown "$@"
+    # These are target-contract compile checks, not a second matrix scope.
+    # Run them in their matching feature lanes so they overlap with the other
+    # target/feature work instead of extending the matrix's serial tail.
+    if [ "$features" = none ] || [ "$features" = avif ]; then
+        cargo test --locked --target wasm32-unknown-unknown \
+            --test feature_gate_tests "$@" --no-run
+    fi
+}
+
+wasm_binary_from_log() {
+    python3 -c '
+import json
+import sys
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    try:
+        message = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if (
+        message.get("reason") == "compiler-artifact"
+        and message.get("target", {}).get("name") == sys.argv[2]
+        and (message.get("executable") or "").endswith(".wasm")
+    ):
+        print(message["executable"])
+        break
+else:
+    raise SystemExit(f"cargo did not report a {sys.argv[2]} WASM executable")
+' "$1" "$2"
+}
+
+run_wasi_determinism_lane() {
+    determinism_log="$matrix_log_dir/wasm-wasi-determinism.jsonl"
+    determinism_status=0
+    cargo test --locked --target wasm32-wasip1 --test determinism_tests \
+        --all-features --no-run --message-format=json --color never \
+        >"$determinism_log" 2>&1 || determinism_status=$?
+    cat "$determinism_log"
+    if [ "$determinism_status" -ne 0 ]; then
+        return "$determinism_status"
+    fi
+    determinism_binary=$(wasm_binary_from_log "$determinism_log" determinism_tests)
+    node scripts/wasm_test_runner.js "$determinism_binary"
 }
 
 run_wasi_lane() {
@@ -209,29 +252,14 @@ run_wasi_lane() {
     if [ "$build_status" -ne 0 ]; then
         return "$build_status"
     fi
-    binary=$(python3 -c '
-import json
-import sys
-
-for line in open(sys.argv[1], encoding="utf-8"):
-    try:
-        message = json.loads(line)
-    except json.JSONDecodeError:
-        continue
-    if (
-        message.get("reason") == "compiler-artifact"
-        and message.get("target", {}).get("name") == "feature_gate_tests"
-        and (message.get("executable") or "").endswith(".wasm")
-    ):
-        print(message["executable"])
-        break
-else:
-    raise SystemExit("cargo did not report a feature_gate_tests WASM executable")
-' "$build_log")
+    binary=$(wasm_binary_from_log "$build_log" feature_gate_tests)
     capability_output="$matrix_log_dir/wasm-wasi-$features.capability"
     CAPABILITY_TABLE_OUTPUT="$capability_output" node scripts/wasm_test_runner.js "$binary" \
         --test-threads "$MATRIX_TEST_THREADS"
     cat "$capability_output"
+    if [ "$features" = all ]; then
+        run_wasi_determinism_lane
+    fi
 }
 
 run_matrix_lane() {
@@ -372,18 +400,6 @@ run_parallel_jobs run_matrix_lane \
     native:avif wasm-unknown:avif wasm-wasi:avif \
     native:default wasm-unknown:default wasm-wasi:default \
     native:all wasm-unknown:all wasm-wasi:all
-
-cargo test --locked --target wasm32-unknown-unknown --test feature_gate_tests \
-    --no-default-features --no-run
-cargo test --locked --target wasm32-unknown-unknown --test feature_gate_tests \
-    --no-default-features --features avif --no-run
-
-# Cross-target determinism: encoded bytes and decoded pixels executed in the
-# WASM runtime must match the golden hashes committed from the native host.
-cargo test --locked --target wasm32-wasip1 --test determinism_tests \
-    --all-features --no-run
-binary=$(ls -t target/wasm32-wasip1/debug/deps/determinism_tests-*.wasm | head -1)
-node scripts/wasm_test_runner.js "$binary"
 
 # Regenerate the capability tables in memory and reject any drift between the
 # committed fixture and the native or WASI runtime tables.
