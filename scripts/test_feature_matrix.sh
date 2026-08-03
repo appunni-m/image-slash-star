@@ -48,14 +48,15 @@ esac
 # active lane. With several lanes running concurrently that multiplies into a
 # heavily oversubscribed matrix. Clean roots keep both the default test-worker
 # total and the concurrent Cargo compiler-job total close to the host CPU
-# count. Warm roots use a small two-worker test budget because their compiler
-# work is already cached; callers may tune either budget explicitly.
+# count. Warm roots use up to three test workers per lane because their
+# compiler work is already cached; the bounded fan-out keeps the codec-heavy
+# test bodies moving without making the host-wide scheduler unbounded.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
     if [ "$matrix_cache_state" = warm ]; then
-        MATRIX_TEST_THREADS=$(( (matrix_cpu_count + 5) / 6 ))
-        if [ "$MATRIX_TEST_THREADS" -gt 2 ]; then
-            MATRIX_TEST_THREADS=2
+        MATRIX_TEST_THREADS=$(( (matrix_cpu_count + 3) / 4 ))
+        if [ "$MATRIX_TEST_THREADS" -gt 3 ]; then
+            MATRIX_TEST_THREADS=3
         fi
     else
         MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
