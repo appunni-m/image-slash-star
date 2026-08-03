@@ -297,7 +297,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/16,384-boolean first-partition-bit/coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 4,096-bit logical bitstream, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/4,096-bit logical and 16,384-boolean first-partition-bit/coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 4,096-bit logical bitstream, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -474,7 +474,8 @@ batch of 1,024 RGB/RGBA-to-YUV conversion items, each batch of 1,024
 analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
-adaptation, partition emission, each 16,384-boolean first-partition-bit interval,
+adaptation, partition emission, each 4,096-bit logical first-partition interval,
+each 16,384-boolean first-partition-bit interval,
 each 16,384-boolean coefficient-bit interval, each 1,024-byte boolean-bitstream
 output interval, and final container assembly.
 Lossless WebP
@@ -494,8 +495,9 @@ RGB/RGBA palette quantization, RGB median-cut hash/order, axis-ordering,
 split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 16,384-boolean
-first-partition-bit intervals, 16,384-boolean coefficient-bit intervals,
+mode-selection subsegments plus analysis/coefficient-probability, 4,096-bit
+logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
+16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
@@ -517,7 +519,8 @@ is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including remaining finer WebP bitstream work beyond the
-implemented first-partition-bit, coefficient-bit, and 1,024-byte
+implemented 4,096-bit logical VP8 first-partition interval, the
+16,384-boolean first-partition-bit, coefficient-bit, and 1,024-byte
 boolean-bitstream-output intervals, the 4,096-bit logical VP8L bitstream
 interval, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP

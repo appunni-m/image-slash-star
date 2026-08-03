@@ -5,8 +5,9 @@
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
 //! Deflate expansion/Huffman/bitstream/checksum stages, lossy WebP VP8
-//! RGB/RGBA-to-YUV conversion items, analysis, 16,384-boolean first-partition
-//! bit and coefficient-bit intervals, 1,024-byte boolean-bitstream output
+//! RGB/RGBA-to-YUV conversion items, analysis, 4,096-bit logical and
+//! 16,384-boolean first-partition bit intervals, coefficient-bit intervals,
+//! 1,024-byte boolean-bitstream output
 //! intervals, and bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, 4,096-bit
 //! logical bitstream, 1,024-byte bitstream-output, and bounded
