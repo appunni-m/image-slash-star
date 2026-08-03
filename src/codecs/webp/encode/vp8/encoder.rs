@@ -135,20 +135,19 @@ fn encode_vp8_planes(
     );
     crate::codecs::error::check_cancelled(token)?;
     let analysis = analyze(
-        &y_plane,
-        &u_plane,
-        &v_plane,
-        padded_width as usize,
-        padded_height as usize,
+        [&y_plane, &u_plane, &v_plane],
+        (padded_width as usize, padded_height as usize),
         quality,
         method,
-    );
+        token,
+    )?;
     crate::codecs::error::check_cancelled(token)?;
     let mut params = segment_params(&analysis, f64::from(quality));
     crate::codecs::error::check_cancelled(token)?;
     let mut decisions = select_frame(
         [&y_plane, &u_plane, &v_plane],
         (padded_width as usize, padded_height as usize),
+        &analysis,
         f64::from(quality),
         method,
         &COEFF_PROBS,
@@ -175,6 +174,7 @@ fn encode_vp8_planes(
         decisions = select_frame(
             [&y_plane, &u_plane, &v_plane],
             (padded_width as usize, padded_height as usize),
+            &analysis,
             f64::from(quality),
             method,
             &COEFF_PROBS,

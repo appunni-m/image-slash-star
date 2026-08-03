@@ -1,7 +1,7 @@
 //! Frame-wide libwebp-compatible VP8 macroblock decisions.
 
 use super::{
-    analysis::{analyze, segment_params},
+    analysis::{FrameAnalysis, segment_params},
     chroma::{self, ChromaCandidate},
     cost::rd_score,
     intra4::{self, Intra4Mode, Intra4Result},
@@ -52,13 +52,6 @@ fn bit(value: u32, index: usize) -> u8 {
         .wrapping_shr(index.to_le_bytes()[0].into())
         .to_le_bytes()[0]
         & 1
-}
-
-/// Converts the public quality input with Rust's saturating float-to-integer
-/// semantics. Callers normally supply Pillow's bounded 0–100 quality domain.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn quality_byte(value: f64) -> u8 {
-    value as u8
 }
 
 fn extract_16(plane: &[u8], stride: usize, x: usize, y: usize) -> [u8; 256] {
@@ -117,6 +110,7 @@ fn store_diffusion_errors(errors: [[i8; 3]; 2], top: &mut [[i8; 2]; 2]) -> [[i8;
 pub(super) fn select_frame(
     planes: [&[u8]; 3],
     dimensions: (usize, usize),
+    analysis: &FrameAnalysis,
     quality: f64,
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
@@ -129,16 +123,7 @@ pub(super) fn select_frame(
     let macroblock_width = width / 16;
     let macroblock_height = height / 16;
     let chroma_stride = width / 2;
-    let analysis = analyze(
-        y_plane,
-        u_plane,
-        v_plane,
-        width,
-        height,
-        quality_byte(quality),
-        method,
-    );
-    let params = segment_params(&analysis, quality);
+    let params = segment_params(analysis, quality);
     let matrices: [SegmentMatrices; 4] = std::array::from_fn(|segment| {
         libwebp_segment_matrices(
             params.segments[segment].quantizer,
