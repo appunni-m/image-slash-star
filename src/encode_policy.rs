@@ -73,9 +73,10 @@ impl EncodePolicy {
     /// each 1,024 pixels while preparing palette/index data; high-color RGB
     /// median-cut preparation additionally charges around hash/order setup,
     /// axis ordering, split stages, and 1,024-item partition intervals; RGBA
-    /// FASTOCTREE preparation additionally charges after each 1,024-cell, bucket, or
-    /// lookup-entry interval; and GIF LZW encoding charges an interval for each
-    /// input symbol considered by its dictionary pass.
+    /// FASTOCTREE preparation additionally charges after each 1,024-cell, bucket,
+    /// lookup-entry, or bucket-sort operation interval; and GIF LZW encoding
+    /// charges an interval for each input symbol considered by its dictionary
+    /// pass.
     /// Exhaustion returns [`ImageError::LimitExceeded`] before that checkpoint
     /// performs further codec work.
     #[must_use]

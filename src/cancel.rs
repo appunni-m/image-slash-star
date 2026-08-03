@@ -10,8 +10,8 @@
 //! bounded backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
 //! partition intervals, fixed 1,024-cell RGBA FASTOCTREE copy/subtraction/lookup
-//! intervals, and LZW input-symbol intervals and BMP row-conversion subsegments)
-//! and stop with
+//! and bucket-sort intervals, and LZW input-symbol intervals and BMP
+//! row-conversion subsegments) and stop with
 //! [`ImageError::Cancelled`] without publishing partial state.
 //! The crate remains single-threaded by design, so the token uses `Rc<Cell>`
 //! and adds no synchronization overhead on native or WASM targets.
