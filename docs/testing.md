@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`; the claim-ledger baseline remains
+`9aeac06bfb27b643921d0c5231c5f83e3538e870`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -370,11 +370,12 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, 512-bit logical bitstream intervals, and 1,024-byte bitstream
-output intervals; the same contract
+intervals, 256-bit and 512-bit logical bitstream intervals, and 1,024-byte
+bitstream output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
-untouched sink, including separate exact-boundary probes for the logical
-bitstream and emitted-output intervals. This is still Rust-only work-control
+untouched sink, including separate exact-boundary probes for the finer 256-bit
+logical interval, the existing 512-bit logical interval, and the emitted-output
+intervals. This is still Rust-only work-control
 evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
 The test's aggregate coverage is incidental evidence, and no coverage-only
@@ -442,7 +443,7 @@ macroblock-analysis, and mode-selection subsegments, WebP coefficient-probabilit
 256-bit and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
 256-bit and 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 512-bit logical VP8L bitstream intervals, and VP8L stages,
+intervals, the 256-bit and 512-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -471,7 +472,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`, the fixture manifest and managed
+`9aeac06bfb27b643921d0c5231c5f83e3538e870`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -2872,7 +2873,7 @@ coverage-only test was added.
 Current acceptance record: JPEG and WebP interior checkpoints and runtime slice
 
 The JPEG baseline/progressive RGB-to-YCbCr and entropy-output checkpoint slice is
-implemented at `4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`. Token-aware RGB
+implemented at `9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware RGB
 conversion preserves the existing row checks and now charges after each 1,024
 converted pixels; token-aware entropy coding tracks the next 1,024-byte
 emitted-output boundary without cumulative division on every observation. Both
@@ -2887,7 +2888,7 @@ token, work-budget result, or caller-owned sink, so it adds no parity row,
 fixture, diagnostic origin, or coverage-only hook.
 
 The lossy WebP VP8 RGBA transparent-area cleanup slice is implemented at
-`4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`. Token-aware cleanup now charges
+`9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware cleanup now charges
 after each 1,024 scanned or flattened pixels, while the ordinary no-token path
 retains its bulk fill helper through a monomorphized no-op controller. The same
 Rust-only contract uses a 128x128 all-transparent RGBA probe to prove ample
@@ -2897,7 +2898,7 @@ no caller token, work-budget result, or caller-owned sink, so this adds no
 parity row, fixture, diagnostic origin, or coverage-only hook.
 
 The finer lossy WebP VP8 coefficient logical-bitstream checkpoint slice is
-implemented at `4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`. Token-aware
+implemented at `9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware
 coefficient boolean coding now charges after each 256 logical coded bits while
 retaining the existing 512-bit logical, 16,384-boolean coefficient-bit, and
 1,024-byte emitted-output intervals. The same Rust-only contract uses the
@@ -2909,7 +2910,7 @@ or caller-owned sink, so this adds no parity row, fixture, diagnostic origin,
 or coverage-only hook.
 
 The finer lossy WebP VP8 first-partition logical-bitstream checkpoint slice is
-implemented at `4a8f06f254033fefc88b8a1ed87a77a28b2e6ac4`. Token-aware
+implemented at `9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware
 first-partition boolean coding now charges after each 256 logical coded bits
 while retaining the existing 512-bit logical, 16,384-boolean first-partition,
 and 1,024-byte emitted-output intervals. The same Rust-only contract uses the
@@ -2918,38 +2919,49 @@ both whole-buffer and direct-sink paths with sentinel `0xb7` untouched. Pillow
 has no caller token, work-budget result, or caller-owned sink, so this adds no
 parity row, fixture, diagnostic origin, or coverage-only hook.
 
+The finer lossless WebP/VP8L logical-bitstream checkpoint slice is implemented
+at `9aeac06bfb27b643921d0c5231c5f83e3538e870`. Token-aware VP8L bit writing
+now charges after each 256 logical coded bits while retaining the existing
+512-bit logical and 1,024-byte output intervals. The same Rust-only contract
+uses the patterned 128x128 RGB lossless probe to reject at `maximum: 54,820`,
+`observed: 54,821` for the finer 256-bit boundary and at `maximum: 54,823`,
+`observed: 54,824` for the retained 512-bit boundary in both whole-buffer and
+direct-sink paths, with sentinels `0xab` and `0xaa` untouched. Pillow has no
+caller token, work-budget result, or caller-owned sink, so this adds no parity
+row, fixture, diagnostic origin, or coverage-only hook.
+
 The same runtime-first slice keeps feature-matrix lanes isolated, avoids the
 shared Cargo lock, and propagates native/WASI child failures instead of masking
 them behind capability-table output. Warm retained roots on the measured
 12-logical-CPU host now use two Cargo build workers per lane; explicit
 overrides remain available. The exact-head managed matrix passed 991/991 in
-45,934 ms, and its retained log ends with the native/WASI capability agreement
+52,870 ms, and its retained log ends with the native/WASI capability agreement
 marker with no lock-wait matches. These are execution measurements, not
 controlled universal benchmarks.
 
-Managed Pillow parity run `309cb5be-a8a1-4f1c-b530-faf11015df5d` passed
-1,445/1,445 checks with zero failures or skips in 39,936 ms. Feature-matrix run
-`397e432b-5993-4915-9ff5-b35acc777e41` passed 991/991 checks in 45,934 ms; its
+Managed Pillow parity run `95fa9817-5693-4a82-9188-3e2de83af18f` passed
+1,445/1,445 checks with zero failures or skips in 45,497 ms. Feature-matrix run
+`204d59f1-a261-4152-871a-035ead6b464b` passed 991/991 checks in 52,870 ms; its
 retained log contains `capability tables OK: every native and wasm32-wasip1
 lane agrees` and has no build-directory or package-cache lock-wait match.
-Coverage MCP run `9365fc80-3020-4e40-942e-e89198b2959e` passed 87/87 tests in
-76,499 ms and ingested snapshot `73947df4-7548-4e22-a789-e739671f57a8`,
-reporting 51,005/51,478 lines, 7,029/7,114 branches, 2,846/2,915 functions,
-and 79,212/80,263 regions. Compared with baseline snapshot
-`94db73fc-c8d5-49d9-8603-f20f39ec9fff`, covered totals changed by +4 lines,
-+2 branches, +0 functions, and +3 regions; total source metrics grew by +7
-lines, +2 branches, +0 functions, and +7 regions. The line-only comparison
-retains six changed-to-uncovered line-number records across WebP VP8
-partition/residual source mappings; aggregate covered totals increased and the
-LLVM JSON segment-normalization warning remains. The changed WebP VP8 partition
-file is 467/474 lines, 62/62 branches, 30/30 functions, and 693/741 regions;
-its six uncovered lines are existing defensive/error-propagation mappings, not
-a reason to add a synthetic coverage hook. These
+Coverage MCP run `4898fcc9-4d09-4d37-b6d8-77cd6cafcd98` passed 87/87 tests in
+82,830 ms and ingested snapshot `5a8b1512-2377-4d21-8951-dd1430d2b653`,
+reporting 51,010/51,483 lines, 7,031/7,116 branches, 2,846/2,915 functions,
+and 79,219/80,272 regions. Compared with baseline snapshot
+`73947df4-7548-4e22-a789-e739671f57a8`, covered totals changed by +5 lines,
++2 branches, +0 functions, and +7 regions; total source metrics grew by +5
+lines, +2 branches, +0 functions, and +9 regions. The line-only comparison
+retains six changed-to-uncovered line-number records in
+`src/codecs/webp/native/encoder.rs` at lines 476, 602, 783, 1217, 1225, and
+1400; aggregate covered totals increased and the LLVM JSON
+segment-normalization warning remains. These are existing defensive/error-
+propagation mappings, not a reason to add a synthetic coverage hook. These
 aggregate and source-provenance records remain separate from Pillow parity, and
 no coverage-only test was added.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 256-bit/512-bit first-partition/coefficient and 1,024-pixel RGBA cleanup checkpoints, JPEG
+current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
+bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG
 interior work beyond the current 1,024-pixel RGB-to-YCbCr and 1,024-byte entropy
 intervals, other codec interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.

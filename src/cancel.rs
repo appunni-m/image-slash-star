@@ -12,8 +12,8 @@
 //! 16,384-boolean first-partition bit intervals, 256-bit and 512-bit logical
 //! and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
 //! intervals, and bitstream stages, and lossless WebP VP8L
-//! predictor/cross-color/entropy/transform, histogram/Huffman, 512-bit
-//! logical bitstream intervals, 1,024-byte bitstream-output, and bounded
+//! predictor/cross-color/entropy/transform, histogram/Huffman, 256-bit and
+//! 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
 //! partition intervals, fixed 1,024-cell RGBA FASTOCTREE copy/subtraction/lookup
