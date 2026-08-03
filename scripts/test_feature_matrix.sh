@@ -185,7 +185,9 @@ run_native_lane() {
     CAPABILITY_TABLE_OUTPUT="$capability_output" cargo test \
         --locked --test feature_gate_tests "$@" -- \
         --test-threads "$MATRIX_TEST_THREADS"
+    native_status=$?
     cat "$capability_output"
+    return "$native_status"
 }
 
 run_wasm_unknown_lane() {
@@ -193,15 +195,28 @@ run_wasm_unknown_lane() {
     set -- $(feature_args "$features")
     cargo clippy --workspace --all-targets --locked \
         --target wasm32-unknown-unknown "$@" -- -D warnings
+    wasm_unknown_status=$?
+    if [ "$wasm_unknown_status" -ne 0 ]; then
+        return "$wasm_unknown_status"
+    fi
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked \
         --target wasm32-unknown-unknown "$@"
+    wasm_unknown_status=$?
+    if [ "$wasm_unknown_status" -ne 0 ]; then
+        return "$wasm_unknown_status"
+    fi
     # These are target-contract compile checks, not a second matrix scope.
     # Run them in their matching feature lanes so they overlap with the other
     # target/feature work instead of extending the matrix's serial tail.
     if [ "$features" = none ] || [ "$features" = avif ]; then
         cargo test --locked --target wasm32-unknown-unknown \
             --test feature_gate_tests "$@" --no-run
+        wasm_unknown_status=$?
+        if [ "$wasm_unknown_status" -ne 0 ]; then
+            return "$wasm_unknown_status"
+        fi
     fi
+    return 0
 }
 
 wasm_binary_from_log() {
@@ -238,6 +253,8 @@ run_wasi_determinism_lane() {
     fi
     determinism_binary=$(wasm_binary_from_log "$determinism_log" determinism_tests)
     node scripts/wasm_test_runner.js "$determinism_binary"
+    determinism_status=$?
+    return "$determinism_status"
 }
 
 run_wasi_lane() {
@@ -256,10 +273,19 @@ run_wasi_lane() {
     capability_output="$matrix_log_dir/wasm-wasi-$features.capability"
     CAPABILITY_TABLE_OUTPUT="$capability_output" node scripts/wasm_test_runner.js "$binary" \
         --test-threads "$MATRIX_TEST_THREADS"
+    wasi_status=$?
     cat "$capability_output"
+    if [ "$wasi_status" -ne 0 ]; then
+        return "$wasi_status"
+    fi
     if [ "$features" = all ]; then
         run_wasi_determinism_lane
+        wasi_status=$?
+        if [ "$wasi_status" -ne 0 ]; then
+            return "$wasi_status"
+        fi
     fi
+    return 0
 }
 
 run_matrix_lane() {

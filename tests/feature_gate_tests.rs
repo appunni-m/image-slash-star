@@ -8260,6 +8260,72 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0x5A],
             "budget rejection must precede sink writes"
         );
+
+        let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
+        for index in 0..64 * 64 {
+            let x = u8::try_from(index % 64)?;
+            let y = u8::try_from(index / 64)?;
+            entropy_pixels.extend_from_slice(&[
+                x.wrapping_mul(17) ^ y.wrapping_mul(31),
+                x.wrapping_mul(43).wrapping_add(y.wrapping_mul(7)),
+                x.wrapping_mul(11) ^ y.wrapping_mul(19),
+            ]);
+        }
+        let entropy_image = DecodedImage::new(64, 64, entropy_pixels, ColorType::Rgb8);
+        let entropy_expected =
+            image_slash_star::encode(&entropy_image, ImageFormat::Jpeg, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &entropy_image,
+                ImageFormat::Jpeg,
+                &options,
+                &unlimited,
+            )?,
+            entropy_expected,
+            "an ample JPEG entropy budget preserves byte identity"
+        );
+        let entropy_policy = image_slash_star::EncodePolicy::new().with_max_work_units(150);
+        let entropy_error = match image_slash_star::encode_with_policy(
+            &entropy_image,
+            ImageFormat::Jpeg,
+            &options,
+            &entropy_policy,
+        ) {
+            Ok(_) => return Err("JPEG entropy work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            entropy_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 150,
+                observed: 151,
+            }
+        ));
+        let mut entropy_sink = vec![0x5B];
+        let entropy_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &entropy_image,
+            ImageFormat::Jpeg,
+            &options,
+            &entropy_policy,
+            &mut entropy_sink,
+        ) {
+            Ok(_) => return Err("JPEG entropy work budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            entropy_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 150,
+                observed: 151,
+            }
+        ));
+        assert_eq!(entropy_sink, vec![0x5B]);
     }
 
     if cfg!(feature = "webp") {

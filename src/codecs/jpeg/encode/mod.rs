@@ -29,6 +29,66 @@ const ZIGZAG: [usize; 64] = [
     13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
     52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 ];
+const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+
+trait EntropyOutputCheckpoint {
+    fn observe(&mut self, current_output: usize) -> CodecResult<()>;
+    fn reset(&mut self);
+}
+
+struct NoopEntropyOutputCheckpoint;
+
+impl EntropyOutputCheckpoint for NoopEntropyOutputCheckpoint {
+    #[inline(always)]
+    fn observe(&mut self, _current_output: usize) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn reset(&mut self) {}
+}
+
+struct TokenEntropyOutputCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    observed_output: usize,
+    bytes_until_checkpoint: usize,
+}
+
+impl<'a> TokenEntropyOutputCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            observed_output: 0,
+            bytes_until_checkpoint: ENTROPY_OUTPUT_CHECKPOINT_BYTES,
+        }
+    }
+}
+
+impl EntropyOutputCheckpoint for TokenEntropyOutputCheckpoint<'_> {
+    fn observe(&mut self, current_output: usize) -> CodecResult<()> {
+        let newly_emitted = current_output.saturating_sub(self.observed_output);
+        self.observed_output = current_output;
+        if newly_emitted < self.bytes_until_checkpoint {
+            self.bytes_until_checkpoint = self.bytes_until_checkpoint.saturating_sub(newly_emitted);
+            return Ok(());
+        }
+
+        let mut remaining = newly_emitted.saturating_sub(self.bytes_until_checkpoint);
+        loop {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            if remaining < ENTROPY_OUTPUT_CHECKPOINT_BYTES {
+                self.bytes_until_checkpoint =
+                    ENTROPY_OUTPUT_CHECKPOINT_BYTES.saturating_sub(remaining);
+                return Ok(());
+            }
+            remaining = remaining.saturating_sub(ENTROPY_OUTPUT_CHECKPOINT_BYTES);
+        }
+    }
+
+    fn reset(&mut self) {
+        self.observed_output = 0;
+    }
+}
 
 /// Per-component prepared data: quantized coefficient blocks in NATURAL order,
 /// indexed by block_row * blocks_per_row + block_col.
@@ -329,26 +389,59 @@ pub(crate) fn encode_with_token(
             comps.iter().map(|c| (c.id, c.dc_tbl, c.ac_tbl)).collect();
         marker::write_sos(&mut out, &sos_comps, 0, 63, 0, 0);
 
-        encode_baseline_entropy(
-            &mut out,
-            &comps,
-            max_h,
-            max_v,
-            &dc_tables,
-            &ac_tables,
-            restart_interval,
-            token,
-        )?;
+        if let Some(token) = token {
+            let mut checkpoint = TokenEntropyOutputCheckpoint::new(token);
+            encode_baseline_entropy(
+                &mut out,
+                &comps,
+                max_h,
+                max_v,
+                &dc_tables,
+                &ac_tables,
+                restart_interval,
+                Some(token),
+                &mut checkpoint,
+            )?;
+        } else {
+            let mut checkpoint = NoopEntropyOutputCheckpoint;
+            encode_baseline_entropy(
+                &mut out,
+                &comps,
+                max_h,
+                max_v,
+                &dc_tables,
+                &ac_tables,
+                restart_interval,
+                None,
+                &mut checkpoint,
+            )?;
+        }
     } else {
-        encode_progressive_scans_exact(
-            &mut out,
-            &comps,
-            num_components,
-            max_h,
-            max_v,
-            &params,
-            token,
-        )?;
+        if let Some(token) = token {
+            let mut checkpoint = TokenEntropyOutputCheckpoint::new(token);
+            encode_progressive_scans_exact(
+                &mut out,
+                &comps,
+                num_components,
+                max_h,
+                max_v,
+                &params,
+                Some(token),
+                &mut checkpoint,
+            )?;
+        } else {
+            let mut checkpoint = NoopEntropyOutputCheckpoint;
+            encode_progressive_scans_exact(
+                &mut out,
+                &comps,
+                num_components,
+                max_h,
+                max_v,
+                &params,
+                None,
+                &mut checkpoint,
+            )?;
+        }
     }
 
     crate::codecs::error::check_cancelled(token)?;
@@ -1058,7 +1151,7 @@ fn baseline_frequencies(
     clippy::too_many_arguments,
     reason = "the helper mirrors libjpeg's entropy routine and the token is an independent checkpoint input"
 )]
-fn encode_baseline_entropy(
+fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
     out: &mut Vec<u8>,
     comps: &[CompData],
     max_h: u8,
@@ -1067,6 +1160,7 @@ fn encode_baseline_entropy(
     ac_tables: &[&huffman::DerivedTable; 2],
     restart_interval: u16,
     token: Option<&crate::CancellationToken>,
+    checkpoint: &mut P,
 ) -> CodecResult<()> {
     let mcu_w = usize::from(max_h).saturating_mul(8);
     let mcu_h = usize::from(max_v).saturating_mul(8);
@@ -1077,13 +1171,14 @@ fn encode_baseline_entropy(
     let mut last_dc = [0i32; 4];
     let mut mcus_until_restart = usize::from(restart_interval);
     let mut next_restart = 0u8;
-
     for my in 0..n_mcu_y {
         crate::codecs::error::check_cancelled(token)?;
         for mx in 0..n_mcu_x {
             if restart_interval != 0 && mcus_until_restart == 0 {
                 bw.flush();
+                checkpoint.observe(bw.out.len())?;
                 out.append(&mut bw.out);
+                checkpoint.reset();
                 marker::write_rst(out, next_restart);
                 next_restart = next_restart.saturating_add(1) & 7;
                 last_dc.fill(0);
@@ -1113,10 +1208,12 @@ fn encode_baseline_entropy(
                     }
                 }
             }
+            checkpoint.observe(bw.out.len())?;
             mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
     bw.flush();
+    checkpoint.observe(bw.out.len())?;
     out.extend_from_slice(&bw.out);
     Ok(())
 }
@@ -1262,7 +1359,11 @@ enum ProgressiveEvent {
     Bits { value: u32, width: u8 },
 }
 
-fn encode_progressive_scans_exact(
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the helper mirrors libjpeg's progressive scan routine and the token is an independent checkpoint input"
+)]
+fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint>(
     output: &mut Vec<u8>,
     components: &[CompData],
     component_count: u8,
@@ -1270,6 +1371,7 @@ fn encode_progressive_scans_exact(
     _maximum_vertical_sampling: u8,
     _params: &quant::EncodeParams,
     token: Option<&crate::CancellationToken>,
+    checkpoint: &mut P,
 ) -> CodecResult<()> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
     // jcmaster.c's jpeg_simple_progression scan script.
@@ -1331,9 +1433,12 @@ fn encode_progressive_scans_exact(
                 }
                 ProgressiveEvent::Bits { value, width } => writer.write_bits(value, width),
             }
+            checkpoint.observe(writer.out.len())?;
         }
         writer.flush();
+        checkpoint.observe(writer.out.len())?;
         output.extend_from_slice(&writer.out);
+        checkpoint.reset();
         crate::codecs::error::check_cancelled(token)?;
     }
     Ok(())
