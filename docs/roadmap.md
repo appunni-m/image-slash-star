@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`33a8ffd72f1b3484c14e29e022fa1cc230be1ee3`; the claim-ledger baseline remains
+`c4305758b9b0a3d24d8160596baec39ea4b73c7b`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1907,6 +1907,42 @@ WebP bitstream loops beyond this macroblock checkpoint, other codec interior
 work, Deflate emission/structural interruption, transient allocation
 accounting, short-write/rollback, and non-checkpointed work-budget semantics
 remain open.
+
+The current lossy WebP/VP8 first-partition emission checkpoint slice is
+implemented at `c4305758b9b0a3d24d8160596baec39ea4b73c7b`. Token-aware first
+partition writing now charges after the fixed 1,024-node coefficient-probability
+signaling table and after each batch of 256 macroblock mode decisions. The
+Rust-only `encode_work_budget_is_a_non_parity_result_contract` contract uses
+the same 512x512 RGB probe to prove typed whole-buffer rejection at the first
+partition probability checkpoint (`maximum: 333`, `observed: 334`), at the
+first partition mode checkpoint (`maximum: 334`, `observed: 335`), and at the
+following coefficient-emission checkpoint (`maximum: 339`, `observed: 340`),
+with the same direct-sink rejection and untouched-prefix assertions. Pillow
+exposes neither caller token nor work-budget result, so no parity row, fixture,
+diagnostic origin, or coverage-only hook was added.
+
+Managed Pillow parity run `bf3a6c1f-a083-4b36-ba5d-28994a61d7ca` passed
+1,445/1,445 checks with zero failures or skips in 1,046 ms. Feature-matrix run
+`29e78fe1-fa3a-46c6-8172-35ca20b8b8b1` passed 991/991 checks in 74,705 ms; its
+retained log has no package-cache or build-directory lock-wait matches and ends
+with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `cc7b49bf-8cbe-468b-b200-64e42efef97d` passed 85/85 tests in
+50,577 ms and ingested snapshot `15808c6b-9311-4fcb-885a-28c1174089b4`,
+reporting 49,427/49,825 lines, 6,799/6,862 branches, 2,750/2,817 functions,
+and 76,845/77,560 regions. Compared with snapshot
+`c8e347ae-a2b9-42e6-b933-930cc5e8151b`, this adds 22 covered lines (+22 total),
+four covered branches (+4 total), no functions, and 24 covered regions (+25
+total). The VP8 partition file is 286/286 lines, 52/52 branches, 15/15
+functions, and 487/487 regions. The VP8 encoder is 628/630 lines, 42/42
+branches, 34/34 functions, and 1,148/1,159 regions; uncovered lines 86 and
+189 remain the pre-existing defensive bridge and unexercised `method >= 6`
+selection-result bridge, respectively, not reasons for a synthetic coverage
+hook. The aggregate snapshot retains the LLVM segment-normalization warning.
+These are Rust-only implementation and target records separate from Pillow
+parity. Remaining finer WebP bitstream loops beyond the first-partition and
+macroblock coefficient checkpoints, other codec interior work, Deflate
+emission/structural interruption, transient allocation accounting,
+short-write/rollback, and non-checkpointed work-budget semantics remain open.
 
 The current lossless WebP/VP8L work-budget slice is implemented and tested at
 `78439ccc44480df892dfdf81c62dfb337ddb0570`: token-aware lossless encoding now
