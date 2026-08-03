@@ -8817,6 +8817,63 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_probe = DecodedImage::new(896, 512, partition_probe_pixels, ColorType::Rgb8);
+        // First-partition boolean coding now charges a finer logical
+        // checkpoint after each 256 coded bits. This patterned 896x512 probe
+        // reaches that interval before the existing 512-bit interval. Pillow
+        // has no caller token or work-budget result, so this remains Rust-only
+        // evidence with no parity row or coverage-only hook.
+        let finest_partition_bit_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(334);
+        let finest_partition_bit_error = match image_slash_star::encode_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &finest_partition_bit_policy,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP finest partition-bit budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            finest_partition_bit_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        let mut finest_partition_bit_sink = vec![0xB7];
+        let finest_partition_bit_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &finest_partition_bit_policy,
+            &mut finest_partition_bit_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP finest partition-bit sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            finest_partition_bit_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        assert_eq!(finest_partition_bit_sink, vec![0xB7]);
         // First-partition boolean coding now charges a logical checkpoint
         // after each 512 coded bits. This patterned 896x512 probe reaches
         // that interval before residual emission. Pillow has no caller token

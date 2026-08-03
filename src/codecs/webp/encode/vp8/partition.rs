@@ -16,6 +16,7 @@ use crate::codecs::CodecResult;
 
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
+const PARTITION_FINEST_BIT_CHECKPOINT_BITS: usize = 256;
 const PARTITION_FINE_BIT_CHECKPOINT_BITS: usize = 512;
 const PARTITION_BIT_CHECKPOINT_BITS: usize = 16_384;
 const PARTITION_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
@@ -78,6 +79,7 @@ struct TokenPartitionCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     probability_items: usize,
     macroblock_items: usize,
+    finest_bit_items: usize,
     fine_bit_items: usize,
     bit_items: usize,
     output_bytes: usize,
@@ -110,6 +112,13 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
 
     #[inline]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        self.finest_bit_items = self.finest_bit_items.saturating_add(1);
+        if self
+            .finest_bit_items
+            .is_multiple_of(PARTITION_FINEST_BIT_CHECKPOINT_BITS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
         self.fine_bit_items = self.fine_bit_items.saturating_add(1);
         if self
             .fine_bit_items
@@ -578,6 +587,7 @@ pub(super) fn encode_first_partition(
             token,
             probability_items: 0,
             macroblock_items: 0,
+            finest_bit_items: 0,
             fine_bit_items: 0,
             bit_items: 0,
             output_bytes: 0,
