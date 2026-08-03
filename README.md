@@ -202,7 +202,7 @@ sampling, quantization, entropy, and progressive scans, PNG rows and adaptive
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
 subsegments plus VP8's 512-bit logical and 16,384-boolean first-partition and
-1,024-bit logical coefficient-bit intervals, lossless VP8L 512-bit logical bitstream intervals
+512-bit logical coefficient-bit intervals, lossless VP8L 512-bit logical bitstream intervals
 and 1,024-byte output intervals, and each writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
