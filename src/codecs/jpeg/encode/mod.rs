@@ -30,6 +30,57 @@ const ZIGZAG: [usize; 64] = [
     52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 ];
 const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
+
+trait RgbConversionCheckpoint {
+    fn row(&mut self) -> CodecResult<()>;
+    fn observe(&mut self) -> CodecResult<()>;
+}
+
+struct NoopRgbConversionCheckpoint;
+
+impl RgbConversionCheckpoint for NoopRgbConversionCheckpoint {
+    #[inline(always)]
+    fn row(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn observe(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenRgbConversionCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    pixels_until_checkpoint: usize,
+}
+
+impl<'a> TokenRgbConversionCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            pixels_until_checkpoint: RGB_TO_YCBCR_CHECKPOINT_PIXELS,
+        }
+    }
+}
+
+impl RgbConversionCheckpoint for TokenRgbConversionCheckpoint<'_> {
+    #[inline]
+    fn row(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn observe(&mut self) -> CodecResult<()> {
+        self.pixels_until_checkpoint = self.pixels_until_checkpoint.saturating_sub(1);
+        if self.pixels_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.pixels_until_checkpoint = RGB_TO_YCBCR_CHECKPOINT_PIXELS;
+        }
+        Ok(())
+    }
+}
 
 trait EntropyOutputCheckpoint {
     fn observe(&mut self, current_output: usize) -> CodecResult<()>;
@@ -904,6 +955,21 @@ fn rgb_to_ycbcr(
     h: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenRgbConversionCheckpoint::new(token);
+        rgb_to_ycbcr_with_checkpoint(pixels, w, h, &mut checkpoint)
+    } else {
+        let mut checkpoint = NoopRgbConversionCheckpoint;
+        rgb_to_ycbcr_with_checkpoint(pixels, w, h, &mut checkpoint)
+    }
+}
+
+fn rgb_to_ycbcr_with_checkpoint<C: RgbConversionCheckpoint>(
+    pixels: &[u8],
+    w: usize,
+    h: usize,
+    checkpoint: &mut C,
+) -> CodecResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
     let n = w.saturating_mul(h);
     let mut y = vec![0u8; n];
     let mut cb = vec![0u8; n];
@@ -911,7 +977,7 @@ fn rgb_to_ycbcr(
     let npix = n.min(pixels.len().div_euclid(3));
     let row_width = w.max(1);
     for row in 0..h {
-        crate::codecs::error::check_cancelled(token)?;
+        checkpoint.row()?;
         let row_start = row.saturating_mul(row_width).min(npix);
         let row_end = npix.min(row_start.saturating_add(row_width));
         for i in row_start..row_end {
@@ -927,6 +993,7 @@ fn rgb_to_ycbcr(
             let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
             cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
             cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
+            checkpoint.observe()?;
         }
     }
     Ok((y, cb, cr))

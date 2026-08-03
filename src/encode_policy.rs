@@ -9,11 +9,12 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// memory failure. `max_work_units` counts the deterministic cooperative
 /// checkpoints reached by an encode, including TIFF Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
-/// JPEG entropy-output intervals after each 1,024 emitted entropy bytes,
-/// the PNG adaptive-filter and filtered-row checkpoints charged after each
-/// 1,024 row bytes, PNG stored-block copy checkpoints charged after each 1,024
-/// copied bytes, BMP row-conversion checkpoints charged after each 1,024
-/// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
+/// JPEG RGB-to-YCbCr conversion items and entropy-output intervals after each
+/// 1,024 converted pixels or emitted entropy bytes, the PNG adaptive-filter
+/// and filtered-row checkpoints charged after each 1,024 row bytes, PNG
+/// stored-block copy checkpoints charged after each 1,024 copied bytes, BMP
+/// row-conversion checkpoints charged after each 1,024 pixels, lossy WebP VP8
+/// RGB/RGBA-to-YUV conversion items, analysis/partition
 /// stages, 512-bit logical and 16,384-boolean first-partition-bit intervals,
 /// 512-bit logical and 16,384-boolean coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
@@ -66,13 +67,12 @@ impl EncodePolicy {
     /// filtered bytes while adaptive candidates are scored or emitted. PNG
     /// stored-block copying charges an additional checkpoint after each 1,024
     /// copied bytes. BMP row conversion charges additional checkpoints after
-    /// each 1,024 pixels.
-    /// TIFF
+    /// each 1,024 pixels. JPEG RGB-to-YCbCr conversion charges an additional
+    /// checkpoint after each 1,024 pixels, and JPEG entropy coding charges an
+    /// additional checkpoint after each 1,024 emitted entropy bytes. TIFF
     /// Deflate charges input-row and level-six matcher candidate, insertion,
     /// fizzle, window, and position intervals plus expansion, Huffman,
     /// bitstream, stored-block, and checksum intervals. Lossy
-    /// JPEG entropy coding additionally charges after each 1,024 emitted
-    /// entropy bytes. Lossy
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
     /// conversion items, after each 512-bit logical and 16,384-boolean
     /// first-partition interval, after each 512-bit logical and 16,384-boolean
