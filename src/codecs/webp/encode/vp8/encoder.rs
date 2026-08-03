@@ -16,7 +16,7 @@ use crate::codecs::CodecResult;
 
 use super::{
     analysis::{FrameParams, analyze, segment_params},
-    frame::select_frame,
+    frame::{FrameSelectionOptions, select_frame},
     partition::encode_first_partition,
     probability::adapt_coefficients,
     residual::encode_coefficients,
@@ -148,11 +148,14 @@ fn encode_vp8_planes(
         [&y_plane, &u_plane, &v_plane],
         (padded_width as usize, padded_height as usize),
         &analysis,
-        f64::from(quality),
-        method,
-        &COEFF_PROBS,
-        false,
-    );
+        FrameSelectionOptions {
+            quality: f64::from(quality),
+            method,
+            coefficient_probabilities: &COEFF_PROBS,
+            trellis: false,
+            token,
+        },
+    )?;
     crate::codecs::error::check_cancelled(token)?;
     let segment_map = simplify_segments(&mut params);
     for decision in &mut decisions {
@@ -175,11 +178,14 @@ fn encode_vp8_planes(
             [&y_plane, &u_plane, &v_plane],
             (padded_width as usize, padded_height as usize),
             &analysis,
-            f64::from(quality),
-            method,
-            &COEFF_PROBS,
-            true,
-        );
+            FrameSelectionOptions {
+                quality: f64::from(quality),
+                method,
+                coefficient_probabilities: &COEFF_PROBS,
+                trellis: true,
+                token,
+            },
+        )?;
         crate::codecs::error::check_cancelled(token)?;
         for decision in &mut decisions {
             decision.segment = segment_map[usize::from(decision.segment)];
