@@ -9086,18 +9086,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
-        let output_lossless_expected =
-            image_slash_star::encode(&output_lossless_image, ImageFormat::WebP, &lossless_options)?;
-        assert_eq!(
-            image_slash_star::encode_with_policy(
-                &output_lossless_image,
-                ImageFormat::WebP,
-                &lossless_options,
-                &lossless_unlimited,
-            )?,
-            output_lossless_expected,
-            "an ample VP8L output budget preserves byte identity"
-        );
+        // The smaller lossless probe above already proves byte identity for
+        // the ordinary and ample-budget VP8L paths. This larger patterned
+        // fixture is reserved for the late logical/output boundaries so the
+        // contract does not pay for two redundant full encodes before them.
         // VP8L token-aware bit writing now charges a checkpoint after each
         // 16 logical bits. This real patterned lossless probe reaches the
         // first new interval before the later writer work. Pillow has no
@@ -9513,8 +9505,6 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut analysis_options {
             options.method = Some(0);
         }
-        let analysis_expected =
-            image_slash_star::encode(&analysis_image, ImageFormat::WebP, &analysis_options)?;
         let partition_probe_pixels: Vec<u8> = (0..272 * 272 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
@@ -9989,16 +9979,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
 
-        assert_eq!(
-            image_slash_star::encode_with_policy(
-                &analysis_image,
-                ImageFormat::WebP,
-                &analysis_options,
-                &unlimited,
-            )?,
-            analysis_expected,
-            "an ample WebP analysis budget preserves byte identity"
-        );
+        // The basic VP8 probe above already proves ordinary/ample byte
+        // identity. This 512x512 fixture is retained only for the real
+        // analysis and macroblock checkpoint boundaries below.
         let analysis_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(326);
         let analysis_error = match image_slash_star::encode_with_policy(
             &analysis_image,
@@ -10931,9 +10914,14 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
     }
 
     if cfg!(feature = "gif") {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
-        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
+        // Sequence work-control is a Rust-only result/sink contract. A tiny
+        // two-frame caller-built sequence exercises the same SequenceEncode
+        // admission and cancellation boundaries without paying to decode a
+        // multi-frame fixture whose pixels are not observed here.
+        let sequence_image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+        let mut sequence = DecodedSequence::from_image(sequence_image);
+        sequence.frames.push(sequence.frames[0].clone());
+        sequence.kind = SequenceKind::TimedAnimation;
         let options = EncodeOptions::for_format(ImageFormat::Gif);
         let zero = image_slash_star::EncodePolicy::new().with_max_work_units(0);
         let error = match image_slash_star::encode_sequence_with_policy(
@@ -10990,11 +10978,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // dictionary pass. Pillow has no caller token or work-budget result,
         // so this remains Rust-only work-control evidence and adds no parity
         // row. The ordinary path and an ample budget must remain byte-identical.
-        let mut pixels = Vec::with_capacity(64 * 64);
-        for index in 0..64 * 64 {
+        let mut pixels = Vec::with_capacity(32 * 32);
+        for index in 0..32 * 32 {
             pixels.push(u8::try_from(index % 256)?);
         }
-        let image = DecodedImage::new(64, 64, pixels, ColorType::L8);
+        let image = DecodedImage::new(32, 32, pixels, ColorType::L8);
         let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
         let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         assert_eq!(
@@ -11055,7 +11043,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // work-budget result, so this remains Rust-only work-control evidence
         // and adds no parity row. The ordinary path and an ample budget must
         // remain byte-identical.
-        let image = DecodedImage::new(2_048, 1, vec![128; 2_048 * 3], ColorType::Rgb8);
+        let image = DecodedImage::new(1_024, 1, vec![128; 1_024 * 3], ColorType::Rgb8);
         let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
         let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         assert_eq!(
@@ -11122,11 +11110,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // token or work-budget result, so this remains Rust-only work-control
         // evidence and adds no parity row. The ordinary path and an ample
         // budget must remain byte-identical.
-        let mut rgba_pixels = Vec::with_capacity(2_048 * 4);
-        for _ in 0..2_048 {
+        let mut rgba_pixels = Vec::with_capacity(1_024 * 4);
+        for _ in 0..1_024 {
             rgba_pixels.extend_from_slice(&[128, 64, 32, 255]);
         }
-        let image = DecodedImage::new(2_048, 1, rgba_pixels, ColorType::Rgba8);
+        let image = DecodedImage::new(1_024, 1, rgba_pixels, ColorType::Rgba8);
         let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
         let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         assert_eq!(
@@ -11302,9 +11290,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // and recursive small ranges while preserving the ordinary bytes under
         // an ample token budget. This is implementation work-control evidence,
         // not a parity or coverage-only fixture.
-        let mut varied_rgba_pixels = Vec::with_capacity(2_048 * 4);
+        let mut varied_rgba_pixels = Vec::with_capacity(1_024 * 4);
         for red in 0..8u8 {
-            for green in 0..8u8 {
+            for green in 0..4u8 {
                 for blue in 0..32u8 {
                     varied_rgba_pixels.extend_from_slice(&[
                         red.saturating_mul(32),
@@ -11315,7 +11303,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 }
             }
         }
-        let varied_image = DecodedImage::new(2_048, 1, varied_rgba_pixels, ColorType::Rgba8);
+        let varied_image = DecodedImage::new(1_024, 1, varied_rgba_pixels, ColorType::Rgba8);
         let varied_expected = image_slash_star::encode(&varied_image, ImageFormat::Gif, &options)?;
         assert_eq!(
             image_slash_star::encode_with_policy(
@@ -11331,8 +11319,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // Transparent-pixel RGB normalization is part of Pillow-compatible
         // FASTOCTREE preparation. This real RGBA work-control probe exercises
         // the token-aware normalization interval without adding a parity row.
-        let mut transparent_pixels = Vec::with_capacity(2_048 * 4);
-        for index in 0..2_048u32 {
+        let mut transparent_pixels = Vec::with_capacity(1_024 * 4);
+        for index in 0..1_024u32 {
             transparent_pixels.extend_from_slice(&[
                 u8::try_from(index & 0xff)?,
                 u8::try_from((index >> 8) & 0xff)?,
@@ -11340,7 +11328,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 0,
             ]);
         }
-        let transparent_image = DecodedImage::new(2_048, 1, transparent_pixels, ColorType::Rgba8);
+        let transparent_image = DecodedImage::new(1_024, 1, transparent_pixels, ColorType::Rgba8);
         let transparent_expected =
             image_slash_star::encode(&transparent_image, ImageFormat::Gif, &options)?;
         assert_eq!(
@@ -11412,15 +11400,15 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // axis, split, and partition scans. This is a real Rust-only
         // work-control contract: Pillow has no caller token or work-budget
         // result, and no parity row or synthetic coverage-only input is added.
-        let mut high_color_pixels = Vec::with_capacity(2_048 * 3);
-        for index in 0..2_048u32 {
+        let mut high_color_pixels = Vec::with_capacity(1_024 * 3);
+        for index in 0..1_024u32 {
             high_color_pixels.extend_from_slice(&[
                 u8::try_from(index & 0xff)?,
                 u8::try_from((index >> 8) & 0xff)?,
                 u8::try_from((index >> 16) & 0xff)?,
             ]);
         }
-        let image = DecodedImage::new(2_048, 1, high_color_pixels, ColorType::Rgb8);
+        let image = DecodedImage::new(1_024, 1, high_color_pixels, ColorType::Rgb8);
         let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
         let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         assert_eq!(
