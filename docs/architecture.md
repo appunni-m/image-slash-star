@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`18a400a27d0a1c28299cbe1f71fb06dfa732b3b5`; the claim-ledger baseline remains
+`66263c8ab08a4f488b3c378c5302477e2f5d9d48`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -297,7 +297,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/4,096-bit logical and 16,384-boolean first-partition-bit/4,096-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 4,096-bit logical bitstream, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 analysis/mode-selection/coefficient-probability/4,096-bit logical and 16,384-boolean first-partition-bit/4,096-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 4,096-bit logical bitstream, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries and default level-six Deflate matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls row/block/scan checkpoints, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries; other PNG compression levels retain only boundary checks around their no-token helper |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -459,6 +459,12 @@ position intervals, so a bounded page cannot consume the complete matcher pass
 between public checkpoints. TIFF Deflate emission additionally charges while
 expanding tokens, analyzing Huffman trees, emitting stored/fixed/dynamic
 bitstreams, copying stored-block bytes, and computing the Adler-32 trailer.
+With a caller token, PNG stored compression additionally checks input-chunk and
+stored-block boundaries plus its Adler-32 calculation, while default level-six
+PNG compression uses the token-aware matcher, token expansion, Huffman/bitstream
+emission, and checksum stages. PNG compression levels other than 0 and 6 still
+only check before and after their existing no-token helper; no-token PNG paths
+remain on the ordinary byte-producing helpers.
 PNG adaptive filtering and filtered-row emission charge
 additional checkpoints after each 1,024 row bytes, including while candidate
 filters are scored. BMP row conversion additionally charges after each 1,024
@@ -508,7 +514,7 @@ boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while
 preparing rows, embedded payloads, or TIFF page state, including PNG adaptive
-filter subsegments, and between emitted
+filter and token-aware compression subsegments, and between emitted
 structural segments in their sink paths. ICO still delivery has the same
 source-size, payload, and directory boundaries; TIFF sink delivery checks
 between its header, strip/padding, and IFD/value segments. GIF, TIFF, WebP,
@@ -525,9 +531,10 @@ implemented 4,096-bit logical VP8 first-partition interval, the
 boolean-bitstream-output intervals, the 4,096-bit logical VP8L bitstream
 interval, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
-row-conversion subsegments, and LZW input-symbol intervals, WebP
+row-conversion subsegments, token-aware PNG stored-block/default-level-six
+Deflate stages, and LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
-subsegments, and TIFF Deflate path—remain open.
+subsegments, TIFF Deflate path, and PNG compression levels other than 0 and 6—remain open.
 
 ### Codec work is bounded by the resource set
 
