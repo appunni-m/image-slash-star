@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
+`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -472,7 +472,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`4c61ad60eab2be62dcad80f8f4b95550cae2688c`, the fixture manifest and managed
+`82a937f74b2255b51415924dc9033f8a43ccafa0`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -2837,7 +2837,60 @@ lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
 segment-normalization warning remains. These are Rust-only implementation and
 target records separate from Pillow parity.
 
-Current acceptance record: direct AVIF auxiliary relationship
+Current acceptance record: grid-derived AVIF alpha relationships and warm matrix fanout
+
+The bounded AVIF source-provenance slice is implemented at
+`c8c18221d1d3126ac320cfc9a097386ddd007289` and its existing feature-gated
+fixture contract was completed at `82a937f74b2255b51415924dc9033f8a43ccafa0`.
+The committed `grid.avif` fixture has primary item `1`, derived color items
+`2` and `3`, and alpha auxiliary items `5` and `6` targeting `2` and `3`.
+`SourceDescriptor::avif_auxiliary_relationships()` retains those exact
+source-local links on inspection, still decode, and the still-sequence
+fallback; the scalar getter remains `None` because the grid has no direct
+primary-item alpha link. The existing `alpha.avif` contract also verifies the
+scalar direct link `2`→`1` and the plural getter's one-element fallback.
+These descriptors record source provenance only; they do not compose the grid,
+transform decoded pixels, or claim non-alpha graph support.
+
+This evidence deliberately stays outside Pillow parity: the parity schema has
+no source descriptor or AVIF item-relationship field. The unchanged Pillow
+result is therefore outer-output regression evidence only. The source contract
+uses existing real fixtures, adds no test function, parity row, fixture,
+diagnostic origin, or coverage-only hook. The test-runtime change at
+`576fe356d22e936df04b4c96f1c36f6db5465fa6` is also harness-only: it derives up
+to three warm test workers per lane from host CPUs and changes no production
+profile or evidence origin.
+
+Managed Pillow parity run `20e9ecf2-076d-4a04-9d34-88e331d67769` passed
+1,445/1,445 checks with zero failures or skips in 53,969 ms at the AVIF
+implementation revision. Final feature-matrix run
+`11b56746-1c02-4888-93d6-57e387175114` passed 991/991 checks in 19,998 ms at
+the source-contract revision; its retained log ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees` and has no
+build-directory or package-cache lock-wait matches. The runtime tuning itself
+was validated separately by managed run `b78b4c94-72cb-45fb-a9e8-1fb4bb49be9e`
+at the performance commit (991/991 in 3,501 ms); on the same warm local host,
+the default changed from 4.51 s to 3.49 s. These timings are cache- and
+runner-sensitive execution evidence, not universal benchmarks.
+
+Coverage MCP run `6fa86e87-831b-4c7d-a273-94f509018eb5` passed 85/85 tests in
+50,815 ms and ingested snapshot `529006bb-3484-4bc7-b595-53a2a6dce421`:
+51,204/51,678 lines, 7,070/7,158 branches, 2,862/2,931 functions, and
+79,476/80,534 regions. Against baseline snapshot
+`92f6ba37-f4eb-4ee8-aeb3-88e94856501a`, covered totals increased by 99 lines,
+27 branches, 6 functions, and 155 regions, with no changed-to-uncovered line
+in the line-only comparison. The remaining named gaps are the defensive
+duplicate-alpha-association branch at `src/codecs/avif/container.rs:1109` and
+two partial `SourceDescriptor::is_empty` outcomes at
+`src/types/mod.rs:1055-1056`; they remain visible rather than being hidden by
+synthetic tests.
+
+Remaining AVIF categories are non-alpha and richer auxiliary graphs, grid
+topology/composition, gain maps/depth/thumbnails/supplementary content,
+premultiplication and plane/range/quality semantics, `iloc` extent variants,
+content selection, invisible RGB, and fragmented-track/edit-list behavior.
+
+Historical acceptance record: direct AVIF auxiliary relationship
 
 The direct AVIF auxiliary-alpha relationship slice is implemented at
 `fcff8dd9e9bebf22da8b7ee3dd3e93ae13798018` and finalized with the
@@ -3196,8 +3249,9 @@ root, it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs
 per lane, capped at six), then derives the Rust test-harness and Cargo compiler
 worker counts from that bound. When all three retained all-feature target roots
 are present, the scheduler treats the root as warm: it allows up to twelve
-independent lanes, uses one Cargo compiler worker per lane, and caps the
-derived test-harness budget at two workers. `MATRIX_JOBS`,
+independent lanes, uses one Cargo compiler worker per lane, and derives the
+test-harness budget as `ceil(logical_cpus / 4)`, capped at three workers per
+lane. `MATRIX_JOBS`,
 `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the derived values
 for a constrained or unusually large CI runner. This bounds aggregate process,
 compiler, and test-thread fan-out without dropping any lane or assertion while
