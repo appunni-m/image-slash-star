@@ -203,9 +203,9 @@ conversion after each 1,024 pixels, color, sampling, quantization, entropy,
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each
 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection
-subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical and 16,384-boolean first-partition and
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
-16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream intervals and 1,024-byte output intervals, and each
+subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, and 1,024-bit logical and 16,384-boolean first-partition and
+8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, and 1,024-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
+16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, and 1,024-bit logical bitstream intervals and 1,024-byte output intervals, and each
 writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
