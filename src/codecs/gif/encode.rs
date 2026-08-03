@@ -23,6 +23,7 @@ const EXTENSION_INTRODUCER: u8 = 0x21;
 const GRAPHIC_CONTROL_LABEL: u8 = 0xf9;
 const MAX_LZW_CODE: u16 = 4095;
 const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
+const GIF_OCTREE_CHECKPOINT_CELLS: usize = 1024;
 
 #[cfg(coverage)]
 fn coverage_frame(
@@ -2492,7 +2493,11 @@ impl OctreeCube {
     }
 }
 
-fn copy_octree_cube(cube: &OctreeCube, bits: [u32; 4]) -> OctreeCube {
+fn copy_octree_cube(
+    cube: &OctreeCube,
+    bits: [u32; 4],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<OctreeCube> {
     let mut result = OctreeCube::new(bits);
     let mut source_reduce = [0u32; 4];
     let mut destination_reduce = [0u32; 4];
@@ -2505,23 +2510,48 @@ fn copy_octree_cube(cube: &OctreeCube, bits: [u32; 4]) -> OctreeCube {
             result.widths[channel]
         }
     });
-    for r in 0..widths[0] {
-        for g in 0..widths[1] {
-            for b in 0..widths[2] {
-                for a in 0..widths[3] {
-                    let values = [r, g, b, a];
-                    let source = cube.offset_position(std::array::from_fn(|channel| {
-                        values[channel] >> source_reduce[channel]
-                    }));
-                    let destination = result.offset_position(std::array::from_fn(|channel| {
-                        values[channel] >> destination_reduce[channel]
-                    }));
-                    result.buckets[destination].add_bucket(&cube.buckets[source]);
+    if let Some(token) = token {
+        let mut cell_index = 0usize;
+        for r in 0..widths[0] {
+            for g in 0..widths[1] {
+                for b in 0..widths[2] {
+                    for a in 0..widths[3] {
+                        if cell_index != 0 && cell_index.is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS)
+                        {
+                            crate::codecs::error::check_cancelled(Some(token))?;
+                        }
+                        let values = [r, g, b, a];
+                        let source = cube.offset_position(std::array::from_fn(|channel| {
+                            values[channel] >> source_reduce[channel]
+                        }));
+                        let destination = result.offset_position(std::array::from_fn(|channel| {
+                            values[channel] >> destination_reduce[channel]
+                        }));
+                        result.buckets[destination].add_bucket(&cube.buckets[source]);
+                        cell_index = cell_index.saturating_add(1);
+                    }
+                }
+            }
+        }
+    } else {
+        for r in 0..widths[0] {
+            for g in 0..widths[1] {
+                for b in 0..widths[2] {
+                    for a in 0..widths[3] {
+                        let values = [r, g, b, a];
+                        let source = cube.offset_position(std::array::from_fn(|channel| {
+                            values[channel] >> source_reduce[channel]
+                        }));
+                        let destination = result.offset_position(std::array::from_fn(|channel| {
+                            values[channel] >> destination_reduce[channel]
+                        }));
+                        result.buckets[destination].add_bucket(&cube.buckets[source]);
+                    }
                 }
             }
         }
     }
-    result
+    Ok(result)
 }
 
 fn bucket_order(left: &OctreeBucket, right: &OctreeBucket) -> std::cmp::Ordering {
@@ -2695,23 +2725,62 @@ fn sorted_octree_buckets(cube: &OctreeCube) -> Vec<OctreeBucket> {
     buckets
 }
 
-fn subtract_octree_buckets(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
-    for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
-        let offset = cube.offset(bucket.average());
-        let destination = &mut cube.buckets[offset];
-        destination.count = destination.count.saturating_sub(bucket.count);
-        for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
-            *sum = sum.saturating_sub(value);
+fn subtract_octree_buckets(
+    cube: &mut OctreeCube,
+    buckets: &[OctreeBucket],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    if let Some(token) = token {
+        for (bucket_index, bucket) in buckets.iter().enumerate() {
+            if bucket_index != 0 && bucket_index.is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            if bucket.count == 0 {
+                continue;
+            }
+            let offset = cube.offset(bucket.average());
+            let destination = &mut cube.buckets[offset];
+            destination.count = destination.count.saturating_sub(bucket.count);
+            for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
+                *sum = sum.saturating_sub(value);
+            }
+        }
+    } else {
+        for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
+            let offset = cube.offset(bucket.average());
+            let destination = &mut cube.buckets[offset];
+            destination.count = destination.count.saturating_sub(bucket.count);
+            for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
+                *sum = sum.saturating_sub(value);
+            }
         }
     }
+    Ok(())
 }
 
-fn add_octree_lookup(cube: &mut OctreeCube, palette: &[OctreeBucket], offset: usize) {
-    for index in (offset..palette.len()).rev() {
-        let bucket = &palette[index];
-        let position = cube.offset(bucket.average());
-        cube.buckets[position].count = bounded_u32(index);
+fn add_octree_lookup(
+    cube: &mut OctreeCube,
+    palette: &[OctreeBucket],
+    offset: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    if let Some(token) = token {
+        for (lookup_index, index) in (offset..palette.len()).rev().enumerate() {
+            if lookup_index != 0 && lookup_index.is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+            let bucket = &palette[index];
+            let position = cube.offset(bucket.average());
+            cube.buckets[position].count = bounded_u32(index);
+        }
+    } else {
+        for index in (offset..palette.len()).rev() {
+            let bucket = &palette[index];
+            let position = cube.offset(bucket.average());
+            cube.buckets[position].count = bounded_u32(index);
+        }
     }
+    Ok(())
 }
 
 fn pillow_fast_octree(
@@ -2734,24 +2803,28 @@ fn pillow_fast_octree(
             fine.add_color(color);
         }
     }
-    let mut coarse = copy_octree_cube(&fine, coarse_bits);
+    let mut coarse = copy_octree_cube(&fine, coarse_bits, token)?;
     let mut coarse_count = coarse.used().min(target);
     let mut fine_count = target.saturating_sub(coarse_count);
     let fine_palette = sorted_octree_buckets(&fine);
-    subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count]);
+    subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token)?;
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
         coarse_count = coarse.used();
         fine_count = target.saturating_sub(coarse_count);
-        subtract_octree_buckets(&mut coarse, &fine_palette[already_subtracted..fine_count]);
+        subtract_octree_buckets(
+            &mut coarse,
+            &fine_palette[already_subtracted..fine_count],
+            token,
+        )?;
     }
     let coarse_palette = sorted_octree_buckets(&coarse);
     let mut buckets = coarse_palette[..coarse_count].to_vec();
     buckets.extend_from_slice(&fine_palette[..fine_count]);
     let mut coarse_lookup = OctreeCube::new(coarse_bits);
-    add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0);
-    let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits);
-    add_octree_lookup(&mut lookup, &buckets, coarse_count);
+    add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token)?;
+    let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits, token)?;
+    add_octree_lookup(&mut lookup, &buckets, coarse_count, token)?;
     let indices = if let Some(token) = token {
         let mut indices = Vec::with_capacity(colors.len());
         for (pixel_index, &color) in colors.iter().enumerate() {
