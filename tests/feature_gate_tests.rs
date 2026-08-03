@@ -1629,15 +1629,26 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 "{name} auxiliary target identity"
             );
             let expected_relationship = Some(relationship);
+            let expected_relationships = [relationship];
             assert_eq!(
                 info.source.avif_auxiliary_relationship(),
                 expected_relationship,
                 "{name} inspect auxiliary relationship"
             );
             assert_eq!(
+                info.source.avif_auxiliary_relationships(),
+                expected_relationships.as_slice(),
+                "{name} inspect auxiliary relationships"
+            );
+            assert_eq!(
                 decoded.content.source.avif_auxiliary_relationship(),
                 expected_relationship,
                 "{name} decode auxiliary relationship"
+            );
+            assert_eq!(
+                decoded.content.source.avif_auxiliary_relationships(),
+                expected_relationships.as_slice(),
+                "{name} decode auxiliary relationships"
             );
             let sequence = image_slash_star::decode_sequence(&bytes)?;
             assert_eq!(
@@ -1652,6 +1663,19 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                     .avif_auxiliary_relationship(),
                 expected_relationship,
                 "{name} sequence auxiliary relationship"
+            );
+        } else if name == "avif opaque" {
+            assert!(
+                info.source.avif_auxiliary_relationships().is_empty(),
+                "{name} inspect auxiliary relationships"
+            );
+            assert!(
+                decoded
+                    .content
+                    .source
+                    .avif_auxiliary_relationships()
+                    .is_empty(),
+                "{name} decode auxiliary relationships"
             );
         }
     }
