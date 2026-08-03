@@ -8454,11 +8454,118 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(probability_sink, vec![0xAD]);
 
+        // The first VP8 partition charges its fixed coefficient-probability
+        // signaling table after 1,024 nodes. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence with no
+        // parity row or coverage-only hook.
+        let partition_probability_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(333);
+        let partition_probability_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_probability_bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP partition-probability budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_probability_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 333,
+                observed: 334,
+            }
+        ));
+        let mut partition_probability_sink = vec![0xAF];
+        let partition_probability_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_probability_bounded,
+            &mut partition_probability_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP partition-probability sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_probability_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 333,
+                observed: 334,
+            }
+        ));
+        assert_eq!(partition_probability_sink, vec![0xAF]);
+
+        // Mode signaling charges after each batch of 256 macroblocks. This
+        // remains Rust-only work-control evidence with no parity row or
+        // coverage-only hook.
+        let partition_mode_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(334);
+        let partition_mode_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_mode_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP partition-mode budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_mode_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        let mut partition_mode_sink = vec![0xB0];
+        let partition_mode_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_mode_bounded,
+            &mut partition_mode_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP partition-mode sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_mode_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 334,
+                observed: 335,
+            }
+        ));
+        assert_eq!(partition_mode_sink, vec![0xB0]);
+
         // Coefficient bitstream emission charges after each batch of 256
         // completed macroblocks. Pillow has no caller token or work-budget
         // result, so this remains Rust-only evidence with no parity row or
         // coverage-only hook.
-        let coefficient_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(334);
+        let coefficient_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(339);
         let coefficient_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -8474,8 +8581,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 334,
-                observed: 335,
+                maximum: 339,
+                observed: 340,
             }
         ));
         let mut coefficient_sink = vec![0xAE];
@@ -8499,8 +8606,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 334,
-                observed: 335,
+                maximum: 339,
+                observed: 340,
             }
         ));
         assert_eq!(coefficient_sink, vec![0xAE]);

@@ -12,6 +12,10 @@ use super::{
     quant::libwebp_segment_matrices,
     tokenize::coefficient_update_probability,
 };
+use crate::codecs::CodecResult;
+
+const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
+const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
 
 fn write_signed(writer: &mut BoolEncoder, value: i32, magnitude_bits: u8) {
     writer.encode_bool(128, value != 0);
@@ -124,7 +128,12 @@ fn write_segment_header(writer: &mut BoolEncoder, params: &FrameParams, probabil
     }
 }
 
-fn write_coefficient_probabilities(writer: &mut BoolEncoder, probabilities: &AdaptedProbabilities) {
+fn write_coefficient_probabilities(
+    writer: &mut BoolEncoder,
+    probabilities: &AdaptedProbabilities,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let mut probability_items = 0usize;
     for coefficient_type in 0..4 {
         for band in 0..8 {
             for context in 0..3 {
@@ -142,11 +151,16 @@ fn write_coefficient_probabilities(writer: &mut BoolEncoder, probabilities: &Ada
                             8,
                         );
                     }
+                    probability_items = probability_items.saturating_add(1);
+                    if probability_items.is_multiple_of(PARTITION_PROBABILITY_CHECKPOINT_NODES) {
+                        crate::codecs::error::check_cancelled(token)?;
+                    }
                 }
             }
         }
     }
     writer.encode_bool(128, false); // no skip probability
+    Ok(())
 }
 
 fn write_segment(writer: &mut BoolEncoder, segment: u8, probabilities: [u8; 3]) {
@@ -215,7 +229,8 @@ fn write_modes(
     macroblock_width: usize,
     segment_probabilities: [u8; 3],
     segmentation_enabled: bool,
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     let mode_stride = macroblock_width.saturating_mul(4);
     let macroblock_height = decisions.len().div_euclid(macroblock_width);
     let mut modes = vec![
@@ -224,6 +239,7 @@ fn write_modes(
             .saturating_mul(macroblock_height)
             .saturating_mul(4)
     ];
+    let mut macroblock_items = 0usize;
     for decision in decisions {
         if segmentation_enabled {
             write_segment(writer, decision.segment, segment_probabilities);
@@ -275,7 +291,12 @@ fn write_modes(
             }
         }
         write_chroma_mode(writer, decision.chroma.mode);
+        macroblock_items = macroblock_items.saturating_add(1);
+        if macroblock_items.is_multiple_of(PARTITION_MODE_CHECKPOINT_MACROBLOCKS) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
     }
+    Ok(())
 }
 
 pub(super) fn encode_first_partition(
@@ -284,7 +305,8 @@ pub(super) fn encode_first_partition(
     params: &FrameParams,
     probabilities: &AdaptedProbabilities,
     adjust_filter_edges: bool,
-) -> Vec<u8> {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
     let segment_probabilities = segment_probabilities(decisions);
     let mut writer = BoolEncoder::default();
@@ -307,13 +329,14 @@ pub(super) fn encode_first_partition(
     write_signed(&mut writer, i32::from(params.chroma_dc_delta), 4);
     write_signed(&mut writer, i32::from(params.chroma_ac_delta), 4);
     writer.encode_bool(128, false); // no entropy refresh
-    write_coefficient_probabilities(&mut writer, probabilities);
+    write_coefficient_probabilities(&mut writer, probabilities, token)?;
     write_modes(
         &mut writer,
         decisions,
         macroblock_width,
         segment_probabilities,
         params.num_segments > 1,
-    );
-    writer.finish()
+        token,
+    )?;
+    Ok(writer.finish())
 }
