@@ -16,6 +16,7 @@ use crate::codecs::CodecResult;
 
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
+const PARTITION_8_BIT_CHECKPOINT_BITS: usize = 8;
 const PARTITION_16_BIT_CHECKPOINT_BITS: usize = 16;
 const PARTITION_32_BIT_CHECKPOINT_BITS: usize = 32;
 const PARTITION_64_BIT_CHECKPOINT_BITS: usize = 64;
@@ -115,41 +116,48 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
     #[inline]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
         // Every logical interval counts the same boolean operations. Keep one
-        // counter and nest the larger intervals under the 16-bit poll so the
+        // counter and nest the larger intervals under the 8-bit poll so the
         // token-aware path does not perform redundant modulo tests per bit.
         self.bit_items = self.bit_items.saturating_add(1);
         if self
             .bit_items
-            .is_multiple_of(PARTITION_16_BIT_CHECKPOINT_BITS)
+            .is_multiple_of(PARTITION_8_BIT_CHECKPOINT_BITS)
         {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             if self
                 .bit_items
-                .is_multiple_of(PARTITION_32_BIT_CHECKPOINT_BITS)
+                .is_multiple_of(PARTITION_16_BIT_CHECKPOINT_BITS)
             {
                 crate::codecs::error::check_cancelled(Some(self.token))?;
                 if self
                     .bit_items
-                    .is_multiple_of(PARTITION_64_BIT_CHECKPOINT_BITS)
+                    .is_multiple_of(PARTITION_32_BIT_CHECKPOINT_BITS)
                 {
                     crate::codecs::error::check_cancelled(Some(self.token))?;
                     if self
                         .bit_items
-                        .is_multiple_of(PARTITION_FINER_BIT_CHECKPOINT_BITS)
+                        .is_multiple_of(PARTITION_64_BIT_CHECKPOINT_BITS)
                     {
                         crate::codecs::error::check_cancelled(Some(self.token))?;
                         if self
                             .bit_items
-                            .is_multiple_of(PARTITION_FINEST_BIT_CHECKPOINT_BITS)
+                            .is_multiple_of(PARTITION_FINER_BIT_CHECKPOINT_BITS)
                         {
                             crate::codecs::error::check_cancelled(Some(self.token))?;
                             if self
                                 .bit_items
-                                .is_multiple_of(PARTITION_FINE_BIT_CHECKPOINT_BITS)
+                                .is_multiple_of(PARTITION_FINEST_BIT_CHECKPOINT_BITS)
                             {
                                 crate::codecs::error::check_cancelled(Some(self.token))?;
-                                if self.bit_items.is_multiple_of(PARTITION_BIT_CHECKPOINT_BITS) {
+                                if self
+                                    .bit_items
+                                    .is_multiple_of(PARTITION_FINE_BIT_CHECKPOINT_BITS)
+                                {
                                     crate::codecs::error::check_cancelled(Some(self.token))?;
+                                    if self.bit_items.is_multiple_of(PARTITION_BIT_CHECKPOINT_BITS)
+                                    {
+                                        crate::codecs::error::check_cancelled(Some(self.token))?;
+                                    }
                                 }
                             }
                         }
