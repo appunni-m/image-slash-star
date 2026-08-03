@@ -9489,6 +9489,58 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(bitstream_1024_checkpoint_sink, vec![0xA9]);
 
+        // The next VP8L logical interval is independently enforced after
+        // each 2,048 written bits. This is Rust-only work-control evidence:
+        // Pillow has no caller token or equivalent budget result.
+        let bitstream_2048_checkpoint_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(16_033);
+        let bitstream_2048_checkpoint_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &bitstream_2048_checkpoint_policy,
+        ) {
+            Ok(_) => return Err("VP8L 2048-bit bitstream budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            bitstream_2048_checkpoint_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 16_033,
+                observed: 16_034,
+            }
+        ));
+        let mut bitstream_2048_checkpoint_sink = vec![0xA8];
+        let bitstream_2048_checkpoint_sink_error =
+            match image_slash_star::encode_to_sink_with_policy(
+                &output_lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(16_032),
+                &mut bitstream_2048_checkpoint_sink,
+            ) {
+                Ok(_) => {
+                    return Err(
+                        "VP8L 2048-bit bitstream sink budget unexpectedly wrote output".into(),
+                    );
+                }
+                Err(error) => error,
+            };
+        assert!(matches!(
+            bitstream_2048_checkpoint_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 16_032,
+                observed: 16_033,
+            }
+        ));
+        assert_eq!(bitstream_2048_checkpoint_sink, vec![0xA8]);
+
         // A one-unit-lower budget rejects at the first 1,024-byte emitted
         // output interval. This is a separate Rust-only work-control
         // boundary; it is not Pillow byte/pixel parity evidence.
@@ -10051,6 +10103,60 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(partition_bit_sink_1024, vec![0xB3]);
+
+        // The next logical first-partition interval is independently enforced
+        // after each 2,048 coded bits. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence with no
+        // parity row or coverage-only hook.
+        let partition_bit_policy_2048 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(527);
+        let partition_bit_error_2048 = match image_slash_star::encode_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_bit_policy_2048,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP 2048-bit partition budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_error_2048,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 527,
+                observed: 528,
+            }
+        ));
+        let mut partition_bit_sink_2048 = vec![0xB2];
+        let partition_bit_sink_error_2048 = match image_slash_star::encode_to_sink_with_policy(
+            &partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(526),
+            &mut partition_bit_sink_2048,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 2048-bit partition sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_sink_error_2048,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 526,
+                observed: 527,
+            }
+        ));
+        assert_eq!(partition_bit_sink_2048, vec![0xB2]);
 
         // The existing coarser first-partition boundary remains separately
         // enforced after each 16,384 coded bits, after the finer logical
@@ -10987,6 +11093,63 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(coefficient_bit_sink_1024, vec![0xC0]);
+
+        // The next logical coefficient interval is independently enforced
+        // after each 2,048 coded bits. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence with no
+        // parity row or coverage-only hook.
+        let coefficient_bit_policy_2048 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(1_124);
+        let coefficient_bit_error_2048 = match image_slash_star::encode_with_policy(
+            &wide_partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_bit_policy_2048,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 2048-bit coefficient budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_error_2048,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_124,
+                observed: 1_125,
+            }
+        ));
+        let mut coefficient_bit_sink_2048 = vec![0xBF];
+        let coefficient_bit_sink_error_2048 = match image_slash_star::encode_to_sink_with_policy(
+            &wide_partition_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(1_123),
+            &mut coefficient_bit_sink_2048,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 2048-bit coefficient sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_sink_error_2048,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_123,
+                observed: 1_124,
+            }
+        ));
+        assert_eq!(coefficient_bit_sink_2048, vec![0xBF]);
 
         // Coefficient-partition output charges an interior checkpoint after
         // each 1,024 emitted boolean-coder bytes. The deep patterned probe
