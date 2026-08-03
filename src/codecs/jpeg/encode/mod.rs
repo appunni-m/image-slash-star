@@ -1138,6 +1138,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut correction_bits = Vec::new();
     let mut block = [0i16; 64];
     block[ZIGZAG[1]] = 2;
+    let mut ac_progressive_checkpoint = NoopProgressiveScanCheckpoint;
     for _ in 0..938 {
         let _ = append_ac_refine_events(
             &mut events,
@@ -1146,6 +1147,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             table,
             &mut eob_run,
             &mut correction_bits,
+            &mut ac_progressive_checkpoint,
         );
     }
 }
