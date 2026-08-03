@@ -8065,6 +8065,80 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(deflate_sink, vec![0xA8]);
+
+        // The remaining zlib-ng levels now use the same token-aware matcher,
+        // emission, and checksum controller. Pillow has no caller budget or
+        // equivalent result, so these are Rust-only contract probes.
+        for level in [1, 2, 3, 4, 5, 7, 8, 9] {
+            let mut level_options = image_slash_star::PngEncodeOptions::default();
+            level_options.compression = Some(image_slash_star::PngCompression::Level(level));
+            let level_options = EncodeOptions::from(level_options);
+            let level_expected =
+                image_slash_star::encode(&interior_image, ImageFormat::Png, &level_options)?;
+            assert_eq!(
+                image_slash_star::encode_with_policy(
+                    &interior_image,
+                    ImageFormat::Png,
+                    &level_options,
+                    &unlimited,
+                )?,
+                level_expected,
+                "an ample budget preserves PNG level-{level} bytes"
+            );
+
+            let level_error = match image_slash_star::encode_with_policy(
+                &interior_image,
+                ImageFormat::Png,
+                &level_options,
+                &deflate_policy,
+            ) {
+                Ok(_) => {
+                    return Err(format!(
+                        "PNG level-{level} Deflate work budget unexpectedly completed"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                level_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Png),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                    maximum: 20,
+                    observed,
+                } if observed > 20
+            ));
+
+            let mut level_sink = vec![0xA9];
+            let level_sink_error = match image_slash_star::encode_to_sink_with_policy(
+                &interior_image,
+                ImageFormat::Png,
+                &level_options,
+                &deflate_policy,
+                &mut level_sink,
+            ) {
+                Ok(_) => {
+                    return Err(format!(
+                        "PNG level-{level} Deflate budget unexpectedly wrote output"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+            assert!(matches!(
+                level_sink_error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Png),
+                    operation: image_slash_star::CodecOperation::StillEncode,
+                    resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                    maximum: 20,
+                    observed,
+                } if observed > 20
+            ));
+            assert_eq!(level_sink, vec![0xA9]);
+        }
     }
 
     if cfg!(feature = "jpeg") {

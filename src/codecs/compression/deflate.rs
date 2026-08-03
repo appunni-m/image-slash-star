@@ -344,10 +344,9 @@ pub(crate) fn compress_zlib_tiff(
     super::zlib_ng::compress_level6_tiff(data, input_chunks, token)
 }
 
-/// Compress a PNG stream with the token-aware paths whose interior work is
-/// currently bounded. The default level-six matcher and stored-block mode
-/// retain the ordinary byte model; other levels still receive the caller
-/// checkpoint before and after their existing no-token helper.
+/// Compress a PNG stream with token-aware interior checkpoints. Stored blocks
+/// and every zlib-ng level retain the ordinary byte model; the no-token path
+/// remains on the existing helpers.
 #[cfg(feature = "png")]
 pub(crate) fn compress_zlib_chunked_with_token(
     data: &[u8],
@@ -358,7 +357,16 @@ pub(crate) fn compress_zlib_chunked_with_token(
     crate::codecs::error::check_cancelled(Some(token))?;
     let output = match level {
         0 => compress_zlib_stored_chunked_with_token(data, input_chunks, token)?,
+        1 => super::zlib_ng::compress_level1_with_token(data, input_chunks, token)?,
+        2..=5 => super::zlib_ng::compress_early_level_with_token(data, input_chunks, level, token)?,
         6 => super::zlib_ng::compress_level6_with_token(data, input_chunks, Some(token), 32_767)?,
+        7..=8 => super::zlib_ng::compress_slow_level_with_token_for_png(
+            data,
+            input_chunks,
+            level,
+            token,
+        )?,
+        9 => super::zlib_ng::compress_level9_with_token(data, input_chunks, token)?,
         _ => {
             let output = compress_zlib_chunked(data, level, input_chunks)?;
             crate::codecs::error::check_cancelled(Some(token))?;
