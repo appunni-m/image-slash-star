@@ -8261,6 +8261,61 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "budget rejection must precede sink writes"
         );
 
+        // A wide single-row image must not hide an unbounded RGB→YCbCr inner
+        // loop behind its one row checkpoint. Pillow has no caller-controlled
+        // work budget, so this remains a Rust-only result/sink contract.
+        let conversion_image = DecodedImage::new(2_048, 1, vec![128; 2_048 * 3], ColorType::Rgb8);
+        let conversion_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3);
+        let conversion_error = match image_slash_star::encode_with_policy(
+            &conversion_image,
+            ImageFormat::Jpeg,
+            &options,
+            &conversion_policy,
+        ) {
+            Ok(_) => {
+                return Err("JPEG RGB conversion budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            conversion_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        let mut conversion_sink = vec![0x5C];
+        let conversion_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &conversion_image,
+            ImageFormat::Jpeg,
+            &options,
+            &conversion_policy,
+            &mut conversion_sink,
+        ) {
+            Ok(_) => {
+                return Err("JPEG RGB conversion budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            conversion_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        assert_eq!(
+            conversion_sink,
+            vec![0x5C],
+            "conversion budget rejection must precede sink writes"
+        );
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;
