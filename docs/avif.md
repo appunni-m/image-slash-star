@@ -3,7 +3,7 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-03 on the committed tree based on revision
-`508867ecb743daf1c793e158807452910adc28d7`; the claim-ledger baseline remains
+`33a8ffd72f1b3484c14e29e022fa1cc230be1ee3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 AVIF is the only codec feature with different native and
