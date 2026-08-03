@@ -8285,6 +8285,73 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(yuv_sink, vec![0xAA]);
+
+        // Lossy VP8 analysis now charges an interior checkpoint after each
+        // 1,024 analyzed macroblocks. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence and adds no
+        // parity row. Reusing the analysis result for frame selection keeps
+        // this checkpoint from adding duplicate ordinary work.
+        let analysis_image = DecodedImage::new(512, 512, vec![128; 512 * 512 * 3], ColorType::Rgb8);
+        let mut analysis_options = EncodeOptions::for_format(ImageFormat::WebP);
+        if let EncodeOptions::WebP(options) = &mut analysis_options {
+            options.method = Some(0);
+        }
+        let analysis_expected =
+            image_slash_star::encode(&analysis_image, ImageFormat::WebP, &analysis_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &analysis_image,
+                ImageFormat::WebP,
+                &analysis_options,
+                &unlimited,
+            )?,
+            analysis_expected,
+            "an ample WebP analysis budget preserves byte identity"
+        );
+        let analysis_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(326);
+        let analysis_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &analysis_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP analysis budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            analysis_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 326,
+                observed: 327,
+            }
+        ));
+        let mut analysis_sink = vec![0xAB];
+        let analysis_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &analysis_bounded,
+            &mut analysis_sink,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP analysis sink budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            analysis_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 326,
+                observed: 327,
+            }
+        ));
+        assert_eq!(analysis_sink, vec![0xAB]);
     }
 
     if cfg!(feature = "gif") {

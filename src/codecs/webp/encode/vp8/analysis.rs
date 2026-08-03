@@ -2,11 +2,13 @@
 
 use super::dct::vp8_fdct_4x4;
 use super::quant::Y_AC_QUANT;
+use crate::codecs::CodecResult;
 
 const MAX_ALPHA: usize = 255;
 const NUM_SEGMENTS: usize = 4;
 const MAX_K_MEANS_ITERATIONS: usize = 6;
 const MAX_COEFFICIENT_THRESHOLD: usize = 31;
+const ANALYSIS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) struct MacroblockAnalysis {
@@ -345,14 +347,14 @@ fn assign_segments(
 }
 
 pub(super) fn analyze(
-    y_plane: &[u8],
-    u_plane: &[u8],
-    v_plane: &[u8],
-    width: usize,
-    height: usize,
+    planes: [&[u8]; 3],
+    dimensions: (usize, usize),
     quality: u8,
     method: u8,
-) -> FrameAnalysis {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<FrameAnalysis> {
+    let [y_plane, u_plane, v_plane] = planes;
+    let (width, height) = dimensions;
     let chroma_width = width.div_ceil(2);
     let chroma_height = height.div_ceil(2);
     let macroblock_width = width.div_ceil(16);
@@ -361,6 +363,7 @@ pub(super) fn analyze(
     let mut alpha_counts = [0i32; MAX_ALPHA + 1];
     let mut alpha_sum = 0_i32;
     let mut chroma_alpha_sum = 0_i32;
+    let mut analysis_items = 0usize;
 
     for macroblock_y in 0..macroblock_height {
         for macroblock_x in 0..macroblock_width {
@@ -488,6 +491,10 @@ pub(super) fn analyze(
                 luma_mode,
                 chroma_mode,
             });
+            analysis_items = analysis_items.saturating_add(1);
+            if analysis_items.is_multiple_of(ANALYSIS_CHECKPOINT_MACROBLOCKS) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
         }
     }
 
@@ -503,12 +510,12 @@ pub(super) fn analyze(
         .checked_div(macroblock_count)
         .unwrap_or_default();
     let segments = assign_segments(&mut macroblocks, &alpha_counts);
-    FrameAnalysis {
+    Ok(FrameAnalysis {
         alpha,
         chroma_alpha,
         macroblocks,
         segments,
-    }
+    })
 }
 
 /// Converts the bounded libwebp quantizer expression with Rust's truncation
