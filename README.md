@@ -150,7 +150,7 @@ capabilities and setup.
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG rows/blocks/scans, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion subsegments and VP8/VP8L stages, and each format's documented boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG rows/blocks/scans, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion and macroblock-analysis subsegments plus VP8/VP8L stages, and each format's documented boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
@@ -200,8 +200,8 @@ without publishing partial state. Token-aware encode APIs check before and
 after whole-buffer codecs; codec-specific checkpoints cover JPEG color,
 sampling, quantization, entropy, and progressive scans, PNG rows and adaptive
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
-WebP VP8 RGB/RGBA-to-YUV conversion subsegments and VP8/VP8L stages, and each
-writer's structural segments.
+WebP VP8 RGB/RGBA-to-YUV conversion and macroblock-analysis subsegments plus
+VP8/VP8L stages, and each writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation
 may leave its delivered prefix; successful sink delivery calls the sink's
