@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`7d7be29a7c3a2dd14b3b3937790983559997803b`; the claim-ledger baseline remains
+`fdeb8190c1373f39248c22af7870c7392e15bac9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -312,7 +312,7 @@ translation cannot be bypassed.
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, analysis/mode-selection/coefficient-probability/256-bit and 512-bit logical and 16,384-boolean first-partition-bit/256-bit and 512-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 256-bit and 512-bit logical bitstream intervals, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
+| `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, analysis/mode-selection/coefficient-probability/256-bit and 512-bit logical and 16,384-boolean first-partition-bit/256-bit and 512-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 256-bit and 512-bit logical bitstream intervals, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block slots after each 1,024 blocks, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
@@ -365,8 +365,9 @@ subsegments after each 1,024 pixels, GIF block and frame boundaries plus RGB/RGB
 palette quantization intervals and LZW input-symbol intervals, TIFF
 still page preparation/predictor/PackBits/LZW work, Deflate level-six matcher
 intervals, plus sequence page and
-strip/tile boundaries, JPEG color/sampling/quantization rows and
-entropy/progressive scan batches, WebP frame boundaries, BMP RLE commands,
+strip/tile boundaries, JPEG color/sampling/quantization rows, progressive scan
+block slots after each 1,024 blocks, and entropy/progressive scan batches, WebP
+frame boundaries, BMP RLE commands,
 ICO directory entries, and AVIF frames. A fired token returns
 `ImageError::Cancelled` with the format and operation stage and never publishes
 partial results; codec state is per-call, so a fresh token can retry the same
@@ -504,7 +505,8 @@ output interval, and final container assembly.
 JPEG baseline and progressive RGB-to-YCbCr conversion and chroma downsampling
 additionally charge after each 1,024 converted or produced pixels, forward-DCT/
 quantization charges after each completed 8x8 block, optimized baseline Huffman
-frequency gathering charges after each 1,024 AC coefficients, and entropy coding
+frequency gathering charges after each 1,024 AC coefficients, progressive scan
+event generation charges after each 1,024 block slots, and entropy coding
 charges after each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP
@@ -535,8 +537,8 @@ search/match-length/cache/trace, histogram/Huffman, token-stream, 256-bit and
 512-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024
 converted RGB or chroma-downsample output pixel, each 1,024 AC coefficients
-during optimized baseline Huffman frequency gathering, and each 1,024-byte
-entropy-output interval; the JPEG, PNG,
+during optimized baseline Huffman frequency gathering, each 1,024 progressive
+scan block slots, and each 1,024-byte entropy-output interval; the JPEG, PNG,
 BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while
@@ -562,7 +564,8 @@ row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup, macroblock-analysis,
 and mode-selection subsegments, JPEG optimized-Huffman frequency work beyond
-the implemented 1,024-AC interval, TIFF Deflate path, and the remaining finer
+the implemented 1,024-AC interval and progressive scan block-slot work beyond
+the implemented 1,024-block interval, TIFF Deflate path, and the remaining finer
 WebP/Deflate work—remain
 open.
 

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`7d7be29a7c3a2dd14b3b3937790983559997803b`; the claim-ledger baseline remains
+`fdeb8190c1373f39248c22af7870c7392e15bac9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -331,6 +331,12 @@ baseline Huffman frequency checkpoint after each 1,024 AC coefficients at
 with the sink untouched. The optimized-frequency boundary is part of the same
 Rust-only contract because Pillow has no caller token, work-budget result, or
 caller-owned sink.
+The same committed `large.jpg` probe with `progressive=true` additionally
+proves progressive DC/AC scan-event block-slot checkpointing after each 1,024
+slots at `maximum: 1,364`, `observed: 1,365`, in both whole-buffer and
+direct-sink paths with sentinel `[0x60]` untouched. This progressive boundary
+is also Rust-only because Pillow has no caller token, work-budget result, or
+caller-owned sink.
 contract also proves that a pre-cancelled caller token takes precedence over a
 zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
@@ -409,8 +415,9 @@ still and sequence
 sink delivery polls between validated top-level ISO-BMFF box segments. JPEG's
 codec-local coverage
 drill fires deterministic
-internal RGB-to-YCbCr conversion, chroma-downsample output, row/block/scan, and
-optimized baseline Huffman frequency, and 1,024-byte entropy-output
+internal RGB-to-YCbCr conversion, chroma-downsample output, row/block/scan,
+progressive scan block slots, optimized baseline Huffman frequency, and
+1,024-byte entropy-output
 checkpoints; the public
 test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
@@ -438,7 +445,8 @@ VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, 512-bit
 logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
-additionally polls after each 1,024 emitted entropy bytes; native AVIF still
+additionally polls after each 1,024 progressive scan block slots and emitted
+entropy bytes; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
 paths poll their implemented frame/coalescing/page/finalization checkpoints,
@@ -450,7 +458,8 @@ The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion, 1,024-pixel
 chroma-downsample output, optimized baseline Huffman frequency gathering after
-each 1,024 AC coefficients, and 1,024-byte entropy-output intervals, PNG row and
+each 1,024 AC coefficients, progressive scan block slots after each 1,024
+blocks, and 1,024-byte entropy-output intervals, PNG row and
 token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
@@ -487,7 +496,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`7d7be29a7c3a2dd14b3b3937790983559997803b`, the fixture manifest and managed
+`fdeb8190c1373f39248c22af7870c7392e15bac9`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -3162,7 +3171,7 @@ uncovered lines and 21 partial branch lines. The line-only comparison retains
 the new downsample checkpoint functions and lines are covered. The
 segment-normalization warning remains, and no coverage-only test was added.
 
-Current acceptance record: JPEG optimized-Huffman frequency checkpoint
+Earlier acceptance record: JPEG optimized-Huffman frequency checkpoint
 
 The JPEG optimized-baseline-Huffman frequency checkpoint slice is implemented
 at `7d7be29a7c3a2dd14b3b3937790983559997803b`. `HuffmanFrequencyCheckpoint`
@@ -3201,12 +3210,50 @@ uncovered lines and 22 partial branch lines. The line-only comparison retains
 the new optimized-frequency checkpoint functions and lines are covered. The
 segment-normalization warning remains, and no coverage-only test was added.
 
+Current acceptance record: JPEG progressive scan-event checkpoint
+
+The JPEG progressive scan-event checkpoint slice is implemented at
+`fdeb8190c1373f39248c22af7870c7392e15bac9`. `ProgressiveScanCheckpoint` keeps
+the ordinary no-token path on an inline no-op implementation while the
+token-aware path retains row checks and charges after each 1,024 DC/AC scan
+block slots, including interleaved padding slots. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses the committed
+`tests/fixtures/input/images/jpeg/large.jpg` fixture (257x129) with
+`progressive=true`, proves ample-budget byte identity, and rejects at
+`maximum: 1,364`, `observed: 1,365` in both whole-buffer and direct-sink
+paths; the direct sink remains `[0x60]`. Pillow has no caller token,
+work-budget result, or caller-owned sink, so this is Rust-only
+resource-contract evidence: no parity row, parity fixture, diagnostic origin,
+new test function, or coverage-only hook was added.
+
+Managed Pillow parity run `794bd3d0-9034-4c82-bde0-935398d0a38d` passed
+1,445/1,445 checks with zero failures or skips in 58,194 ms. The exact-head
+feature-matrix run `e362a6fd-ebaf-4a4f-bf99-683d2c7c6371` passed 991/991
+checks in 62,338 ms; its retained log records
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+`lock-wait` match.
+
+Coverage MCP run `1c19b74a-2e29-414c-976c-abe9fdf3d0c3` passed 85/85 tests
+in 91,181 ms and ingested snapshot
+`1acfb775-0acd-49fe-83eb-a438e3a72e6c`, reporting 51,428/51,908 lines,
+7,095/7,188 branches, 2,894/2,964 functions, and 79,764/80,847 regions.
+Against the prior accepted snapshot
+`c3b1373a-f326-49a3-9817-4fa39d39dce9`, covered totals increased by 37 lines,
+2 branches, 5 functions, and 41 regions; source totals grew by 37 lines,
+2 branches, 5 functions, and 44 regions. The JPEG file is 1,489/1,552
+lines, 188/208 branches, 87/92 functions, and 2,385/2,467 regions covered,
+with 31 uncovered lines and 23 partial branch lines. The line-only comparison
+retains 23 displaced changed-to-uncovered JPEG line records from LLVM source
+remapping; the new progressive checkpoint functions and lines are covered.
+The segment-normalization warning remains, and no coverage-only test was added.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
-and 1,024-byte entropy intervals, other codec
+progressive scan block slots, and 1,024-byte entropy intervals, other codec
 interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.
 
