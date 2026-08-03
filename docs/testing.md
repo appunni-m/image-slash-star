@@ -353,9 +353,11 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, and bitstream assembly; the same contract
+intervals, 4,096-bit logical bitstream intervals, and 1,024-byte bitstream
+output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
-untouched sink. This is still Rust-only work-control
+untouched sink, including separate exact-boundary probes for the logical
+bitstream and emitted-output intervals. This is still Rust-only work-control
 evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
 The test's aggregate coverage is incidental evidence, and no coverage-only
@@ -394,8 +396,8 @@ mode-selection subsegments plus analysis/coefficient-probability, 16,384-boolean
 first-partition bit intervals, 16,384-boolean coefficient-bit intervals, and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
-stages, codec-result,
+search/match-length/cache/trace, histogram/Huffman, token-stream, 4,096-bit
+logical bitstream, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
@@ -410,7 +412,8 @@ beyond the implemented PNG row subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
 16,384-boolean first-partition-bit and coefficient-bit intervals plus the
-1,024-byte boolean-bitstream output intervals and VP8L stages, remaining
+1,024-byte boolean-bitstream output intervals, the 4,096-bit logical VP8L
+bitstream interval, and VP8L stages, remaining
 finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.

@@ -15,8 +15,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// stages, 16,384-boolean first-partition-bit and coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, bitstream, 1,024-byte bitstream-output, and token-stream
-/// stages, GIF RGB
+/// histogram/Huffman, 4,096-bit logical bitstream, 1,024-byte bitstream-output,
+/// and token-stream stages, GIF RGB
 /// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
 /// copy/subtraction/lookup intervals, and LZW input-symbol intervals; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
@@ -70,8 +70,9 @@ impl EncodePolicy {
     /// conversion items, after each 16,384 coefficient bits, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
     /// encoding charges checkpoints around predictor, cross-color, entropy,
-    /// transform, bounded backward-reference, histogram/Huffman, bitstream,
-    /// 1,024-byte bitstream-output, and token-stream intervals. GIF RGB/RGBA
+    /// transform, bounded backward-reference, histogram/Huffman, 4,096-bit
+    /// logical bitstream, 1,024-byte bitstream-output, and token-stream
+    /// intervals. GIF RGB/RGBA
     /// palette quantization charges after
     /// each 1,024 pixels while preparing palette/index data; high-color RGB
     /// median-cut preparation additionally charges around hash/order setup,

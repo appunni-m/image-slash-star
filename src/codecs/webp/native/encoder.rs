@@ -64,8 +64,10 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+const VP8L_BITSTREAM_CHECKPOINT_BITS: usize = 4_096;
 
 trait BitWriterCheckpoint: Clone {
+    fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError>;
 }
 
@@ -73,6 +75,11 @@ trait BitWriterCheckpoint: Clone {
 struct NoopBitWriterCheckpoint;
 
 impl BitWriterCheckpoint for NoopBitWriterCheckpoint {
+    #[inline(always)]
+    fn checkpoint_bits(&mut self, _written: usize) -> Result<(), EncodingError> {
+        Ok(())
+    }
+
     #[inline(always)]
     fn checkpoint_output_bytes(&mut self, _emitted: usize) -> Result<(), EncodingError> {
         Ok(())
@@ -82,10 +89,23 @@ impl BitWriterCheckpoint for NoopBitWriterCheckpoint {
 #[derive(Clone, Copy)]
 struct TokenBitWriterCheckpoint<'a> {
     token: &'a crate::CancellationToken,
+    written_bits: usize,
     output_bytes: usize,
 }
 
 impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
+    fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError> {
+        let previous = self.written_bits;
+        self.written_bits = self.written_bits.saturating_add(written);
+        let mut previous_interval = previous / VP8L_BITSTREAM_CHECKPOINT_BITS;
+        let current_interval = self.written_bits / VP8L_BITSTREAM_CHECKPOINT_BITS;
+        while previous_interval < current_interval {
+            previous_interval = previous_interval.saturating_add(1);
+            check_token(Some(self.token))?;
+        }
+        Ok(())
+    }
+
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError> {
         let previous = self.output_bytes;
         self.output_bytes = self.output_bytes.saturating_add(emitted);
@@ -126,6 +146,7 @@ impl<C: BitWriterCheckpoint> BitWriter<'_, C> {
     fn write_bits(&mut self, bits: u64, nbits: u8) -> Result<(), EncodingError> {
         let before = self.writer.len();
         self.write_bits_unchecked(bits, nbits);
+        self.checkpoint.checkpoint_bits(usize::from(nbits))?;
         self.checkpoint
             .checkpoint_output_bytes(self.writer.len().saturating_sub(before))
     }
@@ -1322,6 +1343,7 @@ fn encode_frame(
             Some(token),
             TokenBitWriterCheckpoint {
                 token,
+                written_bits: 0,
                 output_bytes: 0,
             },
         ),
@@ -1502,6 +1524,7 @@ pub(crate) fn encode_alpha(
             Some(token),
             TokenBitWriterCheckpoint {
                 token,
+                written_bits: 0,
                 output_bytes: 0,
             },
         ),
