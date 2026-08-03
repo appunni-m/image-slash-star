@@ -9,6 +9,7 @@ source of the diagnostic kind, stage, offset, or identity.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -26,6 +27,13 @@ FORBIDDEN_MATRIX_FIELDS = {
     "diagnostic_stage",
     "mutation",
 }
+KNOWN_MUTATIONS = {
+    "png_before_idat",
+    "png_after_idat",
+    "png_bad_crc",
+    "png_bad_crc_after_idat",
+    "png_after_idat_bad_crc",
+}
 
 
 def fail(message: str) -> None:
@@ -40,6 +48,20 @@ def read_json(path: Path) -> dict:
     if not isinstance(value, dict):
         fail(f"{path} must contain a JSON object")
     return value
+
+
+def asset_digest(asset_path: object, case_id: str) -> tuple[str, str]:
+    if not isinstance(asset_path, str) or not asset_path:
+        fail(f"{case_id}: asset_path must be a non-empty string")
+    relative = Path(asset_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        fail(f"{case_id}: asset_path must stay within the repository")
+    path = ROOT / relative
+    try:
+        data = path.read_bytes()
+    except OSError as error:
+        fail(f"{case_id}: cannot read diagnostic baseline {asset_path}: {error}")
+    return relative.name, hashlib.sha256(data).hexdigest()
 
 
 def matrix_rows(document: dict) -> list[dict]:
@@ -60,20 +82,31 @@ def matrix_rows(document: dict) -> list[dict]:
     return rows
 
 
-def has_active_parity_row(rows: list[dict], case: dict) -> bool:
-    asset_path = case.get("asset_path")
+def active_parity_baseline(rows: list[dict], case: dict, asset_name: str, digest: str) -> dict:
     operation = case.get("operation")
-    if not isinstance(asset_path, str) or not isinstance(operation, str):
-        return False
-    asset_name = Path(asset_path).name
-    return any(
-        row.get("status") == "active"
-        and row.get("format") == case.get("format")
-        and row.get("asset") == asset_name
-        and isinstance(row.get("operations"), dict)
-        and operation in row["operations"]
-        for row in rows
-    )
+    if not isinstance(operation, str):
+        fail(f"{case.get('id', '<unknown>')}: operation must be a string")
+    matches = []
+    for row in rows:
+        operations = row.get("operations")
+        origins = row.get("assertion_origins")
+        if (
+            row.get("status") == "active"
+            and row.get("format") == case.get("format")
+            and row.get("asset") == asset_name
+            and row.get("asset_sha256") == digest
+            and isinstance(operations, dict)
+            and operations.get(operation) == "ok"
+            and isinstance(origins, dict)
+            and origins.get("operations") == "pillow_fixture"
+        ):
+            matches.append(row)
+    if len(matches) != 1:
+        fail(
+            f"{case.get('id', '<unknown>')}: expected exactly one active Pillow parity "
+            f"baseline for {asset_name}/{operation} with SHA-256 {digest}, found {len(matches)}"
+        )
+    return matches[0]
 
 
 def verify() -> tuple[int, int, int]:
@@ -111,15 +144,15 @@ def verify() -> tuple[int, int, int]:
             fail(f"{case_id}: non-fatal diagnostic cases must have Pillow outcome ok")
         if case.get("operation") not in {"decode", "decode_sequence"}:
             fail(f"{case_id}: diagnostic operation is not a decode operation")
+        asset_name, digest = asset_digest(case.get("asset_path"), case_id)
+        active_parity_baseline(rows, case, asset_name, digest)
         mutation = case.get("mutation")
         if mutation == "none":
             unmodified += 1
-            if not has_active_parity_row(rows, case):
-                fail(f"{case_id}: unchanged diagnostic asset has no active parity row")
-        elif isinstance(mutation, str) and mutation:
+        elif mutation in KNOWN_MUTATIONS:
             mutations += 1
         else:
-            fail(f"{case_id}: mutation must be `none` or a named runtime mutation")
+            fail(f"{case_id}: mutation must be `none` or one of {sorted(KNOWN_MUTATIONS)}")
 
     total = len(cases)
     for doc in MAINTAINED_DOCS:

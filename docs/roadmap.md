@@ -1199,9 +1199,13 @@ success/pixel result; the other 23 cases construct runtime mutations that are
 not matrix rows. The separate diagnostic test keeps asserting the Rust-only
 recovery records and baseline-preservation invariant, without adding a
 coverage-only hook or synthetic `diagnostics` field to the Pillow matrix.
-`scripts/verify_diagnostic_provenance.py` checks those counts and the schema
-boundary statically, so coverage totals cannot be made to look like
-Pillow-parity evidence by adding an unrelated unit test.
+`scripts/verify_diagnostic_provenance.py` hashes every baseline and requires
+exactly one active Pillow row with the same format, asset digest, successful
+operation, and `pillow_fixture` operation origin; it also validates the named
+runtime-mutation set and the schema boundary. This makes the distinction
+machine-checkable: the diagnostic contract is a normal public Rust behavior
+test, while any lines it executes appear only in aggregate LLVM coverage and
+are not Pillow-parity coverage.
 
 This boundary is required by the oracle schema, not just by test organization:
 the generated Pillow matrix has no successful-decode warning field from which
