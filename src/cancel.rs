@@ -11,7 +11,8 @@
 //! 1,024 scanned or flattened pixels, analysis, 256-bit and 512-bit logical and
 //! 16,384-boolean first-partition bit intervals, 256-bit and 512-bit logical
 //! and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
-//! intervals, and bitstream stages, and lossless WebP VP8L
+//! intervals, JPEG forward-DCT/quantization blocks, and bitstream stages, and
+//! lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, 256-bit and
 //! 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference/token-stream intervals, plus GIF RGB/RGBA palette

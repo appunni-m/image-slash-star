@@ -87,6 +87,47 @@ trait EntropyOutputCheckpoint {
     fn reset(&mut self);
 }
 
+trait FdctCheckpoint {
+    fn row(&mut self) -> CodecResult<()>;
+    fn block(&mut self) -> CodecResult<()>;
+}
+
+struct NoopFdctCheckpoint;
+
+impl FdctCheckpoint for NoopFdctCheckpoint {
+    #[inline(always)]
+    fn row(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenFdctCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+}
+
+impl<'a> TokenFdctCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self { token }
+    }
+}
+
+impl FdctCheckpoint for TokenFdctCheckpoint<'_> {
+    #[inline]
+    fn row(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn block(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+}
+
 struct NoopEntropyOutputCheckpoint;
 
 impl EntropyOutputCheckpoint for NoopEntropyOutputCheckpoint {
@@ -1077,12 +1118,28 @@ fn fdct_quantize(
     qtable: &[u16; 64],
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenFdctCheckpoint::new(token);
+        fdct_quantize_with_checkpoint(plane, w, h, qtable, &mut checkpoint)
+    } else {
+        let mut checkpoint = NoopFdctCheckpoint;
+        fdct_quantize_with_checkpoint(plane, w, h, qtable, &mut checkpoint)
+    }
+}
+
+fn fdct_quantize_with_checkpoint<C: FdctCheckpoint>(
+    plane: &[u8],
+    w: usize,
+    h: usize,
+    qtable: &[u16; 64],
+    checkpoint: &mut C,
+) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
     let blocks_per_row = w.div_ceil(8);
     let block_rows = h.div_ceil(8);
     let mut blocks = vec![[0i16; 64]; blocks_per_row.saturating_mul(block_rows)];
 
     for by in 0..block_rows {
-        crate::codecs::error::check_cancelled(token)?;
+        checkpoint.row()?;
         for bx in 0..blocks_per_row {
             let mut samples = [0i32; 64];
             for row in 0usize..8 {
@@ -1122,6 +1179,7 @@ fn fdct_quantize(
                 q[i] = i16::from_le_bytes([a, b]);
             }
             blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = q;
+            checkpoint.block()?;
         }
     }
     Ok((blocks, blocks_per_row, block_rows))
