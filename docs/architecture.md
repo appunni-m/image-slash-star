@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
+`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -90,7 +90,9 @@ decoded page. AVIF item `irot`/`imir`/`pasp`/`clap` properties are retained as
 rescaling, or cropping decoded samples. Other codecs currently return an empty
 descriptor. AVIF direct alpha `auxl` relationships are retained as
 source-local item IDs through `SourceDescriptor::avif_auxiliary_relationship()`
-when present. A source descriptor is structural provenance, not opaque
+when present, and the bounded
+`SourceDescriptor::avif_auxiliary_relationships()` list also retains alpha
+links to supported grid-derived color items. A source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
@@ -124,11 +126,13 @@ Pillow's result into a new parity field. The
 `SourceDescriptor::alpha()` records the alpha association declared by the
 encoded source: straight (PNG, WebP, and TIFF `ExtraSamples` 2), premultiplied
 (TIFF `ExtraSamples` 1), binary mask (GIF transparency), or auxiliary (AVIF
-alpha items whose samples are carried by a separate image). For the bounded
-direct alpha relationship, `SourceDescriptor::avif_auxiliary_relationship()`
-retains the source-local auxiliary and target item IDs. It never changes
-decoded transfer bytes, which stay the documented normalized unassociated
-layout unless a codec explicitly retains source-order bytes.
+alpha items whose samples are carried by a separate image). For bounded direct
+and supported grid-derived alpha relationships,
+`SourceDescriptor::avif_auxiliary_relationship()` and
+`SourceDescriptor::avif_auxiliary_relationships()` retain the source-local
+auxiliary and target item IDs. They never change decoded transfer bytes, which
+stay the documented normalized unassociated layout unless a codec explicitly
+retains source-order bytes.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the
@@ -236,10 +240,11 @@ Recognized `Exif` item types and `mime` items with content type exactly
 `application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on
 still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
 includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
-orientation application, or implicit encode replay is performed. The direct
-alpha `auxl` relationship is retained in `SourceDescriptor`; non-alpha,
-derived/grid, track-only, unknown-item-property, and other item-relationship
-semantics remain outside this model.
+orientation application, or implicit encode replay is performed. Direct and
+supported grid-derived alpha `auxl` relationships are retained in
+`SourceDescriptor`; non-alpha, grid topology, track-only,
+unknown-item-property, and other item-relationship semantics remain outside
+this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
 position, `clli` content-light-level property, `mdcv` mastering-display color
 volume, and `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
@@ -259,8 +264,9 @@ declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
 Non-ICC profiles, track-only/auxiliary item properties, non-alpha auxiliary
-relationships, and derived/grid metadata remain outside the current model; the
-bounded direct alpha `auxl` relationship is the explicitly retained exception.
+relationships, grid topology, and derived/grid metadata remain outside the
+current model; bounded direct and supported grid-derived alpha `auxl`
+relationships are the explicitly retained exceptions.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

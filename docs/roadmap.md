@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
+`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -172,7 +172,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, concurrency, and clone identity for a selected success per format | Lazy sequences; not-attempted versus cached-failure state; cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `92f6ba37-f4eb-4ee8-aeb3-88e94856501a` for revision `4c61ad60eab2be62dcad80f8f4b95550cae2688c` is 51,105/51,579 lines, 7,043/7,130 branches, 2,856/2,925 functions, and 79,321/80,378 regions. Compared with prior snapshot `5a8b1512-2377-4d21-8951-dd1430d2b653`, the line-only view reports one changed-to-uncovered record at `src/codecs/avif/container.rs:1102`, the defensive duplicate-alpha-association rejection branch; aggregate shortfall remains named rather than hidden. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `529006bb-3484-4bc7-b595-53a2a6dce421` for revision `82a937f74b2255b51415924dc9033f8a43ccafa0` is 51,204/51,678 lines, 7,070/7,158 branches, 2,862/2,931 functions, and 79,476/80,534 regions. Compared with baseline snapshot `92f6ba37-f4eb-4ee8-aeb3-88e94856501a`, covered totals increased by 99 lines, 27 branches, 6 functions, and 155 regions; the line-only comparison reports no changed-to-uncovered records. The current named gaps are the defensive duplicate-alpha-association branch at `src/codecs/avif/container.rs:1109` and two partial `SourceDescriptor::is_empty` branch outcomes at `src/types/mod.rs:1055-1056`; no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -229,14 +229,14 @@ public reusable conversion layer would violate project scope.
 | API-014 | Memory behavior | Lazy materialization retains the complete encoded snapshot and decoded raster forever; clones share both, but there is no eviction. Repeated `verify` reparses independently. | Document peak memory now; benchmark before adding optional cache release or cached verification. |
 | API-017 | Output model | Encoders still produce complete `Vec<u8>` output for their return APIs, and codec working state can remain whole-buffer until a validated sink segment is ready. The dependency-free `OutputSink` contract normalizes write and post-delivery flush rejection to `ImageError::OutputWrite`; every current JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF sink path now emits validated structural segments after exact-length preflight. Every sink path calls `OutputSink::flush` once after complete delivery. JPEG delivery splits marker/scan spans, GIF delivery splits signature/logical-screen, color-table, extension/image sub-block, and trailer segments, WebP delivery splits RIFF/chunk spans, ICO delivery splits its directory from embedded payload, TIFF delivery splits its header, page strip/padding, and IFD/value spans, and native AVIF delivery splits validated ISO-BMFF top-level boxes. These are structural delivery boundaries, not universal streaming; PNG filtered/compressed buffers, BMP row/palette segments, GIF working state, WebP encoded RIFF state, ICO embedded payload, TIFF page/compressed-pixel state, and native AVIF's complete encoded buffer remain bounded working state. A Rust-only contract now exercises a genuine partial second structural write across every still encoder and supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer available in each feature/target lane, preserving the delivered prefix, reporting the selected `StillEncode` or `SequenceEncode` stage, and avoiding `flush`; broader interrupted-write, rollback, and cleanup behavior remain open. | Reduce transient working buffers one independently enforceable boundary at a time. Keep `Vec` convenience wrappers, preserve the structured output-write cause, and define behavior for every short-write/rollback path before claiming universal streaming. |
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
-| API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Recognized AVIF `Exif` items and `mime` items with content type `application/rdf+xml` are now retained as ordered raw `OpaqueMetadata` records on still and sequence decode; primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, primary `av1C` chroma sample position, and `irot`/`imir`/`pasp`/`clap` item properties remain typed source descriptors; direct alpha `auxl` provenance is represented by `SourceAlpha::Auxiliary` plus `SourceDescriptor::avif_auxiliary_relationship()`. Non-alpha primary/auxiliary item relationships, unknown item properties, and other item metadata remain open. | Extend the opaque model to the remaining AVIF item/property graph and exact color fields; parsed semantics are optional and format-specific. |
+| API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Recognized AVIF `Exif` items and `mime` items with content type `application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on still and sequence decode; primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, primary `av1C` chroma sample position, and `irot`/`imir`/`pasp`/`clap` item properties remain typed source descriptors. Direct alpha `auxl` provenance is represented by `SourceAlpha::Auxiliary`, the scalar `SourceDescriptor::avif_auxiliary_relationship()`, and the bounded plural getter for supported grid-derived targets. Non-alpha primary/auxiliary item relationships, grid topology, unknown item properties, and other item metadata remain open. | Extend the opaque model to the remaining AVIF item/property graph and exact color fields; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
 | API-023 | Partial capability | Remaining gaps are transient encoded-output allocation/recoverable-OOM accounting, interior work beyond the current checkpoint set, and complete short-write/rollback semantics. The implemented decode, output-admission, cooperative work checkpoints, JPEG RGB-to-YCbCr conversion after each 1,024 pixels, JPEG baseline/progressive entropy-output after each 1,024 emitted bytes, lossy WebP RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, and lossy WebP VP8 first-partition and coefficient coding after each 256 and 512 logical coded bits are current behavior documented in the architecture/testing contracts, not active roadmap items. | Add one independently enforceable allocation or work dimension at a time; preserve unlimited wrappers, reject before future bounded allocation/work begins, and fixture each inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator or cache policy. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration and cache policy. Keep eager `decode_sequence` as a convenience collector. |
 | API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` or `EncodeWorkUnits` resource, maximum, and observed result/checkpoint value. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context, TIFF compressed strip/tile payload failures now retain `tiff_strip`/`tiff_tile` context, and WebP inspection/container-chunk failures now retain stable WebP context. WebP still and sequence payload-decoder failures now retain `webp_bitstream` at the validated VP8/VP8L payload start, or the current ANMF container offset for animation; finer decoder-internal cursors remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
-| API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms; direct alpha provenance is represented by `SourceAlpha::Auxiliary` and the source-local auxiliary relationship. Non-primary/auxiliary item color properties other than that direct association, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
+| API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms; direct alpha provenance is represented by `SourceAlpha::Auxiliary` plus scalar and bounded plural source-local relationships for primary and supported grid-derived color targets. Non-primary/auxiliary item color properties other than those associations, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
 | API-036 | Work control | Remaining gaps are progress semantics, CPU/instruction interruption inside codec work beyond the documented checkpoints, finer WebP stages beyond the current 256-bit/512-bit logical VP8 first-partition, 256-bit/512-bit logical VP8 coefficient, and 512-bit VP8L intervals plus the 1,024-pixel RGBA transparent-area cleanup checkpoint, JPEG interior work beyond its current 1,024-pixel RGB-to-YCbCr and 1,024-byte entropy-output intervals, and short-write/rollback cleanup. Current cancellation and sink-boundary behavior belongs in the architecture/testing contracts. | Define progress and rollback semantics without claiming universal interior interruption; add checkpoints only for a real long-running operation and retain a separate Rust-only feature-gate contract when Pillow has no equivalent result. |
 | API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set or supplied a trusted format hint. This matters for partial data and downstream policy. | Let a decode policy carry an optional format hint/allow-list while retaining signature validation and feature-independent `detect_format`. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
@@ -654,14 +654,14 @@ Minute gaps:
 | AVF-001 | Portable AV1 still decode is a closed subset; sequence decode and all encode are unavailable on WASM. | Complete the existing AVIF plan before treating the feature as target-invariant. |
 | AVF-002 | Native AVIF requires C compiler, archiver, dynamic libavif, dav1d, and libaom despite the repository-wide no-dependency end goal. | Treat native support only as the oracle bridge to be removed, not a permanent exception. |
 | AVF-003 | Native encode supports fewer Pillow source modes. | Add exact private normalization only after portable encode architecture is selected, so work is not duplicated around FFI. |
-| AVF-004 | AVIF primary `prof`/`rICC` ICC profiles and recognized `Exif`/XMP item payloads are now retained on decode; EXIF remains raw and includes the stored AVIF TIFF-offset prefix. A direct auxiliary alpha item now reports `SourceAlpha::Auxiliary` and its source-local `auxl` relationship, while premultiplied-alpha metadata and its decoded-sample semantics remain unrepresented. | Fold the remaining non-alpha/auxiliary metadata into API-019 and define straight-versus-premultiplied decoded sample semantics. |
+| AVF-004 | AVIF primary `prof`/`rICC` ICC profiles and recognized `Exif`/XMP item payloads are now retained on decode; EXIF remains raw and includes the stored AVIF TIFF-offset prefix. Direct alpha and supported grid-derived alpha items report `SourceAlpha::Auxiliary` plus source-local `auxl` relationships, while premultiplied-alpha metadata and its decoded-sample semantics remain unrepresented. | Fold the remaining non-alpha/auxiliary metadata into API-019 and define straight-versus-premultiplied decoded sample semantics. |
 | AVF-005 | Sequence encoder rejects offsets and requires every frame to match one canvas; loop semantics are not represented in AVIF output. | Compare pinned Pillow/libavif sequence behavior and state unsupported properties explicitly. |
 | AVF-006 | AV1 support is validated by many narrow reverse-mapped fixtures, not the AV1 bitstream specification or conformance suite. | Continue slice-by-slice first-divergence work, then add licensed libavif/AOM corpus classes with independent references. |
 | AVF-007 | `avif` on native and WASM is one Cargo feature with materially different operations. | Capability discovery and runtime WASM gates must make the difference machine-readable until eliminated. |
 | AVF-008 | Portable transfer is 8-bit normalized output; 10/12-bit samples, monochrome, planar YUV, and high-depth alpha cannot be retained directly. | Add exact source descriptors and one transfer layout at a time after portable AV1 correctness. |
 | AVF-009 | Primary-item CICP primaries/transfer/matrix and range, primary-item `av1C` chroma sample position, primary-item `clli` maxCLL/maxPALL, primary-item `mdcv` mastering-display fields, and primary-item `prof`/`rICC` ICC profile bytes now retain through `SourceColor`; non-primary item color properties remain absent from the common model. | Preserve the remaining exact item/property fields without applying tone or color transforms. |
-| AVF-011 | Grids, layered/progressive images, derived items, sample transforms, and alternative item relationships have no representation. | Classify each as decoded still, auxiliary structure, or explicit `Unsupported` with libavif fixtures and bounded graph traversal. |
-| AVF-012 | Gain maps, auxiliary depth, thumbnails, and supplementary images cannot be enumerated or associated with the primary image. The direct alpha `auxl` relationship is now exposed as source-local item IDs through `SourceDescriptor::avif_auxiliary_relationship()`; broader auxiliary graphs remain inaccessible. | Extend the relationship model for non-alpha, derived, grid, and supplementary content only after fixture-backed use cases; never flatten it silently into RGBA. |
+| AVF-011 | Grid topology/composition, layered/progressive images, sample transforms, and alternative item relationships have no representation. The bounded alpha relationships from `grid.avif` to its derived color items are retained as source provenance, but the grid graph is not exposed as a composable image model. | Classify each as decoded still, auxiliary structure, or explicit `Unsupported` with libavif fixtures and bounded graph traversal. |
+| AVF-012 | Gain maps, auxiliary depth, thumbnails, and supplementary images cannot be enumerated or associated with the primary image. Direct alpha and the supported grid-derived alpha links are exposed as source-local item IDs through the scalar and plural `SourceDescriptor` getters; broader non-alpha auxiliary graphs remain inaccessible. | Extend the relationship model for non-alpha, derived, grid, and supplementary content only after fixture-backed use cases; never flatten it silently into RGBA. |
 | AVF-013 | Sequence timing uses integer milliseconds and cannot retain exact timescale/duration, repetition, edit lists, or sample timing. | Replace timing through API-009 before claiming exact animated AVIF container parity. |
 | AVF-014 | Item/property/reference counts, box depth/size, grid dimensions, sample count, cumulative decoded bytes, and AV1 work have no caller limits. | Add BMFF and AV1 sublimits with independently identified failure context. |
 | AVF-015 | Portable encode lacks typed codec, speed, thread, tile, quantizer, chroma, range, tune, and lossless controls matching the native oracle bridge. | Freeze required Pillow/libavif behaviors, then implement only dependency-free, deterministic controls. |
@@ -679,9 +679,9 @@ Minute gaps:
 | AVF-028 | Opaque and UUID item properties have association order, essential bits, transform order, a finite unique-property ceiling, and collision rules with properties generated by the encoder. | Preserve ordered raw properties and reject unsafe collisions; never replay unknown essential properties as if understood. |
 | AVF-029 | EXIF storage carries a TIFF-header offset, and libavif may derive `irot`/`imir` from EXIF orientation. The model now retains raw EXIF and independent container transform provenance, but does not parse orientation or detect contradictions. | Preserve the independent fields and define contradiction/auxiliary-item policy; document that neither is applied to pixels. |
 | AVF-030 | Decoder strict flags, diagnostic text, I/O byte statistics, ignored EXIF/XMP policy, image count/dimension/pixel limits, and waiting-on-I/O state are available in the native reference but have no portable/common mapping. | Define stable stage/limit/progress fields and use the same fixtures against native and portable implementations. |
-| AVF-031 | AVIF auxiliary alpha now has `SourceAlpha::Auxiliary` plus a bounded source-local auxiliary-item relationship on inspection, still decode, and sequence-frame decode, backed by the real alpha fixture; plane range/quality, premultiplication relationship, non-alpha graphs, and exact invisible RGB remain unrepresented. | Add exact plane/relationship fixtures for the remaining auxiliary classes before high-depth alpha; keep source provenance separate from decoded transfer bytes. |
+| AVF-031 | AVIF auxiliary alpha now has `SourceAlpha::Auxiliary` plus bounded source-local auxiliary-item relationships on inspection, still decode, and sequence-frame decode, backed by both direct `alpha.avif` and grid-derived `grid.avif` fixtures. Plane range/quality, premultiplication relationship, non-alpha graphs, grid topology, and exact invisible RGB remain unrepresented. | Add exact plane/relationship fixtures for the remaining auxiliary classes before high-depth alpha; keep source provenance separate from decoded transfer bytes. |
 | AVF-032 | `iloc` construction methods, multiple extents, data references, idat/mdat placement, non-sequential extents, and 64-bit range arithmetic are not a named corpus class. | Add structural extent fixtures with a cumulative byte/range limit and precise box/item context. |
-| AVF-033 | Grid-derived images and gain maps may use different grids/dimensions from the primary image. Flattening them into one canvas loses tile relationships and partial-failure context. | Retain grid topology and validate every tile independently; composition stays private to decode. |
+| AVF-033 | Grid-derived images and gain maps may use different grids/dimensions from the primary image. The current grid fixture proves and retains alpha-to-derived-item relationships, but flattening the grid into one canvas still loses tile topology and partial-failure context. | Retain grid topology and validate every tile independently; composition stays private to decode. |
 | AVF-034 | Fragmented sequence files, edit lists, sample groups, sample-description changes, sync-sample tables, and timestamp offsets have no capability statement. | Classify each BMFF track feature before claiming general animated AVIF support. |
 | AVF-035 | Compatible brands, major brand, minor version, still/sequence brands, and AV1 codec configuration are not exposed together, so detection, inspection, and actual decoder capability can disagree. | Return a bounded FileTypeBox/source descriptor and generate the capability decision from it. |
 
@@ -3056,10 +3056,11 @@ covered in this snapshot. The LLVM normalization warning remains, and the
 coverage-origin verifier still accounts for all 219 exact guards without
 assigning any to Pillow parity.
 
-The completed portion removes auxiliary alpha from the open provenance gap.
-Remaining API-019/034/040 work is non-alpha auxiliary item properties and
-relationships, item identity/plane-range/quality details, premultiplication,
-and invisible RGB semantics. The feature-matrix serial-tail overlap is
+The completed portion removes direct and supported grid-derived auxiliary alpha
+from the open provenance gap. Remaining API-019/034/040 work is non-alpha
+auxiliary item properties and relationships, grid topology, item identity/
+plane-range/quality details, premultiplication, and invisible RGB semantics.
+The feature-matrix serial-tail overlap is
 implemented at `da3dfbe43c90320c6cbf92ac7bcfea6bec71c1fe`: the two
 `wasm32-unknown-unknown` `feature_gate_tests --no-run` checks run in their
 matching `none` and `avif` lanes, and the all-feature
@@ -3158,7 +3159,60 @@ view still reports `src/codecs/webp/encode/vp8/residual.rs:220` as changed from
 one hit to zero; the aggregate shortfall is named rather than hidden. The LLVM
 JSON segment-normalization warning remains.
 
-Current acceptance record: direct AVIF auxiliary relationship
+Current acceptance record: grid-derived AVIF alpha relationships and warm matrix fanout
+
+The bounded AVIF source-provenance slice is implemented at
+`c8c18221d1d3126ac320cfc9a097386ddd007289` and its existing feature-gated
+fixture contract was completed at `82a937f74b2255b51415924dc9033f8a43ccafa0`.
+The committed `grid.avif` fixture has primary item `1`, derived color items
+`2` and `3`, and alpha auxiliary items `5` and `6` targeting `2` and `3`.
+`SourceDescriptor::avif_auxiliary_relationships()` now retains those exact
+source-local links on inspection, still decode, and the still-sequence
+fallback; the scalar getter remains `None` because the grid has no direct
+primary-item alpha link. The existing `alpha.avif` contract also verifies the
+scalar direct link `2`→`1` and the plural getter's one-element fallback.
+These descriptors record source provenance only; they do not compose the grid,
+transform decoded pixels, or claim non-alpha graph support.
+
+This evidence deliberately stays outside Pillow parity: the parity schema has
+no source descriptor or AVIF item-relationship field. The unchanged Pillow
+result is therefore outer-output regression evidence only. The source contract
+uses existing real fixtures, adds no test function, parity row, fixture,
+diagnostic origin, or coverage-only hook. The test-runtime change at
+`576fe356d22e936df04b4c96f1c36f6db5465fa6` is also harness-only: it derives up
+to three warm test workers per lane from host CPUs and changes no production
+profile or evidence origin.
+
+Managed Pillow parity run `20e9ecf2-076d-4a04-9d34-88e331d67769` passed
+1,445/1,445 checks with zero failures or skips in 53,969 ms at the AVIF
+implementation revision. Final feature-matrix run
+`11b56746-1c02-4888-93d6-57e387175114` passed 991/991 checks in 19,998 ms at
+the source-contract revision; its retained log ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees` and has no
+build-directory or package-cache lock-wait matches. The runtime tuning itself
+was validated separately by managed run `b78b4c94-72cb-45fb-a9e8-1fb4bb49be9e`
+at the performance commit (991/991 in 3,501 ms); on the same warm local host,
+the default changed from 4.51 s to 3.49 s. These timings are cache- and
+runner-sensitive execution evidence, not universal benchmarks.
+
+Coverage MCP run `6fa86e87-831b-4c7d-a273-94f509018eb5` passed 85/85 tests in
+50,815 ms and ingested snapshot `529006bb-3484-4bc7-b595-53a2a6dce421`:
+51,204/51,678 lines, 7,070/7,158 branches, 2,862/2,931 functions, and
+79,476/80,534 regions. Against baseline snapshot
+`92f6ba37-f4eb-4ee8-aeb3-88e94856501a`, covered totals increased by 99 lines,
+27 branches, 6 functions, and 155 regions, with no changed-to-uncovered line
+in the line-only comparison. The remaining named gaps are the defensive
+duplicate-alpha-association branch at `src/codecs/avif/container.rs:1109` and
+two partial `SourceDescriptor::is_empty` outcomes at
+`src/types/mod.rs:1055-1056`; they remain visible rather than being hidden by
+synthetic tests.
+
+Remaining AVIF categories are non-alpha and richer auxiliary graphs, grid
+topology/composition, gain maps/depth/thumbnails/supplementary content,
+premultiplication and plane/range/quality semantics, `iloc` extent variants,
+content selection, invisible RGB, and fragmented-track/edit-list behavior.
+
+Historical acceptance record: direct AVIF auxiliary relationship
 
 The direct AVIF auxiliary-alpha relationship slice is implemented at
 `fcff8dd9e9bebf22da8b7ee3dd3e93ae13798018` and finalized with the assertion-only
@@ -3340,10 +3394,11 @@ short-write/rollback semantics, and the other roadmap categories below.
    allocation accounting and structural writing as distinct open resource
    boundaries.
 2. Complete the remaining non-alpha non-primary/auxiliary AVIF item-metadata,
-   relationship, and color-item retention under API-019/034/040. Direct
-   auxiliary-alpha provenance is now represented by `SourceAlpha::Auxiliary`
-   plus `SourceDescriptor::avif_auxiliary_relationship()`; derived/grid,
-   track-only, non-alpha, and richer plane semantics remain open.
+   relationship, and color-item retention under API-019/034/040. Direct and
+   supported grid-derived auxiliary-alpha provenance is now represented by
+   `SourceAlpha::Auxiliary` plus the scalar and plural `SourceDescriptor`
+   relationship getters; track-only, non-alpha, grid topology, and richer
+   plane semantics remain open.
 3. Extend the source-bound per-frame, strip, tile, and sequence paths under
    API-027.
 4. Complete incremental structural writing, full encode interruption and

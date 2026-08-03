@@ -3,7 +3,7 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-03 on the committed tree based on revision
-`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
+`82a937f74b2255b51415924dc9033f8a43ccafa0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 AVIF is the only codec feature with different native and
@@ -116,10 +116,13 @@ decode subset" at the `StillDecode` stage. When an AVIF item declares an
 alpha auxiliary item, `SourceDescriptor::alpha()` reports `Auxiliary`,
 identifying that the alpha samples are carried by a separate image.
 `SourceDescriptor::avif_auxiliary_relationship()` additionally retains the
-direct source-local `auxl` relationship for the committed fixture (auxiliary
-item `2` targets primary item `1`) on inspection, still decode, and sequence
-frames. Decoded transfer bytes remain the documented normalized unassociated
-layout; this relationship is source provenance only.
+direct source-local `auxl` relationship for `alpha.avif` (auxiliary item `2`
+targets primary item `1`) while
+`SourceDescriptor::avif_auxiliary_relationships()` retains the bounded alpha
+links for the supported grid fixture (`5`→`2` and `6`→`3`). Both are present
+on inspection, still decode, and the still-sequence fallback. Decoded transfer
+bytes remain the documented normalized unassociated layout; these relationships
+are source provenance only.
 
 The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
 `clli` content-light-level
@@ -138,10 +141,11 @@ Recognized `Exif` items and `mime` items with content type exactly
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
 Non-ICC item profiles, track-only and non-alpha auxiliary item properties, and
-other non-primary item relationships remain future slices. The direct
-auxiliary-alpha source association is represented through both
-`SourceAlpha::Auxiliary` and the bounded
-`SourceDescriptor::avif_auxiliary_relationship()` relationship.
+other non-primary item relationships remain future slices. The direct and
+supported grid-derived auxiliary-alpha associations are represented through
+`SourceAlpha::Auxiliary`, the scalar
+`SourceDescriptor::avif_auxiliary_relationship()` getter, and the bounded
+`SourceDescriptor::avif_auxiliary_relationships()` list.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
@@ -151,9 +155,9 @@ and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
 pixels are never rotated, mirrored, rescaled, or cropped. Non-primary item-level
-ICC, non-alpha auxiliary relationships, and other item metadata remain open;
-direct auxiliary-alpha provenance is represented through
-`SourceAlpha::Auxiliary` plus the source-local item relationship.
+ICC, non-alpha auxiliary relationships, grid topology, and other item metadata
+remain open; bounded direct/grid auxiliary-alpha provenance is represented
+through `SourceAlpha::Auxiliary` plus the source-local item relationships.
 
 ## Native FFI boundary
 
