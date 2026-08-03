@@ -15,7 +15,9 @@ pub mod vp8;
 /// Encode a DecodedImage to WebP format.
 ///
 /// Lossless uses the internal VP8L encoder.
-/// Lossy: uses our own pure-Rust VP8 intra-frame encoder.
+/// Lossy: uses our own pure-Rust VP8 intra-frame encoder. RGBA lossy encoding
+/// also polls transparent-area cleanup after each 1,024 scanned or flattened
+/// pixels when a caller supplies a cancellation token.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }

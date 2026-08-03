@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`721553aac905c410c25d46e50d5b04e91588d27e`; the claim-ledger baseline remains
+`44cd8c7b2a2eeddf8b1efecb0393eaec4c87bf14`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -353,7 +353,9 @@ analyzing Huffman trees, emitting stored/fixed/dynamic bitstreams, copying
 stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
 a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
-after each batch of 1,024 RGB/RGBA-to-YUV conversion items, each batch of 1,024
+after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
+1,024 scanned or flattened RGBA transparent-area cleanup pixels, each batch of
+1,024
 analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
@@ -434,8 +436,8 @@ target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion and 1,024-byte
 entropy-output intervals, PNG row and token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
-checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
-mode-selection subsegments, WebP coefficient-probability adaptation and
+checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
+macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability adaptation and
 512-bit logical first-partition, 16,384-boolean first-partition-bit,
 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
@@ -468,7 +470,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`721553aac905c410c25d46e50d5b04e91588d27e`, the fixture manifest and managed
+`44cd8c7b2a2eeddf8b1efecb0393eaec4c87bf14`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -2866,10 +2868,10 @@ The LLVM JSON segment-normalization warning remains. These aggregate and
 source-provenance records remain separate from Pillow parity, and no
 coverage-only test was added.
 
-Current acceptance record: JPEG RGB-to-YCbCr/entropy checkpoints and runtime slice
+Current acceptance record: JPEG and WebP interior checkpoints and runtime slice
 
 The JPEG baseline/progressive RGB-to-YCbCr and entropy-output checkpoint slice is
-implemented at `721553aac905c410c25d46e50d5b04e91588d27e`. Token-aware RGB
+implemented at `44cd8c7b2a2eeddf8b1efecb0393eaec4c87bf14`. Token-aware RGB
 conversion preserves the existing row checks and now charges after each 1,024
 converted pixels; token-aware entropy coding tracks the next 1,024-byte
 emitted-output boundary without cumulative division on every observation. Both
@@ -2883,38 +2885,49 @@ RGB entropy probe remains (`maximum: 150`, `observed: 151`) with sentinel
 token, work-budget result, or caller-owned sink, so it adds no parity row,
 fixture, diagnostic origin, or coverage-only hook.
 
+The lossy WebP VP8 RGBA transparent-area cleanup slice is implemented at
+`44cd8c7b2a2eeddf8b1efecb0393eaec4c87bf14`. Token-aware cleanup now charges
+after each 1,024 scanned or flattened pixels, while the ordinary no-token path
+retains its bulk fill helper through a monomorphized no-op controller. The same
+Rust-only contract uses a 128x128 all-transparent RGBA probe to prove ample
+budget byte identity, then rejects at `maximum: 400`, `observed: 401` in both
+whole-buffer and direct-sink paths with sentinel `0xb4` untouched. Pillow has
+no caller token, work-budget result, or caller-owned sink, so this adds no
+parity row, fixture, diagnostic origin, or coverage-only hook.
+
 The same runtime-first slice keeps feature-matrix lanes isolated, avoids the
 shared Cargo lock, and propagates native/WASI child failures instead of masking
 them behind capability-table output. Warm retained roots on the measured
 12-logical-CPU host now use two Cargo build workers per lane; explicit
 overrides remain available. The exact-head managed matrix passed 991/991 in
-6,738 ms, and its retained log ends with the native/WASI capability agreement
+71,473 ms, and its retained log ends with the native/WASI capability agreement
 marker with no lock-wait matches. These are execution measurements, not
 controlled universal benchmarks.
 
-Managed Pillow parity run `aa4fc9bd-815f-4394-9c1a-9164d54b7b66` passed
-1,445/1,445 checks with zero failures or skips in 2,645 ms. Feature-matrix run
-`655dcdbd-c8f2-4906-b065-a1baf526d675` passed 991/991 checks in 6,738 ms; its
+Managed Pillow parity run `6b34a5fd-78b3-4c84-b52a-db25716060d6` passed
+1,445/1,445 checks with zero failures or skips in 66,873 ms. Feature-matrix run
+`f1906a2c-c24c-4a3b-aa4e-d77efae723dc` passed 991/991 checks in 71,473 ms; its
 retained log contains `capability tables OK: every native and wasm32-wasip1
 lane agrees` and has no build-directory or package-cache lock-wait match.
-Coverage MCP run `6e1f71e6-e78a-46f0-9563-d00dd6c14029` passed 85/85 tests in
-49,953 ms and ingested snapshot `30a3537c-8485-47bc-8be7-a916f2c7a7f0`,
-reporting 50,911/51,378 lines, 7,023/7,108 branches, 2,839/2,908 functions,
-and 79,115/80,150 regions. Compared with baseline snapshot
-`a3340261-044f-4625-b322-0da61cdedec0`, covered totals changed by +31 lines,
-+4 branches, +6 functions, and +45 regions; total source metrics grew by the
-same amounts. The line-only comparison retains 19 changed-to-uncovered
-line-number records in JPEG encoder source because source insertion moved the
-mapped line numbers; aggregate coverage increased and the LLVM JSON
-segment-normalization warning remains. These aggregate and source-provenance
-records remain separate from Pillow parity, and no coverage-only test was
-added.
+Coverage MCP run `a39ca4ac-9c2e-499c-928f-4fd075c44b2c` passed 87/87 tests in
+101,006 ms and ingested snapshot `9dce9891-876b-476d-a6e4-e705c2dce220`,
+reporting 50,992/51,464 lines, 7,025/7,110 branches, 2,846/2,915 functions,
+and 79,207/80,249 regions. Compared with baseline snapshot
+`30a3537c-8485-47bc-8be7-a916f2c7a7f0`, covered totals changed by +81 lines,
++2 branches, +7 functions, and +92 regions; total source metrics grew by +86
+lines, +2 branches, +7 functions, and +99 regions. The line-only comparison
+retains three changed-to-uncovered WebP encoder line-number records from the
+generic cleanup helper's source mapping; aggregate coverage increased and the
+LLVM JSON segment-normalization warning remains. The changed WebP VP8 encoder
+file is 705/713 lines, 44/44 branches, 40/40 functions, and 1,234/1,254
+regions. These aggregate and source-provenance records remain separate from
+Pillow parity, and no coverage-only test was added.
 
-Remaining work is finer WebP coverage beyond the current 512-bit coefficient
-interval, JPEG interior work beyond the current 1,024-pixel RGB-to-YCbCr and
-1,024-byte entropy intervals, other codec interior and transient-allocation
-boundaries, short-write/rollback semantics, and the other roadmap categories
-below.
+Remaining work is finer WebP bitstream and other interior work beyond the
+current 512-bit coefficient and 1,024-pixel RGBA cleanup checkpoints, JPEG
+interior work beyond the current 1,024-pixel RGB-to-YCbCr and 1,024-byte entropy
+intervals, other codec interior and transient-allocation boundaries,
+short-write/rollback semantics, and the other roadmap categories below.
 
 Historical claim-ledger acceptance record:
 

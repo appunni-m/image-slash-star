@@ -7,7 +7,8 @@
 //! Deflate expansion/Huffman/bitstream/checksum stages, PNG stored-block copy
 //! intervals, JPEG RGB-to-YCbCr conversion items and entropy-output intervals
 //! after each 1,024 converted pixels or emitted entropy bytes, lossy WebP VP8
-//! RGB/RGBA-to-YUV conversion items, analysis, 512-bit logical and
+//! RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup after each
+//! 1,024 scanned or flattened pixels, analysis, 512-bit logical and
 //! 16,384-boolean first-partition bit intervals, 512-bit logical and
 //! 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
 //! intervals, and bitstream stages, and lossless WebP VP8L

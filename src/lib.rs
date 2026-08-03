@@ -873,7 +873,8 @@ pub fn encode_with_policy(
 /// hash/order, axis-ordering, split, and partition checkpoints, fixed RGBA
 /// FASTOCTREE cell/bucket/lookup and bucket-sort intervals, and LZW input-symbol
 /// intervals, and WebP still encoding polls preparation,
-/// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
+/// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
+/// after each 1,024 scanned or flattened pixels, analysis/mode-selection/
 /// probability, 512-bit logical and 16,384-boolean first-partition-bit and
 /// 512-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
