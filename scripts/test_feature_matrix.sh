@@ -75,12 +75,12 @@ esac
 export CAPABILITY_JOBS
 echo "feature matrix: lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
 
-# Capability probes are compile-heavy and their test bodies are already tiny;
-# avoid paying optimized test-binary code generation independently in every
-# isolated feature/target lane. The repository test profile remains optimized
-# for the larger parity and coverage suites, while callers may override this
-# matrix-only setting explicitly.
-MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-0}
+# The feature-gate suite includes real codec work-budget and cancellation
+# contracts, so unoptimized test binaries make the WASI runtime lane needlessly
+# expensive. Level 1 keeps each isolated lane's compile cost modest while
+# retaining the repository's lightly optimized test profile; callers may still
+# override this matrix-only setting explicitly.
+MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-1}
 case "$MATRIX_TEST_OPT_LEVEL" in
     0|1|2|3|s|z)
         ;;
