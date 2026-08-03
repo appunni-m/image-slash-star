@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`; the claim-ledger baseline remains
+`1a2a04ba17001053dd4d3f7887d3ff023d3a1644`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -316,6 +316,9 @@ instruction-count, transient-allocation, or recoverable-OOM accounting. The
 same contract now also proves JPEG still byte identity under an ample budget,
 a bounded mid-encode rejection after more than one checkpoint, and a typed
 zero-budget no-write result through the JPEG structural sink path. The
+patterned 64x64 JPEG probe additionally proves the new 1,024-byte
+entropy-output interval rejection at `maximum: 150`, `observed: 151`, in both
+whole-buffer and direct-sink paths with the sink untouched. The
 contract also proves that a pre-cancelled caller token takes precedence over a
 zero work budget for still PNG and sequence GIF, without touching the sink.
 A long PNG adaptive-filter row additionally charges a deterministic checkpoint
@@ -391,7 +394,8 @@ still and sequence
 sink delivery polls between validated top-level ISO-BMFF box segments. JPEG's
 codec-local coverage
 drill fires deterministic
-internal row/block/scan checkpoints; the public test intentionally avoids
+internal row/block/scan and 1,024-byte entropy-output checkpoints; the public
+test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
 preparing rows; PNG additionally polls adaptive-filter and filtered-row
 subsegments after each 1,024 row bytes, and token-aware PNG compression polls
@@ -415,7 +419,8 @@ and
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, 512-bit
 logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
-metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
+metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
+additionally polls after each 1,024 emitted entropy bytes; native AVIF still
 encoding polls its preparation,
 frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
 paths poll their implemented frame/coalescing/page/finalization checkpoints,
@@ -425,7 +430,7 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row and token-aware stored-block/all-level Deflate
+beyond the implemented JPEG 1,024-byte entropy-output interval, PNG row and token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
@@ -461,7 +466,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`, the fixture manifest and managed
+`1a2a04ba17001053dd4d3f7887d3ff023d3a1644`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -2859,9 +2864,48 @@ The LLVM JSON segment-normalization warning remains. These aggregate and
 source-provenance records remain separate from Pillow parity, and no
 coverage-only test was added.
 
+Current acceptance record: JPEG entropy-output checkpoint and runtime slice
+
+The JPEG baseline and progressive entropy-output checkpoint slice is implemented
+at `1a2a04ba17001053dd4d3f7887d3ff023d3a1644`. Token-aware entropy coding now
+tracks the next 1,024-byte emitted-output boundary without cumulative division
+on every observation, while the ordinary no-token path uses a monomorphized
+no-op controller and keeps the existing byte producer. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses a patterned 64x64 RGB
+probe to prove ample-budget byte identity and whole-buffer/direct-sink rejection
+at the first entropy interval (`maximum: 150`, `observed: 151`); both bounded
+sinks remain at their sentinels (`0x5b`). This is Rust-only resource-contract
+evidence: Pillow has no caller token, work-budget result, or caller-owned sink,
+so it adds no parity row, fixture, diagnostic origin, or coverage-only hook.
+
+The same runtime-first slice keeps feature-matrix lanes isolated, avoids the
+shared Cargo lock, and propagates native/WASI child failures instead of masking
+them behind capability-table output. A warm local default run completed in
+3,850 ms with 12 lanes, two test workers, and one Cargo build worker; a
+one-worker experiment took 4,180 ms and was not retained as the default. These
+are execution measurements, not controlled benchmarks.
+
+Managed Pillow parity run `2da7a490-e324-4142-8f2e-1e1dcfe16795` passed
+1,445/1,445 checks with zero failures or skips in 43,530 ms. Feature-matrix run
+`fc6b4976-7deb-4988-85c4-a3dfb54d85f1` passed 991/991 checks in 46,331 ms; its
+retained log contains `capability tables OK: every native and wasm32-wasip1
+lane agrees` and has no build-directory or package-cache lock-wait match.
+Coverage MCP run `a320b432-0457-44b8-a627-a61b722b5862` passed 85/85 tests in
+78,990 ms and ingested snapshot `a3340261-044f-4625-b322-0da61cdedec0`,
+reporting 50,880/51,347 lines, 7,019/7,104 branches, 2,833/2,902 functions,
+and 79,070/80,105 regions. Compared with baseline snapshot
+`9ec60a53-de8c-42c6-99fb-66ab2f1b5129`, covered totals changed by +64 lines,
++7 branches, +5 functions, and +90 regions while total source metrics grew by
++68, +8, +5, and +101 respectively. The line-only comparison reports 23
+changed-to-uncovered line-number records (19 in JPEG encoder source and 4 in
+`src/lib.rs`); the LLVM JSON segment-normalization warning remains. These
+aggregate and source-provenance records remain separate from Pillow parity,
+and no coverage-only test was added.
+
 Remaining work is finer WebP coverage beyond the current 512-bit coefficient
-interval, other codec interior and transient-allocation boundaries,
-short-write/rollback semantics, and the other roadmap categories below.
+interval, JPEG interior work beyond the current 1,024-byte interval, other
+codec interior and transient-allocation boundaries, short-write/rollback
+semantics, and the other roadmap categories below.
 
 Historical claim-ledger acceptance record:
 
