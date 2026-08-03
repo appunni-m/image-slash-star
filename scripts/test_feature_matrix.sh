@@ -102,7 +102,23 @@ case "$CAPABILITY_JOBS" in
         ;;
 esac
 export CAPABILITY_JOBS
-echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
+MATRIX_DEBUG=${MATRIX_DEBUG:-0}
+case "$MATRIX_DEBUG" in
+    0|1|2)
+        ;;
+    *)
+        echo "MATRIX_DEBUG must be 0, 1, or 2" >&2
+        exit 2
+        ;;
+esac
+# Matrix lanes do not need debugger symbols: coverage and rustdoc run through
+# their dedicated commands, while these lanes only need compile and runtime
+# correctness. Removing debug info from the isolated dev/test artifacts cuts
+# cold fan-out time and artifact volume without changing a production profile;
+# callers can raise it for local debugging with MATRIX_DEBUG=1 or 2.
+export CARGO_PROFILE_DEV_DEBUG="$MATRIX_DEBUG"
+export CARGO_PROFILE_TEST_DEBUG="$MATRIX_DEBUG"
+echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS debug=$MATRIX_DEBUG"
 
 # The feature-gate suite includes real codec work-budget and cancellation
 # contracts, so unoptimized test binaries make the WASI runtime lane needlessly
