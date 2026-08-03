@@ -64,8 +64,9 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
-const VP8L_FINEST_BITSTREAM_CHECKPOINT_BITS: usize = 256;
-const VP8L_BITSTREAM_CHECKPOINT_BITS: usize = 512;
+const VP8L_128_BITSTREAM_CHECKPOINT_BITS: usize = 128;
+const VP8L_256_BITSTREAM_CHECKPOINT_BITS: usize = 256;
+const VP8L_512_BITSTREAM_CHECKPOINT_BITS: usize = 512;
 
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
@@ -98,16 +99,22 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError> {
         let previous = self.written_bits;
         self.written_bits = self.written_bits.saturating_add(written);
-        let mut previous_finest_interval = previous / VP8L_FINEST_BITSTREAM_CHECKPOINT_BITS;
-        let current_finest_interval = self.written_bits / VP8L_FINEST_BITSTREAM_CHECKPOINT_BITS;
-        while previous_finest_interval < current_finest_interval {
-            previous_finest_interval = previous_finest_interval.saturating_add(1);
+        let mut previous_128_interval = previous / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
+        let current_128_interval = self.written_bits / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
+        while previous_128_interval < current_128_interval {
+            previous_128_interval = previous_128_interval.saturating_add(1);
             check_token(Some(self.token))?;
         }
-        let mut previous_interval = previous / VP8L_BITSTREAM_CHECKPOINT_BITS;
-        let current_interval = self.written_bits / VP8L_BITSTREAM_CHECKPOINT_BITS;
-        while previous_interval < current_interval {
-            previous_interval = previous_interval.saturating_add(1);
+        let mut previous_256_interval = previous / VP8L_256_BITSTREAM_CHECKPOINT_BITS;
+        let current_256_interval = self.written_bits / VP8L_256_BITSTREAM_CHECKPOINT_BITS;
+        while previous_256_interval < current_256_interval {
+            previous_256_interval = previous_256_interval.saturating_add(1);
+            check_token(Some(self.token))?;
+        }
+        let mut previous_512_interval = previous / VP8L_512_BITSTREAM_CHECKPOINT_BITS;
+        let current_512_interval = self.written_bits / VP8L_512_BITSTREAM_CHECKPOINT_BITS;
+        while previous_512_interval < current_512_interval {
+            previous_512_interval = previous_512_interval.saturating_add(1);
             check_token(Some(self.token))?;
         }
         Ok(())

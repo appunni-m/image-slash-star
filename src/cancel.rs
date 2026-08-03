@@ -18,8 +18,8 @@
 //! progressive scan-event frequency items after each 1,024 events,
 //! forward-DCT/quantization blocks, and bitstream stages, and
 //! lossless WebP VP8L
-//! predictor/cross-color/entropy/transform, histogram/Huffman, 256-bit and
-//! 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
+//! predictor/cross-color/entropy/transform, histogram/Huffman, 128-bit, 256-bit,
+//! and 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
 //! partition intervals, fixed 1,024-cell RGBA FASTOCTREE copy/subtraction/lookup
