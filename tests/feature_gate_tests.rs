@@ -9095,6 +9095,36 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(sink, vec![0xC3]);
 
+        // A diverse RGBA palette exercises the sorter’s nontrivial partitions
+        // and recursive small ranges while preserving the ordinary bytes under
+        // an ample token budget. This is implementation work-control evidence,
+        // not a parity or coverage-only fixture.
+        let mut varied_rgba_pixels = Vec::with_capacity(2_048 * 4);
+        for red in 0..8u8 {
+            for green in 0..8u8 {
+                for blue in 0..32u8 {
+                    varied_rgba_pixels.extend_from_slice(&[
+                        red.saturating_mul(32),
+                        green.saturating_mul(32),
+                        blue.saturating_mul(8),
+                        255,
+                    ]);
+                }
+            }
+        }
+        let varied_image = DecodedImage::new(2_048, 1, varied_rgba_pixels, ColorType::Rgba8);
+        let varied_expected = image_slash_star::encode(&varied_image, ImageFormat::Gif, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &varied_image,
+                ImageFormat::Gif,
+                &options,
+                &unlimited,
+            )?,
+            varied_expected,
+            "an ample GIF varied-RGBA bucket-sort budget preserves byte identity"
+        );
+
         // GIF high-color RGB median-cut preparation now charges its hash/order,
         // axis, split, and partition scans. This is a real Rust-only
         // work-control contract: Pillow has no caller token or work-budget
