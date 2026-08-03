@@ -76,14 +76,10 @@ esac
 MATRIX_BUILD_JOBS=${MATRIX_BUILD_JOBS:-${CARGO_BUILD_JOBS:-}}
 if [ -z "$MATRIX_BUILD_JOBS" ]; then
     MATRIX_BUILD_JOBS=$((matrix_cpu_count / MATRIX_JOBS))
-    # Warm roots have already paid the dependency fan-out cost. On the
-    # measured 12-logical-CPU host, two compiler workers per active lane
-    # shorten the remaining test-binary relinks without changing the lane
-    # count or the explicit override surface. Keep the cold-root budget
-    # derived from the aggregate CPU bound above.
-    if [ "$matrix_cache_state" = warm ] && [ "$matrix_cpu_count" -ge 12 ]; then
-        MATRIX_BUILD_JOBS=2
-    fi
+    # Warm roots have already paid the dependency fan-out cost. Keep one
+    # compiler worker per active lane: the warm scheduler can admit up to
+    # twelve lanes, so increasing this to two would oversubscribe the
+    # measured 12-logical-CPU host without changing any test coverage.
     if [ "$MATRIX_BUILD_JOBS" -lt 1 ]; then
         MATRIX_BUILD_JOBS=1
     fi
