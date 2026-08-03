@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`2af1eed8a117995b6965fde7461480d6586960b1`; the claim-ledger baseline remains
+`7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -357,7 +357,7 @@ segment parameters,
 mode selection, coefficient-probability
 adaptation, partition emission, after each 512-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
-1,024-bit logical coefficient interval, after each 16,384-boolean coefficient-bit
+512-bit logical coefficient interval, after each 16,384-boolean coefficient-bit
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
@@ -407,9 +407,9 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 1,024-bit
+mode-selection subsegments plus analysis/coefficient-probability, 512-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
-1,024-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
@@ -430,7 +430,7 @@ subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
 512-bit logical first-partition, 16,384-boolean first-partition-bit,
-1,024-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
+512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 512-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
@@ -461,15 +461,24 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`d8abbfb228e53dc704cae8571959e594486fd60c`, the generated matrix reports:
+`7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`, the fixture manifest and managed
+commands report:
 
 | Metric | Count |
 | --- | ---: |
-| Active cases | 1,445 |
-| Decode/inspect/verify cases | 1,024 |
-| Encode cases | 421 |
-| Planned or unwired cases | 0 |
+| Active fixture rows | 1,417 |
+| Decode/inspect/verify fixture rows | 1,024 |
+| Encode fixture rows | 393 |
+| Planned or unwired fixture rows | 0 |
+| Managed Pillow parity checks | 1,445 (1,417 rows + 28 worker functions) |
+| Feature-gate assertions per native/WASI lane | 45 |
+| Feature-matrix checks | 991 |
 | Formats | 8 |
+
+The fixture-row count, managed Pillow parity count, and non-Pillow feature-gate
+count are separate evidence surfaces; worker functions do not add fixtures or
+Pillow assertions, and feature-gate assertions do not belong to the oracle
+matrix.
 
 The two typed-option adapter manifests add 97 accepted translations and 69
 format-qualified structured-error cases. Accepted rows are labeled
@@ -2816,6 +2825,43 @@ this is recorded rather than hidden. The VP8 residual file reports 339/349
 lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
 segment-normalization warning remains. These are Rust-only implementation and
 target records separate from Pillow parity.
+
+Current acceptance record: finer VP8 coefficient checkpoint
+
+The finer lossy WebP/VP8 coefficient logical-bitstream checkpoint slice is
+implemented at `7c8d97c4f23987a5876b830fd7cd9f1adfb444e9`. Token-aware
+coefficient boolean coding now charges after each 512 logical coded bits,
+retaining the 16,384-boolean coefficient-bit and 1,024-byte emitted-output
+intervals; the no-token path remains a monomorphized no-op controller. The
+existing `encode_work_budget_is_a_non_parity_result_contract` uses the same
+512x512 RGB probe to prove ample-budget byte identity and whole-buffer/direct-
+sink rejection at the fine coefficient boundary (`maximum: 820`, `observed:
+821`), the independent 16,384-boolean coefficient boundary (`maximum: 647`,
+`observed: 648`), and the coefficient macroblock boundary (`maximum: 466`,
+`observed: 467`) in both paths; bounded sinks remain untouched. Pillow has no
+caller token, work-budget result, or caller-owned sink, so this adds no parity
+row, fixture, diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `674b807c-2cd0-4186-a61c-ea84b50c25ca` passed
+1,445/1,445 checks with zero failures or skips in 44,511 ms. Feature-matrix
+run `05c19cde-06ff-4952-bc8e-dd212629d637` passed 991/991 checks in 50,432 ms;
+its retained log contains `capability tables OK: every native and wasm32-wasip1
+lane agrees` and has no `lock-wait` match. Coverage MCP run
+`83deedf2-4f4c-4053-bc66-7565e06fb36b` passed 85/85 tests in 79,504 ms and
+ingested snapshot `9ec60a53-de8c-42c6-99fb-66ab2f1b5129`, reporting
+50,816/51,279 lines, 7,012/7,096 branches, 2,828/2,897 functions, and
+78,980/80,004 regions. Compared with baseline snapshot
+`bb9c8a0b-8d68-4b33-bfbc-0eea51aedb75` at the prior implementation revision,
+there is no line, branch, or function delta and five additional covered
+regions; the line-only regression view names
+`src/codecs/webp/encode/vp8/residual.rs:391` as changed from one hit to zero.
+The LLVM JSON segment-normalization warning remains. These aggregate and
+source-provenance records remain separate from Pillow parity, and no
+coverage-only test was added.
+
+Remaining work is finer WebP coverage beyond the current 512-bit coefficient
+interval, other codec interior and transient-allocation boundaries,
+short-write/rollback semantics, and the other roadmap categories below.
 
 Historical claim-ledger acceptance record:
 
