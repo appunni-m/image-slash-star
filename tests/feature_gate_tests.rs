@@ -8795,7 +8795,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // The existing coarser first-partition boundary remains separately
         // enforced after each 16,384 coded bits, after the finer logical
         // checkpoints above. This is the same Rust-only contract.
-        let partition_bit_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(583);
+        let partition_bit_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(593);
         let partition_bit_error = match image_slash_star::encode_with_policy(
             &partition_probe,
             ImageFormat::WebP,
@@ -8811,8 +8811,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 583,
-                observed: 584,
+                maximum: 593,
+                observed: 594,
             }
         ));
         let mut partition_bit_sink = vec![0xB4];
@@ -8836,8 +8836,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 583,
-                observed: 584,
+                maximum: 593,
+                observed: 594,
             }
         ));
         assert_eq!(partition_bit_sink, vec![0xB4]);
