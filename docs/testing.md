@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`66263c8ab08a4f488b3c378c5302477e2f5d9d48`; the claim-ledger baseline remains
+`a4bc2eace8ceacca2dd57eedde6a5555f518337c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -323,12 +323,11 @@ after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
 untouched sink. Token-aware PNG compression additionally checks each input
 chunk and stored-block boundary plus the Adler-32 calculation for compression
-level 0, and checks the level-six matcher, token expansion, Huffman/bitstream
-emission, and checksum stages. Compression levels other than 0 and 6 still
-only check before and after the existing no-token helper. The contract proves
-ample-budget byte identity for default, stored, non-final stored-block, and
-maximum-level PNG probes, plus typed default-level-six rejection at
-`maximum: 20`, `observed: 21`, in both whole-buffer and direct-sink paths; the
+level 0, and checks every zlib-ng level's matcher, token expansion,
+Huffman/bitstream emission, and checksum stages. The contract proves
+ample-budget byte identity for default, stored, non-final stored-block,
+explicit levels 1–5 and 7–9, and maximum-level PNG probes, plus typed matcher
+rejection at `maximum: 20` in both whole-buffer and direct-sink paths; the
 stored-block byte copy itself remains bounded at block boundaries rather than
 byte-by-byte. This is Rust-only evidence because Pillow has no caller token,
 work-budget result, or caller-owned sink. BMP row conversion additionally
@@ -395,8 +394,8 @@ internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
 preparing rows; PNG additionally polls adaptive-filter and filtered-row
 subsegments after each 1,024 row bytes, and token-aware PNG compression polls
-stored-block boundaries and the default level-six Deflate matcher/emission/
-checksum stages; the still and sink paths poll
+stored-block boundaries and every zlib-ng level's matcher/emission/checksum
+stages; the still and sink paths poll
 between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
 level-six matcher candidate/insertion/fizzle/position boundaries;
@@ -424,8 +423,8 @@ ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
-beyond the implemented PNG row and token-aware stored-block/default-level-six
-Deflate subsegments, PNG's other compression levels, TIFF Deflate matcher/emission
+beyond the implemented PNG row and token-aware stored-block/all-level Deflate
+subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
 4,096-bit logical first-partition, 16,384-boolean first-partition-bit,
@@ -2463,14 +2462,14 @@ its 4,096-bit logical and 1,024-byte output intervals; other codec interior work
 transient allocation accounting, short/interrupted output, rollback, and
 remaining non-checkpointed work-budget semantics remain open.
 
-The current PNG Deflate work-budget checkpoint slice is implemented at
+The initial PNG Deflate work-budget checkpoint slice was implemented at
 `66263c8ab08a4f488b3c378c5302477e2f5d9d48`. With a caller token, stored PNG
 compression checks input-chunk and stored-block boundaries plus the final
 Adler-32 calculation; default level-six compression uses the shared token-aware
 zlib-ng matcher, token expansion, Huffman/bitstream emission, and checksum
 stages. The ordinary no-token path remains on the existing helpers, and PNG
-compression levels other than 0 and 6 still receive only a boundary check
-before and after their no-token helper. The Rust-only
+compression levels other than 0 and 6 received only a boundary check before
+and after their no-token helper in that initial slice. The Rust-only
 `encode_work_budget_is_a_non_parity_result_contract` preserves ample-budget
 bytes for default, stored, non-final stored-block, and maximum-level PNG
 encodes; it proves the existing adaptive-filter rejection at `maximum: 3`,
@@ -2498,10 +2497,47 @@ implementation and target records remain separate from Pillow parity;
 aggregate coverage includes the ordinary Rust work-budget contract
 incidentally.
 
-Remaining PNG non-level-0/6 interior checkpoints, deeper stored-block byte-copy
-interruption, finer VP8/VP8L bitstream work, other codec interior work,
+At that revision, remaining PNG non-level-0/6 interior checkpoints, deeper
+stored-block byte-copy interruption, finer VP8/VP8L bitstream work, other codec interior work,
 transient allocation accounting, short/interrupted output, rollback, and
 remaining non-checkpointed work-budget semantics remain open.
+
+The current PNG all-level Deflate checkpoint slice is implemented at
+`a4bc2eace8ceacca2dd57eedde6a5555f518337c`. Token-aware PNG compression now
+covers the level-one quick matcher, levels two through four early matcher,
+level five medium matcher, default level six matcher, levels seven and eight
+slow matcher, and level nine matcher, followed by the existing token-aware
+expansion, Huffman/bitstream, and Adler-32 stages. The ordinary no-token paths
+retain their existing byte model. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` proves ample-budget byte
+identity for explicit levels 1–5 and 7–9, and bounded matcher rejection at
+`maximum: 20` in whole-buffer and direct-sink paths for every newly covered
+level, with bounded sinks untouched. Pillow has no caller token, work-budget
+result, or caller-owned sink, so this adds no parity row, fixture, diagnostic
+origin, or coverage-only hook.
+
+Managed Pillow parity run `9e0edc6a-fece-4fae-9847-93d756126adc` passed
+1,445/1,445 checks with zero failures or skips in 41,562 ms. Feature-matrix run
+`e9675875-7299-4899-b2bb-988aa0b5dc40` passed 991/991 checks in 105,928 ms;
+its retained log has no `lock-wait` matches and ends with `capability tables OK:
+every native and wasm32-wasip1 lane agrees`. Coverage MCP run
+`9a59b2bc-007e-4b98-b0ac-122f1fb5ca2b` passed 85/85 tests in 71,963 ms and
+ingested snapshot `01651a2e-866b-432c-b298-39e077d8c053`, reporting
+50,794/51,259 lines, 7,010/7,094 branches, 2,827/2,896 functions, and
+78,932/79,965 regions. Compared with snapshot
+`fecafd5b-7690-40c6-938b-78840ac60a72`, this adds 343 covered lines (+360
+total), 14 covered branches (+22 total), 17 covered functions (+17 total),
+and 533 covered regions (+615 total). `src/codecs/compression/deflate.rs` is
+607/610 lines, 66/66 branches, 33/33 functions, and 1,129/1,148 regions;
+`src/codecs/compression/zlib_ng.rs` is 2,270/2,286 lines, 408/416 branches,
+111/111 functions, and 3,502/3,627 regions. The aggregate snapshot retains
+the LLVM segment-normalization warning. These implementation and target
+records remain separate from Pillow parity; no coverage-only test was added.
+
+Remaining deeper stored-block byte-copy interruption, finer VP8/VP8L bitstream
+work, other codec interior work, transient allocation accounting,
+short/interrupted output, rollback, and remaining non-checkpointed work-budget
+semantics remain open.
 
 Historical claim-ledger acceptance record:
 
