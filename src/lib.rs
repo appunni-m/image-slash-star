@@ -866,7 +866,7 @@ pub fn encode_with_policy(
 /// segments in still and one-frame fallback paths; BMP polls row preparation
 /// and structural segments; BMP also polls 1,024-pixel row-conversion
 /// subsegments; GIF still encoding also polls block/frame/coalescing/output-assembly
-/// checkpoints plus LZW input-symbol intervals, and WebP still encoding polls preparation,
+/// checkpoints, RGB quantization intervals, and LZW input-symbol intervals, and WebP still encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
 /// probability/bitstream stages, lossless VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
