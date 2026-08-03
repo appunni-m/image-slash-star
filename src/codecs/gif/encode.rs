@@ -24,6 +24,7 @@ const GRAPHIC_CONTROL_LABEL: u8 = 0xf9;
 const MAX_LZW_CODE: u16 = 4095;
 const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
 const GIF_OCTREE_CHECKPOINT_CELLS: usize = 1024;
+const GIF_MEDIAN_CUT_CHECKPOINT_ITEMS: usize = 1024;
 
 #[cfg(coverage)]
 fn coverage_frame(
@@ -1881,7 +1882,7 @@ fn quantize_rgb(
     // contains one color, but the tree traversal still determines palette and
     // index order. Animated GIF frames after the first pass through this RGB
     // adaptive-palette path in GifImagePlugin._normalize_mode.
-    let order = pillow_median_cut_order(&palette, &counts);
+    let order = pillow_median_cut_order(&palette, &counts, token)?;
     let mut remap = vec![0u8; palette.len()];
     let mut flat = Vec::with_capacity(palette.len().saturating_mul(3));
     for (new_index, &old_index) in order.iter().enumerate() {
@@ -1973,7 +1974,7 @@ fn quantize_rgb_nearest(
             );
         }
     }
-    let leaves = pillow_median_cut_leaves(&colors, &counts, colors.len().min(256));
+    let leaves = pillow_median_cut_leaves(&colors, &counts, colors.len().min(256), token)?;
     let mut palette = Vec::<[u8; 3]>::with_capacity(leaves.len());
     let mut initial_palette = vec![0usize; colors.len()];
     for (palette_index, leaf) in leaves.iter().enumerate() {
@@ -2060,12 +2061,21 @@ struct MedianBox {
     children: Option<(usize, usize)>,
 }
 
-fn pillow_median_cut_order(colors: &[[u8; 3]], counts: &[u32]) -> Vec<usize> {
-    let leaves = pillow_median_cut_leaves(colors, counts, colors.len());
-    leaves.into_iter().map(|leaf| leaf[0]).collect()
+fn pillow_median_cut_order(
+    colors: &[[u8; 3]],
+    counts: &[u32],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<usize>> {
+    let leaves = pillow_median_cut_leaves(colors, counts, colors.len(), token)?;
+    Ok(leaves.into_iter().map(|leaf| leaf[0]).collect())
 }
 
-fn pillow_median_cut_leaves(colors: &[[u8; 3]], counts: &[u32], target: usize) -> Vec<Vec<usize>> {
+fn pillow_median_cut_leaves(
+    colors: &[[u8; 3]],
+    counts: &[u32],
+    target: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<Vec<usize>>> {
     // All callers derive `counts` and `target` from the same non-empty pixel
     // set. Keep those internal invariants visible without retaining an
     // unreachable runtime failure path.
@@ -2073,12 +2083,25 @@ fn pillow_median_cut_leaves(colors: &[[u8; 3]], counts: &[u32], target: usize) -
     debug_assert_eq!(colors.len(), counts.len());
     debug_assert!((1..=colors.len().min(256)).contains(&target));
 
-    let hash_order = pillow_hash_iteration_order(colors);
-    let axes = std::array::from_fn(|axis| {
-        let mut entries = (0..colors.len()).collect::<Vec<_>>();
-        entries.sort_by_key(|&index| (std::cmp::Reverse(colors[index][axis]), hash_order[index]));
-        entries
-    });
+    let hash_order = pillow_hash_iteration_order(colors, token)?;
+    let axes = if let Some(token) = token {
+        let mut axes = [Vec::new(), Vec::new(), Vec::new()];
+        for axis in 0..3 {
+            let mut entries = (0..colors.len()).collect::<Vec<_>>();
+            entries
+                .sort_by_key(|&index| (std::cmp::Reverse(colors[index][axis]), hash_order[index]));
+            crate::codecs::error::check_cancelled(Some(token))?;
+            axes[axis] = entries;
+        }
+        axes
+    } else {
+        std::array::from_fn(|axis| {
+            let mut entries = (0..colors.len()).collect::<Vec<_>>();
+            entries
+                .sort_by_key(|&index| (std::cmp::Reverse(colors[index][axis]), hash_order[index]));
+            entries
+        })
+    };
     let pixel_count = counts.iter().sum();
     let mut boxes = vec![MedianBox {
         axes,
@@ -2088,21 +2111,41 @@ fn pillow_median_cut_leaves(colors: &[[u8; 3]], counts: &[u32], target: usize) -
     let mut heap = PillowBoxHeap::default();
     heap.add(0, &boxes);
 
-    for _ in 1..target {
-        let node = loop {
-            let candidate = heap.remove(&boxes);
-            if box_volume(&boxes[candidate], colors) > 1 {
-                break candidate;
-            }
-        };
-        let (left, right) = split_median_box(&boxes[node], colors, counts);
-        let left_index = boxes.len();
-        boxes.push(left);
-        let right_index = boxes.len();
-        boxes.push(right);
-        boxes[node].children = Some((left_index, right_index));
-        heap.add(left_index, &boxes);
-        heap.add(right_index, &boxes);
+    if let Some(token) = token {
+        for _ in 1..target {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            let node = loop {
+                let candidate = heap.remove(&boxes);
+                if box_volume(&boxes[candidate], colors) > 1 {
+                    break candidate;
+                }
+            };
+            let (left, right) = split_median_box_with_token(&boxes[node], colors, counts, token)?;
+            let left_index = boxes.len();
+            boxes.push(left);
+            let right_index = boxes.len();
+            boxes.push(right);
+            boxes[node].children = Some((left_index, right_index));
+            heap.add(left_index, &boxes);
+            heap.add(right_index, &boxes);
+        }
+    } else {
+        for _ in 1..target {
+            let node = loop {
+                let candidate = heap.remove(&boxes);
+                if box_volume(&boxes[candidate], colors) > 1 {
+                    break candidate;
+                }
+            };
+            let (left, right) = split_median_box(&boxes[node], colors, counts);
+            let left_index = boxes.len();
+            boxes.push(left);
+            let right_index = boxes.len();
+            boxes.push(right);
+            boxes[node].children = Some((left_index, right_index));
+            heap.add(left_index, &boxes);
+            heap.add(right_index, &boxes);
+        }
     }
 
     fn visit(index: usize, boxes: &[MedianBox], output: &mut Vec<Vec<usize>>) {
@@ -2116,10 +2159,13 @@ fn pillow_median_cut_leaves(colors: &[[u8; 3]], counts: &[u32], target: usize) -
     let mut leaves = Vec::with_capacity(target);
     visit(0, &boxes, &mut leaves);
     debug_assert_eq!(leaves.len(), target);
-    leaves
+    Ok(leaves)
 }
 
-fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
+fn pillow_hash_iteration_order(
+    colors: &[[u8; 3]],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<usize>> {
     // QuantHash.c grows 11 -> 23 -> 47 -> 97 for this range. Its historical
     // prime finder accepts the first candidate in this residue table.
     const ACCEPTED_RESIDUES: [bool; 16] = [
@@ -2127,13 +2173,28 @@ fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
         false, false,
     ];
     let mut length = 11u32;
-    for count in 1..=colors.len() {
-        if length.saturating_mul(3) < bounded_u32(count) {
-            let mut candidate = length.saturating_mul(2).saturating_add(1);
-            while !ACCEPTED_RESIDUES[(candidate & 15) as usize] {
-                candidate = candidate.saturating_add(1);
+    if let Some(token) = token {
+        for (count_index, count) in (1..=colors.len()).enumerate() {
+            if length.saturating_mul(3) < bounded_u32(count) {
+                let mut candidate = length.saturating_mul(2).saturating_add(1);
+                while !ACCEPTED_RESIDUES[(candidate & 15) as usize] {
+                    candidate = candidate.saturating_add(1);
+                }
+                length = candidate;
             }
-            length = candidate;
+            if count_index != 0 && count_index.is_multiple_of(GIF_MEDIAN_CUT_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+        }
+    } else {
+        for count in 1..=colors.len() {
+            if length.saturating_mul(3) < bounded_u32(count) {
+                let mut candidate = length.saturating_mul(2).saturating_add(1);
+                while !ACCEPTED_RESIDUES[(candidate & 15) as usize] {
+                    candidate = candidate.saturating_add(1);
+                }
+                length = candidate;
+            }
         }
     }
     let mut iteration = (0..colors.len()).collect::<Vec<_>>();
@@ -2141,11 +2202,23 @@ fn pillow_hash_iteration_order(colors: &[[u8; 3]]) -> Vec<usize> {
         let hash = pillow_pixel_hash(colors[index]);
         (hash.rem_euclid(length), hash)
     });
-    let mut rank = vec![0usize; colors.len()];
-    for (position, index) in iteration.into_iter().enumerate() {
-        rank[index] = position;
+    if let Some(token) = token {
+        crate::codecs::error::check_cancelled(Some(token))?;
     }
-    rank
+    let mut rank = vec![0usize; colors.len()];
+    if let Some(token) = token {
+        for (position, index) in iteration.into_iter().enumerate() {
+            rank[index] = position;
+            if position != 0 && position.is_multiple_of(GIF_MEDIAN_CUT_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+        }
+    } else {
+        for (position, index) in iteration.into_iter().enumerate() {
+            rank[index] = position;
+        }
+    }
+    Ok(rank)
 }
 
 fn pillow_pixel_hash(color: [u8; 3]) -> u32 {
@@ -2236,6 +2309,97 @@ fn split_median_box(
             children: None,
         },
     )
+}
+
+fn split_median_box_with_token(
+    node: &MedianBox,
+    colors: &[[u8; 3]],
+    counts: &[u32],
+    token: &crate::CancellationToken,
+) -> CodecResult<(MedianBox, MedianBox)> {
+    let ranges: [u32; 3] = std::array::from_fn(|axis| {
+        let entries = &node.axes[axis];
+        let last = entries[entries.len().saturating_sub(1)];
+        u32::from(colors[entries[0]][axis].saturating_sub(colors[last][axis]))
+            .saturating_mul([77, 150, 29][axis])
+    });
+    let axis = (1..3).fold(0, |best, candidate| {
+        if ranges[candidate] > ranges[best] {
+            candidate
+        } else {
+            best
+        }
+    });
+    let sorted = &node.axes[axis];
+    let mut items = 0usize;
+    let mut poll_items = || -> CodecResult<()> {
+        items = items.saturating_add(1);
+        if items.is_multiple_of(GIF_MEDIAN_CUT_CHECKPOINT_ITEMS) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+        Ok(())
+    };
+    let mut left_count = 0u32;
+    let mut split = 0usize;
+    while split < sorted.len() {
+        poll_items()?;
+        left_count = left_count.saturating_add(counts[sorted[split]]);
+        split = split.saturating_add(1);
+        if left_count.saturating_mul(2) > node.pixel_count {
+            break;
+        }
+    }
+    if split < sorted.len() {
+        let value = colors[sorted[split.saturating_sub(1)]][axis];
+        while split < sorted.len() && colors[sorted[split]][axis] == value {
+            poll_items()?;
+            left_count = left_count.saturating_add(counts[sorted[split]]);
+            split = split.saturating_add(1);
+        }
+    }
+    if split == sorted.len() {
+        let value = colors[sorted[sorted.len().saturating_sub(1)]][axis];
+        while split > 0 && colors[sorted[split.saturating_sub(1)]][axis] == value {
+            poll_items()?;
+            split = split.saturating_sub(1);
+            left_count = left_count.saturating_sub(counts[sorted[split]]);
+        }
+    }
+    let mut is_left = std::collections::HashSet::with_capacity(split);
+    for &index in &sorted[..split] {
+        poll_items()?;
+        is_left.insert(index);
+    }
+    let mut left_axes = [Vec::new(), Vec::new(), Vec::new()];
+    for (other_axis, axis_entries) in left_axes.iter_mut().enumerate() {
+        for &index in &node.axes[other_axis] {
+            poll_items()?;
+            if is_left.contains(&index) {
+                axis_entries.push(index);
+            }
+        }
+    }
+    let mut right_axes = [Vec::new(), Vec::new(), Vec::new()];
+    for (other_axis, axis_entries) in right_axes.iter_mut().enumerate() {
+        for &index in &node.axes[other_axis] {
+            poll_items()?;
+            if !is_left.contains(&index) {
+                axis_entries.push(index);
+            }
+        }
+    }
+    Ok((
+        MedianBox {
+            axes: left_axes,
+            pixel_count: left_count,
+            children: None,
+        },
+        MedianBox {
+            axes: right_axes,
+            pixel_count: node.pixel_count.saturating_sub(left_count),
+            children: None,
+        },
+    ))
 }
 
 #[derive(Default)]
