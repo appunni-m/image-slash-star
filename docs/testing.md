@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`d8abbfb228e53dc704cae8571959e594486fd60c`; the claim-ledger baseline remains
+`2af1eed8a117995b6965fde7461480d6586960b1`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -355,7 +355,7 @@ analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
-adaptation, partition emission, after each 1,024-bit logical first-partition
+adaptation, partition emission, after each 512-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
 1,024-bit logical coefficient interval, after each 16,384-boolean coefficient-bit
 interval, and after each
@@ -429,7 +429,7 @@ beyond the implemented PNG row and token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
-1,024-bit logical first-partition, 16,384-boolean first-partition-bit,
+512-bit logical first-partition, 16,384-boolean first-partition-bit,
 1,024-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 512-bit logical VP8L bitstream intervals, and VP8L stages,
@@ -2778,6 +2778,44 @@ file reports 1,467/1,477 lines, 226/226 branches, 77/77 functions, and
 2,127/2,228 regions; retained gaps are recorded rather than hidden. The LLVM
 JSON segment-normalization warning remains. These are Rust-only implementation
 and target records separate from Pillow parity.
+
+The finer lossy WebP/VP8 first-partition logical-checkpoint slice is implemented
+at `2af1eed8a117995b6965fde7461480d6586960b1`. Token-aware first-partition
+boolean coding now charges after each 512 logical coded bits while retaining the
+16,384-boolean first-partition boundary; the existing 1,024-bit logical
+coefficient, 16,384-boolean coefficient, and 1,024-byte boolean-bitstream
+output intervals remain unchanged. The no-token path remains a monomorphized
+no-op controller. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` uses the patterned 896x512
+RGB probe to prove whole-buffer and direct-sink rejection at the 512-bit
+logical boundary (`maximum: 593`, `observed: 594`), retains the neighboring
+fine probe (`maximum: 580`, `observed: 581`), and proves the independent
+16,384-boolean first-partition boundary (`maximum: 613`, `observed: 614`) in
+both paths. The existing boolean-output probes remain `maximum: 589`,
+`observed: 590` for whole-buffer and `maximum: 588`, `observed: 589` for the
+direct sink; a later `maximum: 700`, `observed: 701` probe reaches the
+coefficient partition after first-partition completion. Every bounded sink
+remains untouched. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this is Rust-only resource-contract evidence with no
+parity row, fixture, diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `805d09c5-9d04-45d9-afe9-d5e80629380c` passed
+1,445/1,445 checks with zero failures or skips in 48,956 ms. Feature-matrix
+run `31a5f5f0-a665-4d55-bcab-8ad166cf5eae` passed 991/991 checks in 51,687 ms;
+its retained log contains `capability tables OK: every native and wasm32-wasip1
+lane agrees` and has no `lock-wait` match. Coverage MCP run
+`9da0601f-f376-4acf-9d7a-6c5bf88b6781` passed 85/85 tests in 95,449 ms and
+ingested snapshot `bb9c8a0b-8d68-4b33-bfbc-0eea51aedb75`, reporting
+50,816/51,279 lines, 7,012/7,096 branches, 2,828/2,897 functions, and
+78,975/80,004 regions. Compared with snapshot
+`09bee72c-c5cf-4c21-ac25-80fda41c1622`, coverage adds one covered line and
+five covered regions, with zero branch or function delta. The line-only
+regression view still reports one displaced line:
+`src/codecs/webp/encode/vp8/residual.rs:220` changed from one hit to zero;
+this is recorded rather than hidden. The VP8 residual file reports 339/349
+lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
+segment-normalization warning remains. These are Rust-only implementation and
+target records separate from Pillow parity.
 
 Historical claim-ledger acceptance record:
 
