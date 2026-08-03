@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`4bccbfe102d80c94a492a270a6605d5aaad4c645`; the claim-ledger baseline remains
+`bf9dda0de0ce8214cf525ccdba395fa99246d8a6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2665,6 +2665,49 @@ and 1,024-byte output intervals; finer VP8L bitstream work beyond its 1,024-bit
 logical and 1,024-byte output intervals; other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
+
+The native AVIF auxiliary-alpha provenance correction is implemented at
+`bf9dda0de0ce8214cf525ccdba395fa99246d8a6`. AVIF inspection now reports an
+alpha item as `SourceAlpha::Auxiliary`, and native still and sequence decoded
+images retain the same source descriptor. This identifies samples carried by a
+separate auxiliary image; it does not alter the normalized decoded RGBA bytes.
+The feature-gated integration contract
+`source_alpha_matches_the_container_contract` uses the committed
+`tests/fixtures/input/images/avif/alpha.avif` fixture and asserts inspect,
+still-decode, and sequence-decode provenance. It is not a unit test, adds no
+`#[cfg(coverage)]` hook, and adds no Pillow-parity row. Pillow parity cannot
+cover this field because its result schema has no source descriptor or
+auxiliary-item provenance; the unchanged parity run below is regression
+evidence for Pillow-observable output only.
+
+Managed Pillow parity run `002ee279-806e-4de5-acb9-3485f009c2a1` passed
+1,445/1,445 checks with zero failures or skips in 41,696 ms. Feature-matrix run
+`b204b2a7-d4f4-470c-b6aa-3698ff3a97d1` passed 991/991 checks in 7,053 ms; its
+retained log contains the capability marker `capability tables OK: every native
+and wasm32-wasip1 lane agrees`. Coverage MCP run
+`712ff626-3b86-4cb5-aaf2-14b554761541` passed 85/85 tests in 49,016 ms and
+ingested snapshot `8e804ce4-ac81-4386-a283-c77a12dec7c5`, reporting
+50,813/51,279 lines, 7,012/7,096 branches, 2,828/2,897 functions, and
+78,967/80,004 regions. Compared with snapshot
+`dcaab996-685d-4470-ae30-a8d96790261f`, coverage has no line delta and no
+changed-to-uncovered lines; it adds two covered/total branches and five
+covered/total regions. `src/codecs/avif/container.rs` is 2,392/2,392 lines,
+374/374 branches, 137/137 functions, and 3,593/3,593 regions; the changed
+`src/codecs/avif/decode.rs` remains 455/455 lines, 40/40 branches, 26/26
+functions, and 622/622 regions. The LLVM JSON segment-normalization warning
+remains. The static coverage-origin verifier still reports 219 exact guards
+with no Pillow-parity origin. These source-provenance and aggregate coverage
+records remain separate from Pillow parity; no coverage-only test was added.
+
+The remaining AVIF metadata work is non-alpha auxiliary relationships and
+properties, item identity/plane-range/quality details, premultiplication, and
+invisible RGB semantics. The runtime-first matrix follow-up remains the
+cache-aware scheduler at `3a24dd85e507a777492267dfd13a01c508f392d3`: the current
+revision passes all 991 checks in 7,053 ms managed, while a cold local
+shared-target experiment exceeded 150 seconds before termination because
+Cargo serialized competing feature builds. The existing isolated-lane policy
+therefore remains the measured safe default; no matrix scope or test-origin
+claim was reduced.
 
 Historical claim-ledger acceptance record:
 

@@ -375,15 +375,15 @@ use image_slash_star::{
     encode, EncodeOptions, ImageFormat, JpegEncodeOptions, JpegSubsampling,
 };
 
-# fn example(image: &image_slash_star::DecodedImage)
-#     -> image_slash_star::ImageResult<Vec<u8>> {
+fn example(image: &image_slash_star::DecodedImage)
+    -> image_slash_star::ImageResult<Vec<u8>> {
 let options = EncodeOptions::from(JpegEncodeOptions {
     quality: Some(90),
     subsampling: Some(JpegSubsampling::Cs444),
     ..JpegEncodeOptions::default()
 });
 encode(image, ImageFormat::Jpeg, &options)
-# }
+}
 ```
 
 Passing JPEG options with a PNG target, for example, returns a
