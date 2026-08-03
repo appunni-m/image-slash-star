@@ -64,6 +64,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+const VP8L_64_BITSTREAM_CHECKPOINT_BITS: usize = 64;
 const VP8L_128_BITSTREAM_CHECKPOINT_BITS: usize = 128;
 const VP8L_256_BITSTREAM_CHECKPOINT_BITS: usize = 256;
 const VP8L_512_BITSTREAM_CHECKPOINT_BITS: usize = 512;
@@ -99,6 +100,12 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError> {
         let previous = self.written_bits;
         self.written_bits = self.written_bits.saturating_add(written);
+        let mut previous_64_interval = previous / VP8L_64_BITSTREAM_CHECKPOINT_BITS;
+        let current_64_interval = self.written_bits / VP8L_64_BITSTREAM_CHECKPOINT_BITS;
+        while previous_64_interval < current_64_interval {
+            previous_64_interval = previous_64_interval.saturating_add(1);
+            check_token(Some(self.token))?;
+        }
         let mut previous_128_interval = previous / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
         let current_128_interval = self.written_bits / VP8L_128_BITSTREAM_CHECKPOINT_BITS;
         while previous_128_interval < current_128_interval {

@@ -400,11 +400,11 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, 128-bit, 256-bit, and 512-bit logical bitstream intervals, and 1,024-byte
+intervals, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream intervals, and 1,024-byte
 bitstream output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
-untouched sink, including separate exact-boundary probes for the finer 128-bit
-and 256-bit logical intervals, the existing 512-bit logical interval, and the emitted-output
+untouched sink, including separate exact-boundary probes for the finer 64-bit
+and 128-bit logical intervals, the existing 256-bit and 512-bit logical intervals, and the emitted-output
 intervals. This is still Rust-only work-control
 evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
@@ -455,7 +455,7 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 128-bit, 256-bit,
+search/match-length/cache/trace, histogram/Huffman, token-stream, 64-bit, 128-bit, 256-bit,
 and 512-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
 additionally polls after each 1,024 progressive scan block slots, each 1,024
@@ -484,7 +484,7 @@ macroblock-analysis, and mode-selection subsegments, WebP coefficient-probabilit
 128-bit, 256-bit, and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
 128-bit, 256-bit, and 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 128-bit, 256-bit, and 512-bit logical VP8L bitstream intervals, and VP8L stages,
+intervals, the 64-bit, 128-bit, 256-bit, and 512-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -3458,7 +3458,7 @@ used. The parity run is Pillow-oracle evidence; the policy assertions and
 aggregate coverage are implementation/Rust-only evidence.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 128-bit/256-bit/512-bit VP8L
+current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 64-bit/128-bit/256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
