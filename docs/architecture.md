@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`62508a58b1a16fde150067b6cd43930b6e798dd3`; the claim-ledger baseline remains
+`cc6ed8fa71ccce70bcc5014a5bc8fb19f8734056`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -482,7 +482,8 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, and bitstream assembly. This is
+intervals, bitstream assembly, and each 1,024-byte VP8L bitstream-output
+interval. This is
 deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
 
@@ -498,8 +499,8 @@ first-partition-bit intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, and bitstream
-stages, codec-result, and metadata-assembly
+search/match-length/cache/trace, histogram/Huffman, token-stream, bitstream,
+and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG, PNG, BMP, ICO, and TIFF still
 writers plus the one-frame JPEG/BMP/ICO and multi-page TIFF sequence sink
 writers poll while

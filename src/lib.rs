@@ -872,9 +872,10 @@ pub fn encode_with_policy(
 /// intervals, and WebP still encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
 /// probability, 16,384-boolean first-partition-bit and coefficient-bit,
-/// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless VP8L
-/// predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, bitstream, and token-stream stages, codec-result, and
+/// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
+/// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
+/// histogram/Huffman, bitstream, 1,024-byte bitstream-output, and token-stream
+/// stages, codec-result, and
 /// metadata-assembly boundaries; native AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
