@@ -868,8 +868,8 @@ pub fn encode_with_policy(
 /// subsegments; GIF still encoding also polls block/frame/coalescing/output-assembly
 /// checkpoints, RGB/RGBA palette quantization intervals, RGB median-cut
 /// hash/order, axis-ordering, split, and partition checkpoints, fixed RGBA
-/// FASTOCTREE cell/bucket/lookup intervals, and LZW input-symbol intervals, and
-/// WebP still encoding polls preparation,
+/// FASTOCTREE cell/bucket/lookup and bucket-sort intervals, and LZW input-symbol
+/// intervals, and WebP still encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, analysis/mode-selection/
 /// probability/bitstream stages, lossless VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
