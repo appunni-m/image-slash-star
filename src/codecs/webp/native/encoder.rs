@@ -1125,6 +1125,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn encode_frame_stream<C: BitWriterCheckpoint>(
     pixels: &mut [u32],
     width: u32,
