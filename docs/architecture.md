@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`38af2d21830356eefa202f60f5b16c44934b8924`; the claim-ledger baseline remains
+`4bccbfe102d80c94a492a270a6605d5aaad4c645`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -526,10 +526,10 @@ is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including remaining finer WebP bitstream work beyond the
-implemented 4,096-bit logical VP8 first-partition interval, the
-16,384-boolean first-partition-bit, coefficient-bit, and 1,024-byte
-boolean-bitstream-output intervals, the 1,024-bit logical VP8L bitstream
-intervals, and CPU work inside codec
+implemented 1,024-bit logical VP8 first-partition interval, the 4,096-bit
+logical coefficient interval, the 16,384-boolean first-partition and
+coefficient-bit intervals, and the 1,024-byte boolean-bitstream-output
+intervals, the 1,024-bit logical VP8L bitstream intervals, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP

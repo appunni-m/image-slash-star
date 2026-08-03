@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`38af2d21830356eefa202f60f5b16c44934b8924`; the claim-ledger baseline remains
+`4bccbfe102d80c94a492a270a6605d5aaad4c645`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2621,12 +2621,50 @@ remains. These implementation and target records remain separate from Pillow
 parity; aggregate coverage includes the ordinary Rust work-budget contract
 incidentally.
 
+The finer lossy WebP/VP8 first-partition logical-bitstream checkpoint slice is
+implemented at `4bccbfe102d80c94a492a270a6605d5aaad4c645`. Token-aware
+first-partition boolean coding now charges a checkpoint after each 1,024
+logical coded bits, while retaining the existing 16,384-boolean first-partition
+boundary, the 4,096-bit logical coefficient boundary, the 16,384-boolean
+coefficient boundary, and the 1,024-byte boolean-bitstream-output boundary.
+The no-token path remains a monomorphized no-op controller. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` uses the patterned
+896x512 RGB probe to prove whole-buffer and direct-sink rejection at
+`maximum: 577`, `observed: 578` for the finer logical first-partition
+boundary, retains the earlier `maximum: 580`, `observed: 581` logical probe,
+and proves the independent coarser first-partition boundary at `maximum: 598`,
+`observed: 599`; the existing emitted-output probes remain `maximum: 589`,
+`observed: 590` for whole-buffer and `maximum: 588`, `observed: 589` for the
+direct sink. Every bounded sink remains untouched, and ample-budget bytes
+remain identical. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this is Rust-only resource-contract evidence with no
+parity row, fixture, diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `b711346e-bdab-4fe0-878f-2e3e6dbe76b0` passed
+1,445/1,445 checks with zero failures or skips in 40,084 ms. Feature-matrix run
+`00bfa332-c507-4f1c-93b6-7682703945a8` passed 991/991 checks in 40,974 ms;
+its retained log had no `lock-wait` match and contained
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. The first
+exact-command LLVM coverage attempt hit the existing native-AVIF sink-byte
+assertion at 84/85; the immediate retry `b5c8d957-2506-4beb-9748-a4f7bdd880a2`
+passed 85/85 in 45,925 ms and ingested snapshot
+`dcaab996-685d-4470-ae30-a8d96790261f`, reporting 50,813/51,279 lines,
+7,010/7,094 branches, 2,828/2,897 functions, and 78,962/79,999 regions.
+Compared with snapshot `5786f56a-8e4e-4cf4-b1ea-7f3fee2e2091`, coverage
+compare reports no line, branch, or function delta and no changed-to-uncovered
+lines; the four-region aggregate decrease is retained, not hidden. The VP8
+partition file is 460/467 lines, 60/60 branches, 30/30 functions, and
+685/734 regions; its six uncovered lines remain defensive/boundary alternatives.
+The LLVM JSON segment-normalization warning remains. These implementation and
+target records remain separate from Pillow parity; aggregate coverage includes
+the ordinary Rust work-budget contract incidentally.
+
 Remaining finer VP8 bitstream work beyond its 1,024-bit logical first-partition,
-16,384-boolean first-partition/coefficient-bit, and 1,024-byte output intervals;
-finer VP8L bitstream work beyond its 1,024-bit logical and 1,024-byte output
-intervals; other codec interior work, transient allocation accounting,
-short/interrupted output, rollback, and remaining non-checkpointed work-budget
-semantics remain open.
+4,096-bit logical coefficient, 16,384-boolean first-partition/coefficient-bit,
+and 1,024-byte output intervals; finer VP8L bitstream work beyond its 1,024-bit
+logical and 1,024-byte output intervals; other codec interior work, transient
+allocation accounting, short/interrupted output, rollback, and remaining
+non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 
