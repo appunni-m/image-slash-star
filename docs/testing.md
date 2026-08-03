@@ -2859,7 +2859,11 @@ uses existing real fixtures, adds no test function, parity row, fixture,
 diagnostic origin, or coverage-only hook. The test-runtime change at
 `576fe356d22e936df04b4c96f1c36f6db5465fa6` is also harness-only: it derives up
 to three warm test workers per lane from host CPUs and changes no production
-profile or evidence origin.
+profile or evidence origin. The follow-up at
+`9ecf1cd26144aace1146e50784da362d19d40013` defaults the matrix-only
+`MATRIX_DEBUG` budget to `0`, removing debugger symbols from isolated dev/test
+artifacts while retaining `MATRIX_DEBUG=1` or `2` for local debugging. This
+does not change the production profile or any coverage command.
 
 Managed Pillow parity run `20e9ecf2-076d-4a04-9d34-88e331d67769` passed
 1,445/1,445 checks with zero failures or skips in 53,969 ms at the AVIF
@@ -2871,7 +2875,16 @@ build-directory or package-cache lock-wait matches. The runtime tuning itself
 was validated separately by managed run `b78b4c94-72cb-45fb-a9e8-1fb4bb49be9e`
 at the performance commit (991/991 in 3,501 ms); on the same warm local host,
 the default changed from 4.51 s to 3.49 s. These timings are cache- and
-runner-sensitive execution evidence, not universal benchmarks.
+runner-sensitive execution evidence, not universal benchmarks. The same
+12-logical-CPU host measured the fresh isolated matrix at 72.63 s before that
+follow-up and 60.33 s with the new default; a warm rerun of the new roots took
+4.06 s. These are controlled local observations, not universal benchmarks,
+and all 33 lanes and 991 checks remained enabled.
+
+Managed feature-matrix rerun `77ceedff-203c-4be8-9556-97b993a37a23` at the
+runtime follow-up revision passed 991/991 checks in 3,522 ms. Its retained log
+records `debug=0`, ends with the native/WASI capability agreement marker, and
+has no `lock-wait` match.
 
 Coverage MCP run `6fa86e87-831b-4c7d-a273-94f509018eb5` passed 85/85 tests in
 50,815 ms and ingested snapshot `529006bb-3484-4bc7-b595-53a2a6dce421`:
