@@ -12,7 +12,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// JPEG RGB-to-YCbCr conversion and chroma-downsample output intervals after
 /// each 1,024 converted or produced pixels, and entropy-output intervals after
 /// each 1,024 emitted entropy bytes, JPEG optimized-Huffman frequency
-/// coefficients after each 1,024 coefficients, the PNG adaptive-filter
+/// coefficients after each 1,024 coefficients and progressive scan block slots
+/// after each 1,024 blocks, the PNG adaptive-filter
 /// and filtered-row checkpoints charged after each 1,024 row bytes, PNG
 /// stored-block copy checkpoints charged after each 1,024 copied bytes, BMP
 /// row-conversion checkpoints charged after each 1,024 pixels, lossy WebP VP8
@@ -75,7 +76,9 @@ impl EncodePolicy {
     /// additional checkpoint after each 1,024 output pixels, and JPEG entropy
     /// coding charges an additional checkpoint after each 1,024 emitted entropy
     /// bytes, and optimized baseline Huffman frequency gathering charges an
-    /// additional checkpoint after each 1,024 AC coefficients. TIFF
+    /// additional checkpoint after each 1,024 AC coefficients. Progressive
+    /// scan event generation charges an additional checkpoint after each 1,024
+    /// block slots. TIFF
     /// Deflate charges input-row and level-six matcher candidate, insertion,
     /// fizzle, window, and position intervals plus expansion, Huffman,
     /// bitstream, stored-block, and checksum intervals. Lossy

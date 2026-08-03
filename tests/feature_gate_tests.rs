@@ -8624,6 +8624,74 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(frequency_sink, vec![0x5F]);
 
+        // Progressive JPEG scan-event generation walks block slots in its
+        // DC/AC scan loops. The committed fixture reaches that interior path
+        // after the earlier RGB, sampling, and entropy checkpoints; charge
+        // one interval per 1,024 scan blocks so long scan generation cannot
+        // hide behind row polls. Pillow has no caller work budget or
+        // equivalent sink/result contract, so this remains Rust-only evidence
+        // with no parity row, parity fixture, diagnostic origin, or
+        // coverage-only hook.
+        let mut progressive_jpeg_options = image_slash_star::JpegEncodeOptions::default();
+        progressive_jpeg_options.progressive = Some(true);
+        let progressive_options = EncodeOptions::from(progressive_jpeg_options);
+        let progressive_expected =
+            image_slash_star::encode(&downsample_image, ImageFormat::Jpeg, &progressive_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &downsample_image,
+                ImageFormat::Jpeg,
+                &progressive_options,
+                &unlimited,
+            )?,
+            progressive_expected,
+            "an ample progressive-scan budget preserves fixture-derived bytes"
+        );
+        let progressive_policy = image_slash_star::EncodePolicy::new().with_max_work_units(1_364);
+        let progressive_error = match image_slash_star::encode_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_policy,
+        ) {
+            Ok(_) => return Err("JPEG progressive-scan work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_364,
+                observed: 1_365,
+            }
+        ));
+        let mut progressive_sink = vec![0x60];
+        let progressive_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_policy,
+            &mut progressive_sink,
+        ) {
+            Ok(_) => {
+                return Err("JPEG progressive-scan work budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_364,
+                observed: 1_365,
+            }
+        ));
+        assert_eq!(progressive_sink, vec![0x60]);
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;
