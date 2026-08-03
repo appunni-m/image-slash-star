@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`31a1c19d2f5503bc05911ff90b649fda44a1e7f0`; the claim-ledger baseline remains
+`3a24dd85e507a777492267dfd13a01c508f392d3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2569,6 +2569,22 @@ lines remain in the aggregate and are recorded rather than hidden with a
 coverage-only test. The LLVM JSON segment-normalization warning remains. These
 implementation and target records remain separate from Pillow parity.
 
+The feature-matrix scheduler cache-state follow-up is implemented at
+`3a24dd85e507a777492267dfd13a01c508f392d3`. It preserves all 33
+target/feature lanes, the 45 feature-gate assertions per lane, the capability
+table no-drift check, and the existing explicit `MATRIX_*` overrides. A clean
+root keeps the previously measured six-lane/two-worker compile profile; a
+retained root with native, `wasm32-unknown-unknown`, and `wasm32-wasip1`
+all-feature roots switches to up to twelve lanes, one compiler worker per
+lane, and two test workers on the measured 12-logical-CPU host. Three local
+warm runs passed 991/991 checks in 3.36–3.42 seconds. Managed feature-matrix
+run `a662134e-64ff-412c-8dc0-c14944ac6014` passed 991/991 checks in 5,856 ms
+at the exact revision; its retained log has no `lock-wait` match and ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. These are
+observed cache-state/runtime measurements, not universal benchmark claims;
+the scheduler changes no production profile, fixture, parity row, assertion,
+or evidence origin.
+
 Remaining finer VP8/VP8L bitstream work, other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
@@ -2761,15 +2777,17 @@ scripts/test_feature_matrix.sh
 
 The matrix uses isolated retained Cargo target roots to avoid build-directory
 lock contention and interleaves native, `wasm32-unknown-unknown`, and
-`wasm32-wasip1` lanes under one bounded completion-driven scheduler. By default
-it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs per
-lane, capped at six), then derives the Rust test-harness worker count from the
-same values (capped at eight). It also derives `MATRIX_BUILD_JOBS` from the
-same lane bound and exports it as `CARGO_BUILD_JOBS` inside each lane.
-`MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the
-derived values for a constrained or unusually large CI runner. This bounds
-aggregate process, compiler, and test-thread fan-out without dropping any lane
-or assertion.
+`wasm32-wasip1` lanes under one bounded completion-driven scheduler. On a cold
+root, it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs
+per lane, capped at six), then derives the Rust test-harness and Cargo compiler
+worker counts from that bound. When all three retained all-feature target roots
+are present, the scheduler treats the root as warm: it allows up to twelve
+independent lanes, uses one Cargo compiler worker per lane, and caps the
+derived test-harness budget at two workers. `MATRIX_JOBS`,
+`MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the derived values
+for a constrained or unusually large CI runner. This bounds aggregate process,
+compiler, and test-thread fan-out without dropping any lane or assertion while
+avoiding a cold-build fan-out on disposable roots.
 
 The matrix defaults `MATRIX_TEST_OPT_LEVEL` to `1`, matching the repository's
 lightly optimized test profile. The feature-gate suite executes real codec

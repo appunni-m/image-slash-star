@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`31a1c19d2f5503bc05911ff90b649fda44a1e7f0`; the claim-ledger baseline remains
+`3a24dd85e507a777492267dfd13a01c508f392d3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -2924,6 +2924,22 @@ regions (+34 total). `src/codecs/compression/deflate.rs` is 626/630 lines,
 lines remain in the aggregate and are recorded rather than hidden with a
 coverage-only test. The LLVM JSON segment-normalization warning remains. These
 implementation and target records remain separate from Pillow parity.
+
+The feature-matrix scheduler cache-state follow-up is implemented at
+`3a24dd85e507a777492267dfd13a01c508f392d3`. It preserves all 33
+target/feature lanes, the 45 feature-gate assertions per lane, the capability
+table no-drift check, and the existing explicit `MATRIX_*` overrides. A clean
+root keeps the previously measured six-lane/two-worker compile profile; a
+retained root with native, `wasm32-unknown-unknown`, and `wasm32-wasip1`
+all-feature roots switches to up to twelve lanes, one compiler worker per
+lane, and two test workers on the measured 12-logical-CPU host. Three local
+warm runs passed 991/991 checks in 3.36–3.42 seconds. Managed feature-matrix
+run `a662134e-64ff-412c-8dc0-c14944ac6014` passed 991/991 checks in 5,856 ms
+at the exact revision; its retained log has no `lock-wait` match and ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`. These are
+observed cache-state/runtime measurements, not universal benchmark claims;
+the scheduler changes no production profile, fixture, parity row, assertion,
+or evidence origin.
 
 Remaining finer VP8/VP8L bitstream work, other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
