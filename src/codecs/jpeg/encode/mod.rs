@@ -35,6 +35,7 @@ const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
 const HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS: usize = 1_024;
 const PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS: usize = 1_024;
 const PROGRESSIVE_EVENT_CHECKPOINT_EVENTS: usize = 1_024;
+const PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS: usize = 1_024;
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -189,6 +190,7 @@ impl HuffmanFrequencyCheckpoint for TokenHuffmanFrequencyCheckpoint<'_> {
 trait ProgressiveScanCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
     fn block(&mut self) -> CodecResult<()>;
+    fn coefficient(&mut self) -> CodecResult<()>;
     fn event(&mut self) -> CodecResult<()>;
 }
 
@@ -206,6 +208,11 @@ impl ProgressiveScanCheckpoint for NoopProgressiveScanCheckpoint {
     }
 
     #[inline(always)]
+    fn coefficient(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
     fn event(&mut self) -> CodecResult<()> {
         Ok(())
     }
@@ -214,6 +221,7 @@ impl ProgressiveScanCheckpoint for NoopProgressiveScanCheckpoint {
 struct TokenProgressiveScanCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     blocks_until_checkpoint: usize,
+    coefficients_until_checkpoint: usize,
     events_until_checkpoint: usize,
 }
 
@@ -222,6 +230,7 @@ impl<'a> TokenProgressiveScanCheckpoint<'a> {
         Self {
             token,
             blocks_until_checkpoint: PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS,
+            coefficients_until_checkpoint: PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS,
             events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
         }
     }
@@ -239,6 +248,16 @@ impl ProgressiveScanCheckpoint for TokenProgressiveScanCheckpoint<'_> {
         if self.blocks_until_checkpoint == 0 {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             self.blocks_until_checkpoint = PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn coefficient(&mut self) -> CodecResult<()> {
+        self.coefficients_until_checkpoint = self.coefficients_until_checkpoint.saturating_sub(1);
+        if self.coefficients_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.coefficients_until_checkpoint = PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS;
         }
         Ok(())
     }
@@ -1934,7 +1953,8 @@ fn ac_progressive_events<C: ProgressiveScanCheckpoint>(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            );
+                checkpoint,
+            )?;
         } else {
             append_ac_refine_events(
                 &mut events,
@@ -1943,7 +1963,8 @@ fn ac_progressive_events<C: ProgressiveScanCheckpoint>(
                 table,
                 &mut eob_run,
                 &mut correction_bits,
-            );
+                checkpoint,
+            )?;
         }
         checkpoint.block()?;
     }
@@ -1951,14 +1972,15 @@ fn ac_progressive_events<C: ProgressiveScanCheckpoint>(
     Ok(events)
 }
 
-fn append_ac_first_events(
+fn append_ac_first_events<C: ProgressiveScanCheckpoint>(
     events: &mut Vec<ProgressiveEvent>,
     block: &[i16; 64],
     scan: &ProgScan,
     table: usize,
     eob_run: &mut u32,
     correction_bits: &mut Vec<u8>,
-) {
+    checkpoint: &mut C,
+) -> CodecResult<()> {
     let mut run = 0usize;
     let mut last_nonzero = None;
     for coefficient in scan.ss..=scan.se {
@@ -1969,6 +1991,7 @@ fn append_ac_first_events(
             .wrapping_shr(u32::from(scan.al));
         if absolute == 0 {
             run = run.saturating_add(1);
+            checkpoint.coefficient()?;
             continue;
         }
         if eob_run != &0 {
@@ -1999,6 +2022,7 @@ fn append_ac_first_events(
         });
         run = 0;
         last_nonzero = Some(coefficient);
+        checkpoint.coefficient()?;
     }
     if last_nonzero != Some(scan.se) {
         *eob_run = eob_run.saturating_add(1);
@@ -2006,16 +2030,18 @@ fn append_ac_first_events(
             flush_progressive_eob(events, table, eob_run, correction_bits);
         }
     }
+    Ok(())
 }
 
-fn append_ac_refine_events(
+fn append_ac_refine_events<C: ProgressiveScanCheckpoint>(
     events: &mut Vec<ProgressiveEvent>,
     block: &[i16; 64],
     scan: &ProgScan,
     table: usize,
     eob_run: &mut u32,
     correction_bits: &mut Vec<u8>,
-) {
+    checkpoint: &mut C,
+) -> CodecResult<()> {
     let coefficients = (scan.ss..=scan.se)
         .map(|coefficient| {
             let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
@@ -2036,6 +2062,7 @@ fn append_ac_refine_events(
     for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
         if absolute == 0 {
             run = run.saturating_add(1);
+            checkpoint.coefficient()?;
             continue;
         }
         last_nonzero = Some(index);
@@ -2047,6 +2074,7 @@ fn append_ac_refine_events(
         }
         if absolute > 1 {
             block_corrections.push((absolute & 1).to_le_bytes()[0]);
+            checkpoint.coefficient()?;
             continue;
         }
 
@@ -2061,6 +2089,7 @@ fn append_ac_refine_events(
         });
         append_correction_events(events, &mut block_corrections);
         run = 0;
+        checkpoint.coefficient()?;
     }
 
     if last_nonzero != Some(coefficients.len().saturating_sub(1)) || !block_corrections.is_empty() {
@@ -2070,6 +2099,7 @@ fn append_ac_refine_events(
             flush_progressive_eob(events, table, eob_run, correction_bits);
         }
     }
+    Ok(())
 }
 
 fn flush_progressive_eob(

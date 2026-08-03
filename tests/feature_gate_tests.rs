@@ -8742,6 +8742,81 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(progressive_event_sink, vec![0x61]);
 
+        // Progressive AC scan generation also walks every coefficient in the
+        // spectral band of each block. A constant 257x129 probe keeps this
+        // coefficient-item boundary independently reachable from the event
+        // frequency pass above while still traversing more than 1,024 AC
+        // positions. Pillow has no caller work budget or equivalent sink/
+        // result contract, so this remains Rust-only evidence.
+        let progressive_coefficient_image =
+            DecodedImage::new(257, 129, vec![0; 257 * 129 * 3], ColorType::Rgb8);
+        let progressive_coefficient_expected = image_slash_star::encode(
+            &progressive_coefficient_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+        )?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &progressive_coefficient_image,
+                ImageFormat::Jpeg,
+                &progressive_options,
+                &unlimited,
+            )?,
+            progressive_coefficient_expected,
+            "an ample progressive-coefficient budget preserves byte identity"
+        );
+        let progressive_coefficient_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(1_378);
+        let progressive_coefficient_error = match image_slash_star::encode_with_policy(
+            &progressive_coefficient_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_coefficient_policy,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "JPEG progressive-coefficient work budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_coefficient_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_378,
+                observed: 1_379,
+            }
+        ));
+        let mut progressive_coefficient_sink = vec![0x62];
+        let progressive_coefficient_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &progressive_coefficient_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_coefficient_policy,
+            &mut progressive_coefficient_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "JPEG progressive-coefficient work budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_coefficient_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_378,
+                observed: 1_379,
+            }
+        ));
+        assert_eq!(progressive_coefficient_sink, vec![0x62]);
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;
