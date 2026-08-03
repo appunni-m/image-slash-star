@@ -171,7 +171,8 @@ fn encode_vp8_planes(
         &decisions[..statistics_count],
         macroblock_width,
         method >= 3,
-    );
+        token,
+    )?;
     crate::codecs::error::check_cancelled(token)?;
     if method >= 6 {
         decisions = select_frame(
@@ -190,7 +191,7 @@ fn encode_vp8_planes(
         for decision in &mut decisions {
             decision.segment = segment_map[usize::from(decision.segment)];
         }
-        probabilities = adapt_coefficients(&decisions, macroblock_width, true);
+        probabilities = adapt_coefficients(&decisions, macroblock_width, true, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
     let header_data = encode_first_partition(

@@ -8402,6 +8402,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(selection_sink, vec![0xAC]);
+
+        // Coefficient-probability adaptation has 1,056 fixed probability
+        // nodes and charges at 1,024 nodes. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence with no
+        // parity row or coverage-only hook.
+        let probability_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(331);
+        let probability_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &probability_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP probability budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            probability_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 331,
+                observed: 332,
+            }
+        ));
+        let mut probability_sink = vec![0xAD];
+        let probability_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &probability_bounded,
+            &mut probability_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP probability sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            probability_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 331,
+                observed: 332,
+            }
+        ));
+        assert_eq!(probability_sink, vec![0xAD]);
     }
 
     if cfg!(feature = "gif") {
