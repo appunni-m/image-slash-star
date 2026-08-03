@@ -75,6 +75,31 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     output
 }
 
+#[cfg(feature = "png")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+pub(super) fn compress_level1_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let (tokens, final_tokens) = tokenize_level1_with_token(data, input_chunks, token)?;
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    checkpoint.poll()?;
+    let mut output = vec![0x78, 0x01];
+    let mut writer = BitWriter::default();
+    if tokens.is_empty() {
+        emit_fixed_block_with(&final_tokens, true, &mut writer, &mut checkpoint)?;
+    } else {
+        emit_fixed_block_with(&tokens, false, &mut writer, &mut checkpoint)?;
+        emit_fixed_block_with(&final_tokens, true, &mut writer, &mut checkpoint)?;
+    }
+    checkpoint.poll()?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+    checkpoint.poll()?;
+    Ok(output)
+}
+
 fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Token>) {
     let mut head = vec![0usize; HASH_SIZE];
     let mut tokens = Vec::new();
@@ -103,6 +128,52 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Toke
         tokenize_level1_position(data, available, &mut position, &mut head, &mut final_tokens);
     }
     (tokens, final_tokens)
+}
+
+#[cfg(feature = "png")]
+fn tokenize_level1_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<(Vec<Token>, Vec<Token>)> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    let mut head = vec![0usize; HASH_SIZE];
+    let mut tokens = Vec::new();
+    let mut position = 0usize;
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        checkpoint.poll()?;
+        available = available.wrapping_add(chunk_length);
+        debug_assert!(available <= data.len());
+        if position >= 1 {
+            checkpoint.poll()?;
+            quick_insert_level1(data, position.wrapping_sub(1), &mut head);
+        }
+        while available.wrapping_sub(position) >= MIN_LOOKAHEAD {
+            tokenize_level1_position_with(
+                data,
+                available,
+                &mut position,
+                &mut head,
+                &mut tokens,
+                &mut checkpoint,
+            )?;
+        }
+    }
+    debug_assert_eq!(available, data.len());
+    let mut final_tokens = Vec::new();
+    while position < available {
+        tokenize_level1_position_with(
+            data,
+            available,
+            &mut position,
+            &mut head,
+            &mut final_tokens,
+            &mut checkpoint,
+        )?;
+    }
+    checkpoint.poll()?;
+    Ok((tokens, final_tokens))
 }
 
 fn tokenize_level1_position(
@@ -139,6 +210,46 @@ fn tokenize_level1_position(
 
     tokens.push(Token::Literal(data[*position]));
     *position = position.wrapping_add(1);
+}
+
+#[cfg(feature = "png")]
+fn tokenize_level1_position_with<P: MatcherCheckpoint>(
+    data: &[u8],
+    available: usize,
+    position: &mut usize,
+    head: &mut [usize],
+    tokens: &mut Vec<Token>,
+    checkpoint: &mut P,
+) -> crate::codecs::CodecResult<()> {
+    checkpoint.poll()?;
+    let lookahead = available.wrapping_sub(*position);
+    if lookahead >= MIN_MATCH {
+        let candidate = quick_insert_level1(data, *position, head);
+        let distance = position.wrapping_sub(candidate);
+        if distance != 0
+            && distance <= MAX_DISTANCE
+            && data[candidate..candidate.saturating_add(2)]
+                == data[*position..position.saturating_add(2)]
+        {
+            let length = match_length(data, candidate, *position, lookahead.min(MAX_MATCH));
+            if length >= MIN_MATCH {
+                let mut distance = distance;
+                let mut length = length;
+                if let Some(tail_length) =
+                    level1_window_tail_distance_one(data, *position, lookahead, length)
+                {
+                    length = tail_length;
+                    distance = 1;
+                }
+                tokens.push(Token::Match { length, distance });
+                *position = position.wrapping_add(length);
+                return Ok(());
+            }
+        }
+    }
+    tokens.push(Token::Literal(data[*position]));
+    *position = position.wrapping_add(1);
+    Ok(())
 }
 
 fn level1_window_tail_distance_one(
@@ -518,6 +629,49 @@ pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     output
 }
 
+/// Compress PNG levels two through five with token-aware matcher and emission
+/// checkpoints. The no-token callers above remain on their existing helpers.
+#[cfg(feature = "png")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+pub(super) fn compress_early_level_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    level: u8,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let tokens = match level {
+        2..=4 => {
+            let (max_chain, nice_match, max_insert, fast) = match level {
+                2 => (4, 8, 4, true),
+                3 => (6, 16, 6, false),
+                4 => (24, 32, 12, false),
+                _ => unreachable!("early PNG level is outside 2..=4"),
+            };
+            tokenize_early_matcher_with_token(
+                data,
+                input_chunks,
+                max_chain,
+                nice_match,
+                max_insert,
+                fast,
+                token,
+            )?
+        }
+        5 => tokenize_lookahead_medium_with_token(data, input_chunks, 32, 32, 16, token)?,
+        _ => unreachable!("early PNG level is outside 2..=5"),
+    };
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    checkpoint.poll()?;
+    let mut output = vec![0x78, 0x5e];
+    let mut writer = BitWriter::default();
+    emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
+    checkpoint.poll()?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+    checkpoint.poll()?;
+    Ok(output)
+}
+
 /// Compress using Pillow's zlib-ng 2.3.3 level-seven slow strategy.
 pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     compress_slow_level(data, input_chunks, 32, 8, 128, 256, 0xda)
@@ -526,6 +680,30 @@ pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 /// Compress using Pillow's zlib-ng 2.3.3 level-eight slow strategy.
 pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     compress_slow_level(data, input_chunks, 128, 32, 258, 1024, 0xda)
+}
+
+#[cfg(feature = "png")]
+pub(super) fn compress_slow_level_with_token_for_png(
+    data: &[u8],
+    input_chunks: &[usize],
+    level: u8,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let (max_lazy, good_match, nice_match, max_chain) = match level {
+        7 => (32, 8, 128, 256),
+        8 => (128, 32, 258, 1024),
+        _ => unreachable!("slow PNG level is outside 7..=8"),
+    };
+    compress_slow_level_with_token(
+        data,
+        input_chunks,
+        max_lazy,
+        good_match,
+        nice_match,
+        max_chain,
+        0xda,
+        token,
+    )
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
@@ -553,6 +731,41 @@ fn compress_slow_level(
     output
 }
 
+#[cfg(feature = "png")]
+#[allow(
+    clippy::expect_used,
+    clippy::too_many_arguments,
+    clippy::unwrap_in_result
+)]
+fn compress_slow_level_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_lazy: usize,
+    good_match: usize,
+    nice_match: usize,
+    max_chain: usize,
+    header: u8,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let settings = SlowSettings {
+        max_lazy,
+        good_match,
+        nice_match,
+        max_chain,
+    };
+    let tokens = slow_with_token(data, input_chunks, settings, token)?;
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    checkpoint.poll()?;
+    let mut output = vec![0x78, header];
+    let mut writer = BitWriter::default();
+    emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
+    checkpoint.poll()?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+    checkpoint.poll()?;
+    Ok(output)
+}
+
 struct SlowSettings {
     max_lazy: usize,
     good_match: usize,
@@ -578,6 +791,35 @@ fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Vec<Toke
     debug_assert_eq!(available, data.len());
     matcher.process(available, true);
     matcher.tokens
+}
+
+#[cfg(feature = "png")]
+fn slow_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    settings: SlowSettings,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    let mut matcher = SlowMatcher::new(
+        data,
+        settings.max_lazy,
+        settings.good_match,
+        settings.nice_match,
+        settings.max_chain,
+    );
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        checkpoint.poll()?;
+        available = available.wrapping_add(chunk_length);
+        debug_assert!(available <= data.len());
+        matcher.process_with(available, false, &mut checkpoint)?;
+        checkpoint.poll()?;
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process_with(available, true, &mut checkpoint)?;
+    checkpoint.poll()?;
+    Ok(matcher.tokens)
 }
 
 struct SlowMatcher {
@@ -624,7 +866,19 @@ impl SlowMatcher {
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.process_with(available, finishing, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn process_with<P: MatcherCheckpoint>(
+        &mut self,
+        available: usize,
+        finishing: bool,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         loop {
+            checkpoint.poll()?;
             debug_assert!(self.position <= available);
             let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
@@ -643,7 +897,7 @@ impl SlowMatcher {
                 && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < self.max_lazy
             {
-                let found = self.longest_match(candidate, lookahead);
+                let found = self.longest_match_with(candidate, lookahead, checkpoint)?;
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -664,6 +918,7 @@ impl SlowMatcher {
                 for insert_position in
                     self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
                 {
+                    checkpoint.poll()?;
                     self.quick_insert(insert_position);
                 }
                 self.position = self
@@ -691,6 +946,7 @@ impl SlowMatcher {
                 .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
+        Ok(())
     }
 
     fn quick_insert(&mut self, position: usize) -> usize {
@@ -705,7 +961,19 @@ impl SlowMatcher {
         candidate
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
+    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.longest_match_with(candidate, lookahead, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail")
+    }
+
+    fn longest_match_with<P: MatcherCheckpoint>(
+        &self,
+        mut candidate: usize,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<(usize, usize)> {
         let mut best_length = self.previous_length.max(2);
         let mut best_start = self.match_start;
         let mut chain_length = self.max_chain;
@@ -714,6 +982,7 @@ impl SlowMatcher {
         }
         let limit = self.position.saturating_sub(MAX_DISTANCE);
         while candidate < self.position {
+            checkpoint.poll()?;
             if medium_candidate_can_improve(&self.data, candidate, self.position, best_length) {
                 let length = match_length(
                     &self.data,
@@ -738,7 +1007,7 @@ impl SlowMatcher {
                 break;
             }
         }
-        (best_length.min(lookahead), best_start)
+        Ok((best_length.min(lookahead), best_start))
     }
 }
 
@@ -1156,6 +1425,26 @@ pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     output
 }
 
+#[cfg(feature = "png")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+pub(super) fn compress_level9_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let tokens = tokenize_level9_with_token(data, input_chunks, token)?;
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    checkpoint.poll()?;
+    let mut output = vec![0x78, 0xda];
+    let mut writer = BitWriter::default();
+    emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
+    checkpoint.poll()?;
+    output.extend_from_slice(&writer.finish());
+    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+    checkpoint.poll()?;
+    Ok(output)
+}
+
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Vec<Token> {
     let mut matcher = Level9Matcher::new(data);
@@ -1171,6 +1460,31 @@ fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Vec<Token> {
     debug_assert_eq!(available, data.len());
     matcher.process(available, true);
     matcher.tokens
+}
+
+#[cfg(feature = "png")]
+fn tokenize_level9_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    let mut matcher = Level9Matcher::new(data);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        checkpoint.poll()?;
+        if available != 0 {
+            matcher.refill_boundary_with(&mut checkpoint)?;
+        }
+        available = available.wrapping_add(chunk_length);
+        debug_assert!(available <= data.len());
+        matcher.process_with(available, false, &mut checkpoint)?;
+        checkpoint.poll()?;
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process_with(available, true, &mut checkpoint)?;
+    checkpoint.poll()?;
+    Ok(matcher.tokens)
 }
 
 struct Level9Matcher {
@@ -1204,16 +1518,40 @@ impl Level9Matcher {
         }
     }
 
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn refill_boundary(&mut self) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.refill_boundary_with(&mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn refill_boundary_with<P: MatcherCheckpoint>(
+        &mut self,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
+        checkpoint.poll()?;
         self.hash = rolling_hash(
             usize::from(self.data[self.position]),
             self.data[self.position.wrapping_add(1)],
         );
+        checkpoint.poll()
     }
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.process_with(available, finishing, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn process_with<P: MatcherCheckpoint>(
+        &mut self,
+        available: usize,
+        finishing: bool,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         loop {
+            checkpoint.poll()?;
             debug_assert!(self.position <= available);
             let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
@@ -1232,7 +1570,7 @@ impl Level9Matcher {
                 && self.position.wrapping_sub(candidate) <= MAX_DISTANCE
                 && self.previous_length < MAX_MATCH
             {
-                let found = self.longest_match(candidate, lookahead);
+                let found = self.longest_match_with(candidate, lookahead, checkpoint)?;
                 match_length = found.0;
                 if match_length > self.previous_length {
                     self.match_start = found.1;
@@ -1253,6 +1591,7 @@ impl Level9Matcher {
                 for insert_position in
                     self.position.wrapping_add(1)..=self.position.wrapping_add(insert_count)
                 {
+                    checkpoint.poll()?;
                     self.quick_insert(insert_position);
                 }
                 self.position = self
@@ -1280,6 +1619,7 @@ impl Level9Matcher {
                 .push(Token::Literal(self.data[self.position.wrapping_sub(1)]));
             self.match_available = false;
         }
+        Ok(())
     }
 
     fn quick_insert(&mut self, position: usize) -> usize {
@@ -1293,7 +1633,19 @@ impl Level9Matcher {
         candidate
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
+    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.longest_match_with(candidate, lookahead, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail")
+    }
+
+    fn longest_match_with<P: MatcherCheckpoint>(
+        &self,
+        mut candidate: usize,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<(usize, usize)> {
         let mut best_length = self.previous_length.max(2);
         let mut best_start = self.match_start;
         let mut chain_length = if best_length >= 32 {
@@ -1317,11 +1669,12 @@ impl Level9Matcher {
         }
         let mut limit = base_limit.wrapping_add(match_offset);
         if candidate <= limit {
-            return (best_length.min(lookahead), best_start);
+            return Ok((best_length.min(lookahead), best_start));
         }
         // The preceding `candidate <= limit` return also proves
         // `candidate > match_offset`, because `limit >= match_offset`.
         while candidate < self.position.wrapping_add(match_offset) {
+            checkpoint.poll()?;
             let aligned = candidate.wrapping_sub(match_offset);
             if medium_candidate_can_improve(&self.data, aligned, self.position, best_length) {
                 let length =
@@ -1341,7 +1694,7 @@ impl Level9Matcher {
                                 self.previous[candidate.wrapping_add(index) & WINDOW_MASK];
                             if position < next_position {
                                 if position <= base_limit.wrapping_add(index) {
-                                    return (best_length.min(lookahead), best_start);
+                                    return Ok((best_length.min(lookahead), best_start));
                                 }
                                 next_position = position;
                                 match_offset = index;
@@ -1376,7 +1729,7 @@ impl Level9Matcher {
                 break;
             }
         }
-        (best_length.min(lookahead), best_start)
+        Ok((best_length.min(lookahead), best_start))
     }
 }
 
@@ -1490,6 +1843,32 @@ fn tokenize_early_matcher(
     matcher.tokens
 }
 
+#[cfg(feature = "png")]
+fn tokenize_early_matcher_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+    fast: bool,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    let mut matcher = Level3Matcher::new(data, max_chain, nice_match, max_insert, fast);
+    let mut available = 0usize;
+    for &chunk_length in input_chunks {
+        checkpoint.poll()?;
+        available = available.wrapping_add(chunk_length);
+        debug_assert!(available <= data.len());
+        matcher.process_with(available, false, &mut checkpoint)?;
+        checkpoint.poll()?;
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process_with(available, true, &mut checkpoint)?;
+    checkpoint.poll()?;
+    Ok(matcher.tokens)
+}
+
 struct Level3Matcher<'a> {
     data: &'a [u8],
     head: Vec<usize>,
@@ -1525,11 +1904,23 @@ impl<'a> Level3Matcher<'a> {
 
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn process(&mut self, available: usize, finishing: bool) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.process_with(available, finishing, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn process_with<P: MatcherCheckpoint>(
+        &mut self,
+        available: usize,
+        finishing: bool,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
         loop {
+            checkpoint.poll()?;
             debug_assert!(self.position <= available);
             let lookahead = available.wrapping_sub(self.position);
             if lookahead == 0 || (!finishing && lookahead < MIN_LOOKAHEAD) {
-                return;
+                return Ok(());
             }
 
             let mut length = 1usize;
@@ -1539,7 +1930,8 @@ impl<'a> Level3Matcher<'a> {
                 debug_assert!(candidate <= self.position);
                 let distance = self.position.wrapping_sub(candidate);
                 if candidate != 0 && distance <= MAX_DISTANCE {
-                    (length, match_start) = self.longest_match(candidate, lookahead);
+                    (length, match_start) =
+                        self.longest_match_with(candidate, lookahead, checkpoint)?;
                     if length < MIN_MATCH {
                         length = 1;
                     }
@@ -1551,7 +1943,7 @@ impl<'a> Level3Matcher<'a> {
                     length,
                     distance: self.position.wrapping_sub(match_start),
                 });
-                self.insert_match(length, lookahead);
+                self.insert_match_with(length, lookahead, checkpoint)?;
             } else {
                 self.tokens.push(Token::Literal(self.data[self.position]));
             }
@@ -1577,22 +1969,36 @@ impl<'a> Level3Matcher<'a> {
         candidate
     }
 
+    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
     fn insert_match(&mut self, length: usize, lookahead: usize) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.insert_match_with(length, lookahead, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail");
+    }
+
+    fn insert_match_with<P: MatcherCheckpoint>(
+        &mut self,
+        length: usize,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<()> {
+        checkpoint.poll()?;
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 deflate_medium.c:44-94.
         let insert_limit = if self.fast {
             debug_assert!(length <= lookahead);
             if lookahead.wrapping_sub(length) < MIN_MATCH {
-                return;
+                return Ok(());
             }
             self.max_insert
         } else {
             if lookahead <= length.wrapping_add(MIN_MATCH) {
-                return;
+                return Ok(());
             }
             16_usize.wrapping_mul(self.max_insert)
         };
         if length <= insert_limit {
             for offset in 1..length {
+                checkpoint.poll()?;
                 let position = self.position.wrapping_add(offset);
                 self.quick_insert(position);
             }
@@ -1600,9 +2006,22 @@ impl<'a> Level3Matcher<'a> {
             let end = self.position.wrapping_add(length);
             self.quick_insert(end.wrapping_sub(1));
         }
+        Ok(())
     }
 
-    fn longest_match(&self, mut candidate: usize, lookahead: usize) -> (usize, usize) {
+    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
+        let mut checkpoint = NoopMatcherCheckpoint;
+        self.longest_match_with(candidate, lookahead, &mut checkpoint)
+            .expect("the no-op matcher checkpoint cannot fail")
+    }
+
+    fn longest_match_with<P: MatcherCheckpoint>(
+        &self,
+        mut candidate: usize,
+        lookahead: usize,
+        checkpoint: &mut P,
+    ) -> crate::codecs::CodecResult<(usize, usize)> {
         // ⚠️ UNVERIFIED: zlib-ng 2.3.3 match_tpl.h:38-247, specialized for
         // level three's early-exit, nice-length, and chain limits.
         let mut best_length = 2usize;
@@ -1611,6 +2030,7 @@ impl<'a> Level3Matcher<'a> {
         let limit = self.position.saturating_sub(MAX_DISTANCE);
 
         loop {
+            checkpoint.poll()?;
             if self.candidate_can_improve(candidate, best_length) {
                 let length = match_length(
                     self.data,
@@ -1640,7 +2060,7 @@ impl<'a> Level3Matcher<'a> {
                 break;
             }
         }
-        (best_length, best_start)
+        Ok((best_length, best_start))
     }
 
     fn candidate_can_improve(&self, candidate: usize, best_length: usize) -> bool {
