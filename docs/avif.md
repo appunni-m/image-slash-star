@@ -113,8 +113,9 @@ AVIF stack" for sequence decode, "AVIF encoding requires the native extra
 module" for still and sequence encode) that match the capability table;
 out-of-subset still decode returns "AVIF input is outside the portable WASM
 decode subset" at the `StillDecode` stage. When an AVIF item declares an
-alpha auxiliary item, `SourceDescriptor::alpha()` reports `Straight`
-(unassociated), matching the AVIF alpha contract.
+alpha auxiliary item, `SourceDescriptor::alpha()` reports `Auxiliary`,
+identifying that the alpha samples are carried by a separate image. Decoded
+transfer bytes remain the documented normalized unassociated layout.
 
 The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
 `clli` content-light-level
@@ -132,8 +133,9 @@ Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Non-ICC item profiles, track-only and auxiliary item properties, and other
-non-primary item relationships remain future slices.
+Non-ICC item profiles, track-only and non-alpha auxiliary item properties, and
+other non-primary item relationships remain future slices; the auxiliary-alpha
+source association is represented through `SourceAlpha::Auxiliary`.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
 in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
@@ -143,7 +145,8 @@ and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
 pixels are never rotated, mirrored, rescaled, or cropped. Non-primary item-level
-ICC, auxiliary relationships, and other item metadata remain open.
+ICC, non-alpha auxiliary relationships, and other item metadata remain open;
+auxiliary-alpha provenance is represented through `SourceAlpha::Auxiliary`.
 
 ## Native FFI boundary
 

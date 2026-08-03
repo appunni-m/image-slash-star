@@ -120,11 +120,11 @@ Pillow's result into a new parity field. The
 `IDAT` and `IEND` CRCs remain fatal at Rust `verify()`.
 
 `SourceDescriptor::alpha()` records the alpha association declared by the
-encoded source: straight (PNG, WebP, AVIF, TIFF `ExtraSamples` 2),
-premultiplied (TIFF `ExtraSamples` 1), binary mask (GIF transparency), or the
-reserved auxiliary class. It never changes decoded transfer bytes, which stay
-the documented normalized unassociated layout unless a codec explicitly
-retains source-order bytes.
+encoded source: straight (PNG, WebP, and TIFF `ExtraSamples` 2), premultiplied
+(TIFF `ExtraSamples` 1), binary mask (GIF transparency), or auxiliary (AVIF
+alpha items whose samples are carried by a separate image). It never changes
+decoded transfer bytes, which stay the documented normalized unassociated
+layout unless a codec explicitly retains source-order bytes.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the

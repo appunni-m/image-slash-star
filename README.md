@@ -275,11 +275,11 @@ described as timed animation.
 
 `SourceDescriptor::alpha()` reports the alpha association declared by the
 encoded container: straight/unassociated alpha (PNG alpha channels and palette
-tRNS, WebP VP8X/VP8L alpha, TIFF `ExtraSamples` 2, AVIF alpha items), TIFF
-`ExtraSamples` 1 as premultiplied/associated, GIF transparency as a binary
-mask, and a reserved auxiliary variant for future separate alpha channels.
-Decoded transfer bytes remain the documented normalized unassociated layout;
-the descriptor records only what the source declares.
+tRNS, WebP VP8X/VP8L alpha, and TIFF `ExtraSamples` 2), TIFF `ExtraSamples` 1
+as premultiplied/associated, GIF transparency as a binary mask, and AVIF alpha
+items as `SourceAlpha::Auxiliary` because their samples are carried by a
+separate image. Decoded transfer bytes remain the documented normalized
+unassociated layout; the descriptor records only what the source declares.
 
 Decoded images and sequences retain `OpaqueBlock` records for container blocks
 the codec does not interpret, in original order with duplicates and the
