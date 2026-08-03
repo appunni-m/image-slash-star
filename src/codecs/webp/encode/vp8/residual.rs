@@ -15,72 +15,140 @@ const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 13
 const COEFFICIENT_CHECKPOINT_TOKENS: usize = 4_000;
 const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
+const COEFFICIENT_CHECKPOINT_BITS: usize = 16_384;
 
-struct CoefficientCheckpoint<'a> {
-    token: Option<&'a crate::CancellationToken>,
-    token_items: usize,
-    block_items: usize,
+trait CoefficientCheckpointControl {
+    fn checkpoint_token(&mut self) -> CodecResult<()>;
+    fn checkpoint_block(&mut self) -> CodecResult<()>;
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
+    fn checkpoint_bit(&mut self) -> CodecResult<()>;
 }
 
-impl CoefficientCheckpoint<'_> {
+struct NoopCoefficientCheckpoint;
+
+impl CoefficientCheckpointControl for NoopCoefficientCheckpoint {
+    #[inline(always)]
     fn checkpoint_token(&mut self) -> CodecResult<()> {
-        let Some(token) = self.token else {
-            return Ok(());
-        };
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenCoefficientCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    token_items: usize,
+    block_items: usize,
+    macroblock_items: usize,
+    bit_items: usize,
+}
+
+impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
+    #[inline]
+    fn checkpoint_token(&mut self) -> CodecResult<()> {
         self.token_items = self.token_items.saturating_add(1);
         if self
             .token_items
             .is_multiple_of(COEFFICIENT_CHECKPOINT_TOKENS)
         {
-            crate::codecs::error::check_cancelled(Some(token))?;
+            crate::codecs::error::check_cancelled(Some(self.token))?;
         }
         Ok(())
     }
 
+    #[inline]
     fn checkpoint_block(&mut self) -> CodecResult<()> {
-        let Some(token) = self.token else {
-            return Ok(());
-        };
         self.block_items = self.block_items.saturating_add(1);
         if self
             .block_items
             .is_multiple_of(COEFFICIENT_CHECKPOINT_BLOCKS)
         {
-            crate::codecs::error::check_cancelled(Some(token))?;
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        self.macroblock_items = self.macroblock_items.saturating_add(1);
+        if self
+            .macroblock_items
+            .is_multiple_of(COEFFICIENT_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        self.bit_items = self.bit_items.saturating_add(1);
+        if self.bit_items.is_multiple_of(COEFFICIENT_CHECKPOINT_BITS) {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
         }
         Ok(())
     }
 }
 
-fn write_category_bits(
+#[inline]
+fn encode_bool<P: CoefficientCheckpointControl>(
+    writer: &mut BoolEncoder,
+    probability: u8,
+    value: bool,
+    checkpoint: &mut P,
+) -> CodecResult<()> {
+    writer.encode_bool(probability, value);
+    checkpoint.checkpoint_bit()
+}
+
+fn write_category_bits<P: CoefficientCheckpointControl>(
     writer: &mut BoolEncoder,
     residue: u16,
     bit_count: usize,
     probabilities: &[u8],
-) {
+    checkpoint: &mut P,
+) -> CodecResult<()> {
     for bit in (0..bit_count).rev() {
-        writer.encode_bool(
+        encode_bool(
+            writer,
             probabilities[bit_count.saturating_sub(1).saturating_sub(bit)],
             residue & 1u16.wrapping_shl(bit.to_le_bytes()[0].into()) != 0,
-        );
+            checkpoint,
+        )?;
     }
+    Ok(())
 }
 
-fn write_block(
+fn write_block<P: CoefficientCheckpointControl>(
     writer: &mut BoolEncoder,
     probabilities: &AdaptedProbabilities,
     levels: &[i16; 16],
     first: usize,
     coefficient_type: usize,
     initial_context: usize,
-    checkpoint: &mut CoefficientCheckpoint<'_>,
+    checkpoint: &mut P,
 ) -> CodecResult<u8> {
     let Some(last) = (first..16).rev().find(|&position| levels[position] != 0) else {
-        writer.encode_bool(
+        encode_bool(
+            writer,
             probabilities.coefficients[coefficient_type][usize::from(COEFF_BANDS[first])]
                 [initial_context][0],
             false,
-        );
+            checkpoint,
+        )?;
         checkpoint.checkpoint_token()?;
         return Ok(0);
     };
@@ -88,10 +156,12 @@ fn write_block(
     let mut position = first;
     let mut band = usize::from(COEFF_BANDS[position]);
     let mut context = initial_context;
-    writer.encode_bool(
+    encode_bool(
+        writer,
         probabilities.coefficients[coefficient_type][band][context][0],
         true,
-    );
+        checkpoint,
+    )?;
 
     loop {
         let coefficient = levels[position];
@@ -100,92 +170,98 @@ fn write_block(
         let node_probabilities = probabilities.coefficients[coefficient_type][band][context];
 
         if magnitude == 0 {
-            writer.encode_bool(node_probabilities[1], false);
+            encode_bool(writer, node_probabilities[1], false, checkpoint)?;
             band = usize::from(COEFF_BANDS[position]);
             context = 0;
             checkpoint.checkpoint_token()?;
             continue;
         }
 
-        writer.encode_bool(node_probabilities[1], true);
+        encode_bool(writer, node_probabilities[1], true, checkpoint)?;
         if magnitude == 1 {
-            writer.encode_bool(node_probabilities[2], false);
+            encode_bool(writer, node_probabilities[2], false, checkpoint)?;
             context = 1;
         } else {
-            writer.encode_bool(node_probabilities[2], true);
+            encode_bool(writer, node_probabilities[2], true, checkpoint)?;
             if magnitude <= 4 {
-                writer.encode_bool(node_probabilities[3], false);
+                encode_bool(writer, node_probabilities[3], false, checkpoint)?;
                 let not_two = magnitude != 2;
-                writer.encode_bool(node_probabilities[4], not_two);
+                encode_bool(writer, node_probabilities[4], not_two, checkpoint)?;
                 if not_two {
-                    writer.encode_bool(node_probabilities[5], magnitude == 4);
+                    encode_bool(writer, node_probabilities[5], magnitude == 4, checkpoint)?;
                 }
             } else if magnitude <= 10 {
-                writer.encode_bool(node_probabilities[3], true);
-                writer.encode_bool(node_probabilities[6], false);
+                encode_bool(writer, node_probabilities[3], true, checkpoint)?;
+                encode_bool(writer, node_probabilities[6], false, checkpoint)?;
                 let greater_than_six = magnitude > 6;
-                writer.encode_bool(node_probabilities[7], greater_than_six);
+                encode_bool(writer, node_probabilities[7], greater_than_six, checkpoint)?;
                 if greater_than_six {
-                    writer.encode_bool(165, magnitude >= 9);
-                    writer.encode_bool(145, magnitude & 1 == 0);
+                    encode_bool(writer, 165, magnitude >= 9, checkpoint)?;
+                    encode_bool(writer, 145, magnitude & 1 == 0, checkpoint)?;
                 } else {
-                    writer.encode_bool(159, magnitude == 6);
+                    encode_bool(writer, 159, magnitude == 6, checkpoint)?;
                 }
             } else {
-                writer.encode_bool(node_probabilities[3], true);
-                writer.encode_bool(node_probabilities[6], true);
+                encode_bool(writer, node_probabilities[3], true, checkpoint)?;
+                encode_bool(writer, node_probabilities[6], true, checkpoint)?;
                 if magnitude < 19 {
-                    writer.encode_bool(node_probabilities[8], false);
-                    writer.encode_bool(node_probabilities[9], false);
+                    encode_bool(writer, node_probabilities[8], false, checkpoint)?;
+                    encode_bool(writer, node_probabilities[9], false, checkpoint)?;
                     write_category_bits(
                         writer,
                         magnitude.saturating_sub(11),
                         3,
                         &CAT3_PROBABILITIES,
-                    );
+                        checkpoint,
+                    )?;
                 } else if magnitude < 35 {
-                    writer.encode_bool(node_probabilities[8], false);
-                    writer.encode_bool(node_probabilities[9], true);
+                    encode_bool(writer, node_probabilities[8], false, checkpoint)?;
+                    encode_bool(writer, node_probabilities[9], true, checkpoint)?;
                     write_category_bits(
                         writer,
                         magnitude.saturating_sub(19),
                         4,
                         &CAT4_PROBABILITIES,
-                    );
+                        checkpoint,
+                    )?;
                 } else if magnitude < 67 {
-                    writer.encode_bool(node_probabilities[8], true);
-                    writer.encode_bool(node_probabilities[10], false);
+                    encode_bool(writer, node_probabilities[8], true, checkpoint)?;
+                    encode_bool(writer, node_probabilities[10], false, checkpoint)?;
                     write_category_bits(
                         writer,
                         magnitude.saturating_sub(35),
                         5,
                         &CAT5_PROBABILITIES,
-                    );
+                        checkpoint,
+                    )?;
                 } else {
-                    writer.encode_bool(node_probabilities[8], true);
-                    writer.encode_bool(node_probabilities[10], true);
+                    encode_bool(writer, node_probabilities[8], true, checkpoint)?;
+                    encode_bool(writer, node_probabilities[10], true, checkpoint)?;
                     write_category_bits(
                         writer,
                         magnitude.saturating_sub(67),
                         11,
                         &CAT6_PROBABILITIES,
-                    );
+                        checkpoint,
+                    )?;
                 }
             }
             context = 2;
         }
 
-        writer.encode_bool(128, coefficient < 0);
+        encode_bool(writer, 128, coefficient < 0, checkpoint)?;
         if position == 16 {
             checkpoint.checkpoint_token()?;
             return Ok(1);
         }
         band = usize::from(COEFF_BANDS[position]);
         let has_more = position <= last;
-        writer.encode_bool(
+        encode_bool(
+            writer,
             probabilities.coefficients[coefficient_type][band][context][0],
             has_more,
-        );
+            checkpoint,
+        )?;
         if !has_more {
             checkpoint.checkpoint_token()?;
             return Ok(1);
@@ -194,14 +270,14 @@ fn write_block(
     }
 }
 
-fn write_block_with_checkpoint(
+fn write_block_with_checkpoint<P: CoefficientCheckpointControl>(
     writer: &mut BoolEncoder,
     probabilities: &AdaptedProbabilities,
     levels: &[i16; 16],
     first: usize,
     coefficient_type: usize,
     initial_context: usize,
-    checkpoint: &mut CoefficientCheckpoint<'_>,
+    checkpoint: &mut P,
 ) -> CodecResult<u8> {
     let nonzero = write_block(
         writer,
@@ -216,22 +292,16 @@ fn write_block_with_checkpoint(
     Ok(nonzero)
 }
 
-pub(super) fn encode_coefficients(
+fn encode_coefficients_with_checkpoint<P: CoefficientCheckpointControl>(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     probabilities: &AdaptedProbabilities,
-    token: Option<&crate::CancellationToken>,
+    checkpoint: &mut P,
 ) -> CodecResult<Vec<u8>> {
     let mut writer = BoolEncoder::default();
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
-    let mut coefficient_checkpoint = CoefficientCheckpoint {
-        token,
-        token_items: 0,
-        block_items: 0,
-    };
-    let mut macroblock_items = 0usize;
 
     for row in decisions.chunks_exact(macroblock_width) {
         let mut left_y = [0u8; 4];
@@ -248,7 +318,7 @@ pub(super) fn encode_coefficients(
                         0,
                         1,
                         usize::from(top_y2[x].saturating_add(left_y2)),
-                        &mut coefficient_checkpoint,
+                        checkpoint,
                     )?;
                     top_y2[x] = nonzero;
                     left_y2 = nonzero;
@@ -262,7 +332,7 @@ pub(super) fn encode_coefficients(
                                 1,
                                 0,
                                 usize::from(top_nonzero.saturating_add(*left_nonzero)),
-                                &mut coefficient_checkpoint,
+                                checkpoint,
                             )?;
                             *top_nonzero = nonzero;
                             *left_nonzero = nonzero;
@@ -280,7 +350,7 @@ pub(super) fn encode_coefficients(
                                 0,
                                 3,
                                 usize::from(top_nonzero.saturating_add(*left_nonzero)),
-                                &mut coefficient_checkpoint,
+                                checkpoint,
                             )?;
                             *top_nonzero = nonzero;
                             *left_nonzero = nonzero;
@@ -304,18 +374,46 @@ pub(super) fn encode_coefficients(
                             0,
                             2,
                             usize::from(top_uv[x][top_index].saturating_add(left_uv[left_index])),
-                            &mut coefficient_checkpoint,
+                            checkpoint,
                         )?;
                         top_uv[x][top_index] = nonzero;
                         left_uv[left_index] = nonzero;
                     }
                 }
             }
-            macroblock_items = macroblock_items.saturating_add(1);
-            if macroblock_items.is_multiple_of(COEFFICIENT_CHECKPOINT_MACROBLOCKS) {
-                crate::codecs::error::check_cancelled(token)?;
-            }
+            checkpoint.checkpoint_macroblock()?;
         }
     }
     Ok(writer.finish())
+}
+
+pub(super) fn encode_coefficients(
+    decisions: &[MacroblockDecision],
+    macroblock_width: usize,
+    probabilities: &AdaptedProbabilities,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenCoefficientCheckpoint {
+            token,
+            token_items: 0,
+            block_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+        };
+        encode_coefficients_with_checkpoint(
+            decisions,
+            macroblock_width,
+            probabilities,
+            &mut checkpoint,
+        )
+    } else {
+        let mut checkpoint = NoopCoefficientCheckpoint;
+        encode_coefficients_with_checkpoint(
+            decisions,
+            macroblock_width,
+            probabilities,
+            &mut checkpoint,
+        )
+    }
 }
