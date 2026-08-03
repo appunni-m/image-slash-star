@@ -12,12 +12,44 @@ const CAT3_PROBABILITIES: [u8; 3] = [173, 148, 140];
 const CAT4_PROBABILITIES: [u8; 4] = [176, 155, 140, 135];
 const CAT5_PROBABILITIES: [u8; 5] = [180, 157, 141, 134, 130];
 const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 133, 130, 129];
+const COEFFICIENT_CHECKPOINT_TOKENS: usize = 4_000;
 const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
 
 struct CoefficientCheckpoint<'a> {
     token: Option<&'a crate::CancellationToken>,
+    token_items: usize,
     block_items: usize,
+}
+
+impl CoefficientCheckpoint<'_> {
+    fn checkpoint_token(&mut self) -> CodecResult<()> {
+        let Some(token) = self.token else {
+            return Ok(());
+        };
+        self.token_items = self.token_items.saturating_add(1);
+        if self
+            .token_items
+            .is_multiple_of(COEFFICIENT_CHECKPOINT_TOKENS)
+        {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+        Ok(())
+    }
+
+    fn checkpoint_block(&mut self) -> CodecResult<()> {
+        let Some(token) = self.token else {
+            return Ok(());
+        };
+        self.block_items = self.block_items.saturating_add(1);
+        if self
+            .block_items
+            .is_multiple_of(COEFFICIENT_CHECKPOINT_BLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+        Ok(())
+    }
 }
 
 fn write_category_bits(
@@ -41,14 +73,16 @@ fn write_block(
     first: usize,
     coefficient_type: usize,
     initial_context: usize,
-) -> u8 {
+    checkpoint: &mut CoefficientCheckpoint<'_>,
+) -> CodecResult<u8> {
     let Some(last) = (first..16).rev().find(|&position| levels[position] != 0) else {
         writer.encode_bool(
             probabilities.coefficients[coefficient_type][usize::from(COEFF_BANDS[first])]
                 [initial_context][0],
             false,
         );
-        return 0;
+        checkpoint.checkpoint_token()?;
+        return Ok(0);
     };
 
     let mut position = first;
@@ -69,6 +103,7 @@ fn write_block(
             writer.encode_bool(node_probabilities[1], false);
             band = usize::from(COEFF_BANDS[position]);
             context = 0;
+            checkpoint.checkpoint_token()?;
             continue;
         }
 
@@ -142,7 +177,8 @@ fn write_block(
 
         writer.encode_bool(128, coefficient < 0);
         if position == 16 {
-            return 1;
+            checkpoint.checkpoint_token()?;
+            return Ok(1);
         }
         band = usize::from(COEFF_BANDS[position]);
         let has_more = position <= last;
@@ -151,8 +187,10 @@ fn write_block(
             has_more,
         );
         if !has_more {
-            return 1;
+            checkpoint.checkpoint_token()?;
+            return Ok(1);
         }
+        checkpoint.checkpoint_token()?;
     }
 }
 
@@ -172,17 +210,9 @@ fn write_block_with_checkpoint(
         first,
         coefficient_type,
         initial_context,
-    );
-    let Some(token) = checkpoint.token else {
-        return Ok(nonzero);
-    };
-    checkpoint.block_items = checkpoint.block_items.saturating_add(1);
-    if checkpoint
-        .block_items
-        .is_multiple_of(COEFFICIENT_CHECKPOINT_BLOCKS)
-    {
-        crate::codecs::error::check_cancelled(Some(token))?;
-    }
+        checkpoint,
+    )?;
+    checkpoint.checkpoint_block()?;
     Ok(nonzero)
 }
 
@@ -198,6 +228,7 @@ pub(super) fn encode_coefficients(
     let mut top_y2 = vec![0u8; macroblock_width];
     let mut coefficient_checkpoint = CoefficientCheckpoint {
         token,
+        token_items: 0,
         block_items: 0,
     };
     let mut macroblock_items = 0usize;
