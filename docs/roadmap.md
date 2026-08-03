@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`3a24dd85e507a777492267dfd13a01c508f392d3`; the claim-ledger baseline remains
+`38af2d21830356eefa202f60f5b16c44934b8924`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -2945,13 +2945,53 @@ Remaining finer VP8/VP8L bitstream work, other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
 
+The finer lossless WebP/VP8L logical-bitstream checkpoint slice is implemented
+at `38af2d21830356eefa202f60f5b16c44934b8924`. Token-aware VP8L bit writing now
+charges a checkpoint whenever the accumulated logical bit count crosses a
+1,024-bit interval, while retaining the 1,024-byte emitted-output interval;
+every fourth logical crossing therefore preserves the former 4,096-bit
+boundary. The ordinary no-token path remains a monomorphized no-op controller
+and preserves existing bytes. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` proves ample-budget byte
+identity and the finer logical-bitstream rejection at `maximum: 55,996`,
+`observed: 55,997`, in both whole-buffer and direct-sink paths, with both sinks
+untouched. The existing coarser logical and emitted-output probes remain
+covered separately. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this adds no parity row, fixture, diagnostic origin, or
+coverage-only hook.
+
+Managed Pillow parity run `14dfc194-5397-4eff-b8f4-40053a7ab1c4` passed
+1,445/1,445 checks with zero failures or skips in 37,753 ms. Feature-matrix run
+`ae5dda88-c11d-45e6-80c0-f266ce41ed23` passed 991/991 checks in 73,301 ms;
+its retained log had no `lock-wait` match and ended with `capability tables OK:
+every native and wasm32-wasip1 lane agrees`. Coverage MCP run
+`716cf30f-561a-406e-bada-8a68b7f366e9` passed 85/85 tests in 47,510 ms and
+ingested snapshot `5786f56a-8e4e-4cf4-b1ea-7f3fee2e2091`, reporting
+50,813/51,279 lines, 7,010/7,094 branches, 2,828/2,897 functions, and
+78,966/79,999 regions. Compared with snapshot
+`33b8c596-907d-47e1-bc99-fbd8cfaf1d5e`, this adds no covered or total lines,
+branches, or functions and one covered region (+0 total). The WebP encoder file
+is 1,467/1,477 lines, 226/226 branches, 77/77 functions, and 2,127/2,228
+regions; its ten uncovered lines remain defensive cancellation/unexpected-token
+or codec-error propagation edges. The LLVM JSON segment-normalization warning
+remains. These implementation and target records remain separate from Pillow
+parity; aggregate coverage includes the ordinary Rust work-budget contract
+incidentally.
+
+Remaining finer VP8 bitstream work beyond its 4,096-bit logical first-partition,
+16,384-boolean first-partition/coefficient-bit, and 1,024-byte output intervals;
+finer VP8L bitstream work beyond its 1,024-bit logical and 1,024-byte output
+intervals; other codec interior work, transient allocation accounting,
+short/interrupted output, rollback, and remaining non-checkpointed work-budget
+semantics remain open.
+
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
    beyond the implemented PNG 1,024-byte row, PNG stored-block boundary/copy and all-level
    Deflate checkpoints, BMP row-conversion subsegments,
-   and the implemented WebP 4,096-bit logical and 16,384-boolean first-partition-bit
+   and the implemented WebP VP8 4,096-bit logical and 16,384-boolean first-partition-bit
    and coefficient-bit intervals plus 1,024-byte boolean-bitstream output intervals
-   and the 4,096-bit logical VP8L bitstream interval; remaining finer WebP bitstream stages,
+   and the 1,024-bit logical VP8L bitstream intervals; remaining finer WebP bitstream stages,
    work-budget semantics, and short-write/rollback
    cleanup. Keep
    allocation accounting and structural writing as distinct open resource
@@ -3022,7 +3062,7 @@ probability adaptation, 4,096-bit logical and 16,384-boolean first-partition-bit
 4,096-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals, and bitstream
 assembly, plus lossless WebP VP8L predictor/cross-color/entropy/transform,
 bounded backward-reference search/match-length/cache/trace, histogram/Huffman,
-token-stream, 4,096-bit logical bitstream, and 1,024-byte output stages, now
+token-stream, 1,024-bit logical bitstream intervals, and 1,024-byte output stages, now
 charge additional checkpoints.
 Whole-buffer encoders
 allocate before that check; the JPEG, PNG, BMP, ICO, and TIFF still sink paths,
@@ -3035,7 +3075,7 @@ beyond the implemented PNG row, BMP row-conversion, GIF RGB/RGBA palette/index i
 subsegments, and WebP VP8 work beyond the implemented 4,096-bit logical
 first-partition, 16,384-boolean first-partition/coefficient-bit, and 1,024-byte
 boolean-bitstream output intervals plus WebP
-VP8L work beyond the 4,096-bit logical bitstream and 1,024-byte output intervals,
+VP8L work beyond the 1,024-bit logical bitstream and 1,024-byte output intervals,
 finer WebP bitstream work,
 remaining work-budget semantics, and short-write/rollback cleanup remain the next resource/I/O
 boundaries.
