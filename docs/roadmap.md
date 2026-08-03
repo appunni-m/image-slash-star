@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-03 against current implementation revision
-`cc6ed8fa71ccce70bcc5014a5bc8fb19f8734056`; the claim-ledger baseline remains
+`f7a8cd7efdf398c4df564ea29ffa2fcc99e6afdf`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1230,15 +1230,14 @@ result treats the Rust-only diagnostic fields as Pillow parity. The diagnostic
 contract passed in all 22 retained feature-lane executions, and the provenance
 verifier passed separately.
 Current COR-061 revalidation is against implementation revision
-`cc6ed8fa71ccce70bcc5014a5bc8fb19f8734056`. Managed feature-matrix run
-`64f0414e-b049-462f-a54d-d44b446e3d8a` passed 991/991 checks; its retained log
+`f7a8cd7efdf398c4df564ea29ffa2fcc99e6afdf`. Managed feature-matrix run
+`42260e83-2f2b-4d7b-9219-76c415a43f0c` passed 991/991 checks; its retained log
 contains 22 successful executions of
 `diagnostic_manifest_matches_the_non_parity_contract`, one per feature lane,
 with no build-directory or package-cache lock-wait matches. Managed Coverage
-MCP run `da96b55e-13f9-4a82-b1da-3e8918429a9d` passed 85/85 tests in 51,124 ms;
-its retained log explicitly records the same diagnostic contract as `ok` and
-ingested snapshot `3713d12e-690f-4eb8-ba03-d11b8a2edde2`. The current managed
-Pillow parity run `dfc45aea-1e64-4017-aad6-b4b6e5edb277` passed 1,445/1,445
+MCP run `f95bdb91-394f-461e-bc13-ea970997de88` passed 85/85 tests in 69,986 ms
+and ingested snapshot `109c8920-2045-4cfb-a894-b2e2842ccfbc`. The current managed
+Pillow parity run `6e993f5a-d280-4fc5-8191-41086674d433` passed 1,445/1,445
 outer-result checks separately; it contains no diagnostic field or claim.
 These current records revalidate COR-061 without converting Rust-only
 diagnostic execution into Pillow-parity coverage.
@@ -2690,10 +2689,48 @@ and codec-error propagation edges, while the 13 partial-branch lines are
 boundary alternatives in the writer and encoder paths. The aggregate snapshot
 retains the LLVM segment-normalization warning. These are implementation and
 target records separate from Pillow parity. Remaining finer VP8L bitstream work
-beyond the 4,096-bit logical interval and the 1,024-byte output interval, other
-codec interior work, transient
+beyond the 1,024-byte output interval, other codec interior work, transient
 allocation accounting, short/interrupted output, rollback, and remaining
 non-checkpointed work-budget semantics remain open.
+
+The current VP8L logical-bitstream checkpoint slice is implemented at
+`f7a8cd7efdf398c4df564ea29ffa2fcc99e6afdf`. Token-aware VP8L bit writing now
+charges a checkpoint whenever the accumulated logical bit count crosses a
+4,096-bit interval, while retaining the existing checkpoint after each 1,024
+newly emitted output bytes, including final buffered-byte flushes. Compression
+search trials preserve both counters when the shortest candidate is selected;
+the no-token path remains a monomorphized no-op controller. The existing
+Rust-only `encode_work_budget_is_a_non_parity_result_contract` uses a patterned
+128x128 RGB probe to prove whole-buffer and direct-sink rejection at
+`maximum: 56,000`, `observed: 56,001` for the logical-bitstream boundary, and
+at `maximum: 55,999`, `observed: 56,000` for the emitted-output boundary; both
+sinks remain untouched, and an ample budget preserves byte identity. Pillow
+has no caller token, work-budget result, or caller-owned sink, so this adds no
+parity row, fixture, diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `6e993f5a-d280-4fc5-8191-41086674d433` passed
+1,445/1,445 checks with zero failures or skips in 43,482 ms. Feature-matrix run
+`42260e83-2f2b-4d7b-9219-76c415a43f0c` passed 991/991 checks in 118,671 ms;
+its retained log has no build-directory or package-cache lock-wait matches and
+ends with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `f95bdb91-394f-461e-bc13-ea970997de88` passed 85/85 tests in
+69,986 ms and ingested snapshot `109c8920-2045-4cfb-a894-b2e2842ccfbc`,
+reporting 50,377/50,819 lines, 6,988/7,064 branches, 2,807/2,875 functions,
+and 78,276/79,215 regions. Compared with snapshot
+`3713d12e-690f-4eb8-ba03-d11b8a2edde2`, this adds 16 covered lines (+16 total),
+two covered branches (+2 total), two covered functions (+2 total), and 26
+covered regions (+24 total). `src/codecs/webp/native/encoder.rs` is 1,467/1,477
+lines, 226/226 branches, 77/77 functions, and 2,126/2,228 regions; its ten
+uncovered lines and 13 partial-branch lines remain defensive propagation or
+boundary alternatives. The aggregate snapshot retains the LLVM
+segment-normalization warning. These are implementation and target records
+separate from Pillow parity; aggregate coverage includes the ordinary Rust
+work-control contract incidentally.
+
+Remaining finer VP8L bitstream work beyond the 4,096-bit logical interval and
+1,024-byte output interval, other codec interior work, transient allocation
+accounting, short/interrupted output, rollback, and remaining non-checkpointed
+work-budget semantics remain open.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation accounting, interior encode interruption
