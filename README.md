@@ -205,7 +205,7 @@ WebP VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each
 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection
 subsegments plus VP8's 256-bit and 512-bit logical and 16,384-boolean first-partition and
 256-bit and 512-bit logical coefficient-bit intervals, lossless VP8L 256-bit and
-512-bit logical bitstream intervals and 1,024-byte output intervals, and each
+16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream intervals and 1,024-byte output intervals, and each
 writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
 frame/coalescing/page/finalization boundaries. A structural sink cancellation

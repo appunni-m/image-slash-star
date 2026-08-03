@@ -15,6 +15,7 @@ const CAT6_PROBABILITIES: [u8; 11] = [254, 254, 243, 230, 196, 177, 153, 140, 13
 const COEFFICIENT_CHECKPOINT_TOKENS: usize = 4_000;
 const COEFFICIENT_CHECKPOINT_BLOCKS: usize = 64;
 const COEFFICIENT_CHECKPOINT_MACROBLOCKS: usize = 256;
+const COEFFICIENT_16_BIT_CHECKPOINT_BITS: usize = 16;
 const COEFFICIENT_32_BIT_CHECKPOINT_BITS: usize = 32;
 const COEFFICIENT_64_BIT_CHECKPOINT_BITS: usize = 64;
 const COEFFICIENT_FINER_CHECKPOINT_BITS: usize = 128;
@@ -132,36 +133,42 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
     #[inline]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
         // Every logical interval counts the same boolean operations. Keep one
-        // counter and nest the larger intervals under the 32-bit poll so the
+        // counter and nest the larger intervals under the 16-bit poll so the
         // token-aware path does not perform redundant modulo tests per bit.
         self.bit_items = self.bit_items.saturating_add(1);
         if self
             .bit_items
-            .is_multiple_of(COEFFICIENT_32_BIT_CHECKPOINT_BITS)
+            .is_multiple_of(COEFFICIENT_16_BIT_CHECKPOINT_BITS)
         {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             if self
                 .bit_items
-                .is_multiple_of(COEFFICIENT_64_BIT_CHECKPOINT_BITS)
+                .is_multiple_of(COEFFICIENT_32_BIT_CHECKPOINT_BITS)
             {
                 crate::codecs::error::check_cancelled(Some(self.token))?;
                 if self
                     .bit_items
-                    .is_multiple_of(COEFFICIENT_FINER_CHECKPOINT_BITS)
+                    .is_multiple_of(COEFFICIENT_64_BIT_CHECKPOINT_BITS)
                 {
                     crate::codecs::error::check_cancelled(Some(self.token))?;
                     if self
                         .bit_items
-                        .is_multiple_of(COEFFICIENT_FINEST_CHECKPOINT_BITS)
+                        .is_multiple_of(COEFFICIENT_FINER_CHECKPOINT_BITS)
                     {
                         crate::codecs::error::check_cancelled(Some(self.token))?;
                         if self
                             .bit_items
-                            .is_multiple_of(COEFFICIENT_FINE_CHECKPOINT_BITS)
+                            .is_multiple_of(COEFFICIENT_FINEST_CHECKPOINT_BITS)
                         {
                             crate::codecs::error::check_cancelled(Some(self.token))?;
-                            if self.bit_items.is_multiple_of(COEFFICIENT_CHECKPOINT_BITS) {
+                            if self
+                                .bit_items
+                                .is_multiple_of(COEFFICIENT_FINE_CHECKPOINT_BITS)
+                            {
                                 crate::codecs::error::check_cancelled(Some(self.token))?;
+                                if self.bit_items.is_multiple_of(COEFFICIENT_CHECKPOINT_BITS) {
+                                    crate::codecs::error::check_cancelled(Some(self.token))?;
+                                }
                             }
                         }
                     }
