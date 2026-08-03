@@ -9071,9 +9071,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
 
         // This patterned probe reaches the deeper VP8L writer intervals only
         // after the earlier lossless stages. The exact rejection at the
-        // logical 4,096-bit interval proves that bitstream work—not a parity
-        // fixture or a synthetic coverage hook—owns this boundary. Pillow has
-        // no caller work budget or sink.
+        // selected bitstream and output intervals below prove that real
+        // bitstream work—not a parity fixture or a synthetic coverage hook—
+        // owns these boundaries. Pillow has no caller work budget or sink.
         let mut output_lossless_pixels = Vec::with_capacity(128 * 128 * 3);
         for index in 0..128 * 128 {
             let x = u8::try_from(index % 128)?;
@@ -9098,11 +9098,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             output_lossless_expected,
             "an ample VP8L output budget preserves byte identity"
         );
-        // The finer VP8L logical-bitstream interval rejects at the first
-        // 256-bit boundary. This remains Rust-only work-control evidence:
-        // Pillow has no caller budget or equivalent result.
+        // The finer VP8L logical-bitstream interval rejects at a selected
+        // 128-bit boundary after the earlier lossless stages. This remains
+        // Rust-only work-control evidence: Pillow has no caller budget or
+        // equivalent result.
         let finest_bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(54_820);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_010);
         let finest_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -9118,8 +9119,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_820,
-                observed: 54_821,
+                maximum: 56_010,
+                observed: 56_011,
             }
         ));
         let mut finest_bitstream_checkpoint_sink = vec![0xAB];
@@ -9128,7 +9129,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &finest_bitstream_checkpoint_policy,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(56_009),
                 &mut finest_bitstream_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -9142,17 +9143,17 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_820,
-                observed: 54_821,
+                maximum: 56_009,
+                observed: 56_010,
             }
         ));
         assert_eq!(finest_bitstream_checkpoint_sink, vec![0xAB]);
 
-        // The existing VP8L 512-bit logical-bitstream interval remains
-        // independently enforced after the finer 256-bit boundary.
+        // The existing VP8L 256-bit logical-bitstream interval remains
+        // independently enforced after the finer 128-bit boundary.
         // Pillow has no caller budget or equivalent result.
         let fine_bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(54_823);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_185);
         let fine_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -9168,8 +9169,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_823,
-                observed: 54_824,
+                maximum: 56_185,
+                observed: 56_186,
             }
         ));
         let mut fine_bitstream_checkpoint_sink = vec![0xAA];
@@ -9178,7 +9179,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &fine_bitstream_checkpoint_policy,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(56_184),
                 &mut fine_bitstream_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -9192,14 +9193,17 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_823,
-                observed: 54_824,
+                maximum: 56_184,
+                observed: 56_185,
             }
         ));
         assert_eq!(fine_bitstream_checkpoint_sink, vec![0xAA]);
 
+        // The existing VP8L 512-bit logical-bitstream interval remains
+        // independently enforced after the finer 128-bit and 256-bit
+        // boundaries. Pillow has no caller budget or equivalent result.
         let bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(56_000);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_186);
         let bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -9215,8 +9219,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_000,
-                observed: 56_001,
+                maximum: 56_186,
+                observed: 56_187,
             }
         ));
         let mut bitstream_checkpoint_sink = vec![0xAA];
@@ -9238,8 +9242,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_000,
-                observed: 56_001,
+                maximum: 56_186,
+                observed: 56_187,
             }
         ));
         assert_eq!(bitstream_checkpoint_sink, vec![0xAA]);
@@ -9248,7 +9252,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // output interval. This is a separate Rust-only work-control
         // boundary; it is not Pillow byte/pixel parity evidence.
         let output_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(55_999);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_109);
         let output_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -9264,8 +9268,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 55_999,
-                observed: 56_000,
+                maximum: 56_109,
+                observed: 56_110,
             }
         ));
         let mut output_checkpoint_sink = vec![0xAA];
@@ -9273,7 +9277,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &output_checkpoint_policy,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(56_108),
             &mut output_checkpoint_sink,
         ) {
             Ok(_) => return Err("VP8L output checkpoint sink budget unexpectedly completed".into()),
@@ -9285,8 +9289,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 55_999,
-                observed: 56_000,
+                maximum: 56_108,
+                observed: 56_109,
             }
         ));
         assert_eq!(output_checkpoint_sink, vec![0xAA]);
