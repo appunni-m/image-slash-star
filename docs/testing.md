@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`f0d9d683392303602f19bc0b6994f463828265e6`; the claim-ledger baseline remains
+`d50b7aed4a450fcd489d0b8fcd4be02b358701ff`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -411,7 +411,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`f0d9d683392303602f19bc0b6994f463828265e6`, the generated matrix reports:
+`d50b7aed4a450fcd489d0b8fcd4be02b358701ff`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -1596,6 +1596,43 @@ aggregate snapshot retains the LLVM segment-normalization warning. These are
 Rust-only implementation and target records separate from Pillow parity.
 Remaining finer WebP bitstream loops beyond the coefficient-block and
 macroblock checkpoints, other codec interior work, Deflate
+emission/structural interruption, transient allocation accounting,
+short-write/rollback, and non-checkpointed work-budget semantics remain open.
+
+The current lossy WebP/VP8 coefficient-token bitstream checkpoint slice is
+implemented at `d50b7aed4a450fcd489d0b8fcd4be02b358701ff`. Token-aware residual
+writing now charges after each batch of 4,000 coefficient tokens, in addition
+to the 64-block and 256-macroblock checkpoints. The Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` contract uses the same
+512x512 constant RGB probe to prove typed whole-buffer rejection at the first
+token checkpoint (`maximum: 400`, `observed: 401`) and at the retained
+macroblock checkpoint (`maximum: 440`, `observed: 441`), with the same
+direct-sink rejection and untouched-prefix assertions. Pillow exposes neither
+caller token nor work-budget result, so no parity row, fixture, diagnostic
+origin, or coverage-only hook was added.
+
+Managed Pillow parity run `24346ffa-cc4a-47ab-abf6-895ef527fbe1` passed
+1,445/1,445 checks with zero failures or skips in 709 ms. Feature-matrix run
+`bb2c02a6-4844-48bc-bff7-d832bebf990c` passed 991/991 checks in 62,483 ms; its
+retained log has no package-cache or build-directory lock-wait matches and ends
+with `capability tables OK: every native and wasm32-wasip1 lane agrees`.
+Coverage MCP run `bb398c45-6f15-4dff-87f0-dda659e1cc9f` passed 85/85 tests in
+46,112 ms and ingested snapshot `672f9673-d275-4fff-a1b0-e9ffe7562bbb`,
+reporting 49,474/49,875 lines, 6,807/6,870 branches, 2,753/2,820 functions,
+and 76,905/77,629 regions. Compared with snapshot
+`023c80f1-290b-4acf-b45a-1112460a919b`, this adds 23 covered lines (+24 total),
+four covered branches (+4 total), two covered functions (+2 total), and 29
+covered regions (+36 total). The VP8 residual file is 246/249 lines, 34/34
+branches, 7/7 functions, and 359/368 regions; uncovered lines 214, 252, and
+284 are the `?` propagation sites for token/block-checkpoint errors in the
+coefficient-block helper and the Intra16/Intra4 branches, not reasons for a
+synthetic coverage hook. The VP8 encoder remains 628/630 lines, 42/42
+branches, 34/34 functions, and 1,148/1,159 regions; uncovered lines 86 and
+189 remain its pre-existing defensive bridge and unexercised `method >= 6`
+selection-result bridge. The aggregate snapshot retains the LLVM
+segment-normalization warning. These are Rust-only implementation and target
+records separate from Pillow parity. Remaining finer WebP bitstream loops
+beyond coefficient-token checkpoints, other codec interior work, Deflate
 emission/structural interruption, transient allocation accounting,
 short-write/rollback, and non-checkpointed work-budget semantics remain open.
 
