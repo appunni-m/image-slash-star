@@ -4,7 +4,8 @@
 //! own control flow. Token-aware operations poll it at documented structural
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
-//! Deflate expansion/Huffman/bitstream/checksum stages, lossy WebP VP8
+//! Deflate expansion/Huffman/bitstream/checksum stages, PNG stored-block copy
+//! intervals, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, analysis, 4,096-bit logical and
 //! 16,384-boolean first-partition bit intervals, 4,096-bit logical and
 //! 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output

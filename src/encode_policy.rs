@@ -10,7 +10,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// checkpoints reached by an encode, including TIFF Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
 /// the PNG adaptive-filter and filtered-row checkpoints charged after each
-/// 1,024 row bytes, BMP row-conversion checkpoints charged after each 1,024
+/// 1,024 row bytes, PNG stored-block copy checkpoints charged after each 1,024
+/// copied bytes, BMP row-conversion checkpoints charged after each 1,024
 /// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
 /// stages, 4,096-bit logical and 16,384-boolean first-partition-bit intervals,
 /// 4,096-bit logical and 16,384-boolean coefficient-bit intervals,
@@ -61,8 +62,10 @@ impl EncodePolicy {
     ///
     /// One work unit is charged at each documented cancellation checkpoint.
     /// PNG long-row filtering charges additional checkpoints after each 1,024
-    /// filtered bytes while adaptive candidates are scored or emitted. BMP
-    /// row conversion charges additional checkpoints after each 1,024 pixels.
+    /// filtered bytes while adaptive candidates are scored or emitted. PNG
+    /// stored-block copying charges an additional checkpoint after each 1,024
+    /// copied bytes. BMP row conversion charges additional checkpoints after
+    /// each 1,024 pixels.
     /// TIFF
     /// Deflate charges input-row and level-six matcher candidate, insertion,
     /// fizzle, window, and position intervals plus expansion, Huffman,

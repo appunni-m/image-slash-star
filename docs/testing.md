@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`a4bc2eace8ceacca2dd57eedde6a5555f518337c`; the claim-ledger baseline remains
+`31a1c19d2f5503bc05911ff90b649fda44a1e7f0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -322,14 +322,15 @@ A long PNG adaptive-filter row additionally charges a deterministic checkpoint
 after each 1,024 filtered bytes while candidate filters are scored or the row
 is emitted; the contract proves the resulting typed interior rejection and
 untouched sink. Token-aware PNG compression additionally checks each input
-chunk and stored-block boundary plus the Adler-32 calculation for compression
-level 0, and checks every zlib-ng level's matcher, token expansion,
+chunk and stored-block boundary, each 1,024-byte stored-block-copy interval,
+and the Adler-32 calculation for compression level 0, and checks every zlib-ng level's matcher, token expansion,
 Huffman/bitstream emission, and checksum stages. The contract proves
 ample-budget byte identity for default, stored, non-final stored-block,
 explicit levels 1–5 and 7–9, and maximum-level PNG probes, plus typed matcher
 rejection at `maximum: 20` in both whole-buffer and direct-sink paths; the
-stored-block byte copy itself remains bounded at block boundaries rather than
-byte-by-byte. This is Rust-only evidence because Pillow has no caller token,
+stored-block byte copy now charges after each 1,024 copied bytes in the
+token-aware path, while the no-token path remains a bulk byte append. This is
+Rust-only evidence because Pillow has no caller token,
 work-budget result, or caller-owned sink. BMP row conversion additionally
 charges an interior checkpoint
 after each 1,024 pixels; the contract proves ample-budget byte identity and a
@@ -394,7 +395,8 @@ internal row/block/scan checkpoints; the public test intentionally avoids
 timing-sensitive interruption. The PNG and BMP still paths poll while
 preparing rows; PNG additionally polls adaptive-filter and filtered-row
 subsegments after each 1,024 row bytes, and token-aware PNG compression polls
-stored-block boundaries and every zlib-ng level's matcher/emission/checksum
+stored-block boundaries, each 1,024-byte stored-block-copy interval, and every
+zlib-ng level's matcher/emission/checksum
 stages; the still and sink paths poll
 between emitted structural segments; TIFF still encoding now polls page
 preparation, row prediction, raw/PackBits/LZW work, and Deflate input-row plus
@@ -2534,10 +2536,42 @@ and 533 covered regions (+615 total). `src/codecs/compression/deflate.rs` is
 the LLVM segment-normalization warning. These implementation and target
 records remain separate from Pillow parity; no coverage-only test was added.
 
-Remaining deeper stored-block byte-copy interruption, finer VP8/VP8L bitstream
-work, other codec interior work, transient allocation accounting,
+Remaining finer VP8/VP8L bitstream work, other codec interior work, transient
+allocation accounting,
 short/interrupted output, rollback, and remaining non-checkpointed work-budget
 semantics remain open.
+
+The PNG stored-block copy checkpoint slice is implemented at
+`31a1c19d2f5503bc05911ff90b649fda44a1e7f0`. The token-aware level-0 path now
+copies each stored block in 1,024-byte chunks and polls after each copied
+interval; the ordinary no-token path remains a bulk byte append. The existing
+Rust-only `encode_work_budget_is_a_non_parity_result_contract` proves ample
+budget byte identity and rejects the first stored-block copy checkpoint at
+`maximum: 164`, `observed: 165`, in both whole-buffer and direct-sink paths,
+with the sink untouched. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this adds no parity row, fixture, diagnostic origin, or
+coverage-only hook.
+
+Managed Pillow parity run `eb9c7988-dacd-4b3b-a954-6abf0c59aef1` passed
+1,445/1,445 checks with zero failures or skips in 45,812 ms. Feature-matrix run
+`2d14c587-364b-44da-a3cb-6e6cdb1ace52` passed 991/991 checks in 90,938 ms;
+its retained log contained the capability marker `capability tables OK: every
+native and wasm32-wasip1 lane agrees` and no `lock-wait` match. Coverage MCP run
+`c774a888-7a2b-4872-8660-e277088326fa` passed 85/85 tests in 72,844 ms and
+ingested snapshot `33b8c596-907d-47e1-bc99-fbd8cfaf1d5e`, reporting
+50,813/51,279 lines, 7,010/7,094 branches, 2,828/2,897 functions, and
+78,965/79,999 regions. Compared with snapshot
+`01651a2e-866b-432c-b298-39e077d8c053`, this adds 19 covered lines (+20 total),
+no covered or total branches, one covered function (+1 total), and 33 covered
+regions (+34 total). `src/codecs/compression/deflate.rs` is 626/630 lines,
+66/66 branches, 34/34 functions, and 1,162/1,182 regions; four uncovered
+lines remain in the aggregate and are recorded rather than hidden with a
+coverage-only test. The LLVM JSON segment-normalization warning remains. These
+implementation and target records remain separate from Pillow parity.
+
+Remaining finer VP8/VP8L bitstream work, other codec interior work, transient
+allocation accounting, short/interrupted output, rollback, and remaining
+non-checkpointed work-budget semantics remain open.
 
 Historical claim-ledger acceptance record:
 

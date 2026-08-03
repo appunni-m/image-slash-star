@@ -861,9 +861,11 @@ pub fn encode_with_policy(
 /// entropy rows, and progressive event batches; TIFF polls page preparation,
 /// row prediction, PackBits/LZW compression checkpoints, and Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, stored-block, and checksum
-/// intervals; PNG polls row
-/// preparation, adaptive-filter and filtered-row subsegments, and structural
-/// segments in still and one-frame fallback paths; BMP polls row preparation
+/// intervals; PNG polls row preparation, adaptive-filter and filtered-row
+/// subsegments, token-aware stored-block boundaries and 1,024-byte stored-block
+/// copy intervals, every zlib-ng level's matcher/expansion/Huffman/bitstream/
+/// checksum stages, and structural segments in still and one-frame fallback
+/// paths; BMP polls row preparation
 /// and structural segments; BMP also polls 1,024-pixel row-conversion
 /// subsegments; GIF still encoding also polls block/frame/coalescing/output-assembly
 /// checkpoints, RGB/RGBA palette quantization intervals, RGB median-cut
