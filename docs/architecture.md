@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`7383a00c051badbcff99fdb24365f9360cb73a30`; the claim-ledger baseline remains
+`508867ecb743daf1c793e158807452910adc28d7`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -502,8 +502,7 @@ prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
-documented checkpoints—including finer WebP probability and bitstream
-bitstream work and CPU work inside codec
+documented checkpoints—including finer WebP bitstream work and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, GIF LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
