@@ -21,6 +21,7 @@ pub fn decode(
     let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
+    let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -37,6 +38,15 @@ pub fn decode(
             image.with_source_descriptor(source)
         }
         None => image,
+    };
+    let image = if auxiliary_relationships.is_empty() {
+        image
+    } else {
+        let source = image
+            .source
+            .clone()
+            .with_avif_auxiliary_relationships(auxiliary_relationships);
+        image.with_source_descriptor(source)
     };
     let image = if let Some(relationship) = auxiliary_relationship {
         let source = image
@@ -69,6 +79,7 @@ pub fn decode_sequence(
     let metadata = std::mem::take(&mut extracted.metadata);
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
+    let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -77,6 +88,16 @@ pub fn decode_sequence(
     if let Some(transform) = transform {
         for frame in &mut sequence.frames {
             let source = frame.image.source.clone().with_avif_transform(transform);
+            frame.image.source = source;
+        }
+    }
+    if !auxiliary_relationships.is_empty() {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_auxiliary_relationships(auxiliary_relationships.clone());
             frame.image.source = source;
         }
     }

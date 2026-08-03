@@ -1036,11 +1036,18 @@ impl Meta {
         } else {
             SourceDescriptor::new()
         };
-        if let Some(auxiliary_item_id) = self.alpha_targeting(primary)? {
-            source = source.with_avif_auxiliary_relationship(AvifAuxiliaryRelationship::new(
-                auxiliary_item_id,
-                primary,
-            ));
+        let relationships = self.alpha_auxiliary_relationships(primary)?;
+        if let Some(relationship) = relationships
+            .iter()
+            .find(|relationship| relationship.target_item_id() == primary)
+        {
+            source = source.with_avif_auxiliary_relationship(*relationship);
+        }
+        if relationships
+            .iter()
+            .any(|relationship| relationship.target_item_id() != primary)
+        {
+            source = source.with_avif_auxiliary_relationships(relationships);
         }
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(primary) {
@@ -1102,6 +1109,36 @@ impl Meta {
             return Err(parse_failure!());
         }
         Ok(result)
+    }
+
+    fn alpha_auxiliary_relationships(
+        &self,
+        primary: u32,
+    ) -> ParseResult<Vec<AvifAuxiliaryRelationship>> {
+        let mut color_items = vec![primary];
+        loop {
+            let mut changed = false;
+            for reference in &self.references {
+                if reference.kind == *b"dimg"
+                    && color_items.contains(&reference.from_id)
+                    && !color_items.contains(&reference.to_id)
+                {
+                    color_items.push(reference.to_id);
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+
+        let mut relationships = Vec::new();
+        for target in color_items {
+            if let Some(auxiliary_item_id) = self.alpha_targeting(target)? {
+                relationships.push(AvifAuxiliaryRelationship::new(auxiliary_item_id, target));
+            }
+        }
+        Ok(relationships)
     }
 
     fn has_alpha(&self, primary: u32) -> bool {

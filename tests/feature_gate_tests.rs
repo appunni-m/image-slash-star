@@ -1655,6 +1655,49 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             );
         }
     }
+
+    if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
+        // The grid fixture has one primary grid item, two derived color items,
+        // and one alpha auxiliary item for each derived color item. This is
+        // source-provenance evidence outside the Pillow parity schema.
+        let bytes = fs::read(root.join("tests/fixtures/input/images/avif/grid.avif"))?;
+        let expected = [
+            AvifAuxiliaryRelationship::new(5, 2),
+            AvifAuxiliaryRelationship::new(6, 3),
+        ];
+        let inspected = image_slash_star::inspect(&bytes)?;
+        assert_eq!(
+            inspected.source.alpha(),
+            Some(SourceAlpha::Auxiliary),
+            "grid inspect alpha"
+        );
+        assert_eq!(
+            inspected.source.avif_auxiliary_relationship(),
+            None,
+            "grid has no direct primary-item alpha relationship"
+        );
+        assert_eq!(
+            inspected.source.avif_auxiliary_relationships(),
+            expected.as_slice(),
+            "grid inspect auxiliary relationships"
+        );
+
+        let decoded = image_slash_star::decode(&bytes)?;
+        assert_eq!(
+            decoded.content.source.avif_auxiliary_relationships(),
+            expected.as_slice(),
+            "grid decode auxiliary relationships"
+        );
+        let sequence = image_slash_star::decode_sequence(&bytes)?;
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_auxiliary_relationships(),
+            expected.as_slice(),
+            "grid sequence auxiliary relationships"
+        );
+    }
     Ok(())
 }
 

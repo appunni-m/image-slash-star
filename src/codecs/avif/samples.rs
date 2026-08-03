@@ -1152,15 +1152,33 @@ impl Meta {
         Ok(result)
     }
 
-    fn alpha_auxiliary_relationship(
+    fn alpha_auxiliary_relationships(
         &self,
         primary_item_id: u32,
-    ) -> ParseResult<Option<AvifAuxiliaryRelationship>> {
-        Ok(self
-            .alpha_targeting(primary_item_id)?
-            .map(|auxiliary_item_id| {
-                AvifAuxiliaryRelationship::new(auxiliary_item_id, primary_item_id)
-            }))
+    ) -> ParseResult<Vec<AvifAuxiliaryRelationship>> {
+        let mut color_items = vec![primary_item_id];
+        loop {
+            let mut changed = false;
+            for item_id in color_items.clone() {
+                for child in self.dimg_children(item_id) {
+                    if !color_items.contains(&child) {
+                        color_items.push(child);
+                        changed = true;
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+
+        let mut relationships = Vec::new();
+        for target in color_items {
+            if let Some(auxiliary_item_id) = self.alpha_targeting(target)? {
+                relationships.push(AvifAuxiliaryRelationship::new(auxiliary_item_id, target));
+            }
+        }
+        Ok(relationships)
     }
 }
 
@@ -1196,6 +1214,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) metadata: Vec<OpaqueMetadata>,
     pub(super) source_color: SourceColor,
     pub(super) auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
+    pub(super) auxiliary_relationships: Vec<AvifAuxiliaryRelationship>,
     pub(super) transform: Option<AvifTransformProperties>,
 }
 
@@ -2031,11 +2050,18 @@ fn extract_inner_with_metadata(
         Vec::new()
     };
     let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
-    let auxiliary_relationship = meta
+    let primary_item_id = meta.as_ref().map(|meta| meta.primary_item_id);
+    let auxiliary_relationships = meta
         .as_ref()
-        .map(|meta| meta.alpha_auxiliary_relationship(meta.primary_item_id))
+        .map(|meta| meta.alpha_auxiliary_relationships(meta.primary_item_id))
         .transpose()?
-        .flatten();
+        .unwrap_or_default();
+    let auxiliary_relationship = primary_item_id.and_then(|primary_item_id| {
+        auxiliary_relationships
+            .iter()
+            .find(|relationship| relationship.target_item_id() == primary_item_id)
+            .copied()
+    });
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2046,6 +2072,7 @@ fn extract_inner_with_metadata(
         metadata,
         source_color,
         auxiliary_relationship,
+        auxiliary_relationships,
         transform,
     })
 }
@@ -3546,6 +3573,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&empty_payload), 0);
@@ -3565,6 +3593,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&mixed_payload), 12);
@@ -3789,6 +3818,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
     };
     let _ = empty.validate();
@@ -3840,6 +3870,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3857,6 +3888,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3881,6 +3913,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -3918,6 +3951,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3941,6 +3975,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3959,6 +3994,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -3984,6 +4020,7 @@ fn coverage_structural_states() {
         metadata: Vec::new(),
         source_color: SourceColor::new(),
         auxiliary_relationship: None,
+        auxiliary_relationships: Vec::new(),
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
