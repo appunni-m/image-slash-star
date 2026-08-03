@@ -9424,13 +9424,68 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(coefficient_token_sink, vec![0xB2]);
 
-        // Coefficient boolean coding now charges a logical checkpoint after
-        // each 512 coded bits. This 512x512 probe reaches a later logical
-        // interval after the earlier codec checkpoints. Pillow has no caller
-        // token or work-budget result, so this remains Rust-only work-control
-        // evidence with no parity row or coverage-only hook.
-        let coefficient_fine_bit_bounded =
+        // Coefficient boolean coding now charges a finer logical checkpoint
+        // after each 256 coded bits. Pillow has no caller token or work-budget
+        // result, so this remains Rust-only work-control evidence with no
+        // parity row or coverage-only hook.
+        let coefficient_finest_bit_bounded =
             image_slash_star::EncodePolicy::new().with_max_work_units(820);
+        let coefficient_finest_bit_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_finest_bit_bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP finest coefficient-bit budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_finest_bit_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 820,
+                observed: 821,
+            }
+        ));
+        let mut coefficient_finest_bit_sink = vec![0xB5];
+        let coefficient_finest_bit_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_finest_bit_bounded,
+            &mut coefficient_finest_bit_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP finest coefficient-bit sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_finest_bit_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 820,
+                observed: 821,
+            }
+        ));
+        assert_eq!(coefficient_finest_bit_sink, vec![0xB5]);
+
+        // The 512-bit logical coefficient checkpoint remains independently
+        // enforced after the finer 256-bit boundary. This 512x512 probe
+        // reaches the later logical interval after the earlier checkpoints.
+        let coefficient_fine_bit_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(821);
         let coefficient_fine_bit_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -9450,8 +9505,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 820,
-                observed: 821,
+                maximum: 821,
+                observed: 822,
             }
         ));
         let mut coefficient_fine_bit_sink = vec![0xB3];
@@ -9476,8 +9531,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 820,
-                observed: 821,
+                maximum: 821,
+                observed: 822,
             }
         ));
         assert_eq!(coefficient_fine_bit_sink, vec![0xB3]);
