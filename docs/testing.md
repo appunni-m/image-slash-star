@@ -346,7 +346,8 @@ segment parameters,
 mode selection, coefficient-probability
 adaptation, partition emission, after each 4,096-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
-16,384-boolean coefficient-bit interval, and after each
+4,096-bit logical coefficient interval, after each 16,384-boolean coefficient-bit
+interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application,
@@ -394,7 +395,8 @@ polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments plus analysis/coefficient-probability, 4,096-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
-16,384-boolean coefficient-bit intervals, and
+4,096-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, 4,096-bit
@@ -412,8 +414,9 @@ target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented PNG row subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments, WebP coefficient-probability adaptation and
-4,096-bit logical first-partition, 16,384-boolean first-partition-bit and
-coefficient-bit intervals plus the 1,024-byte boolean-bitstream output
+4,096-bit logical first-partition, 16,384-boolean first-partition-bit,
+4,096-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
+plus the 1,024-byte boolean-bitstream output
 intervals, the 4,096-bit logical VP8L
 bitstream interval, and VP8L stages, remaining
 finer WebP bitstream work beyond those intervals, progress callbacks, short-write

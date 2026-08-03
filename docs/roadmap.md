@@ -1144,7 +1144,7 @@ the header, each page's strip/padding, and IFD/value segments; lossy WebP still
 encoding now polls its RGB/RGBA-to-YUV conversion, macroblock-analysis, and
 mode-selection subsegments plus VP8 analysis,
 mode-selection, coefficient-probability, 4,096-bit logical and 16,384-boolean
-first-partition-bit and coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
+first-partition-bit, 4,096-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
 bitstream, and finalization stages, lossless WebP VP8L encoding now polls its
 predictor tile scans/mode application, cross-color multiplier search/transform
 tiles, entropy analysis, transform, bounded backward-reference
@@ -1160,8 +1160,8 @@ sequence-structural/interior interruption beyond the implemented PNG row, BMP
 row-conversion subsegments, GIF RGB/RGBA palette quantization, RGBA FASTOCTREE
 bucket-sort intervals, and LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, macroblock-analysis, and mode-selection
-subsegments, WebP stages, 4,096-bit logical and 16,384-boolean first-partition-bit
-and coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
+subsegments, WebP stages, 4,096-bit logical and 16,384-boolean first-partition-bit,
+4,096-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
 and the 4,096-bit logical VP8L bitstream interval; remaining finer
 WebP bitstream work beyond those intervals, Deflate
 emission/structural interruption, progress, transient
@@ -2848,8 +2848,8 @@ filter and filtered-row subsegments after each 1,024 row bytes, BMP row
 conversion after each 1,024 pixels, and GIF RGB/RGBA palette quantization after each 1,024
 pixels plus LZW's input-symbol intervals inside its dictionary pass. Lossy WebP VP8 RGB/RGBA-to-YUV conversion,
 macroblock-analysis, and mode-selection subsegments, analysis, coefficient-
-probability adaptation, 4,096-bit logical and 16,384-boolean first-partition-bit
-and coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals, and bitstream
+probability adaptation, 4,096-bit logical and 16,384-boolean first-partition-bit,
+4,096-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals, and bitstream
 assembly, plus lossless WebP VP8L predictor/cross-color/entropy/transform,
 bounded backward-reference search/match-length/cache/trace, histogram/Huffman,
 token-stream, 4,096-bit logical bitstream, and 1,024-byte output stages, now
