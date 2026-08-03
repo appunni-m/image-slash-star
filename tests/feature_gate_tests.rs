@@ -9469,16 +9469,19 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_probe = DecodedImage::new(272, 272, partition_probe_pixels, ColorType::Rgb8);
-        let deep_partition_probe_pixels: Vec<u8> = (0..880 * 512 * 3)
+        // The late output/bit checkpoints need only compact patterned probes;
+        // keeping their geometry small avoids repeating hundreds of thousands
+        // of pixels for every whole-buffer and sink boundary.
+        let deep_partition_probe_pixels: Vec<u8> = (0..64 * 96 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let deep_partition_probe =
-            DecodedImage::new(880, 512, deep_partition_probe_pixels, ColorType::Rgb8);
-        let wide_partition_probe_pixels: Vec<u8> = (0..896 * 512 * 3)
+            DecodedImage::new(64, 96, deep_partition_probe_pixels, ColorType::Rgb8);
+        let wide_partition_probe_pixels: Vec<u8> = (0..64 * 64 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let wide_partition_probe =
-            DecodedImage::new(896, 512, wide_partition_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(64, 64, wide_partition_probe_pixels, ColorType::Rgb8);
         // First-partition boolean coding now charges the finer logical
         // checkpoint after each 32 coded bits. This patterned 272x272 probe
         // reaches that interval after the earlier partition stages. Pillow
@@ -9752,7 +9755,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
 
         // The existing coarser first-partition boundary remains separately
         // enforced after each 16,384 coded bits, after the finer logical
-        // checkpoints above. The wider 896x512 probe reaches this boundary
+        // checkpoints above. The compact 64x64 probe reaches this boundary
         // while keeping the smaller probe above fast for the interior polls.
         let partition_bit_bounded =
             image_slash_star::EncodePolicy::new().with_max_work_units(1_574);

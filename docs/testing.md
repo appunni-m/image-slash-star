@@ -3561,9 +3561,9 @@ boundaries are 56,182/56,183, 56,184/56,185, 56,188/56,189, 56,196/56,197,
 and 56,213/56,214; the sink maxima are one lower with observations equal to
 the return maxima, and the 1,024-byte output boundary is 56,493/56,494 for
 return and 56,492/56,493 for sink. The small common VP8 probe remains 272x272;
-only the late VP8 16,384-bit/output cases use 896x512 and 880x512 patterned
-probes, and the late coefficient cases reuse the 880x512 probe. This is
-Rust-only resource-contract evidence: Pillow has no caller token, work-budget
+the late VP8 16,384-bit/output cases use a 64x64 patterned probe, and the
+late coefficient output/bitstream cases reuse a 64x96 patterned probe. This
+is Rust-only resource-contract evidence: Pillow has no caller token, work-budget
 result, or caller-owned sink, so no parity row, fixture, diagnostic origin, or
 coverage-only hook was added. The clean focused test completed in 0.88 s on the
 local host; this is an execution observation, not a universal benchmark.
@@ -3585,6 +3585,30 @@ functions, and 520/560 regions; native VP8L reports 1,483/1,493 lines,
 234/234 branches, 77/77 functions, and 2,157/2,256 regions. The parity run is
 Pillow-oracle evidence; policy assertions and coverage are implementation/Rust
 evidence, with no coverage-only hook.
+
+Current test-runtime acceptance record: compact late WebP work-budget probes
+
+The work-budget contract retains the same `fc8f047567f4f053667e482c149b9cd881f0274b`
+boundary observations after reducing only its late patterned probes: VP8
+first-partition uses 64x64 for the 1,574/1,575 return and 1,573/1,574 sink
+16,384-bit boundary and the 1,115/1,116 return and 1,114/1,115 sink
+1,024-byte boundary; VP8 coefficient output and 16,384-bit checks reuse 64x96
+for 2,184/2,185 and 2,377/2,378 return boundaries and 2,183/2,184 and
+2,376/2,377 sink boundaries. The existing 272x272 probe and every boundary,
+whole-buffer rejection, sink sentinel, and ample-budget identity assertion
+remain in place. This is a test-harness-only runtime change: no production
+codec, Pillow parity row, fixture, diagnostic origin, or coverage-only hook
+changed. Three clean local repeats of the exact all-feature contract reported
+0.80 s of test-body time (0.83–0.85 s process wall); the pre-change repeat in
+the same workspace reported 0.94 s of test-body time. These are local execution
+observations, not universal benchmarks.
+
+A warm repeat of `scripts/test_feature_matrix.sh` also passed all configured
+native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 3.82 s; its
+retained output ended with `capability tables OK: every native and
+wasm32-wasip1 lane agrees`. The preceding run after invalidating the lane test
+artifacts took 21.20 s. These are local harness observations, not universal
+benchmarks.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 32-bit/64-bit/128-bit/256-bit/512-bit first-partition, 32-bit/64-bit/128-bit/256-bit/512-bit coefficient, 32-bit/64-bit/128-bit/256-bit/512-bit VP8L
