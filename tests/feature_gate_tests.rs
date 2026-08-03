@@ -8477,11 +8477,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample VP8L output budget preserves byte identity"
         );
 
-        // The finer VP8L logical-bitstream interval rejects before the legacy
-        // 4,096-bit boundary. This remains Rust-only work-control evidence:
+        // The finer VP8L logical-bitstream interval rejects at the first
+        // 512-bit boundary, before the existing 1,024-bit interval. This
+        // remains Rust-only work-control evidence:
         // Pillow has no caller budget or equivalent result.
         let fine_bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(55_996);
+            image_slash_star::EncodePolicy::new().with_max_work_units(54_823);
         let fine_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -8497,8 +8498,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 55_996,
-                observed: 55_997,
+                maximum: 54_823,
+                observed: 54_824,
             }
         ));
         let mut fine_bitstream_checkpoint_sink = vec![0xAA];
@@ -8521,8 +8522,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 55_996,
-                observed: 55_997,
+                maximum: 54_823,
+                observed: 54_824,
             }
         ));
         assert_eq!(fine_bitstream_checkpoint_sink, vec![0xAA]);
