@@ -8318,6 +8318,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // Pillow has no caller-controlled checkpoint budget or equivalent
         // result. This is a Rust-only work-control contract, including the
         // pre-write policy boundary for the generic whole-buffer sink path.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let image = DecodedImage::new(17, 17, vec![128; 17 * 17 * 3], ColorType::Rgb8);
         let options = EncodeOptions::for_format(ImageFormat::Jpeg);
         let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
@@ -8431,6 +8432,66 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0x5C],
             "conversion budget rejection must precede sink writes"
         );
+
+        // The committed 33x33 JPEG fixture reaches the forward-DCT and
+        // quantization pass after the row-level conversion and sampling
+        // checkpoints. Pillow has no caller work budget or equivalent result,
+        // so this is a Rust-only interior contract with no parity row.
+        let dct_data = fs::read(root.join("tests/fixtures/input/images/jpeg/33x33.jpg"))?;
+        let dct_image = image_slash_star::decode(&dct_data)?.content;
+        let dct_expected = image_slash_star::encode(&dct_image, ImageFormat::Jpeg, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &dct_image,
+                ImageFormat::Jpeg,
+                &options,
+                &unlimited,
+            )?,
+            dct_expected,
+            "an ample DCT budget preserves fixture-derived bytes"
+        );
+        let dct_policy = image_slash_star::EncodePolicy::new().with_max_work_units(70);
+        let dct_error = match image_slash_star::encode_with_policy(
+            &dct_image,
+            ImageFormat::Jpeg,
+            &options,
+            &dct_policy,
+        ) {
+            Ok(_) => return Err("JPEG DCT work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            dct_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 70,
+                observed: 71,
+            }
+        ));
+        let mut dct_sink = vec![0x5D];
+        let dct_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &dct_image,
+            ImageFormat::Jpeg,
+            &options,
+            &dct_policy,
+            &mut dct_sink,
+        ) {
+            Ok(_) => return Err("JPEG DCT work budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            dct_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 70,
+                observed: 71,
+            }
+        ));
+        assert_eq!(dct_sink, vec![0x5D]);
 
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
