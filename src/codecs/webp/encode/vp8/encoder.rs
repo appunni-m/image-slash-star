@@ -200,7 +200,8 @@ fn encode_vp8_planes(
         &params,
         &probabilities,
         method >= 3,
-    );
+        token,
+    )?;
     crate::codecs::error::check_cancelled(token)?;
     let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities, token)?;
     crate::codecs::error::check_cancelled(token)?;
