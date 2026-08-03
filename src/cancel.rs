@@ -9,8 +9,8 @@
 //! after each 1,024 converted pixels or emitted entropy bytes, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup after each
 //! 1,024 scanned or flattened pixels, analysis, 512-bit logical and
-//! 16,384-boolean first-partition bit intervals, 512-bit logical and
-//! 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
+//! 16,384-boolean first-partition bit intervals, 256-bit and 512-bit logical
+//! and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output
 //! intervals, and bitstream stages, and lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, 512-bit
 //! logical bitstream intervals, 1,024-byte bitstream-output, and bounded
