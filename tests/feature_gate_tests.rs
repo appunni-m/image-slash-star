@@ -8692,6 +8692,56 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(progressive_sink, vec![0x60]);
 
+        // Progressive scan encoding next counts the event vector while it
+        // gathers per-scan Huffman frequencies. The block-slot checkpoint
+        // above covers event generation; this separate interval prevents the
+        // frequency pass from hiding a large event vector between polls.
+        let progressive_event_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(1_378);
+        let progressive_event_error = match image_slash_star::encode_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_event_policy,
+        ) {
+            Ok(_) => return Err("JPEG progressive-event work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_event_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_378,
+                observed: 1_379,
+            }
+        ));
+        let mut progressive_event_sink = vec![0x61];
+        let progressive_event_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &downsample_image,
+            ImageFormat::Jpeg,
+            &progressive_options,
+            &progressive_event_policy,
+            &mut progressive_event_sink,
+        ) {
+            Ok(_) => {
+                return Err("JPEG progressive-event work budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            progressive_event_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_378,
+                observed: 1_379,
+            }
+        ));
+        assert_eq!(progressive_event_sink, vec![0x61]);
+
         let mut entropy_pixels = Vec::with_capacity(64 * 64 * 3);
         for index in 0..64 * 64 {
             let x = u8::try_from(index % 64)?;

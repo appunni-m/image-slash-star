@@ -34,6 +34,7 @@ const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
 const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
 const HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS: usize = 1_024;
 const PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS: usize = 1_024;
+const PROGRESSIVE_EVENT_CHECKPOINT_EVENTS: usize = 1_024;
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -188,6 +189,7 @@ impl HuffmanFrequencyCheckpoint for TokenHuffmanFrequencyCheckpoint<'_> {
 trait ProgressiveScanCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
     fn block(&mut self) -> CodecResult<()>;
+    fn event(&mut self) -> CodecResult<()>;
 }
 
 struct NoopProgressiveScanCheckpoint;
@@ -202,11 +204,17 @@ impl ProgressiveScanCheckpoint for NoopProgressiveScanCheckpoint {
     fn block(&mut self) -> CodecResult<()> {
         Ok(())
     }
+
+    #[inline(always)]
+    fn event(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
 }
 
 struct TokenProgressiveScanCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     blocks_until_checkpoint: usize,
+    events_until_checkpoint: usize,
 }
 
 impl<'a> TokenProgressiveScanCheckpoint<'a> {
@@ -214,6 +222,7 @@ impl<'a> TokenProgressiveScanCheckpoint<'a> {
         Self {
             token,
             blocks_until_checkpoint: PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS,
+            events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
         }
     }
 }
@@ -230,6 +239,16 @@ impl ProgressiveScanCheckpoint for TokenProgressiveScanCheckpoint<'_> {
         if self.blocks_until_checkpoint == 0 {
             crate::codecs::error::check_cancelled(Some(self.token))?;
             self.blocks_until_checkpoint = PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn event(&mut self) -> CodecResult<()> {
+        self.events_until_checkpoint = self.events_until_checkpoint.saturating_sub(1);
+        if self.events_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.events_until_checkpoint = PROGRESSIVE_EVENT_CHECKPOINT_EVENTS;
         }
         Ok(())
     }
@@ -1720,6 +1739,7 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
                 frequencies[table][usize::from(value)] =
                     frequencies[table][usize::from(value)].saturating_add(1);
             }
+            scan_checkpoint.event()?;
         }
 
         let mut tables: [Option<huffman::OptimalTable>; 4] = std::array::from_fn(|_| None);
