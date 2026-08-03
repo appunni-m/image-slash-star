@@ -616,7 +616,6 @@ Minute gaps:
 | --- | --- | --- |
 | ICO-001 | Decoder exposes only the selected largest entry; callers cannot inspect/select/enumerate every stored size. | Add an entry-oriented decode/inspect API whose entries are already-sized images, not an image-processing resize request. |
 | ICO-002 | Encoder cannot accept multiple already-sized caller entries. Pillow can save multiple entries and replacement images. | Add an ICO directory model and exact ordering/selection fixtures without generating resized pixels. |
-| ICO-003 | Resolved: CUR shares the ICO container identity and the selected entry's hotspot is retained. | Keep COR-010 fixtures; extend retention to every entry through ICO-007. |
 | ICO-004 | Default PNG-backed path inherits PNG's accepted-mode limits; BMP-backed path accepts only RGB/RGBA. | Publish separate entry-backend mode capabilities and fixture every accepted combination. |
 | ICO-005 | `ico` transitively enables full `png` and `bmp` features, so it is not an isolated compiled slice. | Retain correctness first; measure binary impact and consider private embedded-entry capability features only if Cargo's additive rules remain clear. |
 | ICO-006 | Directory color count, planes, bit depth, duplicate sizes, and tie-breaking are only manifest-bounded. | Add entry-directory edge cases before claiming complete ICO container support. |
