@@ -9044,6 +9044,81 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(sink, vec![0xC1]);
+
+        // GIF high-color RGB median-cut preparation now charges its hash/order,
+        // axis, split, and partition scans. This is a real Rust-only
+        // work-control contract: Pillow has no caller token or work-budget
+        // result, and no parity row or synthetic coverage-only input is added.
+        let mut high_color_pixels = Vec::with_capacity(2_048 * 3);
+        for index in 0..2_048u32 {
+            high_color_pixels.extend_from_slice(&[
+                u8::try_from(index & 0xff)?,
+                u8::try_from((index >> 8) & 0xff)?,
+                u8::try_from((index >> 16) & 0xff)?,
+            ]);
+        }
+        let image = DecodedImage::new(2_048, 1, high_color_pixels, ColorType::Rgb8);
+        let expected = image_slash_star::encode(&image, ImageFormat::Gif, &options)?;
+        let unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(
+            image_slash_star::encode_with_policy(&image, ImageFormat::Gif, &options, &unlimited)?,
+            expected,
+            "an ample GIF high-color median-cut budget preserves byte identity"
+        );
+
+        let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(6);
+        let error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF high-color median-cut budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6,
+                observed: 7,
+            }
+        ));
+
+        let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(5);
+        let mut sink = vec![0xC2];
+        let sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &sink_policy,
+            &mut sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF high-color median-cut sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 5,
+                observed: 6,
+            }
+        ));
+        assert_eq!(sink, vec![0xC2]);
     }
 
     if cfg!(feature = "bmp") {
