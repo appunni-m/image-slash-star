@@ -6,20 +6,36 @@ set -eu
 # independent feature configurations into lock contention. The lane-local
 # roots still reuse clippy, rustdoc, and test artifacts within that lane, and
 # the capability-table probe is pointed at the same roots below.
-# Use roughly two logical CPUs per active lane by default, capped so a large
-# host does not turn the matrix into an unbounded process fan-out. Set
-# MATRIX_JOBS explicitly when a CI runner has a known capacity.
+# Clean roots benefit from roughly two logical CPUs per active lane because
+# each feature/target variant is compiling independently. Retained roots have
+# already paid that compilation cost, so they can use one worker per lane and
+# finish more independent lanes concurrently. Set MATRIX_JOBS explicitly when
+# a CI runner has a known capacity.
 matrix_cpu_count=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '%s\n' 1)
 case "$matrix_cpu_count" in
     ''|*[!0-9]*|0)
         matrix_cpu_count=1
         ;;
 esac
+matrix_target_root=${MATRIX_TARGET_ROOT:-${CARGO_TARGET_DIR:-target}/feature-matrix}
+matrix_cache_state=cold
+if [ -d "$matrix_target_root/target-native-all" ] \
+    && [ -d "$matrix_target_root/target-wasm-unknown-all" ] \
+    && [ -d "$matrix_target_root/target-wasm-wasi-all" ]; then
+    matrix_cache_state=warm
+fi
 MATRIX_JOBS=${MATRIX_JOBS:-}
 if [ -z "$MATRIX_JOBS" ]; then
-    MATRIX_JOBS=$(( (matrix_cpu_count + 1) / 2 ))
-    if [ "$MATRIX_JOBS" -gt 6 ]; then
-        MATRIX_JOBS=6
+    if [ "$matrix_cache_state" = warm ]; then
+        MATRIX_JOBS=$matrix_cpu_count
+        if [ "$MATRIX_JOBS" -gt 12 ]; then
+            MATRIX_JOBS=12
+        fi
+    else
+        MATRIX_JOBS=$(( (matrix_cpu_count + 1) / 2 ))
+        if [ "$MATRIX_JOBS" -gt 6 ]; then
+            MATRIX_JOBS=6
+        fi
     fi
 fi
 case "$MATRIX_JOBS" in
@@ -30,12 +46,20 @@ case "$MATRIX_JOBS" in
 esac
 # The Rust test harness otherwise starts one worker per logical CPU in every
 # active lane. With several lanes running concurrently that multiplies into a
-# heavily oversubscribed matrix. Keep both the default test-worker total and
-# the concurrent Cargo compiler-job total close to the host CPU count while
-# allowing a caller to tune either budget explicitly.
+# heavily oversubscribed matrix. Clean roots keep both the default test-worker
+# total and the concurrent Cargo compiler-job total close to the host CPU
+# count. Warm roots use a small two-worker test budget because their compiler
+# work is already cached; callers may tune either budget explicitly.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
-    MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
+    if [ "$matrix_cache_state" = warm ]; then
+        MATRIX_TEST_THREADS=$(( (matrix_cpu_count + 5) / 6 ))
+        if [ "$MATRIX_TEST_THREADS" -gt 2 ]; then
+            MATRIX_TEST_THREADS=2
+        fi
+    else
+        MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
+    fi
     if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
         MATRIX_TEST_THREADS=1
     fi
@@ -73,7 +97,7 @@ case "$CAPABILITY_JOBS" in
         ;;
 esac
 export CAPABILITY_JOBS
-echo "feature matrix: lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
+echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS"
 
 # The feature-gate suite includes real codec work-budget and cancellation
 # contracts, so unoptimized test binaries make the WASI runtime lane needlessly
@@ -124,7 +148,6 @@ prepare_matrix_cargo_home() {
 # receives an isolated target root, so feature configurations never share
 # Cargo's build-directory lock. Set MATRIX_TARGET_ROOT to a temporary path for
 # a deliberately cold or disposable run.
-matrix_target_root=${MATRIX_TARGET_ROOT:-${CARGO_TARGET_DIR:-target}/feature-matrix}
 export CAPABILITY_TARGET_ROOT="$matrix_target_root"
 cleanup_matrix_logs() {
     rm -rf "$matrix_log_dir"
