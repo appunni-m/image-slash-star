@@ -749,6 +749,17 @@ pub(super) fn compress_level6_tiff(
     input_chunks: &[usize],
     token: Option<&crate::CancellationToken>,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
+    compress_level6_with_token(data, input_chunks, token, 16_383)
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+pub(super) fn compress_level6_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: Option<&crate::CancellationToken>,
+    block_tokens: usize,
+) -> crate::codecs::CodecResult<Vec<u8>> {
     let tokens = if let Some(token) = token {
         tokenize_lookahead_medium_with_token(data, input_chunks, 128, 128, 16, token)?
     } else {
@@ -759,7 +770,7 @@ pub(super) fn compress_level6_tiff(
     let mut writer = BitWriter::default();
     if let Some(token) = token {
         let mut checkpoint = CancellationMatcherCheckpoint { token };
-        emit_blocks_with(&tokens, 16_383, &mut writer, &mut checkpoint)?;
+        emit_blocks_with(&tokens, block_tokens, &mut writer, &mut checkpoint)?;
         checkpoint.poll()?;
         output.extend_from_slice(&writer.finish());
         output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
@@ -798,11 +809,11 @@ fn tokenize_lookahead_medium(
     matcher.tokens
 }
 
-/// Tokenize TIFF Deflate input with cancellation checkpoints at each input
-/// row boundary and inside the level-six matcher. The ordinary PNG/general
-/// level-six path stays on the existing helper above so token-aware TIFF
-/// control does not add polling overhead to ordinary encodes.
-#[cfg(feature = "tiff")]
+/// Tokenize PNG/TIFF Deflate input with cancellation checkpoints at each input
+/// row boundary and inside the level-six matcher. Ordinary no-token callers
+/// stay on the existing helper so token-aware control does not add polling
+/// overhead to ordinary encodes.
+#[cfg(any(feature = "png", feature = "tiff"))]
 fn tokenize_lookahead_medium_with_token(
     data: &[u8],
     input_chunks: &[usize],
@@ -851,12 +862,12 @@ impl MatcherCheckpoint for NoopMatcherCheckpoint {
     }
 }
 
-#[cfg(feature = "tiff")]
+#[cfg(any(feature = "png", feature = "tiff"))]
 struct CancellationMatcherCheckpoint<'a> {
     token: &'a crate::CancellationToken,
 }
 
-#[cfg(feature = "tiff")]
+#[cfg(any(feature = "png", feature = "tiff"))]
 impl MatcherCheckpoint for CancellationMatcherCheckpoint<'_> {
     #[inline(always)]
     fn poll(&mut self) -> crate::codecs::CodecResult<()> {

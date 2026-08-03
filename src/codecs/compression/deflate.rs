@@ -344,6 +344,31 @@ pub(crate) fn compress_zlib_tiff(
     super::zlib_ng::compress_level6_tiff(data, input_chunks, token)
 }
 
+/// Compress a PNG stream with the token-aware paths whose interior work is
+/// currently bounded. The default level-six matcher and stored-block mode
+/// retain the ordinary byte model; other levels still receive the caller
+/// checkpoint before and after their existing no-token helper.
+#[cfg(feature = "png")]
+pub(crate) fn compress_zlib_chunked_with_token(
+    data: &[u8],
+    level: u8,
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> CompressionResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(Some(token))?;
+    let output = match level {
+        0 => compress_zlib_stored_chunked_with_token(data, input_chunks, token)?,
+        6 => super::zlib_ng::compress_level6_with_token(data, input_chunks, Some(token), 32_767)?,
+        _ => {
+            let output = compress_zlib_chunked(data, level, input_chunks)?;
+            crate::codecs::error::check_cancelled(Some(token))?;
+            output
+        }
+    };
+    crate::codecs::error::check_cancelled(Some(token))?;
+    Ok(output)
+}
+
 /// Compress a sequence of input calls as one zlib stream.
 ///
 /// The chunk lengths model callers such as Pillow's PNG encoder, which feeds
@@ -396,6 +421,36 @@ fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> Compress
     }
     write_stored_block_bounded(&mut output, &data[pending_start..], true);
     output.extend_from_slice(&adler32(data).to_be_bytes());
+    Ok(output)
+}
+
+#[cfg(feature = "png")]
+fn compress_zlib_stored_chunked_with_token(
+    data: &[u8],
+    input_chunks: &[usize],
+    token: &crate::CancellationToken,
+) -> CompressionResult<Vec<u8>> {
+    const MIN_BLOCK: usize = 32_768;
+    const MAX_STORED: usize = 65_535;
+
+    crate::codecs::error::check_cancelled(Some(token))?;
+    let mut output = vec![0x78, 0x01];
+    let mut pending_start = 0usize;
+    let mut input_end = 0usize;
+    for &input_len in input_chunks {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        input_end = input_end.wrapping_add(input_len);
+        while input_end.saturating_sub(pending_start) >= MIN_BLOCK {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            let maximum_end = pending_start.saturating_add(MAX_STORED);
+            let block_end = input_end.min(maximum_end);
+            write_stored_block_bounded(&mut output, &data[pending_start..block_end], false);
+            pending_start = block_end;
+        }
+    }
+    crate::codecs::error::check_cancelled(Some(token))?;
+    write_stored_block_bounded(&mut output, &data[pending_start..], true);
+    output.extend_from_slice(&adler32_with_token(data, token)?.to_be_bytes());
     Ok(output)
 }
 
@@ -590,6 +645,22 @@ fn adler32(data: &[u8]) -> u32 {
         b = b.saturating_add(a).rem_euclid(MODULUS);
     }
     b.wrapping_shl(16) | a
+}
+
+#[cfg(feature = "png")]
+fn adler32_with_token(data: &[u8], token: &crate::CancellationToken) -> CompressionResult<u32> {
+    const MODULUS: u32 = 65_521;
+    let mut a = 1u32;
+    let mut b = 0u32;
+    for chunk in data.chunks(5_552) {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        for &byte in chunk {
+            a = a.saturating_add(u32::from(byte)).rem_euclid(MODULUS);
+            b = b.saturating_add(a).rem_euclid(MODULUS);
+        }
+    }
+    crate::codecs::error::check_cancelled(Some(token))?;
+    Ok(b.wrapping_shl(16) | a)
 }
 
 struct Huffman {

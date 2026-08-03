@@ -7846,6 +7846,36 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             expected,
             "an ample checkpoint budget preserves the ordinary result"
         );
+        let mut stored_options = image_slash_star::PngEncodeOptions::default();
+        stored_options.compression = Some(image_slash_star::PngCompression::None);
+        let stored_options = EncodeOptions::from(stored_options);
+        let stored_expected =
+            image_slash_star::encode(&decoded.content, ImageFormat::Png, &stored_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &stored_options,
+                &unlimited,
+            )?,
+            stored_expected,
+            "an ample budget preserves PNG stored-block bytes"
+        );
+        let mut maximum_options = image_slash_star::PngEncodeOptions::default();
+        maximum_options.compression = Some(image_slash_star::PngCompression::Maximum);
+        let maximum_options = EncodeOptions::from(maximum_options);
+        let maximum_expected =
+            image_slash_star::encode(&decoded.content, ImageFormat::Png, &maximum_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &decoded.content,
+                ImageFormat::Png,
+                &maximum_options,
+                &unlimited,
+            )?,
+            maximum_expected,
+            "an ample budget preserves PNG non-default level bytes"
+        );
         let caller_token = image_slash_star::CancellationToken::new();
         assert_eq!(
             image_slash_star::encode_with_token_and_policy(
@@ -7976,6 +8006,51 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(interior_sink, vec![0xA7]);
+
+        // The default PNG level-six DEFLATE path now remains interruptible
+        // after filtering. Its first matcher checkpoint is deterministic for
+        // this probe, while Pillow has no caller budget or equivalent result.
+        let deflate_policy = image_slash_star::EncodePolicy::new().with_max_work_units(20);
+        let deflate_error = match image_slash_star::encode_with_policy(
+            &interior_image,
+            ImageFormat::Png,
+            &options,
+            &deflate_policy,
+        ) {
+            Ok(_) => return Err("PNG DEFLATE work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            deflate_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 20,
+                observed: 21,
+            }
+        ));
+        let mut deflate_sink = vec![0xA8];
+        let deflate_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &interior_image,
+            ImageFormat::Png,
+            &options,
+            &deflate_policy,
+            &mut deflate_sink,
+        ) {
+            Ok(_) => return Err("PNG DEFLATE budget unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            deflate_sink_error,
+            ImageError::LimitExceeded {
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 20,
+                observed: 21,
+                ..
+            }
+        ));
+        assert_eq!(deflate_sink, vec![0xA8]);
     }
 
     if cfg!(feature = "jpeg") {

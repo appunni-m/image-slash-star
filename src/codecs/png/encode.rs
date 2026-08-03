@@ -127,7 +127,16 @@ fn write_encoded(
         }
     };
     crate::codecs::error::check_cancelled(token)?;
-    let compressed = compress_zlib_chunked(&filtered, compression_level, &input_chunks)?;
+    let compressed = if let Some(token) = token {
+        crate::codecs::compression::deflate::compress_zlib_chunked_with_token(
+            &filtered,
+            compression_level,
+            &input_chunks,
+            token,
+        )?
+    } else {
+        compress_zlib_chunked(&filtered, compression_level, &input_chunks)?
+    };
     crate::codecs::error::check_cancelled(token)?;
 
     let mut header = [0u8; 13];
