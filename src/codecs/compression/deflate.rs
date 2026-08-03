@@ -344,9 +344,9 @@ pub(crate) fn compress_zlib_tiff(
     super::zlib_ng::compress_level6_tiff(data, input_chunks, token)
 }
 
-/// Compress a PNG stream with token-aware interior checkpoints. Stored blocks
-/// and every zlib-ng level retain the ordinary byte model; the no-token path
-/// remains on the existing helpers.
+/// Compress a PNG stream with token-aware interior checkpoints. Stored-block
+/// copying and every zlib-ng level retain the ordinary encoded byte model; the
+/// no-token path remains on the existing helpers.
 #[cfg(feature = "png")]
 pub(crate) fn compress_zlib_chunked_with_token(
     data: &[u8],
@@ -452,12 +452,17 @@ fn compress_zlib_stored_chunked_with_token(
             crate::codecs::error::check_cancelled(Some(token))?;
             let maximum_end = pending_start.saturating_add(MAX_STORED);
             let block_end = input_end.min(maximum_end);
-            write_stored_block_bounded(&mut output, &data[pending_start..block_end], false);
+            write_stored_block_bounded_with_token(
+                &mut output,
+                &data[pending_start..block_end],
+                false,
+                token,
+            )?;
             pending_start = block_end;
         }
     }
     crate::codecs::error::check_cancelled(Some(token))?;
-    write_stored_block_bounded(&mut output, &data[pending_start..], true);
+    write_stored_block_bounded_with_token(&mut output, &data[pending_start..], true, token)?;
     output.extend_from_slice(&adler32_with_token(data, token)?.to_be_bytes());
     Ok(output)
 }
@@ -479,6 +484,27 @@ fn write_stored_block(
 fn write_stored_block_bounded(output: &mut Vec<u8>, block: &[u8], final_block: bool) {
     debug_assert!(u16::try_from(block.len()).is_ok());
     write_stored_block_with_len(output, block, final_block, low_u16(block.len()));
+}
+
+#[cfg(feature = "png")]
+fn write_stored_block_bounded_with_token(
+    output: &mut Vec<u8>,
+    block: &[u8],
+    final_block: bool,
+    token: &crate::CancellationToken,
+) -> CompressionResult<()> {
+    const COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+    debug_assert!(u16::try_from(block.len()).is_ok());
+    let len = low_u16(block.len());
+    output.push(u8::from(final_block));
+    output.extend_from_slice(&len.to_le_bytes());
+    output.extend_from_slice(&(!len).to_le_bytes());
+    for chunk in block.chunks(COPY_CHECKPOINT_BYTES) {
+        output.extend_from_slice(chunk);
+        crate::codecs::error::check_cancelled(Some(token))?;
+    }
+    Ok(())
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
