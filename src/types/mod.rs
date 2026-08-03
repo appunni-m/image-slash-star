@@ -1906,6 +1906,16 @@ impl From<ColorType> for ImageMode {
 }
 
 impl ImageMode {
+    /// Whether this mode carries sixteen-bit integer samples.
+    ///
+    /// This classifies the decoded transfer layout only. It does not imply
+    /// that every downstream operation accepts the mode; consumers apply
+    /// their own operation-specific support policy.
+    #[must_use]
+    pub const fn is_16_bit(self) -> bool {
+        matches!(self, Self::L16 | Self::La16 | Self::Rgb16 | Self::Rgba16)
+    }
+
     /// Return the unpacked channel representation used by codecs.
     #[must_use]
     pub const fn color_type(self) -> ColorType {
