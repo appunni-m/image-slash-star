@@ -1506,7 +1506,7 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 
 #[test]
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::SourceAlpha;
+    use image_slash_star::{AvifAuxiliaryRelationship, SourceAlpha};
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
     // parity field. The AVIF case below uses the real committed fixture in
@@ -1617,11 +1617,30 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(decoded.content.source.alpha(), expected, "{name} decode");
         if name == "avif auxiliary alpha" {
+            let expected_relationship = Some(AvifAuxiliaryRelationship::new(2, 1));
+            assert_eq!(
+                info.source.avif_auxiliary_relationship(),
+                expected_relationship,
+                "{name} inspect auxiliary relationship"
+            );
+            assert_eq!(
+                decoded.content.source.avif_auxiliary_relationship(),
+                expected_relationship,
+                "{name} decode auxiliary relationship"
+            );
             let sequence = image_slash_star::decode_sequence(&bytes)?;
             assert_eq!(
                 sequence.content.frames[0].image.source.alpha(),
                 expected,
                 "{name} sequence"
+            );
+            assert_eq!(
+                sequence.content.frames[0]
+                    .image
+                    .source
+                    .avif_auxiliary_relationship(),
+                expected_relationship,
+                "{name} sequence auxiliary relationship"
             );
         }
     }
