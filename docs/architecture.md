@@ -499,9 +499,9 @@ scanned or flattened RGBA transparent-area cleanup pixels, each batch of 1,024
 analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
-adaptation, partition emission, each 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical first-partition interval,
+adaptation, partition emission, each 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical first-partition interval,
 each 16,384-boolean first-partition-bit interval,
-each 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical coefficient interval, each 16,384-boolean coefficient-bit
+each 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical coefficient interval, each 16,384-boolean coefficient-bit
 interval, each 1,024-byte boolean-bitstream
 output interval, and final container assembly.
 JPEG baseline and progressive RGB-to-YCbCr conversion and chroma downsampling
@@ -518,7 +518,7 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, each 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream interval, and each 1,024-byte
+intervals, each 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. This is
 deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
@@ -531,13 +531,13 @@ split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area
 cleanup after each 1,024 scanned or flattened pixels, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, 32-bit, 64-bit, 128-bit, 256-bit, and
+mode-selection subsegments plus analysis/coefficient-probability, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and
 512-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
-32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 32-bit, 64-bit, 128-bit, 256-bit, and
+search/match-length/cache/trace, histogram/Huffman, token-stream, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and
 512-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024
 converted RGB or chroma-downsample output pixel, each 1,024 AC coefficients
@@ -560,10 +560,10 @@ is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. Progress callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including remaining finer WebP bitstream work beyond the
-implemented 32-bit/64-bit/128-bit/256-bit/512-bit logical VP8 first-partition and 32-bit/64-bit/128-bit/256-bit/512-bit logical VP8 coefficient intervals,
+implemented 16-bit/32-bit/64-bit/128-bit/256-bit/512-bit logical VP8 first-partition and 16-bit/32-bit/64-bit/128-bit/256-bit/512-bit logical VP8 coefficient intervals,
 the 16,384-boolean first-partition and coefficient-bit intervals, and the
 1,024-byte boolean-bitstream-output
-intervals, the 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical VP8L bitstream intervals, and CPU work inside codec
+intervals, the 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical VP8L bitstream intervals, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP

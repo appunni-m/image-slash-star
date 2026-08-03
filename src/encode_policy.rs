@@ -21,11 +21,11 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// row-conversion checkpoints charged after each 1,024 pixels, lossy WebP VP8
 /// RGB/RGBA-to-YUV conversion items and RGBA transparent-area cleanup after
 /// each 1,024 scanned or flattened pixels, analysis/partition
-/// stages, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and 16,384-boolean first-partition-bit intervals,
-/// 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and 16,384-boolean coefficient-bit intervals,
+/// stages, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and 16,384-boolean first-partition-bit intervals,
+/// 16-bit, 32-bit, 64-bit, 128-bit, 256-bit and 512-bit logical and 16,384-boolean coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream, 1,024-byte bitstream-output,
+/// histogram/Huffman, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit logical bitstream, 1,024-byte bitstream-output,
 /// and token-stream stages, GIF RGB
 /// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
 /// copy/subtraction/lookup intervals, and LZW input-symbol intervals; it is a
@@ -89,12 +89,12 @@ impl EncodePolicy {
     /// bitstream, stored-block, and checksum intervals. Lossy
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
     /// conversion items and each 1,024 scanned or flattened RGBA
-    /// transparent-area cleanup pixels, after each 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit
-    /// logical and 16,384-boolean first-partition interval, after each 32-bit, 64-bit, 128-bit,
+    /// transparent-area cleanup pixels, after each 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, and 512-bit
+    /// logical and 16,384-boolean first-partition interval, after each 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit and 512-bit logical and 16,384-boolean coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
     /// encoding charges checkpoints around predictor, cross-color, entropy,
-    /// transform, bounded backward-reference, histogram/Huffman, 32-bit, 64-bit, 128-bit,
+    /// transform, bounded backward-reference, histogram/Huffman, 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit and 512-bit logical bitstream intervals, 1,024-byte bitstream-output, and
     /// token-stream intervals. GIF RGB/RGBA
     /// palette quantization charges after
