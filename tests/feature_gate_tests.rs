@@ -7875,6 +7875,52 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             stored_interior_expected,
             "an ample budget preserves PNG non-final stored blocks"
         );
+        let stored_copy_policy = image_slash_star::EncodePolicy::new().with_max_work_units(164);
+        let stored_copy_error = match image_slash_star::encode_with_policy(
+            &stored_interior_image,
+            ImageFormat::Png,
+            &stored_options,
+            &stored_copy_policy,
+        ) {
+            Ok(_) => return Err("PNG stored-block copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            stored_copy_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 164,
+                observed: 165,
+            }
+        ));
+        let mut stored_copy_sink = vec![0xAA];
+        let stored_copy_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &stored_interior_image,
+            ImageFormat::Png,
+            &stored_options,
+            &stored_copy_policy,
+            &mut stored_copy_sink,
+        ) {
+            Ok(_) => return Err("PNG stored-block copy budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            stored_copy_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 164,
+                observed: 165,
+            }
+        ));
+        assert_eq!(
+            stored_copy_sink,
+            vec![0xAA],
+            "PNG stored-block copy rejection happens before sink delivery"
+        );
         let mut maximum_options = image_slash_star::PngEncodeOptions::default();
         maximum_options.compression = Some(image_slash_star::PngCompression::Maximum);
         let maximum_options = EncodeOptions::from(maximum_options);
