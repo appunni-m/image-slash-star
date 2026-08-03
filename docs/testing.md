@@ -390,7 +390,7 @@ analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability
-adaptation, partition emission, after each 256-bit and 512-bit logical first-partition
+adaptation, partition emission, after each 128-bit, 256-bit, and 512-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
 256-bit and 512-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
 interval, and after each
@@ -481,7 +481,7 @@ token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability adaptation and
-256-bit and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
+128-bit, 256-bit, and 512-bit logical first-partition, 16,384-boolean first-partition-bit,
 256-bit and 512-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 256-bit and 512-bit logical VP8L bitstream intervals, and VP8L stages,
@@ -3365,8 +3365,33 @@ its retained log contains 33 passing lane markers, records
 `capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
 build-directory or package-cache lock-wait matches.
 
+Current acceptance record: WebP VP8 128-bit first-partition checkpoint
+
+The finer lossy WebP/VP8 first-partition checkpoint is implemented at
+`fca00abc3ece718d49c4ca774d0e4428566f9625`. `TokenPartitionCheckpoint` now
+charges a logical poll after each 128 boolean-coded bits while retaining the
+256-bit, 512-bit, and 16,384-boolean intervals. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves the new boundary
+with the 512x512 analysis probe at `maximum: 333`, `observed: 334` in both
+whole-buffer and direct-sink paths; the direct sink remains `[0xB8]`. This is
+Rust-only resource-contract evidence: no Pillow row, parity fixture,
+diagnostic origin, new test function, or coverage-only hook was added.
+
+Managed Pillow parity run `3c9bcb42-a744-4a4d-abd4-d067bb785528` passed
+1,445/1,445 checks in 45,231 ms. The exact-head feature-matrix run
+`19e84fd6-d70c-4be4-91c2-71e123b12352` passed in 50,436 ms at the same
+revision; its retained log records 33 passing lane markers and
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+build-directory, package-cache, or lock-wait matches. Coverage MCP run
+`29aaba64-8a13-4014-aad0-9423393e8c49` passed 85/85 tests in 78,442 ms and
+ingested snapshot `117e1e18-2448-4461-9c51-453006189ccf`, reporting
+51,470/51,951 lines, 7,100/7,194 branches, 2,898/2,968 functions, and
+79,810/80,909 regions. The known LLVM JSON segment-normalization warning
+remains; no coverage-only test was added.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 256-bit/512-bit first-partition/coefficient, 256-bit/512-bit VP8L
+current 128-bit/256-bit/512-bit first-partition, 256-bit/512-bit coefficient, 256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
