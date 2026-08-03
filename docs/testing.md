@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`9aeac06bfb27b643921d0c5231c5f83e3538e870`; the claim-ledger baseline remains
+`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -472,7 +472,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`9aeac06bfb27b643921d0c5231c5f83e3538e870`, the fixture manifest and managed
+`4c61ad60eab2be62dcad80f8f4b95550cae2688c`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -2836,6 +2836,42 @@ this is recorded rather than hidden. The VP8 residual file reports 339/349
 lines, 38/38 branches, 21/21 functions, and 494/537 regions. The LLVM JSON
 segment-normalization warning remains. These are Rust-only implementation and
 target records separate from Pillow parity.
+
+Current acceptance record: direct AVIF auxiliary relationship
+
+The direct AVIF auxiliary-alpha relationship slice is implemented at
+`fcff8dd9e9bebf22da8b7ee3dd3e93ae13798018` and finalized with the
+assertion-only contract checkpoint `4c61ad60eab2be62dcad80f8f4b95550cae2688c`.
+`SourceDescriptor::avif_auxiliary_relationship()` retains the direct
+source-local `auxl` relationship from auxiliary item `2` to primary item `1`
+in the committed `alpha.avif` fixture. The relationship is present on
+inspection, still decode, and every sequence frame; it records provenance and
+does not transform decoded pixels. Non-alpha auxiliary properties,
+derived/grid/track relationships, plane range/quality, premultiplication, and
+invisible-RGB semantics remain open.
+
+The existing feature-gated integration contract
+`source_alpha_matches_the_container_contract` was extended to assert the public
+relationship getters. No new test function, Pillow parity row, fixture,
+diagnostic origin, or coverage-only hook was added. Pillow's parity schema has
+no source descriptor or auxiliary-item identity field, so its unchanged result
+is outer-output regression evidence only.
+
+Managed Pillow parity run `4977e46c-43a0-4e3a-bedf-c6d11fdeeff3` passed
+1,445/1,445 checks with zero failures or skips in 56,545 ms. Exact-revision
+feature-matrix run `81ee974e-a13d-41ed-87d6-e02be077cce3` passed 991/991 checks
+in 3,993 ms; its retained log contains the native/WASI capability agreement
+marker and no build-directory or package-cache lock-wait match. The comparable
+warm-runtime measurement remains 46,976 ms versus the preceding 52,870 ms at
+the same scope after reducing warm-lane compiler workers from two to one; these
+are cache- and runner-sensitive execution measurements, not universal
+benchmarks. Coverage MCP run `3c34f53c-72d8-4240-8ebf-6595f24c7b8d` passed
+85/85 tests in 49,923 ms and ingested snapshot
+`92f6ba37-f4eb-4ee8-aeb3-88e94856501a`: 51,105/51,579 lines, 7,043/7,130
+branches, 2,856/2,925 functions, and 79,321/80,378 regions. The only
+changed-to-uncovered line against the prior accepted snapshot is the defensive
+duplicate-alpha-association branch at `src/codecs/avif/container.rs:1102`; the
+shortfall is recorded rather than hidden.
 
 Current acceptance record: finer VP8 coefficient checkpoint
 

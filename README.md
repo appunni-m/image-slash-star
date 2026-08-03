@@ -263,7 +263,10 @@ modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`,
 `pasp`, and `clap` properties are retained through
 `SourceDescriptor::avif_transform()` as source provenance; decoded pixels are
 never rotated, mirrored, rescaled, or cropped. Codecs without a retained
-structural fact currently return an empty descriptor.
+structural fact currently return an empty descriptor. For the committed AVIF
+alpha fixture, `SourceDescriptor::avif_auxiliary_relationship()` also retains
+the direct source-local auxiliary-item relationship; it is provenance only and
+does not alter decoded pixels.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
@@ -281,8 +284,11 @@ encoded container: straight/unassociated alpha (PNG alpha channels and palette
 tRNS, WebP VP8X/VP8L alpha, and TIFF `ExtraSamples` 2), TIFF `ExtraSamples` 1
 as premultiplied/associated, GIF transparency as a binary mask, and AVIF alpha
 items as `SourceAlpha::Auxiliary` because their samples are carried by a
-separate image. Decoded transfer bytes remain the documented normalized
-unassociated layout; the descriptor records only what the source declares.
+separate image. `SourceDescriptor::avif_auxiliary_relationship()` exposes the
+direct AVIF `auxl` association as source-local item IDs when that bounded
+relationship is present. Decoded transfer bytes remain the documented
+normalized unassociated layout; the descriptor records only what the source
+declares.
 
 Decoded images and sequences retain `OpaqueBlock` records for container blocks
 the codec does not interpret, in original order with duplicates and the
@@ -345,7 +351,9 @@ Recognized AVIF `Exif` items and MIME items whose content type is exactly
 still and sequence decode (`Exif` and `XMP ` kinds). Their item extent bytes
 are preserved exactly; the EXIF record therefore includes the AVIF TIFF-offset
 prefix. This is source retention only: default encoding never replays it, and
-non-primary/auxiliary item relationships and other item metadata remain open.
+the direct alpha auxiliary relationship is retained separately through
+`SourceDescriptor::avif_auxiliary_relationship()`. Non-alpha, derived, grid,
+track-only, and other item relationships and metadata remain open.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

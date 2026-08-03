@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-03 against the committed tree based on
-`9aeac06bfb27b643921d0c5231c5f83e3538e870`; the claim-ledger baseline remains
+`4c61ad60eab2be62dcad80f8f4b95550cae2688c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -88,7 +88,9 @@ activation point; ordinary ICO uses `None`.
 decoded page. AVIF item `irot`/`imir`/`pasp`/`clap` properties are retained as
 `AvifTransformProperties` on the primary item without rotating, mirroring,
 rescaling, or cropping decoded samples. Other codecs currently return an empty
-descriptor. A source descriptor is structural provenance, not opaque
+descriptor. AVIF direct alpha `auxl` relationships are retained as
+source-local item IDs through `SourceDescriptor::avif_auxiliary_relationship()`
+when present. A source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
@@ -122,7 +124,9 @@ Pillow's result into a new parity field. The
 `SourceDescriptor::alpha()` records the alpha association declared by the
 encoded source: straight (PNG, WebP, and TIFF `ExtraSamples` 2), premultiplied
 (TIFF `ExtraSamples` 1), binary mask (GIF transparency), or auxiliary (AVIF
-alpha items whose samples are carried by a separate image). It never changes
+alpha items whose samples are carried by a separate image). For the bounded
+direct alpha relationship, `SourceDescriptor::avif_auxiliary_relationship()`
+retains the source-local auxiliary and target item IDs. It never changes
 decoded transfer bytes, which stay the documented normalized unassociated
 layout unless a codec explicitly retains source-order bytes.
 
@@ -232,9 +236,10 @@ Recognized `Exif` item types and `mime` items with content type exactly
 `application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on
 still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
 includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
-orientation application, or implicit encode replay is performed. Non-primary,
-auxiliary, unknown-item-property, and other item-relationship semantics remain
-outside this model.
+orientation application, or implicit encode replay is performed. The direct
+alpha `auxl` relationship is retained in `SourceDescriptor`; non-alpha,
+derived/grid, track-only, unknown-item-property, and other item-relationship
+semantics remain outside this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
 position, `clli` content-light-level property, `mdcv` mastering-display color
 volume, and `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
@@ -253,8 +258,9 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Non-ICC profiles, track-only/auxiliary item properties, and non-primary/
-auxiliary metadata relationships remain outside the current model.
+Non-ICC profiles, track-only/auxiliary item properties, non-alpha auxiliary
+relationships, and derived/grid metadata remain outside the current model; the
+bounded direct alpha `auxl` relationship is the explicitly retained exception.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
