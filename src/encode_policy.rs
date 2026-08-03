@@ -11,8 +11,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
 /// the PNG adaptive-filter and filtered-row checkpoints charged after each
 /// 1,024 row bytes, BMP row-conversion checkpoints charged after each 1,024
-/// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items and analysis/partition
-/// stages, and the lossless WebP VP8L
+/// pixels, lossy WebP VP8 RGB/RGBA-to-YUV conversion items, analysis/partition
+/// stages, and 16,384-boolean coefficient-bit intervals, and the lossless WebP VP8L
 /// predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, bitstream, and token-stream stages, GIF RGB
 /// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
@@ -65,8 +65,8 @@ impl EncodePolicy {
     /// fizzle, window, and position intervals plus expansion, Huffman,
     /// bitstream, stored-block, and checksum intervals. Lossy
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
-    /// conversion items and between its major analysis, mode-selection,
-    /// probability, and bitstream stages; VP8L encoding
+    /// conversion items, after each 16,384 coefficient bits, and between its
+    /// major analysis, mode-selection, probability, and bitstream stages; VP8L encoding
     /// charges checkpoints around predictor, cross-color, entropy, transform,
     /// bounded backward-reference, histogram/Huffman, bitstream, and
     /// token-stream intervals. GIF RGB/RGBA palette quantization charges after
