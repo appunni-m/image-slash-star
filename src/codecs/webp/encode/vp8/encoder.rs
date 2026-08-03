@@ -262,7 +262,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut y_plane = vec![0u8; 8 * 9];
     let mut u_plane = vec![0u8; 5 * 5];
     let mut v_plane = vec![0u8; 5 * 5];
-    cleanup_transparent_area(&rgba, 8, 9, &mut y_plane, &mut u_plane, &mut v_plane);
+    let _ = cleanup_transparent_area(&rgba, 8, 9, &mut y_plane, &mut u_plane, &mut v_plane, None);
 }
 
 fn pad_plane(
@@ -294,6 +294,89 @@ const GAMMA_FIX: i32 = 12;
 const GAMMA_TAB_FIX: i32 = 7;
 const GAMMA_TAB_SIZE: usize = 1 << (GAMMA_FIX - GAMMA_TAB_FIX);
 const YUV_CHECKPOINT_ITEMS: usize = 1_024;
+const TRANSPARENT_AREA_CHECKPOINT_PIXELS: usize = 1_024;
+
+trait TransparentAreaCheckpoint {
+    fn observe(&mut self) -> CodecResult<()>;
+
+    fn fill_block(
+        &mut self,
+        plane: &mut [u8],
+        stride: usize,
+        origin_x: usize,
+        origin_y: usize,
+        size: usize,
+        value: u8,
+    ) -> CodecResult<()>;
+}
+
+struct NoopTransparentAreaCheckpoint;
+
+impl TransparentAreaCheckpoint for NoopTransparentAreaCheckpoint {
+    #[inline(always)]
+    fn observe(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn fill_block(
+        &mut self,
+        plane: &mut [u8],
+        stride: usize,
+        origin_x: usize,
+        origin_y: usize,
+        size: usize,
+        value: u8,
+    ) -> CodecResult<()> {
+        fill_block(plane, stride, origin_x, origin_y, size, value);
+        Ok(())
+    }
+}
+
+struct TokenTransparentAreaCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    pixels_until_checkpoint: usize,
+}
+
+impl<'a> TokenTransparentAreaCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            pixels_until_checkpoint: TRANSPARENT_AREA_CHECKPOINT_PIXELS,
+        }
+    }
+}
+
+impl TransparentAreaCheckpoint for TokenTransparentAreaCheckpoint<'_> {
+    #[inline]
+    fn observe(&mut self) -> CodecResult<()> {
+        self.pixels_until_checkpoint = self.pixels_until_checkpoint.saturating_sub(1);
+        if self.pixels_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.pixels_until_checkpoint = TRANSPARENT_AREA_CHECKPOINT_PIXELS;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn fill_block(
+        &mut self,
+        plane: &mut [u8],
+        stride: usize,
+        origin_x: usize,
+        origin_y: usize,
+        size: usize,
+        value: u8,
+    ) -> CodecResult<()> {
+        for y in origin_y..origin_y.saturating_add(size) {
+            for x in origin_x..origin_x.saturating_add(size) {
+                plane[y.wrapping_mul(stride).wrapping_add(x)] = value;
+                self.observe()?;
+            }
+        }
+        Ok(())
+    }
+}
 
 fn low_u32(value: usize) -> u32 {
     let bytes = value.to_le_bytes();
@@ -461,7 +544,8 @@ pub(super) fn rgb_to_yuv_planes_internal(
     Ok((y_plane, u_plane, v_plane))
 }
 
-fn smoothen_transparent_luma(
+#[allow(clippy::too_many_arguments)]
+fn smoothen_transparent_luma<C: TransparentAreaCheckpoint>(
     rgba: &[u8],
     image_width: usize,
     y_plane: &mut [u8],
@@ -469,7 +553,8 @@ fn smoothen_transparent_luma(
     origin_y: usize,
     width: usize,
     height: usize,
-) -> bool {
+    checkpoint: &mut C,
+) -> CodecResult<bool> {
     let mut sum = 0usize;
     let mut count = 0usize;
     for y in origin_y..origin_y.saturating_add(height) {
@@ -480,6 +565,7 @@ fn smoothen_transparent_luma(
                 count = count.wrapping_add(1);
                 sum = sum.wrapping_add(usize::from(y_plane[plane_offset]));
             }
+            checkpoint.observe()?;
         }
     }
     if count > 0 && count < width.wrapping_mul(height) {
@@ -491,10 +577,11 @@ fn smoothen_transparent_luma(
                 if rgba[rgba_offset.wrapping_add(3)] == 0 {
                     y_plane[plane_offset] = average;
                 }
+                checkpoint.observe()?;
             }
         }
     }
-    count == 0
+    Ok(count == 0)
 }
 
 fn fill_block(
@@ -519,7 +606,46 @@ fn cleanup_transparent_area(
     y_plane: &mut [u8],
     u_plane: &mut [u8],
     v_plane: &mut [u8],
-) {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    match token {
+        Some(token) => {
+            let mut checkpoint = TokenTransparentAreaCheckpoint::new(token);
+            cleanup_transparent_area_with_checkpoint(
+                rgba,
+                width,
+                height,
+                y_plane,
+                u_plane,
+                v_plane,
+                &mut checkpoint,
+            )
+        }
+        None => {
+            let mut checkpoint = NoopTransparentAreaCheckpoint;
+            cleanup_transparent_area_with_checkpoint(
+                rgba,
+                width,
+                height,
+                y_plane,
+                u_plane,
+                v_plane,
+                &mut checkpoint,
+            )
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cleanup_transparent_area_with_checkpoint<C: TransparentAreaCheckpoint>(
+    rgba: &[u8],
+    width: usize,
+    height: usize,
+    y_plane: &mut [u8],
+    u_plane: &mut [u8],
+    v_plane: &mut [u8],
+    checkpoint: &mut C,
+) -> CodecResult<()> {
     const BLOCK: usize = 8;
     let uv_width = width.div_ceil(2);
     let full_width = width.wrapping_div(BLOCK).wrapping_mul(BLOCK);
@@ -528,7 +654,9 @@ fn cleanup_transparent_area(
     for origin_y in (0..full_height).step_by(BLOCK) {
         let mut flattened_values = None;
         for origin_x in (0..full_width).step_by(BLOCK) {
-            if smoothen_transparent_luma(rgba, width, y_plane, origin_x, origin_y, BLOCK, BLOCK) {
+            if smoothen_transparent_luma(
+                rgba, width, y_plane, origin_x, origin_y, BLOCK, BLOCK, checkpoint,
+            )? {
                 let values = *flattened_values.get_or_insert_with(|| {
                     [
                         y_plane[origin_y.wrapping_mul(width).wrapping_add(origin_x)],
@@ -540,23 +668,23 @@ fn cleanup_transparent_area(
                             .wrapping_add(origin_x / 2)],
                     ]
                 });
-                fill_block(y_plane, width, origin_x, origin_y, BLOCK, values[0]);
-                fill_block(
+                checkpoint.fill_block(y_plane, width, origin_x, origin_y, BLOCK, values[0])?;
+                checkpoint.fill_block(
                     u_plane,
                     uv_width,
                     origin_x / 2,
                     origin_y / 2,
                     BLOCK / 2,
                     values[1],
-                );
-                fill_block(
+                )?;
+                checkpoint.fill_block(
                     v_plane,
                     uv_width,
                     origin_x / 2,
                     origin_y / 2,
                     BLOCK / 2,
                     values[2],
-                );
+                )?;
             } else {
                 flattened_values = None;
             }
@@ -570,7 +698,8 @@ fn cleanup_transparent_area(
                 origin_y,
                 width.saturating_sub(full_width),
                 BLOCK,
-            );
+                checkpoint,
+            )?;
         }
     }
     if full_height < height {
@@ -583,7 +712,8 @@ fn cleanup_transparent_area(
                 full_height,
                 BLOCK,
                 height.saturating_sub(full_height),
-            );
+                checkpoint,
+            )?;
         }
         if full_width < width {
             smoothen_transparent_luma(
@@ -594,9 +724,11 @@ fn cleanup_transparent_area(
                 full_height,
                 width.saturating_sub(full_width),
                 height.saturating_sub(full_height),
-            );
+                checkpoint,
+            )?;
         }
     }
+    Ok(())
 }
 
 fn rgba_to_yuv_planes_internal(
@@ -678,7 +810,7 @@ fn rgba_to_yuv_planes_internal(
         }
     }
 
-    cleanup_transparent_area(rgba, w, h, &mut y_plane, &mut u_plane, &mut v_plane);
+    cleanup_transparent_area(rgba, w, h, &mut y_plane, &mut u_plane, &mut v_plane, token)?;
     Ok((y_plane, u_plane, v_plane))
 }
 

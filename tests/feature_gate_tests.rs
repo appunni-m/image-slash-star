@@ -9592,6 +9592,77 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(coefficient_macroblock_sink, vec![0xB1]);
+
+        // Lossy VP8 RGBA transparent-area cleanup now charges a checkpoint
+        // after each 1,024 scanned or flattened pixels. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only work-control
+        // evidence and adds no parity row. The 128x128 all-transparent probe
+        // reaches the cleanup interval after the preceding alpha/conversion
+        // checkpoints; both return and direct-sink rejection leave output
+        // unpublished.
+        let transparent_cleanup_image = DecodedImage::new(
+            128,
+            128,
+            [128, 128, 128, 0].repeat(128 * 128),
+            ColorType::Rgba8,
+        );
+        let transparent_cleanup_expected =
+            image_slash_star::encode(&transparent_cleanup_image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &transparent_cleanup_image,
+                ImageFormat::WebP,
+                &options,
+                &unlimited,
+            )?,
+            transparent_cleanup_expected,
+            "an ample WebP transparent-area budget preserves byte identity"
+        );
+        let transparent_cleanup_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(400);
+        let transparent_cleanup_error = match image_slash_star::encode_with_policy(
+            &transparent_cleanup_image,
+            ImageFormat::WebP,
+            &options,
+            &transparent_cleanup_policy,
+        ) {
+            Ok(_) => return Err("bounded WebP transparent cleanup unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transparent_cleanup_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 400,
+                observed: 401,
+            }
+        ));
+        let mut transparent_cleanup_sink = vec![0xB4];
+        let transparent_cleanup_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &transparent_cleanup_image,
+            ImageFormat::WebP,
+            &options,
+            &transparent_cleanup_policy,
+            &mut transparent_cleanup_sink,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP transparent cleanup sink unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transparent_cleanup_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 400,
+                observed: 401,
+            }
+        ));
+        assert_eq!(transparent_cleanup_sink, vec![0xB4]);
     }
 
     if cfg!(feature = "gif") {
