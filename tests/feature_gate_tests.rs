@@ -8612,13 +8612,69 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(coefficient_sink, vec![0xAE]);
 
+        // Coefficient-token signaling is finer than block emission. On this
+        // constant 512x512 probe, the 4,000-token charge lands after the
+        // 62nd 64-block checkpoint, so it is observed as 401. This remains
+        // Rust-only work-control evidence with no parity row or coverage-only
+        // hook.
+        let coefficient_token_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(400);
+        let coefficient_token_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_token_bounded,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP coefficient-token budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_token_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 400,
+                observed: 401,
+            }
+        ));
+        let mut coefficient_token_sink = vec![0xB2];
+        let coefficient_token_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_token_bounded,
+            &mut coefficient_token_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP coefficient-token sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_token_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 400,
+                observed: 401,
+            }
+        ));
+        assert_eq!(coefficient_token_sink, vec![0xB2]);
+
         // The coarser coefficient macroblock checkpoint remains in place
         // after the finer block checkpoint. On this 512x512 probe, 100 block
-        // checkpoints complete at the 256th macroblock, so the macroblock
-        // charge is observed as 440. This is Rust-only work-control evidence
+        // checkpoints and one token checkpoint complete at the 256th
+        // macroblock, so the macroblock charge is observed as 441. This is
+        // Rust-only work-control evidence
         // with no parity row or coverage-only hook.
         let coefficient_macroblock_bounded =
-            image_slash_star::EncodePolicy::new().with_max_work_units(439);
+            image_slash_star::EncodePolicy::new().with_max_work_units(440);
         let coefficient_macroblock_error = match image_slash_star::encode_with_policy(
             &analysis_image,
             ImageFormat::WebP,
@@ -8638,8 +8694,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 439,
-                observed: 440,
+                maximum: 440,
+                observed: 441,
             }
         ));
         let mut coefficient_macroblock_sink = vec![0xB1];
@@ -8664,8 +8720,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 439,
-                observed: 440,
+                maximum: 440,
+                observed: 441,
             }
         ));
         assert_eq!(coefficient_macroblock_sink, vec![0xB1]);
