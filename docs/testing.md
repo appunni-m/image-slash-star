@@ -3390,8 +3390,42 @@ ingested snapshot `117e1e18-2448-4461-9c51-453006189ccf`, reporting
 79,810/80,909 regions. The known LLVM JSON segment-normalization warning
 remains; no coverage-only test was added.
 
+Current acceptance record: WebP VP8 128-bit coefficient checkpoint
+
+The finer lossy WebP/VP8 coefficient checkpoint is implemented at
+`589c01495ad3b8e7a3d2dda5b072d689b2e62818`. `TokenCoefficientCheckpoint`
+now charges a logical poll after each 128 boolean-coded coefficient bits
+while retaining the 256-bit, 512-bit, and 16,384-boolean intervals. The
+existing `encode_work_budget_is_a_non_parity_result_contract` proves the
+128-bit boundary at `maximum: 820`, `observed: 821`, the retained 256-bit
+boundary at `maximum: 824`, `observed: 825`, and the retained 512-bit
+boundary at `maximum: 832`, `observed: 833`, in both whole-buffer and
+direct-sink paths; the direct-sink sentinels remain `[0xB5]`, `[0xB3]`,
+and `[0xB9]`. It also recalibrates the existing token, macroblock, block,
+and 16,384-bit boundary assertions after the added poll. This is Rust-only
+resource-contract evidence: no Pillow row, parity fixture, diagnostic
+origin, new test function, or coverage-only hook was added.
+
+Managed Pillow parity run `e40fd1fe-8d24-4e95-98ad-166d8f2b5bbe` passed
+1,445/1,445 checks in 40,256 ms. The exact-head feature-matrix run
+`4793928e-7bff-488c-89e5-0136b0d38663` passed in 46,680 ms; its retained
+log records 33 passing lane markers and
+`cache=warm lanes=12 test_threads=3 build_jobs=1 debug=0 verbose=0`, ends
+with `capability tables OK: every native and wasm32-wasip1 lane agrees`,
+and has no `lock-wait`, `build-directory`, or `package-cache` matches.
+Coverage MCP run `d59a57b1-5a6f-42d8-8e04-d3b3411e343c` passed 85/85 tests
+in 58,887 ms and ingested snapshot
+`5abf0bb8-7c28-4b76-9998-8e25f016ad62`, reporting 51,477/51,958 lines,
+7,102/7,196 branches, 2,898/2,968 functions, and 79,821/80,916 regions.
+The known LLVM JSON segment-normalization warning remains. The parity run
+is Pillow-oracle evidence; the policy assertions and aggregate coverage are
+implementation/Rust-only evidence. In the same snapshot,
+`src/codecs/webp/encode/vp8/residual.rs` has 353/363 covered lines,
+42/42 covered branches, and 21/21 covered functions; nine source lines
+remain uncovered, and no coverage-only hook was used.
+
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 128-bit/256-bit/512-bit first-partition, 256-bit/512-bit coefficient, 256-bit/512-bit VP8L
+current 128-bit/256-bit/512-bit first-partition, 128-bit/256-bit/512-bit coefficient, 256-bit/512-bit VP8L
 bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
