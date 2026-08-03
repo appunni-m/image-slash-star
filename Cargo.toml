@@ -50,6 +50,10 @@ name = "capability_table"
 path = "tests/capability_table.rs"
 
 [[test]]
+name = "mode_contract_tests"
+path = "tests/mode_contract_tests.rs"
+
+[[test]]
 name = "determinism_tests"
 path = "tests/determinism_tests.rs"
 
