@@ -8951,10 +8951,67 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(coefficient_token_sink, vec![0xB2]);
 
-        // Coefficient boolean coding adds a finer 16,384-bit interval after
-        // the token checkpoint. Pillow has no caller token or work-budget
-        // result, so this remains Rust-only work-control evidence with no
-        // parity row or coverage-only hook.
+        // Coefficient boolean coding now charges a logical checkpoint after
+        // each 4,096 coded bits. On this 512x512 probe, the first such
+        // interval is observed as 440 in both whole-buffer and direct-sink
+        // paths. Pillow has no caller token or work-budget result, so this
+        // remains Rust-only work-control evidence with no parity row or
+        // coverage-only hook.
+        let coefficient_fine_bit_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(439);
+        let coefficient_fine_bit_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_fine_bit_bounded,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP fine coefficient-bit budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_fine_bit_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 439,
+                observed: 440,
+            }
+        ));
+        let mut coefficient_fine_bit_sink = vec![0xB3];
+        let coefficient_fine_bit_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_fine_bit_bounded,
+            &mut coefficient_fine_bit_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP fine coefficient-bit sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_fine_bit_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 439,
+                observed: 440,
+            }
+        ));
+        assert_eq!(coefficient_fine_bit_sink, vec![0xB3]);
+
+        // The existing coarser coefficient boolean checkpoint remains
+        // independently enforced after each 16,384 coded bits.
         let coefficient_bit_bounded =
             image_slash_star::EncodePolicy::new().with_max_work_units(401);
         let coefficient_bit_error = match image_slash_star::encode_with_policy(
