@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-03 against current implementation revision
-`e3f8d4bfb1f5687d0f5322519b776740748a82fc`; the claim-ledger baseline remains
+`d8abbfb228e53dc704cae8571959e594486fd60c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -365,7 +365,7 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, 1,024-bit logical bitstream intervals, and 1,024-byte bitstream
+intervals, 512-bit logical bitstream intervals, and 1,024-byte bitstream
 output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
 untouched sink, including separate exact-boundary probes for the logical
@@ -413,7 +413,7 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 1,024-bit
+search/match-length/cache/trace, histogram/Huffman, token-stream, 512-bit
 logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; native AVIF still
 encoding polls its preparation,
@@ -432,7 +432,7 @@ mode-selection subsegments, WebP coefficient-probability adaptation and
 1,024-bit logical first-partition, 16,384-boolean first-partition-bit,
 1,024-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 1,024-bit logical VP8L bitstream intervals, and VP8L stages,
+intervals, the 512-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -461,7 +461,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`f7a8cd7efdf398c4df564ea29ffa2fcc99e6afdf`, the generated matrix reports:
+`d8abbfb228e53dc704cae8571959e594486fd60c`, the generated matrix reports:
 
 | Metric | Count |
 | --- | ---: |
@@ -2748,6 +2748,36 @@ function delta. The VP8 residual file reports 339/349 lines, 38/38 branches,
 not hidden with a coverage-only test. The LLVM JSON segment-normalization
 warning remains. These are Rust-only implementation and target records
 separate from Pillow parity.
+
+The finer lossless WebP/VP8L logical-bitstream checkpoint slice is implemented
+at `d8abbfb228e53dc704cae8571959e594486fd60c`. Token-aware VP8L bit writing
+now charges after each 512-bit logical-bitstream interval while retaining the 1,024-byte
+emitted-output interval; compression-search trials preserve their checkpoint
+state when the shortest candidate is selected, and the no-token path remains a
+monomorphized no-op controller. The existing Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` uses the patterned 128x128
+RGB probe to prove ample-budget byte identity and whole-buffer/direct-sink
+rejection at the first logical checkpoint (`maximum: 54,823`, `observed:
+54,824`), with both bounded sinks untouched. Pillow has no caller token,
+work-budget result, or caller-owned sink, so this adds no parity row, fixture,
+diagnostic origin, or coverage-only hook.
+
+Managed Pillow parity run `e7fcfaba-c7e0-4c0b-910c-b9b5ed4081f0` passed
+1,445/1,445 checks with zero failures or skips in 56,180 ms. Feature-matrix
+run `13582bc0-0266-41ed-957b-651696df49a3` passed 991/991 checks in 64,693 ms;
+its retained log contains the capability marker
+`capability tables OK: every native and wasm32-wasip1 lane agrees` and no
+`lock-wait` match. Coverage MCP run
+`d9b2ba47-76b3-45dc-a1c7-091e532153fb` passed 85/85 tests in 90,751 ms and
+ingested snapshot `09bee72c-c5cf-4c21-ac25-80fda41c1622`, reporting
+50,815/51,279 lines, 7,012/7,096 branches, 2,828/2,897 functions, and
+78,970/80,004 regions. Compared with snapshot
+`4cc74646-c229-4ab5-92ec-a511434a893a`, coverage has zero line, branch,
+function, or region delta and no changed-to-uncovered lines. The VP8L encoder
+file reports 1,467/1,477 lines, 226/226 branches, 77/77 functions, and
+2,127/2,228 regions; retained gaps are recorded rather than hidden. The LLVM
+JSON segment-normalization warning remains. These are Rust-only implementation
+and target records separate from Pillow parity.
 
 Historical claim-ledger acceptance record:
 
