@@ -10334,6 +10334,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let huffman_frequency_image =
             DecodedImage::new(128, 128, huffman_frequency_pixels, ColorType::Rgb8);
+        // Huffman-tree emission now checkpoints the code-length-token
+        // frequency scan after each 16 compressed token entries. A generated
+        // LCG probe reaches this interior boundary without adding a Pillow
+        // parity row, fixture, or coverage-only input.
         let huffman_frequency_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(43_938);
         let huffman_frequency_error = match image_slash_star::encode_with_policy(
@@ -10379,6 +10383,59 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(huffman_frequency_sink, vec![0xB3]);
+
+        // The reverse trim scan over trailing zero-repeat Huffman tokens now
+        // checkpoints after each 16 compressed token entries. The same
+        // generated image reaches this later interior boundary without
+        // adding a Pillow parity row, fixture, or coverage-only input.
+        let huffman_trim_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_931);
+        let huffman_trim_error = match image_slash_star::encode_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_trim_policy,
+        ) {
+            Ok(_) => return Err("VP8L Huffman trim budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_trim_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 144_931,
+                observed: 144_932,
+            }
+        ));
+        let mut huffman_trim_sink = vec![0xB4];
+        let huffman_trim_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_931),
+            &mut huffman_trim_sink,
+        ) {
+            Ok(_) => return Err("VP8L Huffman trim sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_trim_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 144_931,
+                observed: 144_932,
+            }
+        ));
+        assert_eq!(
+            huffman_trim_sink,
+            vec![
+                0xB4, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P',
+            ]
+        );
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed
         // alphabets. This is Rust-only work-control evidence: Pillow has no
