@@ -27,9 +27,12 @@ fi
 MATRIX_JOBS=${MATRIX_JOBS:-}
 if [ -z "$MATRIX_JOBS" ]; then
     if [ "$matrix_cache_state" = warm ]; then
-        MATRIX_JOBS=$matrix_cpu_count
-        if [ "$MATRIX_JOBS" -gt 12 ]; then
-            MATRIX_JOBS=12
+        # Warm lanes mostly validate cached fingerprints and execute already
+        # built test binaries. Admit up to two lanes per logical CPU so the
+        # scheduler does not leave independent cached target families idle.
+        MATRIX_JOBS=$((matrix_cpu_count * 2))
+        if [ "$MATRIX_JOBS" -gt 24 ]; then
+            MATRIX_JOBS=24
         fi
     else
         MATRIX_JOBS=$(( (matrix_cpu_count + 1) / 2 ))
@@ -79,7 +82,7 @@ if [ -z "$MATRIX_BUILD_JOBS" ]; then
     MATRIX_BUILD_JOBS=$((matrix_cpu_count / MATRIX_JOBS))
     # Warm roots have already paid the dependency fan-out cost. Keep one
     # compiler worker per active lane: the warm scheduler can admit up to
-    # twelve lanes, so increasing this to two would oversubscribe the
+    # twenty-four lanes, so increasing this to two would oversubscribe the
     # measured 12-logical-CPU host without changing any test coverage.
     if [ "$MATRIX_BUILD_JOBS" -lt 1 ]; then
         MATRIX_BUILD_JOBS=1

@@ -4198,9 +4198,10 @@ lock contention and interleaves native, `wasm32-unknown-unknown`, and
 root, it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs
 per lane, capped at six), then derives the Rust test-harness and Cargo compiler
 worker counts from that bound. When all three retained all-feature target roots
-are present, the scheduler treats the root as warm: it allows up to twelve
-independent lanes, uses one Cargo compiler worker per lane, and derives the
-test-harness budget as `ceil(logical_cpus / 4)`, capped at three workers per
+are present, the scheduler treats the root as warm: it allows up to twenty-four
+independent cached lanes (two per logical CPU, capped at 24), uses one Cargo
+compiler worker per lane, and derives the test-harness budget as
+`ceil(logical_cpus / 4)`, capped at three workers per
 lane. `MATRIX_JOBS`,
 `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the derived values
 for a constrained or unusually large CI runner. This bounds aggregate process,
