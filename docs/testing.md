@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`2d4b9f622923255617eac62669d32d489ead90c5`; the claim-ledger baseline remains
+`1451217f6344c71141518b28d724b9455b7c0a87`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -895,6 +895,18 @@ asserts inspect, still decode, fallback-sequence, pixel-preservation, and
 malformed-profile behavior as separate defensive/specification evidence. No
 row is added to `coverage_matrix.json`.
 
+The non-primary AVIF item-color contract is also separate from Pillow parity.
+The existing `alpha.avif` fixture is mutated only in memory to add the primary
+item's typed `colr`/`nclx` property association to auxiliary item 2. The
+contract asserts source-local item identity and exact CICP values on inspect,
+still decode, and fallback-sequence decode, preserves the primary
+`SourceColor`, and proves decoded pixels are unchanged. Pillow's observable
+schema has no item-level color declaration, so this is Rust
+source-provenance/specification evidence: it adds no parity row or new fixture
+file,
+diagnostic origin, new test function, or coverage-only hook. Non-primary ICC
+profiles and color/property forms other than typed CICP remain open.
+
 The contract also associates a deliberately distinguishable 24-byte primary
 `mdcv` property and asserts the exact green/blue/red wire-order mapping into
 the public red/green/blue descriptor, the mastering luminance fields, inspect/
@@ -1525,6 +1537,50 @@ This is runtime and harness evidence rather than a controlled speedup claim
 because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
+
+The non-primary AVIF typed-CICP slice is implemented at
+`1451217f6344c71141518b28d724b9455b7c0a87`. The existing
+`source_alpha_matches_the_container_contract` feature-gated integration test
+mutates the committed `alpha.avif` bytes only in memory to associate the
+primary typed `colr`/`nclx` property with auxiliary item 2. It asserts the
+source-local item ID and exact CICP values on inspect, still decode, and
+fallback-sequence decode, preserves the primary `SourceColor`, and proves
+decoded pixels are unchanged. No new test function, fixture file, parity row,
+diagnostic origin, or coverage-only hook was added. Pillow has no item-level
+source-color result, so this is Rust source-provenance/specification evidence;
+non-primary ICC profiles and other item color/property forms remain open.
+
+The focused contract passed, and the local all-feature test suite passed all
+82 tests; strict all-target Clippy and rustfmt also passed. Managed Pillow
+parity run `55d0f139-9806-4563-b74a-04693622b2f2` passed 1,445/1,445 checks in
+2,367 ms with zero failures or skips. Feature-matrix run
+`3317cea7-75ab-4c01-b665-520c832aa6c0` passed all 991/991 checks in 80,775 ms,
+ended with `capability tables OK: every native and wasm32-wasip1 lane agrees`,
+and had no `lock-wait`, `build-directory`, or `package-cache` log matches.
+
+Coverage MCP run `58d84cda-d167-4641-9f14-8f81ba5c533e` passed 85/85 tests in
+90,128 ms and ingested snapshot `80bdf23c-8b1c-4459-ae66-fd0b789d3eb7`:
+52,025/52,576 lines, 7,188/7,310 branches, 2,948/3,022 functions, and
+80,512/81,726 regions. Compared with the preceding accepted snapshot
+`5afb834b-bdb7-4f52-a29e-da99b9af4103`, covered totals increased by 95 lines,
+7 branches, 14 functions, and 119 regions; source totals grew by 95 lines,
+8 branches, 14 functions, and 119 regions. The changed AVIF files report:
+`container.rs` 2,530/2,534 lines, 406/410 branches, 158/158 functions, and
+3,782/3,788 regions; `samples.rs` 3,712/3,714 lines, 545/546 branches,
+180/181 functions, and 4,820/4,826 regions; `decode.rs` and `av1/mod.rs` are
+fully covered at 566/566 and 152/152 lines respectively. `types/mod.rs` is
+1,474/1,483 lines, 118/124 branches, 139/142 functions, and 1,478/1,488
+regions; its named partial `SourceDescriptor::is_empty` chain includes the
+new item-color field. The current named AVIF defensive gaps remain the
+duplicate transform branches at `container.rs:1079-1080`, `:1085-1086`, and
+`:1091-1092`, the duplicate
+alpha-association branch at `container.rs:1188-1189`, the empty-grid branch at
+`samples.rs:1235-1236`, and the pre-existing enum-doc gaps at
+`types/mod.rs:962-976`. The known LLVM JSON segment-normalization warning
+remains; the strict aggregate shortfall is 551 lines, 122 branches, 74
+functions, and 1,214 regions. These are Rust implementation/coverage metrics,
+not Pillow-oracle parity metrics, and no coverage-only test was used to hide
+them.
 
 The preceding implementation revision was
 `7d735af15cc448bd1be76b1569c317b8dcd0d9e7`. The runtime-first parity follow-up
@@ -2982,7 +3038,7 @@ assigning any to Pillow parity.
 
 Remaining AVIF metadata work is non-alpha auxiliary relationships and
 properties, item identity/plane-range/quality details, grid topology,
-non-primary color properties, and invisible RGB semantics. The feature-matrix serial-tail overlap is implemented
+non-primary color forms beyond typed CICP, and invisible RGB semantics. The feature-matrix serial-tail overlap is implemented
 at `da3dfbe43c90320c6cbf92ac7bcfea6bec71c1fe`: the two
 `wasm32-unknown-unknown` `feature_gate_tests --no-run` checks now run in their
 matching `none` and `avif` lanes, and the all-feature
