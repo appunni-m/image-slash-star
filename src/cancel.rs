@@ -20,7 +20,7 @@
 //! forward-DCT/quantization blocks, and bitstream stages, and
 //! lossless WebP VP8L
 //! predictor/cross-color/entropy/transform, histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
-//! 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
+//! 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, and 16,384-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference/token-stream intervals, plus GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
 //! partition intervals, fixed 1,024-cell RGBA FASTOCTREE copy/subtraction/lookup
