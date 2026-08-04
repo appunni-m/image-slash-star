@@ -10,7 +10,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// checkpoints reached by an encode, including TIFF Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, and checksum intervals,
 /// JPEG RGB-to-YCbCr conversion and chroma-downsample output intervals after
-/// each 1,024 converted or produced pixels, and entropy-output intervals after
+/// each 1,024 converted or produced pixels, baseline entropy traversal after
+/// each 1,024 MCUs, and entropy-output intervals after
 /// each 1,024 emitted entropy bytes, JPEG optimized-Huffman frequency
 /// coefficients after each 1,024 coefficients, progressive scan block slots
 /// after each 1,024 blocks, progressive scan coefficient items after each
@@ -76,7 +77,8 @@ impl EncodePolicy {
     /// copied bytes. BMP row conversion charges additional checkpoints after
     /// each 1,024 pixels. JPEG RGB-to-YCbCr conversion charges an additional
     /// checkpoint after each 1,024 pixels, JPEG chroma downsampling charges an
-    /// additional checkpoint after each 1,024 output pixels, and JPEG entropy
+    /// additional checkpoint after each 1,024 output pixels, baseline entropy
+    /// traversal charges an additional checkpoint after each 1,024 MCUs, and JPEG entropy
     /// coding charges an additional checkpoint after each 1,024 emitted entropy
     /// bytes, and optimized baseline Huffman frequency gathering charges an
     /// additional checkpoint after each 1,024 AC coefficients. Progressive

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`5f058fecdf63c69a80f4f177f542860264d8cba3`; the claim-ledger baseline remains
+`79de2f10dab8735abadd1fa19db346963656b670`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -331,6 +331,15 @@ baseline Huffman frequency checkpoint after each 1,024 AC coefficients at
 with the sink untouched. The optimized-frequency boundary is part of the same
 Rust-only contract because Pillow has no caller token, work-budget result, or
 caller-owned sink.
+The low-entropy generated 512x512 RGB probe reaches exactly 32x32 default
+4:2:0 MCUs and proves the separate baseline entropy traversal checkpoint after
+each 1,024 MCUs at whole-buffer and direct-sink `maximum: 7,720`,
+`observed: 7,721`, with sentinel `[0x63]` untouched. Its focused contract
+completed in 3.23 seconds locally after reducing unnecessary entropy
+complexity; this is a runner-sensitive observation, not a universal benchmark.
+The MCU boundary is Rust-only because Pillow has no caller token, work-budget
+result, or caller-owned sink, so no parity row, fixture, diagnostic origin, new
+test function, or coverage-only hook was added.
 The same committed `large.jpg` probe with `progressive=true` additionally
 proves progressive DC/AC scan-event block-slot checkpointing after each 1,024
 slots at `maximum: 1,364`, `observed: 1,365`, in both whole-buffer and
@@ -488,7 +497,8 @@ assembly, and directory finalization.
 The AVIF assertion is native-only because portable WASM AVIF encoding remains
 target-unavailable. This slice does not claim universal interior interruption
 beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion, 1,024-pixel
-chroma-downsample output, optimized baseline Huffman frequency gathering after
+chroma-downsample output, baseline entropy traversal after each 1,024 MCUs,
+optimized baseline Huffman frequency gathering after
 each 1,024 AC coefficients, progressive scan block slots after each 1,024
 blocks, progressive scan-event frequency items after each 1,024 events,
 progressive scan coefficient items after each 1,024 coefficients, and 1,024-byte
@@ -529,7 +539,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`5f058fecdf63c69a80f4f177f542860264d8cba3`, the fixture manifest and
+`79de2f10dab8735abadd1fa19db346963656b670`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -549,25 +559,25 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `0f8cb18c-8eec-47c3-86bf-6453dfea9ce3` passed 1,445/1,445 checks
-with zero skips in 921 ms. Feature-matrix run
-`5f1bab78-086b-44b1-a489-1cc9eece23e4` passed all 991 checks in 31,864 ms
+parity run `3843fdd6-0ae4-4017-97fc-50668fdbbd20` passed 1,445/1,445 checks
+with zero skips in 2,184 ms. Feature-matrix run
+`e1ba65de-3e66-4083-8b82-f53c875ae9ad` passed all 991 checks in 27,240 ms
 across 24/24 configured lanes. Its retained log records `cache=warm lanes=24
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
 every native and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`3759c978-c56c-41f9-8f29-1ebea991ddc8` passed 85/85 tests in 66,885 ms and
-ingested snapshot `366f5243-7d98-4f0f-bc2e-82e2d811439f`:
-52,174/52,729 lines, 7,220/7,342 branches, 2,960/3,036 functions, and
-80,707/81,921 regions. Compared with the preceding accepted snapshot
-`4b35942a-516c-41c7-8421-6cbf8b24aed4`, covered and source totals changed by
-`+1/-1/0/-1` for lines/branches/functions/regions. The known LLVM JSON
+`54c9e950-1bf1-4467-85c1-1eb9b6ae2673` passed 85/85 tests in 63,746 ms and
+ingested snapshot `14149605-982f-4340-bc1c-58c66edab530`:
+52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and
+80,723/81,937 regions. Compared with the preceding accepted snapshot
+`47c6cdc2-9141-487c-b1af-f497b5fe3d65`, covered and source totals changed by
+`0/0/0/0` for lines/branches/functions/regions. The known LLVM JSON
 segment-normalization warning remains. The strict local verifier's aggregate
 shortfall is 555 lines, 122 branches, 76 functions, and 1,214 regions;
 coverage is implementation evidence, not Pillow parity, and no coverage-only
 test was added.
 
-Current test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
+Historical test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
 The current harness and compact VP8 boundary probes are included in implementation
 revision `5f058fecdf63c69a80f4f177f542860264d8cba3`; the feature matrix retains
@@ -1545,7 +1555,32 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: WebP VP8 coefficient checkpoints and compact probe runtime
+Current acceptance record: JPEG baseline entropy MCU checkpoint and compact probe runtime
+
+The JPEG baseline entropy traversal checkpoint is implemented and tested at
+implementation/test revision `79de2f10dab8735abadd1fa19db346963656b670`.
+`EntropyOutputCheckpoint` charges after each 1,024 baseline MCUs. The existing
+Rust-only `encode_work_budget_is_a_non_parity_result_contract` uses a low-entropy
+generated 512x512 RGB probe with exactly 32x32 default 4:2:0 MCUs and proves
+whole-buffer and direct-sink rejection at `maximum: 7,720`, `observed: 7,721`,
+leaving sentinel `[0x63]` untouched. The focused contract completed in 3.23
+seconds locally after reducing unnecessary entropy complexity; that duration is
+runner-sensitive rather than a universal benchmark. Pillow has no caller token,
+work-budget result, or caller-owned sink, so this adds no parity row, fixture
+file, diagnostic origin, new test function, or coverage-only hook.
+
+The same revision's managed Pillow parity run
+`3843fdd6-0ae4-4017-97fc-50668fdbbd20` passed 1,445/1,445 checks in 2,184 ms;
+feature-matrix run `e1ba65de-3e66-4083-8b82-f53c875ae9ad` passed all 991/991
+checks across 24/24 lanes in 27,240 ms; and Coverage MCP run
+`54c9e950-1bf1-4467-85c1-1eb9b6ae2673` passed 85/85 tests in 63,746 ms and
+ingested snapshot `14149605-982f-4340-bc1c-58c66edab530`. The snapshot retains
+52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and
+80,723/81,937 regions, unchanged from the preceding accepted 81714bc snapshot;
+the known LLVM segment-normalization warning and strict aggregate shortfall
+remain.
+
+Historical acceptance record: WebP VP8 coefficient checkpoints and compact probe runtime
 
 The current WebP VP8 work-control test optimization is recorded against
 implementation/test revision `5f058fecdf63c69a80f4f177f542860264d8cba3`.
