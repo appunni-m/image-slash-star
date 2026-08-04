@@ -10439,11 +10439,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         let mut cache_probe_pixels = Vec::with_capacity(512 * 512 * 3);
         for _ in 0..512 {
             for x in 0..512_u32 {
-                cache_probe_pixels.extend_from_slice(&[
-                    x as u8,
-                    (x >> 8) as u8,
-                    x.wrapping_mul(37) as u8,
-                ]);
+                let x_bytes = x.to_le_bytes();
+                let mixed_bytes = x.wrapping_mul(37).to_le_bytes();
+                cache_probe_pixels.extend_from_slice(&[x_bytes[0], x_bytes[1], mixed_bytes[0]]);
             }
         }
         let cache_probe_image = DecodedImage::new(512, 512, cache_probe_pixels, ColorType::Rgb8);
