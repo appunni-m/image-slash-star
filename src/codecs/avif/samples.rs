@@ -5,9 +5,9 @@ use std::num::NonZeroU32;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile,
-    SourceColor,
+    AvifContentLightLevel, AvifItemColorProperties, AvifItemRelationship,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1202,6 +1202,26 @@ impl Meta {
             .collect()
     }
 
+    fn non_primary_item_color_properties(
+        &self,
+        primary_item_id: u32,
+    ) -> Vec<AvifItemColorProperties> {
+        self.associations
+            .iter()
+            .filter(|association| association.item_id != primary_item_id)
+            .filter_map(|association| {
+                self.properties.get(association.property_index).and_then(
+                    |property| match property {
+                        Property::Color(color) => {
+                            Some(AvifItemColorProperties::new(association.item_id, *color))
+                        }
+                        _ => None,
+                    },
+                )
+            })
+            .collect()
+    }
+
     fn grid_item_ids(&self, primary_item_id: u32) -> ParseResult<Vec<u32>> {
         let item = self
             .items
@@ -1254,6 +1274,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) auxiliary_relationships: Vec<AvifAuxiliaryRelationship>,
     pub(super) item_relationships: Vec<AvifItemRelationship>,
     pub(super) premultiplied_relationships: Vec<AvifItemRelationship>,
+    pub(super) item_color_properties: Vec<AvifItemColorProperties>,
     pub(super) grid_item_ids: Vec<u32>,
     pub(super) transform: Option<AvifTransformProperties>,
 }
@@ -2115,6 +2136,10 @@ fn extract_inner_with_metadata(
         .as_ref()
         .map(Meta::premultiplied_relationships)
         .unwrap_or_default();
+    let item_color_properties = meta
+        .as_ref()
+        .map(|meta| meta.non_primary_item_color_properties(meta.primary_item_id))
+        .unwrap_or_default();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2128,6 +2153,7 @@ fn extract_inner_with_metadata(
         auxiliary_relationships,
         item_relationships,
         premultiplied_relationships,
+        item_color_properties,
         grid_item_ids,
         transform,
     })
@@ -3632,6 +3658,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3655,6 +3682,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3883,6 +3911,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3938,6 +3967,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3959,6 +3989,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3987,6 +4018,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -4028,6 +4060,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4055,6 +4088,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4077,6 +4111,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4106,6 +4141,7 @@ fn coverage_structural_states() {
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
         premultiplied_relationships: Vec::new(),
+        item_color_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,

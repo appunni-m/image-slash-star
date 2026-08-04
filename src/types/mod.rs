@@ -976,6 +976,38 @@ impl AvifItemRelationship {
     }
 }
 
+/// A bounded CICP color declaration associated with a non-primary AVIF item.
+///
+/// The item identifier is local to the encoded container. This retains the
+/// item's declared `colr`/`nclx` values as source provenance; it does not
+/// apply color conversion or merge the declaration into the primary
+/// [`SourceColor`] result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifItemColorProperties {
+    item_id: u32,
+    color: AvifColorProperties,
+}
+
+impl AvifItemColorProperties {
+    /// Create a source-local non-primary AVIF item color declaration.
+    #[must_use]
+    pub const fn new(item_id: u32, color: AvifColorProperties) -> Self {
+        Self { item_id, color }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the item's declared CICP color properties.
+    #[must_use]
+    pub const fn color(&self) -> AvifColorProperties {
+        self.color
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -990,6 +1022,7 @@ pub struct SourceDescriptor {
     avif_auxiliary_relationships: Option<Vec<AvifAuxiliaryRelationship>>,
     avif_item_relationships: Option<Vec<AvifItemRelationship>>,
     avif_premultiplied_relationships: Option<Vec<AvifItemRelationship>>,
+    avif_item_color_properties: Option<Vec<AvifItemColorProperties>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_transform: Option<AvifTransformProperties>,
 }
@@ -1006,6 +1039,7 @@ impl SourceDescriptor {
             avif_auxiliary_relationships: None,
             avif_item_relationships: None,
             avif_premultiplied_relationships: None,
+            avif_item_color_properties: None,
             avif_grid_item_ids: None,
             avif_transform: None,
         }
@@ -1125,6 +1159,22 @@ impl SourceDescriptor {
             .unwrap_or(&[])
     }
 
+    /// Record bounded CICP declarations for non-primary AVIF items.
+    #[must_use]
+    pub fn with_avif_item_color_properties(
+        mut self,
+        properties: Vec<AvifItemColorProperties>,
+    ) -> Self {
+        self.avif_item_color_properties = (!properties.is_empty()).then_some(properties);
+        self
+    }
+
+    /// Return bounded non-primary AVIF item CICP declarations in source order.
+    #[must_use]
+    pub fn avif_item_color_properties(&self) -> &[AvifItemColorProperties] {
+        self.avif_item_color_properties.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1168,6 +1218,7 @@ impl SourceDescriptor {
             && self.avif_auxiliary_relationships.is_none()
             && self.avif_item_relationships.is_none()
             && self.avif_premultiplied_relationships.is_none()
+            && self.avif_item_color_properties.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_transform.is_none()
     }

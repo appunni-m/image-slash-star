@@ -24,6 +24,7 @@ pub fn decode(
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
     let item_relationships = std::mem::take(&mut extracted.item_relationships);
     let premultiplied_relationships = std::mem::take(&mut extracted.premultiplied_relationships);
+    let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
@@ -78,6 +79,15 @@ pub fn decode(
             .with_avif_premultiplied_relationships(premultiplied_relationships);
         image.with_source_descriptor(source)
     };
+    let image = if item_color_properties.is_empty() {
+        image
+    } else {
+        let source = image
+            .source
+            .clone()
+            .with_avif_item_color_properties(item_color_properties);
+        image.with_source_descriptor(source)
+    };
     let image = if grid_item_ids.is_empty() {
         image
     } else {
@@ -109,6 +119,7 @@ pub fn decode_sequence(
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
     let item_relationships = std::mem::take(&mut extracted.item_relationships);
     let premultiplied_relationships = std::mem::take(&mut extracted.premultiplied_relationships);
+    let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
@@ -158,6 +169,16 @@ pub fn decode_sequence(
                 .source
                 .clone()
                 .with_avif_premultiplied_relationships(premultiplied_relationships.clone());
+            frame.image.source = source;
+        }
+    }
+    if !item_color_properties.is_empty() {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_item_color_properties(item_color_properties.clone());
             frame.image.source = source;
         }
     }

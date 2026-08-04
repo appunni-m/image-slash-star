@@ -7,9 +7,10 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
-    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
+    AvifContentLightLevel, AvifItemColorProperties, AvifItemRelationship,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
+    SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1057,6 +1058,10 @@ impl Meta {
         if !premultiplied_relationships.is_empty() {
             source = source.with_avif_premultiplied_relationships(premultiplied_relationships);
         }
+        let item_color_properties = self.non_primary_item_color_properties(primary);
+        if !item_color_properties.is_empty() {
+            source = source.with_avif_item_color_properties(item_color_properties);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1118,6 +1123,23 @@ impl Meta {
             .filter(|reference| reference.kind == *b"prem")
             .map(|reference| {
                 AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
+            })
+            .collect()
+    }
+
+    fn non_primary_item_color_properties(&self, primary: u32) -> Vec<AvifItemColorProperties> {
+        self.associations
+            .iter()
+            .filter(|association| association.item_id != primary)
+            .filter_map(|association| {
+                self.properties.get(association.property_index).and_then(
+                    |property| match property {
+                        Property::Color(color) => {
+                            Some(AvifItemColorProperties::new(association.item_id, *color))
+                        }
+                        _ => None,
+                    },
+                )
             })
             .collect()
     }
