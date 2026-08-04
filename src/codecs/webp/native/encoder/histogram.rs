@@ -34,6 +34,7 @@ const PRECISION: u32 = 23;
 const NUM_PARTITIONS: usize = 4;
 const BIN_SIZE: usize = NUM_PARTITIONS * NUM_PARTITIONS * NUM_PARTITIONS;
 const MAX_HISTO_GREEDY: u64 = 100;
+const POPULATION_CHECKPOINT_SYMBOLS: usize = 64;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -103,6 +104,19 @@ impl Histogram {
         }
     }
 
+    fn analyze_with_checkpoint(&mut self, token: CheckpointToken<'_>) -> CheckpointResult<()> {
+        self.bit_cost = 0;
+        for i in 0..5 {
+            let (cost, trivial, used) =
+                population_cost_with_checkpoint(&self.populations[i], token)?;
+            self.costs[i] = cost;
+            self.trivial[i] = trivial;
+            self.used[i] = used;
+            self.bit_cost += cost;
+        }
+        Ok(())
+    }
+
     fn add_assign(&mut self, other: &Self) {
         for (to, from) in self.populations.iter_mut().zip(&other.populations) {
             for (to, from) in to.iter_mut().zip(from) {
@@ -167,6 +181,47 @@ fn entropy_unrefined(x: &[u32], y: Option<&[u32]>) -> (BitEntropy, Streaks) {
     );
     entropy.entropy = backward_refs::fast_slog(entropy.sum).saturating_sub(entropy.entropy);
     (entropy, stats)
+}
+
+fn entropy_unrefined_with_checkpoint(
+    x: &[u32],
+    y: Option<&[u32]>,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(BitEntropy, Streaks)> {
+    let value = |i: usize| x[i] + y.map_or(0, |values| values[i]);
+    let mut entropy = BitEntropy {
+        nonzero_code: NON_TRIVIAL,
+        ..BitEntropy::default()
+    };
+    let mut stats = Streaks::default();
+    let mut previous_index = 0;
+    let mut previous = value(0);
+    for i in 1..x.len() {
+        let current = value(i);
+        if current != previous {
+            entropy_streak(
+                previous,
+                i - previous_index,
+                previous_index,
+                &mut entropy,
+                &mut stats,
+            );
+            previous = current;
+            previous_index = i;
+        }
+        if i.is_multiple_of(POPULATION_CHECKPOINT_SYMBOLS) {
+            checkpoint(token)?;
+        }
+    }
+    entropy_streak(
+        previous,
+        x.len() - previous_index,
+        previous_index,
+        &mut entropy,
+        &mut stats,
+    );
+    entropy.entropy = backward_refs::fast_slog(entropy.sum).saturating_sub(entropy.entropy);
+    Ok((entropy, stats))
 }
 
 fn entropy_streak(
@@ -235,6 +290,24 @@ fn population_cost(population: &[u32]) -> (u64, u16, bool) {
         trivial,
         used,
     )
+}
+
+fn population_cost_with_checkpoint(
+    population: &[u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(u64, u16, bool)> {
+    let (entropy, stats) = entropy_unrefined_with_checkpoint(population, None, token)?;
+    let trivial = if entropy.nonzeros == 1 {
+        entropy.nonzero_code
+    } else {
+        NON_TRIVIAL
+    };
+    let used = stats.streaks[1][0] != 0 || stats.streaks[1][1] != 0;
+    Ok((
+        refined_entropy(&entropy) + final_huffman_cost(&stats),
+        trivial,
+        used,
+    ))
 }
 
 pub(super) fn bits_entropy(population: &[u32]) -> u64 {
@@ -585,11 +658,20 @@ pub(super) fn cluster(
             y += 1;
         }
     }
-    for (index, histogram) in originals.iter_mut().enumerate() {
-        if index.is_multiple_of(16) {
-            checkpoint(token)?;
+    if let Some(token) = token {
+        for (index, histogram) in originals.iter_mut().enumerate() {
+            if index.is_multiple_of(16) {
+                checkpoint(Some(token))?;
+            }
+            histogram.analyze_with_checkpoint(Some(token))?;
         }
-        histogram.analyze();
+    } else {
+        for (index, histogram) in originals.iter_mut().enumerate() {
+            if index.is_multiple_of(16) {
+                checkpoint(None)?;
+            }
+            histogram.analyze();
+        }
     }
     let mut clusters = originals
         .iter()

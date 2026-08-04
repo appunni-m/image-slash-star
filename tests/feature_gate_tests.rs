@@ -9967,6 +9967,54 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(sampling_sink, vec![0xAC]);
 
+        // The lossless VP8L histogram population scan now charges after each
+        // 64 symbols. This existing patterned probe reaches the first scan
+        // after the earlier lossless setup polls. Pillow has no caller token
+        // or work-budget result, so this remains Rust-only evidence with no
+        // parity row or coverage-only hook.
+        let histogram_policy = image_slash_star::EncodePolicy::new().with_max_work_units(19);
+        let histogram_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_policy,
+        ) {
+            Ok(_) => return Err("VP8L histogram budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19,
+                observed: 20,
+            }
+        ));
+        let mut histogram_sink = vec![0xAD];
+        let histogram_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_policy,
+            &mut histogram_sink,
+        ) {
+            Ok(_) => return Err("VP8L histogram sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19,
+                observed: 20,
+            }
+        ));
+        assert_eq!(histogram_sink, vec![0xAD]);
+
         // A materially larger budget reaches the long predictor/cross-color,
         // histogram/Huffman, backward-reference, and token-stream intervals
         // before rejecting. This remains Rust-only work-control evidence:
