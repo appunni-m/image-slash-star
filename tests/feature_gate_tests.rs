@@ -10436,6 +10436,68 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 0xB4, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P',
             ]
         );
+        let mut cache_probe_pixels = Vec::with_capacity(512 * 512 * 3);
+        for _ in 0..512 {
+            for x in 0..512_u32 {
+                cache_probe_pixels.extend_from_slice(&[
+                    x as u8,
+                    (x >> 8) as u8,
+                    x.wrapping_mul(37) as u8,
+                ]);
+            }
+        }
+        let cache_probe_image = DecodedImage::new(512, 512, cache_probe_pixels, ColorType::Rgb8);
+        // VP8L cache population inside a copy token now checkpoints after
+        // each 256 pixels. This repeated-row probe reaches that interior
+        // boundary without adding a Pillow parity row, fixture, or
+        // coverage-only input.
+        let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_752);
+        let cache_probe_error = match image_slash_star::encode_with_policy(
+            &cache_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &cache_probe_policy,
+        ) {
+            Ok(_) => return Err("VP8L cache probe budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cache_probe_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 136_752,
+                observed: 136_753,
+            }
+        ));
+        let mut cache_probe_sink = vec![0xB5];
+        let cache_probe_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &cache_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &cache_probe_policy,
+            &mut cache_probe_sink,
+        ) {
+            Ok(_) => return Err("VP8L cache sink probe budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cache_probe_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 136_752,
+                observed: 136_753,
+            }
+        ));
+        assert_eq!(
+            cache_probe_sink,
+            vec![
+                0xB5, b'R', b'I', b'F', b'F', 156, 4, 0, 0, b'W', b'E', b'B', b'P',
+            ]
+        );
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed
         // alphabets. This is Rust-only work-control evidence: Pillow has no
