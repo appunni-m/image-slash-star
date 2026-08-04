@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`f015165d345cb35234ac5349de7de4a21d001638`; the claim-ledger baseline remains
+`77d85b4b8d852da0daf9754c7b09a20b67abbda6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -566,7 +566,8 @@ subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy analysis, transform selection/application, bounded backward-reference
 search/match-length/cache/
-trace, histogram clustering, Huffman-tree/group emission, token-stream
+trace, histogram clustering (including token-aware population scans after each
+64 symbols), Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. This is
 deterministic work control, not CPU-time,
@@ -586,7 +587,8 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
+search/match-length/cache/trace, histogram population scans after each 64
+symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024
 converted RGB or chroma-downsample output pixel, each 1,024 AC coefficients
