@@ -28,6 +28,7 @@ const PARTITION_2048_BIT_CHECKPOINT_BITS: usize = 2_048;
 const PARTITION_4096_BIT_CHECKPOINT_BITS: usize = 4_096;
 const PARTITION_8192_BIT_CHECKPOINT_BITS: usize = 8_192;
 const PARTITION_BIT_CHECKPOINT_BITS: usize = 16_384;
+const PARTITION_32768_BIT_CHECKPOINT_BITS: usize = 32_768;
 const PARTITION_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait PartitionCheckpointControl {
@@ -189,6 +190,13 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
                                                         crate::codecs::error::check_cancelled(
                                                             Some(self.token),
                                                         )?;
+                                                        if self.bit_items.is_multiple_of(
+                                                            PARTITION_32768_BIT_CHECKPOINT_BITS,
+                                                        ) {
+                                                            crate::codecs::error::check_cancelled(
+                                                                Some(self.token),
+                                                            )?;
+                                                        }
                                                     }
                                                 }
                                             }
