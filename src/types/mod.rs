@@ -2189,8 +2189,15 @@ pub struct DecodedImage {
     /// Flat pixel data. Layout depends on `mode`.
     pub pixels: Vec<u8>,
     /// Generic unpacked color representation.
+    ///
+    /// Direct struct literals are unchecked. Use [`Self::try_new`] when the
+    /// constructor should validate this field together with `mode` and the
+    /// pixel buffer.
     pub color: ColorType,
     /// Exact observable byte/sample mode.
+    ///
+    /// Direct struct literals are unchecked. Use [`Self::try_with_mode`] when
+    /// the constructor should validate this mode and the pixel buffer.
     pub mode: ImageMode,
     /// Palette retained for `P8` images.
     pub palette: Option<ImagePalette>,
@@ -2228,6 +2235,27 @@ impl DecodedImage {
         }
     }
 
+    /// Create an unpacked decoded image and validate its dimensions and bytes.
+    ///
+    /// Unlike [`Self::new`], this constructor returns only a value whose
+    /// dimensions, mode, color representation, and pixel length satisfy
+    /// [`Self::validate`]. The input vector is reused without copying on
+    /// success.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same dimensions or parameter errors as [`Self::validate`].
+    pub fn try_new(
+        width: u32,
+        height: u32,
+        pixels: Vec<u8>,
+        color: ColorType,
+    ) -> ImageResult<Self> {
+        let image = Self::new(width, height, pixels, color);
+        image.validate()?;
+        Ok(image)
+    }
+
     /// Create an image with an exact packed or indexed mode.
     ///
     /// This constructor does not attach an optional [`ImageMode::P8`] palette
@@ -2249,11 +2277,45 @@ impl DecodedImage {
         }
     }
 
+    /// Create an exact-mode image and validate its dimensions and bytes.
+    ///
+    /// The input vector is reused without copying on success. Use
+    /// [`Self::try_with_palette`] when a valid indexed palette must be
+    /// attached as part of construction.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same dimensions or parameter errors as [`Self::validate`].
+    pub fn try_with_mode(
+        width: u32,
+        height: u32,
+        pixels: Vec<u8>,
+        mode: ImageMode,
+    ) -> ImageResult<Self> {
+        let image = Self::with_mode(width, height, pixels, mode);
+        image.validate()?;
+        Ok(image)
+    }
+
     /// Attach an indexed palette while preserving the decoded sample bytes.
     #[must_use]
     pub fn with_palette(mut self, palette: ImagePalette) -> Self {
         self.palette = Some(palette);
         self
+    }
+
+    /// Attach an indexed palette and validate the complete image state.
+    ///
+    /// The image and palette remain owned by the returned value without a
+    /// pixel-buffer copy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same parameter or palette-index errors as [`Self::validate`].
+    pub fn try_with_palette(self, palette: ImagePalette) -> ImageResult<Self> {
+        let image = self.with_palette(palette);
+        image.validate()?;
+        Ok(image)
     }
 
     /// Attach a Windows cursor hotspot while preserving decoded sample bytes.
