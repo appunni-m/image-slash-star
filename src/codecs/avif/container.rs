@@ -7,7 +7,7 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifItemColorProperties, AvifItemRelationship,
+    AvifContentLightLevel, AvifItemColorProperties, AvifItemIccProfile, AvifItemRelationship,
     AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
     AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
     SourceColor, SourceDescriptor,
@@ -1062,6 +1062,10 @@ impl Meta {
         if !item_color_properties.is_empty() {
             source = source.with_avif_item_color_properties(item_color_properties);
         }
+        let item_icc_profiles = self.non_primary_item_icc_profiles(primary);
+        if !item_icc_profiles.is_empty() {
+            source = source.with_avif_item_icc_profiles(item_icc_profiles);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1137,6 +1141,24 @@ impl Meta {
                         Property::Color(color) => {
                             Some(AvifItemColorProperties::new(association.item_id, *color))
                         }
+                        _ => None,
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn non_primary_item_icc_profiles(&self, primary: u32) -> Vec<AvifItemIccProfile> {
+        self.associations
+            .iter()
+            .filter(|association| association.item_id != primary)
+            .filter_map(|association| {
+                self.properties.get(association.property_index).and_then(
+                    |property| match property {
+                        Property::IccProfile(profile) => Some(AvifItemIccProfile::new(
+                            association.item_id,
+                            profile.clone(),
+                        )),
                         _ => None,
                     },
                 )
