@@ -446,7 +446,7 @@ fn validate_explicit_format(data: &[u8], expected: ImageFormat) -> ImageResult<(
     }
 }
 
-fn decode_selected_with_policy(
+pub(crate) fn decode_selected_with_policy(
     data: &[u8],
     format: ImageFormat,
     policy: &DecodePolicy,
@@ -466,6 +466,32 @@ fn decode_selected_with_policy(
             diagnostics,
         )
     })
+}
+
+pub(crate) fn decode_sequence_selected_with_policy(
+    data: &[u8],
+    format: ImageFormat,
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedSequence>> {
+    policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
+    let mut budget = policy.sequence_budget(format);
+    if policy.requires_image_info() {
+        let info = codecs::inspect_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
+        budget.charge_primary(&info)?;
+    }
+    codecs::decode_sequence_format(data, format, &mut budget).map(
+        |(sequence, consumed_bytes, diagnostics)| {
+            finish_decoded(
+                format,
+                sequence,
+                consumed_bytes,
+                data.len(),
+                ImageErrorStage::SequenceDecode,
+                diagnostics,
+            )
+        },
+    )
 }
 
 /// Decode with an explicit caller-controlled policy.
@@ -688,25 +714,7 @@ pub fn decode_sequence_with_policy(
 ) -> ImageResult<Decoded<DecodedSequence>> {
     policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_format(data)?;
-    policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
-    let mut budget = policy.sequence_budget(format);
-    if policy.requires_image_info() {
-        let info = codecs::inspect_format(data, format)?;
-        policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
-        budget.charge_primary(&info)?;
-    }
-    codecs::decode_sequence_format(data, format, &mut budget).map(
-        |(sequence, consumed_bytes, diagnostics)| {
-            finish_decoded(
-                format,
-                sequence,
-                consumed_bytes,
-                data.len(),
-                ImageErrorStage::SequenceDecode,
-                diagnostics,
-            )
-        },
-    )
+    decode_sequence_selected_with_policy(data, format, policy)
 }
 
 /// Incremental sequence decode for callers that are still receiving input.
