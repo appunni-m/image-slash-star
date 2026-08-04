@@ -517,7 +517,9 @@ filters are scored. BMP row conversion additionally charges after each 1,024
 pixels. GIF RGB/RGBA palette quantization additionally charges after each 1,024
 pixels while preparing palette/index data. High-color RGB median-cut preparation
 also charges around hash/order setup, axis ordering, median-cut split stages,
-and 1,024-item split/partition scans. RGBA FASTOCTREE preparation also
+and 1,024-item split/partition scans; its nearest-palette candidate ordering
+and bounded candidate scan also charge after each 1,024 work items. RGBA
+FASTOCTREE preparation also
 charges after each 1,024-cell, bucket, or lookup-entry interval, and its
 Apple-compatible bucket sorting charges after each 1,024 sorting operations.
 GIF LZW charges
