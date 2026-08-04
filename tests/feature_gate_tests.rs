@@ -10649,13 +10649,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         let partition_32768_probe =
             DecodedImage::new(1024, 960, partition_32768_probe_pixels, ColorType::Rgb8);
         // The 65,536-bit first-partition and coefficient boundaries use a
-        // 1,152x1,024 patterned probe (72x64 macroblocks). Pillow has no
+        // 1,024x1,024 patterned probe (64x64 macroblocks). Pillow has no
         // caller budget or equivalent result, so this remains Rust-only.
-        let partition_65536_probe_pixels: Vec<u8> = (0..1152 * 1024 * 3)
+        let partition_65536_probe_pixels: Vec<u8> = (0..1024 * 1024 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_65536_probe =
-            DecodedImage::new(1152, 1024, partition_65536_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(1024, 1024, partition_65536_probe_pixels, ColorType::Rgb8);
         // First-partition boolean coding now charges a checkpoint after each
         // 8 coded bits. The patterned probe reaches the first new logical
         // interval after the existing preparation work. Pillow has no caller
