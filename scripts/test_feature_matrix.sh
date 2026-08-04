@@ -50,19 +50,26 @@ case "$MATRIX_JOBS" in
 esac
 # The Rust test harness otherwise starts one worker per logical CPU in every
 # active lane. With several lanes running concurrently that multiplies into a
-# heavily oversubscribed matrix. Derive the default test-worker budget from the
-# same lane bound in both cache states, keeping aggregate test workers near the
-# host CPU count; a warm 12-CPU root with 24 lanes therefore uses one worker
-# per lane instead of multiplying to 72 workers. Callers can override this
-# when a runner has a different process/thread balance.
+# heavily oversubscribed matrix. Cold lanes keep the aggregate test-worker
+# budget near the host CPU count; warm lanes use a bounded three-worker cap so
+# cached codec work overlaps without making the host-wide scheduler unbounded.
+# Callers can override this when a runner has a different process/thread
+# balance.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
-    MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
-    if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
-        MATRIX_TEST_THREADS=1
-    fi
-    if [ "$MATRIX_TEST_THREADS" -gt 8 ]; then
-        MATRIX_TEST_THREADS=8
+    if [ "$matrix_cache_state" = warm ]; then
+        MATRIX_TEST_THREADS=$(( (matrix_cpu_count + 3) / 4 ))
+        if [ "$MATRIX_TEST_THREADS" -gt 3 ]; then
+            MATRIX_TEST_THREADS=3
+        fi
+    else
+        MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
+        if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
+            MATRIX_TEST_THREADS=1
+        fi
+        if [ "$MATRIX_TEST_THREADS" -gt 8 ]; then
+            MATRIX_TEST_THREADS=8
+        fi
     fi
 fi
 case "$MATRIX_TEST_THREADS" in
