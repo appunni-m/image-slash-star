@@ -127,9 +127,9 @@ echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=
 
 # The feature-gate suite includes real codec work-budget and cancellation
 # contracts, so unoptimized test binaries make the WASI runtime lane needlessly
-# expensive. Level 1 keeps each isolated lane's compile cost modest while
-# retaining the repository's lightly optimized test profile; callers may still
-# override this matrix-only setting explicitly.
+# expensive. Keep the isolated matrix lanes at level 1 to balance their
+# compile-heavy fan-out against runtime, below the repository's level-2 test
+# profile; callers may still override this matrix-only setting explicitly.
 MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-1}
 case "$MATRIX_TEST_OPT_LEVEL" in
     0|1|2|3|s|z)
