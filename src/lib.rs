@@ -964,8 +964,9 @@ pub fn encode_with_policy(
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram population, combined entropy-cost, and histogram-merge scans after
-/// each 64 symbols,
+/// token/Huffman cost scans after each 1,024 tokens or 64 symbols, histogram
+/// population, combined entropy-cost, and histogram-merge scans after each 64
+/// symbols,
 /// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical bitstream intervals, 1,024-byte
 /// bitstream-output,
 /// and token-stream stages, codec-result, and
