@@ -1605,7 +1605,10 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 
 #[test]
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{AvifAuxiliaryRelationship, AvifItemRelationship, SourceAlpha};
+    use image_slash_star::{
+        AvifAuxiliaryRelationship, AvifColorProperties, AvifItemColorProperties,
+        AvifItemRelationship, SourceAlpha,
+    };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
     // parity field. The AVIF case below uses the real committed fixture in
@@ -1676,6 +1679,117 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             }
             Ok(output)
         };
+    let append_item_color_property_association = |input: &[u8]| -> Result<
+        Vec<u8>,
+        Box<dyn std::error::Error>,
+    > {
+        let ipma_type = input
+            .windows(4)
+            .position(|window| window == b"ipma")
+            .ok_or("AVIF alpha fixture has no ipma box")?;
+        let ipma = ipma_type
+            .checked_sub(4)
+            .ok_or("AVIF ipma box has no size field")?;
+        let ipma_size = u32::from_be_bytes(input[ipma..ipma + 4].try_into()?) as usize;
+        let ipma_end = ipma
+            .checked_add(ipma_size)
+            .ok_or("AVIF ipma box end overflowed")?;
+        if input.get(ipma + 8) != Some(&0) {
+            return Err("AVIF alpha fixture ipma version changed".into());
+        }
+        let entry_count = u32::from_be_bytes(input[ipma + 12..ipma + 16].try_into()?);
+        let mut cursor = ipma + 16;
+        let mut insertion = None;
+        let mut association_count_offset = None;
+        for _ in 0..entry_count {
+            let item_id_end = cursor
+                .checked_add(2)
+                .ok_or("AVIF ipma item ID offset overflowed")?;
+            let item_id = u16::from_be_bytes(input[cursor..item_id_end].try_into()?);
+            let count_offset = item_id_end;
+            let association_count = *input
+                .get(count_offset)
+                .ok_or("AVIF ipma association count is missing")?;
+            let association_start = count_offset
+                .checked_add(1)
+                .ok_or("AVIF ipma association start overflowed")?;
+            let association_end = association_start
+                .checked_add(usize::from(association_count))
+                .ok_or("AVIF ipma association end overflowed")?;
+            if item_id == 2 {
+                insertion = Some(association_end);
+                association_count_offset = Some(count_offset);
+            }
+            cursor = association_end;
+        }
+        if cursor != ipma_end {
+            return Err("AVIF alpha fixture ipma layout changed".into());
+        }
+        let insertion = insertion.ok_or("AVIF alpha fixture has no auxiliary item")?;
+        let association_count_offset = association_count_offset
+            .ok_or("AVIF alpha fixture auxiliary association count is missing")?;
+        let mut output = Vec::with_capacity(
+            input
+                .len()
+                .checked_add(1)
+                .ok_or("AVIF item color output length overflowed")?,
+        );
+        output.extend_from_slice(&input[..insertion]);
+        output.push(4);
+        output.extend_from_slice(&input[insertion..]);
+        output[association_count_offset] = output[association_count_offset]
+            .checked_add(1)
+            .ok_or("AVIF ipma association count overflowed")?;
+
+        for kind in [b"ipma", b"iprp", b"meta"] {
+            let type_offset = output
+                .windows(4)
+                .position(|window| window == kind)
+                .ok_or_else(|| format!("AVIF alpha fixture has no {kind:?} box"))?;
+            let size_start = type_offset
+                .checked_sub(4)
+                .ok_or_else(|| format!("AVIF {kind:?} box has no size field"))?;
+            let size = u32::from_be_bytes(output[size_start..size_start + 4].try_into()?)
+                .checked_add(1)
+                .ok_or("AVIF metadata box size overflowed")?;
+            output[size_start..size_start + 4].copy_from_slice(&size.to_be_bytes());
+        }
+
+        let iloc_type = output
+            .windows(4)
+            .position(|window| window == b"iloc")
+            .ok_or("AVIF alpha fixture has no iloc box")?;
+        let iloc = iloc_type
+            .checked_sub(4)
+            .ok_or("AVIF iloc box has no size field")?;
+        if output[iloc + 12] != 0x44 || output[iloc + 13] != 0 {
+            return Err("AVIF alpha fixture iloc layout changed".into());
+        }
+        let item_count = u16::from_be_bytes(output[iloc + 14..iloc + 16].try_into()?);
+        let mut iloc_cursor = iloc + 16;
+        for _ in 0..item_count {
+            iloc_cursor = iloc_cursor
+                .checked_add(4)
+                .ok_or("AVIF iloc item offset overflowed")?;
+            let extent_count = u16::from_be_bytes(output[iloc_cursor..iloc_cursor + 2].try_into()?);
+            iloc_cursor = iloc_cursor
+                .checked_add(2)
+                .ok_or("AVIF iloc extent count overflowed")?;
+            for _ in 0..extent_count {
+                let offset_end = iloc_cursor
+                    .checked_add(4)
+                    .ok_or("AVIF iloc offset overflowed")?;
+                let old_offset = u32::from_be_bytes(output[iloc_cursor..offset_end].try_into()?)
+                    .checked_add(1)
+                    .ok_or("AVIF iloc extent offset overflowed")?;
+                output[iloc_cursor..offset_end].copy_from_slice(&old_offset.to_be_bytes());
+                iloc_cursor = iloc_cursor
+                    .checked_add(8)
+                    .ok_or("AVIF iloc extent overflowed")?;
+            }
+        }
+        Ok(output)
+    };
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
         (
             "gif binary mask",
@@ -1975,6 +2089,64 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_premultiplied_relationships(),
             expected_premultiplied.as_slice(),
             "prem sequence relationship"
+        );
+
+        // A non-primary item may declare CICP through the same typed `colr`/
+        // `nclx` property vocabulary as the primary item. Pillow exposes no
+        // item-level source-color result, so this mutation remains a Rust
+        // provenance witness and deliberately adds no parity row. The
+        // declaration must retain its item identity without changing the
+        // primary color result or decoded samples.
+        let item_color_bytes = append_item_color_property_association(&alpha)?;
+        let expected_item_color = AvifColorProperties {
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            full_range: true,
+        };
+        let expected_item_colors = [AvifItemColorProperties::new(2, expected_item_color)];
+        let item_color_inspected = image_slash_star::inspect(&item_color_bytes)?;
+        assert_eq!(
+            item_color_inspected.source.avif_item_color_properties(),
+            expected_item_colors.as_slice(),
+            "item color inspect declaration"
+        );
+        assert_eq!(
+            item_color_inspected.source.avif_item_color_properties()[0].item_id(),
+            2,
+            "item color inspect identity"
+        );
+        assert_eq!(
+            item_color_inspected.source.avif_item_color_properties()[0].color(),
+            expected_item_color,
+            "item color inspect CICP"
+        );
+        assert_eq!(
+            item_color_inspected.source_color.avif_color(),
+            Some(expected_item_color),
+            "item color does not replace primary CICP"
+        );
+        let item_color_decoded = image_slash_star::decode(&item_color_bytes)?;
+        assert_eq!(
+            item_color_decoded.content.pixels, baseline_decoded.content.pixels,
+            "item color preserves decoded pixels"
+        );
+        assert_eq!(
+            item_color_decoded
+                .content
+                .source
+                .avif_item_color_properties(),
+            expected_item_colors.as_slice(),
+            "item color decode declaration"
+        );
+        let item_color_sequence = image_slash_star::decode_sequence(&item_color_bytes)?;
+        assert_eq!(
+            item_color_sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_color_properties(),
+            expected_item_colors.as_slice(),
+            "item color sequence declaration"
         );
     }
     Ok(())
