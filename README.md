@@ -169,7 +169,7 @@ capabilities and setup.
 | `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
 | `all_capabilities()` | Return the same typed capability record for every public format |
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
-| `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware uncached path |
+| `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware selected-format uncached path |
 | `EncodedImage::decode_state`, `sequence_decode_state`, `is_decoded`, `is_sequence_decoded` | Observe separate not-attempted, succeeded, and failed lazy-cache states without exposing synchronization details |
 | `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
