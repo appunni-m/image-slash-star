@@ -402,11 +402,11 @@ VP8L additionally charges around predictor tile scans/mode application,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
-intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, and 65,536-bit logical bitstream intervals, and 1,024-byte
+intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, and 131,072-bit logical bitstream intervals, and 1,024-byte
 bitstream output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
 untouched sink, including separate exact-boundary probes for the 8-bit, 16-bit, 32-bit, 64-bit
-and 128-bit logical intervals, the existing 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, and 65,536-bit logical intervals, and the emitted-output
+and 128-bit logical intervals, the existing 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, and 131,072-bit logical intervals, and the emitted-output
 intervals. This is still Rust-only work-control
 evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
@@ -472,7 +472,7 @@ and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit,
-512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, and 65,536-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
+512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, and 131,072-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
 additionally polls after each 1,024 progressive scan block slots, each 1,024
 progressive scan-event frequency items, each 1,024 progressive scan coefficient
@@ -500,7 +500,7 @@ macroblock-analysis, and mode-selection subsegments, WebP coefficient-probabilit
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical first-partition, 16,384-boolean first-partition-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, and 65,536-bit logical VP8L bitstream intervals, and VP8L stages,
+intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, and 131,072-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -578,17 +578,17 @@ test was added.
 The lossless WebP VP8L work-control slice is implemented at
 `3f551029fb433c7ae5473f5e31ae135b23f67d31`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` now extends the
-deterministic 128×128 high-entropy RGB probe through the 65,536-logical-coded-
-bit checkpoint. It proves exact boundary rejection in both output paths:
-the 32,768-bit whole-buffer/direct-sink maximum/observed pairs are
-`9,287/9,288` and `9,286/9,287`, while the 65,536-bit pairs are
-`9,288/9,289` and `9,287/9,288`; the caller-owned sink sentinels `[0xA2]` and
-`[0xA1]` remain untouched. The probe remains generated from a fixed LCG rather
-than added as a fixture. This is Rust-only resource-contract evidence: Pillow
-has no caller work budget, typed work-unit result, or caller-owned sink, so the
-change adds no parity row, parity fixture, diagnostic origin, new test
-function, or coverage-only hook; the unchanged Pillow run is regression
-evidence only.
+deterministic high-entropy RGB probes through the 131,072-logical-coded-bit
+checkpoint. The 128×128 probe proves exact 32,768-bit and 65,536-bit
+whole-buffer/direct-sink maximum/observed pairs of `9,287/9,288`,
+`9,286/9,287`, `9,288/9,289`, and `9,287/9,288`; the 256×256 probe proves the
+131,072-bit pairs `41,439/41,440` and `41,438/41,439`. Caller-owned sink
+sentinels `[0xA2]`, `[0xA1]`, and `[0xA0]` remain untouched. The probes remain
+generated from fixed LCGs rather than added as fixtures. This is Rust-only
+resource-contract evidence: Pillow has no caller work budget, typed work-unit
+result, or caller-owned sink, so the change adds no parity row, parity fixture,
+diagnostic origin, new test function, or coverage-only hook; the unchanged
+Pillow run is regression evidence only.
 
 The preceding AVIF item-relationship slice is implemented across
 `489351caa15dbdbba7e9c7d41b01a87aebfd457b` and the coverage-fixture
