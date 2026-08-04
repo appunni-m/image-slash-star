@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`79de2f10dab8735abadd1fa19db346963656b670`; the claim-ledger baseline remains
+`3812762c0756330ff11b963791847e9ace38ddb9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -539,7 +539,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`79de2f10dab8735abadd1fa19db346963656b670`, the fixture manifest and
+`3812762c0756330ff11b963791847e9ace38ddb9`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -559,18 +559,18 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `3843fdd6-0ae4-4017-97fc-50668fdbbd20` passed 1,445/1,445 checks
-with zero skips in 2,184 ms. Feature-matrix run
-`e1ba65de-3e66-4083-8b82-f53c875ae9ad` passed all 991 checks in 27,240 ms
+parity run `2d33d0f2-13fe-4228-90cb-1024108d31b4` passed 1,445/1,445 checks
+with zero skips in 61,823 ms. Feature-matrix run
+`d78b33d2-29cf-4f13-b76b-1aac5bf563e7` passed all 991 checks in 64,539 ms
 across 24/24 configured lanes. Its retained log records `cache=warm lanes=24
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
 every native and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`54c9e950-1bf1-4467-85c1-1eb9b6ae2673` passed 85/85 tests in 63,746 ms and
-ingested snapshot `14149605-982f-4340-bc1c-58c66edab530`:
+`0db71e3e-c0bc-40a6-a33f-92a1f9060ec0` passed 85/85 tests in 84,743 ms and
+ingested snapshot `497947de-526a-475d-8ede-6d9ea903372e`:
 52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and
 80,723/81,937 regions. Compared with the preceding accepted snapshot
-`47c6cdc2-9141-487c-b1af-f497b5fe3d65`, covered and source totals changed by
+`14149605-982f-4340-bc1c-58c66edab530`, covered and source totals changed by
 `0/0/0/0` for lines/branches/functions/regions. The known LLVM JSON
 segment-normalization warning remains. The strict local verifier's aggregate
 shortfall is 555 lines, 122 branches, 76 functions, and 1,214 regions;
@@ -1555,7 +1555,29 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: JPEG baseline entropy MCU checkpoint and compact probe runtime
+Current acceptance record: optimized regular test profile
+
+The regular Cargo test profile now uses `opt-level = 2` at implementation/test
+revision `3812762c0756330ff11b963791847e9ace38ddb9`. The feature-matrix script
+continues to override its isolated compile-heavy lanes to `MATRIX_TEST_OPT_LEVEL=1`.
+In paired warm local observations, the all-feature `feature_gate_tests` suite
+completed 45 tests in 2.69 seconds at level 2 versus 3.19 seconds at level 1
+with four test workers. This is an execution observation rather than a universal
+speedup claim; compile cost, cache state, and runner scheduling vary. The change
+does not alter production profiles, fixtures, manifest rows, assertions, or
+Pillow/Rust evidence origins.
+
+Managed Pillow parity run `2d33d0f2-13fe-4228-90cb-1024108d31b4` passed
+1,445/1,445 checks; feature-matrix run
+`d78b33d2-29cf-4f13-b76b-1aac5bf563e7` passed all configured lanes and ended
+with the capability-table agreement; Coverage MCP run
+`0db71e3e-c0bc-40a6-a33f-92a1f9060ec0` passed 85/85 tests and ingested snapshot
+`497947de-526a-475d-8ede-6d9ea903372e`. Coverage totals remain
+52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and
+80,723/81,937 regions, with the known LLVM segment-normalization warning and
+the strict aggregate shortfall unchanged.
+
+Historical acceptance record: JPEG baseline entropy MCU checkpoint and compact probe runtime
 
 The JPEG baseline entropy traversal checkpoint is implemented and tested at
 implementation/test revision `79de2f10dab8735abadd1fa19db346963656b670`.
@@ -4739,11 +4761,11 @@ Set `MATRIX_VERBOSE=1` to replay every successful lane log as well. Keeping
 successful compiler, test, and WASI output out of the parent process reduces
 test-run I/O without changing any lane, assertion, or retained evidence.
 
-The matrix defaults `MATRIX_TEST_OPT_LEVEL` to `1`, matching the repository's
-lightly optimized test profile. The feature-gate suite executes real codec
-work-budget and cancellation contracts, so an unoptimized level-0 binary makes
-the WASI runtime lane disproportionately slow; callers may override this value
-when compile time matters more than runtime.
+The matrix defaults `MATRIX_TEST_OPT_LEVEL` to `1`, one level below the
+repository's regular `opt-level = 2` test profile. The feature-gate suite
+executes real codec work-budget and cancellation contracts, so an unoptimized
+level-0 binary makes the WASI runtime lane disproportionately slow; callers may
+override this value when compile time matters more than runtime.
 
 Cross-compilation proves compilation, not semantic browser or WASM runtime
 parity. The `wasm32-wasip1` lanes are real runtime evidence for feature-gate

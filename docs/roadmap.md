@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`79de2f10dab8735abadd1fa19db346963656b670`; the claim-ledger baseline remains
+`3812762c0756330ff11b963791847e9ace38ddb9`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `14149605-982f-4340-bc1c-58c66edab530` covers implementation/test revision `79de2f10dab8735abadd1fa19db346963656b670`: 52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and 80,723/81,937 regions. Compared with the preceding accepted snapshot `47c6cdc2-9141-487c-b1af-f497b5fe3d65`, covered and source totals changed by 0 lines, 0 branches, 0 functions, and 0 regions; the low-entropy JPEG baseline-MCU work-budget witness is test-only, and no production source was edited. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 555-line, 122-branch, 76-function, and 1,214-region aggregate shortfall. The JPEG baseline-MCU boundary remains ordinary Rust work-budget evidence; no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `497947de-526a-475d-8ede-6d9ea903372e` covers implementation/test revision `3812762c0756330ff11b963791847e9ace38ddb9`: 52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and 80,723/81,937 regions. Compared with the preceding accepted snapshot `14149605-982f-4340-bc1c-58c66edab530`, covered and source totals changed by 0 lines, 0 branches, 0 functions, and 0 regions; the regular Cargo test profile is now `opt-level = 2`, while the compile-heavy feature matrix explicitly uses level 1. This test-harness change adds no production source, parity row, fixture, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 555-line, 122-branch, 76-function, and 1,214-region aggregate shortfall. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4246,7 +4246,29 @@ workspace after removing the separate 1,920×1,920 witness. These are targeted
 boundary witnesses, not general benchmarks or claims of universal codec speedup;
 managed durations remain cache- and runner-sensitive observations.
 
-Current acceptance record: JPEG baseline entropy MCU checkpoint and compact probe runtime
+Current acceptance record: optimized regular test profile
+
+The regular Cargo test profile now uses `opt-level = 2` at implementation/test
+revision `3812762c0756330ff11b963791847e9ace38ddb9`. The feature-matrix script
+continues to override its isolated compile-heavy lanes to `MATRIX_TEST_OPT_LEVEL=1`.
+In paired warm local observations, the all-feature `feature_gate_tests` suite
+completed 45 tests in 2.69 seconds at level 2 versus 3.19 seconds at level 1
+with four test workers. This is an execution observation rather than a universal
+speedup claim; compile cost, cache state, and runner scheduling vary. The change
+does not alter production profiles, fixtures, manifest rows, assertions, or
+Pillow/Rust evidence origins.
+
+Managed Pillow parity run `2d33d0f2-13fe-4228-90cb-1024108d31b4` passed
+1,445/1,445 checks; feature-matrix run
+`d78b33d2-29cf-4f13-b76b-1aac5bf563e7` passed all configured lanes and ended
+with the capability-table agreement; Coverage MCP run
+`0db71e3e-c0bc-40a6-a33f-92a1f9060ec0` passed 85/85 tests and ingested snapshot
+`497947de-526a-475d-8ede-6d9ea903372e`. Coverage totals remain
+52,187/52,742 lines, 7,222/7,344 branches, 2,962/3,038 functions, and
+80,723/81,937 regions, with the known LLVM segment-normalization warning and
+the strict aggregate shortfall unchanged.
+
+Historical acceptance record: JPEG baseline entropy MCU checkpoint and compact probe runtime
 
 The JPEG baseline entropy traversal checkpoint is implemented and tested at
 implementation/test revision `79de2f10dab8735abadd1fa19db346963656b670`.
