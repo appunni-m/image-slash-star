@@ -106,7 +106,7 @@ pub use decode_policy::{DecodeLimits, DecodePolicy};
 pub use diagnostic::{DiagnosticKind, ImageDiagnostic};
 pub use encode_options::*;
 pub use encode_policy::EncodePolicy;
-pub use source::{EncodedImage, EncodedImageView};
+pub use source::{EncodedImage, EncodedImageDecodeState, EncodedImageView};
 pub use types::*;
 
 fn work_budget_token(
