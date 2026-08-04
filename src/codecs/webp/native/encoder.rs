@@ -83,6 +83,7 @@ const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
 const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
+const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
 
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
@@ -318,7 +319,7 @@ fn build_huffman_tree(
     }
 
     let mut optimized = frequencies.to_vec();
-    optimize_huffman_for_rle(&mut optimized);
+    optimize_huffman_for_rle_with_checkpoint(&mut optimized, token)?;
     let optimized_symbol_count = optimized
         .iter()
         .filter(|&&frequency| frequency != 0)
@@ -457,6 +458,74 @@ fn optimize_huffman_for_rle(counts: &mut [u32]) {
     }
 }
 
+fn optimize_huffman_for_rle_with_checkpoint(
+    counts: &mut [u32],
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    if token.is_none() {
+        optimize_huffman_for_rle(counts);
+        return Ok(());
+    }
+    let Some(length) = counts.iter().rposition(|&count| count != 0).map(|i| i + 1) else {
+        return Ok(());
+    };
+    let mut good = vec![false; length];
+    let mut symbol = counts[0];
+    let mut stride = 0;
+    for i in 0..=length {
+        if i.is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+            check_token(token)?;
+        }
+        if i == length || counts[i] != symbol {
+            if (symbol == 0 && stride >= 5) || (symbol != 0 && stride >= 7) {
+                good[i - stride..i].fill(true);
+            }
+            stride = 1;
+            if i != length {
+                symbol = counts[i];
+            }
+        } else {
+            stride += 1;
+        }
+    }
+
+    stride = 0;
+    let mut limit = counts[0];
+    let mut sum = 0_u32;
+    for i in 0..=length {
+        if i.is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+            check_token(token)?;
+        }
+        if i == length || good[i] || (i != 0 && good[i - 1]) || counts[i].abs_diff(limit) >= 4 {
+            if stride >= 4 || (stride >= 3 && sum == 0) {
+                let mut count = (sum + stride as u32 / 2) / stride as u32;
+                count = count.max(1);
+                if sum == 0 {
+                    count = 0;
+                }
+                counts[i - stride..i].fill(count);
+            }
+            stride = 0;
+            sum = 0;
+            limit = if i + 3 < length {
+                (counts[i] + counts[i + 1] + counts[i + 2] + counts[i + 3] + 2) / 4
+            } else if i < length {
+                counts[i]
+            } else {
+                0
+            };
+        }
+        stride += 1;
+        if i != length {
+            sum += counts[i];
+            if stride >= 4 {
+                limit = (sum + stride as u32 / 2) / stride as u32;
+            }
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 struct HuffmanToken {
     code: u8,
@@ -535,6 +604,89 @@ fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
     tokens
 }
 
+fn compressed_huffman_tokens_with_checkpoint(
+    lengths: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<HuffmanToken>, EncodingError> {
+    if token.is_none() {
+        return Ok(compressed_huffman_tokens(lengths));
+    }
+    let mut tokens = Vec::new();
+    let mut previous = 8;
+    let mut next_checkpoint = VP8L_HUFFMAN_CHECKPOINT_SYMBOLS;
+    let mut i = 0;
+    while i < lengths.len() {
+        let value = lengths[i];
+        let mut end = i + 1;
+        while end < lengths.len() && lengths[end] == value {
+            end += 1;
+        }
+        while end >= next_checkpoint {
+            check_token(token)?;
+            next_checkpoint = next_checkpoint.saturating_add(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS);
+        }
+        let mut repetitions = end - i;
+        if value == 0 {
+            // A run always contains at least one value. The long-run case
+            // subtracts 138 only when that leaves a non-zero remainder, and
+            // every shorter case exits immediately.
+            loop {
+                if repetitions < 3 {
+                    tokens.extend((0..repetitions).map(|_| HuffmanToken { code: 0, extra: 0 }));
+                    break;
+                } else if repetitions < 11 {
+                    tokens.push(HuffmanToken {
+                        code: 17,
+                        extra: (repetitions - 3) as u8,
+                    });
+                    break;
+                } else if repetitions < 139 {
+                    tokens.push(HuffmanToken {
+                        code: 18,
+                        extra: (repetitions - 11) as u8,
+                    });
+                    break;
+                } else {
+                    tokens.push(HuffmanToken {
+                        code: 18,
+                        extra: 0x7f,
+                    });
+                    repetitions -= 138;
+                }
+            }
+        } else {
+            if value != previous {
+                tokens.push(HuffmanToken {
+                    code: value,
+                    extra: 0,
+                });
+                repetitions -= 1;
+            }
+            while repetitions != 0 {
+                if repetitions < 3 {
+                    tokens.extend((0..repetitions).map(|_| HuffmanToken {
+                        code: value,
+                        extra: 0,
+                    }));
+                    break;
+                } else if repetitions < 7 {
+                    tokens.push(HuffmanToken {
+                        code: 16,
+                        extra: (repetitions - 3) as u8,
+                    });
+                    break;
+                } else {
+                    tokens.push(HuffmanToken { code: 16, extra: 3 });
+                    repetitions -= 6;
+                }
+            }
+            previous = value;
+        }
+        i = end;
+    }
+    Ok(tokens)
+}
+
 fn write_huffman_tree<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     frequencies: &[u32],
@@ -572,7 +724,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
         return Ok(());
     }
-    let tokens = compressed_huffman_tokens(lengths);
+    let tokens = compressed_huffman_tokens_with_checkpoint(lengths, token)?;
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
