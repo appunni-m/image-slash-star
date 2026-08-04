@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`79de2f10dab8735abadd1fa19db346963656b670`; the claim-ledger baseline remains
+`72248c6b0985fc01e82c615d3bccd01d82979acc`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -561,8 +561,8 @@ additionally charges after each 1,024 MCUs, and entropy coding charges after
 each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP
-VP8L additionally charges around predictor tile scans and mode application after
-each 1,024 pixels,
+VP8L additionally charges around predictor tile scans, mode application, and
+subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
