@@ -9850,6 +9850,65 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(transform_sink, vec![0xAA]);
 
+        let mut subtract_green_pixels = Vec::with_capacity(1_024 * 3);
+        for index in 0..1_024 {
+            let green = u8::try_from(index % 256)?;
+            subtract_green_pixels.extend_from_slice(&[
+                green.wrapping_add(17),
+                green,
+                green.wrapping_add(31),
+            ]);
+        }
+        let subtract_green_image =
+            DecodedImage::new(1_024, 1, subtract_green_pixels, ColorType::Rgb8);
+        // The lossless VP8L subtract-green transform now charges an interior
+        // checkpoint after each 1,024 applied pixels. This one-row probe
+        // reaches that real transform boundary after the earlier setup polls.
+        // Pillow has no caller token or work-budget result, so this remains
+        // Rust-only evidence with no parity row or coverage-only hook.
+        let subtract_green_policy = image_slash_star::EncodePolicy::new().with_max_work_units(19);
+        let subtract_green_error = match image_slash_star::encode_with_policy(
+            &subtract_green_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &subtract_green_policy,
+        ) {
+            Ok(_) => return Err("VP8L subtract-green budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            subtract_green_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19,
+                observed: 20,
+            }
+        ));
+        let mut subtract_green_sink = vec![0xAB];
+        let subtract_green_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &subtract_green_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &subtract_green_policy,
+            &mut subtract_green_sink,
+        ) {
+            Ok(_) => return Err("VP8L subtract-green sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            subtract_green_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19,
+                observed: 20,
+            }
+        ));
+        assert_eq!(subtract_green_sink, vec![0xAB]);
+
         // A materially larger budget reaches the long predictor/cross-color,
         // histogram/Huffman, backward-reference, and token-stream intervals
         // before rejecting. This remains Rust-only work-control evidence:
