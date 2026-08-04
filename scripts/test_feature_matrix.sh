@@ -220,7 +220,12 @@ run_native_lane() {
 run_wasm_unknown_lane() {
     features=$1
     set -- $(feature_args "$features")
-    cargo clippy --workspace --all-targets --locked \
+    # Native and WASI lanes already compile and execute the complete
+    # feature-gated integration target for every feature selection. The
+    # browser-style unknown target is compile/rustdoc-only, so lint its
+    # target-specific library surface here instead of rebuilding every
+    # integration target a second time in all eleven compile-only lanes.
+    cargo clippy --workspace --lib --locked \
         --target wasm32-unknown-unknown "$@" -- -D warnings
     wasm_unknown_status=$?
     if [ "$wasm_unknown_status" -ne 0 ]; then
