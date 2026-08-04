@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`72248c6b0985fc01e82c615d3bccd01d82979acc`; the claim-ledger baseline remains
+`4b47dc3e980a703902b39703ce683528087951bd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -409,8 +409,9 @@ interval, and after each
 Lossless WebP
 VP8L additionally charges around predictor tile scans/mode application and
 subtract-green transforms after each 1,024 pixels,
-cross-color multiplier search/transform tiles, entropy analysis, transform
-selection/application, bounded backward-reference search/match-length/cache/
+cross-color multiplier search/transform tiles and sampling scans/compaction,
+entropy analysis, transform selection/application, bounded backward-reference
+search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
 intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte
 bitstream output intervals; the same contract
@@ -540,7 +541,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`72248c6b0985fc01e82c615d3bccd01d82979acc`, the fixture manifest and
+`4b47dc3e980a703902b39703ce683528087951bd`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -560,22 +561,22 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `9d9b19e7-7d2c-49b3-8dd3-63e1b674a6a5` passed 1,445/1,445 checks
-with zero skips in 1,599 ms. Feature-matrix run
-`97f350b7-00db-46dd-92e0-3ffbe63df537` passed all configured lanes in 61,898 ms
+parity run `946e0082-8769-4783-8f71-9e033321b48f` passed 1,445/1,445 checks
+with zero skips in 1,205 ms. Feature-matrix run
+`f5b20dea-e081-43a1-aa3d-8c444129486c` passed all configured lanes in 38,941 ms
 across 24/24 configured lanes. Its retained log records `cache=warm lanes=24
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
 every native and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`4f248f97-5bec-4352-afb8-5b688e1d0dd4` passed 85/85 tests in 86,214 ms and
-ingested snapshot `e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f`:
-52,220/52,775 lines, 7,229/7,352 branches, 2,963/3,039 functions, and
-80,766/81,989 regions. Compared with the preceding accepted snapshot
-`f39a47f3-1a59-4921-b1cf-ff0312a612d4`, covered/source totals changed by
-`+20/+21/+3/+4/+1/+1/+20/+28` for covered/source lines, covered/source
+`68a9a58d-0456-4c00-9b16-ba7e0e20fdc4` passed 85/85 tests in 74,834 ms and
+ingested snapshot `daf021be-d1c3-4954-90c3-94a57d3ec7d7`:
+52,265/52,824 lines, 7,239/7,364 branches, 2,964/3,040 functions, and
+80,857/82,084 regions. Compared with the preceding accepted snapshot
+`e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f`, covered/source totals changed by
+`+45/+49/+10/+12/+1/+1/+91/+95` for covered/source lines, covered/source
 branches, covered/source functions, and covered/source regions. The known LLVM
 JSON segment-normalization warning remains. The strict local verifier's
-aggregate shortfall is 555 lines, 123 branches, 76 functions, and 1,223
+aggregate shortfall is 559 lines, 125 branches, 76 functions, and 1,227
 regions; coverage is implementation evidence, not Pillow parity, and no
 coverage-only test was added.
 
@@ -1557,7 +1558,35 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: lossless WebP VP8L subtract-green transform interval
+Current acceptance record: lossless WebP VP8L cross-color sampling interval
+
+The lossless VP8L cross-color sampling reduction now charges a cooperative
+work-budget checkpoint after each 1,024 scanned or compacted tile-map samples.
+The implementation/test slice is committed at revision
+`4b47dc3e980a703902b39703ce683528087951bd`. The existing feature-gated
+`encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
+8,192x8 RGB probe with a 1,024-entry tile map and proves the inclusive
+whole-buffer and caller-owned-sink rejection pair `maximum: 129,499`,
+`observed: 129,500`, with sentinel `[0xAC]` untouched. The ordinary no-token
+path retains the original scan/copy loops. Pillow has no caller token or
+work-budget result, so this is Rust-only resource-contract evidence and adds
+no parity row, fixture, diagnostic origin, new test function, or coverage-only
+hook.
+
+Managed Pillow parity run `946e0082-8769-4783-8f71-9e033321b48f` passed
+1,445/1,445 checks; feature-matrix run
+`f5b20dea-e081-43a1-aa3d-8c444129486c` passed all 24/24 configured lanes in
+38,941 ms and retained the capability-table agreement with no targeted
+lock-wait/build-directory/package-cache matches; and Coverage MCP run
+`68a9a58d-0456-4c00-9b16-ba7e0e20fdc4` passed 85/85 tests and ingested snapshot
+`daf021be-d1c3-4954-90c3-94a57d3ec7d7`. The snapshot reports 52,265/52,824
+lines, 7,239/7,364 branches, 2,964/3,040 functions, and 80,857/82,084
+regions. The known LLVM JSON segment-normalization warning remains; the
+aggregate shortfall is 559 lines, 125 branches, 76 functions, and 1,227
+regions. These are implementation, target, and Rust-only contract records;
+the unchanged Pillow run is regression evidence only.
+
+Historical acceptance record: lossless WebP VP8L subtract-green transform interval
 
 The lossless VP8L subtract-green transform now charges a cooperative
 work-budget checkpoint after each 1,024 applied pixels. The implementation/test
