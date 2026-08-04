@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`50375369951ba73c165e87481fa70e068fbfcc07`; the claim-ledger baseline remains
+`a09bda379ced7abc8b88ba09982de3a4d012ce91`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -101,7 +101,9 @@ when present, and the bounded
 `SourceDescriptor::avif_auxiliary_relationships()` list also retains alpha
 links to supported grid-derived color items. For a primary grid,
 `SourceDescriptor::avif_grid_item_ids()` also retains its ordered derived
-color-item list. A source descriptor is structural provenance, not opaque
+color-item list, and `SourceDescriptor::avif_item_relationships()` retains
+bounded non-alpha `iref` edges such as the grid's ordered `dimg` references.
+A source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
@@ -250,10 +252,10 @@ Recognized `Exif` item types and `mime` items with content type exactly
 still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
 includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
 orientation application, or implicit encode replay is performed. Direct and
-supported grid-derived alpha `auxl` relationships and the bounded grid-derived
-item list are retained in `SourceDescriptor`; non-alpha, full grid topology,
-track-only,
-unknown-item-property, and other item-relationship semantics remain outside
+supported grid-derived alpha `auxl` relationships, the bounded grid-derived
+item list, and bounded non-alpha `iref` edges are retained in
+`SourceDescriptor`; full grid topology, track-only content,
+unknown-item-property semantics, and auxiliary-item decoding remain outside
 this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
 position, `clli` content-light-level property, `mdcv` mastering-display color
@@ -273,10 +275,10 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Non-ICC profiles, track-only/auxiliary item properties, non-alpha auxiliary
-relationships, grid topology, and derived/grid metadata remain outside the
-current model; bounded direct and supported grid-derived alpha `auxl`
-relationships are the explicitly retained exceptions.
+Non-ICC profiles, track-only/auxiliary item properties, grid topology, and
+derived/grid composition remain outside the current model; bounded direct,
+supported grid-derived alpha `auxl`, and non-alpha `iref` relationships are
+the explicitly retained exceptions.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
