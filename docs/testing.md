@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`; the claim-ledger baseline remains
+`2d4b9f622923255617eac62669d32d489ead90c5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -529,7 +529,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`, the fixture manifest and
+`2d4b9f622923255617eac62669d32d489ead90c5`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -549,35 +549,29 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `ab734a3c-6935-446c-a8c7-22c4d1102d26` passed 1,445/1,445 checks
-with zero skips in 801 ms; its retained test result reported 0.70 s of test
-time. The current feature-matrix run
-`ed61e34d-c34e-415e-8a96-f1ae61d96a08` passed all configured native,
-`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 4,334 ms; its retained
-log records `cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0
-verbose=0`, ends with `capability tables OK: every native and wasm32-wasip1
-lane agrees`, and targeted searches returned no
+parity run `723e15eb-58e2-417f-9cc1-52c77f458fb4` passed 1,445/1,445 checks
+with zero skips in 74,171 ms. Clean-revision feature-matrix run
+`aace6bcd-f981-479a-97e9-1f6a03cc96ed` passed all 991 checks in 37,636 ms;
+its retained log ends with `capability tables OK: every native and
+wasm32-wasip1 lane agrees`, and targeted searches returned no
 `lock-wait`/build-directory/package-cache match. These are separate from the
-managed LLVM coverage run `3a3b5f99-e82d-4661-8bbf-9b9f25eb048e`, which passed
-85/85 tests in 85,899 ms and ingested snapshot
-`c5b5dedb-0685-4222-9eee-89dbf6c0a55c` from the preceding unchanged Rust
-implementation revision.
-That snapshot reports 51,855/52,406 lines, 7,174/7,294 branches,
-2,926/3,000 functions, and 80,297/81,511 regions. Compared with the accepted
-snapshot `3c69fa6e-f1ff-4a91-8685-62d07133af7d`, covered totals increased by
-20 lines, 8 branches, 0 functions, and 26 regions while source totals grew by
-20 lines, 8 branches, 0 functions, and 28 regions. The changed WebP native
-encoder reports 1,539/1,548 lines, 256/256 branches, 77/77 functions, and
-2,230/2,333 regions. The known LLVM JSON segment-normalization warning
-remains. Aggregate coverage deltas versus the preceding implementation
-snapshot `c15b8b21-62c0-43de-a35c-e3630fcdac04` are +5 covered lines,
-+2 branches, +0 functions, and +6 regions, with source totals increasing by
-5 lines, 2 branches, 0 functions, and 7 regions. The strict local verifier's
-aggregate shortfall is 551 lines, 120 branches, 74 functions, and 1,214
+managed LLVM coverage run `c5bcc4ae-1a8b-45cf-83f6-ce410acb8020`, which passed
+85/85 tests in 108,208 ms and ingested snapshot
+`5afb834b-bdb7-4f52-a29e-da99b9af4103` at the same implementation revision.
+That snapshot reports 51,930/52,481 lines, 7,181/7,302 branches,
+2,934/3,008 functions, and 80,393/81,607 regions. Compared with the accepted
+snapshot `c5b5dedb-0685-4222-9eee-89dbf6c0a55c`, covered totals increased by
+75 lines, 7 branches, 8 functions, and 96 regions while source totals grew by
+75 lines, 8 branches, 8 functions, and 96 regions. The four line-only
+changed-to-uncovered records at `src/codecs/avif/container.rs:1075`, `:1081`,
+`:1087`, and `:1167` are displaced defensive branches after the AVIF
+source-descriptor insertion; they remain named rather than hidden. The known
+LLVM JSON segment-normalization warning remains. The strict local verifier's
+aggregate shortfall is 551 lines, 121 branches, 74 functions, and 1,214
 regions; coverage is implementation evidence, not Pillow parity, and no
 coverage-only test was added.
 
-Current test-runtime acceptance record: fanout-aligned feature-matrix workers
+Accepted test-runtime baseline: fanout-aligned feature-matrix workers
 
 The test-harness scheduler follow-up is implemented at
 `8ea8d3148f808a664cddfc54ff83f117a2af7b4c`. In both cache states,
@@ -2953,9 +2947,42 @@ remains. The static coverage-origin verifier still reports 219 exact guards
 with no Pillow-parity origin. These source-provenance and aggregate coverage
 records remain separate from Pillow parity; no coverage-only test was added.
 
-The remaining AVIF metadata work is non-alpha auxiliary relationships and
-properties, item identity/plane-range/quality details, premultiplication, and
-invisible RGB semantics. The feature-matrix serial-tail overlap is implemented
+The AVIF premultiplied-alpha relationship slice is implemented at
+`2d4b9f622923255617eac62669d32d489ead90c5`. `SourceDescriptor` now retains
+bounded source-local `prem` `iref` edges through
+`avif_premultiplied_relationships()` on native inspection, still decode, and
+sequence-frame decode, while `SourceAlpha::Auxiliary` continues to identify
+the separate alpha item. The existing
+`source_alpha_matches_the_container_contract` extends its committed
+`alpha.avif` fixture contract with an in-memory `prem` child witness, asserts
+the generic and filtered relationship views, and proves decoded normalized
+bytes are unchanged. This is Rust source-provenance evidence: Pillow has no
+source descriptor or item-relationship result field, so it adds no parity
+row, fixture, diagnostic origin, new test function, or coverage-only hook.
+
+Managed Pillow parity run `723e15eb-58e2-417f-9cc1-52c77f458fb4` passed
+1,445/1,445 checks with zero failures or skips in 74,171 ms. Clean-revision
+feature-matrix run `aace6bcd-f981-479a-97e9-1f6a03cc96ed` passed 991/991
+checks in 37,636 ms and retained `capability tables OK: every native and
+wasm32-wasip1 lane agrees`; targeted lock-wait/build-directory/package-cache
+searches were empty. Coverage MCP run
+`c5bcc4ae-1a8b-45cf-83f6-ce410acb8020` passed 85/85 tests in 108,208 ms and
+ingested snapshot `5afb834b-bdb7-4f52-a29e-da99b9af4103`: 51,930/52,481
+lines, 7,181/7,302 branches, 2,934/3,008 functions, and 80,393/81,607
+regions. Compared with snapshot `c5b5dedb-0685-4222-9eee-89dbf6c0a55c`,
+covered totals increased by 75 lines, 7 branches, 8 functions, and 96
+regions; source totals grew by 75 lines, 8 branches, 8 functions, and 96
+regions. The line-only comparison reports four displaced defensive records at
+`src/codecs/avif/container.rs:1075`, `:1081`, `:1087`, and `:1167` after the
+source-descriptor insertion; they remain visible rather than hidden. The LLVM
+JSON segment-normalization warning remains, and the strict aggregate shortfall
+is 551 lines, 121 branches, 74 functions, and 1,214 regions. The
+coverage-origin verifier still accounts for all 219 exact guards without
+assigning any to Pillow parity.
+
+Remaining AVIF metadata work is non-alpha auxiliary relationships and
+properties, item identity/plane-range/quality details, grid topology,
+non-primary color properties, and invisible RGB semantics. The feature-matrix serial-tail overlap is implemented
 at `da3dfbe43c90320c6cbf92ac7bcfea6bec71c1fe`: the two
 `wasm32-unknown-unknown` `feature_gate_tests --no-run` checks now run in their
 matching `none` and `avif` lanes, and the all-feature

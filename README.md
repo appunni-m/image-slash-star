@@ -310,7 +310,10 @@ direct AVIF `auxl` association as source-local item IDs, while
 `SourceDescriptor::avif_auxiliary_relationships()` exposes the bounded list
 when alpha targets include supported grid-derived color items. Decoded
 transfer bytes remain the documented normalized unassociated layout; the
-descriptor records only what the source declares.
+descriptor records only what the source declares. AVIF `prem` relationships
+are retained separately through
+`SourceDescriptor::avif_premultiplied_relationships()` and likewise do not
+request a decoded-sample transformation.
 
 Decoded images and sequences retain `OpaqueBlock` records for container blocks
 the codec does not interpret, in original order with duplicates and the
@@ -377,8 +380,8 @@ the direct alpha auxiliary relationship is retained separately through
 `SourceDescriptor::avif_auxiliary_relationship()` and the bounded plural
 relationship list also retains the committed grid fixture's alpha links
 (auxiliary items `5`→`2` and `6`→`3`); its grid item-ID list retains `[2, 3]`.
-Non-alpha, track-only, richer item graphs, and full grid topology/composition
-remain open.
+Bounded `iref` edges, including `prem`, are retained as source provenance;
+track-only, richer item graphs, and full grid topology/composition remain open.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it
