@@ -11,7 +11,8 @@
 //! RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup after each
 //! 1,024 scanned or flattened pixels, analysis, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and
 //! 16,384-boolean first-partition bit intervals, 8-bit, 16-bit, 32-bit, 64-bit,
-//! 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean coefficient-bit
+//! 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, and
+//! 32,768-bit logical and 16,384-boolean coefficient-bit
 //! intervals, 1,024-byte boolean-bitstream output
 //! intervals, JPEG optimized-Huffman frequency coefficients after each 1,024
 //! coefficients, progressive scan block slots after each 1,024 blocks,
