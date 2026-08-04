@@ -406,15 +406,32 @@ fn build_huffman_tree(
     // Assign codes
     codes.fill(0);
     let mut code = 0u32;
-    for len in 1..=length_limit {
-        check_token(token)?;
-        for (i, &length) in lengths.iter().enumerate() {
-            if length == len {
-                codes[i] = (code as u16).reverse_bits() >> (16 - len);
-                code += 1;
+    if let Some(token) = token {
+        let mut scanned = 0_usize;
+        for len in 1..=length_limit {
+            check_token(Some(token))?;
+            for (i, &length) in lengths.iter().enumerate() {
+                if length == len {
+                    codes[i] = (code as u16).reverse_bits() >> (16 - len);
+                    code += 1;
+                }
+                scanned += 1;
+                if scanned.is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                    check_token(Some(token))?;
+                }
             }
+            code <<= 1;
         }
-        code <<= 1;
+    } else {
+        for len in 1..=length_limit {
+            for (i, &length) in lengths.iter().enumerate() {
+                if length == len {
+                    codes[i] = (code as u16).reverse_bits() >> (16 - len);
+                    code += 1;
+                }
+            }
+            code <<= 1;
+        }
     }
     Ok(true)
 }
