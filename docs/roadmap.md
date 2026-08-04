@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; the claim-ledger baseline remains
+`063f00e145aff455c30656b3559c8881b8e51a6f`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -1162,7 +1162,8 @@ bitstream, and finalization stages, lossless WebP VP8L encoding now polls its
 predictor tile scans, mode application, and subtract-green transforms after
 each 1,024 pixels, cross-color multiplier search/transform tiles and sampling
 scans/compaction, entropy analysis, transform, bounded backward-reference
-search/match-length/cache/trace, histogram clustering, Huffman RLE
+search/match-length/cache/trace, histogram clustering, Huffman-tree simple-tree
+symbol-discovery scans after each 64 code-length slots, Huffman RLE
 preparation/tokenization, Huffman-tree insertion scans after each 64 candidate
 nodes, Huffman-tree/group emission, token-stream, and bitstream
 stages, while WebP still sink delivery polls
@@ -4251,8 +4252,9 @@ managed durations remain cache- and runner-sensitive observations.
 
 Current acceptance record: WebP VP8L histogram population, combined
 entropy-cost, merge, backward-reference cost and copy-token cache population,
-Huffman RLE, canonical-code, Huffman-tree token-frequency and trailing-token-trim, and RGB-equal
-grayscale-preparation checkpoints
+Huffman RLE, canonical-code, Huffman-tree simple-tree symbol-discovery,
+token-frequency and trailing-token-trim, and RGB-equal grayscale-preparation
+checkpoints
 plus compile-only matrix runtime
 
 The token-aware VP8L histogram analysis path now charges cooperative
@@ -4261,14 +4263,15 @@ combined entropy costs, and histogram merges. The backward-reference candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
 and each 64-symbol population scan. Huffman RLE preparation, canonical-code
 assignment, and compressed Huffman-token generation now charge after each 64
-code-length symbols. Huffman-tree code-length-token frequency accumulation and
-the reverse trailing zero-repeat-token trim scan now charge after each 16
-compressed token entries. A
-fixture-backed lossless WebP token/cancellation assertion drives the
-Huffman-tree path, whose canonical-code assignment and sorted-node insertion
+code-length symbols. Huffman-tree simple-tree symbol discovery now charges after
+each 64 code-length slots; code-length-token frequency accumulation and the
+reverse trailing zero-repeat-token trim scan now charge after each 16 compressed
+token entries. The existing feature-gated Rust-only work-control assertion
+drives the Huffman-tree path, whose canonical-code assignment and sorted-node insertion
 scans charge after each 64 code-length slots or candidate nodes. The production
 slice is committed at revision
-`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; token-aware copy-token cache
+`b1fafe4bacd60628b2385e14a843bb6bf827c1e2`; the contract updates are committed
+at `063f00e145aff455c30656b3559c8881b8e51a6f`; token-aware copy-token cache
 population and traced copy-token replay also charge after each 256 pixels
 inside a copy token, while the
 ordinary no-token paths retain their original tight loops. The existing
@@ -4287,13 +4290,15 @@ The same contract proves the Huffman-tree frequency boundary at
 `maximum: 43,938`, `observed: 43,939` for the whole-buffer return path and
 `maximum: 43,937`, `observed: 43,938` with `[0xB3]` untouched for the
 caller-owned sink. It also proves the reverse trailing-token trim boundary at
-`maximum: 144,931`, `observed: 144,932` for both whole-buffer and sink paths;
-the sink retains the expected already-emitted prefix `[0xB4, 0x52, 0x49,
-0x46, 0x46, 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]`.
+`maximum: 144,931`, `observed: 144,932` for the whole-buffer path and
+`maximum: 144,935`, `observed: 144,936` for the caller-owned sink; the sink
+retains the expected already-emitted prefix `[0xB4, 0x52, 0x49, 0x46, 0x46,
+0x58, 0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]`.
 It also proves the VP8L copy-token cache-population boundary at
-`maximum: 136,752`, `observed: 136,753` for both whole-buffer and sink paths;
-the sink retains `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00,
-0x57, 0x45, 0x42, 0x50]`.
+`maximum: 136,752`, `observed: 136,753` for the whole-buffer path and
+`maximum: 136,789`, `observed: 136,790` for the caller-owned sink; its sink
+retains `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45,
+0x42, 0x50]`.
 This is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
 origin, new test function, or coverage-only hook was added.
@@ -4307,22 +4312,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`c7dc8398-fd1d-451c-afdf-7b6549a04847` passed 1,445/1,445 checks in 57,668
-ms; feature-matrix run `f3f76fb1-7dda-4869-b8c7-58721153cd0a` passed all 33/33
-configured lanes in 63,917 ms with `cache=warm lanes=12 test_threads=3
+`86535956-7d95-4b24-ad02-020e0dab5da1` passed 1,445/1,445 checks in 48,678
+ms; feature-matrix run `b0b54aba-1498-4736-83d0-1dd0f5c6fa92` passed all 33/33
+configured lanes in 56,179 ms with `cache=warm lanes=12 test_threads=3
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`1fb4fd4f-5669-4a25-a634-c647c98a3996` passed 85/85 tests in 89,569 ms and
-ingested snapshot `ecc3ca12-b115-4e9f-b307-04854c816422`: 52,866/53,453
-lines, 7,414/7,554 branches, 2,988/3,064 functions, and 81,756/83,066
-regions. Compared with snapshot `132d59a1-5df8-461c-b3bc-1c0bf3ac599e`,
-covered/source totals changed by +24/+25 lines, +3/+4 branches, +2/+2
-functions, and +27/+30 regions. Native WebP encoder reports 1,747/1,782
-lines, 355/368 branches, 86/86 functions, and 2,493/2,664 regions; its
+`1363b6db-da21-465b-9cc4-cfaa25c5add6` passed 85/85 tests in 82,295 ms and
+ingested snapshot `32108b2f-5916-4baa-9f93-78525201409c`: 52,868/53,466
+lines, 7,420/7,562 branches, 2,988/3,064 functions, and 81,774/83,090
+regions. Compared with snapshot `ecc3ca12-b115-4e9f-b307-04854c816422`,
+covered/source totals changed by +2/+13 lines, +6/+8 branches, +0/+0
+functions, and +18/+24 regions. Native WebP encoder reports 1,750/1,795
+lines, 361/376 branches, 86/86 functions, and 2,510/2,688 regions; its
 backward-reference module reports 1,353/1,359 lines, 358/362 branches, 61/61
 functions, and 2,072/2,136 regions. Coverage is implementation evidence, not
-Pillow parity; the known LLVM segment-normalization warning and the 587-line,
-140-branch, 76-function, 1,310-region aggregate shortfall remain. The managed
+Pillow parity; the known LLVM segment-normalization warning and the 598-line,
+142-branch, 76-function, 1,316-region aggregate shortfall remain. The managed
 durations are cache- and runner-sensitive observations, not universal speed
 claims.
 
@@ -5231,7 +5236,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    now also charge 1,024-item intervals, and the VP8L histogram population,
    combined entropy-cost, histogram-merge, and backward-reference cost/Huffman
    scans now charge after each 64 symbols or 1,024 tokens, copy-token cache
-   population now charges after each 256 pixels, and Huffman RLE
+   population now charges after each 256 pixels, simple-tree symbol discovery
+   now charges after each 64 code-length slots, and Huffman RLE
    preparation/tokenization plus canonical-code assignment now charge after
    each 64 code-length symbols, and Huffman-tree insertion scans charge after
    each 64 candidate nodes, and Huffman-tree code-length-token frequency plus

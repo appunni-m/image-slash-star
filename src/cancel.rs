@@ -29,7 +29,8 @@
 //! 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
 //! backward-reference cost/Huffman scans after each 1,024 tokens or 64 symbols,
 //! copy-token cache population after each 256 pixels,
-//! Huffman RLE preparation and canonical-code assignment scans after each 64
+//! Huffman-tree simple-tree symbol discovery scans after each 64 code-length
+//! slots, Huffman RLE preparation and canonical-code assignment scans after each 64
 //! code-length symbols, Huffman-tree insertion scans after each 64 candidate
 //! nodes, Huffman-tree code-length-token frequency scans after each 16
 //! compressed token entries, trailing zero-repeat token trim scans after each
