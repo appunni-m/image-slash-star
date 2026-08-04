@@ -4155,6 +4155,33 @@ testing section records the exact aggregate and changed-file metrics. This is
 Rust-only runtime evidence: no Pillow caller API changes, parity row or
 fixture, diagnostic origin, new test function, or coverage-only hook.
 
+Historical acceptance record: compact incremental-decode fixture sweep
+
+The test-only runtime slice is implemented at
+`a819abb48cd6878ec4ae6c4a41e42a038b81a105`. The existing
+`incremental_decode_tracks_truncation_progress_per_format` feature-gate
+contract still sweeps every byte boundary and compares `decode_prefix` with
+legacy `decode`; it now selects the valid 343-byte
+`miniswhite_8bit.tiff` and 294-byte `portable_probe_gray_128.avif` fixtures
+instead of the 16,506-byte TIFF and 3,077-byte AVIF fixtures. The boundary
+assertions remain fixture-driven and complete for every enabled format, while
+the accidental repeated full-raster decode cost is removed. The all-feature
+feature-gate body fell from 3.23 s to 0.79 s in the same local workspace. The
+warm managed feature-matrix run `d96c8554-834d-4003-bd5c-d72aa0bc87be` passed
+all configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
+3,231 ms, compared with 6,065 ms at the preceding test revision; its retained
+log ended with `capability tables OK: every native and wasm32-wasip1 lane
+agrees`, with no targeted lock-wait/build-directory/package-cache match. The
+committed Pillow parity run `8f76ea58-4044-4db3-b73c-953606341dda` passed
+1,445/1,445 checks in 749 ms. Coverage run
+`42cd2f3e-1b41-4658-8c12-e92aac835f50` passed 85/85 tests in 48,216 ms and
+ingested snapshot `8861f2ef-8624-461c-80df-4237997e94a1`; aggregate coverage
+is unchanged from the preceding accepted snapshot, including the known LLVM
+segment-normalization warning and the 542-line, 119-branch, 71-function, and
+1,200-region strict-verifier shortfall. This is test-harness-only Rust
+evidence: no Pillow parity row, parity-manifest fixture, diagnostic origin,
+new test function, or coverage-only hook changed.
+
 Historical acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
 
 The 8,192-bit WebP logical-checkpoint slice is implemented at

@@ -527,8 +527,9 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`50375369951ba73c165e87481fa70e068fbfcc07`, the fixture manifest and managed
-commands report:
+`50375369951ba73c165e87481fa70e068fbfcc07` and the test/runtime evidence
+revision `a819abb48cd6878ec4ae6c4a41e42a038b81a105`, the fixture manifest and
+managed commands report:
 
 | Metric | Count |
 | --- | ---: |
@@ -546,15 +547,16 @@ count are separate evidence surfaces; worker functions do not add fixtures or
 Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
-For this revision, managed Pillow parity run
-`01b3af4b-b1b6-41b3-8261-1e665d992417` passed 1,445/1,445 checks in 1,039 ms.
-The feature-matrix run `62e1d190-af03-426c-b320-2612fea93f2a` passed all
+For the current test/runtime evidence revision, managed Pillow parity run
+`8f76ea58-4044-4db3-b73c-953606341dda` passed 1,445/1,445 checks in 749 ms.
+The feature-matrix run `d96c8554-834d-4003-bd5c-d72aa0bc87be` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-19,406 ms; its retained log ends with `capability tables OK: every native and
-wasm32-wasip1 lane agrees` and the targeted search returned no `lock-wait`
-match. These are separate from the managed LLVM coverage run
-`9ebd95dd-c64b-4907-ad3b-06903fe4783f`, which passed 85/85 tests in 59,553 ms
-and ingested snapshot `b7b9d763-98f4-4bb3-b200-7cedd75b02eb`.
+3,231 ms; its retained log ends with `capability tables OK: every native and
+wasm32-wasip1 lane agrees` and targeted searches returned no
+`lock-wait`/build-directory/package-cache match. These are separate from the
+managed LLVM coverage run `42cd2f3e-1b41-4658-8c12-e92aac835f50`, which passed
+85/85 tests in 48,216 ms and ingested snapshot
+`8861f2ef-8624-461c-80df-4237997e94a1`.
 That snapshot reports 51,654/52,196 lines, 7,131/7,250 branches,
 2,912/2,983 functions, and 80,017/81,217 regions; compared with the prior
 accepted snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`, covered totals
@@ -567,6 +569,22 @@ segment-normalization warning remains. The strict local verifier still reports
 the aggregate shortfall as 542 lines, 119 branches, 71 functions, and 1,200
 regions; coverage is implementation evidence, not Pillow parity, and no
 coverage-only test was added.
+
+The test-only runtime follow-up is committed at
+`a819abb48cd6878ec4ae6c4a41e42a038b81a105`. The existing
+`incremental_decode_tracks_truncation_progress_per_format` contract still
+sweeps every byte boundary and compares `decode_prefix` with legacy `decode`;
+it now uses the valid 343-byte `miniswhite_8bit.tiff` and 294-byte
+`portable_probe_gray_128.avif` fixtures instead of the 16,506-byte TIFF and
+3,077-byte AVIF fixtures. This removes accidental repeated full-raster decode
+cost without reducing the per-format boundary assertions. In the same local
+workspace the all-feature feature-gate body fell from 3.23 s to 0.79 s, and the
+warm managed feature matrix fell from 6,065 ms at the preceding test revision
+to 3,231 ms here. These are local execution observations, not universal
+benchmarks. The change is Rust-only test-harness evidence: it adds no Pillow
+parity row, parity-manifest fixture, diagnostic origin, new test function, or
+coverage-only hook; the coverage snapshot above has identical aggregate
+metrics to the preceding accepted snapshot.
 
 The current revision also closes API-003. `decode_with_format` and
 `decode_with_format_and_policy` validate the complete signature against the
