@@ -429,6 +429,47 @@ fn color_hash(pixel: u32, bits: u8) -> usize {
     (pixel.wrapping_mul(COLOR_HASH_MUL) >> (32 - bits)) as usize
 }
 
+fn populate_cache_without_checkpoint(
+    pixels: &[u32],
+    position: usize,
+    length: usize,
+    bits: u8,
+    cache: &mut [u32],
+) {
+    if bits == 0 {
+        return;
+    }
+    for &pixel in &pixels[position..position + length] {
+        let key = color_hash(pixel, bits);
+        cache[key] = pixel;
+    }
+}
+
+fn populate_cache(
+    pixels: &[u32],
+    position: usize,
+    length: usize,
+    bits: u8,
+    cache: &mut [u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<()> {
+    if bits == 0 {
+        return Ok(());
+    }
+    let Some(token) = token else {
+        populate_cache_without_checkpoint(pixels, position, length, bits, cache);
+        return Ok(());
+    };
+    for (index, &pixel) in pixels[position..position + length].iter().enumerate() {
+        let key = color_hash(pixel, bits);
+        cache[key] = pixel;
+        if (index + 1).is_multiple_of(CACHE_CHECKPOINT_PIXELS) {
+            checkpoint(Some(token))?;
+        }
+    }
+    Ok(())
+}
+
 fn with_cache_without_checkpoint(pixels: &[u32], refs: &[Token], bits: u8) -> Vec<Token> {
     let mut cache = vec![0_u32; 1 << bits];
     let mut output = Vec::with_capacity(refs.len());
@@ -447,10 +488,7 @@ fn with_cache_without_checkpoint(pixels: &[u32], refs: &[Token], bits: u8) -> Ve
             }
             Token::Copy { length, .. } => {
                 output.push(reference);
-                for &pixel in &pixels[position..position + length] {
-                    let key = color_hash(pixel, bits);
-                    cache[key] = pixel;
-                }
+                populate_cache_without_checkpoint(pixels, position, length, bits, &mut cache);
                 position += length;
             }
             Token::Cache(_) => unreachable!(),
@@ -491,13 +529,7 @@ fn with_cache(
             }
             Token::Copy { length, .. } => {
                 output.push(reference);
-                for (index, &pixel) in pixels[position..position + length].iter().enumerate() {
-                    let key = color_hash(pixel, bits);
-                    cache[key] = pixel;
-                    if (index + 1).is_multiple_of(CACHE_CHECKPOINT_PIXELS) {
-                        checkpoint(Some(token))?;
-                    }
-                }
+                populate_cache(pixels, position, length, bits, &mut cache, Some(token))?;
                 position += length;
             }
             Token::Cache(_) => unreachable!(),
@@ -1310,12 +1342,7 @@ fn trace_backwards(
                 distance: chain[position].0,
                 length,
             });
-            if cache_bits != 0 {
-                for &pixel in &pixels[position..position + length] {
-                    let index = color_hash(pixel, cache_bits);
-                    cache[index] = pixel;
-                }
-            }
+            populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
         }
         position += length;
     }
