@@ -399,9 +399,12 @@ Typed non-primary AVIF `colr`/`nclx` declarations are retained separately as
 source-local `AvifItemColorProperties` through
 `SourceDescriptor::avif_item_color_properties()` on inspection, still decode,
 and sequence fallback. They do not replace the primary `SourceColor`, apply
-color conversion, or change decoded pixels. This item-level CICP field is a
-Rust source-provenance contract because Pillow exposes no equivalent result;
-non-primary ICC profiles and other item color/property forms remain open.
+color conversion, or change decoded pixels. Raw non-primary `prof`/`rICC`
+profiles are likewise retained as `AvifItemIccProfile` records through
+`SourceDescriptor::avif_item_icc_profiles()`, preserving each source-local item
+ID and exact profile kind/bytes without replacing primary `SourceColor`. These
+item-level fields are Rust source-provenance contracts because Pillow exposes
+no equivalent result; other item color/property forms remain open.
 Default encoding never replays retained blocks implicitly; an explicit replay
 API would have to define collisions with encoder-generated blocks first.
 

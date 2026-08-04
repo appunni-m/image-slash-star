@@ -3,7 +3,7 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-04 on the committed tree based on revision
-`4db2c9bd6c7036a26eb854686d17a497eecce8ad`; the claim-ledger baseline remains
+`0b8a6ff257aec7e054ec4dc79ef60c5be40f893d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 AVIF is the only codec feature with different native and
@@ -151,14 +151,17 @@ not merge into the primary `SourceColor`, perform conversion, or change
 decoded pixels. The contract uses the in-memory `alpha.avif` association
 mutation described in [testing](testing.md); Pillow exposes no equivalent
 item-level field, so it remains Rust source-provenance evidence with no parity
-row. Non-primary ICC profiles and other item color/property forms remain open.
+row. Raw non-primary `prof`/`rICC` profiles are retained through
+`SourceDescriptor::avif_item_icc_profiles()` as source-local item ID and exact
+profile-kind/bytes records, without replacing primary `SourceColor` or changing
+decoded pixels. Other item color/property forms remain open.
 Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Non-ICC item profiles, track-only and non-alpha auxiliary item properties,
-item color/property forms beyond typed CICP, and other non-primary item
-relationships remain future slices. Direct and
+Other non-primary item profiles, track-only and non-alpha auxiliary item
+properties, item color/property forms beyond typed CICP and raw ICC, and other
+non-primary item relationships remain future slices. Direct and
 supported grid-derived item and auxiliary-alpha provenance is represented
 through `SourceAlpha::Auxiliary`, the scalar
 `SourceDescriptor::avif_auxiliary_relationship()` getter, and the bounded
@@ -173,9 +176,10 @@ the top/bottom or left/right axis, and `pasp` retains its positive horizontal
 and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
-pixels are never rotated, mirrored, rescaled, or cropped. Non-primary item-level
-ICC, non-alpha auxiliary relationships, full grid topology, and other item
-metadata remain open; bounded direct/grid item, auxiliary-alpha, and
+pixels are never rotated, mirrored, rescaled, or cropped. Other non-primary
+item-level color/properties, non-alpha auxiliary relationships, full grid
+topology, and other item metadata remain open; bounded direct/grid item,
+auxiliary-alpha, and
 premultiplication provenance is represented through `SourceAlpha::Auxiliary`
 plus the source-local item relationships.
 

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`4db2c9bd6c7036a26eb854686d17a497eecce8ad`; the claim-ledger baseline remains
+`0b8a6ff257aec7e054ec4dc79ef60c5be40f893d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -913,8 +913,10 @@ still decode, and fallback-sequence decode, preserves the primary
 schema has no item-level color declaration, so this is Rust
 source-provenance/specification evidence: it adds no parity row or new fixture
 file,
-diagnostic origin, new test function, or coverage-only hook. Non-primary ICC
-profiles and color/property forms other than typed CICP remain open.
+diagnostic origin, new test function, or coverage-only hook. Raw non-primary
+`prof`/`rICC` profiles are retained separately through
+`SourceDescriptor::avif_item_icc_profiles()`; other item color/property forms
+remain open.
 
 The contract also associates a deliberately distinguishable 24-byte primary
 `mdcv` property and asserts the exact green/blue/red wire-order mapping into
@@ -1546,6 +1548,41 @@ This is runtime and harness evidence rather than a controlled speedup claim
 because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
+
+Current acceptance record: AVIF non-primary ICC item properties
+
+The AVIF non-primary ICC slice is implemented at
+`0b8a6ff257aec7e054ec4dc79ef60c5be40f893d`. Native and portable AVIF metadata
+parsers now retain non-primary `colr`/`prof` and `colr`/`rICC` declarations as
+source-local `AvifItemIccProfile` records through
+`SourceDescriptor::avif_item_icc_profiles()`. Inspection, still decode, and
+sequence-frame decode preserve the item ID, exact profile kind, and exact raw
+profile bytes without merging them into primary `SourceColor` or changing
+decoded pixels. The existing
+`source_alpha_matches_the_container_contract` test mutates `alpha.avif` only
+in memory to associate a distinguishable `prof` payload with auxiliary item 2.
+Pillow exposes neither AVIF item identity nor an item-level ICC result, so this
+is Rust source-provenance evidence: no parity row, fixture file, diagnostic
+origin, new test function, or coverage-only hook was added.
+
+The focused contract and local all-feature suite passed; strict all-target
+Clippy, rustfmt, and the repository provenance gates also passed. Managed
+Pillow parity run `8433290d-5d75-410a-8bb5-8859508b9a8a` passed 1,445/1,445
+checks in 2,619 ms with zero failures or skips. Feature-matrix run
+`d27d8ef4-da63-4f4c-93b4-3738cd8b3946` passed all 991/991 checks in 83,313 ms;
+its retained log records 24/24 configured lanes passed, with warm
+`test_threads=1`, and no failure diagnostics. Coverage MCP run
+`aa1c6ac2-db85-4f26-baec-da19d012110a` passed 85/85 tests in 91,100 ms and
+ingested snapshot `bb395085-1498-442a-9fae-ada84a71f90e`:
+52,143/52,699 lines, 7,208/7,330 branches, 2,960/3,036 functions, and
+80,667/81,885 regions. Compared with the preceding accepted snapshot
+`60efcff6-ade0-465f-a1fc-6a08f8dd655f`, covered totals increased by 87 lines,
+7 branches, 12 functions, and 116 regions; source totals grew by 93 lines,
+8 branches, 14 functions, and 121 regions. The known LLVM JSON
+segment-normalization warning remains, and the strict aggregate shortfall is
+556 lines, 122 branches, 76 functions, and 1,218 regions. These are Rust
+implementation/coverage metrics, not Pillow-oracle parity metrics; other
+unknown item properties and non-primary/auxiliary color forms remain open.
 
 Current acceptance record: WebP VP8 65,536-bit logical checkpoints
 
