@@ -80,6 +80,7 @@ const VP8L_8192_BITSTREAM_CHECKPOINT_BITS: usize = 8_192;
 const VP8L_16384_BITSTREAM_CHECKPOINT_BITS: usize = 16_384;
 const VP8L_32768_BITSTREAM_CHECKPOINT_BITS: usize = 32_768;
 const VP8L_HUFFMAN_TREE_CHECKPOINT_NODES: usize = 64;
+const VP8L_HUFFMAN_TOKEN_CHECKPOINTS: usize = 16;
 const VP8L_65536_BITSTREAM_CHECKPOINT_BITS: usize = 65_536;
 const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
@@ -761,8 +762,17 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
-    for huffman_token in &tokens {
-        code_length_frequencies[usize::from(huffman_token.code)] += 1;
+    if let Some(token) = token {
+        for (index, huffman_token) in tokens.iter().enumerate() {
+            code_length_frequencies[usize::from(huffman_token.code)] += 1;
+            if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
+                check_token(Some(token))?;
+            }
+        }
+    } else {
+        for huffman_token in &tokens {
+            code_length_frequencies[usize::from(huffman_token.code)] += 1;
+        }
     }
     build_huffman_tree(
         &code_length_frequencies,
