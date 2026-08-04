@@ -27,7 +27,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
 /// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical bitstream, 1,024-byte bitstream-output,
 /// and token-stream stages, GIF RGB
-/// quantization input/index intervals, fixed 1,024-cell RGBA FASTOCTREE
+/// quantization input/index intervals, high-color RGB nearest-palette candidate
+/// ordering and scan intervals, fixed 1,024-cell RGBA FASTOCTREE
 /// copy/subtraction/lookup intervals, and LZW input-symbol intervals; it is a
 /// work-control bound, not a CPU-time or allocation guarantee.
 #[non_exhaustive]
@@ -100,7 +101,9 @@ impl EncodePolicy {
     /// palette quantization charges after
     /// each 1,024 pixels while preparing palette/index data; high-color RGB
     /// median-cut preparation additionally charges around hash/order setup,
-    /// axis ordering, split stages, and 1,024-item partition intervals; RGBA
+    /// axis ordering, split stages, and 1,024-item partition intervals, and
+    /// its nearest-palette candidate ordering and scan charge every 1,024
+    /// work items; RGBA
     /// FASTOCTREE preparation additionally charges after each 1,024-cell, bucket,
     /// lookup-entry, or bucket-sort operation interval; and GIF LZW encoding
     /// charges an interval for each input symbol considered by its dictionary
