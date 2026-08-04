@@ -117,7 +117,7 @@ impl<'a> EncodedImageView<'a> {
     ///
     /// Returns the same errors as [`crate::decode`].
     pub fn decode(&self) -> ImageResult<Decoded<DecodedImage>> {
-        crate::decode(self.bytes)
+        self.decode_with_policy(&DecodePolicy::default())
     }
 
     /// Decode the still view under an explicit policy.
@@ -126,7 +126,8 @@ impl<'a> EncodedImageView<'a> {
     ///
     /// Returns the same errors as [`crate::decode_with_policy`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<Decoded<DecodedImage>> {
-        crate::decode_with_policy(self.bytes, policy)
+        policy.check_encoded_input(self.bytes, CodecOperation::StillDecode)?;
+        crate::decode_selected_with_policy(self.bytes, self.format, policy)
     }
 
     /// Decode every retained frame/page.
@@ -135,7 +136,7 @@ impl<'a> EncodedImageView<'a> {
     ///
     /// Returns the same errors as [`crate::decode_sequence`].
     pub fn decode_sequence(&self) -> ImageResult<Decoded<crate::DecodedSequence>> {
-        crate::decode_sequence(self.bytes)
+        self.decode_sequence_with_policy(&DecodePolicy::default())
     }
 
     /// Decode every retained frame/page under an explicit policy.
@@ -147,7 +148,8 @@ impl<'a> EncodedImageView<'a> {
         &self,
         policy: &DecodePolicy,
     ) -> ImageResult<Decoded<crate::DecodedSequence>> {
-        crate::decode_sequence_with_policy(self.bytes, policy)
+        policy.check_encoded_input(self.bytes, CodecOperation::SequenceDecode)?;
+        crate::decode_sequence_selected_with_policy(self.bytes, self.format, policy)
     }
 
     /// Decode exactly one retained frame or page by index.
@@ -332,7 +334,13 @@ impl EncodedImage {
         policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;
         self.inner
             .decoded
-            .get_or_init(|| crate::decode(&self.inner.bytes))
+            .get_or_init(|| {
+                crate::decode_selected_with_policy(
+                    &self.inner.bytes,
+                    self.format(),
+                    &DecodePolicy::default(),
+                )
+            })
             .as_ref()
             .map_err(Clone::clone)
     }
@@ -351,7 +359,13 @@ impl EncodedImage {
     pub fn decode_sequence(&self) -> ImageResult<Decoded<DecodedSequence>> {
         self.inner
             .sequence_decoded
-            .get_or_init(|| crate::decode_sequence(&self.inner.bytes))
+            .get_or_init(|| {
+                crate::decode_sequence_selected_with_policy(
+                    &self.inner.bytes,
+                    self.format(),
+                    &DecodePolicy::default(),
+                )
+            })
             .clone()
     }
 
@@ -372,7 +386,8 @@ impl EncodedImage {
         if *policy == DecodePolicy::default() {
             return self.decode_sequence();
         }
-        crate::decode_sequence_with_policy(&self.inner.bytes, policy)
+        policy.check_encoded_input(&self.inner.bytes, CodecOperation::SequenceDecode)?;
+        crate::decode_sequence_selected_with_policy(&self.inner.bytes, self.format(), policy)
     }
 
     /// Decode exactly one retained frame or page by index.
