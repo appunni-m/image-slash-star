@@ -4875,6 +4875,11 @@ fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn s
             cached_sequence,
             "{name} sequence cache is reused"
         );
+        assert_eq!(
+            source.decode_sequence_with_policy(&image_slash_star::DecodePolicy::default())?,
+            cached_sequence,
+            "{name} default sequence policy uses the cache"
+        );
         let clone = source.clone();
         assert_eq!(
             clone.sequence_decode_state(),
