@@ -454,6 +454,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             source_color: crate::types::SourceColor::new(),
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
+            item_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -482,6 +483,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             source_color: crate::types::SourceColor::new(),
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
+            item_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -522,6 +524,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         source_color: crate::types::SourceColor::new(),
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
+        item_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -547,6 +550,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             source_color: crate::types::SourceColor::new(),
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
+            item_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -567,6 +571,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             source_color: crate::types::SourceColor::new(),
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
+            item_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -587,6 +592,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             source_color: crate::types::SourceColor::new(),
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
+            item_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
