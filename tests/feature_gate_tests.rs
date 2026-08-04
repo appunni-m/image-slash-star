@@ -10208,6 +10208,52 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
+        // Lossless VP8L Huffman RLE preparation now charges after each 64
+        // code-length symbols while optimizing and tokenizing the fixed
+        // alphabets. This is Rust-only work-control evidence: Pillow has no
+        // caller token, work budget, or caller-owned sink.
+        let huffman_rle_policy = image_slash_star::EncodePolicy::new().with_max_work_units(773);
+        let huffman_rle_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_rle_policy,
+        ) {
+            Ok(_) => return Err("VP8L Huffman RLE budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_rle_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 773,
+                observed: 774,
+            }
+        ));
+        let mut huffman_rle_sink = vec![0xB1];
+        let huffman_rle_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(772),
+            &mut huffman_rle_sink,
+        ) {
+            Ok(_) => return Err("VP8L Huffman RLE sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_rle_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 772,
+                observed: 773,
+            }
+        ));
+        assert_eq!(huffman_rle_sink, vec![0xB1]);
         // The smaller lossless probe above already proves byte identity for
         // the ordinary and ample-budget VP8L paths. This larger patterned
         // fixture is reserved for the late logical/output boundaries so the
