@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`74162955c8edfcbe940f4d6efa6ec8814dbbcfc6`; the claim-ledger baseline remains
+`7554ca3c37906104ac7ebf16abe1bf31968b1c08`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -394,7 +394,7 @@ segment parameters,
 mode selection, coefficient-probability
 adaptation, partition emission, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition
 interval, after each 16,384-boolean first-partition bit interval, after each
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, and 524,288-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
+8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
@@ -467,7 +467,7 @@ preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup
 macroblock-analysis, and
 mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, and 524,288-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
+8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
@@ -498,7 +498,7 @@ subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
 macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability adaptation and
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition, 16,384-boolean first-partition-bit,
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, and 524,288-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
+8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
 intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical VP8L bitstream intervals, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
@@ -529,7 +529,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`74162955c8edfcbe940f4d6efa6ec8814dbbcfc6`, the fixture manifest and
+`7554ca3c37906104ac7ebf16abe1bf31968b1c08`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -549,29 +549,28 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `aa71a8b4-5917-4e4e-93a2-e9621ad27a42` passed 1,445/1,445 checks
-with zero skips in 2,752 ms. Feature-matrix retry
-`3b67131b-7623-494c-aa23-0bbb87ba7bef` passed all 991 checks in 10,823 ms
+parity run `bc10e715-2692-427b-aa07-e59b640068e8` passed 1,445/1,445 checks
+with zero skips in 54,771 ms. Feature-matrix run
+`666b8ac5-8dcb-447a-b677-1bf1a890bcf1` passed all 991 checks in 66,018 ms
 across 24/24 configured lanes. Its retained log records `cache=warm lanes=24
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
 every native and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`57f55eb9-3221-4b63-8a6c-2f136038a706` passed 85/85 tests in 161,505 ms and
-ingested snapshot `a702f500-9fa2-4fdc-83ad-30655cbaf191`:
-52,169/52,724 lines, 7,219/7,340 branches, 2,960/3,036 functions, and
-80,703/81,915 regions. Compared with the preceding accepted snapshot
-`f8af387e-26a2-43fc-bdc7-65a8b098705f`, covered totals increased by 12 lines,
-6 branches, 0 functions, and 18 regions while source totals grew by 15 lines,
-6 branches, 0 functions, and 18 regions. The known LLVM JSON
+`1696fd81-2fbe-4f55-830a-b402910722e5` passed 85/85 tests in 91,022 ms and
+ingested snapshot `4b35942a-516c-41c7-8421-6cbf8b24aed4`:
+52,173/52,729 lines, 7,221/7,342 branches, 2,960/3,036 functions, and
+80,708/81,921 regions. Compared with the preceding accepted snapshot
+`234b57e0-cfa7-44a8-a6b4-754f21cf9e6e`, covered and source totals are unchanged:
+0 lines, 0 branches, 0 functions, and 0 regions. The known LLVM JSON
 segment-normalization warning remains. The strict local verifier's aggregate
-shortfall is 555 lines, 121 branches, 76 functions, and 1,212 regions;
+shortfall is 556 lines, 121 branches, 76 functions, and 1,213 regions;
 coverage is implementation evidence, not Pillow parity, and no coverage-only
 test was added.
 
 Current test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
 The current harness and compact VP8 boundary probes are included in implementation
-revision `74162955c8edfcbe940f4d6efa6ec8814dbbcfc6`; the feature matrix retains
+revision `7554ca3c37906104ac7ebf16abe1bf31968b1c08`; the feature matrix retains
 24 concurrent lanes with the bounded warm worker setting.
 In both cache states,
 `MATRIX_TEST_THREADS` now defaults to
@@ -581,16 +580,18 @@ lanes instead of multiplying to 72 workers. `MATRIX_TEST_THREADS` remains an
 explicit override. All 991 feature-matrix checks and every native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lane remain in scope.
 
-The same-revision managed warm run passed all 991 checks in 10,823 ms and
-recorded `cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0 verbose=0`;
+The same-revision managed run passed all 991 checks in 66,018 ms and recorded
+`cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0 verbose=0`;
 these are cache- and runner-sensitive execution observations, not a universal
 benchmark and not the revision-bound allocation/peak-memory evidence still
 required by QA-010 and QA-030. The 131,072-bit contract uses a 768×768 RGB
-probe, the 262,144-bit contract uses a 1,024×1,024 high-entropy RGB probe, and
-the coefficient-only 524,288-bit contract uses a 1,920×1,920 high-entropy RGB
-probe; the focused combined contract completed in 3.78 s in this workspace.
-The larger probe is a targeted boundary witness, not a general benchmark or a
-claim of universal codec speedup.
+probe, the 262,144-bit contract uses a 1,024×1,024 high-entropy RGB probe, the
+coefficient-only 524,288-bit contract uses a 1,920×1,920 high-entropy RGB
+probe, and the 1,048,576-bit contract uses an 832×832 deterministic RGB
+checkerboard probe; the focused combined contract completed in 3.77 s in this
+workspace. These are targeted boundary witnesses, not general benchmarks or
+claims of universal codec speedup. The managed durations remain
+cache- and runner-sensitive observations.
 
 Historical acceptance context: WebP VP8L 262,144-bit checkpoint
 
@@ -1544,20 +1545,60 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: WebP VP8 524,288-bit coefficient checkpoint and bounded probe runtime
+Current acceptance record: WebP VP8 1,048,576-bit coefficient checkpoint and bounded probe runtime
 
 The current WebP VP8 work-control slice is implemented at
+`7554ca3c37906104ac7ebf16abe1bf31968b1c08`. Token-aware coefficient coding now
+charges the 1,048,576-logical-coded-bit checkpoint nested after the existing
+524,288-bit checkpoint; first-partition remains covered through 262,144 bits.
+The existing `encode_work_budget_is_a_non_parity_result_contract` extends its
+deterministic quality-100 RGB probes with an 832×832 checkerboard witness:
+coefficient maximum/observed counts are `1,048,575/1,048,576` for the
+whole-buffer path and `1,048,574/1,048,575` for the direct-sink path, with
+sentinel `[0xDA]` untouched. The 768×768, 1,024×1,024, and 1,920×1,920 probes
+remain the compact 131,072-bit, 262,144-bit, and 524,288-bit witnesses. The
+832×832 checkerboard is a targeted boundary witness, not a general benchmark
+or a claim of universal codec speedup. Pillow has no caller token, work-budget
+result, or caller-owned sink, so this is Rust-only resource-contract evidence:
+no parity row, fixture file, diagnostic origin, new test function, or
+coverage-only hook was added.
+
+The focused one-test contract completed in 3.77 seconds; the full local
+all-feature test set passed 82 tests, and strict all-target Clippy, rustfmt,
+doctest, and repository provenance gates passed. Managed Pillow parity run
+`bc10e715-2692-427b-aa07-e59b640068e8` passed 1,445/1,445 checks with zero
+failures or skips in 54,771 ms. Feature-matrix run
+`666b8ac5-8dcb-447a-b677-1bf1a890bcf1` passed all 991/991 checks across 24/24
+configured lanes in 66,018 ms; its retained log records `cache=warm lanes=24
+test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
+every native and wasm32-wasip1 lane agrees`, and has no targeted lock-wait,
+build-directory, or package-cache matches. Coverage MCP run
+`1696fd81-2fbe-4f55-830a-b402910722e5` passed 85/85 tests in 91,022 ms and
+ingested snapshot `4b35942a-516c-41c7-8421-6cbf8b24aed4`:
+52,173/52,729 lines, 7,221/7,342 branches, 2,960/3,036 functions, and
+80,708/81,921 regions. Compared with `234b57e0-cfa7-44a8-a6b4-754f21cf9e6e`,
+covered and source totals are unchanged: 0 lines, 0 branches, 0 functions,
+and 0 regions. The
+changed coefficient file reports 424/435 lines, 70/70 branches, 21/21
+functions, and 591/632 regions. The known LLVM segment-normalization warning
+remains; the strict aggregate shortfall is 556 lines, 121 branches, 76
+functions, and 1,213 regions. These are implementation/coverage records
+separate from Pillow parity, and no coverage-only test was used.
+
+Historical acceptance record: WebP VP8 524,288-bit coefficient checkpoint and bounded probe runtime
+
+The WebP VP8 work-control slice was implemented at
 `74162955c8edfcbe940f4d6efa6ec8814dbbcfc6`. Token-aware coefficient coding
-now charges the 524,288-logical-coded-bit checkpoint nested after the existing
-262,144-bit checkpoint; first-partition remains covered through 262,144 bits.
-The existing `encode_work_budget_is_a_non_parity_result_contract` reuses one
+charged the 524,288-logical-coded-bit checkpoint nested after the existing
+262,144-bit checkpoint; first-partition remained covered through 262,144 bits.
+The existing `encode_work_budget_is_a_non_parity_result_contract` reused one
 deterministic 1,920×1,920 high-entropy RGB probe at quality 100 to prove exact
 whole-buffer and direct-sink rejection in both paths: coefficient
-maximum/observed counts are `524,287/524,288` and `524,286/524,287`, with
-sentinel `[0xD9]` untouched. The 768×768 and 1,024×1,024 probes remain the
-compact 131,072-bit and 262,144-bit witnesses; this boundary does not restore
-the discarded 2,048×1,024 exploratory allocation. Pillow has no caller token,
-work-budget result, or caller-owned sink, so this is Rust-only resource-contract
+maximum/observed counts were `524,287/524,288` and `524,286/524,287`, with
+sentinel `[0xD9]` untouched. The 768×768 and 1,024×1,024 probes remained the
+compact 131,072-bit and 262,144-bit witnesses; this boundary did not restore
+the discarded 2,048×1,024 exploratory allocation. Pillow had no caller token,
+work-budget result, or caller-owned sink, so this was Rust-only resource-contract
 evidence: no parity row, fixture file, diagnostic origin, new test function, or
 coverage-only hook was added.
 
@@ -1574,15 +1615,14 @@ build-directory, or package-cache matches. Coverage MCP run
 `57f55eb9-3221-4b63-8a6c-2f136038a706` passed 85/85 tests in 161,505 ms and
 ingested snapshot `a702f500-9fa2-4fdc-83ad-30655cbaf191`:
 52,169/52,724 lines, 7,219/7,340 branches, 2,960/3,036 functions, and
-80,703/81,915 regions. Compared with the preceding accepted snapshot
-`f8af387e-26a2-43fc-bdc7-65a8b098705f`, covered totals increased by 12 lines,
-6 branches, 0 functions, and 18 regions; source totals grew by 15 lines,
-6 branches, 0 functions, and 18 regions. The changed coefficient file reports
-420/430 lines, 68/68 branches, 21/21 functions, and 586/626 regions. The
-known LLVM JSON segment-normalization warning remains; the strict aggregate
-shortfall is 555 lines, 121 branches, 76 functions, and 1,212 regions. These
-are implementation/coverage records separate from Pillow parity, and no
-coverage-only test was used.
+80,703/81,915 regions. Compared with `f8af387e-26a2-43fc-bdc7-65a8b098705f`,
+covered totals increased by 12 lines, 6 branches, 0 functions, and 18 regions;
+source totals grew by 15 lines, 6 branches, 0 functions, and 18 regions. The
+changed coefficient file reported 420/430 lines, 68/68 branches, 21/21
+functions, and 586/626 regions. The known LLVM segment-normalization warning
+remained; the strict aggregate shortfall was 555 lines, 121 branches, 76
+functions, and 1,212 regions. These were implementation/coverage records
+separate from Pillow parity, and no coverage-only test was used.
 
 Historical acceptance record: WebP VP8 262,144-bit logical checkpoints and bounded probe runtime
 
