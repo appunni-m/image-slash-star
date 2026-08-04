@@ -561,7 +561,8 @@ additionally charges after each 1,024 MCUs, and entropy coding charges after
 each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP
-VP8L additionally charges around predictor tile scans/mode application,
+VP8L additionally charges around predictor tile scans and mode application after
+each 1,024 pixels,
 cross-color multiplier search/transform tiles, entropy analysis, transform
 selection/application, bounded backward-reference search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
