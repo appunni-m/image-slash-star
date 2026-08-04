@@ -21,7 +21,8 @@
 //! progressive scan-event frequency items after each 1,024 events,
 //! forward-DCT/quantization blocks, and bitstream stages, and
 //! lossless WebP VP8L
-//! predictor tile scans, mode application, and subtract-green transforms after
+//! RGB-equal grayscale preparation, predictor tile scans, mode application, and
+//! subtract-green transforms after
 //! each 1,024 pixels,
 //! cross-color multiplier search/transform and sampling scans/compaction,
 //! entropy, histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,

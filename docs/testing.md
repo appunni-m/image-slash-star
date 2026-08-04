@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`82f2e7721a33d51e6c333f1917a8e12b774de952`; the claim-ledger baseline remains
+`15a4f02809bb2ae5be6bee817cad1bb72e1a2fb6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -550,8 +550,9 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current implementation and test/runtime evidence revision
-`82f2e7721a33d51e6c333f1917a8e12b774de952`, the fixture manifest and
+For the current implementation revision
+`15a4f02809bb2ae5be6bee817cad1bb72e1a2fb6` and test/runtime evidence commit
+`001466e6dff27e774e396e733e6caffd8c97827a`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -570,26 +571,30 @@ count are separate evidence surfaces; worker functions do not add fixtures or
 Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
-For the current implementation and test/runtime revision, managed Pillow
-parity run `bbac562b-5a38-4b49-9c72-270ad428701d` passed 1,445/1,445 checks
-with zero skips in 66,538 ms. Feature-matrix run
-`d2dc8b00-8a5e-4e65-81a9-9f9235b9922a` passed all 33/33 configured lanes in
-71,016 ms. Its retained log records `cache=warm lanes=12 test_threads=1
+For the current implementation and test/runtime revision, the existing
+Rust-only work-budget contract now also exercises the RGB-equal grayscale
+preparation checkpoint after each 1,024 pixels through the same deterministic
+feature-gated probe; it adds no Pillow parity row, fixture, diagnostic origin,
+or coverage-only hook. Managed Pillow parity run
+`252794b5-15ba-46cf-9f53-958f0160be0d` passed 1,445/1,445 checks with zero
+skips in 56,641 ms. Feature-matrix run
+`7520d69f-1879-4d96-bb46-e2943b6c63a0` passed all 33/33 configured lanes in
+34,682 ms. Its retained log records `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK: every native
 and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`ffb12efb-412d-4779-8ca3-49042fc0d329` passed 85/85 tests in 104,127 ms and
-ingested snapshot `0f137d96-1e4d-4594-9885-5128f054017b`:
-52,756/53,355 lines, 7,381/7,526 branches, 2,983/3,059 functions, and
-81,594/82,907 regions. Compared with the preceding accepted snapshot
-`8df5c5f9-14e8-401c-9257-d8806a3ed5c8`, covered/source totals changed by
-`+13/+13/+6/+6/+0/+0/+23/+24` for covered/source lines, covered/source
-branches, covered/source functions, and covered/source regions. The known
-LLVM JSON segment-normalization warning remains. The strict aggregate
-shortfall is 599 lines, 145 branches, 76 functions, and 1,313 regions;
-coverage is implementation evidence, not Pillow parity, and no coverage-only
-test was added. Managed durations remain cache- and runner-sensitive
-observations, not universal speed claims.
+`1bc09244-35ae-4855-ac2b-7a3ad86f3e21` passed 85/85 tests in 53,325 ms and
+ingested snapshot `f04d11fc-5c65-4333-b68a-cba3b56fee6e`:
+52,778/53,377 lines, 7,388/7,534 branches, 2,985/3,061 functions, and
+81,629/82,941 regions. Compared with the preceding accepted snapshot
+`4cd88e87-d48b-4f6d-8de9-10846a43f184`, covered/source totals changed by
+`+2/+0/+1/+0/+0/+0/+6/+0` for covered/source lines, covered/source branches,
+covered/source functions, and covered/source regions. The known LLVM JSON
+segment-normalization warning remains. The strict aggregate shortfall is
+599 lines, 146 branches, 76 functions, and 1,312 regions; coverage is
+implementation evidence, not Pillow parity, and no coverage-only test was
+added. Managed durations remain cache- and runner-sensitive observations, not
+universal speed claims.
 
 Historical test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
@@ -1570,8 +1575,9 @@ because managed cache and runner state can differ.
 ## Latest implementation acceptance
 
 Current acceptance record: WebP VP8L histogram population, combined
-entropy-cost, merge, backward-reference cost, Huffman RLE, and canonical-code
-assignment checkpoints plus compile-only matrix runtime
+entropy-cost, merge, backward-reference cost, Huffman RLE, canonical-code
+assignment, and RGB-equal grayscale-preparation checkpoints plus compile-only
+matrix runtime
 
 The token-aware VP8L histogram analysis path now charges cooperative
 checkpoints after each 64 symbols while scanning histogram populations,
@@ -1584,7 +1590,7 @@ fixture-backed lossless WebP token/cancellation assertion drives the
 Huffman-tree path, whose canonical-code assignment and sorted-node insertion
 scans charge after each 64 code-length slots or candidate nodes. The production
 slice is committed at revision
-`82f2e7721a33d51e6c333f1917a8e12b774de952`; the ordinary no-token path retains
+`15a4f02809bb2ae5be6bee817cad1bb72e1a2fb6`; the ordinary no-token path retains
 the original tight loops. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at
@@ -1593,8 +1599,11 @@ probes and proves exact whole-buffer and caller-owned-sink rejection at
 `[0xAF]` untouched, plus `maximum: 14,049`, `observed: 14,050` with `[0xB0]`
 untouched, plus exact Huffman-RLE preparation boundaries at `maximum: 773`,
 `observed: 774` for the whole-buffer return path and `maximum: 772`,
-`observed: 773` with `[0xB1]` untouched for the caller-owned sink. This is
-Rust-only work-control evidence: Pillow has no caller token,
+`observed: 773` with `[0xB1]` untouched for the caller-owned sink. The same
+existing contract now uses a deterministic 128×128 RGBA grayscale probe to
+prove the preparation checkpoint boundary at `maximum: 140`, `observed: 141`
+in both whole-buffer and caller-owned-sink paths, with `[0xB2]` untouched.
+This is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
 origin, new test function, or coverage-only hook was added.
 
@@ -1604,22 +1613,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`bbac562b-5a38-4b49-9c72-270ad428701d` passed 1,445/1,445 checks in 66,538 ms;
-feature-matrix run `d2dc8b00-8a5e-4e65-81a9-9f9235b9922a` passed all 33/33
-configured lanes in 71,016 ms with `cache=warm lanes=12 test_threads=1
+`252794b5-15ba-46cf-9f53-958f0160be0d` passed 1,445/1,445 checks in 56,641 ms;
+feature-matrix run `7520d69f-1879-4d96-bb46-e2943b6c63a0` passed all 33/33
+configured lanes in 34,682 ms with `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`ffb12efb-412d-4779-8ca3-49042fc0d329` passed 85/85 tests in 104,127 ms and
-ingested snapshot `0f137d96-1e4d-4594-9885-5128f054017b`: 52,756/53,355
-lines, 7,381/7,526 branches, 2,983/3,059 functions, and 81,594/82,907
-regions. Compared with snapshot `8df5c5f9-14e8-401c-9257-d8806a3ed5c8`,
-covered/source totals changed by +13/+13 lines, +6/+6 branches, +0/+0
-functions, and +23/+24 regions. Native VP8L reports 1,691/1,738 lines,
-332/350 branches, 84/84 functions, and 2,415/2,593 regions. Coverage is
+`1bc09244-35ae-4855-ac2b-7a3ad86f3e21` passed 85/85 tests in 53,325 ms and
+ingested snapshot `f04d11fc-5c65-4333-b68a-cba3b56fee6e`: 52,778/53,377
+lines, 7,388/7,534 branches, 2,985/3,061 functions, and 81,629/82,941
+regions. Compared with snapshot `4cd88e87-d48b-4f6d-8de9-10846a43f184`,
+covered/source totals changed by +2/+0 lines, +1/+0 branches, +0/+0
+functions, and +6/+0 regions. Native VP8L reports 1,713/1,760 lines,
+339/358 branches, 86/86 functions, and 2,450/2,627 regions. Coverage is
 implementation evidence, not Pillow parity; the known LLVM
-segment-normalization warning and the 599-line, 145-branch, 76-function,
-1,313-region aggregate shortfall remain. The managed durations are
-cache- and runner-sensitive observations, not universal speed claims.
+segment-normalization warning and the 599-line, 146-branch, 76-function,
+1,312-region aggregate shortfall remain. The managed durations are cache- and
+runner-sensitive observations, not universal speed claims.
 
 Historical acceptance record: warm feature-matrix fanout bound
 
