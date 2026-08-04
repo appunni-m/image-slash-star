@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`4a7e2d525c1c5d920d3a6a1c2cb32fda3641816f`; the claim-ledger baseline remains
+`4db2c9bd6c7036a26eb854686d17a497eecce8ad`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -4220,9 +4220,10 @@ new test function, or coverage-only hook changed.
 
 Current test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
-The current harness is included in implementation revision
-`4a7e2d525c1c5d920d3a6a1c2cb32fda3641816f` and its latest runtime-focused
-ancestor is `cb0f67d2e76e99eefc2595317fd49fb5202a7162`. In both cache states,
+The current harness and reduced VP8 boundary probe are included in implementation
+revision `4db2c9bd6c7036a26eb854686d17a497eecce8ad`; the production VP8
+checkpoint slice remains unchanged from `4a7e2d525c1c5d920d3a6a1c2cb32fda3641816f`.
+In both cache states,
 `MATRIX_TEST_THREADS` now defaults to
 `floor(logical_cpus / MATRIX_JOBS)`, bounded to at least one and at most eight;
 the measured 12-CPU warm host therefore uses one worker for its 24 concurrent
@@ -4230,25 +4231,28 @@ lanes instead of multiplying to 72 workers. `MATRIX_TEST_THREADS` remains an
 explicit override. All 991 feature-matrix checks and every native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lane remain in scope.
 
-Managed feature-matrix warm repeat `d1c7dff1-3a82-4867-8de3-e4b4a7618992`
-passed all 991/991 checks in 6,761 ms, recorded `cache=warm lanes=24
+Managed feature-matrix warm repeat `0ceeb8bf-bedc-491b-9411-845ff9f474e2`
+passed all 991/991 checks in 8,467 ms, recorded `cache=warm lanes=24
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ended with
 `capability tables OK: every native and wasm32-wasip1 lane agrees`, and had no
 targeted lock-wait/build-directory/package-cache matches. The first run on the
-changed lane fingerprints passed in 19,996 ms while rebuilding them. These are
+changed lane fingerprints `d856ec45-2311-4797-a2f5-5ef7e5dc2ea9` passed all
+991/991 checks in 22,491 ms while rebuilding them. These are
 cache- and runner-sensitive execution observations, not a universal benchmark
 and not the revision-bound allocation/peak-memory evidence still required by
-QA-010 and QA-030. The 65,536-bit contract probe was reduced to a deterministic
-1,152×1,024 RGB image (3.4 MiB of input samples) after preserving every exact
-boundary result; this is test-footprint evidence, not a claim of universal
-codec speedup.
+QA-010 and QA-030. The 65,536-bit contract probe was reduced from a deterministic
+1,152×1,024 RGB image (3.4 MiB) to 1,024×1,024 RGB (3.0 MiB, 64×64
+macroblocks) after preserving every exact boundary result. Its focused direct
+test time fell from 3.50 s to 2.53 s on this workspace; this is test-footprint
+evidence, not a claim of universal codec speedup.
 
 Current acceptance record: WebP VP8 65,536-bit logical checkpoints
 
 The current WebP VP8 work-control slice is implemented at
-`4a7e2d525c1c5d920d3a6a1c2cb32fda3641816f`. The existing
+`4a7e2d525c1c5d920d3a6a1c2cb32fda3641816f`, with its runtime-reduced contract
+probe recorded at `4db2c9bd6c7036a26eb854686d17a497eecce8ad`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` reuses a deterministic
-patterned RGB probe (`1,152×1,024`, 72×64 macroblocks) to prove exact
+patterned RGB probe (`1,024×1,024`, 64×64 macroblocks) to prove exact
 whole-buffer/direct-sink rejection at the distinct 65,536-bit logical
 checkpoints. First-partition maximum/observed counts are `19,010/19,011` for
 the whole-buffer path and `19,009/19,010` for the direct-sink path, with
@@ -4262,19 +4266,22 @@ coverage-only hook was added.
 
 The focused contract and local all-feature test suite passed; strict
 all-target Clippy and rustfmt also passed. Managed Pillow parity run
-`c607c84b-f662-4441-b8cd-a1095af0d703` passed 1,445/1,445 checks in 1,068 ms
+`5fc321c3-a66d-438c-ac5b-07ad5d3467b3` passed 1,445/1,445 checks in 3,354 ms
 with zero failures or skips. The same-revision feature-matrix run
-`0402f845-8038-4f97-8d58-05e943964c50` passed all 991/991 checks in 19,996 ms;
-the warm repeat `d1c7dff1-3a82-4867-8de3-e4b4a7618992` passed all 991/991 in
-6,761 ms, recorded `cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0
+`d856ec45-2311-4797-a2f5-5ef7e5dc2ea9` passed all 991/991 checks in 22,491 ms;
+the warm repeat `0ceeb8bf-bedc-491b-9411-845ff9f474e2` passed all 991/991 in
+8,467 ms, recorded `cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0
 verbose=0`, ended with `capability tables OK: every native and
 wasm32-wasip1 lane agrees`, and had no `lock-wait`, `build-directory`, or
 `package-cache` log matches. These are cache- and runner-sensitive observations,
-not a universal benchmark; reducing the probe from 2,048×1,024 to 1,152×1,024
-preserved the exact contract while lowering its input footprint to 3.4 MiB.
+not a universal benchmark; reducing the probe from 1,152×1,024 to 1,024×1,024
+preserved the exact contract while lowering its input footprint from 3.4 MiB to
+3.0 MiB and the focused direct test from 3.50 s to 2.53 s in this workspace.
 
 Coverage MCP run `baafbb1b-c782-4896-948a-1aa308dc6f32` passed 85/85 tests in
-54,369 ms and ingested snapshot `60efcff6-ade0-465f-a1fc-6a08f8dd655f`:
+54,369 ms and ingested snapshot `60efcff6-ade0-465f-a1fc-6a08f8dd655f` at the
+preceding production implementation revision; the 4db2c9b change is test-only
+and leaves those source coverage totals unchanged:
 52,056/52,606 lines, 7,201/7,322 branches, 2,948/3,022 functions, and
 80,551/81,764 regions. Compared with the preceding accepted snapshot
 `90ed26c2-f559-4f03-807a-2a87c0227260`, covered totals increased by 7 lines,
