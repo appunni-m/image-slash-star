@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`11501b65ba2b1d72d6b1813f74b7eaa1b267fbd2`; the claim-ledger baseline remains
+`72248c6b0985fc01e82c615d3bccd01d82979acc`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `f39a47f3-1a59-4921-b1cf-ff0312a612d4` covers implementation/test revision `11501b65ba2b1d72d6b1813f74b7eaa1b267fbd2`: 52,200/52,754 lines, 7,226/7,348 branches, 2,962/3,038 functions, and 80,746/81,961 regions. Compared with the preceding accepted snapshot `497947de-526a-475d-8ede-6d9ea903372e`, covered/source totals changed by +13/+12 lines, +4/+4 branches, +0/+0 functions, and +23/+24 regions; the regular Cargo test profile remains `opt-level = 2`, while the compile-heavy feature matrix explicitly uses level 1. The predictor-transform slice adds one production checkpoint and one existing feature-gated Rust-only contract extension, with no parity row or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 554-line, 122-branch, 76-function, and 1,215-region aggregate shortfall. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f` covers implementation/test revision `72248c6b0985fc01e82c615d3bccd01d82979acc`: 52,220/52,775 lines, 7,229/7,352 branches, 2,963/3,039 functions, and 80,766/81,989 regions. Compared with the preceding accepted snapshot `f39a47f3-1a59-4921-b1cf-ff0312a612d4`, covered/source totals changed by +20/+21 lines, +3/+4 branches, +1/+1 functions, and +20/+28 regions; the regular Cargo test profile remains `opt-level = 2`, while the compile-heavy feature matrix explicitly uses level 1. The subtract-green transform slice adds one production checkpoint and one existing feature-gated Rust-only contract extension, with no parity row or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 555-line, 123-branch, 76-function, and 1,223-region aggregate shortfall. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -1159,7 +1159,8 @@ mode-selection subsegments plus VP8 analysis,
 mode-selection, coefficient-probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean
 first-partition-bit, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
 bitstream, and finalization stages, lossless WebP VP8L encoding now polls its
-predictor tile scans and mode application after each 1,024 pixels, cross-color multiplier search/transform
+predictor tile scans, mode application, and subtract-green transforms after
+each 1,024 pixels, cross-color multiplier search/transform
 tiles, entropy analysis, transform, bounded backward-reference
 search/match-length/cache/trace, histogram clustering, Huffman-tree/group
 emission, token-stream, and bitstream stages, while WebP still sink delivery polls
@@ -4246,19 +4247,44 @@ workspace after removing the separate 1,920×1,920 witness. These are targeted
 boundary witnesses, not general benchmarks or claims of universal codec speedup;
 managed durations remain cache- and runner-sensitive observations.
 
-Current acceptance record: lossless WebP VP8L predictor-transform interval
+Current acceptance record: lossless WebP VP8L subtract-green transform interval
+
+The lossless VP8L subtract-green transform now charges a cooperative
+work-budget checkpoint after each 1,024 applied pixels. The implementation/test
+slice is committed at revision
+`72248c6b0985fc01e82c615d3bccd01d82979acc`. The existing feature-gated
+`encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
+1,024-pixel one-row probe and proves the inclusive whole-buffer and
+caller-owned-sink rejection pair `maximum: 19`, `observed: 20`, with sentinel
+`[0xAB]` untouched. The ordinary no-token path remains on the original
+whole-buffer helper. Pillow has no caller token or work-budget result, so this
+is Rust-only resource-contract evidence and adds no parity row, fixture,
+diagnostic origin, new test function, or coverage-only hook.
+
+Managed Pillow parity run `9d9b19e7-7d2c-49b3-8dd3-63e1b674a6a5` passed
+1,445/1,445 checks; feature-matrix run
+`97f350b7-00db-46dd-92e0-3ffbe63df537` passed all 24/24 configured lanes in
+61,898 ms and retained the capability-table agreement with no targeted
+lock-wait/build-directory/package-cache matches; and Coverage MCP run
+`4f248f97-5bec-4352-afb8-5b688e1d0dd4` passed 85/85 tests and ingested snapshot
+`e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f`. The snapshot reports 52,220/52,775
+lines, 7,229/7,352 branches, 2,963/3,039 functions, and 80,766/81,989
+regions. The known LLVM JSON segment-normalization warning remains; the
+aggregate shortfall is 555 lines, 123 branches, 76 functions, and 1,223
+regions. These are implementation, target, and Rust-only contract records;
+the unchanged Pillow run is regression evidence only.
+
+Historical acceptance record: lossless WebP VP8L predictor-transform interval
 
 The lossless VP8L predictor's final mode-application pass now charges a
 cooperative work-budget checkpoint after each 1,024 applied pixels. The
-implementation/test slice is committed at revision
-`11501b65ba2b1d72d6b1813f74b7eaa1b267fbd2`. The existing feature-gated
-`encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
-1,024-pixel one-row probe and proves the inclusive whole-buffer and
-caller-owned-sink rejection pair `maximum: 3,635`, `observed: 3,636`, with
-sentinel `[0xAA]` untouched. An ample budget and the ordinary no-token path
-remain byte-preserving. Pillow has no caller token or work-budget result, so
-this is Rust-only resource-contract evidence and adds no parity row, fixture,
-diagnostic origin, new test function, or coverage-only hook.
+implementation/test slice was committed at revision
+`11501b65ba2b1d72d6b1813f74b7eaa1b267fbd2`. Its existing feature-gated contract
+proved the inclusive whole-buffer and caller-owned-sink rejection pair
+`maximum: 3,635`, `observed: 3,636`, with sentinel `[0xAA]` untouched. Pillow
+has no caller token or work-budget result, so this remained Rust-only
+resource-contract evidence and added no parity row, fixture, diagnostic
+origin, new test function, or coverage-only hook.
 
 Managed Pillow parity run `4e3cd6c5-fd16-4f97-8948-e6674bbf23c1` passed
 1,445/1,445 checks; feature-matrix run
@@ -4266,12 +4292,12 @@ Managed Pillow parity run `4e3cd6c5-fd16-4f97-8948-e6674bbf23c1` passed
 36,418 ms and retained the capability-table agreement with no targeted
 lock-wait/build-directory/package-cache matches; and Coverage MCP run
 `9fe150d0-c322-4add-ad0a-45f7562ea670` passed 85/85 tests and ingested snapshot
-`f39a47f3-1a59-4921-b1cf-ff0312a612d4`. The snapshot reports 52,200/52,754
+`f39a47f3-1a59-4921-b1cf-ff0312a612d4`. The snapshot reported 52,200/52,754
 lines, 7,226/7,348 branches, 2,962/3,038 functions, and 80,746/81,961
-regions. The known LLVM JSON segment-normalization warning remains; the
-aggregate shortfall is 554 lines, 122 branches, 76 functions, and 1,215
-regions. These are implementation, target, and Rust-only contract records;
-the unchanged Pillow run is regression evidence only.
+regions. The known LLVM JSON segment-normalization warning remained; the
+aggregate shortfall was 554 lines, 122 branches, 76 functions, and 1,215
+regions. These were implementation, target, and Rust-only contract records;
+the unchanged Pillow run was regression evidence only.
 
 Historical acceptance record: optimized regular test profile
 
