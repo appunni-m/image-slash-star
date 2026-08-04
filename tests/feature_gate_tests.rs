@@ -10142,6 +10142,55 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(histogram_merge_sink, vec![0xAF]);
 
+        // Backward-reference candidate scoring also performs token and
+        // fixed-alphabet Huffman cost scans. Charge those estimates after each
+        // 1,024 tokens, before the later histogram stages. Pillow has no
+        // caller token, work-budget result, or caller-owned sink, so this is
+        // Rust-only work-control evidence with no parity row or coverage hook.
+        let cost_estimate_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(14_049);
+        let cost_estimate_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &cost_estimate_policy,
+        ) {
+            Ok(_) => return Err("VP8L cost-estimate budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cost_estimate_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 14_049,
+                observed: 14_050,
+            }
+        ));
+        let mut cost_estimate_sink = vec![0xB0];
+        let cost_estimate_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &cost_estimate_policy,
+            &mut cost_estimate_sink,
+        ) {
+            Ok(_) => return Err("VP8L cost-estimate sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cost_estimate_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 14_049,
+                observed: 14_050,
+            }
+        ));
+        assert_eq!(cost_estimate_sink, vec![0xB0]);
+
         // This patterned probe reaches the deeper VP8L writer intervals only
         // after the earlier lossless stages. The exact rejection at the
         // selected bitstream and output intervals below prove that real
