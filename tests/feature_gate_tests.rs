@@ -9787,6 +9787,77 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             lossless_expected,
             "an ample WebP VP8L budget preserves byte identity"
         );
+
+        // The non-palette VP8L preparation path now scans RGB-equal pixels
+        // with a checkpoint after each 1,024 pixels. Varying alpha keeps this
+        // deterministic grayscale probe above the 256-color palette limit,
+        // so the real scan is exercised without a Pillow parity row or a
+        // coverage-only input.
+        let mut grayscale_lossless_pixels = Vec::with_capacity(128 * 128 * 4);
+        for index in 0..128 * 128 {
+            let value = u8::try_from(index % 256)?;
+            let alpha = u8::try_from((index / 256) % 256)?;
+            grayscale_lossless_pixels.extend_from_slice(&[value, value, value, alpha]);
+        }
+        let grayscale_lossless_image =
+            DecodedImage::new(128, 128, grayscale_lossless_pixels, ColorType::Rgba8);
+        let grayscale_lossless_expected = image_slash_star::encode(
+            &grayscale_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+        )?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &grayscale_lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &lossless_unlimited,
+            )?,
+            grayscale_lossless_expected,
+            "an ample VP8L grayscale budget preserves byte identity"
+        );
+        let grayscale_policy = image_slash_star::EncodePolicy::new().with_max_work_units(140);
+        let grayscale_error = match image_slash_star::encode_with_policy(
+            &grayscale_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &grayscale_policy,
+        ) {
+            Ok(_) => return Err("VP8L grayscale budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            grayscale_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 140,
+                observed: 141,
+            }
+        ));
+        let mut grayscale_sink = vec![0xB2];
+        let grayscale_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &grayscale_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &grayscale_policy,
+            &mut grayscale_sink,
+        ) {
+            Ok(_) => return Err("VP8L grayscale sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            grayscale_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 140,
+                observed: 141,
+            }
+        ));
+        assert_eq!(grayscale_sink, vec![0xB2]);
         let lossless_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
         let lossless_error = match image_slash_star::encode_with_policy(
             &lossless_image,
