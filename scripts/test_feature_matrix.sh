@@ -27,10 +27,11 @@ fi
 MATRIX_JOBS=${MATRIX_JOBS:-}
 if [ -z "$MATRIX_JOBS" ]; then
     if [ "$matrix_cache_state" = warm ]; then
-        # Warm lanes mostly validate cached fingerprints and execute already
-        # built test binaries. Admit up to two lanes per logical CPU so the
-        # scheduler does not leave independent cached target families idle.
-        MATRIX_JOBS=$((matrix_cpu_count * 2))
+        # Warm lanes still run native tests, target checks, and WASI processes;
+        # each lane is not merely a cached fingerprint lookup. One lane per
+        # logical CPU keeps those independent jobs from oversubscribing the
+        # host while retaining enough concurrency to overlap target families.
+        MATRIX_JOBS=$matrix_cpu_count
         if [ "$MATRIX_JOBS" -gt 24 ]; then
             MATRIX_JOBS=24
         fi
