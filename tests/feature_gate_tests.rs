@@ -9789,6 +9789,67 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(lossless_sink, vec![0xA9]);
 
+        let mut transform_pixels = Vec::with_capacity(1_024 * 3);
+        for index in 0..1_024 {
+            let value = u8::try_from(index % 256)?;
+            transform_pixels.extend_from_slice(&[
+                value,
+                value.wrapping_add(u8::try_from(index / 4)?),
+                value.wrapping_add(u8::try_from(index / 8)?),
+            ]);
+        }
+        let transform_image = DecodedImage::new(1_024, 1, transform_pixels, ColorType::Rgb8);
+        // The lossless VP8L fixed-predictor transform now charges an interior
+        // checkpoint after each 1,024 applied pixels. This wide one-row probe
+        // reaches that real transform boundary after the earlier predictor
+        // setup polls. Pillow has no caller token or work-budget result, so
+        // this remains Rust-only evidence with no parity row or coverage-only
+        // hook.
+        let transform_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_635);
+        let transform_error = match image_slash_star::encode_with_policy(
+            &transform_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &transform_policy,
+        ) {
+            Ok(_) => return Err("VP8L predictor transform budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transform_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3_635,
+                observed: 3_636,
+            }
+        ));
+        let mut transform_sink = vec![0xAA];
+        let transform_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &transform_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &transform_policy,
+            &mut transform_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L predictor transform sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transform_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3_635,
+                observed: 3_636,
+            }
+        ));
+        assert_eq!(transform_sink, vec![0xAA]);
+
         // A materially larger budget reaches the long predictor/cross-color,
         // histogram/Huffman, backward-reference, and token-stream intervals
         // before rejecting. This remains Rust-only work-control evidence:

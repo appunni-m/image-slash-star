@@ -32,6 +32,7 @@ use super::cross_color::{combined_shannon_entropy, optimize_sampling, prediction
 const ARGB_BLACK: u32 = 0xff00_0000;
 const MODE_COUNT: usize = 14;
 const HISTOGRAM_SIZE: usize = 4 * 256;
+const TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -244,6 +245,7 @@ fn apply_modes(
     let original = source.to_vec();
     let mut upper = vec![0_u32; width + 1];
     let mut current = vec![0_u32; width + 1];
+    let mut pixels_until_checkpoint = TRANSFORM_CHECKPOINT_PIXELS;
     for y in 0..height {
         if y.is_multiple_of(16) {
             checkpoint(token)?;
@@ -254,24 +256,36 @@ fn apply_modes(
         } else {
             0
         };
-        for x in 0..width {
-            let mode = ((modes[(y >> bits) * tiles_per_row + (x >> bits)] >> 8) & 0xff) as usize;
-            let prediction = if y == 0 {
-                if x == 0 { ARGB_BLACK } else { current[x - 1] }
-            } else if x == 0 {
-                upper[0]
-            } else {
-                predict(mode, current[x - 1], upper[x - 1], upper[x], upper[x + 1])
-            };
-            let mut residual = subtract_pixels(current[x], prediction);
-            if current[x] >> 24 == 0 {
-                residual &= 0xff00_0000;
-                current[x] = prediction & 0x00ff_ffff;
-                if x == 0 && y != 0 {
-                    upper[width] = current[0];
+        let mut x = 0;
+        while x < width {
+            let end = x.saturating_add(pixels_until_checkpoint).min(width);
+            for x in x..end {
+                let mode =
+                    ((modes[(y >> bits) * tiles_per_row + (x >> bits)] >> 8) & 0xff) as usize;
+                let prediction = if y == 0 {
+                    if x == 0 { ARGB_BLACK } else { current[x - 1] }
+                } else if x == 0 {
+                    upper[0]
+                } else {
+                    predict(mode, current[x - 1], upper[x - 1], upper[x], upper[x + 1])
+                };
+                let mut residual = subtract_pixels(current[x], prediction);
+                if current[x] >> 24 == 0 {
+                    residual &= 0xff00_0000;
+                    current[x] = prediction & 0x00ff_ffff;
+                    if x == 0 && y != 0 {
+                        upper[width] = current[0];
+                    }
                 }
+                source[y * width + x] = residual;
             }
-            source[y * width + x] = residual;
+            let processed = end.saturating_sub(x);
+            pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(processed);
+            if pixels_until_checkpoint == 0 {
+                checkpoint(token)?;
+                pixels_until_checkpoint = TRANSFORM_CHECKPOINT_PIXELS;
+            }
+            x = end;
         }
         std::mem::swap(&mut upper, &mut current);
     }
