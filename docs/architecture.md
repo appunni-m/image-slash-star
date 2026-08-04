@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`; the claim-ledger baseline remains
+`2d4b9f622923255617eac62669d32d489ead90c5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -101,9 +101,10 @@ when present, and the bounded
 `SourceDescriptor::avif_auxiliary_relationships()` list also retains alpha
 links to supported grid-derived color items. For a primary grid,
 `SourceDescriptor::avif_grid_item_ids()` also retains its ordered derived
-color-item list, and `SourceDescriptor::avif_item_relationships()` retains
-bounded non-alpha `iref` edges such as the grid's ordered `dimg` references.
-A source descriptor is structural provenance, not opaque
+color-item list, `SourceDescriptor::avif_item_relationships()` retains
+bounded `iref` edges such as the grid's ordered `dimg` references, and
+`SourceDescriptor::avif_premultiplied_relationships()` filters source-local
+`prem` edges. A source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
@@ -143,7 +144,9 @@ and supported grid-derived alpha relationships,
 `SourceDescriptor::avif_auxiliary_relationships()` retain the source-local
 auxiliary and target item IDs. They never change decoded transfer bytes, which
 stay the documented normalized unassociated layout unless a codec explicitly
-retains source-order bytes.
+retains source-order bytes. AVIF `prem` relationships are retained separately
+through `SourceDescriptor::avif_premultiplied_relationships()` and likewise do
+not request a decoded-sample transformation.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the
@@ -253,7 +256,7 @@ still and sequence decode, with kinds `Exif` and `XMP `. The raw EXIF record
 includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
 orientation application, or implicit encode replay is performed. Direct and
 supported grid-derived alpha `auxl` relationships, the bounded grid-derived
-item list, and bounded non-alpha `iref` edges are retained in
+item list, bounded `iref` edges, and filtered `prem` relationships are retained in
 `SourceDescriptor`; full grid topology, track-only content,
 unknown-item-property semantics, and auxiliary-item decoding remain outside
 this model.
@@ -277,8 +280,8 @@ vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
 Non-ICC profiles, track-only/auxiliary item properties, grid topology, and
 derived/grid composition remain outside the current model; bounded direct,
-supported grid-derived alpha `auxl`, and non-alpha `iref` relationships are
-the explicitly retained exceptions.
+supported grid-derived alpha `auxl`, ordinary `iref`, and `prem` relationships
+are the explicitly retained exceptions.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
