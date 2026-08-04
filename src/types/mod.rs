@@ -1008,6 +1008,38 @@ impl AvifItemColorProperties {
     }
 }
 
+/// A raw ICC profile associated with a non-primary AVIF item.
+///
+/// The item identifier is local to the encoded container. This retains the
+/// item's declared `colr`/`prof` or `colr`/`rICC` payload as source provenance;
+/// it does not apply color conversion or merge the profile into the primary
+/// [`SourceColor`] result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AvifItemIccProfile {
+    item_id: u32,
+    profile: RawIccProfile,
+}
+
+impl AvifItemIccProfile {
+    /// Create a source-local non-primary AVIF item ICC declaration.
+    #[must_use]
+    pub const fn new(item_id: u32, profile: RawIccProfile) -> Self {
+        Self { item_id, profile }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the raw ICC profile declared by the item.
+    #[must_use]
+    pub const fn profile(&self) -> &RawIccProfile {
+        &self.profile
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -1023,6 +1055,7 @@ pub struct SourceDescriptor {
     avif_item_relationships: Option<Vec<AvifItemRelationship>>,
     avif_premultiplied_relationships: Option<Vec<AvifItemRelationship>>,
     avif_item_color_properties: Option<Vec<AvifItemColorProperties>>,
+    avif_item_icc_profiles: Option<Vec<AvifItemIccProfile>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_transform: Option<AvifTransformProperties>,
 }
@@ -1040,6 +1073,7 @@ impl SourceDescriptor {
             avif_item_relationships: None,
             avif_premultiplied_relationships: None,
             avif_item_color_properties: None,
+            avif_item_icc_profiles: None,
             avif_grid_item_ids: None,
             avif_transform: None,
         }
@@ -1175,6 +1209,19 @@ impl SourceDescriptor {
         self.avif_item_color_properties.as_deref().unwrap_or(&[])
     }
 
+    /// Record bounded raw ICC profiles associated with non-primary AVIF items.
+    #[must_use]
+    pub fn with_avif_item_icc_profiles(mut self, profiles: Vec<AvifItemIccProfile>) -> Self {
+        self.avif_item_icc_profiles = (!profiles.is_empty()).then_some(profiles);
+        self
+    }
+
+    /// Return bounded non-primary AVIF item ICC declarations in source order.
+    #[must_use]
+    pub fn avif_item_icc_profiles(&self) -> &[AvifItemIccProfile] {
+        self.avif_item_icc_profiles.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1219,6 +1266,7 @@ impl SourceDescriptor {
             && self.avif_item_relationships.is_none()
             && self.avif_premultiplied_relationships.is_none()
             && self.avif_item_color_properties.is_none()
+            && self.avif_item_icc_profiles.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_transform.is_none()
     }
