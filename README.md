@@ -156,6 +156,7 @@ capabilities and setup.
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
+| `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Checked zero-copy construction for validated pixels, color/mode state, and indexed palettes; the compatibility builders remain explicitly unchecked |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG RGB-to-YCbCr conversion after each 1,024 pixels, rows/blocks/scans, and 1,024-byte entropy-output intervals, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection subsegments plus VP8 analysis, coefficient-probability adaptation, bitstream, and VP8L stages, and each format's documented boundaries |
@@ -263,6 +264,12 @@ PNG / JPEG / GIF / ...    P8 / L8 / RGB8 / RGBA8 / ...
 `ImageMode::P8` and retain an `ImagePalette` when the source exposes one; they
 are not silently interpreted as grayscale. Caller-built images and sequences
 are validated before encoding.
+
+`DecodedImage::try_new`, `try_with_mode`, and `try_with_palette` provide checked
+zero-copy construction: successful calls reuse the supplied pixel vector, while
+`new`, `with_mode`, and `with_palette` remain available as explicitly unchecked
+builders for staged assembly. Direct `DecodedImage` field construction is also
+unchecked; every encoder and sequence validator still validates before use.
 
 `ImageInfo::source` and `DecodedImage::source` retain structural source facts
 without changing the transfer bytes. TIFF currently records its exact

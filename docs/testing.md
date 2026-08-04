@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`; the claim-ledger baseline remains
+`d5a50cd7cc8096aadfed5000622ca8159c3ef09d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -527,7 +527,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`, the fixture manifest and managed
+`d5a50cd7cc8096aadfed5000622ca8159c3ef09d`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -547,22 +547,22 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For this revision, managed Pillow parity run
-`3588a194-19ec-415e-8f02-a4074e5213cc` passed 1,445/1,445 checks in 780 ms.
-The feature-matrix run `e3266f6e-7218-481a-af9e-48a13e130107` passed all
+`8d3af3c2-19aa-4ed0-947b-f919b9dd0120` passed 1,445/1,445 checks in 1,129 ms.
+The feature-matrix run `ba8aa5cf-957d-42f6-8b6b-f8182f609ab6` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-30,127 ms; its retained log ends with `capability tables OK: every native and
+50,866 ms; its retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees` and the targeted search returned no `lock-wait`
 match. These are separate from the managed LLVM coverage run
-`7ac2da92-8cbd-486c-a976-0a85bf248a37`, which passed 85/85 tests in 58,645 ms
-and ingested snapshot `6782355b-73ab-433e-803b-4103212f03f8`.
-That snapshot reports 51,577/52,119 lines, 7,129/7,248 branches,
-2,901/2,972 functions, and 79,916/81,113 regions; compared with the prior
-accepted snapshot `a113e926-ad23-4b7e-bf48-1484830f09df`, covered totals
-increased by 37 lines, 2 branches, 4 functions, and 44 regions while source
-totals grew by 38 lines, 2 branches, 4 functions, and 46 regions. The known
+`b2a23601-7ee7-4ad5-9551-30c27542920e`, which passed 85/85 tests in 72,985 ms
+and ingested snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`.
+That snapshot reports 51,602/52,144 lines, 7,129/7,248 branches,
+2,904/2,975 functions, and 79,949/81,147 regions; compared with the prior
+accepted snapshot `6782355b-73ab-433e-803b-4103212f03f8`, covered totals
+increased by 25 lines, 0 branches, 3 functions, and 33 regions while source
+totals grew by 25 lines, 0 branches, 3 functions, and 34 regions. The known
 LLVM JSON segment-normalization warning remains. The strict local verifier
 still reports the aggregate shortfall as 542 lines, 119 branches, 71 functions,
-and 1,197 regions; coverage is implementation evidence, not Pillow parity, and
+and 1,198 regions; coverage is implementation evidence, not Pillow parity, and
 no coverage-only test was added.
 
 The current revision also closes API-003. `decode_with_format` and
@@ -576,6 +576,15 @@ prove an encoded-byte policy rejection before dispatch. This is a Rust API
 contract: Pillow has no caller-supplied format-hint operation, so it adds no
 parity row, no new fixture, no diagnostic-origin assignment, and no new test
 function.
+
+The current revision also closes API-006. `DecodedImage::try_new`,
+`try_with_mode`, and `try_with_palette` provide checked zero-copy construction
+while retaining `new`, `with_mode`, and `with_palette` as explicitly unchecked
+compatibility builders. The existing feature-gate contract proves valid RGB and
+indexed construction, palette validation, vector pointer identity, dimensions,
+and color/mode error classification. This is a Rust-only defensive-model
+contract: no Pillow caller API changes, no parity row or fixture, no diagnostic
+origin, no new test function, and no coverage-only hook.
 
 The two typed-option adapter manifests add 97 accepted translations and 69
 format-qualified structured-error cases. Accepted rows are labeled
