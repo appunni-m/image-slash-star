@@ -385,6 +385,24 @@ pub fn decode(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
     decode_with_policy(data, &DecodePolicy::default())
 }
 
+/// Decode encoded image data using a caller-selected format.
+///
+/// The selected format is a dispatch hint, not a trust boundary: the complete
+/// input must still have the corresponding [`detect_format`] signature before
+/// metadata limits, feature dispatch, or pixel materialization are reached.
+/// Use [`decode_prefix`] when the input is still an incomplete prefix; this
+/// complete-slice API does not turn partial data into a retryable result.
+///
+/// # Errors
+///
+/// Returns [`ImageError::Parameter`] when the complete signature identifies a
+/// different format, [`ImageError::Malformed`] when no complete supported
+/// signature is present, or the same feature, codec, and decoded-buffer errors
+/// as [`decode`].
+pub fn decode_with_format(data: &[u8], format: ImageFormat) -> ImageResult<Decoded<DecodedImage>> {
+    decode_with_format_and_policy(data, format, &DecodePolicy::default())
+}
+
 fn finish_decoded<T>(
     format: ImageFormat,
     content: T,
@@ -407,6 +425,49 @@ fn finish_decoded<T>(
     Decoded::new(format, content, consumed_bytes).with_diagnostics(diagnostics)
 }
 
+fn validate_explicit_format(data: &[u8], expected: ImageFormat) -> ImageResult<()> {
+    match detect_format(data) {
+        Ok(actual) if actual == expected => Ok(()),
+        Ok(actual) => Err(ImageError::Parameter {
+            format: Some(expected),
+            message: format!("explicit format {expected} does not match detected format {actual}"),
+            stage: Some(ImageErrorStage::StillDecode),
+            offset: None,
+            identity: None,
+        }),
+        Err(ImageError::UnknownFormat) => Err(ImageError::Malformed {
+            format: expected,
+            message: format!("input does not contain a complete {expected} signature"),
+            stage: Some(ImageErrorStage::StillDecode),
+            offset: None,
+            identity: None,
+        }),
+        Err(error) => Err(error),
+    }
+}
+
+fn decode_selected_with_policy(
+    data: &[u8],
+    format: ImageFormat,
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
+    if policy.requires_image_info() {
+        let info = codecs::inspect_format(data, format)?;
+        policy.check_image_info(&info, CodecOperation::StillDecode)?;
+    }
+    codecs::decode_format(data, format).map(|(image, consumed_bytes, diagnostics)| {
+        finish_decoded(
+            format,
+            image,
+            consumed_bytes,
+            data.len(),
+            ImageErrorStage::StillDecode,
+            diagnostics,
+        )
+    })
+}
+
 /// Decode with an explicit caller-controlled policy.
 ///
 /// The encoded-input byte limit is checked before format detection. Configured
@@ -425,21 +486,31 @@ pub fn decode_with_policy(
 ) -> ImageResult<Decoded<DecodedImage>> {
     policy.check_encoded_input(data, CodecOperation::StillDecode)?;
     let format = detect_format(data)?;
-    policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
-    if policy.requires_image_info() {
-        let info = codecs::inspect_format(data, format)?;
-        policy.check_image_info(&info, CodecOperation::StillDecode)?;
-    }
-    codecs::decode_format(data, format).map(|(image, consumed_bytes, diagnostics)| {
-        finish_decoded(
-            format,
-            image,
-            consumed_bytes,
-            data.len(),
-            ImageErrorStage::StillDecode,
-            diagnostics,
-        )
-    })
+    decode_selected_with_policy(data, format, policy)
+}
+
+/// Decode with an explicit format and caller-controlled policy.
+///
+/// The encoded-input byte limit is checked before signature validation. The
+/// selected format is then compared with the complete input signature before
+/// metadata, canvas, frame, or decoded-byte limits are evaluated. No explicit
+/// format hint can bypass the policy or the codec's payload validation.
+///
+/// # Errors
+///
+/// Returns [`ImageError::LimitExceeded`] for an encoded-input or configured
+/// decode limit, [`ImageError::Parameter`] for a recognized signature from a
+/// different format, [`ImageError::Malformed`] for an incomplete or unknown
+/// complete-slice signature, and otherwise the same errors as
+/// [`decode_with_policy`].
+pub fn decode_with_format_and_policy(
+    data: &[u8],
+    format: ImageFormat,
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_encoded_input(data, CodecOperation::StillDecode)?;
+    validate_explicit_format(data, format)?;
+    decode_selected_with_policy(data, format, policy)
 }
 
 /// Incremental still decode for callers that are still receiving input.

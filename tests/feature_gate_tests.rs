@@ -585,6 +585,23 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
         .collect::<HashSet<_>>();
     assert_eq!(capability_formats.len(), 8);
 
+    let generic_avif = fs::read(
+        root.join("tests/fixtures/input/images/avif")
+            .join("generic_mif1.avif"),
+    )?;
+    assert_eq!(
+        image_slash_star::detect_format(&generic_avif),
+        Err(ImageError::UnknownFormat)
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_format(&generic_avif, ImageFormat::Avif),
+        Err(ImageError::Malformed {
+            format: ImageFormat::Avif,
+            stage: Some(ImageErrorStage::StillDecode),
+            ..
+        })
+    ));
+
     for (name, rows) in manifest.formats {
         let (format, feature, enabled) = format(&name);
         let options = EncodeOptions::for_format(format);
@@ -616,6 +633,18 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             let expected = ImageError::FeatureDisabled { format, feature };
             assert_eq!(image_slash_star::inspect(&bytes), Err(expected.clone()));
             assert_eq!(image_slash_star::decode(&bytes), Err(expected.clone()));
+            assert_eq!(
+                image_slash_star::decode_with_format(&bytes, format),
+                Err(expected.clone())
+            );
+            assert_eq!(
+                image_slash_star::decode_with_format_and_policy(
+                    &bytes,
+                    format,
+                    &image_slash_star::DecodePolicy::default()
+                ),
+                Err(expected.clone())
+            );
             assert_eq!(
                 image_slash_star::decode_sequence(&bytes),
                 Err(expected.clone())
@@ -688,6 +717,18 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
                 Err(expected_decode.clone())
             );
             assert_eq!(
+                image_slash_star::decode_with_format(&bytes, format),
+                Err(expected_decode.clone())
+            );
+            assert_eq!(
+                image_slash_star::decode_with_format_and_policy(
+                    &bytes,
+                    format,
+                    &image_slash_star::DecodePolicy::default()
+                ),
+                Err(expected_decode.clone())
+            );
+            assert_eq!(
                 image_slash_star::decode_sequence(&bytes),
                 Err(expected_sequence_decode)
             );
@@ -743,6 +784,14 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             source.verify().is_ok(),
             row.verify_status.as_deref() == Some("ok")
         );
+        assert!(matches!(
+            image_slash_star::decode_with_format(source.bytes(), wrong_format),
+            Err(ImageError::Parameter {
+                format: Some(actual),
+                stage: Some(ImageErrorStage::StillDecode),
+                ..
+            }) if actual == wrong_format
+        ));
         let decoded = source.decode()?;
         assert_eq!(decoded.format, format);
         assert_eq!(decoded.content.mode, info.mode);
@@ -750,6 +799,30 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
             [decoded.content.width, decoded.content.height],
             expected_size
         );
+        assert_eq!(
+            image_slash_star::decode_with_format(source.bytes(), format)?,
+            decoded.clone(),
+            "{name} explicit-format decode"
+        );
+        assert_eq!(
+            image_slash_star::decode_with_format_and_policy(
+                source.bytes(),
+                format,
+                &image_slash_star::DecodePolicy::default()
+            )?,
+            decoded.clone(),
+            "{name} explicit-format policy decode"
+        );
+        let strict_policy = image_slash_star::DecodePolicy::default()
+            .with_max_encoded_bytes((source.bytes().len() as u64).saturating_sub(1));
+        assert!(matches!(
+            image_slash_star::decode_with_format_and_policy(source.bytes(), format, &strict_policy),
+            Err(ImageError::LimitExceeded {
+                format: None,
+                operation: image_slash_star::CodecOperation::StillDecode,
+                ..
+            })
+        ));
         assert_eq!(
             image_slash_star::decode_sequence(source.bytes())?.format,
             format
