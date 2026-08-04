@@ -31,10 +31,24 @@
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
+const SAMPLING_CHECKPOINT_PIXELS: usize = 1_024;
 
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
+}
+
+#[inline]
+fn checkpoint_after_sample(
+    samples_until_checkpoint: &mut usize,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<()> {
+    *samples_until_checkpoint = samples_until_checkpoint.saturating_sub(1);
+    if *samples_until_checkpoint == 0 {
+        checkpoint(token)?;
+        *samples_until_checkpoint = SAMPLING_CHECKPOINT_PIXELS;
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy, Default)]
@@ -434,12 +448,31 @@ pub(super) fn optimize_sampling(
         checkpoint(token)?;
         let next_square = 1_usize << (best_bits + 1 - bits);
         let square = 1_usize << (best_bits - bits);
-        let rows_equal = (0..original_height.saturating_sub(square))
-            .step_by(next_square)
-            .all(|y| {
-                image[y * original_width..(y + 1) * original_width]
-                    == image[(y + square) * original_width..(y + square + 1) * original_width]
-            });
+        let rows_equal = if let Some(token) = token {
+            let mut samples_until_checkpoint = SAMPLING_CHECKPOINT_PIXELS;
+            let mut rows_equal = true;
+            'rows: for y in (0..original_height.saturating_sub(square)).step_by(next_square) {
+                let left = &image[y * original_width..(y + 1) * original_width];
+                let right =
+                    &image[(y + square) * original_width..(y + square + 1) * original_width];
+                for (&left, &right) in left.iter().zip(right) {
+                    let equal = left == right;
+                    checkpoint_after_sample(&mut samples_until_checkpoint, Some(token))?;
+                    if !equal {
+                        rows_equal = false;
+                        break 'rows;
+                    }
+                }
+            }
+            rows_equal
+        } else {
+            (0..original_height.saturating_sub(square))
+                .step_by(next_square)
+                .all(|y| {
+                    image[y * original_width..(y + 1) * original_width]
+                        == image[(y + square) * original_width..(y + square + 1) * original_width]
+                })
+        };
         if !rows_equal {
             break;
         }
@@ -448,13 +481,35 @@ pub(super) fn optimize_sampling(
     while best_bits > bits {
         checkpoint(token)?;
         let square = 1_usize << (best_bits - bits);
-        let columns_equal = (0..original_height).all(|y| {
-            (0..original_width).step_by(square).all(|x| {
-                image[y * original_width + x..y * original_width + (x + square).min(original_width)]
-                    .iter()
-                    .all(|&value| value == image[y * original_width + x])
+        let columns_equal = if let Some(token) = token {
+            let mut samples_until_checkpoint = SAMPLING_CHECKPOINT_PIXELS;
+            let mut columns_equal = true;
+            'rows: for y in 0..original_height {
+                for x in (0..original_width).step_by(square) {
+                    let start = y * original_width + x;
+                    let end = y * original_width + (x + square).min(original_width);
+                    let expected = image[start];
+                    for &value in &image[start..end] {
+                        let equal = value == expected;
+                        checkpoint_after_sample(&mut samples_until_checkpoint, Some(token))?;
+                        if !equal {
+                            columns_equal = false;
+                            break 'rows;
+                        }
+                    }
+                }
+            }
+            columns_equal
+        } else {
+            (0..original_height).all(|y| {
+                (0..original_width).step_by(square).all(|x| {
+                    image[y * original_width + x
+                        ..y * original_width + (x + square).min(original_width)]
+                        .iter()
+                        .all(|&value| value == image[y * original_width + x])
+                })
             })
-        });
+        };
         if columns_equal {
             break;
         }
@@ -466,12 +521,22 @@ pub(super) fn optimize_sampling(
     let square = 1_usize << (best_bits - bits);
     let width = subsample_size(full_width, best_bits);
     let height = subsample_size(full_height, best_bits);
-    for y in 0..height {
-        if y.is_multiple_of(16) {
-            checkpoint(token)?;
+    if let Some(token) = token {
+        let mut samples_until_checkpoint = SAMPLING_CHECKPOINT_PIXELS;
+        for y in 0..height {
+            if y.is_multiple_of(16) {
+                checkpoint(Some(token))?;
+            }
+            for x in 0..width {
+                image[y * width + x] = image[square * (y * original_width + x)];
+                checkpoint_after_sample(&mut samples_until_checkpoint, Some(token))?;
+            }
         }
-        for x in 0..width {
-            image[y * width + x] = image[square * (y * original_width + x)];
+    } else {
+        for y in 0..height {
+            for x in 0..width {
+                image[y * width + x] = image[square * (y * original_width + x)];
+            }
         }
     }
     Ok(best_bits)
