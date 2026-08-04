@@ -810,18 +810,39 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     let mut trailing_zero_bits = 0;
     // The normal-tree path always emits at least one non-zero code-length
     // token before trailing zero-repeat tokens.
-    loop {
-        let token = tokens[trimmed_length - 1];
-        if !matches!(token.code, 0 | 17 | 18) {
-            break;
+    if let Some(token) = token {
+        let mut trimmed_tokens = 0usize;
+        loop {
+            let huffman_token = tokens[trimmed_length - 1];
+            if !matches!(huffman_token.code, 0 | 17 | 18) {
+                break;
+            }
+            trimmed_length -= 1;
+            trailing_zero_bits += usize::from(code_length_lengths[usize::from(huffman_token.code)]);
+            trailing_zero_bits += match huffman_token.code {
+                17 => 3,
+                18 => 7,
+                _ => 0,
+            };
+            trimmed_tokens += 1;
+            if trimmed_tokens.is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
+                check_token(Some(token))?;
+            }
         }
-        trimmed_length -= 1;
-        trailing_zero_bits += usize::from(code_length_lengths[usize::from(token.code)]);
-        trailing_zero_bits += match token.code {
-            17 => 3,
-            18 => 7,
-            _ => 0,
-        };
+    } else {
+        loop {
+            let huffman_token = tokens[trimmed_length - 1];
+            if !matches!(huffman_token.code, 0 | 17 | 18) {
+                break;
+            }
+            trimmed_length -= 1;
+            trailing_zero_bits += usize::from(code_length_lengths[usize::from(huffman_token.code)]);
+            trailing_zero_bits += match huffman_token.code {
+                17 => 3,
+                18 => 7,
+                _ => 0,
+            };
+        }
     }
     let write_trimmed = trailing_zero_bits > 12;
     w.write_bits(u64::from(write_trimmed), 1)?;
