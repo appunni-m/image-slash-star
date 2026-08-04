@@ -65,6 +65,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
 const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
@@ -1227,6 +1228,36 @@ enum EntropyMode {
     Palette,
 }
 
+fn pixels_are_grayscale(pixels: &[u32]) -> bool {
+    pixels.iter().all(|&pixel| {
+        let red = (pixel >> 16) & 0xff;
+        let green = (pixel >> 8) & 0xff;
+        let blue = pixel & 0xff;
+        red == green && green == blue
+    })
+}
+
+fn pixels_are_grayscale_with_checkpoint(
+    pixels: &[u32],
+    token: Option<&crate::CancellationToken>,
+) -> Result<bool, EncodingError> {
+    if token.is_none() {
+        return Ok(pixels_are_grayscale(pixels));
+    }
+    for (index, &pixel) in pixels.iter().enumerate() {
+        let red = (pixel >> 16) & 0xff;
+        let green = (pixel >> 8) & 0xff;
+        let blue = pixel & 0xff;
+        if red != green || green != blue {
+            return Ok(false);
+        }
+        if (index + 1).is_multiple_of(VP8L_GRAYSCALE_CHECKPOINT_PIXELS) {
+            check_token(token)?;
+        }
+    }
+    Ok(true)
+}
+
 // The direct entropy mode makes the mode table non-empty.
 #[allow(clippy::unwrap_used)]
 fn analyze_entropy(
@@ -1499,12 +1530,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
         if entropy_mode == EntropyMode::Palette {
             apply_palette(w, pixels, width as usize, height as usize, palette, token)?;
         } else {
-            let grayscale = pixels.iter().all(|&pixel| {
-                let red = (pixel >> 16) & 0xff;
-                let green = (pixel >> 8) & 0xff;
-                let blue = pixel & 0xff;
-                red == green && green == blue
-            });
+            let grayscale = pixels_are_grayscale_with_checkpoint(pixels, token)?;
             let use_subtract_green = matches!(
                 entropy_mode,
                 EntropyMode::SubtractGreen | EntropyMode::SpatialSubtractGreen
