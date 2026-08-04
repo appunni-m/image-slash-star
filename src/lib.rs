@@ -969,6 +969,7 @@ pub fn encode_with_policy(
 /// preparation and canonical-code assignment scans after each 64 code-length
 /// symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 /// Huffman-tree code-length-token frequency scans after each 16 compressed
+/// token entries, trailing zero-repeat token trim scans after each 16 compressed
 /// token entries,
 /// histogram population, combined entropy-cost,
 /// and histogram-merge scans after each 64 symbols,
