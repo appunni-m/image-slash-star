@@ -188,6 +188,9 @@ fn entropy_unrefined_with_checkpoint(
     y: Option<&[u32]>,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<(BitEntropy, Streaks)> {
+    if token.is_none() {
+        return Ok(entropy_unrefined(x, y));
+    }
     let value = |i: usize| x[i] + y.map_or(0, |values| values[i]);
     let mut entropy = BitEntropy {
         nonzero_code: NON_TRIVIAL,
@@ -315,53 +318,80 @@ pub(super) fn bits_entropy(population: &[u32]) -> u64 {
     refined_entropy(&entropy)
 }
 
-fn combined_channel_cost(a: &Histogram, b: &Histogram, channel: usize) -> u64 {
+fn combined_channel_cost(
+    a: &Histogram,
+    b: &Histogram,
+    channel: usize,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
     if (a.trivial[channel] != NON_TRIVIAL && a.trivial[channel] == b.trivial[channel])
         || !a.used[channel]
         || !b.used[channel]
     {
-        return if a.used[channel] {
+        return Ok(if a.used[channel] {
             a.costs[channel]
         } else {
             b.costs[channel]
-        };
+        });
     }
-    let (entropy, stats) =
-        entropy_unrefined(&a.populations[channel], Some(&b.populations[channel]));
-    refined_entropy(&entropy) + final_huffman_cost(&stats)
+    let (entropy, stats) = entropy_unrefined_with_checkpoint(
+        &a.populations[channel],
+        Some(&b.populations[channel]),
+        token,
+    )?;
+    Ok(refined_entropy(&entropy) + final_huffman_cost(&stats))
 }
 
-fn combined_costs(a: &Histogram, b: &Histogram, threshold: i64) -> Option<(u64, [u64; 5])> {
+fn combined_costs(
+    a: &Histogram,
+    b: &Histogram,
+    threshold: i64,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Option<(u64, [u64; 5])>> {
     if threshold <= 0 {
-        return None;
+        return Ok(None);
     }
     let mut total = 0;
     let mut costs = [0; 5];
     for (channel, cost) in costs.iter_mut().enumerate() {
-        *cost = combined_channel_cost(a, b, channel);
+        *cost = combined_channel_cost(a, b, channel, token)?;
         total += *cost;
         if total >= threshold as u64 {
-            return None;
+            return Ok(None);
         }
     }
-    Some((total, costs))
+    Ok(Some((total, costs)))
 }
 
-fn add_eval(a: &Histogram, b: &Histogram, threshold: i64) -> Option<Histogram> {
+fn add_eval(
+    a: &Histogram,
+    b: &Histogram,
+    threshold: i64,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Option<Histogram>> {
     let sum = a.bit_cost + b.bit_cost;
     let limit = threshold.saturating_add_unsigned(sum);
-    let (cost, costs) = combined_costs(a, b, limit)?;
+    let Some((cost, costs)) = combined_costs(a, b, limit, token)? else {
+        return Ok(None);
+    };
     let mut result = b.clone();
     result.add_assign(a);
     result.costs = costs;
     result.bit_cost = cost;
-    Some(result)
+    Ok(Some(result))
 }
 
-fn add_threshold(a: &Histogram, b: &Histogram, threshold: i64) -> Option<i64> {
+fn add_threshold(
+    a: &Histogram,
+    b: &Histogram,
+    threshold: i64,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Option<i64>> {
     let limit = threshold.saturating_add_unsigned(a.bit_cost);
-    let (cost, _) = combined_costs(a, b, limit)?;
-    Some(cost as i64 - a.bit_cost as i64)
+    let Some((cost, _)) = combined_costs(a, b, limit, token)? else {
+        return Ok(None);
+    };
+    Ok(Some(cost as i64 - a.bit_cost as i64))
 }
 
 #[derive(Clone)]
@@ -373,18 +403,27 @@ struct Pair {
     costs: [u64; 5],
 }
 
-fn update_pair(histograms: &[Histogram], pair: &mut Pair, threshold: i64) -> bool {
+fn update_pair(
+    histograms: &[Histogram],
+    pair: &mut Pair,
+    threshold: i64,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<bool> {
     let sum = histograms[pair.first].bit_cost + histograms[pair.second].bit_cost;
     let limit = threshold.saturating_add_unsigned(sum);
-    let Some((cost, costs)) =
-        combined_costs(&histograms[pair.first], &histograms[pair.second], limit)
+    let Some((cost, costs)) = combined_costs(
+        &histograms[pair.first],
+        &histograms[pair.second],
+        limit,
+        token,
+    )?
     else {
-        return false;
+        return Ok(false);
     };
     pair.cost_combo = cost;
     pair.costs = costs;
     pair.cost_diff = cost as i64 - sum as i64;
-    true
+    Ok(true)
 }
 
 fn update_head(queue: &mut [Pair], index: usize) {
@@ -400,9 +439,10 @@ fn push_pair(
     mut first: usize,
     mut second: usize,
     threshold: i64,
-) -> i64 {
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<i64> {
     if queue.len() == maximum {
-        return 0;
+        return Ok(0);
     }
     if first > second {
         core::mem::swap(&mut first, &mut second);
@@ -414,14 +454,14 @@ fn push_pair(
         cost_combo: 0,
         costs: [0; 5],
     };
-    if !update_pair(histograms, &mut pair, threshold) {
-        return 0;
+    if !update_pair(histograms, &mut pair, threshold, token)? {
+        return Ok(0);
     }
     let result = pair.cost_diff;
     queue.push(pair);
     let index = queue.len() - 1;
     update_head(queue, index);
-    result
+    Ok(result)
 }
 
 fn fix_pair(pair: &mut Pair, bad: usize, good: usize) {
@@ -475,7 +515,13 @@ fn entropy_bin_combine(
             continue;
         };
         let threshold = -(((histograms[index].bit_cost * 16 + 50) / 100) as i64);
-        let Some(combo) = add_eval(&histograms[first_index], &histograms[index], threshold) else {
+        let Some(combo) = add_eval(
+            &histograms[first_index],
+            &histograms[index],
+            threshold,
+            token,
+        )?
+        else {
             index += 1;
             continue;
         };
@@ -525,7 +571,7 @@ fn stochastic_combine(
             if second >= first {
                 second += 1;
             }
-            let cost = push_pair(&mut queue, 9, histograms, first, second, best);
+            let cost = push_pair(&mut queue, 9, histograms, first, second, best, token)?;
             if cost < 0 {
                 best = cost;
                 if queue.len() == 9 {
@@ -560,7 +606,7 @@ fn stochastic_combine(
             if touches_first || touches_second {
                 fix_pair(&mut queue[index], second, first);
                 let mut pair = queue[index].clone();
-                if !update_pair(histograms, &mut pair, 0) {
+                if !update_pair(histograms, &mut pair, 0, token)? {
                     queue.swap_remove(index);
                     continue;
                 }
@@ -588,7 +634,7 @@ fn greedy_combine(
             if second.is_multiple_of(64) {
                 checkpoint(token)?;
             }
-            push_pair(&mut queue, maximum, histograms, first, second, 0);
+            push_pair(&mut queue, maximum, histograms, first, second, 0, token)?;
         }
     }
     while let Some(chosen) = queue.first().cloned() {
@@ -622,7 +668,7 @@ fn greedy_combine(
                 checkpoint(token)?;
             }
             if index != first {
-                push_pair(&mut queue, maximum, histograms, first, index, 0);
+                push_pair(&mut queue, maximum, histograms, first, index, 0, token)?;
             }
         }
     }
@@ -700,7 +746,7 @@ pub(super) fn cluster(
         }
         let mut best = i64::MAX;
         for (cluster_index, cluster) in clusters.iter().enumerate() {
-            if let Some(cost) = add_threshold(cluster, original, best) {
+            if let Some(cost) = add_threshold(cluster, original, best, token)? {
                 best = cost;
                 symbols[index] = cluster_index as u16;
             }
@@ -726,7 +772,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     b.add_token(Token::Literal(0xff00_00ff), 1);
     a.analyze();
     b.analyze();
-    assert!(combined_costs(&a, &b, 0).is_none());
+    assert!(matches!(combined_costs(&a, &b, 0, None), Ok(None)));
 
     let histograms = vec![a, b];
     let mut queue = vec![Pair {
@@ -736,7 +782,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         cost_combo: 0,
         costs: [0; 5],
     }];
-    let _ = push_pair(&mut queue, 1, &histograms, 0, 1, -1);
+    let _ = push_pair(&mut queue, 1, &histograms, 0, 1, -1, None);
 
     let mut equal_bins = vec![Histogram::new(0), Histogram::new(0)];
     for histogram in &mut equal_bins {
