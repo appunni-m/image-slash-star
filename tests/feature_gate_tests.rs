@@ -10939,28 +10939,20 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut coefficient_524288_options {
             options.quality = Some(100);
         }
-        // The next coefficient-only logical interval needs roughly twice the
-        // 1,920x1,920 probe's high-entropy coefficient work. Keep this
-        // deterministic 2,720x2,720 witness separate so the earlier boundary
-        // retains its smaller runtime footprint and memory stays bounded.
-        let mut coefficient_1048576_probe_pixels = Vec::with_capacity(2_720 * 2_720 * 3);
-        let mut coefficient_1048576_state = 0xA5A5_5A5Au32;
-        for _ in 0..2_720 * 2_720 {
-            coefficient_1048576_state = coefficient_1048576_state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
-            coefficient_1048576_probe_pixels.extend_from_slice(&[
-                u8::try_from(coefficient_1048576_state >> 24)?,
-                u8::try_from((coefficient_1048576_state >> 16) & 0xff)?,
-                u8::try_from((coefficient_1048576_state >> 8) & 0xff)?,
-            ]);
+        // A deterministic 832x832 checkerboard reaches the next
+        // coefficient-only logical interval at quality 100 while keeping the
+        // boundary probe compact. Its strong alternating chroma/luma signal
+        // generates the required coefficient work without restoring the
+        // discarded multi-megapixel high-entropy allocation.
+        let mut coefficient_1048576_probe_pixels = Vec::with_capacity(832 * 832 * 3);
+        for y in 0..832 {
+            for x in 0..832 {
+                let value = if (x + y) % 2 == 0 { 0 } else { 255 };
+                coefficient_1048576_probe_pixels.extend_from_slice(&[value, 255 - value, value]);
+            }
         }
-        let coefficient_1048576_probe = DecodedImage::new(
-            2_720,
-            2_720,
-            coefficient_1048576_probe_pixels,
-            ColorType::Rgb8,
-        );
+        let coefficient_1048576_probe =
+            DecodedImage::new(832, 832, coefficient_1048576_probe_pixels, ColorType::Rgb8);
         let mut coefficient_1048576_options = analysis_options.clone();
         if let EncodeOptions::WebP(options) = &mut coefficient_1048576_options {
             options.quality = Some(100);
