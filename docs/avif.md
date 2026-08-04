@@ -3,7 +3,7 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-04 on the committed tree based on revision
-`2d4b9f622923255617eac62669d32d489ead90c5`; the claim-ledger baseline remains
+`1451217f6344c71141518b28d724b9455b7c0a87`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 AVIF is the only codec feature with different native and
@@ -144,12 +144,21 @@ This is a bounded specification/defensive-model contract rather than Pillow
 parity evidence, because Pillow's observable result has no equivalent item-level
 structured color field. The test uses a committed Pillow-generated encoded
 metadata output only as a source witness for ICC and does not add a parity row.
+Typed non-primary `colr`/`nclx` declarations are retained separately through
+`SourceDescriptor::avif_item_color_properties()` as source-local item ID/CICP
+records on inspection, still decode, and the still-sequence fallback. They do
+not merge into the primary `SourceColor`, perform conversion, or change
+decoded pixels. The contract uses the in-memory `alpha.avif` association
+mutation described in [testing](testing.md); Pillow exposes no equivalent
+item-level field, so it remains Rust source-provenance evidence with no parity
+row. Non-primary ICC profiles and other item color/property forms remain open.
 Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Non-ICC item profiles, track-only and non-alpha auxiliary item properties, and
-other non-primary item relationships remain future slices. Direct and
+Non-ICC item profiles, track-only and non-alpha auxiliary item properties,
+item color/property forms beyond typed CICP, and other non-primary item
+relationships remain future slices. Direct and
 supported grid-derived item and auxiliary-alpha provenance is represented
 through `SourceAlpha::Auxiliary`, the scalar
 `SourceDescriptor::avif_auxiliary_relationship()` getter, and the bounded

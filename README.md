@@ -395,6 +395,13 @@ mapping; the item-level AVIF color contract is defensive/specification
 evidence because the Pillow parity oracle does not expose an equivalent
 structured result. Chroma sample position is retained as source provenance
 only; it does not cause chroma resampling.
+Typed non-primary AVIF `colr`/`nclx` declarations are retained separately as
+source-local `AvifItemColorProperties` through
+`SourceDescriptor::avif_item_color_properties()` on inspection, still decode,
+and sequence fallback. They do not replace the primary `SourceColor`, apply
+color conversion, or change decoded pixels. This item-level CICP field is a
+Rust source-provenance contract because Pillow exposes no equivalent result;
+non-primary ICC profiles and other item color/property forms remain open.
 Default encoding never replays retained blocks implicitly; an explicit replay
 API would have to define collisions with encoder-generated blocks first.
 
