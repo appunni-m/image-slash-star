@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`b56d0d9147adb81216d13853fbc349e9bc56a00b`; the claim-ledger baseline remains
+`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -4268,8 +4268,9 @@ fixture-backed lossless WebP token/cancellation assertion drives the
 Huffman-tree path, whose canonical-code assignment and sorted-node insertion
 scans charge after each 64 code-length slots or candidate nodes. The production
 slice is committed at revision
-`b56d0d9147adb81216d13853fbc349e9bc56a00b`; token-aware copy-token cache
-population also charges after each 256 pixels inside a copy token, while the
+`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; token-aware copy-token cache
+population and traced copy-token replay also charge after each 256 pixels
+inside a copy token, while the
 ordinary no-token paths retain their original tight loops. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at
@@ -4306,22 +4307,24 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`04350fbf-f235-498a-874e-64bb047e0d22` passed 1,445/1,445 checks in 48,738
-ms; feature-matrix run `fecd3432-b474-4bd8-984a-31851f321981` passed all 33/33
-configured lanes in 7,480 ms with `cache=warm lanes=12 test_threads=3
+`c7dc8398-fd1d-451c-afdf-7b6549a04847` passed 1,445/1,445 checks in 57,668
+ms; feature-matrix run `f3f76fb1-7dda-4869-b8c7-58721153cd0a` passed all 33/33
+configured lanes in 63,917 ms with `cache=warm lanes=12 test_threads=3
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`41bda3f0-d46a-4032-93b2-c14f6cb07cd0` passed 85/85 tests in 79,036 ms and
-ingested snapshot `132d59a1-5df8-461c-b3bc-1c0bf3ac599e`: 52,842/53,428
-lines, 7,411/7,550 branches, 2,986/3,062 functions, and 81,729/83,036
-regions. Compared with snapshot `233fb4aa-bcfd-4acd-87d7-04f4bd612fe0`,
-covered/source totals changed by +29/+29 lines, +8/+6 branches, +1/+1
-functions, and +56/+58 regions. Native WebP encoder reports 1,747/1,782
-lines, 355/368 branches, 86/86 functions, and 2,493/2,664 regions. Coverage
-is implementation evidence, not Pillow parity; the known LLVM
-segment-normalization warning and the 586-line, 139-branch, 76-function,
-1,307-region aggregate shortfall remain. The managed durations are cache- and
-runner-sensitive observations, not universal speed claims.
+`1fb4fd4f-5669-4a25-a634-c647c98a3996` passed 85/85 tests in 89,569 ms and
+ingested snapshot `ecc3ca12-b115-4e9f-b307-04854c816422`: 52,866/53,453
+lines, 7,414/7,554 branches, 2,988/3,064 functions, and 81,756/83,066
+regions. Compared with snapshot `132d59a1-5df8-461c-b3bc-1c0bf3ac599e`,
+covered/source totals changed by +24/+25 lines, +3/+4 branches, +2/+2
+functions, and +27/+30 regions. Native WebP encoder reports 1,747/1,782
+lines, 355/368 branches, 86/86 functions, and 2,493/2,664 regions; its
+backward-reference module reports 1,353/1,359 lines, 358/362 branches, 61/61
+functions, and 2,072/2,136 regions. Coverage is implementation evidence, not
+Pillow parity; the known LLVM segment-normalization warning and the 587-line,
+140-branch, 76-function, 1,310-region aggregate shortfall remain. The managed
+durations are cache- and runner-sensitive observations, not universal speed
+claims.
 
 Historical acceptance record: warm feature-matrix fanout bound
 

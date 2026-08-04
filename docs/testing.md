@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`b56d0d9147adb81216d13853fbc349e9bc56a00b`; the claim-ledger baseline remains
+`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -555,7 +555,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation revision
-`b56d0d9147adb81216d13853fbc349e9bc56a00b`, test evidence commit
+`996f13de3071ace66f5bb3eef5cb45c74b1459b0`, test evidence commit
 `20a818c1c2d91dd463da6c1393b09c07dd171569`, and runtime harness commit
 `22ef4f1ec190e279f1aa8d9b4f5e15f94e244c88`, the fixture manifest and managed
 commands report:
@@ -579,7 +579,8 @@ matrix.
 For the current implementation and test/runtime revision, the existing
 Rust-only work-budget contract now exercises the RGB-equal grayscale
 preparation checkpoint after each 1,024 pixels, the VP8L copy-token cache
-population scan after each 256 pixels, the Huffman-tree code-length-token
+population and traced copy-token replay scans after each 256 pixels, the
+Huffman-tree code-length-token
 frequency scan, and the trailing zero-repeat-token trim scan after each 16
 compressed token entries through deterministic feature-gated probes; these add
 no Pillow parity row, fixture, diagnostic origin, or coverage-only hook. The
@@ -587,24 +588,26 @@ cache probe proves `maximum: 136,752`, `observed: 136,753` in both whole-buffer
 and caller-owned-sink paths, with sink prefix
 `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45, 0x42,
 0x50]`. Managed Pillow parity run
-`04350fbf-f235-498a-874e-64bb047e0d22` passed 1,445/1,445 checks with zero
-skips in 48,738 ms. Feature-matrix run
-`fecd3432-b474-4bd8-984a-31851f321981` passed all 33/33 configured lanes in
-7,480 ms. Its retained log records `cache=warm lanes=12 test_threads=3
+`c7dc8398-fd1d-451c-afdf-7b6549a04847` passed 1,445/1,445 checks with zero
+skips in 57,668 ms. Feature-matrix run
+`f3f76fb1-7dda-4869-b8c7-58721153cd0a` passed all 33/33 configured lanes in
+63,917 ms. Its retained log records `cache=warm lanes=12 test_threads=3
 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK: every native
 and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`41bda3f0-d46a-4032-93b2-c14f6cb07cd0` passed 85/85 tests in 79,036 ms and
-ingested snapshot `132d59a1-5df8-461c-b3bc-1c0bf3ac599e`:
-52,842/53,428 lines, 7,411/7,550 branches, 2,986/3,062 functions, and
-81,729/83,036 regions. Compared with the preceding accepted snapshot
-`233fb4aa-bcfd-4acd-87d7-04f4bd612fe0`, covered/source totals changed by
-`+29/+29/+8/+6/+1/+1/+56/+58` for covered/source lines, covered/source
+`1fb4fd4f-5669-4a25-a634-c647c98a3996` passed 85/85 tests in 89,569 ms and
+ingested snapshot `ecc3ca12-b115-4e9f-b307-04854c816422`:
+52,866/53,453 lines, 7,414/7,554 branches, 2,988/3,064 functions, and
+81,756/83,066 regions. Compared with the preceding accepted snapshot
+`132d59a1-5df8-461c-b3bc-1c0bf3ac599e`, covered/source totals changed by
+`+24/+25/+3/+4/+2/+2/+27/+30` for covered/source lines, covered/source
 branches, covered/source functions, and covered/source regions. The changed
 native WebP encoder reports 1,747/1,782 lines, 355/368 branches, 86/86
-functions, and 2,493/2,664 regions. The known LLVM JSON
-segment-normalization warning remains. The strict aggregate shortfall is 586
-lines, 139 branches, 76 functions, and 1,307 regions; coverage is
+functions, and 2,493/2,664 regions; its backward-reference module reports
+1,353/1,359 lines, 358/362 branches, 61/61 functions, and 2,072/2,136
+regions. The known LLVM JSON segment-normalization warning remains. The
+strict aggregate shortfall is 587 lines, 140 branches, 76 functions, and
+1,310 regions; coverage is
 implementation evidence, not Pillow parity, and no coverage-only test was
 added. The warm matrix worker change is an observed runtime improvement, not a
 universal speed claim; managed durations remain cache- and runner-sensitive.
