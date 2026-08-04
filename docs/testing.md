@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`54de3e3f8ded6c889b59416727285297016a891e`; the claim-ledger baseline remains
+`a09bda379ced7abc8b88ba09982de3a4d012ce91`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -529,7 +529,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`54de3e3f8ded6c889b59416727285297016a891e`, the fixture manifest and
+`a09bda379ced7abc8b88ba09982de3a4d012ce91`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -549,31 +549,48 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation revision, managed Pillow parity run
-`e990d872-9e9b-42b0-9784-86c6558ef37a` passed 1,445/1,445 checks with zero
-skips in 786 ms; its retained test body passed 28/28 in 0.71 s. The current
-feature-matrix run `966cf917-c7d9-4356-bda9-66488069ee12` passed all configured
-native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 27,716 ms; its
+`f007ba3a-68f9-4095-8dd4-a5f44b5688db` passed 1,445/1,445 checks with zero
+skips in 936 ms; its retained test body passed 28/28 in 0.85 s. The current
+feature-matrix run `58a205d6-594a-4fd8-a431-856e96390b2e` passed all configured
+native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 59,367 ms; its
 retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees`, and targeted searches returned no
 `lock-wait`/build-directory/package-cache match. These are separate from the
-managed LLVM coverage run `c7561ec0-faf7-418f-9eca-e1c144f94ffd`, which passed
-85/85 tests in 47,094 ms and ingested snapshot
-`755fa610-acb0-4c69-95cd-e357da8558a4`.
-That snapshot reports 51,750/52,292 lines, 7,155/7,274 branches,
-2,916/2,987 functions, and 80,164/81,367 regions; compared with the prior
-accepted snapshot `229ca3ff-97d5-4f1c-b306-9a777eb3d65d`, covered totals
-increased by 7 lines, 3 branches, 0 functions, and 10 regions while source
-totals grew by 5 lines, 2 branches, 0 functions, and 7 regions. The changed
-`src/codecs/webp/native/encoder.rs` reports 1,519/1,528 lines, 248/248
-branches, 77/77 functions, and 2,204/2,305 regions; relative to the prior
-snapshot it adds 5 source lines, 7 covered lines, 2 branches, 3 covered
-branches, and 7 regions with 10 covered. The known LLVM JSON
-segment-normalization warning remains. The strict local verifier's aggregate
-shortfall is 542 lines, 119 branches, 71 functions, and 1,203 regions;
-coverage is implementation evidence, not Pillow parity, and no coverage-only
-test was added.
+managed LLVM coverage run `65d286b2-9924-4725-b286-dfd2bccadd19`, which passed
+85/85 tests in 58,290 ms and ingested snapshot
+`3c69fa6e-f1ff-4a91-8685-62d07133af7d`.
+That snapshot reports 51,835/52,386 lines, 7,166/7,286 branches,
+2,926/3,000 functions, and 80,271/81,483 regions. Compared with the accepted
+snapshot `755fa610-acb0-4c69-95cd-e357da8558a4`, covered totals increased by
+85 lines, 11 branches, 10 functions, and 107 regions while source totals grew
+by 94 lines, 12 branches, 13 functions, and 116 regions. The changed AVIF
+files report `container.rs` 2,495/2,499 lines, 402/406 branches, 151/151
+functions, and 3,732/3,738 regions; `decode.rs` 528/528, 56/56, 26/26, and
+737/737; `samples.rs` 3,651/3,653, 545/546, 172/173, and 4,752/4,758;
+`av1/mod.rs` 152/152, 30/30, 10/10, and 253/253; and `types/mod.rs`
+1,438/1,447, 116/120, 132/135, and 1,439/1,449, respectively. The known
+LLVM JSON segment-normalization warning remains. The strict local verifier's
+aggregate shortfall is 551 lines, 120 branches, 74 functions, and 1,212
+regions; coverage is implementation evidence, not Pillow parity, and no
+coverage-only test was added.
 
-The preceding GIF high-color nearest-palette work-control slice is implemented at
+The current AVIF item-relationship slice is implemented across
+`489351caa15dbdbba7e9c7d41b01a87aebfd457b` and the coverage-fixture
+completeness fix `a09bda379ced7abc8b88ba09982de3a4d012ce91`. The existing
+`source_alpha_matches_the_container_contract` feature-gated contract now
+asserts that `grid.avif` retains the ordered non-alpha `dimg` edges `1`→`2`
+and `1`→`3` through inspection, still decode, and sequence-frame decode, while
+direct alpha `auxl` edges remain in the dedicated alpha relationship fields.
+It uses existing fixtures and an existing test function: no parity row,
+fixture, diagnostic origin, or coverage-only hook was added. Pillow has no
+source-descriptor or AVIF item-graph result field, so this is Rust-only source
+provenance evidence and the unchanged Pillow result remains outer-output
+regression evidence.
+
+The preceding WebP VP8L work-control slice is implemented at
+`54de3e3f8ded6c889b59416727285297016a891e`; it remains a Rust-only contract
+for the same caller-budget/sink reason and is retained below as historical
+acceptance context. The preceding GIF high-color nearest-palette work-control slice is implemented at
 `6d851a1ca259598c3fa0056c0e3b25f7073cea51`. The token-aware path reuses
 candidate and merge scratch buffers, charges stable candidate ordering and the
 bounded nearest-candidate scan after each 1,024 work items, and leaves the
@@ -601,7 +618,7 @@ parity row, parity-manifest fixture, diagnostic origin, new test function, or
 coverage-only hook; its current coverage delta is recorded above and does not
 turn the Rust-only work-control contract into Pillow parity.
 
-The current WebP lossless VP8L work-control slice is implemented at
+The preceding WebP lossless VP8L work-control slice is implemented at
 `54de3e3f8ded6c889b59416727285297016a891e`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
 128×128 high-entropy RGB probe to exercise the added 16,384-logical-coded-bit
