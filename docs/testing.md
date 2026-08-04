@@ -603,6 +603,16 @@ codec. This is a Rust-only dispatch optimization: no Pillow caller API changes,
 parity row or fixture, diagnostic origin, new test function, or coverage-only
 hook.
 
+The source memory contract is a retained-payload model rather than an allocator
+benchmark: an owned source retains one shared encoded-byte snapshot, inspected
+metadata, and each successful still/sequence result independently; clones add
+no buffer copy; verification does not populate either cache; and a borrowed
+view owns neither its input nor a persistent cache. Codec parser, decompressor,
+and temporary materialization allocations are outside that accounting, so no
+Pillow-parity row or synthetic coverage hook is appropriate. Optional eviction,
+cached verification, and revision-bound allocator/peak measurements remain
+open under API-014 and QA-030.
+
 The current revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction
 while retaining `new`, `with_mode`, and `with_palette` as explicitly unchecked

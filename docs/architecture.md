@@ -810,6 +810,18 @@ first call to `decode_sequence()` initializes an independent sequence
 - `verify()` runs independently and does not populate or modify either decode
   cache.
 
+The retained source payload is additive: an owned source keeps one shared copy
+of the encoded bytes, plus the inspected metadata and whichever decoded cache
+results have succeeded. A still cache retains its decoded pixel vector and
+palette/metadata payload; a sequence cache retains every retained frame and
+its presentation/metadata payload. Calling both operations therefore retains
+both decoded payload sets, while cloning an `EncodedImage` adds no encoded or
+decoded buffer copy. A borrowed `EncodedImageView` owns none of the input
+bytes and has no cache, so each returned decode owns its result for that call.
+These are retained-payload bounds, not a total allocator peak: codec parser,
+decompressor, and temporary materialization buffers may add transient memory,
+and no recoverable-OOM or allocator-count contract is promised.
+
 `EncodedImage::new_with_policy` applies the input limit before inspection and
 primary-canvas dimension, pixel, decoded-byte, and frame-count limits
 immediately afterward. `decode_with_policy` checks encoded bytes and retained
