@@ -1474,6 +1474,46 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
         assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
         assert_eq!(error.format(), Some(ImageFormat::WebP));
         assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+
+        // Keep a fixture-backed lossless WebP token path in this contract so
+        // VP8L Huffman-tree checkpoints are exercised without adding a
+        // Pillow-parity row or a synthetic coverage-only input.
+        let data = fs::read(root.join("tests/fixtures/input/images/webp/lossless.webp"))?;
+        let decoded = image_slash_star::decode(&data)?;
+        let options = EncodeOptions::for_format(ImageFormat::WebP);
+        let expected = image_slash_star::encode(&decoded.content, ImageFormat::WebP, &options)?;
+        let token = image_slash_star::CancellationToken::new();
+        assert_eq!(
+            image_slash_star::encode_with_token(
+                &decoded.content,
+                ImageFormat::WebP,
+                &options,
+                &token,
+            )?,
+            expected,
+            "an uncancelled lossless WebP encode remains byte-identical"
+        );
+
+        let cancelled = image_slash_star::CancellationToken::new();
+        cancelled.cancel();
+        let error = match image_slash_star::encode_with_token(
+            &decoded.content,
+            ImageFormat::WebP,
+            &options,
+            &cancelled,
+        ) {
+            Ok(bytes) => {
+                return Err(format!(
+                    "cancelled lossless WebP encode returned {} bytes",
+                    bytes.len()
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::WebP));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
     }
 
     if cfg!(feature = "avif") && !cfg!(target_arch = "wasm32") {
