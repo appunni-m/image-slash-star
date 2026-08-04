@@ -33,6 +33,7 @@ const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
 const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
 const HUFFMAN_FREQUENCY_CHECKPOINT_COEFFICIENTS: usize = 1_024;
+const BASELINE_ENTROPY_CHECKPOINT_MCUS: usize = 1_024;
 const PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS: usize = 1_024;
 const PROGRESSIVE_EVENT_CHECKPOINT_EVENTS: usize = 1_024;
 const PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS: usize = 1_024;
@@ -275,6 +276,7 @@ impl ProgressiveScanCheckpoint for TokenProgressiveScanCheckpoint<'_> {
 
 trait EntropyOutputCheckpoint {
     fn observe(&mut self, current_output: usize) -> CodecResult<()>;
+    fn baseline_mcu(&mut self) -> CodecResult<()>;
     fn reset(&mut self);
 }
 
@@ -328,6 +330,11 @@ impl EntropyOutputCheckpoint for NoopEntropyOutputCheckpoint {
     }
 
     #[inline(always)]
+    fn baseline_mcu(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
     fn reset(&mut self) {}
 }
 
@@ -335,6 +342,7 @@ struct TokenEntropyOutputCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     observed_output: usize,
     bytes_until_checkpoint: usize,
+    baseline_mcus_until_checkpoint: usize,
 }
 
 impl<'a> TokenEntropyOutputCheckpoint<'a> {
@@ -343,6 +351,7 @@ impl<'a> TokenEntropyOutputCheckpoint<'a> {
             token,
             observed_output: 0,
             bytes_until_checkpoint: ENTROPY_OUTPUT_CHECKPOINT_BYTES,
+            baseline_mcus_until_checkpoint: BASELINE_ENTROPY_CHECKPOINT_MCUS,
         }
     }
 }
@@ -366,6 +375,15 @@ impl EntropyOutputCheckpoint for TokenEntropyOutputCheckpoint<'_> {
             }
             remaining = remaining.saturating_sub(ENTROPY_OUTPUT_CHECKPOINT_BYTES);
         }
+    }
+
+    fn baseline_mcu(&mut self) -> CodecResult<()> {
+        self.baseline_mcus_until_checkpoint = self.baseline_mcus_until_checkpoint.saturating_sub(1);
+        if self.baseline_mcus_until_checkpoint == 0 {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+            self.baseline_mcus_until_checkpoint = BASELINE_ENTROPY_CHECKPOINT_MCUS;
+        }
+        Ok(())
     }
 
     fn reset(&mut self) {
@@ -1584,6 +1602,7 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
                 }
             }
             checkpoint.observe(bw.out.len())?;
+            checkpoint.baseline_mcu()?;
             mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }

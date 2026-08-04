@@ -6,8 +6,9 @@
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
 //! Deflate expansion/Huffman/bitstream/checksum stages, PNG stored-block copy
 //! intervals, JPEG RGB-to-YCbCr conversion items and chroma-downsample output
-//! pixels after each 1,024 converted or produced pixels, JPEG entropy-output
-//! intervals after each 1,024 emitted entropy bytes, lossy WebP VP8
+//! pixels after each 1,024 converted or produced pixels, JPEG baseline entropy
+//! coding after each 1,024 MCUs, and entropy-output intervals after each 1,024
+//! emitted entropy bytes, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup after each
 //! 1,024 scanned or flattened pixels, analysis, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and
 //! 16,384-boolean first-partition bit intervals, 8-bit, 16-bit, 32-bit, 64-bit,

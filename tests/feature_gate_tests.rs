@@ -9563,6 +9563,81 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(entropy_sink, vec![0x5B]);
+
+        // Baseline JPEG entropy coding now charges an interior checkpoint
+        // after each 1,024 MCUs. This deterministic 512x512 RGB probe has
+        // exactly 32x32 default 4:2:0 MCUs, so the boundary is reachable even
+        // when the encoded entropy stream does not cross another output-byte
+        // interval at the same point. Pillow has no caller token,
+        // work-budget result, or caller-owned sink, so this remains Rust-only
+        // evidence with no parity row, fixture, diagnostic origin, new test
+        // function, or coverage-only hook.
+        let mut baseline_mcu_pixels = Vec::with_capacity(512 * 512 * 3);
+        for y in 0..512usize {
+            for x in 0..512usize {
+                let value = u8::try_from((x.wrapping_mul(17) ^ y.wrapping_mul(31)) & 0xff)?;
+                baseline_mcu_pixels.extend_from_slice(&[
+                    value,
+                    value.wrapping_add(37),
+                    value ^ 0x5A,
+                ]);
+            }
+        }
+        let baseline_mcu_image = DecodedImage::new(512, 512, baseline_mcu_pixels, ColorType::Rgb8);
+        let baseline_mcu_expected =
+            image_slash_star::encode(&baseline_mcu_image, ImageFormat::Jpeg, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &baseline_mcu_image,
+                ImageFormat::Jpeg,
+                &options,
+                &unlimited,
+            )?,
+            baseline_mcu_expected,
+            "an ample baseline-MCU budget preserves generated-probe bytes"
+        );
+        let baseline_mcu_policy = image_slash_star::EncodePolicy::new().with_max_work_units(7_862);
+        let baseline_mcu_error = match image_slash_star::encode_with_policy(
+            &baseline_mcu_image,
+            ImageFormat::Jpeg,
+            &options,
+            &baseline_mcu_policy,
+        ) {
+            Ok(_) => return Err("JPEG baseline-MCU budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            baseline_mcu_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 7_862,
+                observed: 7_863,
+            }
+        ));
+        let mut baseline_mcu_sink = vec![0x63];
+        let baseline_mcu_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &baseline_mcu_image,
+            ImageFormat::Jpeg,
+            &options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(7_862),
+            &mut baseline_mcu_sink,
+        ) {
+            Ok(_) => return Err("JPEG baseline-MCU sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            baseline_mcu_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Jpeg),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 7_862,
+                observed: 7_863,
+            }
+        ));
+        assert_eq!(baseline_mcu_sink, vec![0x63]);
     }
 
     if cfg!(feature = "webp") {

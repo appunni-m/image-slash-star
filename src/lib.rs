@@ -940,8 +940,9 @@ pub fn encode_with_policy(
 /// optimized baseline Huffman frequency intervals after each 1,024 AC
 /// coefficients, progressive scan block slots after each 1,024 blocks,
 /// progressive scan coefficient items after each 1,024 coefficients, and
-/// progressive scan-event frequency items after each 1,024 events, entropy
-/// rows, after each 1,024 emitted entropy bytes, and
+/// progressive scan-event frequency items after each 1,024 events, baseline
+/// entropy coding after each 1,024 MCUs, entropy rows, and after each 1,024
+/// emitted entropy bytes, and
 /// progressive event batches; TIFF polls page preparation,
 /// row prediction, PackBits/LZW compression checkpoints, and Deflate input-row,
 /// level-six matcher, expansion, Huffman, bitstream, stored-block, and checksum
