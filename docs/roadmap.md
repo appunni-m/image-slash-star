@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`4b47dc3e980a703902b39703ce683528087951bd`; the claim-ledger baseline remains
+`f015165d345cb35234ac5349de7de4a21d001638`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `daf021be-d1c3-4954-90c3-94a57d3ec7d7` covers implementation/test revision `4b47dc3e980a703902b39703ce683528087951bd`: 52,265/52,824 lines, 7,239/7,364 branches, 2,964/3,040 functions, and 80,857/82,084 regions. Compared with the preceding accepted snapshot `e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f`, covered/source totals changed by +45/+49 lines, +10/+12 branches, +1/+1 functions, and +91/+95 regions; the regular Cargo test profile remains `opt-level = 2`, while the compile-heavy feature matrix explicitly uses level 1. The cross-color sampling slice adds one production checkpoint and one existing feature-gated Rust-only contract extension, with no parity row or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 559-line, 125-branch, 76-function, and 1,227-region aggregate shortfall. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `96ca2123-2aa7-4524-a6a0-7f9c99b1a773` covers implementation/test revision `f015165d345cb35234ac5349de7de4a21d001638`: 52,265/52,824 lines, 7,239/7,364 branches, 2,964/3,040 functions, and 80,857/82,084 regions. Compared with the preceding accepted snapshot `daf021be-d1c3-4954-90c3-94a57d3ec7d7`, covered/source totals changed by 0/0 lines, 0/0 branches, 0/0 functions, and 0/0 regions; the regular Cargo test profile remains `opt-level = 2`, while the feature matrix uses level 1 test binaries. Warm matrix auto mode now defaults to one lane per logical CPU, capped at 24, while explicit overrides remain available; the harness change adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 559-line, 125-branch, 76-function, and 1,227-region aggregate shortfall. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4247,7 +4247,33 @@ workspace after removing the separate 1,920×1,920 witness. These are targeted
 boundary witnesses, not general benchmarks or claims of universal codec speedup;
 managed durations remain cache- and runner-sensitive observations.
 
-Current acceptance record: lossless WebP VP8L cross-color sampling interval
+Current acceptance record: warm feature-matrix fanout bound
+
+Warm automatic feature-matrix mode now selects one lane per logical CPU, capped
+at 24, instead of two cached lanes per logical CPU. The scheduler change is
+committed at revision `f015165d345cb35234ac5349de7de4a21d001638`; explicit
+`MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` overrides remain
+unchanged. On this 12-CPU workspace, the default warm run selected
+`lanes=12 test_threads=1 build_jobs=1` and completed in about 7.3 seconds,
+compared with about 24.1 seconds at the previous 24-lane default. This is a
+cache- and runner-sensitive execution observation, not a universal benchmark;
+all native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes remain in scope.
+
+Managed feature-matrix run `9fca3370-5cb6-451b-9539-ef114a376a53` passed all
+configured lanes in 9,006 ms. Its retained log records
+`cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+targeted lock-wait/build-directory/package-cache matches. Managed Pillow parity
+run `7e9f9f8f-5f9f-4ba8-8e38-cce59a01270c` passed 1,445/1,445 checks in 794 ms.
+Coverage MCP run `53722a97-62e5-456e-8e77-c337af8451ff` passed 85/85 tests in
+54,770 ms and ingested snapshot `96ca2123-2aa7-4524-a6a0-7f9c99b1a773`.
+Coverage totals are unchanged at 52,265/52,824 lines, 7,239/7,364 branches,
+2,964/3,040 functions, and 80,857/82,084 regions; the known LLVM
+segment-normalization warning and 559-line, 125-branch, 76-function,
+1,227-region shortfall remain. This harness-only slice adds no parity row,
+fixture, diagnostic origin, new test function, or coverage-only hook.
+
+Historical acceptance record: lossless WebP VP8L cross-color sampling interval
 
 The lossless VP8L cross-color sampling reduction now charges a cooperative
 work-budget checkpoint after each 1,024 scanned or compacted tile-map samples.

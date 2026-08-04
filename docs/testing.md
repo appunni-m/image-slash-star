@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`4b47dc3e980a703902b39703ce683528087951bd`; the claim-ledger baseline remains
+`f015165d345cb35234ac5349de7de4a21d001638`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -541,7 +541,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`4b47dc3e980a703902b39703ce683528087951bd`, the fixture manifest and
+`f015165d345cb35234ac5349de7de4a21d001638`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -561,20 +561,20 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `946e0082-8769-4783-8f71-9e033321b48f` passed 1,445/1,445 checks
-with zero skips in 1,205 ms. Feature-matrix run
-`f5b20dea-e081-43a1-aa3d-8c444129486c` passed all configured lanes in 38,941 ms
-across 24/24 configured lanes. Its retained log records `cache=warm lanes=24
+parity run `7e9f9f8f-5f9f-4ba8-8e38-cce59a01270c` passed 1,445/1,445 checks
+with zero skips in 794 ms. Feature-matrix run
+`9fca3370-5cb6-451b-9539-ef114a376a53` passed all configured lanes in 9,006 ms
+across 24/24 configured lanes. Its retained log records `cache=warm lanes=12
 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK:
 every native and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`68a9a58d-0456-4c00-9b16-ba7e0e20fdc4` passed 85/85 tests in 74,834 ms and
-ingested snapshot `daf021be-d1c3-4954-90c3-94a57d3ec7d7`:
+`53722a97-62e5-456e-8e77-c337af8451ff` passed 85/85 tests in 54,770 ms and
+ingested snapshot `96ca2123-2aa7-4524-a6a0-7f9c99b1a773`:
 52,265/52,824 lines, 7,239/7,364 branches, 2,964/3,040 functions, and
 80,857/82,084 regions. Compared with the preceding accepted snapshot
-`e2ca902b-ff80-48e0-bbb9-a8ab7a9bbc5f`, covered/source totals changed by
-`+45/+49/+10/+12/+1/+1/+91/+95` for covered/source lines, covered/source
-branches, covered/source functions, and covered/source regions. The known LLVM
+`daf021be-d1c3-4954-90c3-94a57d3ec7d7`, covered/source totals changed by
+`0/0/0/0/0/0/0/0` for covered/source lines, covered/source branches,
+covered/source functions, and covered/source regions. The known LLVM
 JSON segment-normalization warning remains. The strict local verifier's
 aggregate shortfall is 559 lines, 125 branches, 76 functions, and 1,227
 regions; coverage is implementation evidence, not Pillow parity, and no
@@ -1558,7 +1558,33 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: lossless WebP VP8L cross-color sampling interval
+Current acceptance record: warm feature-matrix fanout bound
+
+Warm automatic feature-matrix mode now selects one lane per logical CPU, capped
+at 24, instead of two cached lanes per logical CPU. The scheduler change is
+committed at revision `f015165d345cb35234ac5349de7de4a21d001638`; explicit
+`MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` overrides remain
+unchanged. On this 12-CPU workspace, the default warm run selected
+`lanes=12 test_threads=1 build_jobs=1` and completed in about 7.3 seconds,
+compared with about 24.1 seconds at the previous 24-lane default. This is a
+cache- and runner-sensitive execution observation, not a universal benchmark;
+all native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes remain in scope.
+
+Managed feature-matrix run `9fca3370-5cb6-451b-9539-ef114a376a53` passed all
+configured lanes in 9,006 ms. Its retained log records
+`cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0 verbose=0`, ends with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and has no
+targeted lock-wait/build-directory/package-cache matches. Managed Pillow parity
+run `7e9f9f8f-5f9f-4ba8-8e38-cce59a01270c` passed 1,445/1,445 checks in 794 ms.
+Coverage MCP run `53722a97-62e5-456e-8e77-c337af8451ff` passed 85/85 tests in
+54,770 ms and ingested snapshot `96ca2123-2aa7-4524-a6a0-7f9c99b1a773`.
+Coverage totals are unchanged at 52,265/52,824 lines, 7,239/7,364 branches,
+2,964/3,040 functions, and 80,857/82,084 regions; the known LLVM
+segment-normalization warning and 559-line, 125-branch, 76-function,
+1,227-region shortfall remain. This harness-only slice adds no parity row,
+fixture, diagnostic origin, new test function, or coverage-only hook.
+
+Historical acceptance record: lossless WebP VP8L cross-color sampling interval
 
 The lossless VP8L cross-color sampling reduction now charges a cooperative
 work-budget checkpoint after each 1,024 scanned or compacted tile-map samples.
@@ -4825,17 +4851,15 @@ lock contention and interleaves native, `wasm32-unknown-unknown`, and
 root, it derives `MATRIX_JOBS` from host logical CPUs (roughly two logical CPUs
 per lane, capped at six), then derives the Rust test-harness and Cargo compiler
 worker counts from that bound. When all three retained all-feature target roots
-are present, the scheduler treats the root as warm: it allows up to twenty-four
-independent cached lanes (two per logical CPU, capped at 24), uses one Cargo
-compiler worker per lane, and derives the test-harness budget as
-`floor(logical_cpus / MATRIX_JOBS)`, with a minimum of one and a maximum of
-eight workers per lane. On the measured 12-CPU host, the warm 24-lane default
-is therefore one test worker per lane, keeping aggregate test-worker fan-out
-near the host capacity instead of multiplying to 72 workers. `MATRIX_JOBS`,
-`MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the derived values
-for a constrained or unusually large CI runner. This bounds aggregate process,
-compiler, and test-thread fan-out without dropping any lane or assertion while
-avoiding a cold-build fan-out on disposable roots.
+are present, the scheduler treats the root as warm: it allows one independent
+lane per logical CPU, capped at 24, uses one Cargo compiler worker per lane, and
+derives the test-harness budget as `floor(logical_cpus / MATRIX_JOBS)`, with a
+minimum of one and a maximum of eight workers per lane. On the measured 12-CPU
+host, the warm default is therefore 12 lanes and one test worker per lane.
+`MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the
+derived values for a constrained or unusually large CI runner. This bounds
+aggregate process, compiler, and test-thread fan-out without dropping any lane
+or assertion while avoiding a cold-build fan-out on disposable roots.
 
 Successful lanes report one compact status line by default. Their complete
 logs remain in the run-scoped directory so the capability-table no-drift check
