@@ -10320,6 +10320,65 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
+        // Huffman-tree emission now checkpoints the code-length-token
+        // frequency scan after each 16 compressed token entries. A generated
+        // LCG probe reaches this interior boundary without adding a Pillow
+        // parity row, fixture, or coverage-only input.
+        let mut huffman_frequency_pixels = Vec::with_capacity(128 * 128 * 3);
+        let mut huffman_frequency_state = 0xD1B5_4A32_u32;
+        for _ in 0..128 * 128 {
+            huffman_frequency_state = huffman_frequency_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            huffman_frequency_pixels.extend_from_slice(&huffman_frequency_state.to_be_bytes()[..3]);
+        }
+        let huffman_frequency_image =
+            DecodedImage::new(128, 128, huffman_frequency_pixels, ColorType::Rgb8);
+        let huffman_frequency_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(43_938);
+        let huffman_frequency_error = match image_slash_star::encode_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_frequency_policy,
+        ) {
+            Ok(_) => return Err("VP8L Huffman frequency budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_frequency_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 43_938,
+                observed: 43_939,
+            }
+        ));
+        let mut huffman_frequency_sink = vec![0xB3];
+        let huffman_frequency_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(43_937),
+            &mut huffman_frequency_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L Huffman frequency sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_frequency_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 43_937,
+                observed: 43_938,
+            }
+        ));
+        assert_eq!(huffman_frequency_sink, vec![0xB3]);
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed
         // alphabets. This is Rust-only work-control evidence: Pillow has no
