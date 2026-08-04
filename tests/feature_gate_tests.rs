@@ -12433,6 +12433,62 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(sink, vec![0xC2]);
+
+        // The high-color nearest-palette path now checkpoints its stable
+        // candidate ordering and bounded candidate scan. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only work-control
+        // evidence and adds no parity row, fixture, diagnostic origin, or
+        // coverage-only hook.
+        let nearest_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_048);
+        let nearest_error = match image_slash_star::encode_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &nearest_policy,
+        ) {
+            Ok(_) => {
+                return Err("bounded GIF nearest-palette budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            nearest_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_048,
+                observed: 2_049,
+            }
+        ));
+
+        let nearest_sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_047);
+        let mut nearest_sink = vec![0xC3];
+        let nearest_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &image,
+            ImageFormat::Gif,
+            &options,
+            &nearest_sink_policy,
+            &mut nearest_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded GIF nearest-palette sink budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            nearest_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Gif),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_047,
+                observed: 2_048,
+            }
+        ));
+        assert_eq!(nearest_sink, vec![0xC3]);
     }
 
     if cfg!(feature = "bmp") {

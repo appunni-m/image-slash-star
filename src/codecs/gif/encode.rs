@@ -25,6 +25,7 @@ const MAX_LZW_CODE: u16 = 4095;
 const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
 const GIF_OCTREE_CHECKPOINT_CELLS: usize = 1024;
 const GIF_MEDIAN_CUT_CHECKPOINT_ITEMS: usize = 1024;
+const GIF_NEAREST_CHECKPOINT_ITEMS: usize = 1024;
 
 #[cfg(coverage)]
 fn coverage_frame(
@@ -2000,15 +2001,24 @@ fn quantize_rgb_nearest(
     }
     let mapped = if let Some(token) = token {
         let mut mapped = Vec::with_capacity(colors.len());
+        let mut candidates = Vec::with_capacity(palette.len());
+        let mut scratch = vec![0usize; palette.len()];
+        let mut nearest_work_items = 0usize;
         for (color_index, color) in colors.iter().enumerate() {
             if color_index != 0 && color_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
                 crate::codecs::error::check_cancelled(Some(token))?;
             }
-            mapped.push(find_nearest_from(
+            candidates.clear();
+            candidates.extend(0..palette.len());
+            mapped.push(find_nearest_from_with_token(
                 &palette,
                 color,
                 initial_palette[color_index],
-            ));
+                token,
+                &mut candidates,
+                &mut scratch,
+                &mut nearest_work_items,
+            )?);
         }
         mapped
     } else {
@@ -3238,6 +3248,98 @@ fn find_nearest_from(palette: &[[u8; 3]], color: &[u8; 3], initial: usize) -> us
         }
     }
     best
+}
+
+fn find_nearest_from_with_token(
+    palette: &[[u8; 3]],
+    color: &[u8; 3],
+    initial: usize,
+    token: &crate::CancellationToken,
+    candidates: &mut [usize],
+    scratch: &mut [usize],
+    work_items: &mut usize,
+) -> CodecResult<usize> {
+    let mut best = initial;
+    let mut best_dist = color_distance(palette[initial], *color);
+    let search_limit = best_dist.saturating_mul(4);
+    stable_sort_nearest_candidates(candidates, scratch, palette, initial, token, work_items)?;
+    for &index in candidates.iter() {
+        charge_nearest_work(token, work_items)?;
+        if color_distance(palette[initial], palette[index]) > search_limit {
+            break;
+        }
+        let dist = color_distance(palette[index], *color);
+        if dist < best_dist {
+            best_dist = dist;
+            best = index;
+        }
+    }
+    Ok(best)
+}
+
+fn stable_sort_nearest_candidates(
+    candidates: &mut [usize],
+    scratch: &mut [usize],
+    palette: &[[u8; 3]],
+    initial: usize,
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<()> {
+    if candidates.len() < 2 {
+        return Ok(());
+    }
+    debug_assert!(scratch.len() >= candidates.len());
+
+    let mut width = 1usize;
+    while width < candidates.len() {
+        let mut start = 0usize;
+        while start < candidates.len() {
+            let middle = start.saturating_add(width).min(candidates.len());
+            let end = middle.saturating_add(width).min(candidates.len());
+            let mut left = start;
+            let mut right = middle;
+            let mut output = start;
+            while left < middle || right < end {
+                let take_left = if left == middle {
+                    false
+                } else if right == end {
+                    true
+                } else {
+                    charge_nearest_work(token, work_items)?;
+                    nearest_candidate_key(palette, initial, candidates[left])
+                        <= nearest_candidate_key(palette, initial, candidates[right])
+                };
+                if take_left {
+                    scratch[output] = candidates[left];
+                    left = left.saturating_add(1);
+                } else {
+                    scratch[output] = candidates[right];
+                    right = right.saturating_add(1);
+                }
+                output = output.saturating_add(1);
+            }
+            start = start.saturating_add(width.saturating_mul(2));
+        }
+        candidates.copy_from_slice(&scratch[..candidates.len()]);
+        width = width.saturating_mul(2);
+    }
+    Ok(())
+}
+
+fn nearest_candidate_key(palette: &[[u8; 3]], initial: usize, index: usize) -> (u32, usize) {
+    (color_distance(palette[initial], palette[index]), index)
+}
+
+fn charge_nearest_work(
+    token: &crate::CancellationToken,
+    work_items: &mut usize,
+) -> CodecResult<()> {
+    *work_items = work_items.saturating_add(1);
+    if *work_items == GIF_NEAREST_CHECKPOINT_ITEMS {
+        *work_items = 0;
+        crate::codecs::error::check_cancelled(Some(token))?;
+    }
+    Ok(())
 }
 
 fn color_distance(left: [u8; 3], right: [u8; 3]) -> u32 {

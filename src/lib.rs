@@ -953,9 +953,10 @@ pub fn encode_with_policy(
 /// and structural segments; BMP also polls 1,024-pixel row-conversion
 /// subsegments; GIF still encoding also polls block/frame/coalescing/output-assembly
 /// checkpoints, RGB/RGBA palette quantization intervals, RGB median-cut
-/// hash/order, axis-ordering, split, and partition checkpoints, fixed RGBA
-/// FASTOCTREE cell/bucket/lookup and bucket-sort intervals, and LZW input-symbol
-/// intervals, and WebP still encoding polls preparation,
+/// hash/order, axis-ordering, split, partition, and high-color nearest-palette
+/// candidate-ordering/scan checkpoints, fixed RGBA FASTOCTREE cell/bucket/lookup
+/// and bucket-sort intervals, and LZW input-symbol intervals, and WebP still
+/// encoding polls preparation,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, analysis/mode-selection/
 /// probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean first-partition-bit and
