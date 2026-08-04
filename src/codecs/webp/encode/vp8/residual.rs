@@ -25,6 +25,7 @@ const COEFFICIENT_FINE_CHECKPOINT_BITS: usize = 512;
 const COEFFICIENT_1024_CHECKPOINT_BITS: usize = 1_024;
 const COEFFICIENT_2048_CHECKPOINT_BITS: usize = 2_048;
 const COEFFICIENT_4096_CHECKPOINT_BITS: usize = 4_096;
+const COEFFICIENT_8192_CHECKPOINT_BITS: usize = 8_192;
 const COEFFICIENT_CHECKPOINT_BITS: usize = 16_384;
 const COEFFICIENT_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
@@ -194,13 +195,20 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
                                                 crate::codecs::error::check_cancelled(Some(
                                                     self.token,
                                                 ))?;
-                                                if self
-                                                    .bit_items
-                                                    .is_multiple_of(COEFFICIENT_CHECKPOINT_BITS)
-                                                {
+                                                if self.bit_items.is_multiple_of(
+                                                    COEFFICIENT_8192_CHECKPOINT_BITS,
+                                                ) {
                                                     crate::codecs::error::check_cancelled(Some(
                                                         self.token,
                                                     ))?;
+                                                    if self
+                                                        .bit_items
+                                                        .is_multiple_of(COEFFICIENT_CHECKPOINT_BITS)
+                                                    {
+                                                        crate::codecs::error::check_cancelled(
+                                                            Some(self.token),
+                                                        )?;
+                                                    }
                                                 }
                                             }
                                         }
