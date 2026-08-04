@@ -8,7 +8,7 @@ use bytemuck as _;
 use image_slash_star::{
     Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
     DecodedImage, DecodedSequence, DiagnosticKind, EncodeOptions, EncodedImage, ImageDiagnostic,
-    ImageError, ImageErrorStage, ImageFormat, ImageMode, SequenceKind, SourceColor,
+    ImageError, ImageErrorStage, ImageFormat, ImageMode, ImagePalette, SequenceKind, SourceColor,
     UnsupportedReason,
 };
 
@@ -571,6 +571,32 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
     let manifest = CoverageMatrix::from_json(manifest_value)?;
     let encode_input = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
     let encode_sequence = DecodedSequence::from_image(encode_input.clone());
+    let checked_pixels = vec![0; 16 * 16 * 3];
+    let checked_pixels_ptr = checked_pixels.as_ptr();
+    let checked = DecodedImage::try_new(16, 16, checked_pixels, ColorType::Rgb8)?;
+    assert_eq!(checked.pixels.as_ptr(), checked_pixels_ptr);
+    assert_eq!(checked, encode_input);
+    assert_eq!(
+        DecodedImage::try_with_mode(16, 16, vec![0; 16 * 16 * 3], ImageMode::Rgb8)?,
+        encode_input
+    );
+    let checked_indexed = DecodedImage::try_with_mode(1, 1, vec![0], ImageMode::P8)?
+        .try_with_palette(ImagePalette {
+            rgb: vec![0, 0, 0],
+            alpha: Vec::new(),
+        })?;
+    assert_eq!(checked_indexed.mode, ImageMode::P8);
+    assert!(matches!(
+        DecodedImage::try_new(1, 1, vec![0], ColorType::Rgb8),
+        Err(ImageError::Dimensions { .. })
+    ));
+    assert!(matches!(
+        DecodedImage::try_new(1, 1, vec![0], ColorType::L8)?.try_with_palette(ImagePalette {
+            rgb: vec![0, 0, 0],
+            alpha: Vec::new(),
+        }),
+        Err(ImageError::Parameter { .. })
+    ));
     let all_capabilities = image_slash_star::all_capabilities();
     let capability_formats = all_capabilities
         .into_iter()
