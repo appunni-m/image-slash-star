@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`50375369951ba73c165e87481fa70e068fbfcc07`; the claim-ledger baseline remains
+`6d851a1ca259598c3fa0056c0e3b25f7073cea51`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -371,7 +371,9 @@ typed whole-buffer rejection, while its direct structural sink preserves the
 validated header prefix before the same interior rejection. GIF RGB/RGBA palette quantization
 additionally charges after each 1,024 pixels while preparing palette/index data;
 High-color RGB median-cut preparation also charges around hash/order setup, axis
-ordering, median-cut split stages, and 1,024-item split/partition scans. GIF LZW
+ordering, median-cut split stages, and 1,024-item split/partition scans, and its
+nearest-palette candidate ordering and bounded candidate scan after each 1,024
+work items. GIF LZW
 charges an input-symbol checkpoint inside its dictionary pass. RGBA FASTOCTREE
 bucket sorting additionally charges after each 1,024 sorting operations. The
 contract proves ample-budget byte identity and typed RGB/RGBA palette-quantization rejection
@@ -526,9 +528,8 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-For the current implementation revision
-`50375369951ba73c165e87481fa70e068fbfcc07` and the test/runtime evidence
-revision `a819abb48cd6878ec4ae6c4a41e42a038b81a105`, the fixture manifest and
+For the current implementation and test/runtime evidence revision
+`6d851a1ca259598c3fa0056c0e3b25f7073cea51`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -547,28 +548,42 @@ count are separate evidence surfaces; worker functions do not add fixtures or
 Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
-For the current test/runtime evidence revision, managed Pillow parity run
-`8f76ea58-4044-4db3-b73c-953606341dda` passed 1,445/1,445 checks in 749 ms.
-The feature-matrix run `d96c8554-834d-4003-bd5c-d72aa0bc87be` passed all
+For the current implementation revision, managed Pillow parity run
+`df964824-099d-4705-83ce-c05bd3321748` passed 1,445/1,445 checks with zero
+skips in 47,370 ms; its retained test body passed 28/28 in 0.73 s. The
+warm feature-matrix repeat `1023a5a5-e7d3-4232-92b1-f74841526b6b` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-3,231 ms; its retained log ends with `capability tables OK: every native and
+5,832 ms; its retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees` and targeted searches returned no
 `lock-wait`/build-directory/package-cache match. These are separate from the
-managed LLVM coverage run `42cd2f3e-1b41-4658-8c12-e92aac835f50`, which passed
-85/85 tests in 48,216 ms and ingested snapshot
-`8861f2ef-8624-461c-80df-4237997e94a1`.
-That snapshot reports 51,654/52,196 lines, 7,131/7,250 branches,
-2,912/2,983 functions, and 80,017/81,217 regions; compared with the prior
-accepted snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`, covered totals
-increased by 20 lines, 0 branches, 1 function, and 35 regions while source
-totals grew by 20 lines, 0 branches, 1 function, and 37 regions. The changed
-`src/source.rs` reports 182/182 lines, 6/6 branches, 34/34 functions, and
-238/240 regions; `src/lib.rs` reports 761/789 lines, 92/96 branches,
-76/78 functions, and 1,143/1,217 regions. The known LLVM JSON
-segment-normalization warning remains. The strict local verifier still reports
-the aggregate shortfall as 542 lines, 119 branches, 71 functions, and 1,200
-regions; coverage is implementation evidence, not Pillow parity, and no
-coverage-only test was added.
+managed LLVM coverage run `197b4efe-230a-4979-a7bc-b8bfbd6834cb`, which passed
+85/85 tests in 49,393 ms and ingested snapshot
+`229ca3ff-97d5-4f1c-b306-9a777eb3d65d`.
+That snapshot reports 51,743/52,287 lines, 7,152/7,272 branches,
+2,916/2,987 functions, and 80,154/81,360 regions; compared with the prior
+accepted snapshot `8861f2ef-8624-461c-80df-4237997e94a1`, covered totals
+increased by 89 lines, 21 branches, 4 functions, and 137 regions while source
+totals grew by 91 lines, 22 branches, 4 functions, and 143 regions. The
+changed `src/codecs/gif/encode.rs` reports 2,685/2,879 lines, 418/462
+branches, 159/186 functions, and 4,322/4,638 regions; its new defensive
+single-candidate sort return remains uncovered at lines 3288–3289, while the
+token-aware nearest-palette path is exercised by the existing Rust-only
+contract. The known LLVM JSON segment-normalization warning remains. The
+strict local verifier's aggregate shortfall is 544 lines, 120 branches,
+71 functions, and 1,206 regions; coverage is implementation evidence, not
+Pillow parity, and no coverage-only test was added.
+
+The current GIF high-color nearest-palette work-control slice is implemented at
+`6d851a1ca259598c3fa0056c0e3b25f7073cea51`. The token-aware path reuses
+candidate and merge scratch buffers, charges stable candidate ordering and the
+bounded nearest-candidate scan after each 1,024 work items, and leaves the
+legacy no-token byte path unchanged. The existing high-color contract proves
+ample-budget byte identity and typed `EncodeWorkUnits` rejection at the new
+nearest-palette boundary (`2,048/2,049` whole-buffer and `2,047/2,048`
+direct-sink), with untouched sink prefixes. This is Rust-only work-control
+evidence: Pillow has no caller token, work-budget result, or caller-owned sink,
+so it adds no parity row, fixture, diagnostic origin, new test function, or
+coverage-only hook.
 
 The test-only runtime follow-up is committed at
 `a819abb48cd6878ec4ae6c4a41e42a038b81a105`. The existing
