@@ -13700,7 +13700,7 @@ fn incremental_decode_tracks_truncation_progress_per_format()
         (
             ImageFormat::Tiff,
             cfg!(feature = "tiff"),
-            "tests/fixtures/input/images/tiff/8bit.tiff",
+            "tests/fixtures/input/images/tiff/miniswhite_8bit.tiff",
         ),
         (
             ImageFormat::Jpeg,
@@ -13720,7 +13720,7 @@ fn incremental_decode_tracks_truncation_progress_per_format()
         (
             ImageFormat::Avif,
             cfg!(feature = "avif"),
-            "tests/fixtures/input/images/avif/baseline.avif",
+            "tests/fixtures/input/images/avif/portable_probe_gray_128.avif",
         ),
     ];
     for (_, enabled, path) in cases {
