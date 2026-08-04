@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`72248c6b0985fc01e82c615d3bccd01d82979acc`; the claim-ledger baseline remains
+`4b47dc3e980a703902b39703ce683528087951bd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -563,8 +563,9 @@ ordinary byte producer.
 Lossless WebP
 VP8L additionally charges around predictor tile scans, mode application, and
 subtract-green transforms after each 1,024 pixels,
-cross-color multiplier search/transform tiles, entropy analysis, transform
-selection/application, bounded backward-reference search/match-length/cache/
+cross-color multiplier search/transform tiles and sampling scans/compaction,
+entropy analysis, transform selection/application, bounded backward-reference
+search/match-length/cache/
 trace, histogram clustering, Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. This is
