@@ -4210,8 +4210,10 @@ worker counts from that bound. When all three retained all-feature target roots
 are present, the scheduler treats the root as warm: it allows up to twenty-four
 independent cached lanes (two per logical CPU, capped at 24), uses one Cargo
 compiler worker per lane, and derives the test-harness budget as
-`ceil(logical_cpus / 4)`, capped at three workers per
-lane. `MATRIX_JOBS`,
+`floor(logical_cpus / MATRIX_JOBS)`, with a minimum of one and a maximum of
+eight workers per lane. On the measured 12-CPU host, the warm 24-lane default
+is therefore one test worker per lane, keeping aggregate test-worker fan-out
+near the host capacity instead of multiplying to 72 workers. `MATRIX_JOBS`,
 `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the derived values
 for a constrained or unusually large CI runner. This bounds aggregate process,
 compiler, and test-thread fan-out without dropping any lane or assertion while
