@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`996f13de3071ace66f5bb3eef5cb45c74b1459b0`; the claim-ledger baseline remains
+`063f00e145aff455c30656b3559c8881b8e51a6f`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -354,7 +354,8 @@ translation cannot be bypassed.
 | `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
 
 The WebP VP8L token-aware list includes copy-token cache-population checkpoints
-after each 256 pixels, Huffman-tree code-length-token frequency, and trailing
+after each 256 pixels, Huffman-tree simple-tree symbol-discovery checkpoints
+after each 64 code-length slots, code-length-token frequency, and trailing
 zero-repeat token trim checkpoints after each 16 compressed token entries; the
 no-token paths retain their original tight loops.
 
@@ -573,6 +574,7 @@ cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy analysis, transform selection/application, bounded backward-reference
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
+Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency and trailing zero-repeat token trim
@@ -600,6 +602,7 @@ VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
+Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency and trailing zero-repeat token trim
