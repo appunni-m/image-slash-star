@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`d862d74eabd125539a577123d403aa808861cae5`; the claim-ledger baseline remains
+`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -527,7 +527,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`d862d74eabd125539a577123d403aa808861cae5`, the fixture manifest and managed
+`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -547,23 +547,35 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For this revision, managed Pillow parity run
-`f3077d75-2370-48cc-9845-fdd9cfa6f698` passed 1,445/1,445 checks in 60,630 ms.
-The feature-matrix run `8336a26a-e489-4656-b92a-bd643552ba0b` passed all
+`3588a194-19ec-415e-8f02-a4074e5213cc` passed 1,445/1,445 checks in 780 ms.
+The feature-matrix run `e3266f6e-7218-481a-af9e-48a13e130107` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-101,238 ms; its retained log ends with `capability tables OK: every native and
-wasm32-wasip1 lane agrees` and has no `lock-wait` match. These are separate
-from the managed LLVM coverage run
-`510d580f-3c3d-4aef-a706-e7918d300d3b`, which passed 85/85 tests in 279,366 ms
-and ingested snapshot `a113e926-ad23-4b7e-bf48-1484830f09df`.
-That snapshot reports 51,540/52,081 lines, 7,127/7,246 branches,
-2,897/2,968 functions, and 79,872/81,067 regions; compared with the prior
-accepted snapshot `33f78a7a-0258-4224-b399-53842d46d0e4`, covered totals
-increased by 15 lines, 8 branches, 0 functions, and 25 regions while source
-totals grew by 13 lines, 6 branches, 0 functions, and 19 regions. The known
+30,127 ms; its retained log ends with `capability tables OK: every native and
+wasm32-wasip1 lane agrees` and the targeted search returned no `lock-wait`
+match. These are separate from the managed LLVM coverage run
+`7ac2da92-8cbd-486c-a976-0a85bf248a37`, which passed 85/85 tests in 58,645 ms
+and ingested snapshot `6782355b-73ab-433e-803b-4103212f03f8`.
+That snapshot reports 51,577/52,119 lines, 7,129/7,248 branches,
+2,901/2,972 functions, and 79,916/81,113 regions; compared with the prior
+accepted snapshot `a113e926-ad23-4b7e-bf48-1484830f09df`, covered totals
+increased by 37 lines, 2 branches, 4 functions, and 44 regions while source
+totals grew by 38 lines, 2 branches, 4 functions, and 46 regions. The known
 LLVM JSON segment-normalization warning remains. The strict local verifier
-still reports the aggregate shortfall as 541 lines, 119 branches, 71 functions,
-and 1,195 regions; coverage is implementation evidence, not Pillow parity, and
+still reports the aggregate shortfall as 542 lines, 119 branches, 71 functions,
+and 1,197 regions; coverage is implementation evidence, not Pillow parity, and
 no coverage-only test was added.
+
+The current revision also closes API-003. `decode_with_format` and
+`decode_with_format_and_policy` validate the complete signature against the
+caller-selected `ImageFormat`, preserve the encoded-input limit before
+selection, and then use the ordinary feature, inspection, policy, and codec
+path. Existing fixture-selected rows in the feature-gate contract compare both
+explicit entry points with auto-detecting decode, assert staged mismatch and
+unknown-signature errors, retain disabled-feature and WASM AVIF outcomes, and
+prove an encoded-byte policy rejection before dispatch. This is a Rust API
+contract: Pillow has no caller-supplied format-hint operation, so it adds no
+parity row, no new fixture, no diagnostic-origin assignment, and no new test
+function.
 
 The two typed-option adapter manifests add 97 accepted translations and 69
 format-qualified structured-error cases. Accepted rows are labeled
@@ -3797,7 +3809,7 @@ reports 390/400, 55/56, 21/21, and 544/590; native VP8L reports 1,507/1,518,
 warning remains. These are implementation/Rust coverage metrics, not
 Pillow-oracle parity metrics.
 
-Current acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
+Historical acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
 
 The 8,192-bit WebP logical-checkpoint slice is implemented at
 `d862d74eabd125539a577123d403aa808861cae5`. Token-aware VP8 first-partition,
@@ -3815,7 +3827,7 @@ evidence: Pillow has no caller token, work-budget result, or caller-owned sink,
 so the slice adds no parity row, fixture, diagnostic origin, new test function,
 or coverage-only hook.
 
-The current managed Pillow parity run `f3077d75-2370-48cc-9845-fdd9cfa6f698`
+The managed Pillow parity run `f3077d75-2370-48cc-9845-fdd9cfa6f698`
 passed 1,445/1,445 checks in 60,630 ms. The feature-matrix run
 `8336a26a-e489-4656-b92a-bd643552ba0b` passed all configured native,
 `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 101,238 ms and ended
