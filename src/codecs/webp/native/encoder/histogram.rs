@@ -35,6 +35,7 @@ const NUM_PARTITIONS: usize = 4;
 const BIN_SIZE: usize = NUM_PARTITIONS * NUM_PARTITIONS * NUM_PARTITIONS;
 const MAX_HISTO_GREEDY: u64 = 100;
 const POPULATION_CHECKPOINT_SYMBOLS: usize = 64;
+const MERGE_CHECKPOINT_SYMBOLS: usize = 64;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -131,6 +132,34 @@ impl Histogram {
             };
             self.used[i] |= other.used[i];
         }
+    }
+
+    fn add_assign_with_checkpoint(
+        &mut self,
+        other: &Self,
+        token: CheckpointToken<'_>,
+    ) -> CheckpointResult<()> {
+        if token.is_none() {
+            self.add_assign(other);
+            return Ok(());
+        }
+        for (to, from) in self.populations.iter_mut().zip(&other.populations) {
+            for (index, (to, from)) in to.iter_mut().zip(from).enumerate() {
+                *to += *from;
+                if (index + 1).is_multiple_of(MERGE_CHECKPOINT_SYMBOLS) {
+                    checkpoint(token)?;
+                }
+            }
+        }
+        for i in 0..5 {
+            self.trivial[i] = if self.trivial[i] == other.trivial[i] {
+                self.trivial[i]
+            } else {
+                NON_TRIVIAL
+            };
+            self.used[i] |= other.used[i];
+        }
+        Ok(())
     }
 }
 
@@ -375,7 +404,7 @@ fn add_eval(
         return Ok(None);
     };
     let mut result = b.clone();
-    result.add_assign(a);
+    result.add_assign_with_checkpoint(a, token)?;
     result.costs = costs;
     result.bit_cost = cost;
     Ok(Some(result))
@@ -586,7 +615,7 @@ fn stochastic_combine(
         let first = chosen.first;
         let second = chosen.second;
         let other = histograms[second].clone();
-        histograms[first].add_assign(&other);
+        histograms[first].add_assign_with_checkpoint(&other, token)?;
         histograms[first].bit_cost = chosen.cost_combo;
         histograms[first].costs = chosen.costs;
         histograms.swap_remove(second);
@@ -642,7 +671,7 @@ fn greedy_combine(
         let first = chosen.first;
         let second = chosen.second;
         let other = histograms[second].clone();
-        histograms[first].add_assign(&other);
+        histograms[first].add_assign_with_checkpoint(&other, token)?;
         histograms[first].bit_cost = chosen.cost_combo;
         histograms[first].costs = chosen.costs;
         histograms.swap_remove(second);
@@ -758,7 +787,7 @@ pub(super) fn cluster(
             checkpoint(token)?;
         }
         if original.used.iter().any(|&used| used) {
-            remapped[usize::from(symbol)].add_assign(original);
+            remapped[usize::from(symbol)].add_assign_with_checkpoint(original, token)?;
         }
     }
     Ok((symbols, remapped))
