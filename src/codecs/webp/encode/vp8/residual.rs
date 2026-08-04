@@ -31,6 +31,7 @@ const COEFFICIENT_32768_CHECKPOINT_BITS: usize = 32_768;
 const COEFFICIENT_65536_CHECKPOINT_BITS: usize = 65_536;
 const COEFFICIENT_131072_CHECKPOINT_BITS: usize = 131_072;
 const COEFFICIENT_262144_CHECKPOINT_BITS: usize = 262_144;
+const COEFFICIENT_524288_CHECKPOINT_BITS: usize = 524_288;
 const COEFFICIENT_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait CoefficientCheckpointControl {
@@ -236,6 +237,13 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
                                                                         crate::codecs::error::check_cancelled(
                                                                             Some(self.token),
                                                                         )?;
+                                                                        if self.bit_items.is_multiple_of(
+                                                                            COEFFICIENT_524288_CHECKPOINT_BITS,
+                                                                        ) {
+                                                                            crate::codecs::error::check_cancelled(
+                                                                                Some(self.token),
+                                                                            )?;
+                                                                        }
                                                                     }
                                                                 }
                                                             }
