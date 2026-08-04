@@ -3,15 +3,28 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::{
-    CodecOperation, DecodePolicy, Decoded, DecodedImage, ImageError, ImageErrorStage, ImageFormat,
-    ImageInfo, ImageResult, TransferLayout, VerificationScope,
+    CodecOperation, DecodePolicy, Decoded, DecodedImage, DecodedSequence, ImageError,
+    ImageErrorStage, ImageFormat, ImageInfo, ImageResult, TransferLayout, VerificationScope,
 };
+
+/// State of one persistent lazy decode cache on an [`EncodedImage`].
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EncodedImageDecodeState {
+    /// No decode result has been attempted or retained.
+    NotAttempted,
+    /// A decoded result was retained successfully.
+    Succeeded,
+    /// A deterministic decode failure was retained.
+    Failed,
+}
 
 #[derive(Debug)]
 struct EncodedImageInner {
     bytes: Arc<[u8]>,
     info: ImageInfo,
     decoded: OnceLock<ImageResult<Decoded<DecodedImage>>>,
+    sequence_decoded: OnceLock<ImageResult<Decoded<DecodedSequence>>>,
 }
 
 /// An immutable encoded-image snapshot with a shared lazy decode cache.
@@ -228,6 +241,7 @@ impl EncodedImage {
                 bytes,
                 info,
                 decoded: OnceLock::new(),
+                sequence_decoded: OnceLock::new(),
             }),
         })
     }
@@ -250,12 +264,35 @@ impl EncodedImage {
         self.inner.info.format
     }
 
-    /// Returns whether ordinary decoding has completed successfully.
+    /// Returns the state of the ordinary still-decode cache.
+    #[must_use]
+    pub fn decode_state(&self) -> EncodedImageDecodeState {
+        cache_state(&self.inner.decoded)
+    }
+
+    /// Returns the state of the retained sequence-decode cache.
+    #[must_use]
+    pub fn sequence_decode_state(&self) -> EncodedImageDecodeState {
+        cache_state(&self.inner.sequence_decoded)
+    }
+
+    /// Returns whether ordinary still decoding has completed successfully.
     ///
-    /// A cached failure is not considered materialized.
+    /// A cached failure is not considered materialized. Use [`Self::decode_state`]
+    /// when callers must distinguish a failed attempt from no attempt.
     #[must_use]
     pub fn is_decoded(&self) -> bool {
-        matches!(self.inner.decoded.get(), Some(Ok(_)))
+        self.decode_state() == EncodedImageDecodeState::Succeeded
+    }
+
+    /// Returns whether sequence decoding has completed successfully.
+    ///
+    /// A cached failure is not considered materialized. Use
+    /// [`Self::sequence_decode_state`] when callers must distinguish a failed
+    /// attempt from no attempt.
+    #[must_use]
+    pub fn is_sequence_decoded(&self) -> bool {
+        self.sequence_decode_state() == EncodedImageDecodeState::Succeeded
     }
 
     /// Decodes pixels once and returns the shared cached result.
@@ -298,6 +335,44 @@ impl EncodedImage {
             .get_or_init(|| crate::decode(&self.inner.bytes))
             .as_ref()
             .map_err(Clone::clone)
+    }
+
+    /// Decode and retain every frame or page in a shared lazy sequence cache.
+    ///
+    /// The returned sequence is cloned from the retained result so this method
+    /// preserves an owned return value while avoiding repeated codec work.
+    /// Clones of this source share the same cache. Deterministic failures from
+    /// the unlimited compatibility operation are cached as well.
+    ///
+    /// # Errors
+    ///
+    /// Returns the structured sequence decoder failure for malformed,
+    /// unsupported, or feature-disabled input.
+    pub fn decode_sequence(&self) -> ImageResult<Decoded<DecodedSequence>> {
+        self.inner
+            .sequence_decoded
+            .get_or_init(|| crate::decode_sequence(&self.inner.bytes))
+            .clone()
+    }
+
+    /// Decode every frame or page under an explicit policy.
+    ///
+    /// The unlimited compatibility policy uses the shared sequence cache.
+    /// A policy with resource limits runs the policy-aware root operation so
+    /// policy-dependent failures are not retained as if they were inherent to
+    /// the encoded source.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`crate::decode_sequence_with_policy`].
+    pub fn decode_sequence_with_policy(
+        &self,
+        policy: &DecodePolicy,
+    ) -> ImageResult<Decoded<DecodedSequence>> {
+        if *policy == DecodePolicy::default() {
+            return self.decode_sequence();
+        }
+        crate::decode_sequence_with_policy(&self.inner.bytes, policy)
     }
 
     /// Decode exactly one retained frame or page by index.
@@ -371,5 +446,13 @@ impl EncodedImage {
     #[must_use]
     pub fn verification_scope(&self) -> VerificationScope {
         self.format().verification_scope()
+    }
+}
+
+fn cache_state<T>(cache: &OnceLock<ImageResult<T>>) -> EncodedImageDecodeState {
+    match cache.get() {
+        None => EncodedImageDecodeState::NotAttempted,
+        Some(Ok(_)) => EncodedImageDecodeState::Succeeded,
+        Some(Err(_)) => EncodedImageDecodeState::Failed,
     }
 }

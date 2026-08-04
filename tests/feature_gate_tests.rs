@@ -4819,7 +4819,7 @@ fn borrowed_view_matches_the_owned_snapshot_contract() -> Result<(), Box<dyn std
 
 #[test]
 fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{EncodedImage, EncodedImageView};
+    use image_slash_star::{EncodedImage, EncodedImageDecodeState, EncodedImageView};
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let cases: &[(&str, bool, &str)] = &[
@@ -4850,15 +4850,68 @@ fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn s
         }
         let data = fs::read(root.join(path))?;
         let source = EncodedImage::new(data.clone())?;
-        let count = source.info().frame_count.unwrap_or(1);
-        let sequence = image_slash_star::decode_sequence(&data)?.into_inner();
         assert_eq!(
-            u32::try_from(sequence.frames.len()).unwrap_or(u32::MAX),
+            source.decode_state(),
+            EncodedImageDecodeState::NotAttempted,
+            "{name} still cache starts empty"
+        );
+        assert_eq!(
+            source.sequence_decode_state(),
+            EncodedImageDecodeState::NotAttempted,
+            "{name} sequence cache starts empty"
+        );
+        let count = source.info().frame_count.unwrap_or(1);
+        let sequence = image_slash_star::decode_sequence(&data)?;
+        let cached_sequence = source.decode_sequence()?;
+        assert_eq!(cached_sequence, sequence, "{name} cached sequence");
+        assert_eq!(
+            source.sequence_decode_state(),
+            EncodedImageDecodeState::Succeeded,
+            "{name} sequence cache succeeds"
+        );
+        assert!(source.is_sequence_decoded(), "{name} sequence materialized");
+        assert_eq!(
+            source.decode_sequence()?,
+            cached_sequence,
+            "{name} sequence cache is reused"
+        );
+        let clone = source.clone();
+        assert_eq!(
+            clone.sequence_decode_state(),
+            EncodedImageDecodeState::Succeeded,
+            "{name} clone observes sequence cache"
+        );
+        let still = source.decode()?;
+        assert_eq!(
+            source.decode_state(),
+            EncodedImageDecodeState::Succeeded,
+            "{name} still cache succeeds"
+        );
+        assert!(source.is_decoded(), "{name} still materialized");
+        assert_eq!(
+            still.content, sequence.content.frames[0].image,
+            "{name} still first frame"
+        );
+        if count > 1 {
+            let strict =
+                image_slash_star::DecodePolicy::default().with_max_frames(count.saturating_sub(1));
+            assert!(
+                source.decode_sequence_with_policy(&strict).is_err(),
+                "{name} strict sequence policy"
+            );
+            assert_eq!(
+                source.sequence_decode_state(),
+                EncodedImageDecodeState::Succeeded,
+                "{name} policy failure does not poison cache"
+            );
+        }
+        assert_eq!(
+            u32::try_from(sequence.content.frames.len()).unwrap_or(u32::MAX),
             count,
             "{name} frame count"
         );
         let view = EncodedImageView::new(&data)?;
-        for (index, frame) in sequence.frames.iter().enumerate() {
+        for (index, frame) in sequence.content.frames.iter().enumerate() {
             let index_u32 = u32::try_from(index).unwrap_or(u32::MAX);
             assert_eq!(
                 source.decode_frame(index_u32)?,
@@ -12819,6 +12872,31 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
     assert_eq!(verify_error.stage(), Some(ImageErrorStage::Verification));
     assert_eq!(verify_error.identity(), Some("png_chunk"));
     assert!(verify_error.offset().is_some());
+
+    let decode_failure_bytes =
+        fs::read(root.join("tests/fixtures/input/images/png/zlib_bad_adler.png"))?;
+    let decode_failure_source = image_slash_star::EncodedImage::new(decode_failure_bytes)?;
+    assert_eq!(
+        decode_failure_source.decode_state(),
+        image_slash_star::EncodedImageDecodeState::NotAttempted
+    );
+    assert!(decode_failure_source.decode().is_err());
+    assert_eq!(
+        decode_failure_source.decode_state(),
+        image_slash_star::EncodedImageDecodeState::Failed
+    );
+    assert!(!decode_failure_source.is_decoded());
+    assert!(decode_failure_source.decode().is_err());
+    assert_eq!(
+        decode_failure_source.sequence_decode_state(),
+        image_slash_star::EncodedImageDecodeState::NotAttempted
+    );
+    assert!(decode_failure_source.decode_sequence().is_err());
+    assert_eq!(
+        decode_failure_source.sequence_decode_state(),
+        image_slash_star::EncodedImageDecodeState::Failed
+    );
+    assert!(decode_failure_source.decode_sequence().is_err());
 
     if cfg!(feature = "bmp") {
         // BMP parse-site context is a Rust error-detail contract. Pillow has
