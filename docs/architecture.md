@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`4db2c9bd6c7036a26eb854686d17a497eecce8ad`; the claim-ledger baseline remains
+`0b8a6ff257aec7e054ec4dc79ef60c5be40f893d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -150,8 +150,11 @@ not request a decoded-sample transformation. Typed non-primary AVIF
 `colr`/`nclx` declarations are retained as bounded `AvifItemColorProperties`
 records through `SourceDescriptor::avif_item_color_properties()`, preserving
 the source-local item ID and CICP values without replacing the primary
-`SourceColor` or changing decoded samples. Non-primary ICC profiles and other
-item color/property forms remain outside this typed boundary.
+`SourceColor` or changing decoded samples. Raw non-primary `prof`/`rICC`
+profiles are retained as bounded `AvifItemIccProfile` records through
+`SourceDescriptor::avif_item_icc_profiles()`, preserving exact item IDs and
+profile bytes without replacing `SourceColor`; other item color/property forms
+remain outside this typed boundary.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the
@@ -283,11 +286,13 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Non-ICC profiles, track-only/auxiliary item properties, item color/property
-forms beyond typed CICP, grid topology, and derived/grid composition remain
-outside the current model; bounded direct, supported grid-derived alpha
+Other non-primary/auxiliary profiles, track-only item properties, item
+color/property forms beyond typed CICP and raw ICC, grid topology, and
+derived/grid composition remain outside the current model; bounded direct,
+supported grid-derived alpha
 `auxl`, ordinary `iref`, `prem`, and typed non-primary `colr`/`nclx`
-declarations are the explicitly retained exceptions.
+declarations plus non-primary `prof`/`rICC` profiles are the explicitly
+retained exceptions.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,
