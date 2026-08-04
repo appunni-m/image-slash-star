@@ -10891,6 +10891,28 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut partition_131072_options {
             options.quality = Some(100);
         }
+        // A 1,024×1,024 high-entropy probe reaches the next 262,144-bit
+        // interval in both VP8 paths at quality 100. It is kept separate from
+        // the compact 131,072-bit probe so the boundary remains deterministic
+        // without reintroducing the discarded 2,048×1,024 allocation.
+        let mut partition_262144_probe_pixels = Vec::with_capacity(1024 * 1024 * 3);
+        let mut partition_262144_state = 0xA5A5_5A5Au32;
+        for _ in 0..1024 * 1024 {
+            partition_262144_state = partition_262144_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            partition_262144_probe_pixels.extend_from_slice(&[
+                u8::try_from(partition_262144_state >> 24)?,
+                u8::try_from((partition_262144_state >> 16) & 0xff)?,
+                u8::try_from((partition_262144_state >> 8) & 0xff)?,
+            ]);
+        }
+        let partition_262144_probe =
+            DecodedImage::new(1024, 1024, partition_262144_probe_pixels, ColorType::Rgb8);
+        let mut partition_262144_options = analysis_options.clone();
+        if let EncodeOptions::WebP(options) = &mut partition_262144_options {
+            options.quality = Some(100);
+        }
         // First-partition boolean coding now charges a checkpoint after each
         // 8 coded bits. The patterned probe reaches the first new logical
         // interval after the existing preparation work. Pillow has no caller
@@ -11870,6 +11892,116 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(coefficient_bit_sink_131072, vec![0xD6]);
+
+        // The next logical interval is independently enforced after each
+        // 262,144 coded bits in both VP8 partitions. Pillow has no caller
+        // token, work-budget result, or caller-owned sink, so this remains
+        // Rust-only evidence with no parity row or coverage-only hook.
+        let partition_bit_policy_262144 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(66_874);
+        let partition_bit_error_262144 = match image_slash_star::encode_with_policy(
+            &partition_262144_probe,
+            ImageFormat::WebP,
+            &partition_262144_options,
+            &partition_bit_policy_262144,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 262144-bit partition budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_error_262144,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 66_874,
+                observed: 66_875,
+            }
+        ));
+        let mut partition_bit_sink_262144 = vec![0xD7];
+        let partition_bit_sink_error_262144 = match image_slash_star::encode_to_sink_with_policy(
+            &partition_262144_probe,
+            ImageFormat::WebP,
+            &partition_262144_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(66_873),
+            &mut partition_bit_sink_262144,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 262144-bit partition sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_sink_error_262144,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 66_873,
+                observed: 66_874,
+            }
+        ));
+        assert_eq!(partition_bit_sink_262144, vec![0xD7]);
+
+        let coefficient_bit_policy_262144 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(148_071);
+        let coefficient_bit_error_262144 = match image_slash_star::encode_with_policy(
+            &partition_262144_probe,
+            ImageFormat::WebP,
+            &partition_262144_options,
+            &coefficient_bit_policy_262144,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 262144-bit coefficient budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_error_262144,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 148_071,
+                observed: 148_072,
+            }
+        ));
+        let mut coefficient_bit_sink_262144 = vec![0xD8];
+        let coefficient_bit_sink_error_262144 = match image_slash_star::encode_to_sink_with_policy(
+            &partition_262144_probe,
+            ImageFormat::WebP,
+            &partition_262144_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(148_070),
+            &mut coefficient_bit_sink_262144,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 262144-bit coefficient sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_sink_error_262144,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 148_070,
+                observed: 148_071,
+            }
+        ));
+        assert_eq!(coefficient_bit_sink_262144, vec![0xD8]);
 
         // First-partition output now charges an interior checkpoint after each
         // 1,024 emitted boolean-coder bytes. The deep patterned probe reaches
