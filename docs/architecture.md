@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`15a4f02809bb2ae5be6bee817cad1bb72e1a2fb6`; the claim-ledger baseline remains
+`e3273a08d6325c9cb3cbb4388f25c38e735f2e39`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -353,6 +353,10 @@ translation cannot be bypassed.
 | `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
 | `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
 
+The WebP VP8L token-aware list includes a Huffman-tree code-length-token
+frequency checkpoint after each 16 compressed token entries; the no-token path
+retains its original tight frequency loop.
+
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
 `ImageError::FeatureDisabled`. For AVIF, `avif` and `avis` major brands are
@@ -570,7 +574,8 @@ search/match-length/cache/
 trace and token/Huffman cost scans after each 1,024 tokens or 64 symbols,
 Huffman RLE preparation and canonical-code assignment scans after each 64
 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
-histogram clustering (including token-aware
+Huffman-tree code-length-token frequency scans after each 16 compressed token
+entries, histogram clustering (including token-aware
 population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
@@ -595,7 +600,8 @@ predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace and token/Huffman cost scans after each 1,024
 tokens or 64 symbols, Huffman RLE preparation and canonical-code assignment
 scans after each 64 code-length symbols, Huffman-tree insertion scans after each
-64 candidate nodes, histogram
+64 candidate nodes, Huffman-tree code-length-token frequency scans after each
+16 compressed token entries, histogram
 population, combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly

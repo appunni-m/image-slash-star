@@ -968,6 +968,8 @@ pub fn encode_with_policy(
 /// token/Huffman cost scans after each 1,024 tokens or 64 symbols, Huffman RLE
 /// preparation and canonical-code assignment scans after each 64 code-length
 /// symbols, Huffman-tree insertion scans after each 64 candidate nodes,
+/// Huffman-tree code-length-token frequency scans after each 16 compressed
+/// token entries,
 /// histogram population, combined entropy-cost,
 /// and histogram-merge scans after each 64 symbols,
 /// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical bitstream intervals, 1,024-byte
