@@ -9909,6 +9909,64 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(subtract_green_sink, vec![0xAB]);
 
+        let mut sampling_pixels = Vec::with_capacity(8_192 * 8 * 3);
+        for index in 0..8_192 * 8 {
+            let value = u32::try_from(index)?
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let [red, green, blue, _] = value.to_le_bytes();
+            sampling_pixels.extend_from_slice(&[red, green, blue]);
+        }
+        let sampling_image = DecodedImage::new(8_192, 8, sampling_pixels, ColorType::Rgb8);
+        let sampling_policy = image_slash_star::EncodePolicy::new().with_max_work_units(129_499);
+        // The lossless VP8L cross-color sampling pass now charges an interior
+        // checkpoint after each 1,024 scanned or compacted tile-map samples.
+        // This 8,192x8 probe creates a 1,024-entry tile map and reaches that
+        // real reduction boundary after the earlier analysis and transform
+        // work. Pillow has no caller token or work-budget result, so this
+        // remains Rust-only evidence with no parity row or coverage-only hook.
+        let sampling_error = match image_slash_star::encode_with_policy(
+            &sampling_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &sampling_policy,
+        ) {
+            Ok(_) => return Err("VP8L sampling budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sampling_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 129_499,
+                observed: 129_500,
+            }
+        ));
+        let mut sampling_sink = vec![0xAC];
+        let sampling_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &sampling_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &sampling_policy,
+            &mut sampling_sink,
+        ) {
+            Ok(_) => return Err("VP8L sampling sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sampling_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 129_499,
+                observed: 129_500,
+            }
+        ));
+        assert_eq!(sampling_sink, vec![0xAC]);
+
         // A materially larger budget reaches the long predictor/cross-color,
         // histogram/Huffman, backward-reference, and token-stream intervals
         // before rejecting. This remains Rust-only work-control evidence:
