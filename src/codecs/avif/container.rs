@@ -7,9 +7,9 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
-    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
-    SourceAlpha, SourceColor, SourceDescriptor,
+    AvifContentLightLevel, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
+    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
+    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1049,6 +1049,10 @@ impl Meta {
         {
             source = source.with_avif_auxiliary_relationships(relationships);
         }
+        let item_relationships = self.non_alpha_item_relationships();
+        if !item_relationships.is_empty() {
+            source = source.with_avif_item_relationships(item_relationships);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1087,6 +1091,21 @@ impl Meta {
             source = source.with_avif_transform(transform);
         }
         Ok(source)
+    }
+
+    fn non_alpha_item_relationships(&self) -> Vec<AvifItemRelationship> {
+        self.references
+            .iter()
+            .filter(|reference| {
+                !(reference.kind == *b"auxl"
+                    && self
+                        .associated(reference.from_id)
+                        .any(|property| matches!(property, Property::AuxC { is_alpha: true })))
+            })
+            .map(|reference| {
+                AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
+            })
+            .collect()
     }
 
     fn grid_item_ids(&self, primary: u32) -> ParseResult<Vec<u32>> {

@@ -22,6 +22,7 @@ pub fn decode(
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
+    let item_relationships = std::mem::take(&mut extracted.item_relationships);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
@@ -58,6 +59,15 @@ pub fn decode(
     } else {
         image
     };
+    let image = if item_relationships.is_empty() {
+        image
+    } else {
+        let source = image
+            .source
+            .clone()
+            .with_avif_item_relationships(item_relationships);
+        image.with_source_descriptor(source)
+    };
     let image = if grid_item_ids.is_empty() {
         image
     } else {
@@ -87,6 +97,7 @@ pub fn decode_sequence(
     let source_color = std::mem::take(&mut extracted.source_color);
     let auxiliary_relationship = extracted.auxiliary_relationship;
     let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
+    let item_relationships = std::mem::take(&mut extracted.item_relationships);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
@@ -116,6 +127,16 @@ pub fn decode_sequence(
                 .source
                 .clone()
                 .with_avif_auxiliary_relationship(relationship);
+            frame.image.source = source;
+        }
+    }
+    if !item_relationships.is_empty() {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_item_relationships(item_relationships.clone());
             frame.image.source = source;
         }
     }

@@ -1605,7 +1605,7 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 
 #[test]
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::{AvifAuxiliaryRelationship, SourceAlpha};
+    use image_slash_star::{AvifAuxiliaryRelationship, AvifItemRelationship, SourceAlpha};
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
     // parity field. The AVIF case below uses the real committed fixture in
@@ -1749,6 +1749,10 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 expected_relationships.as_slice(),
                 "{name} decode auxiliary relationships"
             );
+            assert!(
+                info.source.avif_item_relationships().is_empty(),
+                "{name} alpha edges are not duplicated as generic relationships"
+            );
             let sequence = image_slash_star::decode_sequence(&bytes)?;
             assert_eq!(
                 sequence.content.frames[0].image.source.alpha(),
@@ -1780,6 +1784,10 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                     .is_empty(),
                 "{name} decode auxiliary relationships"
             );
+            assert!(
+                info.source.avif_item_relationships().is_empty(),
+                "{name} generic relationships"
+            );
         }
     }
 
@@ -1791,6 +1799,10 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         let expected = [
             AvifAuxiliaryRelationship::new(5, 2),
             AvifAuxiliaryRelationship::new(6, 3),
+        ];
+        let expected_item_relationships = [
+            AvifItemRelationship::new(*b"dimg", 1, 2),
+            AvifItemRelationship::new(*b"dimg", 1, 3),
         ];
         let inspected = image_slash_star::inspect(&bytes)?;
         assert_eq!(
@@ -1813,6 +1825,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             [2, 3].as_slice(),
             "grid inspect derived item IDs"
         );
+        assert_eq!(
+            inspected.source.avif_item_relationships(),
+            expected_item_relationships.as_slice(),
+            "grid inspect generic relationships"
+        );
 
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(
@@ -1824,6 +1841,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             decoded.content.source.avif_grid_item_ids(),
             [2, 3].as_slice(),
             "grid decode derived item IDs"
+        );
+        assert_eq!(
+            decoded.content.source.avif_item_relationships(),
+            expected_item_relationships.as_slice(),
+            "grid decode generic relationships"
         );
         let sequence = image_slash_star::decode_sequence(&bytes)?;
         assert_eq!(
@@ -1838,6 +1860,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             sequence.content.frames[0].image.source.avif_grid_item_ids(),
             [2, 3].as_slice(),
             "grid sequence derived item IDs"
+        );
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_relationships(),
+            expected_item_relationships.as_slice(),
+            "grid sequence generic relationships"
         );
     }
     Ok(())

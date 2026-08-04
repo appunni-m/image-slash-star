@@ -898,8 +898,9 @@ pub enum SourceAlpha {
 /// Item identifiers are local to the encoded container; they are source
 /// provenance, not globally stable image identifiers. The AVIF parser exposes
 /// direct primary-item associations and alpha associations to the derived
-/// color items of a supported grid. Non-alpha auxiliary, per-frame, and other
-/// item graphs are not represented by this descriptor yet.
+/// color items of a supported grid. Non-alpha `iref` edges are represented by
+/// [`AvifItemRelationship`]; this type keeps the established alpha contract
+/// distinct from that broader graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AvifAuxiliaryRelationship {
     auxiliary_item_id: u32,
@@ -929,6 +930,51 @@ impl AvifAuxiliaryRelationship {
     }
 }
 
+/// A source-local non-alpha AVIF item reference.
+///
+/// The four-byte kind is the ISO-BMFF `iref` child type, and the item IDs are
+/// local to the encoded container. This retains graph provenance only: it
+/// does not compose grid tiles, decode auxiliary content, or apply a sample
+/// transform. Alpha `auxl` edges remain exposed through
+/// [`AvifAuxiliaryRelationship`] so their established semantic contract is
+/// not conflated with the broader reference graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifItemRelationship {
+    kind: [u8; 4],
+    from_item_id: u32,
+    to_item_id: u32,
+}
+
+impl AvifItemRelationship {
+    /// Create a source-local AVIF item reference.
+    #[must_use]
+    pub const fn new(kind: [u8; 4], from_item_id: u32, to_item_id: u32) -> Self {
+        Self {
+            kind,
+            from_item_id,
+            to_item_id,
+        }
+    }
+
+    /// Return the four-byte `iref` child kind.
+    #[must_use]
+    pub const fn kind(&self) -> [u8; 4] {
+        self.kind
+    }
+
+    /// Return the source-local item that owns the reference.
+    #[must_use]
+    pub const fn from_item_id(&self) -> u32 {
+        self.from_item_id
+    }
+
+    /// Return the source-local item targeted by the reference.
+    #[must_use]
+    pub const fn to_item_id(&self) -> u32 {
+        self.to_item_id
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -941,6 +987,7 @@ pub struct SourceDescriptor {
     alpha: Option<SourceAlpha>,
     avif_auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     avif_auxiliary_relationships: Option<Vec<AvifAuxiliaryRelationship>>,
+    avif_item_relationships: Option<Vec<AvifItemRelationship>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_transform: Option<AvifTransformProperties>,
 }
@@ -955,6 +1002,7 @@ impl SourceDescriptor {
             alpha: None,
             avif_auxiliary_relationship: None,
             avif_auxiliary_relationships: None,
+            avif_item_relationships: None,
             avif_grid_item_ids: None,
             avif_transform: None,
         }
@@ -1033,6 +1081,22 @@ impl SourceDescriptor {
         }
     }
 
+    /// Record bounded non-alpha AVIF item references.
+    #[must_use]
+    pub fn with_avif_item_relationships(
+        mut self,
+        relationships: Vec<AvifItemRelationship>,
+    ) -> Self {
+        self.avif_item_relationships = (!relationships.is_empty()).then_some(relationships);
+        self
+    }
+
+    /// Return bounded non-alpha AVIF item references in source order.
+    #[must_use]
+    pub fn avif_item_relationships(&self) -> &[AvifItemRelationship] {
+        self.avif_item_relationships.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1074,6 +1138,7 @@ impl SourceDescriptor {
             && self.alpha.is_none()
             && self.avif_auxiliary_relationship.is_none()
             && self.avif_auxiliary_relationships.is_none()
+            && self.avif_item_relationships.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_transform.is_none()
     }
