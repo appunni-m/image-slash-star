@@ -1192,6 +1192,16 @@ impl Meta {
             .collect()
     }
 
+    fn premultiplied_relationships(&self) -> Vec<AvifItemRelationship> {
+        self.references
+            .iter()
+            .filter(|reference| reference.kind == *b"prem")
+            .map(|reference| {
+                AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
+            })
+            .collect()
+    }
+
     fn grid_item_ids(&self, primary_item_id: u32) -> ParseResult<Vec<u32>> {
         let item = self
             .items
@@ -1243,6 +1253,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     pub(super) auxiliary_relationships: Vec<AvifAuxiliaryRelationship>,
     pub(super) item_relationships: Vec<AvifItemRelationship>,
+    pub(super) premultiplied_relationships: Vec<AvifItemRelationship>,
     pub(super) grid_item_ids: Vec<u32>,
     pub(super) transform: Option<AvifTransformProperties>,
 }
@@ -2100,6 +2111,10 @@ fn extract_inner_with_metadata(
         .as_ref()
         .map(Meta::non_alpha_item_relationships)
         .unwrap_or_default();
+    let premultiplied_relationships = meta
+        .as_ref()
+        .map(Meta::premultiplied_relationships)
+        .unwrap_or_default();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2112,6 +2127,7 @@ fn extract_inner_with_metadata(
         auxiliary_relationship,
         auxiliary_relationships,
         item_relationships,
+        premultiplied_relationships,
         grid_item_ids,
         transform,
     })
@@ -3615,6 +3631,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3637,6 +3654,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3864,6 +3882,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
     };
@@ -3918,6 +3937,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3938,6 +3958,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -3965,6 +3986,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -4005,6 +4027,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4031,6 +4054,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4052,6 +4076,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,
@@ -4080,6 +4105,7 @@ fn coverage_structural_states() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: None,

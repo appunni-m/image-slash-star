@@ -455,6 +455,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
             item_relationships: Vec::new(),
+            premultiplied_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -484,6 +485,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
             item_relationships: Vec::new(),
+            premultiplied_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -525,6 +527,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         auxiliary_relationship: None,
         auxiliary_relationships: Vec::new(),
         item_relationships: Vec::new(),
+        premultiplied_relationships: Vec::new(),
         grid_item_ids: Vec::new(),
         transform: None,
         still: Some(StillPayload {
@@ -551,6 +554,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
             item_relationships: Vec::new(),
+            premultiplied_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -572,6 +576,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
             item_relationships: Vec::new(),
+            premultiplied_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })
@@ -593,6 +598,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             auxiliary_relationship: None,
             auxiliary_relationships: Vec::new(),
             item_relationships: Vec::new(),
+            premultiplied_relationships: Vec::new(),
             grid_item_ids: Vec::new(),
             transform: None,
         })

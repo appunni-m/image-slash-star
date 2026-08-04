@@ -1611,6 +1611,71 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     // parity field. The AVIF case below uses the real committed fixture in
     // this feature-gated integration contract and adds no parity row.
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let append_premultiplied_relationship =
+        |input: &[u8]| -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+            let iref_type = input
+                .windows(4)
+                .position(|window| window == b"iref")
+                .ok_or("AVIF alpha fixture has no iref box")?;
+            let iref_start = iref_type
+                .checked_sub(4)
+                .ok_or("AVIF iref box has no size field")?;
+            let iref_size =
+                u32::from_be_bytes(input[iref_start..iref_start + 4].try_into()?) as usize;
+            let iref_end = iref_start
+                .checked_add(iref_size)
+                .ok_or("AVIF iref box end overflowed")?;
+            let child = avif_box(b"prem", &[0, 2, 0, 1, 0, 1]);
+            let delta = u32::try_from(child.len())?;
+            let mut output = Vec::with_capacity(
+                input
+                    .len()
+                    .checked_add(child.len())
+                    .ok_or("AVIF prem relationship output length overflowed")?,
+            );
+            output.extend_from_slice(&input[..iref_end]);
+            output.extend_from_slice(&child);
+            output.extend_from_slice(&input[iref_end..]);
+
+            let iref_size = u32::from_be_bytes(output[iref_start..iref_start + 4].try_into()?)
+                .checked_add(delta)
+                .ok_or("AVIF iref size overflowed")?;
+            output[iref_start..iref_start + 4].copy_from_slice(&iref_size.to_be_bytes());
+            let meta_start = avif_box_offset(&output, b"meta")?;
+            let meta_size = u32::from_be_bytes(output[meta_start..meta_start + 4].try_into()?)
+                .checked_add(delta)
+                .ok_or("AVIF meta size overflowed")?;
+            output[meta_start..meta_start + 4].copy_from_slice(&meta_size.to_be_bytes());
+
+            let iloc_type = output
+                .windows(4)
+                .position(|window| window == b"iloc")
+                .ok_or("AVIF alpha fixture has no iloc box")?;
+            let iloc = iloc_type
+                .checked_sub(4)
+                .ok_or("AVIF iloc box has no size field")?;
+            if output[iloc + 12] != 0x44 || output[iloc + 13] != 0 {
+                return Err("AVIF alpha fixture iloc layout changed".into());
+            }
+            let item_count = u16::from_be_bytes(output[iloc + 14..iloc + 16].try_into()?);
+            let mut cursor = iloc + 16;
+            for _ in 0..item_count {
+                cursor = cursor
+                    .checked_add(2 + 2)
+                    .ok_or("AVIF iloc item offset overflowed")?;
+                let extent_count = u16::from_be_bytes(output[cursor..cursor + 2].try_into()?);
+                cursor += 2;
+                for _ in 0..extent_count {
+                    let offset_end = cursor.checked_add(4).ok_or("AVIF iloc offset overflowed")?;
+                    let old_offset = u32::from_be_bytes(output[cursor..offset_end].try_into()?)
+                        .checked_add(delta)
+                        .ok_or("AVIF iloc extent offset overflowed")?;
+                    output[cursor..offset_end].copy_from_slice(&old_offset.to_be_bytes());
+                    cursor = cursor.checked_add(8).ok_or("AVIF iloc extent overflowed")?;
+                }
+            }
+            Ok(output)
+        };
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
         (
             "gif binary mask",
@@ -1868,6 +1933,48 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_item_relationships(),
             expected_item_relationships.as_slice(),
             "grid sequence generic relationships"
+        );
+
+        // `prem` is an AVIF source relationship from an alpha item to the
+        // color item it qualifies. It is not a Pillow-observable field, so
+        // this mutation stays in the Rust source-provenance contract. The
+        // existing alpha relationship remains present to prove the two facts
+        // are retained independently, and decoded pixels remain unchanged.
+        let alpha = fs::read(root.join("tests/fixtures/input/images/avif/alpha.avif"))?;
+        let premultiplied = append_premultiplied_relationship(&alpha)?;
+        let expected_premultiplied = [AvifItemRelationship::new(*b"prem", 2, 1)];
+        let inspected = image_slash_star::inspect(&premultiplied)?;
+        assert_eq!(
+            inspected.source.alpha(),
+            Some(SourceAlpha::Auxiliary),
+            "prem inspect preserves separate alpha semantics"
+        );
+        assert_eq!(
+            inspected.source.avif_premultiplied_relationships(),
+            expected_premultiplied.as_slice(),
+            "prem inspect relationship"
+        );
+        assert_eq!(
+            inspected.source.avif_item_relationships(),
+            expected_premultiplied.as_slice(),
+            "prem inspect generic relationship"
+        );
+        let baseline_decoded = image_slash_star::decode(&alpha)?;
+        let decoded = image_slash_star::decode(&premultiplied)?;
+        assert_eq!(decoded.content.pixels, baseline_decoded.content.pixels);
+        assert_eq!(
+            decoded.content.source.avif_premultiplied_relationships(),
+            expected_premultiplied.as_slice(),
+            "prem decode relationship"
+        );
+        let sequence = image_slash_star::decode_sequence(&premultiplied)?;
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_premultiplied_relationships(),
+            expected_premultiplied.as_slice(),
+            "prem sequence relationship"
         );
     }
     Ok(())

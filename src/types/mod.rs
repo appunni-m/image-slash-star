@@ -898,9 +898,9 @@ pub enum SourceAlpha {
 /// Item identifiers are local to the encoded container; they are source
 /// provenance, not globally stable image identifiers. The AVIF parser exposes
 /// direct primary-item associations and alpha associations to the derived
-/// color items of a supported grid. Non-alpha `iref` edges are represented by
-/// [`AvifItemRelationship`]; this type keeps the established alpha contract
-/// distinct from that broader graph.
+/// color items of a supported grid. Other `iref` edges are represented by
+/// [`AvifItemRelationship`]; this type keeps the established `auxl` alpha
+/// contract distinct from that broader graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AvifAuxiliaryRelationship {
     auxiliary_item_id: u32,
@@ -930,14 +930,15 @@ impl AvifAuxiliaryRelationship {
     }
 }
 
-/// A source-local non-alpha AVIF item reference.
+/// A source-local AVIF item reference other than an alpha `auxl` association.
 ///
 /// The four-byte kind is the ISO-BMFF `iref` child type, and the item IDs are
 /// local to the encoded container. This retains graph provenance only: it
 /// does not compose grid tiles, decode auxiliary content, or apply a sample
 /// transform. Alpha `auxl` edges remain exposed through
-/// [`AvifAuxiliaryRelationship`] so their established semantic contract is
-/// not conflated with the broader reference graph.
+/// [`AvifAuxiliaryRelationship`], while `prem` edges also have a dedicated
+/// filtered getter on [`SourceDescriptor`] so their alpha-associated meaning
+/// is not lost in the broader reference graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AvifItemRelationship {
     kind: [u8; 4],
@@ -988,6 +989,7 @@ pub struct SourceDescriptor {
     avif_auxiliary_relationship: Option<AvifAuxiliaryRelationship>,
     avif_auxiliary_relationships: Option<Vec<AvifAuxiliaryRelationship>>,
     avif_item_relationships: Option<Vec<AvifItemRelationship>>,
+    avif_premultiplied_relationships: Option<Vec<AvifItemRelationship>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_transform: Option<AvifTransformProperties>,
 }
@@ -1003,6 +1005,7 @@ impl SourceDescriptor {
             avif_auxiliary_relationship: None,
             avif_auxiliary_relationships: None,
             avif_item_relationships: None,
+            avif_premultiplied_relationships: None,
             avif_grid_item_ids: None,
             avif_transform: None,
         }
@@ -1081,7 +1084,7 @@ impl SourceDescriptor {
         }
     }
 
-    /// Record bounded non-alpha AVIF item references.
+    /// Record bounded AVIF item references other than alpha `auxl` edges.
     #[must_use]
     pub fn with_avif_item_relationships(
         mut self,
@@ -1091,10 +1094,35 @@ impl SourceDescriptor {
         self
     }
 
-    /// Return bounded non-alpha AVIF item references in source order.
+    /// Return bounded AVIF item references other than alpha `auxl` edges in
+    /// source order.
     #[must_use]
     pub fn avif_item_relationships(&self) -> &[AvifItemRelationship] {
         self.avif_item_relationships.as_deref().unwrap_or(&[])
+    }
+
+    /// Record bounded AVIF `prem` relationships.
+    ///
+    /// The AVIF `prem` relationship declares that the referenced color item
+    /// carries values associated with its alpha item. This is source
+    /// provenance only: decoded transfer bytes remain in the crate's
+    /// documented normalized layout and are not implicitly transformed.
+    #[must_use]
+    pub fn with_avif_premultiplied_relationships(
+        mut self,
+        relationships: Vec<AvifItemRelationship>,
+    ) -> Self {
+        self.avif_premultiplied_relationships =
+            (!relationships.is_empty()).then_some(relationships);
+        self
+    }
+
+    /// Return bounded AVIF `prem` relationships in source order.
+    #[must_use]
+    pub fn avif_premultiplied_relationships(&self) -> &[AvifItemRelationship] {
+        self.avif_premultiplied_relationships
+            .as_deref()
+            .unwrap_or(&[])
     }
 
     /// Record the ordered source-local item identifiers derived from a
@@ -1139,6 +1167,7 @@ impl SourceDescriptor {
             && self.avif_auxiliary_relationship.is_none()
             && self.avif_auxiliary_relationships.is_none()
             && self.avif_item_relationships.is_none()
+            && self.avif_premultiplied_relationships.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_transform.is_none()
     }

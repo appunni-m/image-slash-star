@@ -1053,6 +1053,10 @@ impl Meta {
         if !item_relationships.is_empty() {
             source = source.with_avif_item_relationships(item_relationships);
         }
+        let premultiplied_relationships = self.premultiplied_relationships();
+        if !premultiplied_relationships.is_empty() {
+            source = source.with_avif_premultiplied_relationships(premultiplied_relationships);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1102,6 +1106,16 @@ impl Meta {
                         .associated(reference.from_id)
                         .any(|property| matches!(property, Property::AuxC { is_alpha: true })))
             })
+            .map(|reference| {
+                AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
+            })
+            .collect()
+    }
+
+    fn premultiplied_relationships(&self) -> Vec<AvifItemRelationship> {
+        self.references
+            .iter()
+            .filter(|reference| reference.kind == *b"prem")
             .map(|reference| {
                 AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
             })
