@@ -34,6 +34,8 @@ const HASH_SIZE: usize = 1 << HASH_BITS;
 const HASH_MULTIPLIER_HI: u32 = 0xc6a4_a793;
 const HASH_MULTIPLIER_LO: u32 = 0x5bd1_e996;
 const COLOR_HASH_MUL: u32 = 0x1e35_a7bd;
+const COST_CHECKPOINT_SYMBOLS: usize = 64;
+const COST_CHECKPOINT_TOKENS: usize = 1_024;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -558,6 +560,77 @@ fn population_estimate_fixed(counts: &[u32]) -> u64 {
     refined + initial + (u64::from(extra) << 13)
 }
 
+fn population_estimate_fixed_with_checkpoint(
+    counts: &[u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
+    if token.is_none() {
+        return Ok(population_estimate_fixed(counts));
+    }
+    let mut sum = 0_u32;
+    let mut nonzero = 0;
+    let mut maximum = 0;
+    let mut entropy_sum = 0_u64;
+    for (index, &count) in counts.iter().enumerate() {
+        sum += count;
+        if count != 0 {
+            nonzero += 1;
+            maximum = maximum.max(count);
+            entropy_sum += fast_slog(count);
+        }
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_SYMBOLS) {
+            checkpoint(token)?;
+        }
+    }
+    let entropy = fast_slog(sum) - entropy_sum;
+    let div_round = |value: u64, divisor: u64| (value + divisor / 2) / divisor;
+    let refined = match nonzero {
+        0 | 1 => 0,
+        2 => div_round(99 * (u64::from(sum) << 23) + entropy, 100),
+        _ => {
+            let mix = if nonzero == 3 {
+                950
+            } else if nonzero == 4 {
+                700
+            } else {
+                627
+            };
+            let minimum = div_round(
+                mix * (u64::from(2 * sum - maximum) << 23) + (1000 - mix) * entropy,
+                1000,
+            );
+            entropy.max(minimum)
+        }
+    };
+
+    let mut counts_by_kind = [0_u32; 2];
+    let mut streaks = [[0_u32; 2]; 2];
+    let mut start = 0;
+    while start < counts.len() {
+        let value = counts[start];
+        let mut end = start + 1;
+        while end < counts.len() && counts[end] == value {
+            end += 1;
+            if end.is_multiple_of(COST_CHECKPOINT_SYMBOLS) {
+                checkpoint(token)?;
+            }
+        }
+        let kind = usize::from(value != 0);
+        let long = usize::from(end - start > 3);
+        counts_by_kind[kind] += u32::from(long != 0);
+        streaks[kind][long] += (end - start) as u32;
+        start = end;
+    }
+    let extra = counts_by_kind[0] * 1600
+        + 240 * streaks[0][1]
+        + counts_by_kind[1] * 2640
+        + 720 * streaks[1][1]
+        + 1840 * streaks[0][0]
+        + 3360 * streaks[1][0];
+    let initial = (57_u64 << 23) - div_round(91_u64 << 23, 10);
+    Ok(refined + initial + (u64::from(extra) << 13))
+}
+
 pub(super) fn estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
     let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
     let mut green = vec![0_u32; 280 + cache_size];
@@ -596,6 +669,54 @@ pub(super) fn estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
         + (u64::from(extra) << 23)
 }
 
+fn estimated_bits_with_checkpoint(
+    tokens: &[Token],
+    cache_bits: u8,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
+    if token.is_none() {
+        return Ok(estimated_bits(tokens, cache_bits));
+    }
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut green = vec![0_u32; 280 + cache_size];
+    let mut red = [0_u32; 256];
+    let mut blue = [0_u32; 256];
+    let mut alpha = [0_u32; 256];
+    let mut distance = [0_u32; 40];
+    let mut extra = 0_u32;
+    for (index, &item) in tokens.iter().enumerate() {
+        match item {
+            Token::Literal(pixel) => {
+                let [r, g, b, a] = super::channels(pixel);
+                green[g] += 1;
+                red[r] += 1;
+                blue[b] += 1;
+                alpha[a] += 1;
+            }
+            Token::Copy {
+                distance: d,
+                length,
+            } => {
+                let (length_symbol, length_extra) = prefix(length);
+                let (distance_symbol, distance_extra) = prefix(d);
+                green[256 + length_symbol] += 1;
+                distance[distance_symbol] += 1;
+                extra += u32::from(length_extra + distance_extra);
+            }
+            Token::Cache(cache_index) => green[280 + cache_index] += 1,
+        }
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_TOKENS) {
+            checkpoint(token)?;
+        }
+    }
+    Ok(population_estimate_fixed_with_checkpoint(&green, token)?
+        + population_estimate_fixed_with_checkpoint(&red, token)?
+        + population_estimate_fixed_with_checkpoint(&blue, token)?
+        + population_estimate_fixed_with_checkpoint(&alpha, token)?
+        + population_estimate_fixed_with_checkpoint(&distance, token)?
+        + (u64::from(extra) << 23))
+}
+
 fn cache_estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
     let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
     let mut green = vec![0_u32; 280 + cache_size];
@@ -619,6 +740,41 @@ fn cache_estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
         + population_estimate_fixed(&red)
         + population_estimate_fixed(&blue)
         + population_estimate_fixed(&alpha)
+}
+
+fn cache_estimated_bits_with_checkpoint(
+    tokens: &[Token],
+    cache_bits: u8,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
+    if token.is_none() {
+        return Ok(cache_estimated_bits(tokens, cache_bits));
+    }
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut green = vec![0_u32; 280 + cache_size];
+    let mut red = [0_u32; 256];
+    let mut blue = [0_u32; 256];
+    let mut alpha = [0_u32; 256];
+    for (index, &item) in tokens.iter().enumerate() {
+        match item {
+            Token::Literal(pixel) => {
+                let [r, g, b, a] = super::channels(pixel);
+                green[g] += 1;
+                red[r] += 1;
+                blue[b] += 1;
+                alpha[a] += 1;
+            }
+            Token::Copy { length, .. } => green[256 + prefix(length).0] += 1,
+            Token::Cache(cache_index) => green[280 + cache_index] += 1,
+        }
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_TOKENS) {
+            checkpoint(token)?;
+        }
+    }
+    Ok(population_estimate_fixed_with_checkpoint(&green, token)?
+        + population_estimate_fixed_with_checkpoint(&red, token)?
+        + population_estimate_fixed_with_checkpoint(&blue, token)?
+        + population_estimate_fixed_with_checkpoint(&alpha, token)?)
 }
 
 fn population_cost(counts: &[u32]) -> Vec<u32> {
@@ -653,6 +809,56 @@ fn population_cost(counts: &[u32]) -> Vec<u32> {
         .collect()
 }
 
+fn population_cost_with_checkpoint(
+    counts: &[u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<u32>> {
+    if token.is_none() {
+        return Ok(population_cost(counts));
+    }
+    let mut sum = 0_u32;
+    let mut nonzero = 0;
+    for (index, &count) in counts.iter().enumerate() {
+        sum += count;
+        nonzero += usize::from(count != 0);
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_SYMBOLS) {
+            checkpoint(token)?;
+        }
+    }
+    if nonzero <= 1 {
+        return Ok(vec![0; counts.len()]);
+    }
+    let fast_log = |value: u32| -> u32 {
+        if value == 0 {
+            0
+        } else if value < 256 {
+            (f64::from(value).log2() * f64::from(1_u32 << 23)).round() as u32
+        } else if value < 65_536 {
+            let log_count = value.ilog2() - 7;
+            let scale = 1_u32 << log_count;
+            let reduced = value >> log_count;
+            let mut result = (f64::from(reduced).log2() * f64::from(1_u32 << 23)).round() as u32
+                + (log_count << 23);
+            if value >= 4096 {
+                let correction = 12_102_203_u64 * u64::from(value & (scale - 1));
+                result += ((correction + u64::from(value) / 2) / u64::from(value)) as u32;
+            }
+            result
+        } else {
+            (12_102_203.161_561_485 * f64::from(value).ln() + 0.5) as u32
+        }
+    };
+    let log_sum = fast_log(sum);
+    let mut result = Vec::with_capacity(counts.len());
+    for (index, &count) in counts.iter().enumerate() {
+        result.push(log_sum - fast_log(count));
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_SYMBOLS) {
+            checkpoint(token)?;
+        }
+    }
+    Ok(result)
+}
+
 fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
     let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
     let mut green = vec![0_u32; 280 + cache_size];
@@ -684,7 +890,7 @@ fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
     }
     // Each population cost is bounded by the VP8L alphabet and fixed-point
     // scale, so the reference representation is guaranteed to fit `i32`.
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
     CostModel {
         green: population_cost(&green),
         red: population_cost(&red).try_into().unwrap(),
@@ -692,6 +898,66 @@ fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
         alpha: population_cost(&alpha).try_into().unwrap(),
         distance: population_cost(&distance).try_into().unwrap(),
     }
+}
+
+fn cost_model_with_checkpoint(
+    tokens: &[Token],
+    cache_bits: u8,
+    width: usize,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<CostModel> {
+    if token.is_none() {
+        return Ok(cost_model(tokens, cache_bits, width));
+    }
+    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+    let mut green = vec![0_u32; 280 + cache_size];
+    let mut red = [0_u32; 256];
+    let mut blue = [0_u32; 256];
+    let mut alpha = [0_u32; 256];
+    let mut distance = [0_u32; 40];
+    for (index, &item) in tokens.iter().enumerate() {
+        match item {
+            Token::Literal(pixel) => {
+                let [r, g, b, a] = super::channels(pixel);
+                green[g] += 1;
+                red[r] += 1;
+                blue[b] += 1;
+                alpha[a] += 1;
+            }
+            Token::Copy {
+                distance: d,
+                length,
+            } => {
+                let (length_code, length_extra) = prefix(length);
+                let (distance_code, distance_extra) = prefix(plane_code(width, d));
+                green[256 + length_code] += 1;
+                distance[distance_code] += 1;
+                let _ = (length_extra, distance_extra);
+            }
+            Token::Cache(cache_index) => green[280 + cache_index] += 1,
+        }
+        if (index + 1).is_multiple_of(COST_CHECKPOINT_TOKENS) {
+            checkpoint(token)?;
+        }
+    }
+    // Each population cost is bounded by the VP8L alphabet and fixed-point
+    // scale, so the reference representation is guaranteed to fit `i32`.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    Ok(CostModel {
+        green: population_cost_with_checkpoint(&green, token)?,
+        red: population_cost_with_checkpoint(&red, token)?
+            .try_into()
+            .unwrap(),
+        blue: population_cost_with_checkpoint(&blue, token)?
+            .try_into()
+            .unwrap(),
+        alpha: population_cost_with_checkpoint(&alpha, token)?
+            .try_into()
+            .unwrap(),
+        distance: population_cost_with_checkpoint(&distance, token)?
+            .try_into()
+            .unwrap(),
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -883,7 +1149,7 @@ fn trace_backwards(
 ) -> CheckpointResult<Vec<Token>> {
     checkpoint(token)?;
     const SCALE: i64 = 1 << 23;
-    let model = cost_model(source, cache_bits, width);
+    let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
     let mut manager = CostManager::new(pixels.len(), &model);
     checkpoint(token)?;
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
@@ -1038,7 +1304,7 @@ pub(super) fn candidates(
         for bits in 0..=maximum {
             checkpoint(token)?;
             let cached = with_cache(pixels, &source, bits, token)?;
-            let cost = cache_estimated_bits(&cached, bits);
+            let cost = cache_estimated_bits_with_checkpoint(&cached, bits, token)?;
             if best
                 .as_ref()
                 .is_none_or(|(_, _, best_cost)| cost < *best_cost)
@@ -1049,7 +1315,7 @@ pub(super) fn candidates(
         let Some((tokens, bits, _)) = best else {
             unreachable!("the inclusive cache-bit range is never empty");
         };
-        let cost = estimated_bits(&tokens, bits);
+        let cost = estimated_bits_with_checkpoint(&tokens, bits, token)?;
         checkpoint(token)?;
         Ok((tokens, bits, cost))
     };
@@ -1066,7 +1332,7 @@ pub(super) fn candidates(
                 candidate.1,
                 token,
             )?;
-            let cost = estimated_bits(&traced, candidate.1);
+            let cost = estimated_bits_with_checkpoint(&traced, candidate.1, token)?;
             if cost < candidate.2 {
                 candidate = (traced, candidate.1, cost);
             }
