@@ -34,11 +34,11 @@ include = [
 [lib]
 test = false
 
-# The fixture matrix executes real codec work, including the intentionally
-# expensive GIF/WebP cases. A lightly optimized test binary keeps that
+# The fixture and coverage suites execute real codec work, including the
+# intentionally expensive GIF/WebP cases. An optimized test binary keeps that
 # validation representative without requiring callers to use a release build.
 [profile.test]
-opt-level = 1
+opt-level = 2
 
 [[test]]
 name = "coverage_matrix_tests"
