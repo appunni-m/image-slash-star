@@ -729,12 +729,28 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     build_huffman_tree(frequencies, lengths, codes, 15, token)?;
-    let symbols = lengths
-        .iter()
-        .enumerate()
-        .filter_map(|(symbol, &length)| (length != 0).then_some(symbol))
-        .take(3)
-        .collect::<Vec<_>>();
+    let symbols = if let Some(token) = token {
+        let mut symbols = Vec::with_capacity(3);
+        for (index, &length) in lengths.iter().enumerate() {
+            if length != 0 {
+                symbols.push(index);
+                if symbols.len() == 3 {
+                    break;
+                }
+            }
+            if (index + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                check_token(Some(token))?;
+            }
+        }
+        symbols
+    } else {
+        lengths
+            .iter()
+            .enumerate()
+            .filter_map(|(symbol, &length)| (length != 0).then_some(symbol))
+            .take(3)
+            .collect::<Vec<_>>()
+    };
     if symbols.len() <= 2 && symbols.iter().all(|&symbol| symbol < 256) {
         let first = symbols.first().copied().unwrap_or(0);
         w.write_bits(1, 1)?;
