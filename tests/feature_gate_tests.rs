@@ -10648,6 +10648,14 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .collect();
         let partition_32768_probe =
             DecodedImage::new(1024, 960, partition_32768_probe_pixels, ColorType::Rgb8);
+        // The 65,536-bit first-partition and coefficient boundaries use a
+        // 2,048x1,024 patterned probe (128x64 macroblocks). Pillow has no
+        // caller budget or equivalent result, so this remains Rust-only.
+        let partition_65536_probe_pixels: Vec<u8> = (0..2048 * 1024 * 3)
+            .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
+            .collect();
+        let partition_65536_probe =
+            DecodedImage::new(2048, 1024, partition_65536_probe_pixels, ColorType::Rgb8);
         // First-partition boolean coding now charges a checkpoint after each
         // 8 coded bits. The patterned probe reaches the first new logical
         // interval after the existing preparation work. Pillow has no caller
@@ -11403,6 +11411,120 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(coefficient_bit_sink_32768, vec![0xD2]);
+
+        // The next logical first-partition interval is enforced after each
+        // 65,536 coded bits. This larger patterned probe reaches it after the
+        // existing 32,768-bit checkpoint. Pillow has no caller token,
+        // work-budget result, or caller-owned sink, so this remains Rust-only
+        // evidence with no parity row or coverage-only hook.
+        let partition_bit_policy_65536 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(19_010);
+        let partition_bit_error_65536 = match image_slash_star::encode_with_policy(
+            &partition_65536_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_bit_policy_65536,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 65536-bit partition budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_error_65536,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19_010,
+                observed: 19_011,
+            }
+        ));
+        let mut partition_bit_sink_65536 = vec![0xD3];
+        let partition_bit_sink_error_65536 = match image_slash_star::encode_to_sink_with_policy(
+            &partition_65536_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(19_009),
+            &mut partition_bit_sink_65536,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 65536-bit partition sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_bit_sink_error_65536,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 19_009,
+                observed: 19_010,
+            }
+        ));
+        assert_eq!(partition_bit_sink_65536, vec![0xD3]);
+
+        // The coefficient partition has its own 65,536-bit logical interval.
+        // The same probe reaches it only after first-partition work completes,
+        // proving the inclusive boundary and sink no-write behavior without a
+        // second parity fixture.
+        let coefficient_bit_policy_65536 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(35_929);
+        let coefficient_bit_error_65536 = match image_slash_star::encode_with_policy(
+            &partition_65536_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &coefficient_bit_policy_65536,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 65536-bit coefficient budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_error_65536,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 35_929,
+                observed: 35_930,
+            }
+        ));
+        let mut coefficient_bit_sink_65536 = vec![0xD4];
+        let coefficient_bit_sink_error_65536 = match image_slash_star::encode_to_sink_with_policy(
+            &partition_65536_probe,
+            ImageFormat::WebP,
+            &analysis_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(35_928),
+            &mut coefficient_bit_sink_65536,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP 65536-bit coefficient sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            coefficient_bit_sink_error_65536,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 35_928,
+                observed: 35_929,
+            }
+        ));
+        assert_eq!(coefficient_bit_sink_65536, vec![0xD4]);
 
         // First-partition output now charges an interior checkpoint after each
         // 1,024 emitted boolean-coder bytes. The deep patterned probe reaches
