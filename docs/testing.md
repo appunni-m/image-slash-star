@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`5fc90132e6957dab54bc5df29819799afb6491d0`; the claim-ledger baseline remains
+`82f2e7721a33d51e6c333f1917a8e12b774de952`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -413,8 +413,9 @@ cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy analysis, transform selection/application, bounded backward-reference
 search/match-length/cache/
 trace and token/Huffman cost scans after each 1,024 tokens or 64 symbols,
-Huffman RLE preparation after each 64 code-length symbols, Huffman-tree insertion
-scans after each 64 candidate nodes, histogram clustering (including token-aware
+Huffman RLE preparation and canonical-code assignment scans after each 64
+code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
+histogram clustering (including token-aware
 population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte
@@ -487,8 +488,9 @@ and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
 search/match-length/cache/trace and token/Huffman cost scans after each 1,024
-tokens or 64 symbols, Huffman RLE preparation after each 64 code-length
-symbols, Huffman-tree insertion scans after each 64 candidate nodes, histogram
+tokens or 64 symbols, Huffman RLE preparation and canonical-code assignment
+scans after each 64 code-length symbols, Huffman-tree insertion scans after each
+64 candidate nodes, histogram
 population, combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit,
 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
@@ -549,7 +551,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`5fc90132e6957dab54bc5df29819799afb6491d0`, the fixture manifest and
+`82f2e7721a33d51e6c333f1917a8e12b774de952`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -569,24 +571,25 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `1d7bcd82-ccfe-45f0-b2a6-558934f088ca` passed 1,445/1,445 checks
-with zero skips in 818 ms. Feature-matrix run
-`feb1d6f7-3e83-4cd2-bb57-fddb411b95b3` passed all 33/33 configured lanes in
-18,933 ms. Its retained log records `cache=warm lanes=12 test_threads=1
+parity run `bbac562b-5a38-4b49-9c72-270ad428701d` passed 1,445/1,445 checks
+with zero skips in 66,538 ms. Feature-matrix run
+`d2dc8b00-8a5e-4e65-81a9-9f9235b9922a` passed all 33/33 configured lanes in
+71,016 ms. Its retained log records `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK: every native
 and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`1d087468-47b2-4648-b450-f728015ce1e1` passed 85/85 tests in 51,091 ms and
-ingested snapshot `8df5c5f9-14e8-401c-9257-d8806a3ed5c8`:
-52,743/53,342 lines, 7,375/7,520 branches, 2,983/3,059 functions, and
-81,571/82,883 regions. Compared with the preceding accepted snapshot
-`d39afc9c-0655-4639-90e3-23b7e6bd5720`, covered/source totals changed by
-`+11/+11/+6/+6/+0/+0/+19/+20` for covered/source lines, covered/source
+`ffb12efb-412d-4779-8ca3-49042fc0d329` passed 85/85 tests in 104,127 ms and
+ingested snapshot `0f137d96-1e4d-4594-9885-5128f054017b`:
+52,756/53,355 lines, 7,381/7,526 branches, 2,983/3,059 functions, and
+81,594/82,907 regions. Compared with the preceding accepted snapshot
+`8df5c5f9-14e8-401c-9257-d8806a3ed5c8`, covered/source totals changed by
+`+13/+13/+6/+6/+0/+0/+23/+24` for covered/source lines, covered/source
 branches, covered/source functions, and covered/source regions. The known
 LLVM JSON segment-normalization warning remains. The strict aggregate
-shortfall is 599 lines, 145 branches, 76 functions, and 1,312 regions;
+shortfall is 599 lines, 145 branches, 76 functions, and 1,313 regions;
 coverage is implementation evidence, not Pillow parity, and no coverage-only
-test was added.
+test was added. Managed durations remain cache- and runner-sensitive
+observations, not universal speed claims.
 
 Historical test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
@@ -1567,19 +1570,21 @@ because managed cache and runner state can differ.
 ## Latest implementation acceptance
 
 Current acceptance record: WebP VP8L histogram population, combined
-entropy-cost, merge, backward-reference cost, and Huffman RLE checkpoints plus
-compile-only matrix runtime
+entropy-cost, merge, backward-reference cost, Huffman RLE, and canonical-code
+assignment checkpoints plus compile-only matrix runtime
 
 The token-aware VP8L histogram analysis path now charges cooperative
 checkpoints after each 64 symbols while scanning histogram populations,
 combined entropy costs, and histogram merges. The backward-reference candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
-and each 64-symbol population scan. Huffman RLE preparation and compressed
-Huffman-token generation now charge after each 64 code-length symbols. A
+and each 64-symbol population scan. Huffman RLE preparation, canonical-code
+assignment, and compressed Huffman-token generation now charge after each 64
+code-length symbols. A
 fixture-backed lossless WebP token/cancellation assertion drives the
-Huffman-tree path, whose sorted-node insertion scans charge after each 64
-candidate nodes. The production slice is committed at revision
-`5fc90132e6957dab54bc5df29819799afb6491d0`; the ordinary no-token path retains
+Huffman-tree path, whose canonical-code assignment and sorted-node insertion
+scans charge after each 64 code-length slots or candidate nodes. The production
+slice is committed at revision
+`82f2e7721a33d51e6c333f1917a8e12b774de952`; the ordinary no-token path retains
 the original tight loops. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at
@@ -1599,19 +1604,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`1d7bcd82-ccfe-45f0-b2a6-558934f088ca` passed 1,445/1,445 checks in 818 ms;
-feature-matrix run `feb1d6f7-3e83-4cd2-bb57-fddb411b95b3` passed all 33/33
-configured lanes in 18,933 ms with `cache=warm lanes=12 test_threads=1
+`bbac562b-5a38-4b49-9c72-270ad428701d` passed 1,445/1,445 checks in 66,538 ms;
+feature-matrix run `d2dc8b00-8a5e-4e65-81a9-9f9235b9922a` passed all 33/33
+configured lanes in 71,016 ms with `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`1d087468-47b2-4648-b450-f728015ce1e1` passed 85/85 tests in 51,091 ms and
-ingested snapshot `8df5c5f9-14e8-401c-9257-d8806a3ed5c8`: 52,743/53,342
-lines, 7,375/7,520 branches, 2,983/3,059 functions, and 81,571/82,883
-regions. Compared with snapshot `d39afc9c-0655-4639-90e3-23b7e6bd5720`,
-covered/source totals changed by +11/+11 lines, +6/+6 branches, +0/+0
-functions, and +19/+20 regions. Coverage is implementation evidence, not
-Pillow parity; the known LLVM segment-normalization warning and the
-599-line, 145-branch, 76-function, 1,312-region aggregate shortfall remain.
+`ffb12efb-412d-4779-8ca3-49042fc0d329` passed 85/85 tests in 104,127 ms and
+ingested snapshot `0f137d96-1e4d-4594-9885-5128f054017b`: 52,756/53,355
+lines, 7,381/7,526 branches, 2,983/3,059 functions, and 81,594/82,907
+regions. Compared with snapshot `8df5c5f9-14e8-401c-9257-d8806a3ed5c8`,
+covered/source totals changed by +13/+13 lines, +6/+6 branches, +0/+0
+functions, and +23/+24 regions. Native VP8L reports 1,691/1,738 lines,
+332/350 branches, 84/84 functions, and 2,415/2,593 regions. Coverage is
+implementation evidence, not Pillow parity; the known LLVM
+segment-normalization warning and the 599-line, 145-branch, 76-function,
+1,313-region aggregate shortfall remain. The managed durations are
+cache- and runner-sensitive observations, not universal speed claims.
 
 Historical acceptance record: warm feature-matrix fanout bound
 
@@ -4706,7 +4714,10 @@ coverage, not Pillow-oracle parity, and no coverage-only hook was added.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
 current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit coefficient, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/16,384-bit VP8L
-bitstream, and 1,024-pixel RGBA cleanup checkpoints, JPEG interior work beyond
+bitstream, the 64-symbol VP8L histogram/cost/merge/backward-reference scans,
+64-code-length-symbol Huffman RLE preparation and canonical-code assignment,
+64-candidate-node Huffman-tree insertion scans, and 1,024-pixel RGBA cleanup
+checkpoints, JPEG interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
 progressive scan block slots, event-frequency items, and coefficient traversal

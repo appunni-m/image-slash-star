@@ -1476,7 +1476,8 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
         assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
 
         // Keep a fixture-backed lossless WebP token path in this contract so
-        // VP8L Huffman-tree checkpoints are exercised without adding a
+        // VP8L Huffman canonical-code and tree-insertion checkpoints are
+        // exercised without adding a
         // Pillow-parity row or a synthetic coverage-only input.
         let data = fs::read(root.join("tests/fixtures/input/images/webp/lossless.webp"))?;
         let decoded = image_slash_star::decode(&data)?;
