@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`7303e0d4eeded0f25c98a66fa61155692c4bc744`; the claim-ledger baseline remains
+`07d4ed8c880458484ac10da1959b34b3859bacbc`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -587,8 +587,8 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram population and combined entropy-cost
-scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
+search/match-length/cache/trace, histogram population, combined entropy-cost,
+and histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024
 converted RGB or chroma-downsample output pixel, each 1,024 AC coefficients

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`7303e0d4eeded0f25c98a66fa61155692c4bc744`; the claim-ledger baseline remains
+`07d4ed8c880458484ac10da1959b34b3859bacbc`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -483,8 +483,8 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-search/match-length/cache/trace, histogram population and combined entropy-cost
-scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit,
+search/match-length/cache/trace, histogram population, combined entropy-cost,
+and histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit,
 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
 additionally polls after each 1,024 progressive scan block slots, each 1,024
@@ -543,7 +543,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`7303e0d4eeded0f25c98a66fa61155692c4bc744`, the fixture manifest and
+`07d4ed8c880458484ac10da1959b34b3859bacbc`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -563,24 +563,24 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, managed Pillow
-parity run `46a05516-2632-441c-82f5-3faef331f95f` passed 1,445/1,445 checks
-with zero skips in 1,241 ms. Feature-matrix run
-`6fb1e64a-d26a-4367-888d-496a0ffffdc2` passed all 33/33 configured lanes in
-9,341 ms. Its retained log records `cache=warm lanes=12 test_threads=1
+parity run `45c30722-d1fb-49a9-be55-171c5552adbf` passed 1,445/1,445 checks
+with zero skips in 1,610 ms. Feature-matrix run
+`eb34f23f-dc4b-4bc5-a125-5eab24092c74` passed all 33/33 configured lanes in
+7,878 ms. Its retained log records `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK: every native
 and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`388a08d3-2553-4ce0-aad1-130427f0d776` passed 85/85 tests in 54,721 ms and
-ingested snapshot `93eaf91d-d25c-45dd-a539-a305c12ffe12`:
-52,379/52,939 lines, 7,256/7,382 branches, 2,969/3,045 functions, and
-80,986/82,222 regions. Compared with the preceding accepted snapshot
-`0a9ed3e0-156a-4529-bca9-29d3a0003d6b`, covered/source totals changed by
-`43/43/5/6/1/0/36/40` for covered/source lines, covered/source branches,
-covered/source functions, and covered/source regions. The known LLVM
-JSON segment-normalization warning remains. The strict local verifier's
-aggregate shortfall is 560 lines, 126 branches, 76 functions, and 1,236
-regions; coverage is implementation evidence, not Pillow parity, and no
-coverage-only test was added.
+`12876bbf-b9d2-46b8-b6b0-127a21b299c6` passed 85/85 tests in 53,038 ms and
+ingested snapshot `e0940fd1-90fc-467d-b480-a7cdb8e6cd4a`:
+52,364/52,961 lines, 7,247/7,388 branches, 2,970/3,046 functions, and
+80,981/82,268 regions. Compared with the preceding accepted snapshot
+`93eaf91d-d25c-45dd-a539-a305c12ffe12`, covered/source totals changed by
+`-15/+22/-9/+6/+1/+1/-5/+46` for covered/source lines, covered/source
+branches, covered/source functions, and covered/source regions. The known
+LLVM JSON segment-normalization warning remains. The strict aggregate
+shortfall is 597 lines, 141 branches, 76 functions, and 1,287 regions;
+coverage is implementation evidence, not Pillow parity, and no coverage-only
+test was added.
 
 Historical test-runtime acceptance record: bounded, cache-aware feature-matrix fanout
 
@@ -1560,20 +1560,21 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: WebP VP8L combined histogram-cost checkpoints and
-compile-only matrix runtime
+Current acceptance record: WebP VP8L histogram population, combined
+entropy-cost, and merge checkpoints plus compile-only matrix runtime
 
-The token-aware VP8L histogram analysis path now charges a cooperative
-checkpoint after each 64 symbols while scanning both histogram populations and
-combined entropy costs. The production slice is committed at
-`3626ccdc5085ce8ee64659d16e0dee5579aa24d4`; the ordinary no-token path retains
-the original tight loops. The existing
-`encode_work_budget_is_a_non_parity_result_contract` uses its deterministic
-64×64 RGB probe and proves exact whole-buffer and caller-owned-sink rejection
-at `maximum: 37`, `observed: 38`, with sentinel `[0xAE]` untouched. This is a
-Rust-only work-control contract: Pillow has no caller token, work-budget
-result, or caller-owned sink, so no parity row, fixture, diagnostic origin,
-new test function, or coverage-only hook was added.
+The token-aware VP8L histogram analysis path now charges cooperative
+checkpoints after each 64 symbols while scanning histogram populations,
+combined entropy costs, and histogram merges. The production slice is committed
+at revision `07d4ed8c880458484ac10da1959b34b3859bacbc`; the ordinary no-token
+path retains the original tight loops. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
+probes and proves exact whole-buffer and caller-owned-sink rejection at
+`maximum: 19`, `observed: 20` with sentinel `[0xAD]`, `maximum: 37`,
+`observed: 38` with `[0xAE]`, and `maximum: 8,215`, `observed: 8,216` with
+`[0xAF]` untouched. This is Rust-only work-control evidence: Pillow has no
+caller token, work-budget result, or caller-owned sink, so no parity row,
+fixture, diagnostic origin, new test function, or coverage-only hook was added.
 
 The test harness follow-up is committed at
 `7303e0d4eeded0f25c98a66fa61155692c4bc744`. Unknown-target compile-only lanes
@@ -1581,18 +1582,19 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`46a05516-2632-441c-82f5-3faef331f95f` passed 1,445/1,445 checks in 1,241 ms;
-feature-matrix run `6fb1e64a-d26a-4367-888d-496a0ffffdc2` passed all 33/33
-configured lanes in 9,341 ms with `cache=warm lanes=12 test_threads=1
+`45c30722-d1fb-49a9-be55-171c5552adbf` passed 1,445/1,445 checks in 1,610 ms;
+feature-matrix run `eb34f23f-dc4b-4bc5-a125-5eab24092c74` passed all 33/33
+configured lanes in 7,878 ms with `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`388a08d3-2553-4ce0-aad1-130427f0d776` passed 85/85 tests in 54,721 ms and
-ingested snapshot `93eaf91d-d25c-45dd-a539-a305c12ffe12`: 52,379/52,939
-lines, 7,256/7,382 branches, 2,969/3,045 functions, and 80,986/82,222
-regions. Compared with snapshot `0a9ed3e0-156a-4529-bca9-29d3a0003d6b`,
-covered/source totals changed by 43/43 lines, 5/6 branches, 1/0 functions,
-and 36/40 regions. Coverage is implementation evidence, not Pillow parity;
-the known LLVM segment-normalization warning and aggregate shortfall remain.
+`12876bbf-b9d2-46b8-b6b0-127a21b299c6` passed 85/85 tests in 53,038 ms and
+ingested snapshot `e0940fd1-90fc-467d-b480-a7cdb8e6cd4a`: 52,364/52,961
+lines, 7,247/7,388 branches, 2,970/3,046 functions, and 80,981/82,268
+regions. Compared with snapshot `93eaf91d-d25c-45dd-a539-a305c12ffe12`,
+covered/source totals changed by -15/+22 lines, -9/+6 branches, +1/+1
+functions, and -5/+46 regions. Coverage is implementation evidence, not
+Pillow parity; the known LLVM segment-normalization warning and the
+597-line, 141-branch, 76-function, 1,287-region aggregate shortfall remain.
 
 Historical acceptance record: warm feature-matrix fanout bound
 
