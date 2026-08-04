@@ -4,8 +4,8 @@
   "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
   "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
   "coverage": {
-    "run_id": "53722a97-62e5-456e-8e77-c337af8451ff",
-    "snapshot_id": "96ca2123-2aa7-4524-a6a0-7f9c99b1a773",
+    "run_id": "98152df4-6b3d-486e-8e5c-92e9db2b5f2d",
+    "snapshot_id": "0a9ed3e0-156a-4529-bca9-29d3a0003d6b",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
