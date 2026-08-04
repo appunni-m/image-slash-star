@@ -10320,10 +10320,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
-        // Huffman-tree emission now checkpoints the code-length-token
-        // frequency scan after each 16 compressed token entries. A generated
-        // LCG probe reaches this interior boundary without adding a Pillow
-        // parity row, fixture, or coverage-only input.
+        // Huffman-tree emission now checkpoints simple-tree symbol discovery
+        // after each 64 code-length slots and the code-length-token frequency
+        // scan after each 16 compressed token entries. A generated LCG probe
+        // reaches these interior paths without adding a Pillow parity row,
+        // fixture, or coverage-only input.
         let mut huffman_frequency_pixels = Vec::with_capacity(128 * 128 * 3);
         let mut huffman_frequency_state = 0xD1B5_4A32_u32;
         for _ in 0..128 * 128 {
@@ -10334,10 +10335,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let huffman_frequency_image =
             DecodedImage::new(128, 128, huffman_frequency_pixels, ColorType::Rgb8);
-        // Huffman-tree emission now checkpoints the code-length-token
-        // frequency scan after each 16 compressed token entries. A generated
-        // LCG probe reaches this interior boundary without adding a Pillow
-        // parity row, fixture, or coverage-only input.
+        // The same generated LCG probe reaches the later code-length-token
+        // frequency boundary without adding a Pillow parity row, fixture, or
+        // coverage-only input.
         let huffman_frequency_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(43_938);
         let huffman_frequency_error = match image_slash_star::encode_with_policy(
@@ -10414,7 +10414,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_931),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_935),
             &mut huffman_trim_sink,
         ) {
             Ok(_) => return Err("VP8L Huffman trim sink budget unexpectedly completed".into()),
@@ -10426,8 +10426,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_931,
-                observed: 144_932,
+                maximum: 144_935,
+                observed: 144_936,
             }
         ));
         assert_eq!(
@@ -10474,7 +10474,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &cache_probe_image,
             ImageFormat::WebP,
             &lossless_options,
-            &cache_probe_policy,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(136_789),
             &mut cache_probe_sink,
         ) {
             Ok(_) => return Err("VP8L cache sink probe budget unexpectedly completed".into()),
@@ -10486,8 +10486,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_752,
-                observed: 136_753,
+                maximum: 136_789,
+                observed: 136_790,
             }
         ));
         assert_eq!(
