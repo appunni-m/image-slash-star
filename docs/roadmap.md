@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`d862d74eabd125539a577123d403aa808861cae5`; the claim-ledger baseline remains
+`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -33,6 +33,8 @@ Native AVIF is migration debt, not an exception to the final WASM constraint.
 The following decisions are already implemented and are not roadmap work:
 
 - canonical auto-detecting root APIs;
+- signature-validated explicit-format still decode for trusted out-of-band
+  format knowledge;
 - private codec dispatchers;
 - separate source `ImageFormat` and decoded `ImageMode`;
 - exact palette, alpha, frame, timing, disposal, and background transfer
@@ -172,7 +174,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, concurrency, and clone identity for a selected success per format | Lazy sequences; not-attempted versus cached-failure state; cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `a113e926-ad23-4b7e-bf48-1484830f09df` for revision `d862d74eabd125539a577123d403aa808861cae5` is 51,540/52,081 lines, 7,127/7,246 branches, 2,897/2,968 functions, and 79,872/81,067 regions. Compared with the prior accepted snapshot `33f78a7a-0258-4224-b399-53842d46d0e4`, covered totals increased by 15 lines, 8 branches, 0 functions, and 25 regions; source totals grew by 13 lines, 6 branches, 0 functions, and 19 regions. The changed WebP partition file reports 513/521 lines, 78/80 branches, 30/30 functions, and 744/793 regions; residual reports 396/405, 58/58, 21/21, and 553/596; native VP8L reports 1,512/1,523, 245/246, 77/77, and 2,194/2,298. The known LLVM JSON segment-normalization warning remains, and no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `6782355b-73ab-433e-803b-4103212f03f8` for revision `b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d` is 51,577/52,119 lines, 7,129/7,248 branches, 2,901/2,972 functions, and 79,916/81,113 regions. Compared with the prior accepted snapshot `a113e926-ad23-4b7e-bf48-1484830f09df`, covered totals increased by 37 lines, 2 branches, 4 functions, and 44 regions; source totals grew by 38 lines, 2 branches, 4 functions, and 46 regions. The changed public dispatch file `src/lib.rs` reports 754/782 lines, 92/96 branches, 75/77 functions, and 1,137/1,211 regions. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 542-line, 119-branch, 71-function, and 1,197-region aggregate shortfall, and no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -221,7 +223,6 @@ public reusable conversion layer would violate project scope.
 
 | ID | Class | Finding | Attack and acceptance |
 | --- | --- | --- | --- |
-| API-003 | Missing capability | Common decode is auto-detect only. There is no explicit-format decode for trusted out-of-band format knowledge or ambiguous/partial containers. | Decide whether `decode_with_format` improves codec-only use without duplicating dispatch. If accepted, it must still validate the format signature/contract and never bypass safety checks. |
 | API-006 | Invalid-state surface | `DecodedImage` exposes both `color` and `mode`; callers can create disagreement. Palette/image/sequence fields are also all public. | Keep zero-copy construction possible, but consider checked constructors/builders and clearly label direct field construction as unchecked. Every consumer remains validation-gated. |
 | API-008 | Missing representation | No YCbCr/YCCK/BGR transfer mode exists, constraining otherwise codec-native JPEG/TIFF/WebP/AVIF input contracts. | Add a mode only when at least one decode or encode fixture needs byte-preserving transfer. Avoid adding modes merely to mirror another library. |
 | API-012 | Lazy-loading limitation | `EncodedImage` lazily caches only `DecodedImage`, not `DecodedSequence`. Animated callers must use eager `decode_sequence`. | Add a separate cached sequence path or a source view with independently named still/sequence caches; prove no accidental first-frame collapse. |
@@ -238,7 +239,7 @@ public reusable conversion layer would violate project scope.
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms; direct alpha provenance is represented by `SourceAlpha::Auxiliary` plus scalar and bounded plural source-local relationships, and the supported primary grid retains its ordered derived item IDs. Non-primary/auxiliary item color properties other than those associations, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
 | API-036 | Work control | Remaining gaps are progress semantics, CPU/instruction interruption inside codec work beyond the documented checkpoints, finer WebP stages beyond the current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit logical VP8 first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit logical VP8 coefficient, and 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit VP8L intervals plus the 1,024-pixel RGBA transparent-area cleanup checkpoint, JPEG interior work beyond its current 1,024-pixel RGB-to-YCbCr, 1,024-pixel chroma-downsample output, completed 8x8 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, and 1,024-byte entropy-output intervals, and short-write/rollback cleanup. Current cancellation and sink-boundary behavior belongs in the architecture/testing contracts. | Define progress and rollback semantics without claiming universal interior interruption; add checkpoints only for a real long-running operation and retain a separate Rust-only feature-gate contract when Pillow has no equivalent result. |
-| API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set or supplied a trusted format hint. This matters for partial data and downstream policy. | Let a decode policy carry an optional format hint/allow-list while retaining signature validation and feature-independent `detect_format`. |
+| API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set. The explicit-format still API validates a selected format, but `DecodePolicy` cannot express an allowed set or combine that restriction with partial-input flow. | Let a decode policy carry an optional allow-list while retaining signature validation and feature-independent `detect_format`; keep it distinct from the explicit-format dispatch API. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
 | API-043 | Partial-input contract | The non-terminal `NeedMoreData { minimum }` state now exists for detection, basic inspection, still decode, and sequence decode, with exact minimum-byte or progress semantics; terminal results must never be retried. | Keep the status stable for any future streaming surface and document per-operation progress. |
 | API-044 | Partial capability | Current resource limits are per-call eligibility checks before cache access, are never cached, and cannot be bypassed by cached success. Future output mode, strictness, metadata, or color/alpha policies would still make the single permanent still-decode cache key ambiguous. | Keep resource eligibility outside the cache key. Before API-033 or another result-shaping policy lands, choose separately keyed materialization or explicitly disallow that policy on cached sources. |
@@ -441,7 +442,7 @@ Minute gaps:
 | BMP-008 | V4/V5 endpoints, gamma, color-space type, profile offset/size, and rendering intent are discarded. | Retain exact header/profile data under API-034/040 before semantic interpretation. |
 | BMP-009 | RLE delta moves, absolute-run padding, early EOL/EOB, top-down restrictions, and trailing compressed bytes need a strictness matrix. | Reverse-map each branch to a minimal Pillow fixture and retain defensive cases separately. |
 | BMP-010 | ICO DIB XOR alpha, AND masks, 32-bit source alpha, and palette transparency interact in under-specified ways. | Add cross-product fixtures shared by BMP and ICO before changing either decoder. |
-| BMP-011 | Headerless DIB has no explicit input/output type even though it is a distinct useful byte contract. | Keep it out of `detect_format` unless an unambiguous signature exists; consider explicit-format-only DIB APIs under API-003. |
+| BMP-011 | Headerless DIB has no explicit input/output type even though it is a distinct useful byte contract. | Keep it out of `detect_format` and the signature-validated common explicit-format API unless an unambiguous DIB contract is added; consider a separate DIB API. |
 | BMP-012 | Related OS/2 bitmap-array/icon/pointer signatures (`BA`, `CI`, `CP`, `IC`, `PT`) and Windows `BM` are not one interchangeable format, but the support boundary is not documented. | Keep automatic BMP detection at `BM`; explicitly classify the related signatures and require a separate container decision before adding any. |
 | BMP-013 | Header sizes 12, 16, 40, 52, 56, 64, 108, and 124 have overlapping but non-identical field layouts. Header identity and unsupported intermediate variants are not exposed. | Build a header-generation matrix and return a typed variant from inspection. |
 | BMP-014 | Bitfield masks lack an explicit validity contract for zero, overlap, non-contiguous bits, bits outside depth, alpha overlap, and default masks when absent. | Reverse-map Pillow acceptance and retain normalized channel extraction separately from exact source masks. |
@@ -4050,7 +4051,39 @@ reports 390/400, 55/56, 21/21, and 544/590; native VP8L reports 1,507/1,518,
 warning remains. These are implementation/Rust coverage metrics, not
 Pillow-oracle parity metrics.
 
-Current acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
+Current acceptance record: API-003 signature-validated explicit-format still decode
+
+API-003 is implemented at
+`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`. The new
+`decode_with_format` and `decode_with_format_and_policy` entry points accept a
+caller-selected `ImageFormat` only after the complete signature agrees; input
+limits still run first, and matching inputs continue through normal feature,
+inspection, policy, payload-validation, and diagnostic paths. A recognized
+different signature returns staged `Parameter`, an incomplete or unknown
+complete-slice signature returns staged `Malformed`, and partial input remains
+the `decode_prefix` API.
+
+The existing fixture-selected feature-gate contract proves explicit-format
+success matches auto-detecting decode for every enabled format, preserves
+disabled-feature and portable-WASM AVIF outcomes, rejects a mismatched format,
+and rejects a one-byte-too-small encoded-input policy before format dispatch.
+The focused contract and full all-feature suite passed, with 82/82 tests and
+strict all-target Clippy clean. Managed Pillow parity run
+`3588a194-19ec-415e-8f02-a4074e5213cc` passed 1,445/1,445 checks in 780 ms;
+feature-matrix run `e3266f6e-7218-481a-af9e-48a13e130107` passed all configured
+native and WASM lanes in 30,127 ms and ended with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, with no
+targeted `lock-wait` match. Coverage MCP run
+`7ac2da92-8cbd-486c-a976-0a85bf248a37` passed 85/85 tests in 58,645 ms and
+ingested snapshot `6782355b-73ab-433e-803b-4103212f03f8`: 51,577/52,119
+lines, 7,129/7,248 branches, 2,901/2,972 functions, and 79,916/81,113
+regions. The strict local verifier still reports the known aggregate shortfall
+of 542 lines, 119 branches, 71 functions, and 1,197 regions. This is a
+Rust-only API contract: Pillow has no caller-supplied format-hint operation,
+so the implementation adds no parity row, fixture, diagnostic origin, new
+test function, or coverage-only hook.
+
+Historical acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
 
 The 8,192-bit WebP logical-checkpoint slice is implemented at
 `d862d74eabd125539a577123d403aa808861cae5`. Token-aware VP8 first-partition,

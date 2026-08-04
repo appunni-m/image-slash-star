@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`d862d74eabd125539a577123d403aa808861cae5`; the claim-ledger baseline remains
+`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -17,6 +17,8 @@ declaration-level reference.
 - encoded-image signature detection;
 - header and container inspection;
 - validated still-image and sequence decoding;
+- signature-validated explicit-format still decoding for trusted out-of-band
+  dispatch;
 - explicit-format still-image and sequence encoding;
 - source format, structural source descriptors, sample mode, color layout,
   palette, alpha, frame timing, disposal, and background transfer models;
@@ -57,6 +59,11 @@ encoded bytes
     │                                      ├─ source ImageFormat
     │                                      ├─ ImageMode + ColorType + pixels
     │                                      └─ non-fatal diagnostics
+    │
+    ├─ decode_with_format(expected) ───► validate complete expected signature
+    │                                      ├─ mismatch ─────► Parameter
+    │                                      ├─ no signature ─► Malformed
+    │                                      └─ match ────────► same decode path
     │
     └─ decode_sequence() ─────────────► Decoded<DecodedSequence>
 
@@ -300,6 +307,8 @@ translation cannot be bypassed.
 | `inspect_basic(&[u8])` | Read the same header facts without deep frame counting; `frame_count_complete` distinguishes known from unknown counts |
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: header facts when provable, `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
+| `decode_with_format(&[u8], ImageFormat)` | Validate the complete signature against a caller-selected format, then decode through the normal feature and codec dispatch |
+| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Apply the encoded-input limit, validate the selected signature, then apply metadata/canvas/frame/decoded-byte limits before decode |
 | `decode_prefix`, `decode_prefix_with_policy` | Incremental still decode with the non-terminal `NeedMoreData { minimum }` status |
 | `decode_with_token`, `decode_with_token_and_policy` | Still decode that polls a `CancellationToken` at structural checkpoints |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
@@ -345,6 +354,15 @@ PNG, ANMF sub-chunks, nested AVIF boxes) also stay terminal, because appending
 more file bytes cannot repair them. Legacy complete-slice APIs are unchanged:
 they map every internal truncation back to `Malformed` with the same message,
 so manifest parity and error stages are preserved.
+
+`decode_with_format` is the complete-slice entry point for callers that know a
+candidate format out of band. It checks the encoded-input limit first, then
+requires `detect_format` to return the same format before any policy metadata
+preflight or codec dispatch. A recognized different signature is a staged
+`Parameter` error; an incomplete or otherwise unknown complete-slice signature
+is a staged `Malformed` error. The policy-aware variant keeps the same ordering
+and limits, and neither explicit-format API bypasses feature availability or
+payload validation. Partial input remains the `decode_prefix` contract.
 
 Decoding uses the same classification. `decode_prefix` and
 `decode_sequence_prefix` run the identical codec paths as `decode` and
@@ -399,6 +417,13 @@ short entry points. `max_encoded_bytes` is inclusive and checked against the
 complete byte slice before signature detection. This ordering bounds AVIF
 compatible-brand scanning as well as every codec parser, but intentionally
 leaves `ImageError::format()` as `None` on rejection.
+
+`decode_with_format_and_policy` uses the same first check, then validates the
+caller-selected format against the complete signature before any metadata or
+canvas preflight. A signature mismatch is `Parameter`; no complete supported
+signature is `Malformed`; and a matching signature proceeds through the same
+feature, inspection, limit, and payload-validation path as auto-detecting
+decode.
 
 `max_width`, `max_height`, `max_pixels`, and
 `max_primary_decoded_bytes` are inclusive limits on the exact inspected

@@ -24,7 +24,8 @@ bytes.
 
 ## Why use it?
 
-- One auto-detecting, structured `Result` API across all codecs.
+- One structured `Result` API across all codecs, with auto-detecting and
+  signature-validated explicit-format still decode entry points.
 - Rust-only default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO execution.
 - `bytemuck` as the only Cargo dependency.
 - Independent per-format Cargo features.
@@ -77,8 +78,13 @@ fn opaque_rgb_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
 ```
 
 `decode` detects the source format from the complete byte slice and preserves
-that format separately from the decoded sample mode. Encoding always requires
-an explicit output format.
+that format separately from the decoded sample mode. When a caller already has
+an out-of-band format candidate, `decode_with_format` validates that the
+complete signature agrees before following the same feature and codec path;
+`decode_with_format_and_policy` additionally preserves policy precedence. A
+mismatch returns a staged `Parameter` error, while an input without a complete
+supported signature returns staged `Malformed`; partial input remains the
+`decode_prefix` contract. Encoding always requires an explicit output format.
 
 The example deliberately accepts only opaque `Rgb8` PNG pixels. RGBA, indexed,
 bilevel, and sixteen-bit PNG inputs need an explicit conversion policy in a
@@ -138,6 +144,8 @@ capabilities and setup.
 | `inspect_basic(&[u8])` | Read header facts without counting every frame/page; `frame_count_complete` reports whether the count is known |
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
+| `decode_with_format(&[u8], ImageFormat)` | Decode with a caller-selected format after validating the complete input signature |
+| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, metadata, canvas, frame, and decoded-byte limits |
 | `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
 | `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
