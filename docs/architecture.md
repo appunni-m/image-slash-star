@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`b0ab0edc823b2065c182f7cd53cd4bbf37a79d8d`; the claim-ledger baseline remains
+`d5a50cd7cc8096aadfed5000622ca8159c3ef09d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -319,6 +319,7 @@ translation cannot be bypassed.
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
+| `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Validate dimensions, exact mode/color state, pixel length, and indexed palette state while reusing owned pixel buffers; unchecked constructors remain available for staged assembly |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, analysis/mode-selection/coefficient-probability/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean first-partition-bit/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, histogram clustering, Huffman-tree/group emission, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical bitstream intervals, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block slots after each 1,024 blocks, progressive scan-event frequency items and progressive scan coefficient traversal items after each 1,024 events or coefficients, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
@@ -690,9 +691,12 @@ buffer as exact Pillow-observable transfer bytes. The manifest proves
 uncompressed, Deflate plus horizontal-predictor, and LZW plus
 horizontal-predictor output from detached big-endian source bytes.
 
-`DecodedImage::new` and `DecodedImage::with_mode` record caller-supplied
-buffers without validating them. `DecodedImage::validate`, every encoder, and
-sequence validation reject:
+`DecodedImage::new` and `DecodedImage::with_mode` record caller-supplied buffers
+without validating them. `DecodedImage::try_new` and `try_with_mode` validate
+the same state while reusing the supplied pixel vector on success;
+`try_with_palette` validates indexed palette state after attaching a palette.
+Direct field literals and the compatibility builders remain unchecked.
+`DecodedImage::validate`, every encoder, and sequence validation reject:
 
 - zero dimensions;
 - arithmetic overflow;
