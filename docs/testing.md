@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`d5a50cd7cc8096aadfed5000622ca8159c3ef09d`; the claim-ledger baseline remains
+`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -527,7 +527,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`d5a50cd7cc8096aadfed5000622ca8159c3ef09d`, the fixture manifest and managed
+`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -547,19 +547,21 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For this revision, managed Pillow parity run
-`8d3af3c2-19aa-4ed0-947b-f919b9dd0120` passed 1,445/1,445 checks in 1,129 ms.
-The feature-matrix run `ba8aa5cf-957d-42f6-8b6b-f8182f609ab6` passed all
+`5ade141b-71e1-4075-b6d0-2807e6ba56ed` passed 1,445/1,445 checks in 1,235 ms.
+The feature-matrix run `b8891003-847f-4118-b7a4-a40b3bfd068c` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-50,866 ms; its retained log ends with `capability tables OK: every native and
+7,242 ms; its retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees` and the targeted search returned no `lock-wait`
 match. These are separate from the managed LLVM coverage run
-`b2a23601-7ee7-4ad5-9551-30c27542920e`, which passed 85/85 tests in 72,985 ms
-and ingested snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`.
-That snapshot reports 51,602/52,144 lines, 7,129/7,248 branches,
-2,904/2,975 functions, and 79,949/81,147 regions; compared with the prior
-accepted snapshot `6782355b-73ab-433e-803b-4103212f03f8`, covered totals
-increased by 25 lines, 0 branches, 3 functions, and 33 regions while source
-totals grew by 25 lines, 0 branches, 3 functions, and 34 regions. The known
+`101634e8-2b9d-4446-8a20-b2e0f328b0fe`, which passed 85/85 tests in 75,468 ms
+and ingested snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`.
+That snapshot reports 51,634/52,176 lines, 7,131/7,250 branches,
+2,911/2,982 functions, and 79,982/81,180 regions; compared with the prior
+accepted snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`, covered totals
+increased by 32 lines, 2 branches, 7 functions, and 33 regions while source
+totals grew by 32 lines, 2 branches, 7 functions, and 33 regions. The changed
+`src/source.rs` reports 169/169 lines, 6/6 branches, 34/34 functions, and
+209/209 regions. The known
 LLVM JSON segment-normalization warning remains. The strict local verifier
 still reports the aggregate shortfall as 542 lines, 119 branches, 71 functions,
 and 1,198 regions; coverage is implementation evidence, not Pillow parity, and
@@ -576,6 +578,18 @@ prove an encoded-byte policy rejection before dispatch. This is a Rust API
 contract: Pillow has no caller-supplied format-hint operation, so it adds no
 parity row, no new fixture, no diagnostic-origin assignment, and no new test
 function.
+
+The current revision also closes API-012 and API-013. `EncodedImage` now has an
+independent lazy sequence cache, so repeated owned-source sequence materialization
+does not repeat codec work or collapse an animated source to its first frame.
+`EncodedImageDecodeState` and the still/sequence state accessors distinguish
+not-attempted, succeeded, and failed caches. Unlimited compatibility failures are
+retained; limited sequence-policy failures use the policy-aware root path and do
+not poison the unlimited cache. The existing source-bound fixture contract proves
+full sequence ordering, clone-visible cache state, separate still/sequence state,
+and policy-failure isolation. This is a Rust-only source/cache contract: no
+Pillow caller API changes, no parity row or fixture, no diagnostic origin, no new
+test function, and no coverage-only hook.
 
 The current revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction
