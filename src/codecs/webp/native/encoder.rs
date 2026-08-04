@@ -81,6 +81,7 @@ const VP8L_65536_BITSTREAM_CHECKPOINT_BITS: usize = 65_536;
 const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
+const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
 
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
@@ -197,6 +198,12 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
                                                                                 / VP8L_8_BITSTREAM_CHECKPOINT_BITS,
                                                                         ) {
                                                                             check_token(Some(self.token))?;
+                                                                            if previous_8_interval.is_multiple_of(
+                                                                                VP8L_1048576_BITSTREAM_CHECKPOINT_BITS
+                                                                                    / VP8L_8_BITSTREAM_CHECKPOINT_BITS,
+                                                                            ) {
+                                                                                check_token(Some(self.token))?;
+                                                                            }
                                                                         }
                                                                     }
                                                                 }
