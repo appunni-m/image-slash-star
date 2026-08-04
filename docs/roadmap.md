@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`cc765b33d2b2846b7f17171292660cc275fb431b`; the claim-ledger baseline remains
+`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `c5b5dedb-0685-4222-9eee-89dbf6c0a55c` for revision `cc765b33d2b2846b7f17171292660cc275fb431b` is 51,855/52,406 lines, 7,174/7,294 branches, 2,926/3,000 functions, and 80,297/81,511 regions. Compared with the accepted baseline snapshot `3c69fa6e-f1ff-4a91-8685-62d07133af7d`, covered totals increased by 20 lines, 8 branches, 0 functions, and 26 regions; source totals grew by 20 lines, 8 branches, 0 functions, and 28 regions. The changed WebP native encoder reports `encoder.rs` 1,539/1,548 lines, 256/256 branches, 77/77 functions, and 2,230/2,333 regions. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 551-line, 120-branch, 74-function, and 1,214-region aggregate shortfall, and no coverage-only test was added. Aggregate covered deltas versus the preceding implementation snapshot `c15b8b21-62c0-43de-a35c-e3630fcdac04` are +5 lines, +2 branches, +0 functions, and +6 regions, while source totals grew by 5 lines, 2 branches, 0 functions, and 7 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `c5b5dedb-0685-4222-9eee-89dbf6c0a55c` covers the unchanged Rust implementation revision `cc765b33d2b2846b7f17171292660cc275fb431b` carried into test-runtime revision `8ea8d3148f808a664cddfc54ff83f117a2af7b4c`: 51,855/52,406 lines, 7,174/7,294 branches, 2,926/3,000 functions, and 80,297/81,511 regions. Compared with the accepted baseline snapshot `3c69fa6e-f1ff-4a91-8685-62d07133af7d`, covered totals increased by 20 lines, 8 branches, 0 functions, and 26 regions; source totals grew by 20 lines, 8 branches, 0 functions, and 28 regions. The changed WebP native encoder reports `encoder.rs` 1,539/1,548 lines, 256/256 branches, 77/77 functions, and 2,230/2,333 regions. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 551-line, 120-branch, 74-function, and 1,214-region aggregate shortfall, and no coverage-only test was added. Aggregate covered deltas versus the preceding implementation snapshot `c15b8b21-62c0-43de-a35c-e3630fcdac04` are +5 lines, +2 branches, +0 functions, and +6 regions, while source totals grew by 5 lines, 2 branches, 0 functions, and 7 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4181,6 +4181,29 @@ segment-normalization warning and the 542-line, 119-branch, 71-function, and
 1,200-region strict-verifier shortfall. This is test-harness-only Rust
 evidence: no Pillow parity row, parity-manifest fixture, diagnostic origin,
 new test function, or coverage-only hook changed.
+
+Current test-runtime acceptance record: fanout-aligned feature-matrix workers
+
+The test-harness scheduler follow-up is implemented at
+`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`. In both cache states,
+`MATRIX_TEST_THREADS` now defaults to
+`floor(logical_cpus / MATRIX_JOBS)`, bounded to at least one and at most eight;
+the measured 12-CPU warm host therefore uses one worker for its 24 concurrent
+lanes instead of multiplying to 72 workers. `MATRIX_TEST_THREADS` remains an
+explicit override. All 991 feature-matrix checks and every native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` lane remain in scope.
+
+Managed feature-matrix run `ed61e34d-c34e-415e-8a96-f1ae61d96a08` passed all
+configured lanes in 4,334 ms, recorded `cache=warm lanes=24 test_threads=1
+build_jobs=1 debug=0 verbose=0`, ended with
+`capability tables OK: every native and wasm32-wasip1 lane agrees`, and had no
+targeted lock-wait/build-directory/package-cache matches. Two warm local
+repeats completed in 4.21–4.26 s; the preceding three-worker default took
+7.51 s in the same workspace. These are cache- and runner-sensitive execution
+observations, not a universal benchmark and not the revision-bound
+allocation/peak-memory evidence still required by QA-010 and QA-030. This is
+a scheduler-only change: no codec behavior, Pillow parity row, fixture,
+diagnostic origin, test function, or coverage hook changed.
 
 Current acceptance record: WebP VP8L 262,144-bit checkpoint
 

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`cc765b33d2b2846b7f17171292660cc275fb431b`; the claim-ledger baseline remains
+`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -529,7 +529,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`cc765b33d2b2846b7f17171292660cc275fb431b`, the fixture manifest and
+`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -548,18 +548,20 @@ count are separate evidence surfaces; worker functions do not add fixtures or
 Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
-For the current implementation revision, managed Pillow parity run
-`21f761ef-f87d-46c6-9763-7833fa6bc1e5` passed 1,445/1,445 checks with zero
-skips in 55,361 ms; the retained test result reported 0.75 s of test time.
-The current feature-matrix run
-`a06a2d59-cde5-42c0-92ef-e4bd492ecb6c` passed all configured native,
-`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 57,512 ms; its
-retained log ends with `capability tables OK: every native and
-wasm32-wasip1 lane agrees`, and targeted searches returned no
+For the current implementation and test/runtime revision, managed Pillow
+parity run `ab734a3c-6935-446c-a8c7-22c4d1102d26` passed 1,445/1,445 checks
+with zero skips in 801 ms; its retained test result reported 0.70 s of test
+time. The current feature-matrix run
+`ed61e34d-c34e-415e-8a96-f1ae61d96a08` passed all configured native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 4,334 ms; its retained
+log records `cache=warm lanes=24 test_threads=1 build_jobs=1 debug=0
+verbose=0`, ends with `capability tables OK: every native and wasm32-wasip1
+lane agrees`, and targeted searches returned no
 `lock-wait`/build-directory/package-cache match. These are separate from the
 managed LLVM coverage run `3a3b5f99-e82d-4661-8bbf-9b9f25eb048e`, which passed
 85/85 tests in 85,899 ms and ingested snapshot
-`c5b5dedb-0685-4222-9eee-89dbf6c0a55c`.
+`c5b5dedb-0685-4222-9eee-89dbf6c0a55c` from the preceding unchanged Rust
+implementation revision.
 That snapshot reports 51,855/52,406 lines, 7,174/7,294 branches,
 2,926/3,000 functions, and 80,297/81,511 regions. Compared with the accepted
 snapshot `3c69fa6e-f1ff-4a91-8685-62d07133af7d`, covered totals increased by
@@ -574,6 +576,25 @@ snapshot `c15b8b21-62c0-43de-a35c-e3630fcdac04` are +5 covered lines,
 aggregate shortfall is 551 lines, 120 branches, 74 functions, and 1,214
 regions; coverage is implementation evidence, not Pillow parity, and no
 coverage-only test was added.
+
+Current test-runtime acceptance record: fanout-aligned feature-matrix workers
+
+The test-harness scheduler follow-up is implemented at
+`8ea8d3148f808a664cddfc54ff83f117a2af7b4c`. In both cache states,
+`MATRIX_TEST_THREADS` now defaults to
+`floor(logical_cpus / MATRIX_JOBS)`, bounded to at least one and at most eight;
+the measured 12-CPU warm host therefore uses one worker for its 24 concurrent
+lanes instead of multiplying to 72 workers. `MATRIX_TEST_THREADS` remains an
+explicit override. All 991 feature-matrix checks and every native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` lane remain in scope.
+
+Two warm local repeats with the derived one-worker setting completed in
+4.21–4.26 s; the preceding three-worker default took 7.51 s in the same
+workspace. The managed run above passed in 4,334 ms. These are cache- and
+runner-sensitive execution observations, not a universal benchmark and not
+the revision-bound allocation/peak-memory evidence still required by QA-010
+and QA-030. This is a scheduler-only change: no codec behavior, Pillow parity
+row, fixture, diagnostic origin, test function, or coverage hook changed.
 
 The lossless WebP VP8L work-control slice is implemented at
 `cc765b33d2b2846b7f17171292660cc275fb431b`. The existing
@@ -650,7 +671,7 @@ Pillow has no caller work budget, typed work-unit result, or caller-owned sink.
 No parity row, fixture, diagnostic origin, new test function, or coverage-only
 hook was added.
 
-The current revision also closes API-003. `decode_with_format` and
+The preceding Rust implementation revision also closes API-003. `decode_with_format` and
 `decode_with_format_and_policy` validate the complete signature against the
 caller-selected `ImageFormat`, preserve the encoded-input limit before
 selection, and then use the ordinary feature, inspection, policy, and codec
@@ -662,7 +683,7 @@ contract: Pillow has no caller-supplied format-hint operation, so it adds no
 parity row, no new fixture, no diagnostic-origin assignment, and no new test
 function.
 
-The current revision also closes API-012 and API-013. `EncodedImage` now has an
+The preceding Rust implementation revision also closes API-012 and API-013. `EncodedImage` now has an
 independent lazy sequence cache, so repeated owned-source sequence materialization
 does not repeat codec work or collapse an animated source to its first frame.
 `EncodedImageDecodeState` and the still/sequence state accessors distinguish
@@ -675,7 +696,7 @@ source/cache contract: no
 Pillow caller API changes, no parity row or fixture, no diagnostic origin, no new
 test function, and no coverage-only hook.
 
-The current revision also advances API-045. Owned and borrowed source-bound
+The preceding Rust implementation revision also advances API-045. Owned and borrowed source-bound
 still and sequence decode now reuse the format validated during construction,
 so they skip a second signature-detection scan while preserving the root
 auto-detecting APIs, policy checks, and codec parsing behavior. Verification and
@@ -695,7 +716,7 @@ Pillow-parity row or synthetic coverage hook is appropriate. Optional eviction,
 cached verification, and revision-bound allocator/peak measurements remain
 open under API-014 and QA-030.
 
-The current revision also closes API-006. `DecodedImage::try_new`,
+The preceding Rust implementation revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction
 while retaining `new`, `with_mode`, and `with_palette` as explicitly unchecked
 compatibility builders. The existing feature-gate contract proves valid RGB and
