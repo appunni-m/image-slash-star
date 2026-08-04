@@ -36,6 +36,7 @@ const HASH_MULTIPLIER_LO: u32 = 0x5bd1_e996;
 const COLOR_HASH_MUL: u32 = 0x1e35_a7bd;
 const COST_CHECKPOINT_SYMBOLS: usize = 64;
 const COST_CHECKPOINT_TOKENS: usize = 1_024;
+const CACHE_CHECKPOINT_PIXELS: usize = 256;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -428,22 +429,11 @@ fn color_hash(pixel: u32, bits: u8) -> usize {
     (pixel.wrapping_mul(COLOR_HASH_MUL) >> (32 - bits)) as usize
 }
 
-fn with_cache(
-    pixels: &[u32],
-    refs: &[Token],
-    bits: u8,
-    token: CheckpointToken<'_>,
-) -> CheckpointResult<Vec<Token>> {
-    if bits == 0 {
-        return Ok(refs.to_vec());
-    }
+fn with_cache_without_checkpoint(pixels: &[u32], refs: &[Token], bits: u8) -> Vec<Token> {
     let mut cache = vec![0_u32; 1 << bits];
     let mut output = Vec::with_capacity(refs.len());
     let mut position: usize = 0;
     for &reference in refs {
-        if position.is_multiple_of(1024) {
-            checkpoint(token)?;
-        }
         match reference {
             Token::Literal(pixel) => {
                 let key = color_hash(pixel, bits);
@@ -460,6 +450,53 @@ fn with_cache(
                 for &pixel in &pixels[position..position + length] {
                     let key = color_hash(pixel, bits);
                     cache[key] = pixel;
+                }
+                position += length;
+            }
+            Token::Cache(_) => unreachable!(),
+        }
+    }
+    output
+}
+
+fn with_cache(
+    pixels: &[u32],
+    refs: &[Token],
+    bits: u8,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<Token>> {
+    if bits == 0 {
+        return Ok(refs.to_vec());
+    }
+    let Some(token) = token else {
+        return Ok(with_cache_without_checkpoint(pixels, refs, bits));
+    };
+    let mut cache = vec![0_u32; 1 << bits];
+    let mut output = Vec::with_capacity(refs.len());
+    let mut position: usize = 0;
+    for &reference in refs {
+        if position.is_multiple_of(1024) {
+            checkpoint(Some(token))?;
+        }
+        match reference {
+            Token::Literal(pixel) => {
+                let key = color_hash(pixel, bits);
+                if cache[key] == pixel {
+                    output.push(Token::Cache(key));
+                } else {
+                    output.push(reference);
+                    cache[key] = pixel;
+                }
+                position += 1;
+            }
+            Token::Copy { length, .. } => {
+                output.push(reference);
+                for (index, &pixel) in pixels[position..position + length].iter().enumerate() {
+                    let key = color_hash(pixel, bits);
+                    cache[key] = pixel;
+                    if (index + 1).is_multiple_of(CACHE_CHECKPOINT_PIXELS) {
+                        checkpoint(Some(token))?;
+                    }
                 }
                 position += length;
             }
