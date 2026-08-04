@@ -963,7 +963,7 @@ pub fn encode_with_policy(
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 /// VP8L predictor/cross-color/entropy/transform, bounded backward-reference,
-/// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, and 32,768-bit logical bitstream intervals, 1,024-byte
+/// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, and 65,536-bit logical bitstream intervals, 1,024-byte
 /// bitstream-output,
 /// and token-stream stages, codec-result, and
 /// metadata-assembly boundaries; native AVIF still encoding polls preparation,

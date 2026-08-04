@@ -9949,6 +9949,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(bitstream_32768_sink, vec![0xA2]);
 
+        // The deterministic probe also reaches the next VP8L logical
+        // bitstream interval. This remains Rust-only work-control evidence:
+        // Pillow has no caller budget or equivalent result.
+        let bitstream_65536_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_288);
+        let bitstream_65536_error = match image_slash_star::encode_with_policy(
+            &bitstream_16384_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &bitstream_65536_policy,
+        ) {
+            Ok(_) => return Err("VP8L 65536-bit bitstream budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            bitstream_65536_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 9_288,
+                observed: 9_289,
+            }
+        ));
+        let mut bitstream_65536_sink = vec![0xA1];
+        let bitstream_65536_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &bitstream_16384_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(9_287),
+            &mut bitstream_65536_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "VP8L 65536-bit bitstream sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            bitstream_65536_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 9_287,
+                observed: 9_288,
+            }
+        ));
+        assert_eq!(bitstream_65536_sink, vec![0xA1]);
+
         // A one-unit-lower budget rejects at the first 1,024-byte emitted
         // output interval. This is a separate Rust-only work-control
         // boundary; it is not Pillow byte/pixel parity evidence.
