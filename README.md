@@ -214,8 +214,8 @@ conversion after each 1,024 pixels, color, sampling, quantization, entropy,
 filter segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each
 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection
-subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical and 16,384-boolean first-partition and
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and 8,192-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
+subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, and 32,768-bit logical and 16,384-boolean first-partition and
+8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, and 32,768-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals and 1,024-byte output intervals, and each
 writer's structural segments.
 GIF, TIFF, WebP, and native AVIF sequence paths poll at their
