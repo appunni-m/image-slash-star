@@ -10092,6 +10092,56 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             } if observed > 8_192
         ));
 
+        // Histogram population merges now charge after each 64 symbols once
+        // the earlier entropy-cost checkpoints have completed. This boundary
+        // is Rust-only work-control evidence: Pillow has no caller token,
+        // work-budget result, or caller-owned sink.
+        let histogram_merge_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(8_215);
+        let histogram_merge_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_merge_policy,
+        ) {
+            Ok(_) => return Err("VP8L histogram merge budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_merge_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8_215,
+                observed: 8_216,
+            }
+        ));
+        let mut histogram_merge_sink = vec![0xAF];
+        let histogram_merge_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_merge_policy,
+            &mut histogram_merge_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L histogram merge sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_merge_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8_215,
+                observed: 8_216,
+            }
+        ));
+        assert_eq!(histogram_merge_sink, vec![0xAF]);
+
         // This patterned probe reaches the deeper VP8L writer intervals only
         // after the earlier lossless stages. The exact rejection at the
         // selected bitstream and output intervals below prove that real
