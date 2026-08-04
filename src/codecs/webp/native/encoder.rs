@@ -64,6 +64,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 }
 
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
 const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
@@ -1196,6 +1197,25 @@ fn subtract_green(pixels: &mut [u32]) {
     }
 }
 
+fn subtract_green_with_checkpoint(
+    pixels: &mut [u32],
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    let mut pixels_until_checkpoint = VP8L_TRANSFORM_CHECKPOINT_PIXELS;
+    for pixel in pixels {
+        let green = (*pixel >> 8) & 0xff;
+        let red = ((*pixel >> 16) & 0xff).wrapping_sub(green) & 0xff;
+        let blue = (*pixel & 0xff).wrapping_sub(green) & 0xff;
+        *pixel = (*pixel & 0xff00_ff00) | (red << 16) | blue;
+        pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+        if pixels_until_checkpoint == 0 {
+            check_token(token)?;
+            pixels_until_checkpoint = VP8L_TRANSFORM_CHECKPOINT_PIXELS;
+        }
+    }
+    Ok(())
+}
+
 // The palette is constructed from the same pixel set being packed.
 #[allow(clippy::unwrap_used)]
 fn apply_palette<C: BitWriterCheckpoint>(
@@ -1312,7 +1332,11 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
             if use_subtract_green {
                 w.write_bits(1, 1)?;
                 w.write_bits(2, 2)?;
-                subtract_green(pixels);
+                if token.is_some() {
+                    subtract_green_with_checkpoint(pixels, token)?;
+                } else {
+                    subtract_green(pixels);
+                }
                 check_token(token)?;
             }
 
