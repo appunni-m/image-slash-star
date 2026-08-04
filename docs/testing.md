@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`; the claim-ledger baseline remains
+`50375369951ba73c165e87481fa70e068fbfcc07`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -527,7 +527,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation revision
-`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`, the fixture manifest and managed
+`50375369951ba73c165e87481fa70e068fbfcc07`, the fixture manifest and managed
 commands report:
 
 | Metric | Count |
@@ -547,25 +547,26 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For this revision, managed Pillow parity run
-`5ade141b-71e1-4075-b6d0-2807e6ba56ed` passed 1,445/1,445 checks in 1,235 ms.
-The feature-matrix run `b8891003-847f-4118-b7a4-a40b3bfd068c` passed all
+`01b3af4b-b1b6-41b3-8261-1e665d992417` passed 1,445/1,445 checks in 1,039 ms.
+The feature-matrix run `62e1d190-af03-426c-b320-2612fea93f2a` passed all
 configured native, `wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in
-7,242 ms; its retained log ends with `capability tables OK: every native and
+19,406 ms; its retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees` and the targeted search returned no `lock-wait`
 match. These are separate from the managed LLVM coverage run
-`101634e8-2b9d-4446-8a20-b2e0f328b0fe`, which passed 85/85 tests in 75,468 ms
-and ingested snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`.
-That snapshot reports 51,634/52,176 lines, 7,131/7,250 branches,
-2,911/2,982 functions, and 79,982/81,180 regions; compared with the prior
-accepted snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`, covered totals
-increased by 32 lines, 2 branches, 7 functions, and 33 regions while source
-totals grew by 32 lines, 2 branches, 7 functions, and 33 regions. The changed
-`src/source.rs` reports 169/169 lines, 6/6 branches, 34/34 functions, and
-209/209 regions. The known
-LLVM JSON segment-normalization warning remains. The strict local verifier
-still reports the aggregate shortfall as 542 lines, 119 branches, 71 functions,
-and 1,198 regions; coverage is implementation evidence, not Pillow parity, and
-no coverage-only test was added.
+`9ebd95dd-c64b-4907-ad3b-06903fe4783f`, which passed 85/85 tests in 59,553 ms
+and ingested snapshot `b7b9d763-98f4-4bb3-b200-7cedd75b02eb`.
+That snapshot reports 51,654/52,196 lines, 7,131/7,250 branches,
+2,912/2,983 functions, and 80,017/81,217 regions; compared with the prior
+accepted snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`, covered totals
+increased by 20 lines, 0 branches, 1 function, and 35 regions while source
+totals grew by 20 lines, 0 branches, 1 function, and 37 regions. The changed
+`src/source.rs` reports 182/182 lines, 6/6 branches, 34/34 functions, and
+238/240 regions; `src/lib.rs` reports 761/789 lines, 92/96 branches,
+76/78 functions, and 1,143/1,217 regions. The known LLVM JSON
+segment-normalization warning remains. The strict local verifier still reports
+the aggregate shortfall as 542 lines, 119 branches, 71 functions, and 1,200
+regions; coverage is implementation evidence, not Pillow parity, and no
+coverage-only test was added.
 
 The current revision also closes API-003. `decode_with_format` and
 `decode_with_format_and_policy` validate the complete signature against the
@@ -584,12 +585,23 @@ independent lazy sequence cache, so repeated owned-source sequence materializati
 does not repeat codec work or collapse an animated source to its first frame.
 `EncodedImageDecodeState` and the still/sequence state accessors distinguish
 not-attempted, succeeded, and failed caches. Unlimited compatibility failures are
-retained; limited sequence-policy failures use the policy-aware root path and do
-not poison the unlimited cache. The existing source-bound fixture contract proves
-full sequence ordering, clone-visible cache state, separate still/sequence state,
-and policy-failure isolation. This is a Rust-only source/cache contract: no
+retained; limited sequence-policy failures use the policy-aware selected-format
+path and do not poison the unlimited cache. The existing source-bound fixture
+contract proves full sequence ordering, clone-visible cache state, separate
+still/sequence state, and policy-failure isolation. This is a Rust-only
+source/cache contract: no
 Pillow caller API changes, no parity row or fixture, no diagnostic origin, no new
 test function, and no coverage-only hook.
+
+The current revision also advances API-045. Owned and borrowed source-bound
+still and sequence decode now reuse the format validated during construction,
+so they skip a second signature-detection scan while preserving the root
+auto-detecting APIs, policy checks, and codec parsing behavior. Verification and
+codec-specific container parsing remain independent; retaining a parsed
+header/index is still a future optimization that requires a proof for every
+codec. This is a Rust-only dispatch optimization: no Pillow caller API changes,
+parity row or fixture, diagnostic origin, new test function, or coverage-only
+hook.
 
 The current revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction

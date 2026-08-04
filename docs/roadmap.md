@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-04 against current implementation revision
-`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`; the claim-ledger baseline remains
+`50375369951ba73c165e87481fa70e068fbfcc07`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `061cc413-e997-4cc9-9ce7-9c9fafe9d227` for revision `0fe6ea6e2dab8da0dede699ccbc595feb2d93c52` is 51,634/52,176 lines, 7,131/7,250 branches, 2,911/2,982 functions, and 79,982/81,180 regions. Compared with the prior accepted snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`, covered totals increased by 32 lines, 2 branches, 7 functions, and 33 regions; source totals grew by 32 lines, 2 branches, 7 functions, and 33 regions. The changed `src/source.rs` reports 169/169 lines, 6/6 branches, 34/34 functions, and 209/209 regions. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 542-line, 119-branch, 71-function, and 1,198-region aggregate shortfall, and no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `b7b9d763-98f4-4bb3-b200-7cedd75b02eb` for revision `50375369951ba73c165e87481fa70e068fbfcc07` is 51,654/52,196 lines, 7,131/7,250 branches, 2,912/2,983 functions, and 80,017/81,217 regions. Compared with the prior accepted snapshot `061cc413-e997-4cc9-9ce7-9c9fafe9d227`, covered totals increased by 20 lines, 0 branches, 1 function, and 35 regions; source totals grew by 20 lines, 0 branches, 1 function, and 37 regions. The changed `src/source.rs` reports 182/182 lines, 6/6 branches, 34/34 functions, and 238/240 regions; `src/lib.rs` reports 761/789 lines, 92/96 branches, 76/78 functions, and 1,143/1,217 regions. The known LLVM JSON segment-normalization warning remains; the strict local verifier reports a 542-line, 119-branch, 71-function, and 1,200-region aggregate shortfall, and no coverage-only test was added. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -242,7 +242,7 @@ public reusable conversion layer would violate project scope.
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
 | API-043 | Partial-input contract | The non-terminal `NeedMoreData { minimum }` state now exists for detection, basic inspection, still decode, and sequence decode, with exact minimum-byte or progress semantics; terminal results must never be retried. | Keep the status stable for any future streaming surface and document per-operation progress. |
 | API-044 | Partial capability | Current resource limits are per-call eligibility checks before cache access, are never cached, and cannot be bypassed by cached success. Future output mode, strictness, metadata, or color/alpha policies would still make the single permanent still-decode cache key ambiguous. | Keep resource eligibility outside the cache key. Before API-033 or another result-shaping policy lands, choose separately keyed materialization or explicitly disallow that policy on cached sources. |
-| API-045 | Repeated parsing | `EncodedImage::new` detects and inspects once, but `decode()` calls the top-level decoder, which detects and parses the container again; `verify()` independently reparses it on every call. | Measure the duplicate work, then retain an immutable parsed header/index only when every codec can prove that reuse cannot make later validation weaker. |
+| API-045 | Repeated parsing | `EncodedImage::new` detects and inspects once; owned and borrowed source-bound still/sequence decode now reuse that validated format instead of repeating signature detection, but each codec still parses the container for materialization and `verify()` independently reparses it on every call. | Measure the remaining duplicate codec work, then retain an immutable parsed header/index only when every codec can prove that reuse cannot make later validation weaker. |
 | API-046 | Output-layout preflight | Callers can preflight exact row bytes, packed-row status, total allocation, and alignment through `TransferLayout` (API-025), but per-plane sizes, byte order, and future codec-native layouts are still absent. `ColorType::bits_per_pixel` is insufficient for source-endian TIFF numeric bytes and future planar data. | Add a checked transfer-layout result for each new layout as it lands. Keep it about byte transport, not image processing. |
 | API-047 | Information completeness | `ImageInfo.frame_count: Option<u32>` collapses not-applicable, not-yet-scanned, scan-limited, malformed-later, and genuinely unknown states. A partial demux cannot report “N complete frames seen, another is partial.” | Replace the optional count with a small completeness/result model before incremental inspect or frame enumeration becomes public. |
 | API-048 | Source subtype loss | `Decoded<T>` retains only the eight-format enum. It cannot identify APNG versus PNG, classic TIFF versus BigTIFF, ICO versus CUR without inspecting a selected hotspot, VP8/VP8L/VP8X, AVIF item versus sequence source, or the source precision/profile class. | Add codec-specific inspected descriptors behind the format feature. Keep `ImageFormat` as the stable dispatch identity. |
@@ -4106,12 +4106,13 @@ snapshot `439f2d27-2bda-4986-8205-ce6598946e8d`. This is Rust-only
 defensive-model evidence: no Pillow caller API changes, parity row or fixture,
 diagnostic origin, new test function, or coverage-only hook.
 
-Current acceptance record: API-012/API-013 lazy sequence cache and decode state
+Historical acceptance record: API-012/API-013 lazy sequence cache and decode state
 
-API-012 and API-013 are implemented at
-`affb3df61e26df56bb6873fa916e5565292261f2`. `EncodedImage` now retains an
+The cache implementation is in
+`affb3df61e26df56bb6873fa916e5565292261f2`; the final contract/evidence
+revision is `0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`. `EncodedImage` now retains an
 independent lazy `DecodedSequence` cache, while `decode_sequence_with_policy`
-uses the policy-aware root path for limited policies so a resource-limit failure
+uses the policy-aware path for limited policies so a resource-limit failure
 cannot poison the unlimited compatibility cache. `EncodedImageDecodeState` plus
 the still/sequence state accessors distinguish `NotAttempted`, `Succeeded`, and
 `Failed`; the existing success-only predicates remain available. The source
@@ -4121,14 +4122,38 @@ isolation without collapsing to the first frame.
 
 The focused source contract and full all-feature suite passed, with 82/82 tests
 and strict all-target Clippy clean. Managed Pillow parity run
-`3cfb8364-afdc-4e76-bce2-c719951635cf` passed 1,445/1,445 checks; feature-matrix
-run `8ea7bd53-fcfa-40bf-9902-fa1153277b4c` passed all configured native and WASM
+`5ade141b-71e1-4075-b6d0-2807e6ba56ed` passed 1,445/1,445 checks; feature-matrix
+run `b8891003-847f-4118-b7a4-a40b3bfd068c` passed all configured native and WASM
 lanes; coverage run `101634e8-2b9d-4446-8a20-b2e0f328b0fe` passed 85/85 tests
 in 75,468 ms and ingested snapshot
 `061cc413-e997-4cc9-9ce7-9c9fafe9d227`. The revision-bound testing section
 records the exact coverage deltas. This is Rust-only source/cache evidence: no Pillow caller API
 changes, parity row or fixture, diagnostic origin, new test function, or
 coverage-only hook.
+
+Current acceptance record: API-045 source-bound selected-format dispatch
+
+The runtime slice is implemented at
+`50375369951ba73c165e87481fa70e068fbfcc07`. Owned and borrowed source-bound
+still and sequence decode now route through the `ImageFormat` retained by
+construction after repeating the caller policy checks, so a source decode does
+not run signature detection a second time. The root auto-detecting APIs are
+unchanged. Codec-specific materialization still parses its container as needed,
+and `verify()` still reparses independently; immutable parsed-header/index
+retention remains open under API-045 until every codec proves that reuse cannot
+weaken later validation.
+
+The focused source contract and full all-feature suite passed, with 82/82 tests
+and strict all-target Clippy clean. Managed Pillow parity run
+`01b3af4b-b1b6-41b3-8261-1e665d992417` passed 1,445/1,445 checks in 1,039 ms;
+feature-matrix run `62e1d190-af03-426c-b320-2612fea93f2a` passed all configured
+native and WASM lanes in 19,406 ms with the capability-agreement marker and no
+targeted `lock-wait` match; coverage run
+`9ebd95dd-c64b-4907-ad3b-06903fe4783f` passed 85/85 tests in 59,553 ms and
+ingested snapshot `b7b9d763-98f4-4bb3-b200-7cedd75b02eb`. The revision-bound
+testing section records the exact aggregate and changed-file metrics. This is
+Rust-only runtime evidence: no Pillow caller API changes, parity row or
+fixture, diagnostic origin, new test function, or coverage-only hook.
 
 Historical acceptance record: WebP 8,192-bit checkpoints and shared interval traversal
 

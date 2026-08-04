@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-04 against the committed tree based on
-`0fe6ea6e2dab8da0dede699ccbc595feb2d93c52`; the claim-ledger baseline remains
+`50375369951ba73c165e87481fa70e068fbfcc07`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -331,8 +331,8 @@ translation cannot be bypassed.
 | `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Token-aware sink encoding; structural writers can stop after an already-written prefix when cancellation fires |
 | `ImageFormat::capabilities()` | Describe operation availability for one format in the current build |
 | `all_capabilities()` | Return the same typed record for every public format in stable order |
-| `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, and defer decoding |
-| `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware uncached path |
+| `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, defer decoding, and reuse the retained format for source-bound dispatch |
+| `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware selected-format uncached path |
 | `EncodedImage::decode_state`, `sequence_decode_state` | Report separate not-attempted, succeeded, and failed lazy-cache states for still and sequence materialization |
 | `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
 | `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
@@ -790,7 +790,11 @@ metadata. This is a Rust capability contract, not a Pillow-parity field.
 ## Immutable source lifecycle
 
 `EncodedImage::new` converts input into an `Arc<[u8]>`, detects the format, and
-inspects the header. It does not decode pixels.
+inspects the header. It does not decode pixels. The owned and borrowed
+source-bound still and sequence methods reuse that validated format for
+dispatch, avoiding a second signature-detection scan; codec parsing and
+verification remain independent until a codec-specific parsed representation
+can be proved safe to retain.
 
 The first call to `decode()` initializes a shared still `OnceLock`, and the
 first call to `decode_sequence()` initializes an independent sequence
@@ -812,11 +816,10 @@ immediately afterward. `decode_with_policy` checks encoded bytes and retained
 `ImageInfo` before consulting the `OnceLock`: a policy failure is never cached,
 a later sufficient policy can initialize the ordinary cache, and an earlier
 cached success cannot bypass a later stricter policy. The policy is per
-cached success cannot bypass a later stricter policy. The policy is per
 operation rather than permanently attached to the source. The sequence policy
-variant follows the same resource-limit semantics through the root
-`decode_sequence_with_policy` path; it does not poison the unlimited sequence
-cache with a policy-dependent failure.
+variant follows the same resource-limit semantics through the selected-format
+dispatch path; it does not poison the unlimited sequence cache with a
+policy-dependent failure.
 
 `ImageFormat::verification_scope()` and
 `EncodedImage::verification_scope()` distinguish `Structure` from
