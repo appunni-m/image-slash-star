@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-04 against current implementation revision
-`3f551029fb433c7ae5473f5e31ae135b23f67d31`; the claim-ledger baseline remains
+`a2977127f25fc95d7b67e8e231bb2127d629219d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -529,7 +529,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For the current implementation and test/runtime evidence revision
-`3f551029fb433c7ae5473f5e31ae135b23f67d31`, the fixture manifest and
+`a2977127f25fc95d7b67e8e231bb2127d629219d`, the fixture manifest and
 managed commands report:
 
 | Metric | Count |
@@ -549,34 +549,34 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation revision, managed Pillow parity run
-`c6b53af9-5387-4dad-8d97-608203c71d12` passed 1,445/1,445 checks with zero
-skips; the test result reported 0.75 s of test time within the 47,795 ms
-managed run. The current feature-matrix run
-`2d55f6e1-d323-4bd4-ac81-558cc9193739` passed all configured native,
-`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 52,638 ms; its
+`1705886c-d05a-4d08-9273-c8c480e1af6c` passed 1,445/1,445 checks with zero
+skips in 57,669 ms; the retained test result reported 0.87 s of test time.
+The current feature-matrix run
+`35d59b2e-dc62-434a-beaa-b39e8c85a397` passed all configured native,
+`wasm32-unknown-unknown`, and `wasm32-wasip1` lanes in 60,493 ms; its
 retained log ends with `capability tables OK: every native and
 wasm32-wasip1 lane agrees`, and targeted searches returned no
 `lock-wait`/build-directory/package-cache match. These are separate from the
-managed LLVM coverage run `435b4e0f-9a1b-48b1-88ee-4a73b2ac6a03`, which passed
-85/85 tests in 83,598 ms and ingested snapshot
-`183761da-aa0e-4a88-bdf8-e3bfbbb5c9c0`.
-That snapshot reports 51,839/52,396 lines, 7,167/7,290 branches,
-2,926/3,000 functions, and 80,276/81,490 regions. Compared with the accepted
+managed LLVM coverage run `b221fd17-9b75-4006-be6d-4c54905085dc`, which passed
+85/85 tests in 82,055 ms and ingested snapshot
+`c15b8b21-62c0-43de-a35c-e3630fcdac04`.
+That snapshot reports 51,850/52,401 lines, 7,172/7,292 branches,
+2,926/3,000 functions, and 80,291/81,504 regions. Compared with the accepted
 snapshot `3c69fa6e-f1ff-4a91-8685-62d07133af7d`, covered totals increased by
-4 lines, 1 branch, 0 functions, and 5 regions while source totals grew by
-10 lines, 4 branches, 0 functions, and 14 regions. The changed WebP native
-encoder reports 1,523/1,538 lines, 249/252 branches, 77/77 functions, and
-2,209/2,319 regions. The known LLVM JSON segment-normalization warning
+15 lines, 6 branches, 0 functions, and 20 regions while source totals grew by
+15 lines, 6 branches, 0 functions, and 21 regions. The changed WebP native
+encoder reports 1,534/1,543 lines, 254/254 branches, 77/77 functions, and
+2,224/2,326 regions. The known LLVM JSON segment-normalization warning
 remains. Aggregate coverage deltas versus the preceding implementation
-snapshot `ac2630f1-8876-4f2d-b3f1-323d9565c1aa` are zero covered lines,
-branches, functions, and regions, with source totals increasing by 5 lines,
-2 branches, 0 functions, and 7 regions. The strict local verifier's aggregate
-shortfall is 557 lines, 123 branches, 74 functions, and 1,221 regions;
-coverage is implementation evidence, not Pillow parity, and no coverage-only
-test was added.
+snapshot `183761da-aa0e-4a88-bdf8-e3bfbbb5c9c0` are +11 covered lines,
++5 branches, +0 functions, and +15 regions, with source totals increasing by
+5 lines, 2 branches, 0 functions, and 7 regions. The strict local verifier's
+aggregate shortfall is 551 lines, 120 branches, 74 functions, and 1,213
+regions; coverage is implementation evidence, not Pillow parity, and no
+coverage-only test was added.
 
 The lossless WebP VP8L work-control slice is implemented at
-`3f551029fb433c7ae5473f5e31ae135b23f67d31`. The existing
+`a2977127f25fc95d7b67e8e231bb2127d629219d`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` now extends the
 deterministic high-entropy RGB probes through the 131,072-logical-coded-bit
 checkpoint. The 128×128 probe proves exact 32,768-bit and 65,536-bit
@@ -634,7 +634,7 @@ parity row, parity-manifest fixture, diagnostic origin, new test function, or
 coverage-only hook; its current coverage delta is recorded above and does not
 turn the Rust-only work-control contract into Pillow parity.
 
-The historical WebP VP8L work-control slice before the current 65,536-bit
+The historical WebP VP8L work-control slice before the current 131,072-bit
 extension is implemented at
 `54de3e3f8ded6c889b59416727285297016a891e`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
