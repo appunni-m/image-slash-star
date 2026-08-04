@@ -78,6 +78,7 @@ const VP8L_4096_BITSTREAM_CHECKPOINT_BITS: usize = 4_096;
 const VP8L_8192_BITSTREAM_CHECKPOINT_BITS: usize = 8_192;
 const VP8L_16384_BITSTREAM_CHECKPOINT_BITS: usize = 16_384;
 const VP8L_32768_BITSTREAM_CHECKPOINT_BITS: usize = 32_768;
+const VP8L_HUFFMAN_TREE_CHECKPOINT_NODES: usize = 64;
 const VP8L_65536_BITSTREAM_CHECKPOINT_BITS: usize = 65_536;
 const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
@@ -356,10 +357,24 @@ fn build_huffman_tree(
             let left = nodes.pop().unwrap();
             let right = nodes.pop().unwrap();
             let count = left.count + right.count;
-            let position = nodes
-                .iter()
-                .position(|node| node.count <= count)
-                .unwrap_or(nodes.len());
+            let position = if token.is_some() {
+                let mut position = nodes.len();
+                for (index, node) in nodes.iter().enumerate() {
+                    if index.is_multiple_of(VP8L_HUFFMAN_TREE_CHECKPOINT_NODES) {
+                        check_token(token)?;
+                    }
+                    if node.count <= count {
+                        position = index;
+                        break;
+                    }
+                }
+                position
+            } else {
+                nodes
+                    .iter()
+                    .position(|node| node.count <= count)
+                    .unwrap_or(nodes.len())
+            };
             nodes.insert(
                 position,
                 WeightedNode {
