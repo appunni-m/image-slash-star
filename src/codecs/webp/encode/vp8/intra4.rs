@@ -2,7 +2,9 @@
 
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
-    dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
+    dct::{
+        vp8_fdct_4x4, vp8_fdct_4x4_with_control, vp8_idct_add_4x4, vp8_idct_add_4x4_with_control,
+    },
     quant::{
         QuantMatrix, SegmentMatrices, quantize_block, quantize_block_with_control,
         trellis_quantize_block,
@@ -183,6 +185,12 @@ pub(super) struct Intra4Result {
 
 trait SelectionCheckpointControl {
     fn after_candidate_stage(&mut self) -> CodecResult<()>;
+    fn forward_transform(&mut self, block: &[i16; 16]) -> CodecResult<[i16; 16]>;
+    fn inverse_transform(
+        &mut self,
+        prediction: &[u8; 16],
+        coefficients: &[i16; 16],
+    ) -> CodecResult<[u8; 16]>;
     fn quantize_block(
         &mut self,
         coefficients: &mut [i16; 16],
@@ -199,6 +207,20 @@ impl SelectionCheckpointControl for NoopSelectionCheckpoint {
     #[inline(always)]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         Ok(())
+    }
+
+    #[inline(always)]
+    fn forward_transform(&mut self, block: &[i16; 16]) -> CodecResult<[i16; 16]> {
+        Ok(vp8_fdct_4x4(block))
+    }
+
+    #[inline(always)]
+    fn inverse_transform(
+        &mut self,
+        prediction: &[u8; 16],
+        coefficients: &[i16; 16],
+    ) -> CodecResult<[u8; 16]> {
+        Ok(vp8_idct_add_4x4(prediction, coefficients))
     }
 
     #[inline(always)]
@@ -230,6 +252,20 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
     #[inline]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn forward_transform(&mut self, block: &[i16; 16]) -> CodecResult<[i16; 16]> {
+        vp8_fdct_4x4_with_control(block, || self.after_candidate_stage())
+    }
+
+    #[inline]
+    fn inverse_transform(
+        &mut self,
+        prediction: &[u8; 16],
+        coefficients: &[i16; 16],
+    ) -> CodecResult<[u8; 16]> {
+        vp8_idct_add_4x4_with_control(prediction, coefficients, || self.after_candidate_stage())
     }
 
     #[inline]
@@ -490,8 +526,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     let residual = std::array::from_fn(|index| {
                         i16::from(block_source[index]).wrapping_sub(i16::from(prediction[index]))
                     });
-                    let mut coefficients = vp8_fdct_4x4(&residual);
-                    checkpoint.after_candidate_stage()?;
+                    let mut coefficients = checkpoint.forward_transform(&residual)?;
                     let mut levels = [0; 16];
                     let nonzero = trellis_quantize_block(
                         &mut coefficients,
@@ -503,20 +538,17 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                         coefficient_probabilities,
                     );
                     checkpoint.after_candidate_stage()?;
-                    let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
-                    checkpoint.after_candidate_stage()?;
+                    let reconstructed = checkpoint.inverse_transform(&prediction, &coefficients)?;
                     (nonzero, levels, reconstructed)
                 } else {
                     let residual = std::array::from_fn(|index| {
                         i16::from(block_source[index]).wrapping_sub(i16::from(prediction[index]))
                     });
-                    let mut coefficients = vp8_fdct_4x4(&residual);
-                    checkpoint.after_candidate_stage()?;
+                    let mut coefficients = checkpoint.forward_transform(&residual)?;
                     let mut levels = [0; 16];
                     let nonzero =
                         checkpoint.quantize_block(&mut coefficients, &mut levels, &matrices.y1)?;
-                    let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
-                    checkpoint.after_candidate_stage()?;
+                    let reconstructed = checkpoint.inverse_transform(&prediction, &coefficients)?;
                     (nonzero, levels, reconstructed)
                 };
                 let distortion = squared_error_4x4(&block_source, &reconstructed);

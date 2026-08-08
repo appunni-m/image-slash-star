@@ -14387,17 +14387,90 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(selection_fixture_sink, vec![0xAE]);
 
-        // The same method-0 fixture reaches the first non-trellis
-        // quantization coefficient after the preselection and transform
-        // stages. This extends the existing witness without a new fixture,
-        // parity row, or coverage-only hook. Pillow has no caller token,
-        // typed work-budget result, or sink-rollback contract, so this remains
-        // Rust-only feature-gate evidence.
-        let quantization_policy = image_slash_star::EncodePolicy::new().with_max_work_units(18);
+        // Method 0 deliberately spends its early budget in distortion-only
+        // preselection. Reuse the same fixture with method 2 so the existing
+        // witness reaches the full non-trellis intra4 candidate path and its
+        // transform/quantization interiors. Pillow has no caller token, typed
+        // work-budget result, or sink-rollback contract, so this remains
+        // Rust-only feature-gate evidence without a new fixture, parity row,
+        // or coverage-only hook.
+        let mut interior_options = analysis_options.clone();
+        if let EncodeOptions::WebP(options) = &mut interior_options {
+            options.method = Some(2);
+        }
+        let interior_expected =
+            image_slash_star::encode(&selection_fixture, ImageFormat::WebP, &interior_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &selection_fixture,
+                ImageFormat::WebP,
+                &interior_options,
+                &unlimited,
+            )?,
+            interior_expected,
+            "an ample fixture-derived interior budget preserves byte identity"
+        );
+
+        // The first forward-transform row is the seventh admitted checkpoint:
+        // five preparation/selection-boundary polls precede the first
+        // candidate prediction poll. The transform itself then charges each
+        // four-row and four-column subpass.
+        let transform_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6);
+        let transform_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &transform_policy,
+        ) {
+            Ok(_) => {
+                return Err("fixture-derived transform budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transform_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6,
+                observed: 7,
+            }
+        ));
+        let mut transform_sink = vec![0xAD];
+        let transform_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &transform_policy,
+            &mut transform_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived transform sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            transform_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6,
+                observed: 7,
+            }
+        ));
+        assert_eq!(transform_sink, vec![0xAD]);
+
+        // After the eight forward-transform subpasses, the first non-trellis
+        // quantization coefficient is the fifteenth admitted checkpoint.
+        let quantization_policy = image_slash_star::EncodePolicy::new().with_max_work_units(14);
         let quantization_error = match image_slash_star::encode_with_policy(
             &selection_fixture,
             ImageFormat::WebP,
-            &analysis_options,
+            &interior_options,
             &quantization_policy,
         ) {
             Ok(_) => {
@@ -14411,15 +14484,15 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 18,
-                observed: 19,
+                maximum: 14,
+                observed: 15,
             }
         ));
         let mut quantization_sink = vec![0xAF];
         let quantization_sink_error = match image_slash_star::encode_to_sink_with_policy(
             &selection_fixture,
             ImageFormat::WebP,
-            &analysis_options,
+            &interior_options,
             &quantization_policy,
             &mut quantization_sink,
         ) {
@@ -14436,11 +14509,67 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 18,
-                observed: 19,
+                maximum: 14,
+                observed: 15,
             }
         ));
         assert_eq!(quantization_sink, vec![0xAF]);
+
+        // The inverse transform begins after all sixteen non-trellis
+        // coefficient checkpoints. Its first column pass is therefore the
+        // thirty-first admitted checkpoint.
+        let inverse_transform_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(30);
+        let inverse_transform_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &inverse_transform_policy,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived inverse-transform budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            inverse_transform_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 30,
+                observed: 31,
+            }
+        ));
+        let mut inverse_transform_sink = vec![0xB0];
+        let inverse_transform_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &inverse_transform_policy,
+            &mut inverse_transform_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived inverse-transform sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            inverse_transform_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 30,
+                observed: 31,
+            }
+        ));
+        assert_eq!(inverse_transform_sink, vec![0xB0]);
 
         // Coefficient-probability adaptation has 1,056 fixed probability
         // nodes and charges at 1,024 nodes. Pillow has no caller token or
