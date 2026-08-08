@@ -47,6 +47,18 @@ fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
 }
 
+#[inline]
+fn checkpoint_cost_manager_work(
+    token: CheckpointToken<'_>,
+    work: &mut usize,
+) -> CheckpointResult<()> {
+    *work = work.saturating_add(1);
+    if (*work).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+        checkpoint(token)?;
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Token {
     Literal(u32),
@@ -1250,7 +1262,95 @@ impl CostManager {
             }
             return Ok(());
         }
-        self.insert_min_interval(candidate);
+
+        // The interval set is still below saturation, but splitting and
+        // rebuilding it can compare hundreds of existing intervals against
+        // hundreds of candidate windows. Keep this token-aware path bounded
+        // without adding polling to the ordinary no-token encoder.
+        let mut work = 0usize;
+        let mut boundaries = vec![candidate.start, candidate.end];
+        for interval in &self.intervals {
+            checkpoint_cost_manager_work(token, &mut work)?;
+            if interval.end > candidate.start && interval.start < candidate.end {
+                boundaries.push(interval.start.max(candidate.start));
+                boundaries.push(interval.end.min(candidate.end));
+            }
+        }
+        boundaries.sort_unstable();
+        boundaries.dedup();
+
+        let mut additions = Vec::new();
+        for window in boundaries.windows(2) {
+            let start = window[0];
+            let end = window[1];
+            let mut existing = None;
+            for interval in &self.intervals {
+                checkpoint_cost_manager_work(token, &mut work)?;
+                if interval.start <= start && interval.end >= end {
+                    existing = Some(*interval);
+                    break;
+                }
+            }
+            if existing.is_none_or(|interval| candidate.cost < interval.cost) {
+                additions.push(CostInterval {
+                    start,
+                    end,
+                    ..candidate
+                });
+            }
+        }
+
+        if additions.is_empty() {
+            return Ok(());
+        }
+        let old = std::mem::take(&mut self.intervals);
+        let mut rebuilt = Vec::new();
+        for interval in old {
+            let mut overlaps = Vec::new();
+            for addition in &additions {
+                checkpoint_cost_manager_work(token, &mut work)?;
+                if addition.end > interval.start && addition.start < interval.end {
+                    overlaps.push(*addition);
+                }
+            }
+            if overlaps.is_empty() {
+                rebuilt.push(interval);
+                continue;
+            }
+            let mut cursor = interval.start;
+            for addition in overlaps {
+                if cursor < addition.start {
+                    rebuilt.push(CostInterval {
+                        end: addition.start,
+                        start: cursor,
+                        ..interval
+                    });
+                }
+                cursor = cursor.max(addition.end);
+            }
+            if cursor < interval.end {
+                rebuilt.push(CostInterval {
+                    start: cursor,
+                    ..interval
+                });
+            }
+        }
+        rebuilt.extend(additions);
+        rebuilt.sort_by_key(|interval| interval.start);
+        let mut merged: Vec<CostInterval> = Vec::new();
+        for interval in rebuilt {
+            checkpoint_cost_manager_work(token, &mut work)?;
+            if let Some(last) = merged.last_mut()
+                && last.end == interval.start
+                && last.cost == interval.cost
+                && last.position == interval.position
+            {
+                last.end = interval.end;
+            } else {
+                merged.push(interval);
+            }
+        }
+        self.intervals = merged;
         Ok(())
     }
 
