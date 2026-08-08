@@ -587,6 +587,12 @@ histogram population `62/63`, combined entropy cost `80/81`, histogram merge
 `44,001/44,002` (or `44,000/44,001` for the sink), code-length emission
 `144,869/144,870`, and cache population `136,928/136,929`.
 
+The predictor mode-application path now also checkpoints its pre-transform
+source snapshot copy after each 1,024 pixels; its no-token path retains the
+original bulk clone. The existing predictor-transform probe exercises this
+token-aware path before the later transform boundary. This is the same
+Rust-only caller-budget contract, not a Pillow-observable result.
+
 These are Rust-only work-control results. Pillow cannot exercise a caller token,
 typed work-budget result, or caller-owned sink/rollback contract, so this
 revision adds no Pillow parity row, fixture-manifest row, diagnostic origin,

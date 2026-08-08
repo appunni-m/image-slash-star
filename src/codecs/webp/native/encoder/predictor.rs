@@ -242,7 +242,24 @@ fn apply_modes(
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     let tiles_per_row = (width + (1_usize << bits) - 1) >> bits;
-    let original = source.to_vec();
+    // The predictor transform needs the pre-transform pixels for each row. In
+    // the caller-controlled path this full source snapshot is itself an
+    // O(pixel-count) operation, so keep its copy cooperative. Pillow has no
+    // equivalent caller budget; preserve the original bulk clone otherwise.
+    let original = if let Some(token) = token {
+        let mut original = Vec::with_capacity(source.len());
+        for (index, &pixel) in source.iter().enumerate() {
+            original.push(pixel);
+            if (index + 1).is_multiple_of(TRANSFORM_CHECKPOINT_PIXELS) {
+                checkpoint(Some(token))?;
+            }
+        }
+        original
+    } else {
+        // Keep the ordinary encoder on the original bulk clone. Pillow has
+        // no caller work budget, and this branch must retain its tight path.
+        source.to_vec()
+    };
     let mut upper = vec![0_u32; width + 1];
     let mut current = vec![0_u32; width + 1];
     let mut pixels_until_checkpoint = TRANSFORM_CHECKPOINT_PIXELS;

@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `d197d0bb-8fab-45d2-b140-45e6db91511a` covers implementation, test, and runtime revision `dd1f8be02234d89d49f79c23aacf569768ad1b8e`: 53,219/53,833 lines, 7,532/7,682 branches, 2,998/3,074 functions, and 82,345/83,711 regions. Compared with the preceding accepted snapshot `3e0b3832-a8b1-4743-bbd7-fcbf06f2137e`, covered/source totals changed by +16/+26 lines, +5/+6 branches, +1/+1 functions, and +27/+50 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix run used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 614 lines, 150 branches, 76 functions, and 1,366 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a` covers implementation, test, and runtime revision `7ab2a043b1e07106370416500bc13ae6af52cefd`: 53,323/53,939 lines, 7,557/7,708 branches, 3,001/3,077 functions, and 82,502/83,879 regions. Compared with the preceding accepted snapshot `ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by +37/+37 lines, +6/+6 branches, +1/+1 functions, and +51/+51 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix retry used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,377 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -1013,7 +1013,9 @@ and avoids broad rewrites.
 The current WebP VP8L work-control surface also polls token-aware cost-manager
 interval-update and cleanup scans after each 256 cumulative interval entries,
 repeated-run hash-chain insertion after each 256 pixels, while retaining the
-original no-token hot paths. VP8L candidate trials also reuse the
+original no-token hot paths. Predictor mode application also checkpoints its
+pre-transform source snapshot copy after each 1,024 pixels; its no-token path
+retains the original bulk clone. VP8L candidate trials also reuse the
 already-emitted prefix and retain only each trial suffix, removing repeated
 prefix copy/allocation without changing selected bytes. These are Rust-only
 checkpoint/runtime dimensions: Pillow
@@ -4305,6 +4307,12 @@ Huffman-RLE `828/829` (sink `827/828`), grayscale `195/196`, Huffman frequency
 `44,001/44,002` (sink `44,000/44,001`), emission `144,869/144,870`, and cache
 `136,928/136,929`.
 
+The predictor mode-application path now checkpoints its pre-transform source
+snapshot copy after each 1,024 pixels, while the no-token path retains the
+original bulk clone. The existing predictor-transform probe exercises that
+caller-budget path before its later transform boundary; this is Rust-only
+evidence because Pillow has no equivalent token or typed work-budget result.
+
 This is Rust-only resource-contract evidence: Pillow has no caller token, typed
 work-budget result, or caller-owned sink/rollback contract, so the revision adds
 no parity row, fixture-manifest row, diagnostic origin, new test function, or
@@ -5515,8 +5523,9 @@ and RGBA alpha-palette source collection and index packing after each 1,024 sour
 macroblock-analysis, and mode-selection subsegments, analysis, coefficient-
 probability adaptation, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals, and bitstream
-assembly, plus lossless WebP VP8L image-palette construction and palette-mode
-index packing after each 1,024 source pixels, predictor and mode application
+assembly, plus lossless WebP VP8L RGB/RGBA source-pixel materialization,
+image-palette construction and palette-mode index packing, and predictor
+source-snapshot copying after each 1,024 source pixels, predictor and mode application
 after each 1,024 pixels, cross-color/entropy/transform,
 bounded backward-reference search/match-length/cache/trace and repeated-run
 hash-chain insertion after each 256 pixels, histogram/Huffman,
