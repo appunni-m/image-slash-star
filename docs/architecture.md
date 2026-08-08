@@ -357,7 +357,7 @@ translation cannot be bypassed.
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
 | Lossy WebP VP8 segment-assignment checkpoints | Token-aware analysis segment assignment polls after each 1,024 macroblocks; the no-token path retains the original tight rewrite pass |
-| Lossy WebP VP8 mode-selection checkpoints | Token-aware intra4 selection polls after each completed luma 4×4 block, while the outer checkpoint remains after each 64 completed macroblocks for intra16/chroma and completed-decision work; the no-token path retains the original tight loop and candidate evaluation inside a block remains one uninterruptible unit |
+| Lossy WebP VP8 mode-selection checkpoints | Token-aware intra4 selection polls after each candidate trial and each completed luma 4×4 block, while the outer checkpoint remains after each 64 completed macroblocks for intra16/chroma and completed-decision work; the no-token path retains the original tight loop and each candidate trial remains one uninterruptible unit |
 | Lossy WebP VP8 filter-edge adjustment checkpoints | Token-aware filter-edge adjustment polls after each 1,024 selected macroblocks; the no-token path retains the original tight adjustment pass |
 | Lossy WebP VP8 coefficient-statistics checkpoints | Token-aware coefficient-statistics collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight traversal |
 | Lossy WebP VP8 segment-probability prepass checkpoints | Token-aware first-partition segment-probability collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight count pass |
@@ -588,7 +588,7 @@ source collection and index packing after each 1,024 source pixels, and each
 batch of 64 nearest-delta candidate values, each batch of 1,024 analyzed
 macroblocks, and each batch of 64 frame-selection macroblocks (roughly 1,024
 luma 4×4 blocks), with token-aware intra4 selection also checking after each
-completed luma 4×4 block, then
+candidate trial and completed luma 4×4 block, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, required padded Y/U/V edge-replication after each 1,024 padded
@@ -662,14 +662,15 @@ split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, required padded-plane edge
 replication, analysis and segment assignment after each 1,024 macroblocks,
-intra4 mode selection after each completed luma 4×4 block and its outer
-64-macroblock batch for intra16/chroma work,
+intra4 mode selection after each candidate trial and completed luma 4×4 block
+and its outer 64-macroblock batch for intra16/chroma work,
 filter-edge adjustment, RGBA transparent-area cleanup after each 1,024 scanned
 or flattened pixels, RGBA alpha-palette source
 collection and index packing after each 1,024 source pixels, nearest-delta
 candidate values after each 64 candidates, macroblock-analysis, and
-intra4 mode selection after each completed luma 4×4 block and its outer
-64-macroblock batch for intra16/chroma work, plus mode-selection subsegments
+intra4 mode selection after each candidate trial and completed luma 4×4 block
+and its outer 64-macroblock batch for intra16/chroma work, plus
+mode-selection subsegments
 plus
 analysis/segment-assignment/coefficient-
 probability, filter-edge adjustment, and first-partition segment-probability
@@ -735,8 +736,9 @@ rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP
 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup, macroblock-analysis,
-and mode-selection work beyond the implemented intra4 per-block and outer
-64-macroblock checkpoints, JPEG baseline entropy traversal beyond the
+and mode-selection work beyond the implemented intra4 candidate-trial,
+per-block, and outer 64-macroblock checkpoints, JPEG baseline entropy traversal
+beyond the
 implemented 1,024-MCU interval, optimized-Huffman frequency work beyond
 the implemented 1,024-AC interval, progressive scan block-slot work beyond
 the implemented 1,024-block interval, progressive scan-event frequency work

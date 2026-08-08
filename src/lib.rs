@@ -1004,8 +1004,9 @@ pub fn encode_with_policy(
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
 /// API additionally checks at retained-frame boundaries and codec-specific
-/// checkpoints. The no-token WebP selection path remains tight, and candidate
-/// evaluation within an intra4 block remains one uninterruptible unit.
+/// checkpoints. The no-token WebP selection path remains tight; token-aware
+/// selection checks after each candidate trial, while each trial remains one
+/// uninterruptible unit.
 ///
 /// # Errors
 ///
