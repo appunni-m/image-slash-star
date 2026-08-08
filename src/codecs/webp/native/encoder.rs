@@ -1339,6 +1339,30 @@ fn minimize_palette_deltas_with_checkpoint(
     Ok(())
 }
 
+// Palette construction proves that every encoded pixel belongs to this
+// table. The token-aware lookup keeps that invariant and the no-token
+// position/tie behavior while bounding the potentially repeated linear scan.
+#[inline]
+fn palette_index_with_checkpoint(
+    palette: &[u32],
+    color: u32,
+    token: &crate::CancellationToken,
+) -> Result<usize, EncodingError> {
+    let mut candidates_until_checkpoint = WEBP_PALETTE_CHECKPOINT_VALUES;
+    for (index, &entry) in palette.iter().enumerate() {
+        let matches = entry == color;
+        candidates_until_checkpoint = candidates_until_checkpoint.saturating_sub(1);
+        if candidates_until_checkpoint == 0 {
+            check_token(Some(token))?;
+            candidates_until_checkpoint = WEBP_PALETTE_CHECKPOINT_VALUES;
+        }
+        if matches {
+            return Ok(index);
+        }
+    }
+    unreachable!("palette construction must retain every encoded color")
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum EntropyMode {
     Direct,
@@ -1599,17 +1623,30 @@ fn apply_palette<C: BitWriterCheckpoint>(
     let bits_per_pixel = 8 >> packing_bits;
     let packed_width = width.div_ceil(pixels_per_group);
     let mut packed = Vec::with_capacity(packed_width * height);
-    for (row_index, row) in pixels.chunks_exact(width).enumerate() {
-        if row_index.is_multiple_of(64) {
-            check_token(token)?;
-        }
-        for group in row.chunks(pixels_per_group) {
-            let mut packed_pixel = 0xff00_0000_u32;
-            for (index, &color) in group.iter().enumerate() {
-                let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
-                packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+    if let Some(token) = token {
+        for (row_index, row) in pixels.chunks_exact(width).enumerate() {
+            if row_index.is_multiple_of(64) {
+                check_token(Some(token))?;
             }
-            packed.push(packed_pixel);
+            for group in row.chunks(pixels_per_group) {
+                let mut packed_pixel = 0xff00_0000_u32;
+                for (index, &color) in group.iter().enumerate() {
+                    let palette_index = palette_index_with_checkpoint(&palette, color, token)?;
+                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+                }
+                packed.push(packed_pixel);
+            }
+        }
+    } else {
+        for row in pixels.chunks_exact(width) {
+            for group in row.chunks(pixels_per_group) {
+                let mut packed_pixel = 0xff00_0000_u32;
+                for (index, &color) in group.iter().enumerate() {
+                    let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
+                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+                }
+                packed.push(packed_pixel);
+            }
         }
     }
     w.write_bits(0, 1)?;

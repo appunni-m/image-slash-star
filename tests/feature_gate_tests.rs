@@ -9860,6 +9860,81 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(palette_work_sink, vec![0xA7]);
 
+        // Lossless VP8L palette-index packing now charges after each 64
+        // palette candidates examined by a repeated linear lookup. This
+        // deterministic 128x128 probe keeps the 128-entry palette mode and
+        // reaches the lookup boundary after the earlier palette ordering and
+        // image-stream work. Pillow has no caller token, work-budget result,
+        // or sink-rollback contract, so this remains Rust-only evidence with
+        // no parity row, manifest fixture, diagnostic origin, or coverage-only
+        // hook.
+        let mut palette_lookup_pixels = Vec::with_capacity(128 * 128 * 3);
+        let mut palette_lookup_state = 0x1234_5678_u32;
+        for _ in 0..128 * 128 {
+            palette_lookup_state = palette_lookup_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let palette_index = usize::try_from((palette_lookup_state >> 25) & 0x7f)?;
+            palette_lookup_pixels.extend_from_slice(&palette_work_fixture[palette_index]);
+        }
+        let palette_lookup_image =
+            DecodedImage::new(128, 128, palette_lookup_pixels, ColorType::Rgb8);
+        let palette_lookup_expected =
+            image_slash_star::encode(&palette_lookup_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &palette_lookup_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            palette_lookup_expected,
+            "an ample palette-lookup budget preserves byte identity"
+        );
+        let palette_lookup_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_804);
+        let palette_lookup_error = match image_slash_star::encode_with_policy(
+            &palette_lookup_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_lookup_policy,
+        ) {
+            Ok(_) => return Err("WebP palette lookup budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_lookup_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 9_804,
+                observed: 9_805,
+            }
+        ));
+        let mut palette_lookup_sink = vec![0xA9];
+        let palette_lookup_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &palette_lookup_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_lookup_policy,
+            &mut palette_lookup_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP palette lookup wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_lookup_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 9_804,
+                observed: 9_805,
+            }
+        ));
+        assert_eq!(palette_lookup_sink, vec![0xA9]);
+
         // A small monotone palette reaches the same public token-aware path
         // but has only forward deltas, proving its bounded early return with
         // a real lossless encode rather than a coverage-only call.
