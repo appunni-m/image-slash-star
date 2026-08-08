@@ -24,6 +24,7 @@
 //! RGB-equal grayscale preparation, predictor tile scans, mode application, and
 //! subtract-green transforms after
 //! each 1,024 pixels,
+//! RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
 //! cross-color multiplier search/transform and sampling scans/compaction,
 //! palette-index lookup candidate scans after each 64 palette entries,
 //! entropy, histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,

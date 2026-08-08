@@ -1672,8 +1672,8 @@ Huffman-tree simple-tree symbol-discovery, token-frequency, trailing-token-trim,
 and code-length-emission checkpoints, plus RGB-equal grayscale-preparation
 checkpoints, candidate-trial prefix reuse, lossy WebP RGBA alpha-palette
 candidate-scan checkpoints, and lossless WebP VP8L palette-index lookup,
-palette sign, and nearest-delta candidate-scan checkpoints
-plus compile-only matrix runtime
+palette sign, nearest-delta candidate-scan, and RGBA hidden-RGB cleanup
+checkpoints, plus compile-only matrix runtime
 
 The token-aware VP8L entropy-mode analysis now charges cooperative checkpoints
 after each 64 symbols while scanning fixed-alphabet histogram costs. The
@@ -1716,9 +1716,11 @@ reverse trailing zero-repeat-token trim scan now charge after each 16 compressed
 token entries. Huffman code-length emission now charges after each 16 compressed
 token entries; its existing feature-gated Rust-only work-control assertion
 drives the Huffman-tree path, whose canonical-code assignment and sorted-node insertion
-scans charge after each 64 code-length slots or candidate nodes. The palette-index
-lookup slice and current production revision are committed at
-`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the preceding production slice is
+scans charge after each 64 code-length slots or candidate nodes. The preceding
+palette-index lookup slice is committed at
+`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the current lossless-RGBA-cleanup
+production revision is committed at
+`464126042af49a945a63a505cb1675ebe703a904`; the earlier production slice is
 `84a9abbd8fca78fc468e3e46be8baa5ca37e005f5`; an earlier production slice is
 committed at revision
 `b1fafe4bacd60628b2385e14a843bb6bf827c1e2`; the current contract and backward
@@ -1780,6 +1782,16 @@ token-aware scan checks after each 64 candidates, while the no-token path keeps
 the original first-minimum ordering and byte output. Pillow has no caller work
 budget or sink contract, so this is Rust-only evidence with no parity row,
 fixture, diagnostic origin, new test function, or coverage-only hook.
+The same existing contract now uses a deterministic 128×128 fully transparent
+RGBA lossless WebP probe with nonzero hidden RGB values to prove ordinary and
+ample-budget byte identity, then exact whole-buffer and caller-owned-sink
+rejection at `maximum: 2`, `observed: 3`, with sentinel `[0xB7]` untouched.
+The token-aware VP8L cleanup polls after each 1,024 scanned pixels; the
+ordinary no-token path retains its bulk loop. Pillow has no caller token,
+work-budget result, or sink-rollback contract, so this remains Rust-only
+evidence with no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook. The implementation is committed at
+`464126042af49a945a63a505cb1675ebe703a904`.
 This closes the next causal interior checkpoint in the current WebP work-control
 slice. It is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
@@ -1797,23 +1809,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`ffb55fc7-ad94-4d26-b8b3-bcf7a3cf6eaa` passed 1,445/1,445 checks with zero
-skips in 1,002 ms; feature-matrix run
-`5e02f54d-a300-4cbd-aaec-8847ec7435ef` passed all 33 configured lanes in
-39,841 ms with `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
-verbose=0` and the terminal capability agreement; targeted searches returned
-no lock-wait, build-directory, or package-cache matches. Managed LLVM coverage
-run `36d06757-30af-4342-9394-51b3b1f07aa2` passed 85/85 tests in 62,524 ms and
-ingested snapshot `d197d0bb-8fab-45d2-b140-45e6db91511a`: 53,219/53,833
-lines, 7,532/7,682 branches, 2,998/3,074 functions, and 82,345/83,711
-regions. Compared with snapshot `3e0b3832-a8b1-4743-bbd7-fcbf06f2137e`,
-covered/source totals changed by +16/+26 lines, +5/+6 branches, +1/+1
-functions, and +27/+50 regions. Native WebP encoder reports 1,850/1,900
-lines, 397/412 branches, 88/88 functions, and 2,707/2,894 regions. Coverage
+`878d2ec1-2003-4a63-8392-39223d0b86ef` passed 1,445/1,445 checks with zero
+skips in 2,338 ms; feature-matrix run
+`cb1b7396-7f55-4997-9348-7a5aac8b365e` passed all configured lanes in 54,615
+ms with the terminal capability agreement; targeted searches returned no
+lock-wait, build-directory, or package-cache matches. Managed LLVM coverage
+run `ed9d7d26-6e4f-42bf-8d3f-94ffb4de6b87` passed 85/85 tests in 66,943 ms and
+ingested snapshot `134df260-62ba-4716-9f3c-01596205eca0`: 53,230/53,844
+lines, 7,538/7,688 branches, 2,998/3,074 functions, and 82,361/83,727
+regions. Compared with snapshot `d197d0bb-8fab-45d2-b140-45e6db91511a`,
+covered/source totals changed by +11/+11 lines, +6/+6 branches, +0/+0
+functions, and +16/+16 regions. Native WebP encoder reports 1,861/1,911
+lines, 403/418 branches, 88/88 functions, and 2,723/2,910 regions. Coverage
 is implementation evidence, not Pillow parity; the known LLVM
 segment-normalization warning and the 614-line, 150-branch, 76-function,
 1,366-region aggregate shortfall remain. Managed durations remain cache- and
-runner-sensitive. The palette-index lookup checkpoint is Rust-only evidence
+runner-sensitive. The lossless RGBA cleanup checkpoint is Rust-only evidence
 and adds no parity row, fixture-manifest row, diagnostic origin, or new test
 function.
 

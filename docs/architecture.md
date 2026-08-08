@@ -580,8 +580,9 @@ additionally charges after each 1,024 MCUs, and entropy coding charges after
 each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP
-VP8L additionally charges around RGB-equal grayscale preparation after each
-1,024 pixels, predictor tile scans, mode application, and
+VP8L additionally charges around RGBA hidden-RGB cleanup after each 1,024
+scanned pixels, RGB-equal grayscale preparation after each 1,024 pixels,
+predictor tile scans, mode application, and
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy-mode histogram-cost analysis after each 64 symbols, transform
@@ -620,7 +621,7 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
-VP8L
+VP8L hidden-RGB cleanup after each 1,024 scanned pixels, plus
 palette-index lookup candidate scans after each 64 palette entries, palette sign
 and nearest-delta candidate scans after each 64 palette entries
 or candidate values, predictor/cross-color/entropy/transform, bounded backward-reference
