@@ -8,7 +8,6 @@
 
 use super::{
     cost::{bit_cost, level_cost},
-    dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
     tokenize::COEFF_BANDS,
 };
 
@@ -370,20 +369,4 @@ pub(super) fn quantize_block(
         }
     }
     nonzero
-}
-
-/// Transforms, quantizes, and reconstructs one predicted 4×4 block.
-pub(super) fn quantize_reconstruct_block(
-    source: &[u8; 16],
-    prediction: &[u8; 16],
-    matrix: &QuantMatrix,
-) -> (bool, [i16; 16], [u8; 16]) {
-    let residual = std::array::from_fn(|index| {
-        i16::from(source[index]).wrapping_sub(i16::from(prediction[index]))
-    });
-    let mut coefficients = vp8_fdct_4x4(&residual);
-    let mut levels = [0; 16];
-    let nonzero = quantize_block(&mut coefficients, &mut levels, matrix);
-    let reconstructed = vp8_idct_add_4x4(prediction, &coefficients);
-    (nonzero, levels, reconstructed)
 }
