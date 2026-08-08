@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`b190231b3d3adf5e5e056d2f8d09204cad505a13`; the claim-ledger baseline remains
+`56869ad0a61565012cc039bd6c94f01afb34f098`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -339,6 +339,7 @@ translation cannot be bypassed.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls RGB-equal grayscale preparation after each 1,024 pixels, the remaining preparation stages, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, and RGBA alpha-palette source collection and index packing after each 1,024 source pixels, lossless VP8L RGB/RGBA source-pixel materialization, predictor source-snapshot copying, image-palette construction and palette-mode index packing after each 1,024 source pixels, analysis/mode-selection/coefficient-probability/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, cost-manager interval-update and cleanup scans after each 256 cumulative interval entries, repeated-run hash-chain insertion, and copy-token cache-population scans after each 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols, Huffman RLE preparation and canonical-code assignment scans after each 64 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, histogram clustering, Huffman-tree/group emission, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, 1,024-byte output, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy after each 1,024 MCUs, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block slots after each 1,024 blocks, progressive scan-event frequency items and progressive scan coefficient traversal items after each 1,024 events or coefficients, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
+| Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
@@ -356,8 +357,9 @@ translation cannot be bypassed.
 
 The WebP VP8L token-aware list includes entropy-mode histogram-cost scans after
 each 64 symbols, cost-manager interval-update and cleanup scans after each 256
-cumulative interval entries, repeated-run hash-chain
-insertion and copy-token cache-population checkpoints after each 256 pixels, Huffman
+cumulative interval entries, repeated-run hash-chain insertion and long
+backward-reference result backfills after each 256 entries, and copy-token
+cache-population checkpoints after each 256 pixels, Huffman
 code-length emission after each 16 compressed token entries, Huffman-tree
 simple-tree symbol-discovery checkpoints
 after each 64 code-length slots, code-length-token frequency, and trailing
@@ -598,8 +600,9 @@ token-aware cost-manager interval-update and cleanup scans after each 256
 cumulative interval entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
-repeated-run hash-chain insertion, search/match-length/cache/trace, and
-copy-token cache-population scans after each 256 pixels, plus token/Huffman cost
+repeated-run hash-chain insertion, long backward-reference result backfills
+after each 256 entries, search/match-length/cache/trace, and copy-token
+cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
@@ -643,8 +646,9 @@ token-aware cost-manager interval-update and cleanup scans after each 256
 cumulative interval entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
-repeated-run hash-chain insertion, search/match-length/cache/trace, and
-copy-token cache-population scans after each 256 pixels, plus token/Huffman cost
+repeated-run hash-chain insertion, long backward-reference result backfills
+after each 256 entries, search/match-length/cache/trace, and copy-token
+cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
