@@ -2,8 +2,8 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-08 on the committed tree based on revision
-`ade63113ea059668d731269ec9cda8c6d82b7243`; the claim-ledger baseline remains
+Reviewed: 2026-08-09 on the committed tree based on revision
+`b0f16b903bd36c4f03a9103429fa5a30a803f116`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 AVIF is the only codec feature with different native and
@@ -129,8 +129,12 @@ source-local edge alongside the auxiliary relationship. The field reports
 container provenance only; it does not premultiply or unpremultiply decoded
 transfer bytes.
 For the same grid, `SourceDescriptor::avif_grid_item_ids()` retains the ordered
-derived color-item list (`[2, 3]`) on those three surfaces. It does not expose
-tile placement or compose the grid.
+derived color-item list (`[2, 3]`) on those three surfaces. The primary grid's
+validated payload topology is also retained through
+`SourceDescriptor::avif_grid_properties()`: the committed fixture reports
+version `0`, raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas.
+These fields are source provenance only; they do not expose tile placement or
+compose the grid.
 
 The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
 `clli` content-light-level
@@ -177,8 +181,8 @@ and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
 pixels are never rotated, mirrored, rescaled, or cropped. Other non-primary
-item-level color/properties, non-alpha auxiliary relationships, full grid
-topology, and other item metadata remain open; bounded direct/grid item,
+item-level color/properties, non-alpha auxiliary relationships, grid tile
+placement/composition, and other item metadata remain open; bounded direct/grid item,
 auxiliary-alpha, and
 premultiplication provenance is represented through `SourceAlpha::Auxiliary`
 plus the source-local item relationships.

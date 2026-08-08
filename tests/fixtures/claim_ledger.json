@@ -4,8 +4,8 @@
   "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
   "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
   "coverage": {
-    "run_id": "2a184e06-59db-4371-a68f-fa2ae0c1a03a",
-    "snapshot_id": "7e573894-cf96-4fe6-b1b6-056f32edb239",
+    "run_id": "6c413daa-9aaa-4107-8136-56ce869f3fda",
+    "snapshot_id": "ef2bf9fb-6a8b-4dbe-a5d1-fe888aec318d",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -19,6 +19,6 @@
     "capability_tables": "44ecb9e7fe31ede7b0e74535b1207922f25bfd82ed1be922d1ec6067f9f290e1",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
-    "coverage_origins": "f6a5689522677786e9f1023cd910a09506866a9ee3ee1b7d23b0927811ca7aaf"
+    "coverage_origins": "9456a51672e91a67194609dec32d84e62f23bbf6946a8384a1482720017df894"
   }
 }
