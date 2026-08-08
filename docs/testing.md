@@ -794,6 +794,50 @@ aggregate shortfall is 722 lines, 187 branches, 78 functions, and 1,607
 regions. These execution, target, and coverage records remain separate from
 Pillow parity, and no synthetic coverage test was added.
 
+Current partial structural-write acceptance record
+
+Test revision `d5f7e416b30862819dbddb38f8b6027cc4219076` extends the existing
+Rust-only sink contracts without changing production encoding or the Pillow
+oracle. `output_sinks_receive_the_exact_encoded_bytes` now drives a destination
+that accepts all but one byte of the second structural segment and then
+returns an error through the PNG, BMP, ICO, WebP, JPEG, GIF, and native AVIF
+still paths. `tiff_capability_and_destination_failures_are_structured` applies
+the same prefix assertion to TIFF still output with both Raw and Deflate
+compression options and to TIFF sequence output. Each call must normalize the
+rejection to `ImageError::OutputWrite`, retain the selected format and
+corresponding `StillEncode` or `SequenceEncode` stage, make exactly two writes,
+and leave the delivered bytes as
+an exact prefix of the whole-buffer result. The pre-existing cross-codec
+contract retains the no-`flush` assertion for the broader still/sequence
+writer set. These assertions prove observable prefix delivery; they do not
+claim rollback, recovery, or partial-container cleanup.
+
+This is not a Pillow parity fixture or row. Pillow has no caller-owned
+`OutputSink`, no partial-write failure interface, and no equivalent destination
+state to compare, so the evidence remains in the existing
+`tests/feature_gate_tests.rs` Rust-only contracts. No diagnostic origin,
+coverage-only hook, or synthetic unit test was added; unchanged coverage is
+incidental to the real destination behavior.
+
+Exact-head managed validation for this test revision recorded Pillow parity
+run `7b21a875-5c2e-493f-b3cb-f98a96927b6d` at 1,445/1,445 checks in 914 ms.
+Feature-matrix run `d757e2c9-ac63-43df-9fcb-892a22910e57` passed all 33
+configured lanes in 51,641 ms with `cache=cold`, `lanes=6`,
+`test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; its retained
+log contains the capability-table agreement marker and no `lock-wait` match.
+Nightly LLVM run `a2d550c1-66ea-41ac-93f8-5bebac67530f` passed 85/85 tests in
+64,321 ms and ingested snapshot
+`48ef5dc3-f331-483d-92bf-4508c82f0102`, retaining 54,143/54,865 lines,
+7,663/7,850 branches, 3,077/3,155 functions, and 83,567/85,174 regions.
+Compared with the preceding implementation snapshot
+`95f8cdcd-961b-4656-b14b-ab58aa8fbb6b`, all covered/source deltas are zero.
+The known LLVM JSON segment-normalization warning and the aggregate shortfall
+of 722 lines, 187 branches, 78 functions, and 1,607 regions remain. The
+focused local `output_sinks_receive_the_exact_encoded_bytes` and
+`tiff_capability_and_destination_failures_are_structured` contracts each
+passed 1/1; the
+all-target, all-feature Clippy gate also passed with warnings denied.
+
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
 `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8` through the same existing
@@ -3683,7 +3727,7 @@ Pillow parity. Remaining other codec interior work, finer WebP work, transient
 allocation accounting, short/interrupted output, rollback, and any remaining
 non-checkpointed work-budget semantics remain open.
 
-The current partial structural sink-write slice is implemented at
+The original cross-codec partial structural sink-write slice was implemented at
 `1726f44e381ebc6132a027696a068415ad82806a`, building on the still-codec
 coverage in `ac22bf1cbdb43922969bb35172a9515430e753b8` and the sequence
 coverage in `c2919b0bf383a308e3ce111c2cfafcb4d8ab22f5`. The Rust-only

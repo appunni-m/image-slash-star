@@ -905,10 +905,12 @@ complete prefix. The Rust-only partial-write contract additionally proves that
 every available still codec and each supported multi-frame GIF/TIFF/WebP/native-
 AVIF sequence writer may reject after accepting a partial structural prefix: the
 delivered prefix remains observable, the error stage is `StillEncode` or
-`SequenceEncode`, and `flush` is not called. Short-write behavior on other
-paths, rollback, and partial-container cleanup remain open. Every current codec
-sink writer reports the same structured cause if any validated emitted segment
-is rejected.
+`SequenceEncode`, and `flush` is not called. Test revision
+`d5f7e416b30862819dbddb38f8b6027cc4219076` reinforces the same boundary in the
+exact-byte sink paths and both TIFF still compression options plus sequence
+delivery. Short-write behavior on other paths, rollback, and partial-container
+cleanup remain open. Every current codec sink writer reports the same
+structured cause if any validated emitted segment is rejected.
 
 Non-fatal recovery is separate from `ImageError`: successful decode returns
 `Decoded<T>::diagnostics`, while fatal parser failures remain `ImageError`.
