@@ -24,8 +24,9 @@
 //! 16,384-boolean first-partition bit intervals, 8-bit, 16-bit, 32-bit, 64-bit,
 //! 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit,
 //! 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit
-//! intervals, 1,024-byte boolean-bitstream output
-//! intervals, JPEG optimized-Huffman frequency coefficients after each 1,024
+//! intervals, 1,024-byte boolean-bitstream output intervals (including pending
+//! VP8 boolean-output runs drained in those same chunks), JPEG optimized-Huffman
+//! frequency coefficients after each 1,024
 //! coefficients, progressive scan block slots after each 1,024 blocks,
 //! progressive scan coefficient items after each 1,024 coefficients, and
 //! progressive scan-event frequency items after each 1,024 events,

@@ -37,7 +37,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and
 /// 16,384-boolean first-partition-bit intervals,
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals,
-/// and 1,024-byte boolean-bitstream output intervals, and lossless WebP VP8L
+/// and 1,024-byte boolean-bitstream output intervals, including pending VP8
+/// boolean-output runs drained in those same chunks, and lossless WebP VP8L
 /// RGB/RGBA source-pixel materialization, image-palette construction, and
 /// palette-mode index packing after each 1,024 source pixels, plus RGBA
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
