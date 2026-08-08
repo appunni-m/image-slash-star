@@ -357,12 +357,59 @@ fn build_huffman_tree(
                 node: Node::Leaf(value),
             })
             .collect::<Vec<_>>();
-        nodes.sort_by(|left, right| {
-            right
-                .count
-                .cmp(&left.count)
-                .then_with(|| left.sort_value.cmp(&right.sort_value))
-        });
+        if let Some(token) = token {
+            // The token-aware path keeps the stable ordering of the original
+            // sort with a bounded bottom-up merge sort. A large fixed alphabet
+            // can otherwise spend an entire comparison sort between the
+            // surrounding tree checkpoints; keeping O(n log n) here also
+            // avoids turning cancellation-aware encoding into a quadratic
+            // slow path.
+            let mut comparisons = 0_usize;
+            let mut scratch = nodes.clone();
+            let mut width = 1_usize;
+            while width < nodes.len() {
+                let mut start = 0_usize;
+                while start < nodes.len() {
+                    let middle = start.saturating_add(width).min(nodes.len());
+                    let end = middle.saturating_add(width).min(nodes.len());
+                    let mut left = start;
+                    let mut right = middle;
+                    for slot in &mut scratch[start..end] {
+                        let take_left =
+                            if left == middle {
+                                false
+                            } else if right == end {
+                                true
+                            } else {
+                                comparisons = comparisons.saturating_add(1);
+                                if comparisons.is_multiple_of(VP8L_HUFFMAN_TREE_CHECKPOINT_NODES) {
+                                    check_token(Some(token))?;
+                                }
+                                nodes[right].count.cmp(&nodes[left].count).then_with(|| {
+                                    nodes[left].sort_value.cmp(&nodes[right].sort_value)
+                                }) != core::cmp::Ordering::Greater
+                            };
+                        if take_left {
+                            *slot = nodes[left].clone();
+                            left += 1;
+                        } else {
+                            *slot = nodes[right].clone();
+                            right += 1;
+                        }
+                    }
+                    start = end;
+                }
+                core::mem::swap(&mut nodes, &mut scratch);
+                width = width.saturating_mul(2);
+            }
+        } else {
+            nodes.sort_by(|left, right| {
+                right
+                    .count
+                    .cmp(&left.count)
+                    .then_with(|| left.sort_value.cmp(&right.sort_value))
+            });
+        }
         while nodes.len() > 1 {
             check_token(token)?;
             let left = nodes.pop().unwrap();
