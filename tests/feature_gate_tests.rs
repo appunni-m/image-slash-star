@@ -9777,7 +9777,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // backfill. The token-aware path now polls every 256 backfilled entries
         // instead of allowing the outer 1,024-pixel checkpoint to be skipped;
         // this caller-work boundary is not representable by Pillow.
-        let backfill_image = DecodedImage::new(1, 512, vec![128; 1 * 512 * 3], ColorType::Rgb8);
+        let backfill_image = DecodedImage::new(1, 512, vec![128; 512 * 3], ColorType::Rgb8);
         let backfill_expected =
             image_slash_star::encode(&backfill_image, ImageFormat::WebP, &lossless_options)?;
         assert_eq!(
