@@ -37,6 +37,7 @@ const COLOR_HASH_MUL: u32 = 0x1e35_a7bd;
 const COST_CHECKPOINT_SYMBOLS: usize = 64;
 const COST_CHECKPOINT_TOKENS: usize = 1_024;
 const COST_MANAGER_CHECKPOINT_ENTRIES: usize = 1_024;
+const COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES: usize = 256;
 const CACHE_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RUN_CHECKPOINT_PIXELS: usize = 256;
 
@@ -55,6 +56,18 @@ fn checkpoint_cost_manager_work(
 ) -> CheckpointResult<()> {
     *work = work.saturating_add(1);
     if (*work).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+        checkpoint(token)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn checkpoint_cost_manager_update_work(
+    token: CheckpointToken<'_>,
+    work: &mut usize,
+) -> CheckpointResult<()> {
+    *work = work.saturating_add(1);
+    if (*work).is_multiple_of(COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES) {
         checkpoint(token)?;
     }
     Ok(())
@@ -1174,6 +1187,49 @@ impl CostManager {
         }
     }
 
+    fn update_at_with_checkpoint(
+        &mut self,
+        index: usize,
+        clean: bool,
+        token: CheckpointToken<'_>,
+        work: &mut usize,
+    ) -> CheckpointResult<()> {
+        // Preserve the original tight interval scan when no caller token is
+        // present. The token-aware path can otherwise inspect a large
+        // interval set between its outer pixel checkpoints.
+        let Some(token) = token else {
+            self.update_at(index, clean);
+            return Ok(());
+        };
+
+        let mut applicable = Vec::new();
+        for &interval in &self.intervals {
+            if interval.start > index {
+                break;
+            }
+            if interval.end > index {
+                applicable.push(interval);
+            }
+            checkpoint_cost_manager_update_work(Some(token), work)?;
+        }
+        for interval in applicable {
+            self.update(index, interval.position, interval.cost);
+            checkpoint_cost_manager_update_work(Some(token), work)?;
+        }
+        if clean {
+            let intervals = std::mem::take(&mut self.intervals);
+            let mut retained = Vec::with_capacity(intervals.len());
+            for interval in intervals {
+                if interval.end > index {
+                    retained.push(interval);
+                }
+                checkpoint_cost_manager_update_work(Some(token), work)?;
+            }
+            self.intervals = retained;
+        }
+        Ok(())
+    }
+
     fn insert_min_interval(&mut self, candidate: CostInterval) {
         if candidate.start >= candidate.end {
             return;
@@ -1452,6 +1508,7 @@ fn trace_backwards(
     let mut manager = CostManager::new_with_checkpoint(pixels.len(), &model, token)?;
     checkpoint(token)?;
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
+    let mut update_work = 0usize;
 
     let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
         let pixel = pixels[position];
@@ -1528,8 +1585,8 @@ fn trace_backwards(
                         }
                         split += 1;
                     }
-                    manager.update_at(split - 1, false);
-                    manager.update_at(split, false);
+                    manager.update_at_with_checkpoint(split - 1, false, token, &mut update_work)?;
+                    manager.update_at_with_checkpoint(split, false, token, &mut update_work)?;
                     manager.push_with_checkpoint(
                         manager.costs[split - 1] + offset_cost,
                         split,
@@ -1540,7 +1597,7 @@ fn trace_backwards(
                 }
             }
         }
-        manager.update_at(position, true);
+        manager.update_at_with_checkpoint(position, true, token, &mut update_work)?;
         previous_offset = distance;
         previous_length = maximum_length;
     }

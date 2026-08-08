@@ -10411,6 +10411,64 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(cost_manager_sink, vec![0xB6]);
 
+        // Token-aware cost-manager interval update and cleanup scans now
+        // checkpoint after each 256 cumulative interval entries. The same
+        // generated probe reaches this later interior boundary without adding
+        // a Pillow parity row, fixture, or coverage-only input. Pillow has no
+        // caller-owned work budget or sink contract, so this remains Rust-only
+        // work-control evidence.
+        let cost_manager_update_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_941);
+        let cost_manager_update_error = match image_slash_star::encode_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &cost_manager_update_policy,
+        ) {
+            Ok(_) => return Err("VP8L cost-manager update budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cost_manager_update_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 144_941,
+                observed: 144_942,
+            }
+        ));
+        let mut cost_manager_update_sink = vec![0xB7];
+        let cost_manager_update_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_942),
+            &mut cost_manager_update_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L cost-manager update sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cost_manager_update_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 144_942,
+                observed: 144_943,
+            }
+        ));
+        assert_eq!(
+            cost_manager_update_sink,
+            vec![
+                0xB7, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P', b'V', b'P',
+                b'8', b'L', b'L', 0xC0, 0, 0,
+            ]
+        );
+
         // The reverse trim scan over trailing zero-repeat Huffman tokens now
         // checkpoints after each 16 compressed token entries. The same
         // generated image reaches this later interior boundary without
