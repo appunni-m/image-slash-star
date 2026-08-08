@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the claim-ledger baseline remains
+`7ab2a043b1e07106370416500bc13ae6af52cefd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of

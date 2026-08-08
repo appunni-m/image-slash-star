@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`589186a6e3f0a1f8fd47ca84dcc73133620ed9fa`; the claim-ledger baseline remains
+`7ab2a043b1e07106370416500bc13ae6af52cefd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -566,6 +566,55 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+For implementation/runtime revision
+`7ab2a043b1e07106370416500bc13ae6af52cefd`, the existing
+`encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
+VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
+polls after each 1,024 source pixels; the no-token path keeps its original tight
+maps and byte behavior. The same 64×64 RGB lossless WebP fixture rejects at
+`maximum: 2`, `observed: 3`, and leaves the caller-owned sink sentinel `[0xC4]`
+untouched. The later image-palette construction boundary is
+`maximum: 6`, `observed: 7`, with `[0xBA]` untouched after four earlier
+conversion intervals; RGBA hidden-RGB cleanup is `18/19` with `[0xB7]`, palette
+lookup is `9,820/9,821` with `[0xA9]`, and palette-mode packing is `5,205/5,206`
+with the existing `[0xC3, 0x52, 0x49, 0x46, 0x46, 0xEA, 0x03, 0x00, 0x00,
+0x57, 0x45, 0x42, 0x50]` delivered prefix. Downstream exact boundaries were
+recalibrated for the four conversion intervals: entropy analysis `23/24`,
+histogram population `62/63`, combined entropy cost `80/81`, histogram merge
+`8,258/8,259`, cost estimate `14,092/14,093`, Huffman-RLE `828/829` (or
+`827/828` for the sink), grayscale preparation `195/196`, Huffman frequency
+`44,001/44,002` (or `44,000/44,001` for the sink), code-length emission
+`144,869/144,870`, and cache population `136,928/136,929`.
+
+These are Rust-only work-control results. Pillow cannot exercise a caller token,
+typed work-budget result, or caller-owned sink/rollback contract, so this
+revision adds no Pillow parity row, fixture-manifest row, diagnostic origin,
+new test function, or coverage-only hook. The unchanged 1,445-row managed
+Pillow run is regression evidence only. The first feature-matrix attempt
+`b7851f54-9f74-4eb8-a406-2534e563c1ee` recorded one native/all AVIF
+`output_sinks_receive_the_exact_encoded_bytes` failure; the accepted retry
+`aae19360-07a7-4ade-be11-e594e80bd6e6` passed all 33 configured lanes in
+8,317 ms, ended with capability-table agreement, and had no targeted lock-wait,
+build-directory, or package-cache matches. No AVIF implementation changed in
+this revision.
+
+The managed Pillow parity run `6e6167c4-2161-4e7a-bcd4-98a1cff7e5a5` passed
+1,445/1,445 checks with zero skips in 775 ms. Managed LLVM coverage run
+`a04ade4a-8d73-481c-82bb-7c3952d57f45` passed 85/85 tests in 71,770 ms and
+ingested snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`: 53,323/53,939
+lines, 7,557/7,708 branches, 3,001/3,077 functions, and 82,502/83,879
+regions. Compared with the preceding accepted snapshot
+`ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by
+`+37/+37` lines, `+6/+6` branches, `+1/+1` functions, and `+51/+51` regions.
+The changed `src/codecs/webp/native/encoder.rs` reports 1,956/2,006 lines,
+423/438 branches, 91/91 functions, and 2,870/3,062 regions. The known LLVM
+segment-normalization warning remains; the strict aggregate shortfall is 616
+lines, 151 branches, 76 functions, and 1,377 regions. Coverage is
+implementation evidence, not Pillow parity, and no coverage-only test was
+added. Managed durations remain cache- and runner-sensitive.
+
+## Historical acceptance record: superseded WebP work-control revisions
 
 For implementation/runtime revision
 `dd1f8be02234d89d49f79c23aacf569768ad1b8e`, the current work-budget contract
@@ -1660,7 +1709,7 @@ wasm32-wasip1 lane agrees`; all 947 checks and feature assertions remain.
 This is runtime and harness evidence rather than a controlled speedup claim
 because managed cache and runner state can differ.
 
-## Latest implementation acceptance
+## Historical acceptance record: superseded implementation slices
 
 Current acceptance record: WebP VP8L entropy-mode analysis, entropy-bin histogram
 clustering pre-passes, histogram population, combined entropy-cost, merge,
@@ -1672,7 +1721,7 @@ Huffman-tree simple-tree symbol-discovery, token-frequency, trailing-token-trim,
 and code-length-emission checkpoints, plus RGB-equal grayscale-preparation
 checkpoints, candidate-trial prefix reuse, lossy WebP RGBA alpha-palette
 source-collection, index-packing, and candidate-scan checkpoints, and lossless WebP
-VP8L image-palette-construction,
+VP8L source-pixel materialization, image-palette-construction,
 palette-mode index-packing, palette-index lookup, palette sign, nearest-delta candidate-scan, and RGBA
 hidden-RGB cleanup checkpoints, plus compile-only matrix runtime
 
