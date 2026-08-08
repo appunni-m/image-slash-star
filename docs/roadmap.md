@@ -4591,6 +4591,39 @@ focused local `output_sinks_receive_the_exact_encoded_bytes` and
 passed 1/1; the
 all-target, all-feature Clippy gate also passed with warnings denied.
 
+Current WebP sampling-witness runtime acceptance record
+
+Test revision `d42d32f6b61ec97473230025dd4064cbd60f245e` compacts the existing
+Rust-only VP8L meta-histogram sampling witness from a 16,384x16 RGBA probe to
+12,288x16. The deterministic probe still keeps two real meta-histogram groups,
+retains 1,025 equal tile symbols before the distinct tail, and reaches the
+same interior comparison after the first 1,024 symbols. The generated pixel
+allocation and tile count are each reduced by 25%; the recalibrated exact
+work-budget boundary is `maximum: 600,000`, `observed: 600,001` for both
+whole-buffer and caller-owned-sink calls, with sentinel `[0xB7]` untouched.
+
+This remains a Rust-only feature-gate witness, not a Pillow parity fixture or
+row. Pillow has no caller token, typed work-budget result, caller-owned sink,
+or rollback contract, so the witness stays in the existing
+`encode_work_budget_is_a_non_parity_result_contract`; no new test function,
+fixture-manifest row, diagnostic origin, synthetic unit test, or
+coverage-only hook was added. The implementation revision and accepted
+coverage snapshot are unchanged.
+
+Exact-head managed feature-matrix run
+`7bae6546-8023-4d10-9b1f-fc182e3e1a50` passed all 33 configured lanes in
+14,731 ms with `cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. The preceding exact-head warm run
+`8459ba78-b482-41f6-9436-ac3d81670a34` took 16,775 ms with the same scheduler,
+an observed reduction of 2,044 ms (12.2%) on this host. These are
+cache- and runner-sensitive observations, not the revision-bound benchmark,
+allocation, or peak-memory evidence still required by QA-010 and QA-030.
+
+Exact-head Pillow parity run `995d9dcf-14c4-4566-a463-40b5b7cc573d` passed
+1,445/1,445 checks in 642 ms. The parity surface and coverage totals remain
+unchanged.
+
 The finer lossy WebP VP8 intra4 mode-selection, transform, trellis, distortion,
 and residual-cost slice is implemented at
 `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8` through the same existing
