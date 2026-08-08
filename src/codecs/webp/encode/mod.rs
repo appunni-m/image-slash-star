@@ -28,7 +28,9 @@ pub mod vp8;
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
 /// VP8 encoding polls required padded Y/U/V edge-replication items after each
 /// 1,024 items, analysis and segment-assignment macroblocks after each 1,024
-/// items, filter-edge adjustment, coefficient-statistics collection, and the
+/// items, mode-selection batches after each 64 completed macroblocks (roughly
+/// 1,024 luma blocks), filter-edge adjustment, coefficient-statistics
+/// collection, and the
 /// first-partition segment-probability prepass after each 1,024 selected
 /// macroblocks, transparent-area cleanup after each 1,024 scanned or flattened
 /// pixels, and alpha-palette source collection and index packing after each
