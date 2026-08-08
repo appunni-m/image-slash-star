@@ -36,6 +36,7 @@ const BIN_SIZE: usize = NUM_PARTITIONS * NUM_PARTITIONS * NUM_PARTITIONS;
 const MAX_HISTO_GREEDY: u64 = 100;
 const POPULATION_CHECKPOINT_SYMBOLS: usize = 64;
 const MERGE_CHECKPOINT_SYMBOLS: usize = 64;
+const CLUSTER_CHECKPOINT_HISTOGRAMS: usize = 64;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -523,13 +524,22 @@ fn entropy_bin_combine(
     checkpoint(token)?;
     let mut minima = [u64::MAX; 3];
     let mut maxima = [0; 3];
-    for histogram in histograms.iter() {
+    // The bin pre-pass can visit thousands of tile histograms before the
+    // merge loop below gets a chance to poll. Keep both token-aware scans
+    // bounded while retaining the existing no-token algorithm and data.
+    for (index, histogram) in histograms.iter().enumerate() {
+        if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
+            checkpoint(token)?;
+        }
         for (range, channel) in [0, 1, 2].into_iter().enumerate() {
             minima[range] = minima[range].min(histogram.costs[channel]);
             maxima[range] = maxima[range].max(histogram.costs[channel]);
         }
     }
-    for histogram in histograms.iter_mut() {
+    for (index, histogram) in histograms.iter_mut().enumerate() {
+        if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
+            checkpoint(token)?;
+        }
         let mut bin = 0;
         for channel in 0..3 {
             let range = maxima[channel] - minima[channel];

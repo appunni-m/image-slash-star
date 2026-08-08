@@ -10382,11 +10382,41 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let huffman_frequency_image =
             DecodedImage::new(128, 128, huffman_frequency_pixels, ColorType::Rgb8);
+        // Histogram clustering now checkpoints its min/max pre-pass after
+        // each 64 tile histograms and its bin-assignment pre-pass at the same
+        // interval. This boundary reaches the first bin-assignment poll after
+        // the four min/max polls on the generated 128x128 probe. Pillow has
+        // no caller token, work-budget result, or caller-owned sink, so this
+        // is Rust-only work-control evidence with no parity row or fixture.
+        let entropy_bin_prepass_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(5_309);
+        let mut entropy_bin_prepass_sink = vec![0xB9];
+        let entropy_bin_prepass_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &entropy_bin_prepass_policy,
+            &mut entropy_bin_prepass_sink,
+        ) {
+            Ok(_) => return Err("VP8L entropy-bin pre-pass budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            entropy_bin_prepass_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 5_309,
+                observed: 5_310,
+            }
+        ));
+        assert_eq!(entropy_bin_prepass_sink, vec![0xB9]);
         // The same generated LCG probe reaches the later code-length-token
         // frequency boundary without adding a Pillow parity row, fixture, or
         // coverage-only input.
         let huffman_frequency_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(43_977);
+            image_slash_star::EncodePolicy::new().with_max_work_units(43_985);
         let huffman_frequency_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
@@ -10402,8 +10432,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 43_977,
-                observed: 43_978,
+                maximum: 43_985,
+                observed: 43_986,
             }
         ));
         let mut huffman_frequency_sink = vec![0xB3];
@@ -10411,7 +10441,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(43_976),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(43_984),
             &mut huffman_frequency_sink,
         ) {
             Ok(_) => {
@@ -10425,8 +10455,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 43_976,
-                observed: 43_977,
+                maximum: 43_984,
+                observed: 43_985,
             }
         ));
         assert_eq!(huffman_frequency_sink, vec![0xB3]);
@@ -10441,7 +10471,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_974),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_982),
             &mut cost_manager_sink,
         ) {
             Ok(_) => return Err("VP8L cost-manager budget unexpectedly completed".into()),
@@ -10453,8 +10483,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_974,
-                observed: 144_975,
+                maximum: 144_982,
+                observed: 144_983,
             }
         ));
         assert_eq!(cost_manager_sink, vec![0xB6]);
@@ -10466,7 +10496,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // caller-owned work budget or sink contract, so this remains Rust-only
         // work-control evidence.
         let cost_manager_update_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(144_980);
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_988);
         let cost_manager_update_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
@@ -10482,8 +10512,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_980,
-                observed: 144_981,
+                maximum: 144_988,
+                observed: 144_989,
             }
         ));
         let mut cost_manager_update_sink = vec![0xB7];
@@ -10491,7 +10521,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_981),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_989),
             &mut cost_manager_update_sink,
         ) {
             Ok(_) => {
@@ -10505,8 +10535,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_981,
-                observed: 144_982,
+                maximum: 144_989,
+                observed: 144_990,
             }
         ));
         assert_eq!(
@@ -10522,7 +10552,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // generated image reaches this later interior boundary without
         // adding a Pillow parity row, fixture, or coverage-only input.
         let huffman_trim_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(144_970);
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_978);
         let huffman_trim_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
@@ -10538,8 +10568,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_970,
-                observed: 144_971,
+                maximum: 144_978,
+                observed: 144_979,
             }
         ));
         let mut huffman_trim_sink = vec![0xB4];
@@ -10547,7 +10577,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_980),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_988),
             &mut huffman_trim_sink,
         ) {
             Ok(_) => return Err("VP8L Huffman trim sink budget unexpectedly completed".into()),
@@ -10559,8 +10589,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_980,
-                observed: 144_981,
+                maximum: 144_988,
+                observed: 144_989,
             }
         ));
         assert_eq!(
