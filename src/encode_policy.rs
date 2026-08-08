@@ -30,6 +30,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// palette-mode index packing after each 1,024 source pixels, plus RGBA
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
+/// VP8L meta-histogram sampling row/column comparisons and symbol compaction
+/// after each 1,024 symbols,
 /// bounded backward-reference cost/length-table initialization and setup after
 /// each 1,024 entries, token-aware cost-manager interval-update and cleanup
 /// scans after each 256 cumulative interval entries, repeated-run hash-chain insertion

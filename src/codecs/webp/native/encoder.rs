@@ -93,6 +93,7 @@ const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
 const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
 const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
+const VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS: usize = 1_024;
 const WEBP_PALETTE_CHECKPOINT_VALUES: usize = 64;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES: usize = 64;
 
@@ -1046,13 +1047,37 @@ fn optimize_sampling(
         check_token(token)?;
         let new_square_size = 1 << (best_bits + 1 - input_bits);
         let square_size = 1 << (best_bits - input_bits);
-        let rows_match = (0..height)
-            .step_by(new_square_size)
-            .take_while(|&y| y + square_size < height)
-            .all(|y| {
-                symbols[y * width..(y + 1) * width]
-                    == symbols[(y + square_size) * width..(y + square_size + 1) * width]
-            });
+        let rows_match = if let Some(token) = token {
+            let mut comparisons = 0_usize;
+            let mut rows_match = true;
+            'rows: for y in (0..height)
+                .step_by(new_square_size)
+                .take_while(|&y| y + square_size < height)
+            {
+                let left = &symbols[y * width..(y + 1) * width];
+                let right = &symbols[(y + square_size) * width..(y + square_size + 1) * width];
+                for (&left, &right) in left.iter().zip(right.iter()) {
+                    let equal = left == right;
+                    comparisons += 1;
+                    if comparisons.is_multiple_of(VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS) {
+                        check_token(Some(token))?;
+                    }
+                    if !equal {
+                        rows_match = false;
+                        break 'rows;
+                    }
+                }
+            }
+            rows_match
+        } else {
+            (0..height)
+                .step_by(new_square_size)
+                .take_while(|&y| y + square_size < height)
+                .all(|y| {
+                    symbols[y * width..(y + 1) * width]
+                        == symbols[(y + square_size) * width..(y + square_size + 1) * width]
+                })
+        };
         if !rows_match {
             break;
         }
@@ -1065,13 +1090,35 @@ fn optimize_sampling(
     while best_bits > input_bits {
         check_token(token)?;
         let square_size = 1 << (best_bits - input_bits);
-        let columns_match = (0..height).all(|y| {
-            (0..width).step_by(square_size).all(|x| {
-                let first = symbols[y * width + x];
-                (x + 1..(x + square_size).min(width))
-                    .all(|column| symbols[y * width + column] == first)
+        let columns_match = if let Some(token) = token {
+            let mut comparisons = 0_usize;
+            let mut columns_match = true;
+            'rows: for y in 0..height {
+                for x in (0..width).step_by(square_size) {
+                    let first = symbols[y * width + x];
+                    for column in (x + 1)..(x + square_size).min(width) {
+                        let equal = symbols[y * width + column] == first;
+                        comparisons += 1;
+                        if comparisons.is_multiple_of(VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS) {
+                            check_token(Some(token))?;
+                        }
+                        if !equal {
+                            columns_match = false;
+                            break 'rows;
+                        }
+                    }
+                }
+            }
+            columns_match
+        } else {
+            (0..height).all(|y| {
+                (0..width).step_by(square_size).all(|x| {
+                    let first = symbols[y * width + x];
+                    (x + 1..(x + square_size).min(width))
+                        .all(|column| symbols[y * width + column] == first)
+                })
             })
-        });
+        };
         if columns_match {
             break;
         }
@@ -1085,12 +1132,28 @@ fn optimize_sampling(
     let square_size = 1 << (best_bits - input_bits);
     width = full_width.div_ceil(1 << best_bits);
     height = full_height.div_ceil(1 << best_bits);
-    for y in 0..height {
-        if y.is_multiple_of(64) {
-            check_token(token)?;
+    if let Some(token) = token {
+        let mut copied = 0_usize;
+        for y in 0..height {
+            if y.is_multiple_of(64) {
+                check_token(Some(token))?;
+            }
+            for x in 0..width {
+                symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
+                copied += 1;
+                if copied.is_multiple_of(VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS) {
+                    check_token(Some(token))?;
+                }
+            }
         }
-        for x in 0..width {
-            symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
+    } else {
+        for y in 0..height {
+            if y.is_multiple_of(64) {
+                check_token(None)?;
+            }
+            for x in 0..width {
+                symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
+            }
         }
     }
     symbols.truncate(width * height);
