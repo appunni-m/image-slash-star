@@ -39,7 +39,8 @@
 //! code-length symbols, Huffman-tree insertion scans after each 64 candidate
 //! nodes, Huffman-tree code-length-token frequency scans after each 16
 //! compressed token entries, trailing zero-repeat token trim scans after each
-//! 16 compressed token entries, token-stream intervals, plus
+//! 16 compressed token entries, Huffman code-length emission after each 16
+//! compressed token entries, token-stream intervals, plus
 //! GIF RGB/RGBA palette
 //! quantization, RGB median-cut hash/order, axis-ordering, split, and 1,024-item
 //! partition intervals, fixed 1,024-cell RGBA FASTOCTREE copy/subtraction/lookup
