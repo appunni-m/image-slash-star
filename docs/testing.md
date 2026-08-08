@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the claim-ledger baseline remains
+`c4a27c560ee6509f2c47c3e78d158ca8866cc7c2`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -1671,7 +1671,8 @@ and cost, Huffman RLE, canonical-code,
 Huffman-tree simple-tree symbol-discovery, token-frequency, trailing-token-trim,
 and code-length-emission checkpoints, plus RGB-equal grayscale-preparation
 checkpoints, candidate-trial prefix reuse, lossy WebP RGBA alpha-palette
-candidate-scan checkpoints, and lossless WebP VP8L image-palette-construction,
+source-collection and candidate-scan checkpoints, and lossless WebP
+VP8L image-palette-construction,
 palette-index lookup, palette sign, nearest-delta candidate-scan, and RGBA
 hidden-RGB cleanup checkpoints, plus compile-only matrix runtime
 
@@ -1693,7 +1694,18 @@ length-interval enumeration also charge after each 1,024 entries, while the
 ordinary no-token path retains its original tight loops. The VP8L candidate-trial
 writer now copies the already-emitted prefix once and retains only each trial
 suffix, removing repeated prefix copy/allocation without changing selected
-bytes or adding a new public work-budget result. The lossless VP8L image-palette
+bytes or adding a new public work-budget result. The lossy WebP RGBA
+alpha-palette source-collection path now charges a token-aware checkpoint after
+each 1,024 source pixels; the no-token path retains its bulk BTreeSet collection
+and byte output. The deterministic 16×64 RGBA fixture in this same existing
+feature-gate contract proves exact whole-buffer and direct-sink rejection at
+`maximum: 5,016`, `observed: 5,017`; the sink preserves the already-delivered
+WebP prefix `[0xC1, 0x52, 0x49, 0x46, 0x46, 0xF8, 0x00, 0x00, 0x00, 0x57,
+0x45, 0x42, 0x50]`. Pillow has no caller token, work-budget result, or
+caller-owned sink, so this is Rust-only evidence with no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook. The implementation is committed at
+`c4a27c560ee6509f2c47c3e78d158ca8866cc7c2`. The lossless VP8L image-palette
 construction path now charges a token-aware checkpoint after each 1,024 source
 pixels while collecting the source-color set; the no-token path retains its
 bulk collection and byte output. The deterministic 64×64 RGB lossless WebP
@@ -1819,25 +1831,26 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`472fc43d-6b90-4906-a99d-d5a689679948` passed 1,445/1,445 checks with zero
-skips in 1,019 ms; feature-matrix run
-`1491b467-f643-4493-a64d-95019aea279b` passed all configured lanes in 57,219
+`b77cebe2-1c90-4abb-9e61-ad489a6fe427` passed 1,445/1,445 checks with zero
+skips in 1,720 ms; feature-matrix run
+`cc7aa939-aaf7-4d0c-a77a-4fac4126e870` passed all configured lanes in 47,308
 ms and its retained log ended with the terminal capability agreement; targeted
 searches returned no lock-wait, build-directory, or package-cache matches.
-Managed LLVM coverage run `81b9294b-23a1-46b1-be06-5c1e5c2feb58` passed 85/85
-tests in 78,335 ms and ingested snapshot
-`d36bd1b3-f90b-444a-8751-49fdac473203`: 53,244/53,861 lines, 7,541/7,692
-branches, 2,999/3,075 functions, and 82,373/83,753 regions. Compared with
-the preceding accepted snapshot `134df260-62ba-4716-9f3c-01596205eca0`,
-covered/source totals changed by +14/+17 lines, +3/+4 branches, +1/+1
-functions, and +12/+26 regions. Native WebP encoder reports 1,878/1,928
-lines, 407/422 branches, 89/89 functions, and 2,745/2,936 regions. Coverage
+Managed LLVM coverage run `912694cf-27d2-46a0-87fd-4be3eadbfdbb` passed 85/85
+tests in 63,992 ms and ingested snapshot
+`5aa0b499-df72-43e8-89ad-330be54a75f1`: 53,262/53,878 lines, 7,545/7,696
+branches, 3,000/3,076 functions, and 82,399/83,778 regions. Compared with
+the preceding accepted snapshot `d36bd1b3-f90b-444a-8751-49fdac473203`,
+covered/source totals changed by +18/+17 lines, +4/+4 branches, +1/+1
+functions, and +26/+25 regions. Native WebP encoder reports 1,895/1,945
+lines, 411/426 branches, 90/90 functions, and 2,768/2,961 regions. Coverage
 is implementation evidence, not Pillow parity; the known LLVM
-segment-normalization warning and the 617-line, 151-branch, 76-function,
-1,380-region aggregate shortfall remain. Managed durations remain cache- and
-runner-sensitive. The lossless VP8L image-palette-construction checkpoint is
-Rust-only evidence and adds no parity row, fixture-manifest row, diagnostic
-origin, new test function, or coverage-only hook.
+segment-normalization warning and the 616-line, 151-branch, 76-function,
+1,379-region aggregate shortfall remain. Managed durations remain cache- and
+runner-sensitive. The lossless VP8L image-palette-construction and lossy WebP
+alpha-palette source-collection checkpoints are Rust-only evidence and add no
+parity row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook.
 
 Historical acceptance record: warm feature-matrix fanout bound
 
