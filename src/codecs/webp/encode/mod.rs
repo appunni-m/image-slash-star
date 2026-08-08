@@ -15,7 +15,8 @@ pub mod vp8;
 /// Encode a DecodedImage to WebP format.
 ///
 /// Lossless uses the internal VP8L encoder, which also polls image-palette
-/// construction after each 1,024 source pixels and transparent-pixel hidden-RGB
+/// construction and palette-mode index packing after each 1,024 source pixels
+/// and transparent-pixel hidden-RGB
 /// cleanup after each 1,024 scanned pixels when a caller supplies a cancellation
 /// token.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. RGBA lossy encoding
