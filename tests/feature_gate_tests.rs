@@ -14257,15 +14257,18 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(segment_assignment_sink, vec![0xA7]);
 
-        // The following selection pass now charges its own 64-macroblock
-        // interior batch (sixteen 4x4 luma blocks per macroblock, roughly
-        // 1,024 luma blocks). The preceding analysis checkpoint is allowed
-        // through, so the next charge is observed as 330. This remains
-        // Rust-only work-control evidence with no parity row or coverage-only
-        // hook.
-        let selection_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(329);
+        // The selection-only witness uses 128x128 (exactly 64 macroblocks),
+        // so it reaches the new 64-macroblock batch without repeating the
+        // larger analysis/segment-assignment probe. Each macroblock contains
+        // sixteen 4x4 luma blocks, roughly 1,024 luma blocks per batch. The
+        // preceding conversion work charges 16 units, so selection is
+        // observed as 17. This remains Rust-only work-control evidence with
+        // no parity row or coverage-only hook.
+        let selection_image =
+            DecodedImage::new(128, 128, vec![128; 128 * 128 * 3], ColorType::Rgb8);
+        let selection_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(16);
         let selection_error = match image_slash_star::encode_with_policy(
-            &analysis_image,
+            &selection_image,
             ImageFormat::WebP,
             &analysis_options,
             &selection_bounded,
@@ -14279,13 +14282,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 329,
-                observed: 330,
+                maximum: 16,
+                observed: 17,
             }
         ));
         let mut selection_sink = vec![0xAC];
         let selection_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &analysis_image,
+            &selection_image,
             ImageFormat::WebP,
             &analysis_options,
             &selection_bounded,
@@ -14302,8 +14305,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 329,
-                observed: 330,
+                maximum: 16,
+                observed: 17,
             }
         ));
         assert_eq!(selection_sink, vec![0xAC]);
