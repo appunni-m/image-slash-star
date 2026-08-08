@@ -26,13 +26,15 @@ pub mod vp8;
 /// Long backward-reference result backfills also poll after each 256 entries.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
-/// VP8 encoding polls padded Y/U/V edge-replication after each 1,024 padded items,
-/// filter-edge adjustment, coefficient-statistics collection, and the first-
-/// partition segment-probability prepass after each 1,024 selected macroblocks,
-/// transparent-area cleanup after each 1,024 scanned or flattened pixels, and
-/// alpha-palette source collection and index packing after each 1,024 source
-/// pixels when a caller supplies a cancellation token. The no-token helpers
-/// retain their original tight paths.
+/// VP8 encoding polls required padded Y/U/V edge-replication items after each
+/// 1,024 items, analysis and segment-assignment macroblocks after each 1,024
+/// items, filter-edge adjustment, coefficient-statistics collection, and the
+/// first-partition segment-probability prepass after each 1,024 selected
+/// macroblocks, transparent-area cleanup after each 1,024 scanned or flattened
+/// pixels, and alpha-palette source collection and index packing after each
+/// 1,024 source pixels when a caller supplies a cancellation token. Aligned
+/// planes are cloned directly because no edge replication is needed. The
+/// no-token helpers retain their original tight paths.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }

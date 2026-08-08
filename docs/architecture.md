@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`5a4635de869f66e55490fdaf42777d0e486fd56d`; the claim-ledger baseline remains
+`310830dd94ea74b8aa54173e5c6d2a63f1015136`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -349,7 +349,8 @@ translation cannot be bypassed.
 | Lossless WebP VP8L Huffman-node ordering checkpoints | Token-aware stable bottom-up ordering polls after each 64 comparisons; the no-token path retains the original stable sort |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
-| Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items; the no-token path retains the original tight helper and byte behavior |
+| Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
+| Lossy WebP VP8 segment-assignment checkpoints | Token-aware analysis segment assignment polls after each 1,024 macroblocks; the no-token path retains the original tight rewrite pass |
 | Lossy WebP VP8 filter-edge adjustment checkpoints | Token-aware filter-edge adjustment polls after each 1,024 selected macroblocks; the no-token path retains the original tight adjustment pass |
 | Lossy WebP VP8 coefficient-statistics checkpoints | Token-aware coefficient-statistics collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight traversal |
 | Lossy WebP VP8 segment-probability prepass checkpoints | Token-aware first-partition segment-probability collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight count pass |
@@ -581,8 +582,9 @@ batch of 64 nearest-delta candidate values, each batch of 1,024 analyzed
 macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
-adaptation, padded Y/U/V edge-replication after each 1,024 padded items,
-filter-edge adjustment, coefficient-statistics collection, and the first-
+adaptation, required padded Y/U/V edge-replication after each 1,024 padded
+items (aligned planes take a direct clone), analysis and segment assignment
+after each 1,024 macroblocks, filter-edge adjustment, coefficient-statistics collection, and the first-
 partition segment-probability prepass after each 1,024 selected macroblocks,
 partition emission, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition interval,
 each 16,384-boolean first-partition-bit interval,
@@ -647,13 +649,15 @@ GIF still writer also polls at its block/frame/coalescing/output-assembly and
 RGB/RGBA palette quantization, RGB median-cut hash/order, axis-ordering,
 split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
-preparation, lossy VP8 RGB/RGBA-to-YUV conversion, padded-plane edge
-replication, filter-edge adjustment, RGBA transparent-area cleanup after each
-1,024 scanned or flattened pixels, RGBA alpha-palette source
+preparation, lossy VP8 RGB/RGBA-to-YUV conversion, required padded-plane edge
+replication, analysis and segment assignment after each 1,024 macroblocks,
+filter-edge adjustment, RGBA transparent-area cleanup after each 1,024 scanned
+or flattened pixels, RGBA alpha-palette source
 collection and index packing after each 1,024 source pixels, nearest-delta
 candidate values after each 64 candidates, macroblock-analysis, and
-mode-selection subsegments plus analysis/coefficient-probability, filter-edge
-adjustment, and first-partition segment-probability prepass after each 1,024
+mode-selection subsegments plus analysis/segment-assignment/coefficient-
+probability, filter-edge adjustment, and first-partition segment-probability
+prepass after each 1,024
 selected macroblocks, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and
 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
