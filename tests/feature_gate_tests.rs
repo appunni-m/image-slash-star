@@ -14319,7 +14319,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // This committed 17x19 lossy WebP fixture is small enough to avoid
         // the outer 64-macroblock boundary. Its padded first macroblock still
         // reaches the new token-only checkpoint after the first intra4
-        // candidate trial, proving a finer selection boundary without a
+        // candidate-trial stage, proving a finer selection boundary without a
         // generated parity row or coverage-only hook. Pillow has no caller
         // token, typed work-budget result, or sink-rollback contract, so this
         // remains Rust-only feature-gate evidence.

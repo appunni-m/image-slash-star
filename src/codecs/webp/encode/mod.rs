@@ -38,8 +38,8 @@ pub mod vp8;
 /// 1,024 source pixels when a caller supplies a cancellation token. Aligned
 /// planes are cloned directly because no edge replication is needed. The
 /// no-token helpers retain their original tight paths; token-aware selection
-/// checks after each candidate trial, while each trial remains one
-/// uninterruptible unit.
+/// checks after candidate-trial stages and after each candidate, while each
+/// individual stage remains one uninterruptible unit.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }

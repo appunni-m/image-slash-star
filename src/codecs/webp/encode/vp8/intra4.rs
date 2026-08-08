@@ -3,7 +3,7 @@
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
     dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
-    quant::{SegmentMatrices, quantize_reconstruct_block, trellis_quantize_block},
+    quant::{SegmentMatrices, quantize_block, trellis_quantize_block},
 };
 use crate::codecs::CodecResult;
 
@@ -179,6 +179,7 @@ pub(super) struct Intra4Result {
 }
 
 trait SelectionCheckpointControl {
+    fn after_candidate_stage(&mut self) -> CodecResult<()>;
     fn after_candidate(&mut self) -> CodecResult<()>;
     fn after_block(&mut self) -> CodecResult<()>;
 }
@@ -186,6 +187,11 @@ trait SelectionCheckpointControl {
 struct NoopSelectionCheckpoint;
 
 impl SelectionCheckpointControl for NoopSelectionCheckpoint {
+    #[inline(always)]
+    fn after_candidate_stage(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
     #[inline(always)]
     fn after_candidate(&mut self) -> CodecResult<()> {
         Ok(())
@@ -202,6 +208,11 @@ struct TokenSelectionCheckpoint<'a> {
 }
 
 impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
+    #[inline]
+    fn after_candidate_stage(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
     #[inline]
     fn after_candidate(&mut self) -> CodecResult<()> {
         crate::codecs::error::check_cancelled(Some(self.token))
@@ -416,12 +427,14 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                 let mut selected: Option<(u32, Intra4Mode)> = None;
                 for mode in Intra4Mode::ALL {
                     let prediction = predict(mode, &top, &left, block_top_left);
-                    let score =
-                        256_u32
-                            .wrapping_mul(squared_error_4x4(&block_source, &prediction))
-                            .wrapping_add(11_u32.wrapping_mul(u32::from(fixed_mode_cost(
-                                top_mode, left_mode, mode,
-                            ))));
+                    checkpoint.after_candidate_stage()?;
+                    let distortion = squared_error_4x4(&block_source, &prediction);
+                    checkpoint.after_candidate_stage()?;
+                    let mode_cost = fixed_mode_cost(top_mode, left_mode, mode);
+                    checkpoint.after_candidate_stage()?;
+                    let score = 256_u32
+                        .wrapping_mul(distortion)
+                        .wrapping_add(11_u32.wrapping_mul(u32::from(mode_cost)));
                     if selected.is_none_or(|(best, _)| score < best) {
                         selected = Some((score, mode));
                     }
@@ -441,11 +454,13 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                 .filter(|&mode| selected_mode.is_none_or(|selected| selected == mode))
             {
                 let prediction = predict(mode, &top, &left, block_top_left);
+                checkpoint.after_candidate_stage()?;
                 let (nonzero, levels, reconstructed) = if trellis {
                     let residual = std::array::from_fn(|index| {
                         i16::from(block_source[index]).wrapping_sub(i16::from(prediction[index]))
                     });
                     let mut coefficients = vp8_fdct_4x4(&residual);
+                    checkpoint.after_candidate_stage()?;
                     let mut levels = [0; 16];
                     let nonzero = trellis_quantize_block(
                         &mut coefficients,
@@ -456,13 +471,27 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                         matrices.lambda_trellis_i4,
                         coefficient_probabilities,
                     );
+                    checkpoint.after_candidate_stage()?;
                     let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
+                    checkpoint.after_candidate_stage()?;
                     (nonzero, levels, reconstructed)
                 } else {
-                    quantize_reconstruct_block(&block_source, &prediction, &matrices.y1)
+                    let residual = std::array::from_fn(|index| {
+                        i16::from(block_source[index]).wrapping_sub(i16::from(prediction[index]))
+                    });
+                    let mut coefficients = vp8_fdct_4x4(&residual);
+                    checkpoint.after_candidate_stage()?;
+                    let mut levels = [0; 16];
+                    let nonzero = quantize_block(&mut coefficients, &mut levels, &matrices.y1);
+                    checkpoint.after_candidate_stage()?;
+                    let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
+                    checkpoint.after_candidate_stage()?;
+                    (nonzero, levels, reconstructed)
                 };
                 let distortion = squared_error_4x4(&block_source, &reconstructed);
+                checkpoint.after_candidate_stage()?;
                 let texture = spectral_distortion_4x4(&block_source, &reconstructed);
+                checkpoint.after_candidate_stage()?;
                 let spectral = texture_lambda
                     .wrapping_mul(texture)
                     .wrapping_add(128)
@@ -496,6 +525,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     context,
                     coefficient_probabilities,
                 ));
+                checkpoint.after_candidate_stage()?;
                 let score = rd_score(rate, header, distortion.wrapping_add(spectral), lambda_i4);
                 if distortion_only || best.as_ref().is_none_or(|best| score < best.0) {
                     best = Some((

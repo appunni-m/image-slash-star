@@ -1005,8 +1005,8 @@ pub fn encode_with_policy(
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
 /// API additionally checks at retained-frame boundaries and codec-specific
 /// checkpoints. The no-token WebP selection path remains tight; token-aware
-/// selection checks after each candidate trial, while each trial remains one
-/// uninterruptible unit.
+/// selection checks after candidate-trial stages and after each candidate,
+/// while each individual stage remains one uninterruptible unit.
 ///
 /// # Errors
 ///
