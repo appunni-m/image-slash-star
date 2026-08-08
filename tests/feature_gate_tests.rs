@@ -9787,7 +9787,6 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             lossless_expected,
             "an ample WebP VP8L budget preserves byte identity"
         );
-
         // The non-palette VP8L preparation path now scans RGB-equal pixels
         // with a checkpoint after each 1,024 pixels. Varying alpha keeps this
         // deterministic grayscale probe above the 256-color palette limit,
@@ -10474,9 +10473,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let cache_probe_image = DecodedImage::new(512, 512, cache_probe_pixels, ColorType::Rgb8);
         // VP8L cache population inside a copy token now checkpoints after
-        // each 256 pixels. This repeated-row probe reaches that interior
-        // boundary without adding a Pillow parity row, fixture, or
-        // coverage-only input.
+        // each 256 pixels. The token-aware hash-chain path also checkpoints
+        // repeated-run insertion after each 256 pixels; its no-token path
+        // remains tight. This repeated-row probe reaches the cache boundary
+        // without adding a Pillow parity row, fixture, or coverage-only input.
         let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_752);
         let cache_probe_error = match image_slash_star::encode_with_policy(
             &cache_probe_image,
@@ -10502,7 +10502,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &cache_probe_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(136_789),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(136_804),
             &mut cache_probe_sink,
         ) {
             Ok(_) => return Err("VP8L cache sink probe budget unexpectedly completed".into()),
@@ -10514,8 +10514,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_789,
-                observed: 136_790,
+                maximum: 136_804,
+                observed: 136_805,
             }
         ));
         assert_eq!(

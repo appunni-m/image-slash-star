@@ -38,6 +38,7 @@ const COST_CHECKPOINT_SYMBOLS: usize = 64;
 const COST_CHECKPOINT_TOKENS: usize = 1_024;
 const COST_MANAGER_CHECKPOINT_ENTRIES: usize = 1_024;
 const CACHE_CHECKPOINT_PIXELS: usize = 256;
+const HASH_CHAIN_RUN_CHECKPOINT_PIXELS: usize = 256;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -125,15 +126,33 @@ fn fill_hash_chain(
                 position += run - MAX_LENGTH;
                 run = MAX_LENGTH;
             }
-            while run > 0 {
-                let key = (run as u32)
-                    .wrapping_mul(HASH_MULTIPLIER_HI)
-                    .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
-                let hash = (key >> (32 - HASH_BITS)) as usize;
-                chain[position] = first[hash];
-                first[hash] = position as i32;
-                position += 1;
-                run -= 1;
+            if let Some(token) = token {
+                let mut inserted = 0_usize;
+                while run > 0 {
+                    let key = (run as u32)
+                        .wrapping_mul(HASH_MULTIPLIER_HI)
+                        .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
+                    let hash = (key >> (32 - HASH_BITS)) as usize;
+                    chain[position] = first[hash];
+                    first[hash] = position as i32;
+                    position += 1;
+                    run -= 1;
+                    inserted += 1;
+                    if inserted.is_multiple_of(HASH_CHAIN_RUN_CHECKPOINT_PIXELS) {
+                        checkpoint(Some(token))?;
+                    }
+                }
+            } else {
+                while run > 0 {
+                    let key = (run as u32)
+                        .wrapping_mul(HASH_MULTIPLIER_HI)
+                        .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
+                    let hash = (key >> (32 - HASH_BITS)) as usize;
+                    chain[position] = first[hash];
+                    first[hash] = position as i32;
+                    position += 1;
+                    run -= 1;
+                }
             }
             equal_pair = false;
         } else {
