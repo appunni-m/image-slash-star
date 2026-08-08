@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`2945ad28fde44976f33459c7664482f9c61a2b70`; the claim-ledger baseline remains
+`8a549091c618c7282c43b8566da79d6f592d4bae`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -727,6 +727,40 @@ records from generic token-aware instantiations without adding synthetic
 coverage. The known LLVM JSON segment-normalization warning remains; the
 aggregate shortfall is 722 lines, 187 branches, 78 functions, and 1,609
 regions.
+
+Current test-runtime acceptance record: warm feature-matrix fanout
+
+The harness-only revision `8a549091c618c7282c43b8566da79d6f592d4bae`
+retains the same 33 native, `wasm32-unknown-unknown`, and
+`wasm32-wasip1` lanes, 991/991 assertions, capability-table agreement, and
+unknown-target library lint scope. For retained warm roots, the default
+fanout now admits up to two single-worker lanes per logical CPU, capped at 24;
+`MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` remain explicit
+overrides. This changes validation scheduling only, not production code,
+Pillow fixtures, parity rows, or coverage origins.
+
+Exact managed feature-matrix run
+`4dd23596-58c7-49ab-b92d-bb5600c06a4b` passed all 33 configured lanes in
+31,992 ms with `cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`,
+`debug=0`, and `verbose=0`; its retained log contains the
+`capability tables OK: every native and wasm32-wasip1 lane agrees` marker and
+no `lock-wait` match. On the same unchanged local host, the former 12-lane
+default took 17.05 s and the 24-lane run took 14.86 s. These are
+cache- and runner-sensitive observations, not universal benchmarks and not
+the revision-bound allocation/peak-memory evidence still required by QA-010
+and QA-030.
+
+Exact-head Pillow parity run `f811133a-b09d-4273-9423-5804cbf60987` passed
+1,445/1,445 checks in 1,401 ms. Nightly LLVM run
+`69fc0cfe-4bc8-413f-b3ab-2214cafb7b51` passed 85/85 tests in 65,242 ms and
+ingested snapshot `0e5bcd27-f18c-4b11-81fb-5ff6613b3f54`, retaining
+54,149/54,871 lines, 7,667/7,854 branches, 3,077/3,155 functions, and
+83,579/85,188 regions. Compared with the preceding snapshot
+`c5bb524f-600d-42ba-9143-e16d2a47b0d0`, covered/source deltas are zero because
+the slice changes only the test harness; the existing LLVM
+segment-normalization warning remains. These execution, target, and coverage
+records remain separate from Pillow parity, and no synthetic coverage test was
+added.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
