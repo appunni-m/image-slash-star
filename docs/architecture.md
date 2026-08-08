@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`132184ab3dccd7a9b16b90361fd90041f60634b9`; the claim-ledger baseline remains
+`2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -357,7 +357,7 @@ translation cannot be bypassed.
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
 | Lossy WebP VP8 segment-assignment checkpoints | Token-aware analysis segment assignment polls after each 1,024 macroblocks; the no-token path retains the original tight rewrite pass |
-| Lossy WebP VP8 mode-selection checkpoints | Token-aware intra4 selection polls after each candidate-trial stage, each forward- and inverse-transform row/column subpass, each non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, each candidate, and each completed luma 4×4 block, while the outer checkpoint remains after each 64 completed macroblocks for intra16/chroma and completed-decision work; the no-token path retains the original tight loop and each other individual stage remains one uninterruptible unit |
+| Lossy WebP VP8 mode-selection checkpoints | Token-aware intra4 selection polls after each candidate-trial stage, each forward- and inverse-transform row/column subpass, each non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, each squared-error pixel, each spectral-distortion weighted-transform row/column pass, each residual-cost coefficient, each candidate, and each completed luma 4×4 block, while the outer checkpoint remains after each 64 completed macroblocks for intra16/chroma and completed-decision work; the no-token path retains the original tight loop and each other individual stage remains one uninterruptible unit |
 | Lossy WebP VP8 filter-edge adjustment checkpoints | Token-aware filter-edge adjustment polls after each 1,024 selected macroblocks; the no-token path retains the original tight adjustment pass |
 | Lossy WebP VP8 coefficient-statistics checkpoints | Token-aware coefficient-statistics collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight traversal |
 | Lossy WebP VP8 segment-probability prepass checkpoints | Token-aware first-partition segment-probability collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight count pass |
@@ -590,8 +590,9 @@ macroblocks, and each batch of 64 frame-selection macroblocks (roughly 1,024
 luma 4×4 blocks), with token-aware intra4 selection also checking after each
 candidate-trial stage, forward- and inverse-transform row/column subpass,
 non-trellis quantization coefficient, each method-6 trellis-quantization
-coefficient candidate and path-reconstruction node, candidate, and completed
-luma 4×4 block, then
+coefficient candidate and path-reconstruction node, squared-error pixel,
+spectral-distortion weighted-transform row/column pass, residual-cost
+coefficient, candidate, and completed luma 4×4 block, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, required padded Y/U/V edge-replication after each 1,024 padded
@@ -665,7 +666,7 @@ split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, required padded-plane edge
 replication, analysis and segment assignment after each 1,024 macroblocks,
-intra4 mode selection after each candidate-trial stage, forward- and inverse-transform row/column subpass, non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, candidate, and completed luma 4×4 block
+intra4 mode selection after each candidate-trial stage, forward- and inverse-transform row/column subpass, non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, squared-error pixel, spectral-distortion weighted-transform row/column pass, residual-cost coefficient, candidate, and completed luma 4×4 block
 and its outer 64-macroblock batch for intra16/chroma work,
 filter-edge adjustment, RGBA transparent-area cleanup after each 1,024 scanned
 or flattened pixels, RGBA alpha-palette source
@@ -742,8 +743,9 @@ RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup, macroblock-analysis,
 and mode-selection work beyond the implemented intra4 candidate-trial-stage,
 forward- and inverse-transform row/column subpass, non-trellis
 quantization-coefficient, method-6 trellis-quantization coefficient-candidate
-and path-reconstruction-node, per-block, and outer 64-macroblock checkpoints,
-including distortion and residual-cost interiors, JPEG baseline entropy traversal
+and path-reconstruction-node, squared-error pixel, spectral-distortion
+weighted-transform row/column pass, residual-cost coefficient, per-block, and
+outer 64-macroblock checkpoints, JPEG baseline entropy traversal
 beyond the
 implemented 1,024-MCU interval, optimized-Huffman frequency work beyond
 the implemented 1,024-AC interval, progressive scan block-slot work beyond
