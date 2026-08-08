@@ -175,6 +175,7 @@ struct TrellisNode {
 }
 
 /// Trellis quantization used by libwebp's method 6 luma search.
+#[inline(always)]
 pub(super) fn trellis_quantize_block(
     coefficients: &mut [i16; 16],
     levels: &mut [i16; 16],
@@ -184,6 +185,33 @@ pub(super) fn trellis_quantize_block(
     lambda: i32,
     probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> bool {
+    trellis_quantize_block_with_control(
+        coefficients,
+        levels,
+        initial_context,
+        coefficient_type,
+        matrix,
+        lambda,
+        probabilities,
+        || Ok(()),
+    )
+    .unwrap_or_default()
+}
+
+/// Trellis-quantize one block while polling its dynamic-programming work.
+pub(super) fn trellis_quantize_block_with_control<F>(
+    coefficients: &mut [i16; 16],
+    levels: &mut [i16; 16],
+    initial_context: usize,
+    coefficient_type: usize,
+    matrix: &QuantMatrix,
+    lambda: i32,
+    probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    mut checkpoint: F,
+) -> CodecResult<bool>
+where
+    F: FnMut() -> CodecResult<()>,
+{
     const WEIGHTS: [i64; 16] = [30, 27, 19, 11, 27, 24, 17, 10, 19, 17, 12, 8, 11, 10, 8, 6];
     const MAX_LEVEL: u32 = 2_047;
     const MAX_SCORE: i64 = i64::MAX / 4;
@@ -294,18 +322,21 @@ pub(super) fn trellis_quantize_block(
                     best_path = Some((position, delta, selected_previous));
                 }
             }
+            checkpoint()?;
         }
         previous_scores = current_scores;
         previous_contexts = current_contexts;
+        checkpoint()?;
     }
 
     let clear_from = first;
     for position in clear_from..16 {
         coefficients[ZIGZAG[position]] = 0;
         levels[position] = 0;
+        checkpoint()?;
     }
     let Some((mut position, mut node, terminal_previous)) = best_path else {
-        return false;
+        return Ok(false);
     };
     nodes[position][node].previous = terminal_previous.to_le_bytes()[0];
     loop {
@@ -319,13 +350,14 @@ pub(super) fn trellis_quantize_block(
         let q = matrix.q[ZIGZAG[position]];
         coefficients[ZIGZAG[position]] =
             signed_level.wrapping_mul(i16::from_le_bytes(q.to_le_bytes()));
+        checkpoint()?;
         node = usize::from(selected.previous);
         if position == first {
             break;
         }
         position = position.wrapping_sub(1);
     }
-    true
+    Ok(true)
 }
 
 /// Quantizes one transform block using libwebp's lossy VP8 scalar quantizer.

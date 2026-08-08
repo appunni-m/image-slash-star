@@ -25,7 +25,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// collection and index packing after each 1,024 source pixels, required
 /// padded-plane edge replication, filter-edge adjustment, analysis and
 /// segment-assignment macroblocks, mode-selection batches after each 64
-/// completed macroblocks (roughly 1,024 luma blocks), plus the remaining
+/// completed macroblocks (roughly 1,024 luma blocks), method-6 trellis
+/// quantization coefficient candidates and path-reconstruction nodes, plus the remaining
 /// analysis/partition stages, 8-bit, 16-bit, 32-bit, 64-bit,
 /// 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit,
 /// 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and
@@ -113,7 +114,8 @@ impl EncodePolicy {
     /// source pixels during source collection and index packing, after each
     /// required padded-plane item, analysis or segment-assignment macroblock,
     /// mode-selection batch of 64 completed macroblocks (roughly 1,024 luma
-    /// blocks), and after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
+    /// blocks), method-6 trellis quantization coefficient candidates and
+    /// path-reconstruction nodes, and after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
     /// logical and 16,384-boolean first-partition interval, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L

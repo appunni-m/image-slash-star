@@ -14571,6 +14571,75 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(inverse_transform_sink, vec![0xB0]);
 
+        let mut trellis_options = interior_options.clone();
+        if let EncodeOptions::WebP(options) = &mut trellis_options {
+            options.method = Some(6);
+        }
+        let trellis_expected =
+            image_slash_star::encode(&selection_fixture, ImageFormat::WebP, &trellis_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &selection_fixture,
+                ImageFormat::WebP,
+                &trellis_options,
+                &unlimited,
+            )?,
+            trellis_expected,
+            "an ample fixture-derived trellis budget preserves byte identity"
+        );
+
+        // Method 6 performs a second intra4 selection with trellis
+        // quantization. The first trellis block starts after the preceding
+        // method-6 preparation and non-trellis selection work has admitted
+        // 23,442 checkpoints; its first coefficient candidate is the next
+        // controlled boundary. This is Rust-only caller-budget evidence:
+        // Pillow has no caller token, typed work-budget result, sink, or
+        // rollback contract, so it adds no parity row or coverage-only hook.
+        let trellis_policy = image_slash_star::EncodePolicy::new().with_max_work_units(23_442);
+        let trellis_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &trellis_options,
+            &trellis_policy,
+        ) {
+            Ok(_) => return Err("fixture-derived trellis budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trellis_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 23_442,
+                observed: 23_443,
+            }
+        ));
+        let mut trellis_sink = vec![0xB1];
+        let trellis_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &trellis_options,
+            &trellis_policy,
+            &mut trellis_sink,
+        ) {
+            Ok(_) => {
+                return Err("fixture-derived trellis sink budget unexpectedly wrote output".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trellis_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 23_442,
+                observed: 23_443,
+            }
+        ));
+        assert_eq!(trellis_sink, vec![0xB1]);
+
         // Coefficient-probability adaptation has 1,056 fixed probability
         // nodes and charges at 1,024 nodes. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence with no

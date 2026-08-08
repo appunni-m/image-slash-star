@@ -7,7 +7,7 @@ use super::{
     },
     quant::{
         QuantMatrix, SegmentMatrices, quantize_block, quantize_block_with_control,
-        trellis_quantize_block,
+        trellis_quantize_block, trellis_quantize_block_with_control,
     },
 };
 use crate::codecs::CodecResult;
@@ -197,6 +197,16 @@ trait SelectionCheckpointControl {
         levels: &mut [i16; 16],
         matrix: &QuantMatrix,
     ) -> CodecResult<bool>;
+    fn trellis_quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        initial_context: usize,
+        coefficient_type: usize,
+        matrix: &QuantMatrix,
+        lambda: i32,
+        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<bool>;
     fn after_candidate(&mut self) -> CodecResult<()>;
     fn after_block(&mut self) -> CodecResult<()>;
 }
@@ -231,6 +241,28 @@ impl SelectionCheckpointControl for NoopSelectionCheckpoint {
         matrix: &QuantMatrix,
     ) -> CodecResult<bool> {
         Ok(quantize_block(coefficients, levels, matrix))
+    }
+
+    #[inline(always)]
+    fn trellis_quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        initial_context: usize,
+        coefficient_type: usize,
+        matrix: &QuantMatrix,
+        lambda: i32,
+        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<bool> {
+        Ok(trellis_quantize_block(
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+        ))
     }
 
     #[inline(always)]
@@ -278,6 +310,29 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
         quantize_block_with_control(coefficients, levels, matrix, || {
             self.after_candidate_stage()
         })
+    }
+
+    #[inline]
+    fn trellis_quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        initial_context: usize,
+        coefficient_type: usize,
+        matrix: &QuantMatrix,
+        lambda: i32,
+        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<bool> {
+        trellis_quantize_block_with_control(
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+            || self.after_candidate_stage(),
+        )
     }
 
     #[inline]
@@ -528,7 +583,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     });
                     let mut coefficients = checkpoint.forward_transform(&residual)?;
                     let mut levels = [0; 16];
-                    let nonzero = trellis_quantize_block(
+                    let nonzero = checkpoint.trellis_quantize_block(
                         &mut coefficients,
                         &mut levels,
                         context,
@@ -536,7 +591,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                         &matrices.y1,
                         matrices.lambda_trellis_i4,
                         coefficient_probabilities,
-                    );
+                    )?;
                     checkpoint.after_candidate_stage()?;
                     let reconstructed = checkpoint.inverse_transform(&prediction, &coefficients)?;
                     (nonzero, levels, reconstructed)
