@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`573c15cfec6e6a40de3248edac3a93d8904b52ec`; the claim-ledger baseline remains
+`95e9efa7318540e525700e7b32ae38703c5ecedf`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -350,6 +350,7 @@ translation cannot be bypassed.
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items; the no-token path retains the original tight helper and byte behavior |
+| Lossy WebP VP8 coefficient-statistics checkpoints | Token-aware coefficient-statistics collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight traversal |
 | `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer or structural segment reaches a caller-owned sink |
@@ -579,6 +580,7 @@ macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, padded Y/U/V edge-replication after each 1,024 padded items,
+coefficient-statistics collection after each 1,024 selected macroblocks,
 partition emission, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition interval,
 each 16,384-boolean first-partition-bit interval,
 each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient interval, each 16,384-boolean coefficient-bit
