@@ -66,6 +66,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
 const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
@@ -1820,9 +1821,23 @@ fn encode_frame(
     // libwebp therefore replaces hidden RGB values of fully transparent
     // pixels with transparent black before selecting any transforms.
     if is_alpha {
-        for pixel in &mut pixels {
-            if *pixel >> 24 == 0 {
-                *pixel = 0;
+        if let Some(token) = token {
+            let mut pixels_until_checkpoint = VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS;
+            for pixel in &mut pixels {
+                if *pixel >> 24 == 0 {
+                    *pixel = 0;
+                }
+                pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+                if pixels_until_checkpoint == 0 {
+                    check_token(Some(token))?;
+                    pixels_until_checkpoint = VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS;
+                }
+            }
+        } else {
+            for pixel in &mut pixels {
+                if *pixel >> 24 == 0 {
+                    *pixel = 0;
+                }
             }
         }
     }
