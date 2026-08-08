@@ -67,6 +67,7 @@ const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
+const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
@@ -1965,6 +1966,32 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     })
 }
 
+fn collect_alpha_palette(
+    alpha: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u8>, EncodingError> {
+    if let Some(token) = token {
+        let mut palette = std::collections::BTreeSet::new();
+        let mut samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
+        for &value in alpha {
+            palette.insert(value);
+            samples_until_checkpoint = samples_until_checkpoint.saturating_sub(1);
+            if samples_until_checkpoint == 0 {
+                check_token(Some(token))?;
+                samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
+            }
+        }
+        Ok(palette.into_iter().collect())
+    } else {
+        Ok(alpha
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect())
+    }
+}
+
 // Every sorted palette suffix is non-empty by construction.
 #[allow(clippy::unwrap_used)]
 pub(crate) fn encode_alpha(
@@ -1976,12 +2003,7 @@ pub(crate) fn encode_alpha(
     check_token(token)?;
     assert_eq!(alpha.len(), width as usize * height as usize);
 
-    let mut palette_values = alpha
-        .iter()
-        .copied()
-        .collect::<std::collections::BTreeSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
+    let mut palette_values = collect_alpha_palette(alpha, token)?;
     let mut signs = 0u8;
     let mut predicted = 0u8;
     for (index, &value) in palette_values.iter().enumerate() {
