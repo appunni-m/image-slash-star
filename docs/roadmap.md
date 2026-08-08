@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `74d32c64-7231-448b-9a23-b8fabc4f70c2` covers implementation revision `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8`: 54,081/54,803 lines, 7,646/7,832 branches, 3,073/3,151 functions, and 83,481/85,084 regions. Compared with the preceding accepted snapshot `ce8893e1-ae15-49d9-b179-20e381579d02`, covered/source totals changed by +182/+183 lines, +24/+24 branches, +14/+14 functions, and +299/+308 regions. The current test/runtime harness follow-up is `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`: warm feature-matrix lanes default to `MATRIX_TEST_OPT_LEVEL=2`, and exact-revision run `9ba9bd95-5b7f-49ca-89c5-1a127657ea1c` passed all configured native/WASI lanes in 65,185 ms with one test worker per lane, one build job per lane, debug 0, and verbose 0; its retained log records `capability tables OK: every native and wasm32-wasip1 lane agrees` and no `lock-wait` match. The regular Cargo test profile remains `opt-level = 2`, and explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 722 lines, 186 branches, 78 functions, and 1,603 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `74d32c64-7231-448b-9a23-b8fabc4f70c2` covers implementation revision `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8`: 54,081/54,803 lines, 7,646/7,832 branches, 3,073/3,151 functions, and 83,481/85,084 regions. Compared with the preceding accepted snapshot `ce8893e1-ae15-49d9-b179-20e381579d02`, covered/source totals changed by +182/+183 lines, +24/+24 branches, +14/+14 functions, and +299/+308 regions. The current test/runtime harness follow-up is `8c531be322c6234b4694e9353164587f8c79b4ba`: `scripts/test_feature_matrix.sh` fingerprints build/test inputs before classifying retained lane roots, so source-changing runs use compile-oriented fanout while unchanged revisions retain the warm scheduler. Exact source-changing run `236ec73c-0f8d-4f1b-8187-6d0204dd0938` passed all 33 configured native/WASI lanes in 17,110 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; unchanged-revision run `077d58d7-b211-4e4a-8c18-3f6539b56eb0` passed in 15,424 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`, `debug=0`, and `verbose=0`. Both retained the `capability tables OK: every native and wasm32-wasip1 lane agrees` marker; the earlier 65,185 ms run was a stale-cache-classification observation, not a persistent test-body regression. The regular Cargo test profile remains `opt-level = 2`, and explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 722 lines, 186 branches, 78 functions, and 1,603 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4349,15 +4349,21 @@ The harness follow-up defaults the isolated feature-matrix test binaries to
 the existing Cargo test `opt-level = 2`. The existing native AVIF
 structural-sink witness also pins `sequence_time=1` in its caller-built
 options, preventing wall-clock BMFF timestamps from making repeated sink
-comparisons fail. Managed run
-`db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured lanes in
-8,806 ms on a warm cache with one test worker per lane, one build job per lane,
-debug 0, and verbose 0; its retained log has the native/WASI capability
-agreement marker and no `lock-wait` match. The parent level-1 run took 11,478
-ms, while the first level-2 run rebuilt isolated artifacts in 25,946 ms. These
-are runner- and cache-sensitive observations. This slice changes no
-production codec behavior, Pillow parity row, parity fixture, diagnostic
-origin, or coverage-only test.
+comparisons fail. The later stale-cache fix is committed at
+`8c531be322c6234b4694e9353164587f8c79b4ba`: the script fingerprints
+build/test inputs before classifying retained lane roots, so a source-changing
+run uses the compile-oriented scheduler and an unchanged revision keeps the
+warm scheduler. Exact source-changing run
+`236ec73c-0f8d-4f1b-8187-6d0204dd0938` passed all 33 configured lanes in
+17,110 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; unchanged-revision run
+`077d58d7-b211-4e4a-8c18-3f6539b56eb0` passed in 15,424 ms with
+`cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`, `debug=0`, and
+`verbose=0`. Both retained the native/WASI capability agreement marker. The
+earlier 65,185 ms run was a stale-cache-classification observation, not a
+persistent test-body regression. These are runner- and cache-sensitive
+observations. This harness slice changes no production codec behavior, Pillow
+parity row, parity fixture, diagnostic origin, or coverage-only test.
 
 The AVIF grid slice retains the validated primary `grid` payload as
 `AvifGridProperties` (`version`, raw `flags`, `rows`, `columns`,
@@ -4438,7 +4444,12 @@ surface unchanged. Feature-matrix run
 `9ba9bd95-5b7f-49ca-89c5-1a127657ea1c` passed all configured lanes in
 65,185 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
 `debug=0`, and `verbose=0`; its retained log records the native/WASI
-capability agreement marker and no `lock-wait` match. Nightly LLVM run
+capability agreement marker and no `lock-wait` match.
+The later harness revision `8c531be322c6234b4694e9353164587f8c79b4ba`
+passed the same 33 lanes in 17,110 ms during the source-changing run and
+15,424 ms on the unchanged warm rerun above.
+
+Nightly LLVM run
 `afea191b-ffaa-48eb-89d5-41c94592ea6a` passed 85/85 tests in 79,822 ms and
 ingested snapshot `74d32c64-7231-448b-9a23-b8fabc4f70c2`, reporting
 54,081/54,803 lines, 7,646/7,832 branches, 3,073/3,151 functions, and

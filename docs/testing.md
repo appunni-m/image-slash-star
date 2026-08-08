@@ -711,6 +711,22 @@ agreement marker and no `lock-wait` match. The parent level-1 run
 first level-2 run rebuilt isolated artifacts in 25,946 ms. These are
 cache- and runner-sensitive observations, not universal speed claims.
 
+The current stale-cache classification follow-up is committed at
+`8c531be322c6234b4694e9353164587f8c79b4ba`. The harness fingerprints
+build/test inputs before choosing the retained-root scheduler, so source
+changes use compile-oriented fanout while unchanged revisions retain the
+warm scheduler. Source-changing managed run
+`236ec73c-0f8d-4f1b-8187-6d0204dd0938` passed all 33 configured lanes in
+17,110 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; unchanged-revision run
+`077d58d7-b211-4e4a-8c18-3f6539b56eb0` passed in 15,424 ms with
+`cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`, `debug=0`, and
+`verbose=0`. Both retained the native/WASI capability agreement marker. The
+earlier 65,185 ms run was a stale-cache-classification observation, not a
+persistent test-body regression. These remain cache- and runner-sensitive
+observations; production codec behavior, Pillow manifest rows, parity
+fixtures, and coverage origins are unchanged.
+
 Exact-head managed validation for implementation/coverage revision
 `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8` passed Pillow parity run
 `0913abdc-b1f7-4a37-b697-d7d35d29139b` with 1,445/1,445 checks in 3,728 ms;
@@ -719,7 +735,12 @@ surface unchanged. Feature-matrix run
 `9ba9bd95-5b7f-49ca-89c5-1a127657ea1c` passed all configured lanes in
 65,185 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
 `debug=0`, and `verbose=0`; its retained log records the native/WASI
-capability agreement marker and no `lock-wait` match. Nightly LLVM run
+capability agreement marker and no `lock-wait` match.
+The later harness revision `8c531be322c6234b4694e9353164587f8c79b4ba`
+passed the same 33 lanes in 17,110 ms during the source-changing run and
+15,424 ms on the unchanged warm rerun above.
+
+Nightly LLVM run
 `afea191b-ffaa-48eb-89d5-41c94592ea6a` passed 85/85 tests in 79,822 ms and
 ingested snapshot `74d32c64-7231-448b-9a23-b8fabc4f70c2`, reporting
 54,081/54,803 lines, 7,646/7,832 branches, 3,073/3,151 functions, and
