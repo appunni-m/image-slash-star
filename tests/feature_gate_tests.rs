@@ -9773,6 +9773,80 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // Lossless VP8L RGBA cleanup now polls after each 1,024 scanned
+        // pixels while replacing hidden RGB values in fully transparent
+        // pixels. This deterministic 128x128 fixture reaches that first
+        // interior checkpoint after the encoder's two fixed admission polls.
+        // Pillow has no caller token, work-budget result, or sink-rollback
+        // contract, so this remains Rust-only evidence with no parity row,
+        // manifest fixture, diagnostic origin, new test function, or
+        // coverage-only hook.
+        let mut alpha_cleanup_pixels = Vec::with_capacity(128 * 128 * 4);
+        for index in 0..128 * 128 {
+            let value = u8::try_from(index % 256)?;
+            alpha_cleanup_pixels.extend_from_slice(&[
+                value,
+                value.wrapping_mul(3),
+                value.wrapping_add(7),
+                0,
+            ]);
+        }
+        let alpha_cleanup_image =
+            DecodedImage::new(128, 128, alpha_cleanup_pixels, ColorType::Rgba8);
+        let alpha_cleanup_expected =
+            image_slash_star::encode(&alpha_cleanup_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &alpha_cleanup_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            alpha_cleanup_expected,
+            "an ample VP8L RGBA cleanup budget preserves byte identity"
+        );
+        let alpha_cleanup_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let alpha_cleanup_error = match image_slash_star::encode_with_policy(
+            &alpha_cleanup_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &alpha_cleanup_policy,
+        ) {
+            Ok(_) => return Err("VP8L RGBA cleanup budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_cleanup_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        let mut alpha_cleanup_sink = vec![0xB7];
+        let alpha_cleanup_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &alpha_cleanup_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &alpha_cleanup_policy,
+            &mut alpha_cleanup_sink,
+        ) {
+            Ok(_) => return Err("VP8L RGBA cleanup sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_cleanup_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        assert_eq!(alpha_cleanup_sink, vec![0xB7]);
         // This deterministic 128-entry palette fixture reaches lossless
         // VP8L palette mode and forces both forward and reverse RGB deltas.
         // The Rust-only work contract must therefore cover the inner nearest
