@@ -15,6 +15,7 @@ use super::{
 use crate::codecs::CodecResult;
 
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
+const PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
 const PARTITION_8_BIT_CHECKPOINT_BITS: usize = 8;
@@ -37,6 +38,7 @@ const PARTITION_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait PartitionCheckpointControl {
     fn checkpoint_probability(&mut self) -> CodecResult<()>;
+    fn checkpoint_filter_edge_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_bit(&mut self) -> CodecResult<()>;
@@ -55,6 +57,11 @@ struct NoopPartitionCheckpoint;
 impl PartitionCheckpointControl for NoopPartitionCheckpoint {
     #[inline(always)]
     fn checkpoint_probability(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_filter_edge_macroblock(&mut self) -> CodecResult<()> {
         Ok(())
     }
 
@@ -98,6 +105,7 @@ impl PartitionCheckpointControl for NoopPartitionCheckpoint {
 struct TokenPartitionCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     probability_items: usize,
+    filter_edge_items: usize,
     prepass_items: usize,
     macroblock_items: usize,
     bit_items: usize,
@@ -111,6 +119,18 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
         if self
             .probability_items
             .is_multiple_of(PARTITION_PROBABILITY_CHECKPOINT_NODES)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_filter_edge_macroblock(&mut self) -> CodecResult<()> {
+        self.filter_edge_items = self.filter_edge_items.saturating_add(1);
+        if self
+            .filter_edge_items
+            .is_multiple_of(PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS)
         {
             crate::codecs::error::check_cancelled(Some(self.token))?;
         }
@@ -363,11 +383,12 @@ fn segment_probabilities<P: PartitionCheckpointControl>(
     ])
 }
 
-fn adjusted_frame_params(
+fn adjusted_frame_params<P: PartitionCheckpointControl>(
     decisions: &[MacroblockDecision],
     params: &FrameParams,
     adjust_filter_edges: bool,
-) -> FrameParams {
+    checkpoint: &mut P,
+) -> CodecResult<FrameParams> {
     let mut adjusted = FrameParams {
         segments: params.segments,
         num_segments: params.num_segments,
@@ -375,28 +396,28 @@ fn adjusted_frame_params(
         chroma_ac_delta: params.chroma_ac_delta,
     };
     if !adjust_filter_edges {
-        return adjusted;
+        return Ok(adjusted);
     }
     let mut maximum_edges = [0u16; 4];
     for decision in decisions {
-        let LumaDecision::Intra16(luma) = &decision.luma else {
-            continue;
-        };
-        let segment = usize::from(decision.segment);
-        let matrices = libwebp_segment_matrices(
-            params.segments[segment].quantizer,
-            params.chroma_dc_delta,
-            params.chroma_ac_delta,
-        );
-        let only_y2_nonzero = luma.nonzero & 0x0100_ffff == 0x0100_0000;
-        let minimum_distortion = 20u32.saturating_mul(u32::from(matrices.y1.q[0]));
-        if only_y2_nonzero && luma.distortion > minimum_distortion {
-            let edge = luma.y2_levels[1]
-                .unsigned_abs()
-                .max(luma.y2_levels[2].unsigned_abs())
-                .max(luma.y2_levels[4].unsigned_abs());
-            maximum_edges[segment] = maximum_edges[segment].max(edge);
+        if let LumaDecision::Intra16(luma) = &decision.luma {
+            let segment = usize::from(decision.segment);
+            let matrices = libwebp_segment_matrices(
+                params.segments[segment].quantizer,
+                params.chroma_dc_delta,
+                params.chroma_ac_delta,
+            );
+            let only_y2_nonzero = luma.nonzero & 0x0100_ffff == 0x0100_0000;
+            let minimum_distortion = 20u32.saturating_mul(u32::from(matrices.y1.q[0]));
+            if only_y2_nonzero && luma.distortion > minimum_distortion {
+                let edge = luma.y2_levels[1]
+                    .unsigned_abs()
+                    .max(luma.y2_levels[2].unsigned_abs())
+                    .max(luma.y2_levels[4].unsigned_abs());
+                maximum_edges[segment] = maximum_edges[segment].max(edge);
+            }
         }
+        checkpoint.checkpoint_filter_edge_macroblock()?;
     }
     for (segment, &maximum_edge) in maximum_edges.iter().enumerate() {
         let matrices = libwebp_segment_matrices(
@@ -411,7 +432,7 @@ fn adjusted_frame_params(
             .filter_strength
             .max(delta.min(63).to_le_bytes()[0]);
     }
-    adjusted
+    Ok(adjusted)
 }
 
 fn write_segment_header<P: PartitionCheckpointControl>(
@@ -652,7 +673,7 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
     adjust_filter_edges: bool,
     checkpoint: &mut P,
 ) -> CodecResult<Vec<u8>> {
-    let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
+    let params = adjusted_frame_params(decisions, params, adjust_filter_edges, checkpoint)?;
     let segment_probabilities = segment_probabilities(decisions, checkpoint)?;
     let mut writer = BoolEncoder::default();
     encode_bool(&mut writer, 128, false, checkpoint)?; // colorspace
@@ -713,6 +734,7 @@ pub(super) fn encode_first_partition(
         let mut checkpoint = TokenPartitionCheckpoint {
             token,
             probability_items: 0,
+            filter_edge_items: 0,
             prepass_items: 0,
             macroblock_items: 0,
             bit_items: 0,
