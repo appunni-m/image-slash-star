@@ -11706,9 +11706,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // contract does not pay for two redundant full encodes before them.
         // VP8L token-aware bit writing now charges a checkpoint after each
         // 8 logical bits. This real patterned lossless probe reaches the
-        // first new interval before the later writer work. Pillow has no
-        // caller token or work-budget result, so this remains Rust-only
-        // evidence with no parity row or coverage-only hook.
+        // first new interval before the later writer work. The lossy VP8
+        // boolean writer also drains any pending 0xff run through the same
+        // 1,024-byte output accounting before returning from a flush; its
+        // ordinary no-token writer remains unchanged. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only evidence
+        // with no parity row or coverage-only hook.
         let bitstream_8_checkpoint_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(200);
         let bitstream_8_checkpoint_error = match image_slash_star::encode_with_policy(

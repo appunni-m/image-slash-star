@@ -38,6 +38,8 @@ pub struct BoolEncoder {
     output: Vec<u8>,
 }
 
+const BOOL_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+
 impl BoolEncoder {
     /// Create a new bool encoder with initial state.
     ///
@@ -102,11 +104,27 @@ impl BoolEncoder {
     where
         F: FnMut(usize) -> Result<(), E>,
     {
-        let before = self.output.len();
-        self.encode_bool(prob, value);
-        let emitted = self.output.len().saturating_sub(before);
-        if emitted != 0 {
-            checkpoint(emitted)?;
+        let split = self.range.wrapping_mul(i32::from(prob)).wrapping_shr(8);
+
+        if value {
+            let upper_interval = split.saturating_add(1);
+            self.value = self.value.wrapping_add(upper_interval);
+            self.range = self.range.wrapping_sub(upper_interval);
+        } else {
+            self.range = split;
+        }
+
+        if self.range < 127 {
+            let mut shift = 0i32;
+            while self.range < 127 {
+                self.range = self.range.wrapping_add(1).wrapping_shl(1).wrapping_sub(1);
+                shift = shift.saturating_add(1);
+            }
+            self.value = self.value.wrapping_shl(shift.cast_unsigned());
+            self.nb_bits = self.nb_bits.saturating_add(shift);
+            if self.nb_bits > 0 {
+                self.flush_with_checkpoint(checkpoint)?;
+            }
         }
         Ok(())
     }
@@ -137,12 +155,32 @@ impl BoolEncoder {
     where
         F: FnMut(usize) -> Result<(), E>,
     {
-        let before = self.output.len();
-        self.flush();
-        let emitted = self.output.len().saturating_sub(before);
-        if emitted != 0 {
-            checkpoint(emitted)?;
+        let shift = self.nb_bits.saturating_add(8);
+        let bits = self.value.wrapping_shr(shift.cast_unsigned());
+        self.value = self
+            .value
+            .wrapping_sub(bits.wrapping_shl(shift.cast_unsigned()));
+        self.nb_bits = self.nb_bits.saturating_sub(8);
+        if bits & 0xff == 0xff {
+            self.run = self.run.saturating_add(1);
+            return Ok(());
         }
+        if bits & 0x100 != 0
+            && let Some(previous) = self.output.last_mut()
+        {
+            *previous = previous.wrapping_add(1);
+        }
+        let delayed = if bits & 0x100 != 0 { 0x00 } else { 0xff };
+        let mut pending = self.run;
+        self.run = 0;
+        while pending != 0 {
+            let emitted = pending.min(BOOL_OUTPUT_CHECKPOINT_BYTES);
+            self.output.extend(std::iter::repeat_n(delayed, emitted));
+            checkpoint(emitted)?;
+            pending = pending.saturating_sub(emitted);
+        }
+        self.output.push(bits.to_le_bytes()[0]);
+        checkpoint(1)?;
         Ok(())
     }
 

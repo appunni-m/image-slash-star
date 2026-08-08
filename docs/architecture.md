@@ -354,6 +354,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L meta-histogram sampling checkpoints | Token-aware row/column comparisons and symbol compaction poll after each 1,024 symbols; no-token paths retain their original tight loops |
 | Lossless WebP VP8L Huffman-node ordering checkpoints | Token-aware stable bottom-up ordering polls after each 64 comparisons; the no-token path retains the original stable sort |
 | Lossless WebP VP8L Huffman run-scan checkpoints | Token-aware code-length run scans poll whenever each 64-symbol boundary is crossed, including before a long equal-length run finishes; the no-token path retains the original tight helper |
+| Lossy WebP VP8 boolean-output flush checkpoints | Token-aware boolean flushes drain pending output runs through the existing 1,024-byte output accounting before returning; no-token encoding keeps the original flush helper |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
