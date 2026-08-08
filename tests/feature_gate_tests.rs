@@ -11352,6 +11352,91 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xB5],
             "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
+        // A 16,384x16 RGBA probe keeps two real meta-histogram groups while
+        // making the first 1,537 tile symbols equal across adjacent rows.
+        // This reaches the interior sampling comparison after its first
+        // 1,024 symbols. Pillow exposes neither a caller token nor a typed
+        // work-budget or sink-rollback contract, so this is Rust-only
+        // work-control evidence with no parity row or manifest fixture.
+        let sampling_probe_width = 16_384;
+        let sampling_probe_height = 16;
+        let mut sampling_probe_pixels =
+            Vec::with_capacity(sampling_probe_width * sampling_probe_height * 4);
+        for y in 0..sampling_probe_height {
+            let tile_row = y / 8;
+            for x in 0..sampling_probe_width {
+                let tile = x / 8;
+                let within_tile = (y % 8) * 8 + (x % 8);
+                let (red, green, blue) = if tile < 1_536 {
+                    if x % 2 == 0 {
+                        (17, 53, 91)
+                    } else {
+                        (193, 229, 251)
+                    }
+                } else {
+                    let code = tile * 64 + within_tile;
+                    let code = u32::try_from(code)?
+                        .wrapping_mul(2_654_435_761)
+                        .wrapping_add(0x2468_ace1);
+                    let [red, green, blue, _] = code.to_le_bytes();
+                    (red, green, blue)
+                };
+                let alpha = if tile_row == 0 { u8::MAX } else { 254 };
+                sampling_probe_pixels.extend_from_slice(&[red, green, blue, alpha]);
+            }
+        }
+        let sampling_probe_image = DecodedImage::new(
+            u32::try_from(sampling_probe_width)?,
+            u32::try_from(sampling_probe_height)?,
+            sampling_probe_pixels,
+            ColorType::Rgba8,
+        );
+        // The smaller lossless probe above already proves ordinary and
+        // ample-budget byte identity; this wider fixture is reserved for the
+        // interior sampling boundary and sink rollback.
+        let sampling_probe_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(967_091);
+        let sampling_probe_error = match image_slash_star::encode_with_policy(
+            &sampling_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &sampling_probe_policy,
+        ) {
+            Ok(_) => return Err("VP8L histogram sampling row budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sampling_probe_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 967_091,
+                observed: 967_092,
+            }
+        ));
+        let mut sampling_probe_sink = vec![0xB7];
+        let sampling_probe_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &sampling_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &sampling_probe_policy,
+            &mut sampling_probe_sink,
+        ) {
+            Ok(_) => return Err("VP8L histogram sampling row budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            sampling_probe_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 967_091,
+                observed: 967_092,
+            }
+        ));
+        assert_eq!(sampling_probe_sink, vec![0xB7]);
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed
         // alphabets. This is Rust-only work-control evidence: Pillow has no
