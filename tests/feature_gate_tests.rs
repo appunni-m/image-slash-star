@@ -14318,11 +14318,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
 
         // This committed 17x19 lossy WebP fixture is small enough to avoid
         // the outer 64-macroblock boundary. Its padded first macroblock still
-        // reaches the new token-only checkpoint after the first intra4
-        // candidate-trial stage, proving a finer selection boundary without a
-        // generated parity row or coverage-only hook. Pillow has no caller
-        // token, typed work-budget result, or sink-rollback contract, so this
-        // remains Rust-only feature-gate evidence.
+        // reaches the first squared-error pixel in the initial distortion-only
+        // intra4 candidate after the segment-clustering boundary above,
+        // proving a later selection boundary without a generated parity row or
+        // coverage-only hook. Pillow has no caller token, typed work-budget
+        // result, or sink-rollback contract, so this remains Rust-only
+        // feature-gate evidence.
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let selection_fixture_data =
             fs::read(root.join("tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp"))?;
@@ -14339,6 +14340,62 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             selection_fixture_expected,
             "an ample fixture-derived selection budget preserves byte identity"
         );
+
+        // Segment clustering scans the bounded alpha domain in 64-value
+        // chunks. The first chunk is the ninth admitted checkpoint for this
+        // committed fixture, before any intra4 candidate work begins. Pillow
+        // has no caller token, typed work-budget result, or sink-rollback
+        // contract, so this is Rust-only feature-gate evidence with no new
+        // parity row, fixture-manifest row, or coverage-only hook.
+        let segment_cluster_policy = image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let segment_cluster_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &segment_cluster_policy,
+        ) {
+            Ok(_) => {
+                return Err("fixture-derived segment-cluster budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            segment_cluster_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+        let mut segment_cluster_sink = vec![0xB5];
+        let segment_cluster_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &segment_cluster_policy,
+            &mut segment_cluster_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived segment-cluster sink budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            segment_cluster_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+        assert_eq!(segment_cluster_sink, vec![0xB5]);
+
         let selection_fixture_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(12);
         let selection_fixture_error = match image_slash_star::encode_with_policy(

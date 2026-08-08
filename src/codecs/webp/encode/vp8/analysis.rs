@@ -10,9 +10,11 @@ const MAX_K_MEANS_ITERATIONS: usize = 6;
 const MAX_COEFFICIENT_THRESHOLD: usize = 31;
 const ANALYSIS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+const SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES: usize = 64;
 
 trait AnalysisCheckpointControl {
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()>;
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()>;
     fn checkpoint_segment_assignment(&mut self) -> CodecResult<()>;
 }
 
@@ -21,6 +23,11 @@ struct NoopAnalysisCheckpoint;
 impl AnalysisCheckpointControl for NoopAnalysisCheckpoint {
     #[inline(always)]
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
         Ok(())
     }
 
@@ -47,6 +54,11 @@ impl AnalysisCheckpointControl for TokenAnalysisCheckpoint<'_> {
             crate::codecs::error::check_cancelled(Some(self.token))?;
         }
         Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
     }
 
     #[inline]
@@ -329,6 +341,7 @@ fn assign_segments<C: AnalysisCheckpointControl>(
         let mut accumulations = [0i32; NUM_SEGMENTS];
         let mut distance_accumulations = [0i32; NUM_SEGMENTS];
         let mut nearest = 0_usize;
+        let mut scanned = 0_usize;
         for alpha in minimum..=maximum {
             let count = alpha_counts[alpha];
             if count != 0 {
@@ -346,6 +359,13 @@ fn assign_segments<C: AnalysisCheckpointControl>(
                     distance_accumulations[nearest].wrapping_add(alpha_i32.wrapping_mul(count));
                 accumulations[nearest] = accumulations[nearest].wrapping_add(count);
             }
+            scanned = scanned.wrapping_add(1);
+            if scanned.is_multiple_of(SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES) {
+                checkpoint.checkpoint_segment_cluster()?;
+            }
+        }
+        if !scanned.is_multiple_of(SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES) {
+            checkpoint.checkpoint_segment_cluster()?;
         }
 
         let mut displaced = 0_i32;
