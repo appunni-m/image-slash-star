@@ -14301,6 +14301,62 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(probability_sink, vec![0xAD]);
 
+        // The first-partition segment-probability prepass scans every selected
+        // macroblock before it writes the fixed probability table. It now
+        // charges after each 1,024 macroblocks. Pillow has no caller token or
+        // work-budget result, so this remains Rust-only evidence with no
+        // parity row, fixture-manifest entry, diagnostic origin, new test
+        // function, or coverage-only hook.
+        let partition_prepass_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(332);
+        let partition_prepass_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_prepass_bounded,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP partition-prepass budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_prepass_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 332,
+                observed: 333,
+            }
+        ));
+        let mut partition_prepass_sink = vec![0xAE];
+        let partition_prepass_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &partition_prepass_bounded,
+            &mut partition_prepass_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP partition-prepass sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            partition_prepass_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 332,
+                observed: 333,
+            }
+        ));
+        assert_eq!(partition_prepass_sink, vec![0xAE]);
+
         // The first VP8 partition charges its fixed coefficient-probability
         // signaling table after 1,024 nodes. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence with no
