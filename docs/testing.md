@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`676f7632e34e6b04bd98289713e5d2eb7ff8993e`; the claim-ledger baseline remains
+`5a4635de869f66e55490fdaf42777d0e486fd56d`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -578,7 +578,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 The current AVIF grid-provenance portion of implementation/runtime revision
-`676f7632e34e6b04bd98289713e5d2eb7ff8993e` uses the existing
+`5a4635de869f66e55490fdaf42777d0e486fd56d` uses the existing
 `source_alpha_matches_the_container_contract` feature-gated contract now also
 checks the committed `grid.avif` fixture's `AvifGridProperties`: version `0`,
 raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas. Portable
@@ -591,7 +591,7 @@ or coverage-only hook, because Pillow exposes no equivalent grid topology
 field.
 
 The carried-forward WebP work-control portion of implementation/runtime
-revision `676f7632e34e6b04bd98289713e5d2eb7ff8993e` uses the existing
+revision `5a4635de869f66e55490fdaf42777d0e486fd56d` uses the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -636,6 +636,16 @@ preserves exact bytes under the ample policy and rejects at `maximum: 712`,
 Pillow has no caller token, typed work-budget result, or sink/rollback
 contract, so it adds no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook.
+
+The lossy WebP VP8 filter-edge adjustment slice also extends this existing
+contract: method 3 enables the adjustment path, whose token-aware scan polls
+after each 1,024 selected macroblocks. The 512×512 RGB feature-gate probe
+rejects at `maximum: 719`, `observed: 720` in both whole-buffer and direct-sink
+paths, leaving sentinel `[0xD3]` untouched; the no-token path retains its
+original tight adjustment pass. Pillow exposes no caller token, typed
+work-budget result, or sink/rollback contract, so this adds no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook.
 
 The first-partition WebP VP8 segment-probability prepass now polls after each
 1,024 selected macroblocks while collecting the four segment counts. The same
@@ -682,23 +692,23 @@ typed work-budget result, or caller-owned sink/rollback contract, and it has no
 equivalent AVIF grid-topology field. The revision therefore adds no Pillow
 parity row, fixture-manifest row, diagnostic origin, new test function, or
 coverage-only hook. Pillow parity run
-`04025370-2897-480c-b311-379ec4efddb7` passed 1,445/1,445 checks with zero
-skips in 1,184 ms. Feature-matrix run
-`df0b4b4c-0762-4887-af3e-760942e57255` passed all 33 configured lanes in
-47,865 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
+`1eeb8129-ad85-4bfd-8512-ac6c1ef83659` passed 1,445/1,445 checks with zero
+skips in 1,598 ms. Feature-matrix run
+`e10497b4-59f4-4f59-9241-5754b61c6c2d` passed all 33 configured lanes in
+48,013 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
 verbose=0`, ended with `capability tables OK: every native and wasm32-wasip1
 lane agrees`, and had no targeted lock-wait/build-directory/package-cache
 matches.
 
-Managed LLVM coverage run `3f626a76-c14f-46f2-a5ce-3dd733ce10b3` passed 85/85
-tests in 71,875 ms and ingested snapshot
-`f655e807-2c09-4fe6-80a1-f885717c5e51`: 53,650/54,311 lines, 7,625/7,788
-branches, 3,026/3,104 functions, and 82,964/84,439 regions. Compared with
-preceding accepted snapshot `162457d3-4699-498f-8ed7-238076ff2150`, covered/source
-totals changed by `+14/+16` lines, `+2/+2` branches, `+2/+2` functions,
-and `+13/+18` regions. The known LLVM segment-normalization warning remains;
+Managed LLVM coverage run `25d73b60-ec57-4691-835a-1fb2c0400e14` passed 85/85
+tests in 68,038 ms and ingested snapshot
+`2ed526ed-3c23-442f-b7e8-b4209956f8f8`: 53,665/54,326 lines, 7,627/7,790
+branches, 3,028/3,106 functions, and 82,985/84,457 regions. Compared with
+preceding accepted snapshot `f655e807-2c09-4fe6-80a1-f885717c5e51`, covered/source
+totals changed by `+15/+15` lines, `+2/+2` branches, `+2/+2` functions,
+and `+21/+18` regions. The known LLVM segment-normalization warning remains;
 the strict aggregate shortfall is 661 lines, 163 branches, 78 functions, and
-1,475 regions. Coverage is implementation evidence, not Pillow parity; the
+1,472 regions. Coverage is implementation evidence, not Pillow parity; the
 AVIF grid provenance and WebP work-control contracts are covered by
 feature-gate execution, and no coverage-only test was added. Managed durations
 remain cache- and runner-sensitive.
