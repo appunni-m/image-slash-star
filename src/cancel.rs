@@ -57,8 +57,9 @@
 //! after each 1,024 tokens or 64 symbols,
 //! copy-token cache population after each 256 pixels,
 //! Huffman-tree simple-tree symbol discovery scans after each 64 code-length
-//! slots, Huffman RLE preparation and canonical-code assignment scans after each 64
-//! code-length symbols, Huffman-tree ordering comparisons and insertion scans
+//! slots, Huffman RLE preparation and in-run code-length scans after each 64
+//! code-length symbols, canonical-code assignment scans after each 64 symbols,
+//! and Huffman-tree ordering comparisons and insertion scans
 //! after each 64 comparisons or candidate nodes, Huffman-tree code-length-token frequency scans after each 16
 //! compressed token entries, trailing zero-repeat token trim scans after each
 //! 16 compressed token entries, Huffman code-length emission after each 16

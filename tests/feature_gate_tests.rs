@@ -11655,7 +11655,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(sampling_probe_sink, vec![0xB7]);
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed
-        // alphabets. This is Rust-only work-control evidence: Pillow has no
+        // alphabets, including while a long equal-length run is still being
+        // scanned. This is Rust-only work-control evidence: Pillow has no
         // caller token, work budget, or caller-owned sink.
         let huffman_rle_policy = image_slash_star::EncodePolicy::new().with_max_work_units(828);
         let huffman_rle_error = match image_slash_star::encode_with_policy(

@@ -710,6 +710,14 @@ fn compressed_huffman_tokens_with_checkpoint(
         let mut end = i + 1;
         while end < lengths.len() && lengths[end] == value {
             end += 1;
+            // Poll while scanning a long equal-length run instead of waiting
+            // for the run to finish. The no-token path returns to the
+            // original helper above, so this finer boundary is only paid by
+            // caller-controlled work-budget encodes.
+            while end >= next_checkpoint {
+                check_token(token)?;
+                next_checkpoint = next_checkpoint.saturating_add(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS);
+            }
         }
         while end >= next_checkpoint {
             check_token(token)?;
