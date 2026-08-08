@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`838815fee30b2810d2dedb3370f33cd7f1306303`; the claim-ledger baseline remains
+`b190231b3d3adf5e5e056d2f8d09204cad505a13`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -497,7 +497,8 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-length-cost table and equal-cost interval setup after each 1,024 entries,
+cost/length-table initialization and length-cost/equal-cost interval setup
+after each 1,024 entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
 search/match-length/cache/trace, repeated-run hash-chain insertion, and
@@ -568,7 +569,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation/runtime revision
-`838815fee30b2810d2dedb3370f33cd7f1306303`, the existing
+`b190231b3d3adf5e5e056d2f8d09204cad505a13`, the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -577,9 +578,9 @@ maps and byte behavior. The same 64×64 RGB lossless WebP fixture rejects at
 untouched. The later image-palette construction boundary is
 `maximum: 6`, `observed: 7`, with `[0xBA]` untouched after four earlier
 conversion intervals; RGBA hidden-RGB cleanup is `18/19` with `[0xB7]`, palette
-lookup is `9,820/9,821` with `[0xA9]`, and palette-mode packing is `5,205/5,206`
-with the existing `[0xC3, 0x52, 0x49, 0x46, 0x46, 0xEA, 0x03, 0x00, 0x00,
-0x57, 0x45, 0x42, 0x50]` delivered prefix. Downstream exact boundaries were
+lookup is `9,820/9,821` with `[0xA9]`, and palette-mode packing is `5,205/5,206`;
+the token-aware cost-manager table initialization now leaves only `[0xC3]`
+before that bounded sink rejection. Downstream exact boundaries were
 recalibrated for the four conversion intervals: entropy analysis `23/24`,
 histogram population `62/63`, combined entropy cost `80/81`, histogram merge
 `8,258/8,259`, cost estimate `14,092/14,093`, Huffman-RLE `828/829` (or
@@ -591,35 +592,40 @@ The predictor mode-application path now also checkpoints its pre-transform
 source snapshot copy after each 1,024 pixels; its no-token path retains the
 original bulk clone. The existing predictor-transform probe exercises this
 token-aware path before the later transform boundary. This is the same
-Rust-only caller-budget contract, not a Pillow-observable result.
+Rust-only caller-budget contract, not a Pillow-observable result. The
+token-aware VP8L backward-reference cost manager also initializes its
+pixel-sized cost/length tables after each 1,024 entries; its capacity
+reservations retain the no-recoverable-OOM policy. The existing 1,024-pixel
+palette-mode sink probe now rejects at `maximum: 5,205`, `observed: 5,206`
+before structural delivery and leaves `[0xC3]` untouched.
 
 These are Rust-only work-control results. Pillow cannot exercise a caller token,
 typed work-budget result, or caller-owned sink/rollback contract, so this
 revision adds no Pillow parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook. The managed Pillow parity run
-`0f9a2f5f-9d10-4e5b-831f-0dd85406a49b` passed 1,445/1,445 checks with zero
-skips in 885 ms. Feature-matrix run
-`41c5ecab-a311-44df-9704-88888a98e596` passed all 33 configured lanes in
-46,282 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
+`3e8c8891-f04c-427f-aeec-679e9edfc9c6` passed 1,445/1,445 checks with zero
+skips in 845 ms. Feature-matrix run
+`90cfbf1a-ca28-46ae-9473-801c6514469c` passed all 33 configured lanes in
+62,192 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
 verbose=0`, ended with capability-table agreement, and had no targeted
 lock-wait, build-directory, or package-cache matches. No AVIF implementation
 changed in this revision.
 
-Managed LLVM coverage run `197fbeeb-b966-419c-bc9c-aae15c9c2742` passed 85/85
-tests in 65,931 ms and ingested snapshot
-`0aaa833e-7597-469b-b3d8-2da10d2dc0d7`: 53,331/53,947 lines, 7,561/7,712
-branches, 3,001/3,077 functions, and 82,521/83,900 regions. Compared with
-preceding accepted snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`,
-covered/source totals changed by `+8/+8` lines, `+4/+4` branches, `+0/+0`
-functions, and `+19/+21` regions. The changed
-`src/codecs/webp/native/encoder/predictor.rs` reports 307/307 lines, 56/56
-branches, 23/23 functions, and 571/576 regions; the native WebP encoder
-remains 1,956/2,006 lines, 423/438 branches, 91/91 functions, and 2,870/3,062
-regions. The known LLVM segment-normalization warning remains; the strict
-aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,379
-regions. Coverage is implementation evidence, not Pillow parity; the new
-predictor copy is covered by existing feature-gate execution, and no
-coverage-only test was added. Managed durations remain cache- and
+Managed LLVM coverage run `9d68555f-2209-4c07-8f12-3c3723c7e9f7` passed 85/85
+tests in 86,980 ms and ingested snapshot
+`83634c29-ba52-4054-a695-7417262366ff`: 53,338/53,955 lines, 7,563/7,714
+branches, 3,001/3,077 functions, and 82,539/83,916 regions. Compared with
+preceding accepted snapshot `0aaa833e-7597-469b-b3d8-2da10d2dc0d7`,
+covered/source totals changed by `+7/+8` lines, `+2/+2` branches, `+0/+0`
+functions, and `+18/+16` regions. The changed
+`src/codecs/webp/native/encoder/backward_refs.rs` reports 1,595/1,613 lines,
+430/442 branches, 68/68 functions, and 2,434/2,538 regions; the native WebP
+encoder remains 1,956/2,006 lines, 423/438 branches, 91/91 functions, and
+2,872/3,062 regions. The known LLVM segment-normalization warning remains;
+the strict aggregate shortfall is 617 lines, 151 branches, 76 functions, and
+1,377 regions. Coverage is implementation evidence, not Pillow parity; the
+new cost-manager initialization is covered by existing feature-gate execution,
+and no coverage-only test was added. Managed durations remain cache- and
 runner-sensitive.
 
 ## Historical acceptance record: superseded WebP work-control revisions

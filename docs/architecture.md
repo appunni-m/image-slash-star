@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`838815fee30b2810d2dedb3370f33cd7f1306303`; the claim-ledger baseline remains
+`b190231b3d3adf5e5e056d2f8d09204cad505a13`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -637,7 +637,8 @@ palette-index lookup candidate scans after each 64 palette entries, palette sign
 and nearest-delta candidate scans after each 64 palette entries
 or candidate values, predictor source-snapshot copying,
 predictor/cross-color/entropy/transform, bounded backward-reference
-length-cost table and equal-cost interval setup after each 1,024 entries,
+cost/length-table initialization and length-cost/equal-cost interval setup
+after each 1,024 entries,
 token-aware cost-manager interval-update and cleanup scans after each 256
 cumulative interval entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
