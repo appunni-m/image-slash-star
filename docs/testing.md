@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`310830dd94ea74b8aa54173e5c6d2a63f1015136`; the claim-ledger baseline remains
+`79d53951ba83b700f2647d5912718c634cecd417`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -396,8 +396,10 @@ a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
 after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
 1,024 scanned or flattened RGBA transparent-area cleanup pixels, each batch of
-1,024 required padded-plane items, analyzed macroblocks, segment-assignment
-macroblocks, and frame-selection macroblocks, then
+1,024 required padded-plane items, analyzed macroblocks, and
+segment-assignment macroblocks, plus each batch of 64 frame-selection
+macroblocks
+(roughly 1,024 luma 4×4 blocks), then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability adaptation, and first-partition
@@ -579,7 +581,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 The current AVIF grid-provenance portion of implementation/runtime revision
-`310830dd94ea74b8aa54173e5c6d2a63f1015136` uses the existing
+`79d53951ba83b700f2647d5912718c634cecd417` uses the existing
 `source_alpha_matches_the_container_contract` feature-gated contract now also
 checks the committed `grid.avif` fixture's `AvifGridProperties`: version `0`,
 raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas. Portable
@@ -592,7 +594,7 @@ or coverage-only hook, because Pillow exposes no equivalent grid topology
 field.
 
 The carried-forward WebP work-control portion of implementation/runtime
-revision `310830dd94ea74b8aa54173e5c6d2a63f1015136` uses the existing
+revision `79d53951ba83b700f2647d5912718c634cecd417` uses the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -641,19 +643,36 @@ caller token, typed work-budget result, or sink/rollback contract, so this is
 Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook.
 
+The current lossy WebP VP8 mode-selection slice is implemented in
+`79d53951ba83b700f2647d5912718c634cecd417` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
+selection now charges after each 64 completed macroblocks; each macroblock
+contains sixteen luma 4×4 blocks, so the batch is roughly 1,024 luma blocks.
+The compact 128×128 RGB probe contains exactly 64 macroblocks and reaches this
+selection boundary after the preceding 16 conversion units at `maximum: 16`,
+`observed: 17` in both whole-buffer and direct-sink paths, with the sink
+sentinel untouched. The larger 512×512 probe remains reserved for the
+separate analysis and segment-assignment boundaries.
+The no-token path retains its original tight inner selection loop, so this is
+a bounded work-interruption improvement rather than a CPU-time guarantee.
+Pillow exposes neither a caller token nor a typed work-budget result,
+caller-owned sink, or rollback contract; this remains Rust-only evidence with
+no parity row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook.
+
 Exact-head managed validation for implementation/runtime revision
-`310830dd94ea74b8aa54173e5c6d2a63f1015136` passed Pillow parity run
-`b6fc2cdc-fa0d-4da5-90dd-5c54b8a550df` with 1,445/1,445 checks in 12,256 ms.
-The feature-matrix run `ed1d3025-bfe8-4ef1-b67c-fa55682c7310` completed all
-12 warm lanes in 58,152 ms with `test_threads=1`, `build_jobs=1`, and the
+`79d53951ba83b700f2647d5912718c634cecd417` passed Pillow parity run
+`84506c50-2af7-49ef-8192-800b3cab5892` with 1,445/1,445 checks in 1,006 ms.
+The feature-matrix run `9a786539-eb17-44a0-b308-86c19a22e6cb` completed all
+12 warm lanes in 29,178 ms with `test_threads=1`, `build_jobs=1`, and the
 `capability tables OK: every native and wasm32-wasip1 lane agrees` marker; its
 retained log has no lock-wait match. Nightly LLVM run
-`e6bf9b48-82cd-4c90-9c91-13010f3abbf9` passed 85/85 tests in 75,265 ms and
-ingested snapshot `5d21852b-4a5f-421a-9900-590a65b21f04`, reporting
+`4af5ba0f-7349-400c-b630-a97312ee3291` passed 85/85 tests in 75,950 ms and
+ingested snapshot `a44748e1-74fa-489a-9cf8-623f29ca4611`, reporting
 53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and
-83,052/84,511 regions. Compared with the preceding accepted snapshot
-`2ed526ed-3c23-442f-b7e8-b4209956f8f8`, covered/source totals changed by
-46/44 lines, 11/12 branches, 5/5 functions, and 67/54 regions; the known
+83,038/84,511 regions. Compared with the preceding accepted snapshot
+`5248c52b-ea17-446d-a089-1389c67a13c9`, covered/source totals changed by
+0/0 lines, 0/0 branches, 0/0 functions, and 0/0 regions; the known
 LLVM JSON segment-normalization warning remains. In the snapshot,
 `src/codecs/webp/encode/vp8/analysis.rs` is 508/508 lines, 38/38 branches,
 29/29 functions, and 831/831 regions; `encoder.rs` is 741/753 lines,
