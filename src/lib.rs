@@ -974,9 +974,9 @@ pub fn encode_with_policy(
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 /// VP8L RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
-/// bounded backward-reference
-/// length-cost table and equal-cost interval setup after each 1,024 entries,
-/// token-aware cost-manager interval-update and cleanup scans after each 256
+/// bounded backward-reference cost/length-table initialization and length-cost
+/// table/equal-cost interval setup after each 1,024 entries, token-aware
+/// cost-manager interval-update and cleanup scans after each 256
 /// cumulative interval entries, saturated cost-interval fallback scans after
 /// each 1,024 entries, repeated-run hash-chain insertion after each 256 pixels,
 /// plus token/Huffman cost scans after

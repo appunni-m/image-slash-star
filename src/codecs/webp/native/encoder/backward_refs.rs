@@ -1155,9 +1155,23 @@ impl CostManager {
             length_intervals.push((cost, start, end));
             start = end;
         }
+        // The capacity reservations remain ordinary fallible allocations;
+        // this policy does not promise recoverable OOM behavior. Once those
+        // tables exist, initialize their pixel-sized contents cooperatively so
+        // a caller token cannot be hidden behind two bulk vec! fills. Keep the
+        // no-token constructor above on its original tight path.
+        let mut costs = Vec::with_capacity(pixel_count);
+        let mut lengths = Vec::with_capacity(pixel_count);
+        for index in 0..pixel_count {
+            costs.push(i64::MAX);
+            lengths.push(1);
+            if (index + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+                checkpoint(Some(token))?;
+            }
+        }
         Ok(Self {
-            costs: vec![i64::MAX; pixel_count],
-            lengths: vec![1; pixel_count],
+            costs,
+            lengths,
             length_costs,
             length_intervals,
             intervals: Vec::new(),

@@ -19,7 +19,10 @@ pub mod vp8;
 /// after each 1,024 source pixels, plus transparent-pixel hidden-RGB cleanup
 /// after each 1,024 scanned pixels. Predictor mode application also polls its
 /// pre-transform source snapshot copy after each 1,024 pixels when a caller
-/// supplies a cancellation token.
+/// supplies a cancellation token. The token-aware lossless backward-reference
+/// cost manager also initializes its pixel-sized cost/length tables in 1,024-
+/// entry intervals; its capacity reservations retain the existing
+/// no-recoverable-OOM policy.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. RGBA lossy encoding
 /// also polls transparent-area cleanup after each 1,024 scanned or flattened
