@@ -5599,6 +5599,36 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    struct PartialFailingSink {
+        bytes: Vec<u8>,
+        writes: usize,
+        fail_at: usize,
+        accepted_on_failure: usize,
+        failed_segment_len: usize,
+    }
+
+    impl OutputSink for PartialFailingSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes == self.fail_at {
+                self.failed_segment_len = bytes.len();
+                self.accepted_on_failure = bytes.len().saturating_sub(1);
+                self.bytes
+                    .extend_from_slice(&bytes[..self.accepted_on_failure]);
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "sink rejected after a partial write".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+    }
+
     struct RecordingSink {
         bytes: Vec<u8>,
         writes: usize,
@@ -5657,6 +5687,38 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    let assert_partial_second_write = |image: &image_slash_star::DecodedImage,
+                                       format: ImageFormat,
+                                       options: &EncodeOptions,
+                                       expected: &[u8]|
+     -> Result<(), Box<dyn std::error::Error>> {
+        let mut sink = PartialFailingSink {
+            bytes: Vec::new(),
+            writes: 0,
+            fail_at: 2,
+            accepted_on_failure: 0,
+            failed_segment_len: 0,
+        };
+        let error = match image_slash_star::encode_to_sink(image, format, options, &mut sink) {
+            Ok(length) => {
+                return Err(format!(
+                    "{format:?} partial second write unexpectedly accepted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(sink.writes, 2);
+        assert!(sink.failed_segment_len > 0);
+        assert!(sink.accepted_on_failure < sink.failed_segment_len);
+        assert!(sink.bytes.len() < expected.len());
+        assert_eq!(sink.bytes.as_slice(), &expected[..sink.bytes.len()]);
+        Ok(())
+    };
+
     // Exercise both standard-library sink impls directly, because the generic
     // encode functions only ever select the `&mut Vec<u8>` implementation.
     let mut direct = Vec::new();
@@ -5672,6 +5734,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         let decoded = image_slash_star::decode(&data)?;
         let options = EncodeOptions::for_format(ImageFormat::Png);
         let expected = image_slash_star::encode(&decoded.content, ImageFormat::Png, &options)?;
+        assert_partial_second_write(&decoded.content, ImageFormat::Png, &options, &expected)?;
 
         let mut owned = Vec::new();
         assert_eq!(
@@ -6115,6 +6178,12 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             let bmp_options = EncodeOptions::for_format(ImageFormat::Bmp);
             let expected_bmp =
                 image_slash_star::encode(&decoded.content, ImageFormat::Bmp, &bmp_options)?;
+            assert_partial_second_write(
+                &decoded.content,
+                ImageFormat::Bmp,
+                &bmp_options,
+                &expected_bmp,
+            )?;
             let mut bmp_sink = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
@@ -6506,6 +6575,12 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             let ico_options = EncodeOptions::for_format(ImageFormat::Ico);
             let expected_ico =
                 image_slash_star::encode(&decoded.content, ImageFormat::Ico, &ico_options)?;
+            assert_partial_second_write(
+                &decoded.content,
+                ImageFormat::Ico,
+                &ico_options,
+                &expected_ico,
+            )?;
             let mut ico_sink = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
@@ -7012,6 +7087,12 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             let webp_options = EncodeOptions::for_format(ImageFormat::WebP);
             let expected_webp =
                 image_slash_star::encode(&decoded.content, ImageFormat::WebP, &webp_options)?;
+            assert_partial_second_write(
+                &decoded.content,
+                ImageFormat::WebP,
+                &webp_options,
+                &expected_webp,
+            )?;
             let mut webp_sink = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
@@ -7402,6 +7483,12 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             let jpeg_options = EncodeOptions::for_format(ImageFormat::Jpeg);
             let jpeg_expected =
                 image_slash_star::encode(&jpeg_image, ImageFormat::Jpeg, &jpeg_options)?;
+            assert_partial_second_write(
+                &jpeg_image,
+                ImageFormat::Jpeg,
+                &jpeg_options,
+                &jpeg_expected,
+            )?;
             let mut jpeg_sink = RecordingSink {
                 bytes: Vec::new(),
                 writes: 0,
@@ -7787,6 +7874,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         let gif_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
         let gif_options = EncodeOptions::for_format(ImageFormat::Gif);
         let gif_expected = image_slash_star::encode(&gif_image, ImageFormat::Gif, &gif_options)?;
+        assert_partial_second_write(&gif_image, ImageFormat::Gif, &gif_options, &gif_expected)?;
         let mut gif_sink = RecordingSink {
             bytes: Vec::new(),
             writes: 0,
@@ -8080,6 +8168,12 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
         let avif_expected =
             image_slash_star::encode(&avif_image, ImageFormat::Avif, &avif_options)?;
+        assert_partial_second_write(
+            &avif_image,
+            ImageFormat::Avif,
+            &avif_options,
+            &avif_expected,
+        )?;
         assert!(
             avif_expected.len() >= 8,
             "AVIF output must contain one box header"
@@ -18263,6 +18357,35 @@ fn tiff_capability_and_destination_failures_are_structured()
         }
     }
 
+    struct PartialTiffSink {
+        bytes: Vec<u8>,
+        writes: usize,
+        accepted_on_failure: usize,
+        failed_segment_len: usize,
+    }
+
+    impl image_slash_star::OutputSink for PartialTiffSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes == 2 {
+                self.failed_segment_len = bytes.len();
+                self.accepted_on_failure = bytes.len().saturating_sub(1);
+                self.bytes
+                    .extend_from_slice(&bytes[..self.accepted_on_failure]);
+                return Err(ImageError::Unsupported {
+                    format: None,
+                    message: "TIFF sink rejected after a partial write".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+    }
+
     let decoded = image_slash_star::decode(&fs::read(
         root.join("tests/fixtures/input/images/tiff/8bit.tiff"),
     )?)?;
@@ -18274,6 +18397,32 @@ fn tiff_capability_and_destination_failures_are_structured()
             options.compression = Some(compression);
         }
         let expected = image_slash_star::encode(&decoded.content, ImageFormat::Tiff, &options)?;
+        let mut partial = PartialTiffSink {
+            bytes: Vec::new(),
+            writes: 0,
+            accepted_on_failure: 0,
+            failed_segment_len: 0,
+        };
+        let partial_error = match image_slash_star::encode_to_sink(
+            &decoded.content,
+            ImageFormat::Tiff,
+            &options,
+            &mut partial,
+        ) {
+            Ok(length) => panic!("partial TIFF sink unexpectedly accepted {length} bytes"),
+            Err(error) => error,
+        };
+        assert_eq!(
+            partial_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(partial_error.format(), Some(ImageFormat::Tiff));
+        assert_eq!(partial_error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(partial.writes, 2);
+        assert!(partial.failed_segment_len > 0);
+        assert!(partial.accepted_on_failure < partial.failed_segment_len);
+        assert!(partial.bytes.len() < expected.len());
+        assert_eq!(partial.bytes.as_slice(), &expected[..partial.bytes.len()]);
         let mut structural = RecordingTiffSink {
             bytes: Vec::new(),
             writes: 0,
@@ -18349,6 +18498,38 @@ fn tiff_capability_and_destination_failures_are_structured()
     let sequence_options = EncodeOptions::for_format(ImageFormat::Tiff);
     let expected_sequence =
         image_slash_star::encode_sequence(&tiff_sequence, ImageFormat::Tiff, &sequence_options)?;
+    let mut partial_sequence = PartialTiffSink {
+        bytes: Vec::new(),
+        writes: 0,
+        accepted_on_failure: 0,
+        failed_segment_len: 0,
+    };
+    let partial_sequence_error = match image_slash_star::encode_sequence_to_sink(
+        &tiff_sequence,
+        ImageFormat::Tiff,
+        &sequence_options,
+        &mut partial_sequence,
+    ) {
+        Ok(length) => panic!("partial TIFF sequence sink unexpectedly accepted {length} bytes"),
+        Err(error) => error,
+    };
+    assert_eq!(
+        partial_sequence_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(partial_sequence_error.format(), Some(ImageFormat::Tiff));
+    assert_eq!(
+        partial_sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(partial_sequence.writes, 2);
+    assert!(partial_sequence.failed_segment_len > 0);
+    assert!(partial_sequence.accepted_on_failure < partial_sequence.failed_segment_len);
+    assert!(partial_sequence.bytes.len() < expected_sequence.len());
+    assert_eq!(
+        partial_sequence.bytes.as_slice(),
+        &expected_sequence[..partial_sequence.bytes.len()]
+    );
     let mut sequence_sink = RecordingTiffSink {
         bytes: Vec::new(),
         writes: 0,
