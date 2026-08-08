@@ -1,6 +1,7 @@
 //! Exact VP8 rate costs used by libwebp's mode decisions.
 
 use super::tokenize::COEFF_BANDS;
+use crate::codecs::CodecResult;
 
 const ENTROPY_COST: [u16; 256] = [
     1792, 1792, 1792, 1536, 1536, 1408, 1366, 1280, 1280, 1216, 1178, 1152, 1110, 1076, 1061, 1024,
@@ -216,6 +217,23 @@ pub(super) fn squared_error_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 {
     })
 }
 
+pub(super) fn squared_error_4x4_with_control<F>(
+    left: &[u8; 16],
+    right: &[u8; 16],
+    mut checkpoint: F,
+) -> CodecResult<u32>
+where
+    F: FnMut() -> CodecResult<()>,
+{
+    let mut error = 0_u32;
+    for (&left, &right) in left.iter().zip(right) {
+        let difference = i32::from(left).wrapping_sub(i32::from(right));
+        error = error.wrapping_add(difference.wrapping_mul(difference).cast_unsigned());
+        checkpoint()?;
+    }
+    Ok(error)
+}
+
 pub(super) fn squared_error_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
     left.iter().zip(right).fold(0_u32, |sum, (&left, &right)| {
         let difference = i32::from(left).wrapping_sub(i32::from(right));
@@ -266,6 +284,62 @@ pub(super) fn spectral_distortion_4x4(left: &[u8; 16], right: &[u8; 16]) -> u32 
         .wrapping_sub(weighted_transform(right))
         .unsigned_abs()
         .wrapping_shr(5)
+}
+
+fn weighted_transform_with_control<F>(block: &[u8; 16], mut checkpoint: F) -> CodecResult<i32>
+where
+    F: FnMut() -> CodecResult<()>,
+{
+    const WEIGHTS: [i32; 16] = [38, 32, 20, 9, 32, 28, 17, 7, 20, 17, 10, 4, 9, 7, 4, 2];
+    let mut temporary = [0i32; 16];
+    for row in 0_usize..4 {
+        let offset = row.wrapping_mul(4);
+        let a0 = i32::from(block[offset]).wrapping_add(i32::from(block[offset.wrapping_add(2)]));
+        let a1 = i32::from(block[offset.wrapping_add(1)])
+            .wrapping_add(i32::from(block[offset.wrapping_add(3)]));
+        let a2 = i32::from(block[offset.wrapping_add(1)])
+            .wrapping_sub(i32::from(block[offset.wrapping_add(3)]));
+        let a3 = i32::from(block[offset]).wrapping_sub(i32::from(block[offset.wrapping_add(2)]));
+        temporary[offset] = a0.wrapping_add(a1);
+        temporary[offset.wrapping_add(1)] = a3.wrapping_add(a2);
+        temporary[offset.wrapping_add(2)] = a3.wrapping_sub(a2);
+        temporary[offset.wrapping_add(3)] = a0.wrapping_sub(a1);
+        checkpoint()?;
+    }
+    let mut sum = 0_i32;
+    for column in 0_usize..4 {
+        let a0 = temporary[column].wrapping_add(temporary[8_usize.wrapping_add(column)]);
+        let a1 = temporary[4_usize.wrapping_add(column)]
+            .wrapping_add(temporary[12_usize.wrapping_add(column)]);
+        let a2 = temporary[4_usize.wrapping_add(column)]
+            .wrapping_sub(temporary[12_usize.wrapping_add(column)]);
+        let a3 = temporary[column].wrapping_sub(temporary[8_usize.wrapping_add(column)]);
+        let transformed = [
+            a0.wrapping_add(a1),
+            a3.wrapping_add(a2),
+            a3.wrapping_sub(a2),
+            a0.wrapping_sub(a1),
+        ];
+        for (row, &value) in transformed.iter().enumerate() {
+            let weight_index = row.wrapping_mul(4).wrapping_add(column);
+            sum = sum.wrapping_add(WEIGHTS[weight_index].wrapping_mul(value.abs()));
+        }
+        checkpoint()?;
+    }
+    Ok(sum)
+}
+
+pub(super) fn spectral_distortion_4x4_with_control<F>(
+    left: &[u8; 16],
+    right: &[u8; 16],
+    mut checkpoint: F,
+) -> CodecResult<u32>
+where
+    F: FnMut() -> CodecResult<()>,
+{
+    let left = weighted_transform_with_control(left, &mut checkpoint)?;
+    let right = weighted_transform_with_control(right, &mut checkpoint)?;
+    Ok(left.wrapping_sub(right).unsigned_abs().wrapping_shr(5))
 }
 
 pub(super) fn spectral_distortion_16x16(left: &[u8; 256], right: &[u8; 256]) -> u32 {
@@ -375,6 +449,93 @@ pub(super) fn residual_cost(
         if !has_more {
             return cost;
         }
+    }
+}
+
+pub(super) fn residual_cost_with_control<F>(
+    levels: &[i16; 16],
+    first: usize,
+    coefficient_type: usize,
+    initial_context: usize,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    mut checkpoint: F,
+) -> CodecResult<u32>
+where
+    F: FnMut() -> CodecResult<()>,
+{
+    let last = (first..16).rev().find(|&index| levels[index] != 0);
+    let mut position = first;
+    let mut probabilities = &coefficient_probabilities[coefficient_type]
+        [usize::from(COEFF_BANDS[position])][initial_context];
+    let Some(last) = last else {
+        checkpoint()?;
+        return Ok(bit_cost(false, probabilities[0]));
+    };
+    let mut cost = bit_cost(true, probabilities[0]);
+
+    loop {
+        let coefficient = levels[position];
+        position = position.wrapping_add(1);
+        if coefficient == 0 {
+            cost = cost.wrapping_add(bit_cost(false, probabilities[1]));
+            probabilities =
+                &coefficient_probabilities[coefficient_type][usize::from(COEFF_BANDS[position])][0];
+            checkpoint()?;
+            continue;
+        }
+
+        cost = cost.wrapping_add(bit_cost(true, probabilities[1]));
+        let magnitude = coefficient.unsigned_abs();
+        cost = cost.wrapping_add(u32::from(LEVEL_FIXED_COSTS[usize::from(magnitude)]));
+        let next_context = if magnitude == 1 {
+            cost = cost.wrapping_add(bit_cost(false, probabilities[2]));
+            1
+        } else {
+            cost = cost.wrapping_add(bit_cost(true, probabilities[2]));
+            if magnitude <= 4 {
+                cost = cost.wrapping_add(bit_cost(false, probabilities[3]));
+                cost = cost.wrapping_add(bit_cost(magnitude != 2, probabilities[4]));
+                if magnitude != 2 {
+                    cost = cost.wrapping_add(bit_cost(magnitude == 4, probabilities[5]));
+                }
+            } else {
+                cost = cost.wrapping_add(bit_cost(true, probabilities[3]));
+                if magnitude <= 10 {
+                    cost = cost.wrapping_add(bit_cost(false, probabilities[6]));
+                    cost = cost.wrapping_add(bit_cost(magnitude > 6, probabilities[7]));
+                } else {
+                    cost = cost.wrapping_add(bit_cost(true, probabilities[6]));
+                    let (node8, node9_or_10) = if magnitude < 19 {
+                        (false, false)
+                    } else if magnitude < 35 {
+                        (false, true)
+                    } else if magnitude < 67 {
+                        (true, false)
+                    } else {
+                        (true, true)
+                    };
+                    cost = cost.wrapping_add(bit_cost(node8, probabilities[8]));
+                    cost = cost.wrapping_add(bit_cost(
+                        node9_or_10,
+                        probabilities[if node8 { 10 } else { 9 }],
+                    ));
+                }
+            }
+            2
+        };
+        if position == 16 {
+            checkpoint()?;
+            return Ok(cost);
+        }
+        probabilities = &coefficient_probabilities[coefficient_type]
+            [usize::from(COEFF_BANDS[position])][next_context];
+        let has_more = position <= last;
+        cost = cost.wrapping_add(bit_cost(has_more, probabilities[0]));
+        if !has_more {
+            checkpoint()?;
+            return Ok(cost);
+        }
+        checkpoint()?;
     }
 }
 

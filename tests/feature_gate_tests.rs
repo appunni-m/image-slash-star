@@ -14571,6 +14571,167 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(inverse_transform_sink, vec![0xB0]);
 
+        // The first reconstructed-block squared-error pixel follows the
+        // inverse-transform subpasses. Its per-pixel checkpoint is a
+        // Rust-only work-control boundary: Pillow has no caller token,
+        // typed work-budget result, or sink/rollback contract.
+        let squared_error_policy = image_slash_star::EncodePolicy::new().with_max_work_units(38);
+        let squared_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &squared_error_policy,
+        ) {
+            Ok(_) => {
+                return Err("fixture-derived squared-error budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            squared_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 38,
+                observed: 39,
+            }
+        ));
+        let mut squared_error_sink = vec![0xB2];
+        let squared_error_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &squared_error_policy,
+            &mut squared_error_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived squared-error sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            squared_error_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 38,
+                observed: 39,
+            }
+        ));
+        assert_eq!(squared_error_sink, vec![0xB2]);
+
+        // The first row of the first weighted spectral-distortion transform
+        // follows the sixteen squared-error pixels and the preserved outer
+        // stage poll. This is the next Rust-only interior boundary.
+        let spectral_policy = image_slash_star::EncodePolicy::new().with_max_work_units(55);
+        let spectral_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &spectral_policy,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived spectral-distortion budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            spectral_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 55,
+                observed: 56,
+            }
+        ));
+        let mut spectral_sink = vec![0xB3];
+        let spectral_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &spectral_policy,
+            &mut spectral_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived spectral-distortion sink budget unexpectedly wrote output"
+                        .into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            spectral_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 55,
+                observed: 56,
+            }
+        ));
+        assert_eq!(spectral_sink, vec![0xB3]);
+
+        // The first residual-cost coefficient follows both weighted transforms
+        // and the preserved spectral-stage poll. Its coefficient-granular
+        // boundary remains Rust-only because Pillow exposes no equivalent
+        // caller-controlled work result or sink contract.
+        let residual_cost_policy = image_slash_star::EncodePolicy::new().with_max_work_units(72);
+        let residual_cost_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &residual_cost_policy,
+        ) {
+            Ok(_) => {
+                return Err("fixture-derived residual-cost budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            residual_cost_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 72,
+                observed: 73,
+            }
+        ));
+        let mut residual_cost_sink = vec![0xB4];
+        let residual_cost_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &interior_options,
+            &residual_cost_policy,
+            &mut residual_cost_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived residual-cost sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            residual_cost_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 72,
+                observed: 73,
+            }
+        ));
+        assert_eq!(residual_cost_sink, vec![0xB4]);
+
         let mut trellis_options = interior_options.clone();
         if let EncodeOptions::WebP(options) = &mut trellis_options {
             options.method = Some(6);

@@ -28,7 +28,9 @@
 //! progressive scan-event frequency items after each 1,024 events,
 //! forward/inverse-DCT row/column subpasses, non-trellis quantization
 //! coefficients, method-6 trellis-quantization coefficient candidates and
-//! path-reconstruction nodes, and bitstream stages, and
+//! path-reconstruction nodes, squared-error pixels, spectral-distortion
+//! weighted-transform row/column passes, residual-cost coefficients, and
+//! bitstream stages, and
 //! lossless WebP VP8L RGB/RGBA source-pixel materialization, predictor
 //! source-snapshot copying, image-palette construction, and palette-mode index
 //! packing after each 1,024 source pixels,

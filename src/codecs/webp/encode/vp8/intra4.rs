@@ -1,7 +1,11 @@
 //! Exact libwebp-compatible VP8 4×4 intra predictions.
 
 use super::{
-    cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
+    cost::{
+        rd_score, residual_cost as residual_cost_plain, residual_cost_with_control,
+        spectral_distortion_4x4 as spectral_distortion_4x4_plain,
+        spectral_distortion_4x4_with_control, squared_error_4x4, squared_error_4x4_with_control,
+    },
     dct::{
         vp8_fdct_4x4, vp8_fdct_4x4_with_control, vp8_idct_add_4x4, vp8_idct_add_4x4_with_control,
     },
@@ -185,6 +189,16 @@ pub(super) struct Intra4Result {
 
 trait SelectionCheckpointControl {
     fn after_candidate_stage(&mut self) -> CodecResult<()>;
+    fn squared_error_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32>;
+    fn spectral_distortion_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32>;
+    fn residual_cost(
+        &mut self,
+        levels: &[i16; 16],
+        first: usize,
+        coefficient_type: usize,
+        initial_context: usize,
+        coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<u32>;
     fn forward_transform(&mut self, block: &[i16; 16]) -> CodecResult<[i16; 16]>;
     fn inverse_transform(
         &mut self,
@@ -208,6 +222,34 @@ impl SelectionCheckpointControl for NoopSelectionCheckpoint {
     #[inline(always)]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         Ok(())
+    }
+
+    #[inline(always)]
+    fn squared_error_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        Ok(squared_error_4x4(left, right))
+    }
+
+    #[inline(always)]
+    fn spectral_distortion_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        Ok(spectral_distortion_4x4_plain(left, right))
+    }
+
+    #[inline(always)]
+    fn residual_cost(
+        &mut self,
+        levels: &[i16; 16],
+        first: usize,
+        coefficient_type: usize,
+        initial_context: usize,
+        coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<u32> {
+        Ok(residual_cost_plain(
+            levels,
+            first,
+            coefficient_type,
+            initial_context,
+            coefficient_probabilities,
+        ))
     }
 
     #[inline(always)]
@@ -275,6 +317,35 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
     #[inline]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn squared_error_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        squared_error_4x4_with_control(left, right, || self.after_candidate_stage())
+    }
+
+    #[inline]
+    fn spectral_distortion_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        spectral_distortion_4x4_with_control(left, right, || self.after_candidate_stage())
+    }
+
+    #[inline]
+    fn residual_cost(
+        &mut self,
+        levels: &[i16; 16],
+        first: usize,
+        coefficient_type: usize,
+        initial_context: usize,
+        coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<u32> {
+        residual_cost_with_control(
+            levels,
+            first,
+            coefficient_type,
+            initial_context,
+            coefficient_probabilities,
+            || self.after_candidate_stage(),
+        )
     }
 
     #[inline]
@@ -523,7 +594,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                 for mode in Intra4Mode::ALL {
                     let prediction = predict(mode, &top, &left, block_top_left);
                     checkpoint.after_candidate_stage()?;
-                    let distortion = squared_error_4x4(&block_source, &prediction);
+                    let distortion = checkpoint.squared_error_4x4(&block_source, &prediction)?;
                     checkpoint.after_candidate_stage()?;
                     let mode_cost = fixed_mode_cost(top_mode, left_mode, mode);
                     checkpoint.after_candidate_stage()?;
@@ -579,9 +650,9 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     let reconstructed = checkpoint.inverse_transform(&prediction, &coefficients)?;
                     (nonzero, levels, reconstructed)
                 };
-                let distortion = squared_error_4x4(&block_source, &reconstructed);
+                let distortion = checkpoint.squared_error_4x4(&block_source, &reconstructed)?;
                 checkpoint.after_candidate_stage()?;
-                let texture = spectral_distortion_4x4(&block_source, &reconstructed);
+                let texture = checkpoint.spectral_distortion_4x4(&block_source, &reconstructed)?;
                 checkpoint.after_candidate_stage()?;
                 let spectral = texture_lambda
                     .wrapping_mul(texture)
@@ -609,13 +680,13 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     checkpoint.after_candidate()?;
                     continue;
                 }
-                let rate = flat_penalty.wrapping_add(residual_cost(
+                let rate = flat_penalty.wrapping_add(checkpoint.residual_cost(
                     &levels,
                     0,
                     3,
                     context,
                     coefficient_probabilities,
-                ));
+                )?);
                 checkpoint.after_candidate_stage()?;
                 let score = rd_score(rate, header, distortion.wrapping_add(spectral), lambda_i4);
                 if distortion_only || best.as_ref().is_none_or(|best| score < best.0) {
