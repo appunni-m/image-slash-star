@@ -10384,6 +10384,34 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(huffman_frequency_sink, vec![0xB3]);
 
+        // Backward-reference tracing now checkpoints its length-cost table
+        // and equal-cost interval setup after each 1,024 entries. The same
+        // generated probe reaches the first new setup boundary before the
+        // previously emitted sink prefix; this is Rust-only work-control
+        // evidence, not a Pillow parity row or a coverage-only input.
+        let mut cost_manager_sink = vec![0xB6];
+        let cost_manager_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_935),
+            &mut cost_manager_sink,
+        ) {
+            Ok(_) => return Err("VP8L cost-manager budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            cost_manager_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 144_935,
+                observed: 144_936,
+            }
+        ));
+        assert_eq!(cost_manager_sink, vec![0xB6]);
+
         // The reverse trim scan over trailing zero-repeat Huffman tokens now
         // checkpoints after each 16 compressed token entries. The same
         // generated image reaches this later interior boundary without
@@ -10414,7 +10442,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_935),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(144_941),
             &mut huffman_trim_sink,
         ) {
             Ok(_) => return Err("VP8L Huffman trim sink budget unexpectedly completed".into()),
@@ -10426,8 +10454,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_935,
-                observed: 144_936,
+                maximum: 144_941,
+                observed: 144_942,
             }
         ));
         assert_eq!(
