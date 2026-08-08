@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`2e1ff04748204d0d7a05608511ae25a7d6f11689`; the claim-ledger baseline remains
+`a28f9373f997b42c47d6228c15e8003e0aa5ffd4`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -649,7 +649,7 @@ Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook.
 
 The finer lossy WebP VP8 mode-selection slice is implemented in
-`2e1ff04748204d0d7a05608511ae25a7d6f11689` through the same existing
+`a28f9373f997b42c47d6228c15e8003e0aa5ffd4` through the same existing
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
 selection retains the outer checkpoint after each 64 completed macroblocks
 for intra16/chroma and completed-decision work, and now also polls after each
@@ -685,20 +685,20 @@ first level-2 run rebuilt isolated artifacts in 25,946 ms. These are
 cache- and runner-sensitive observations, not universal speed claims.
 
 Exact-head managed validation for implementation/coverage revision
-`2e1ff04748204d0d7a05608511ae25a7d6f11689` passed Pillow parity run
-`ea208cde-4b4c-412b-857f-d7c78eca99a8` with 1,445/1,445 checks in 12,270 ms;
+`a28f9373f997b42c47d6228c15e8003e0aa5ffd4` passed Pillow parity run
+`26ae01db-3558-440d-b2a5-a35c7143b259` with 1,445/1,445 checks in 2,531 ms;
 the new Rust-only work-control evidence therefore leaves the Pillow oracle
 surface unchanged. Feature-matrix run
-`4c4ba0b4-9bd7-4265-bd73-dc90f9a06ed9` passed all 33 configured lanes in
-62,131 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
+`d7128a92-db8d-4735-aa54-390380b5ffcd` passed all 33 configured lanes in
+47,654 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
 `debug=0`, and `verbose=0`; its retained log records the native/WASI
 capability agreement marker and no `lock-wait` match. Nightly LLVM run
-`a097b70f-23fd-49e2-bb19-44cf38120fd1` passed 85/85 tests in 74,501 ms and
-ingested snapshot `81987517-21d7-457c-8417-a6de1f78efd4`, reporting
-53,763/54,486 lines, 7,622/7,808 branches, 3,038/3,116 functions, and
-83,029/84,619 regions. The known LLVM JSON segment-normalization warning
+`7495d5b4-849f-4fbe-9fcf-d54be33ccd0d` passed 85/85 tests in 73,618 ms and
+ingested snapshot `dfe891db-3276-4e07-9893-1bbe0f3cbb53`, reporting
+53,776/54,499 lines, 7,622/7,808 branches, 3,039/3,117 functions, and
+83,060/84,663 regions. The known LLVM JSON segment-normalization warning
 remains; the strict aggregate shortfall is 723 lines, 186 branches, 78
-functions, and 1,590 regions. These are implementation, target-matrix, and
+functions, and 1,603 regions. These are implementation, target-matrix, and
 Pillow-oracle records with separate evidence ownership.
 
 The lossy WebP VP8 coefficient-statistics slice extends the same existing
