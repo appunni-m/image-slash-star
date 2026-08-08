@@ -29,7 +29,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// RGB/RGBA source-pixel materialization, image-palette construction, and
 /// palette-mode index packing after each 1,024 source pixels, plus RGBA
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
-/// predictor/cross-color/entropy/transform, bounded backward-reference
+/// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
+/// bounded backward-reference
 /// setup, token-aware cost-manager interval-update and cleanup scans after
 /// each 256 cumulative interval entries, repeated-run hash-chain insertion
 /// after each 256 pixels, and saturated cost-interval scans,
