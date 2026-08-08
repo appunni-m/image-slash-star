@@ -51,17 +51,14 @@ esac
 # The Rust test harness otherwise starts one worker per logical CPU in every
 # active lane. With several lanes running concurrently that multiplies into a
 # heavily oversubscribed matrix. Cold lanes keep the aggregate test-worker
-# budget near the host CPU count; warm lanes use a bounded three-worker cap so
-# cached codec work overlaps without making the host-wide scheduler unbounded.
+# budget near the host CPU count; warm lanes use one worker per lane because
+# the lanes already execute independently and their codec work is CPU-bound.
 # Callers can override this when a runner has a different process/thread
 # balance.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
 if [ -z "$MATRIX_TEST_THREADS" ]; then
     if [ "$matrix_cache_state" = warm ]; then
-        MATRIX_TEST_THREADS=$(( (matrix_cpu_count + 3) / 4 ))
-        if [ "$MATRIX_TEST_THREADS" -gt 3 ]; then
-            MATRIX_TEST_THREADS=3
-        fi
+        MATRIX_TEST_THREADS=1
     else
         MATRIX_TEST_THREADS=$((matrix_cpu_count / MATRIX_JOBS))
         if [ "$MATRIX_TEST_THREADS" -lt 1 ]; then
