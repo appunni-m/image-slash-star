@@ -15,6 +15,7 @@ use super::{
 use crate::codecs::CodecResult;
 
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
+const PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const PARTITION_MODE_CHECKPOINT_MACROBLOCKS: usize = 256;
 const PARTITION_8_BIT_CHECKPOINT_BITS: usize = 8;
 const PARTITION_16_BIT_CHECKPOINT_BITS: usize = 16;
@@ -36,6 +37,7 @@ const PARTITION_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 
 trait PartitionCheckpointControl {
     fn checkpoint_probability(&mut self) -> CodecResult<()>;
+    fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_macroblock(&mut self) -> CodecResult<()>;
     fn checkpoint_bit(&mut self) -> CodecResult<()>;
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()>;
@@ -53,6 +55,11 @@ struct NoopPartitionCheckpoint;
 impl PartitionCheckpointControl for NoopPartitionCheckpoint {
     #[inline(always)]
     fn checkpoint_probability(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()> {
         Ok(())
     }
 
@@ -91,6 +98,7 @@ impl PartitionCheckpointControl for NoopPartitionCheckpoint {
 struct TokenPartitionCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     probability_items: usize,
+    prepass_items: usize,
     macroblock_items: usize,
     bit_items: usize,
     output_bytes: usize,
@@ -103,6 +111,18 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
         if self
             .probability_items
             .is_multiple_of(PARTITION_PROBABILITY_CHECKPOINT_NODES)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()> {
+        self.prepass_items = self.prepass_items.saturating_add(1);
+        if self
+            .prepass_items
+            .is_multiple_of(PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS)
         {
             crate::codecs::error::check_cancelled(Some(self.token))?;
         }
@@ -323,20 +343,24 @@ fn segment_probability(zero: usize, one: usize) -> u8 {
         .to_le_bytes()[0]
 }
 
-fn segment_probabilities(decisions: &[MacroblockDecision]) -> [u8; 3] {
+fn segment_probabilities<P: PartitionCheckpointControl>(
+    decisions: &[MacroblockDecision],
+    checkpoint: &mut P,
+) -> CodecResult<[u8; 3]> {
     let mut counts = [0usize; 4];
     for decision in decisions {
         counts[usize::from(decision.segment)] =
             counts[usize::from(decision.segment)].saturating_add(1);
+        checkpoint.checkpoint_prepass_macroblock()?;
     }
-    [
+    Ok([
         segment_probability(
             counts[0].saturating_add(counts[1]),
             counts[2].saturating_add(counts[3]),
         ),
         segment_probability(counts[0], counts[1]),
         segment_probability(counts[2], counts[3]),
-    ]
+    ])
 }
 
 fn adjusted_frame_params(
@@ -629,7 +653,7 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
     checkpoint: &mut P,
 ) -> CodecResult<Vec<u8>> {
     let params = adjusted_frame_params(decisions, params, adjust_filter_edges);
-    let segment_probabilities = segment_probabilities(decisions);
+    let segment_probabilities = segment_probabilities(decisions, checkpoint)?;
     let mut writer = BoolEncoder::default();
     encode_bool(&mut writer, 128, false, checkpoint)?; // colorspace
     encode_bool(&mut writer, 128, false, checkpoint)?; // clamp type
@@ -689,6 +713,7 @@ pub(super) fn encode_first_partition(
         let mut checkpoint = TokenPartitionCheckpoint {
             token,
             probability_items: 0,
+            prepass_items: 0,
             macroblock_items: 0,
             bit_items: 0,
             output_bytes: 0,
