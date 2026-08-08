@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`6207722d23e014ed4fda9e2045499500d59b3c7c`; the claim-ledger baseline remains
+`a698bc5ec019d94131ae681ce87ee6d656f9d700`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -396,8 +396,9 @@ a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
 after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
 1,024 scanned or flattened RGBA transparent-area cleanup pixels, each batch of
-1,024 required padded-plane items, each 64-value segment-clustering
-alpha-domain chunk, analyzed macroblocks, and segment-assignment macroblocks,
+1,024 required padded-plane items, each 64 completed 4×4 histogram blocks,
+each 64-value segment-clustering alpha-domain chunk, analyzed macroblocks, and
+segment-assignment macroblocks,
 plus each batch of 64 frame-selection
 macroblocks
 (roughly 1,024 luma 4×4 blocks), then
@@ -498,7 +499,8 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
-macroblock-analysis, intra4 mode-selection candidate-trial stages, forward- and
+macroblock-analysis, analysis histogram construction after each 64 completed
+4×4 blocks, intra4 mode-selection candidate-trial stages, forward- and
 inverse-transform row/column subpasses, non-trellis quantization coefficients,
 method-6 trellis-quantization coefficient candidates and path-reconstruction
 nodes, squared-error pixels, spectral-distortion weighted-transform
@@ -658,19 +660,28 @@ caller token, typed work-budget result, or sink/rollback contract, so this is
 Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook.
 
-The latest lossy WebP VP8 segment-clustering slice is implemented at
-`6207722d23e014ed4fda9e2045499500d59b3c7c` through that same existing
-`encode_work_budget_is_a_non_parity_result_contract`. Token-aware segment
-clustering now polls after each 64 alpha-domain values, including a trailing
-partial chunk, while the no-token path retains the original byte-preserving
-algorithm. The committed
+The latest lossy WebP VP8 analysis-histogram slice is implemented at
+`a698bc5ec019d94131ae681ce87ee6d656f9d700` through that same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware histogram
+construction now polls after each 64 completed 4×4 blocks, while the no-token
+path retains the original tight transform loop. The committed
 `tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp` fixture
 preserves exact bytes under the ample policy; its bounded whole-buffer and
 direct-sink calls reject at `maximum: 8`, `observed: 9`, with sink sentinel
-`[0xB5]` untouched. Pillow has no caller token, typed work-budget result,
+`[0xB6]` untouched. Pillow has no caller token, typed work-budget result,
 caller-owned sink, or rollback contract, so this is Rust-only evidence with no
 parity row, fixture-manifest row, diagnostic origin, new test function, or
 coverage-only hook.
+
+The current lossy WebP VP8 segment-clustering slice was introduced at
+`6207722d23e014ed4fda9e2045499500d59b3c7c` and revalidated at
+`a698bc5ec019d94131ae681ce87ee6d656f9d700`. Token-aware segment clustering
+polls after each 64 alpha-domain values, including a trailing partial chunk,
+while the no-token path retains the original byte-preserving algorithm. The
+same committed fixture rejects at `maximum: 9`, `observed: 10` in both
+whole-buffer and direct-sink calls, with sink sentinel `[0xB5]` untouched.
+This remains Rust-only evidence with no parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
@@ -746,6 +757,29 @@ observations; production codec behavior, Pillow manifest rows, parity
 fixtures, and coverage origins are unchanged.
 
 Latest exact-head managed validation for implementation/coverage revision
+`a698bc5ec019d94131ae681ce87ee6d656f9d700` passed Pillow parity run
+`1fc47e7f-9ffd-4254-85b6-50891a224688` with 1,445/1,445 checks in 4,280 ms;
+the histogram and segment-clustering checkpoints are Rust-only, so the Pillow
+oracle surface remains unchanged. Feature-matrix run
+`04e2015f-31b3-44c6-b653-6bc0aa4b9036` passed all configured lanes in 60,987 ms
+with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and
+`verbose=0`; its retained log contains the native/WASI capability agreement
+marker and no `lock-wait` match. Nightly LLVM run
+`958e1f52-b17b-445e-a4ed-19728c245ba6` passed 85/85 tests in 62,974 ms and
+ingested snapshot `8cc6bdf3-7a44-4681-a731-ad1fb50f949b`, reporting
+54,113/54,836 lines, 7,651/7,838 branches, 3,077/3,155 functions, and
+83,521/85,129 regions. Compared with the preceding accepted snapshot
+`4d159e5e-c0b7-42e6-bf10-cff246a448b2`, covered/source totals changed by
+`+19/+19` lines, `+2/+2` branches, `+2/+2` functions, and `+20/+24`
+regions. The known LLVM JSON segment-normalization warning remains; the
+aggregate shortfall is 723 lines, 187 branches, 78 functions, and 1,608
+regions. In `src/codecs/webp/encode/vp8/analysis.rs`, coverage is 540/541
+lines, 43/44 branches, 33/33 functions, and 870/876 regions; line 391 has a
+partial branch and line 393 is uncovered for the trailing partial segment-
+cluster chunk. The histogram checkpoint is covered; the named aggregate gap
+is retained without a synthetic or coverage-only test.
+
+Prior exact-head managed validation for implementation/coverage revision
 `6207722d23e014ed4fda9e2045499500d59b3c7c` passed Pillow parity run
 `2eee7cb3-54e8-43c1-877e-729ced549cdb` with 1,445/1,445 checks in 4,165 ms;
 the segment-clustering work is Rust-only, so the Pillow oracle surface remains
