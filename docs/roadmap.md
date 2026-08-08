@@ -226,7 +226,7 @@ public reusable conversion layer would violate project scope.
 The current API-023/API-036 work-control record now includes the lossy WebP
 VP8 required padded Y/U/V edge-replication pass and filter-edge adjustment
 after each 1,024 padded item or selected macroblock as applicable, plus
-intra4 mode-selection candidate-trial stages, candidates, and each completed luma 4×4 block and the outer
+intra4 mode-selection candidate-trial stages, non-trellis quantization coefficients, candidates, and each completed luma 4×4 block and the outer
 mode-selection batch after each 64 completed macroblocks for intra16/chroma
 and completed-decision work, the lossy
 VP8 analysis segment-assignment pass, coefficient-statistics collection and first-partition segment-probability
@@ -245,11 +245,12 @@ The remaining API backlog still covers deeper codec interruption, transient
 allocation accounting, progress, and rollback.
 
 The current API-023/API-036 checkpoint set also includes lossy WebP VP8
-intra4 mode-selection candidate-trial stages, candidates, and each completed luma 4×4 block, with the outer
+intra4 mode-selection candidate-trial stages, non-trellis quantization coefficients, candidates, and each completed luma 4×4 block, with the outer
 64-macroblock checkpoint retained for intra16/chroma and completed-decision
 work. The no-token path keeps its original tight selection loop; each individual
-candidate-trial stage remains one uninterruptible unit, and work inside those
-stages is the next finer interior gap. The
+candidate-trial stage remains one uninterruptible unit. Non-trellis quantization
+now polls after each coefficient; transforms, trellis quantization, distortion,
+and residual-cost interiors are the next finer gaps. The
 existing feature-gated work-budget contract is the Rust-only evidence because Pillow
 has no caller token, typed work-budget result, caller-owned sink, or rollback
 equivalent.
@@ -761,7 +762,7 @@ union. That has several consequences for this crate.
 
 QA-026's current feature-gated work-budget evidence also covers the token-aware
 VP8L Huffman-node ordering comparisons after each 64 comparisons and lossy VP8
-intra4 mode-selection candidate-trial stages, candidates, and each completed luma 4×4 block, with the outer
+intra4 mode-selection candidate-trial stages, non-trellis quantization coefficients, candidates, and each completed luma 4×4 block, with the outer
 mode-selection checkpoint retained after each 64 completed macroblocks for
 intra16/chroma and completed-decision work. This remains
 Rust-only contract evidence: Pillow parity continues to own only
@@ -4432,15 +4433,16 @@ The finer lossy WebP VP8 intra4 mode-selection slice is implemented at
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
 selection retains the outer checkpoint after each 64 completed macroblocks
 for intra16/chroma and completed-decision work, and now polls after each
-candidate-trial stage, candidate, and completed luma 4×4 block during intra4
-selection. The committed
+candidate-trial stage, non-trellis quantization coefficient, candidate, and
+completed luma 4×4 block during intra4 selection. The committed
 `tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp` fixture is
 small enough to avoid the outer 64-macroblock boundary but reaches the first
 intra4 candidate-trial stage: whole-buffer and direct-sink calls reject at exactly
 `maximum: 12`, `observed: 13`, while the direct-sink sentinel `[0xAE]` remains
 untouched; an ample budget preserves exact encoded bytes. The no-token path
 retains its original tight selection loop; each token-aware candidate-trial stage
-remains one uninterruptible unit. Pillow has no caller token, typed
+remains one uninterruptible unit, while non-trellis quantization polls after
+each coefficient. Pillow has no caller token, typed
 work-budget result, caller-owned sink, or rollback contract, so this is
 Rust-only feature-gate evidence with no parity row, fixture-manifest row,
 diagnostic origin, new test function, or coverage-only hook.
