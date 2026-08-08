@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`84a9abbd8fca78fc468e3e46be8baa5ca37e005f5`; the claim-ledger baseline remains
+`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -565,8 +565,9 @@ adaptation, partition emission, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256
 each 16,384-boolean first-partition-bit interval,
 each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient interval, each 16,384-boolean coefficient-bit
 interval, each 1,024-byte boolean-bitstream
-output interval, and final container assembly. Lossless WebP VP8L palette sign
-collection and nearest-delta ordering likewise charge after each 64 palette
+output interval, and final container assembly. Lossless WebP VP8L palette-index
+lookup candidate scans, palette sign collection, and nearest-delta ordering
+likewise charge after each 64 palette
 entries or candidate values in the token-aware path.
 JPEG baseline and progressive RGB-to-YCbCr conversion and chroma downsampling
 additionally charge after each 1,024 converted or produced pixels, forward-DCT/
@@ -620,7 +621,8 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
-palette sign and nearest-delta candidate scans after each 64 palette entries
+palette-index lookup candidate scans after each 64 palette entries, palette sign
+and nearest-delta candidate scans after each 64 palette entries
 or candidate values, predictor/cross-color/entropy/transform, bounded backward-reference
 length-cost table and equal-cost interval setup after each 1,024 entries,
 token-aware cost-manager interval-update and cleanup scans after each 256
