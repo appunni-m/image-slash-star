@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`; the claim-ledger baseline remains
+`4eae86493bad9016611648a498a81a79f90f5551`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -360,6 +360,8 @@ insertion and copy-token cache-population checkpoints after each 256 pixels, Huf
 simple-tree symbol-discovery checkpoints
 after each 64 code-length slots, code-length-token frequency, and trailing
 zero-repeat token trim checkpoints after each 16 compressed token entries; the
+histogram-clustering min/max and bin-assignment pre-passes also checkpoint after
+each 64 tile histograms; the
 no-token paths retain their original tight loops. Candidate trials reuse the
 already-emitted prefix and retain only each trial's suffix, avoiding repeated
 prefix copies without changing the selected bitstream or adding a new public
@@ -591,8 +593,9 @@ Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency and trailing zero-repeat token trim
-scans after each 16 compressed token entries, histogram clustering (including token-aware
-population scans after each 64
+scans after each 16 compressed token entries, histogram-clustering min/max and
+bin-assignment pre-passes after each 64 tile histograms, histogram clustering
+(including token-aware population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. This is
@@ -625,8 +628,9 @@ Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency and trailing zero-repeat token trim
-scans after each 16 compressed token entries, histogram
-population, combined entropy-cost, and
+scans after each 16 compressed token entries, histogram-clustering min/max and
+bin-assignment pre-passes after each 64 tile histograms, histogram population,
+combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024

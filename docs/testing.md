@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`; the claim-ledger baseline remains
+`4eae86493bad9016611648a498a81a79f90f5551`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -424,7 +424,8 @@ code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency and trailing zero-repeat token trim
 scans after each 16 compressed token entries, entropy-mode histogram-cost
 analysis after each 64 symbols,
-histogram clustering (including token-aware
+histogram-clustering min/max and bin-assignment pre-passes after each 64 tile
+histograms, histogram clustering (including token-aware
 population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte
@@ -567,12 +568,14 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation/runtime revision
-`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`, the current work-budget contract
+`4eae86493bad9016611648a498a81a79f90f5551`, the current work-budget contract
 remains the existing feature-gated assertion from
 `52623efa026c775b2d1c5157e10cf485e5fca789`; the candidate-trial prefix-reuse
 optimization is committed at `3e139ae7fc5bc1bfaeb3440c4112394cb33eeff3`; the
 entropy-analysis checkpoint slice is committed at
-`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`;
+`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`; the entropy-bin clustering
+pre-pass checkpoint slice is committed at
+`4eae86493bad9016611648a498a81a79f90f5551`;
 runtime harness commit `5af768432579730f01e6af0bf595ac4f02a371df` remains the
 active harness revision. The fixture manifest and managed commands report:
 
@@ -600,8 +603,11 @@ cost-interval fallback, and its long length-interval enumeration after each
 loops. Token-aware repeated-run hash-chain insertion also charges after each
 256 pixels; its no-token path remains tight. Lossless VP8L entropy-mode analysis
 now charges after each 64 symbols while scanning fixed-alphabet histogram costs.
-The existing Rust-only work-budget contract exercises that entropy-analysis
-boundary, histogram population, the RGB-equal grayscale preparation checkpoint
+Histogram clustering now charges in both its min/max and bin-assignment
+pre-passes after each 64 tile histograms; its ordinary no-token path keeps the
+existing algorithm and data.
+The existing Rust-only work-budget contract exercises that entropy-analysis and
+histogram-clustering pre-pass boundary, histogram population, the RGB-equal grayscale preparation checkpoint
 after each 1,024 pixels, the backward-reference length-cost table and equal-cost
 interval setup after each 1,024 entries, the token-aware cost-manager
 interval-update and cleanup scans after each 256 cumulative interval entries,
@@ -624,17 +630,19 @@ The histogram-merge boundary is `maximum: 8,254`, `observed: 8,255` with
 `maximum: 812`, `observed: 813` for the whole-buffer path and `maximum: 811`,
 `observed: 812` with `[0xB1]` untouched for the caller-owned sink. The
 grayscale preparation boundary is `maximum: 179`, `observed: 180` in both
-paths with `[0xB2]` untouched. Huffman-tree frequency proves
-`maximum: 43,977`, `observed: 43,978` for the whole-buffer path and
-`maximum: 43,976`, `observed: 43,977` with `[0xB3]` untouched for the sink.
-The cost-manager setup boundary is `maximum: 144,974`, `observed: 144,975`
+paths with `[0xB2]` untouched. The histogram-clustering min/max and
+bin-assignment pre-pass boundary is `maximum: 5,309`, `observed: 5,310` with
+`[0xB9]` untouched. Huffman-tree frequency proves
+`maximum: 43,985`, `observed: 43,986` for the whole-buffer path and
+`maximum: 43,984`, `observed: 43,985` with `[0xB3]` untouched for the sink.
+The cost-manager setup boundary is `maximum: 144,982`, `observed: 144,983`
 with `[0xB6]` untouched. The reverse trailing-token trim boundary is
-`maximum: 144,970`, `observed: 144,971` for the whole-buffer path and
-`maximum: 144,980`, `observed: 144,981` for the caller-owned sink; the sink
+`maximum: 144,978`, `observed: 144,979` for the whole-buffer path and
+`maximum: 144,988`, `observed: 144,989` for the caller-owned sink; the sink
 retains the expected already-emitted prefix `[0xB4, 0x52, 0x49, 0x46, 0x46,
 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]`. The cost-manager
-interval-update/cleanup boundary is `maximum: 144,980`, `observed: 144,981`
-for the whole-buffer path and `maximum: 144,981`, `observed: 144,982` for the
+interval-update/cleanup boundary is `maximum: 144,988`, `observed: 144,989`
+for the whole-buffer path and `maximum: 144,989`, `observed: 144,990` for the
 caller-owned sink; the latter retains
 `[0xB7, 0x52, 0x49, 0x46, 0x46, 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45,
 0x42, 0x50, 0x56, 0x50, 0x38, 0x4C, 0x4C, 0xC0, 0x00, 0x00]`. The cache
@@ -642,28 +650,26 @@ probe proves `maximum: 136,791`, `observed: 136,792` in the whole-buffer path
 and `maximum: 136,843`, `observed: 136,844` in the caller-owned-sink path,
 with sink prefix
 `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45, 0x42,
-0x50]`. Managed Pillow parity run `f605a219-6bf1-4b46-8df4-1e5fecf63040`
-passed 1,445/1,445 checks with zero skips in 1,717 ms. Feature-matrix run
-`df0daf93-f6d5-4adb-bc06-9fe0a6525d53` passed all configured lanes in 56,885 ms
-with `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0 verbose=0`,
-ended with `capability tables OK: every native and wasm32-wasip1 lane agrees`,
-and targeted searches returned no lock-wait/build-directory/package-cache
-match. Managed LLVM coverage run
-`cf8e3a5d-d492-4351-94a2-f5c7582d3bfa` passed 85/85 tests in 73,511 ms and
-ingested snapshot `e6a43193-bc52-428d-ab2c-e6c3c2f26ef1`:
-53,119/53,728 lines, 7,492/7,642 branches, 2,996/3,072 functions, and
-82,152/83,506 regions. Compared with the preceding accepted snapshot
-`ccfd1793-1ea0-4de8-881a-cdcbf9b84e55`, covered/source totals changed by
-`+10/+10/+2/+2/+1/+1/+16/+15` for covered/source lines, covered/source
+0x50]`. Managed Pillow parity run `c66f3451-cccb-446a-bced-cb89dfe180b3`
+passed 1,445/1,445 checks with zero skips in 53,594 ms. Feature-matrix run
+`7e49d2e7-6009-4577-825b-92abd4f451c3` passed all configured lanes in 61,301 ms
+and ended with the terminal capability agreement; targeted searches returned
+no lock-wait/build-directory/package-cache match. Managed LLVM coverage run
+`c5b0dd02-4c6d-4117-b36e-180be1fe8680` passed 85/85 tests in 84,707 ms and
+ingested snapshot `3cd6077e-e33f-4f1d-9084-c007b59ca287`:
+53,125/53,734 lines, 7,496/7,646 branches, 2,996/3,072 functions, and
+82,167/83,522 regions. Compared with the preceding accepted snapshot
+`e6a43193-bc52-428d-ab2c-e6c3c2f26ef1`, covered/source totals changed by
+`+6/+6/+4/+4/+0/+0/+15/+16` for covered/source lines, covered/source
 branches, covered/source functions, and covered/source regions. The changed
 native WebP encoder reports 1,756/1,801 lines, 361/376 branches, 86/86
-functions, and 2,529/2,705 regions; its histogram module reports 758/758
-lines, 156/156 branches, 39/39 functions, and 1,138/1,160 regions; its
+functions, and 2,529/2,705 regions; its histogram module reports 764/764
+lines, 160/160 branches, 39/39 functions, and 1,153/1,176 regions; its
 backward-reference module reports
 1,587/1,605 lines, 428/440 branches, 68/68 functions, and 2,417/2,522
 regions. The known LLVM JSON segment-normalization warning remains. The
 strict aggregate shortfall is 609 lines, 150 branches, 76 functions, and
-1,354 regions; coverage is implementation evidence, not Pillow parity, and
+1,355 regions; coverage is implementation evidence, not Pillow parity, and
 no coverage-only test was added. The candidate-prefix change is a runtime and
 allocation optimization only: it adds no parity row, fixture, diagnostic
 origin, or new test function. Managed durations remain cache- and
@@ -1647,8 +1653,9 @@ because managed cache and runner state can differ.
 
 ## Latest implementation acceptance
 
-Current acceptance record: WebP VP8L entropy-mode analysis, histogram population,
-combined entropy-cost, merge, backward-reference cost-manager setup and
+Current acceptance record: WebP VP8L entropy-mode analysis, entropy-bin histogram
+clustering pre-passes, histogram population, combined entropy-cost, merge,
+backward-reference cost-manager setup and
 interval-update/cleanup, non-saturated
 interval split/merge, saturated fallback,
 and cost, Huffman RLE, canonical-code,
@@ -1666,6 +1673,9 @@ table and equal-cost interval setup now charge after each 1,024 entries, and
 token-aware cost-manager interval-update and cleanup scans charge after each
 256 cumulative interval entries. Token-aware repeated-run hash-chain insertion
 charges after each 256 pixels. The
+token-aware histogram-clustering min/max and bin-assignment pre-passes now charge
+after each 64 tile histograms; the ordinary no-token path retains the existing
+algorithm and data. The
 token-aware non-saturated interval split/merge path now charges after each
 1,024 interval-work entries; the saturated cost-interval fallback and long
 length-interval enumeration also charge after each 1,024 entries, while the
@@ -1695,6 +1705,8 @@ interval-update/cleanup checkpoint slice is committed at
 optimization is committed at `3e139ae7fc5bc1bfaeb3440c4112394cb33eeff3`; the
 entropy-analysis checkpoint slice is committed at
 `1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`. The existing
+entropy-bin clustering pre-pass checkpoint slice is committed at
+`4eae86493bad9016611648a498a81a79f90f5551`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at the
 entropy-analysis boundary `maximum: 19`, `observed: 20` with sentinel `[0xAD]`,
@@ -1709,19 +1721,21 @@ sink. The same
 existing contract now uses a deterministic 128×128 RGBA grayscale probe to
 prove the preparation checkpoint boundary at `maximum: 179`, `observed: 180`
 in both whole-buffer and caller-owned-sink paths, with `[0xB2]` untouched.
-The same contract proves the Huffman-tree frequency boundary at
-`maximum: 43,977`, `observed: 43,978` for the whole-buffer return path and
-`maximum: 43,976`, `observed: 43,977` with `[0xB3]` untouched for the
+The same contract proves the histogram-clustering min/max and bin-assignment
+pre-pass boundary at `maximum: 5,309`, `observed: 5,310` with `[0xB9]`
+untouched. The Huffman-tree frequency boundary is
+`maximum: 43,985`, `observed: 43,986` for the whole-buffer return path and
+`maximum: 43,984`, `observed: 43,985` with `[0xB3]` untouched for the
 caller-owned sink. It also proves the backward-reference cost-manager setup
-boundary at `maximum: 144,974`, `observed: 144,975` with caller-owned sink
+boundary at `maximum: 144,982`, `observed: 144,983` with caller-owned sink
 sentinel `[0xB6]` untouched. The reverse trailing-token trim boundary is
-`maximum: 144,970`, `observed: 144,971` for the whole-buffer path and
-`maximum: 144,980`, `observed: 144,981` for the caller-owned sink; the sink
+`maximum: 144,978`, `observed: 144,979` for the whole-buffer path and
+`maximum: 144,988`, `observed: 144,989` for the caller-owned sink; the sink
 retains the expected already-emitted prefix `[0xB4, 0x52, 0x49, 0x46, 0x46,
 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]`.
-The cost-manager interval-update/cleanup boundary is `maximum: 144,980`,
-`observed: 144,981` for the whole-buffer path and `maximum: 144,981`,
-`observed: 144,982` for the caller-owned sink; the latter retains
+The cost-manager interval-update/cleanup boundary is `maximum: 144,988`,
+`observed: 144,989` for the whole-buffer path and `maximum: 144,989`,
+`observed: 144,990` for the caller-owned sink; the latter retains
 `[0xB7, 0x52, 0x49, 0x46, 0x46, 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45,
 0x42, 0x50, 0x56, 0x50, 0x38, 0x4C, 0x4C, 0xC0, 0x00, 0x00]`.
 The same contract proves the VP8L copy-token cache-population boundary at
@@ -1745,25 +1759,24 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`f605a219-6bf1-4b46-8df4-1e5fecf63040` passed 1,445/1,445 checks with zero
-skips in 1,717 ms; feature-matrix run
-`df0daf93-f6d5-4adb-bc06-9fe0a6525d53` passed all configured lanes in 56,885 ms
-with `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0 verbose=0`, the
-terminal capability agreement, and no targeted lock-wait/build-directory/
-package-cache matches. Managed LLVM coverage run
-`cf8e3a5d-d492-4351-94a2-f5c7582d3bfa` passed 85/85 tests in 73,511 ms and
-ingested snapshot `e6a43193-bc52-428d-ab2c-e6c3c2f26ef1`: 53,119/53,728
-lines, 7,492/7,642 branches, 2,996/3,072 functions, and 82,152/83,506
-regions. Compared with snapshot `ccfd1793-1ea0-4de8-881a-cdcbf9b84e55`,
-covered/source totals changed by +10/+10 lines, +2/+2 branches, +1/+1
-functions, and +16/+15 regions. Native WebP encoder reports 1,756/1,801
+`c66f3451-cccb-446a-bced-cb89dfe180b3` passed 1,445/1,445 checks with zero
+skips in 53,594 ms; feature-matrix run
+`7e49d2e7-6009-4577-825b-92abd4f451c3` passed all configured lanes in 61,301 ms
+with the terminal capability agreement and no targeted lock-wait/
+build-directory/package-cache matches. Managed LLVM coverage run
+`c5b0dd02-4c6d-4117-b36e-180be1fe8680` passed 85/85 tests in 84,707 ms and
+ingested snapshot `3cd6077e-e33f-4f1d-9084-c007b59ca287`: 53,125/53,734
+lines, 7,496/7,646 branches, 2,996/3,072 functions, and 82,167/83,522
+regions. Compared with snapshot `e6a43193-bc52-428d-ab2c-e6c3c2f26ef1`,
+covered/source totals changed by +6/+6 lines, +4/+4 branches, +0/+0
+functions, and +15/+16 regions. Native WebP encoder reports 1,756/1,801
 lines, 361/376 branches, 86/86 functions, and 2,529/2,705 regions; its
-histogram module reports 758/758 lines, 156/156 branches, 39/39 functions,
-and 1,138/1,160 regions; its backward-reference module reports 1,587/1,605
+histogram module reports 764/764 lines, 160/160 branches, 39/39 functions,
+and 1,153/1,176 regions; its backward-reference module reports 1,587/1,605
 lines, 428/440 branches, 68/68 functions, and 2,417/2,522 regions. Coverage
 is implementation evidence, not Pillow parity; the known LLVM
 segment-normalization warning and the 609-line, 150-branch, 76-function,
-1,354-region aggregate shortfall remain. Managed durations remain cache- and
+1,355-region aggregate shortfall remain. Managed durations remain cache- and
 runner-sensitive. The candidate-prefix change is runtime/allocation evidence
 only and adds no parity row, fixture, diagnostic origin, or new test function.
 
