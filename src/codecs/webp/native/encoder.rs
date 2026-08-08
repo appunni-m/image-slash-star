@@ -68,6 +68,7 @@ const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
+const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
@@ -2098,17 +2099,38 @@ pub(crate) fn encode_alpha(
     let bits_per_pixel = 8 >> xbits;
     let packed_width = width.div_ceil(pixels_per_group as u32) as usize;
     let mut packed = Vec::with_capacity(packed_width * height as usize);
-    for (row_index, row) in alpha.chunks_exact(width as usize).enumerate() {
-        if row_index.is_multiple_of(64) {
-            check_token(token)?;
-        }
-        for group in row.chunks(pixels_per_group) {
-            let mut pixel = 0xff00_0000u32;
-            for (index, &value) in group.iter().enumerate() {
-                let palette_index = u32::from(palette_indices[usize::from(value)]);
-                pixel |= palette_index << (8 + bits_per_pixel * index);
+    if let Some(token) = token {
+        check_token(Some(token))?;
+        let mut source_pixels_until_checkpoint = WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
+        for row in alpha.chunks_exact(width as usize) {
+            for group in row.chunks(pixels_per_group) {
+                let mut pixel = 0xff00_0000u32;
+                for (index, &value) in group.iter().enumerate() {
+                    let palette_index = u32::from(palette_indices[usize::from(value)]);
+                    pixel |= palette_index << (8 + bits_per_pixel * index);
+                }
+                packed.push(pixel);
+                source_pixels_until_checkpoint =
+                    source_pixels_until_checkpoint.saturating_sub(group.len());
+                if source_pixels_until_checkpoint == 0 {
+                    check_token(Some(token))?;
+                    source_pixels_until_checkpoint = WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
+                }
             }
-            packed.push(pixel);
+        }
+    } else {
+        for (row_index, row) in alpha.chunks_exact(width as usize).enumerate() {
+            if row_index.is_multiple_of(64) {
+                check_token(None)?;
+            }
+            for group in row.chunks(pixels_per_group) {
+                let mut pixel = 0xff00_0000u32;
+                for (index, &value) in group.iter().enumerate() {
+                    let palette_index = u32::from(palette_indices[usize::from(value)]);
+                    pixel |= palette_index << (8 + bits_per_pixel * index);
+                }
+                packed.push(pixel);
+            }
         }
     }
 
