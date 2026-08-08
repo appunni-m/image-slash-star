@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`3ae19ad65cd73b56d90ef0db0d1704183894e8f0`; the claim-ledger baseline remains
+`ade63113ea059668d731269ec9cda8c6d82b7243`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -573,7 +573,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation/runtime revision
-`3ae19ad65cd73b56d90ef0db0d1704183894e8f0`, the existing
+`ade63113ea059668d731269ec9cda8c6d82b7243`, the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -606,6 +606,16 @@ token, typed work-budget result, or caller-owned sink/rollback contract, so
 this adds no parity row, fixture-manifest row, diagnostic origin, new test
 function, or coverage-only hook.
 
+The token-aware VP8L Huffman-node ordering path now uses a stable bottom-up
+merge sort and polls after each 64 comparisons; the no-token path retains the
+original stable sort. The existing 128-entry palette feature-gate fixture
+rejects at `maximum: 2,412`, `observed: 2,413` in both whole-buffer and
+caller-owned-sink paths before structural delivery; the sink sentinel `[0xC6]`
+remains untouched. Pillow has no caller token, typed work-budget result, or
+caller-owned sink/rollback contract, so this adds no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook.
+
 The predictor mode-application path now also checkpoints its pre-transform
 source snapshot copy after each 1,024 pixels; its no-token path retains the
 original bulk clone. The existing predictor-transform probe exercises this
@@ -621,26 +631,24 @@ These are Rust-only work-control results. Pillow cannot exercise a caller token,
 typed work-budget result, or caller-owned sink/rollback contract, so this
 revision adds no Pillow parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook. Pillow parity run
-`a6cf3f1f-88a3-4962-ba35-94d770851602` passed 1,445/1,445 checks with zero
-skips in 1,024 ms. Feature-matrix run
-`83e9aa6a-0304-46af-98e9-23dbaca6c75b` passed all 33 configured lanes in
-48,571 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
+`80e16273-d94a-41bf-9ee8-2fb3d29da895` passed 1,445/1,445 checks with zero
+skips in 2,654 ms. Feature-matrix run
+`89481933-3ee9-4bde-8458-3fa2b588e82c` passed all 33 configured lanes in
+51,935 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
 verbose=0`, ended with capability-table agreement, and had no targeted
 lock-wait/build-directory/package-cache matches. No AVIF implementation
 changed in this revision.
 
-Managed LLVM coverage run `7cd9d519-1b4f-4aed-858f-6e1e58a29a18` passed 85/85
-tests in 65,153 ms and ingested snapshot
-`b8ebf101-9fdf-484c-b4e1-2d0ce151edcc`: 53,369/54,010 lines, 7,576/7,736
-branches, 3,002/3,078 functions, and 82,596/84,029 regions. Compared with
-preceding accepted snapshot `295965ae-83c5-4fe2-a09b-396be34d020e`, covered/source
-totals changed by `+24/+49` lines, `+9/+18` branches, `+1/+1` functions, and
-`+47/+102` regions. The native WebP encoder reports 1,978/2,055 lines,
-431/456 branches, 92/92 functions, and 2,916/3,164 regions; its
-backward-reference module reports 1,601/1,619 lines, 434/446 branches,
-68/68 functions, and 2,444/2,549 regions. The known LLVM
+Managed LLVM coverage run `2a184e06-59db-4371-a68f-fa2ae0c1a03a` passed 85/85
+tests in 71,384 ms and ingested snapshot
+`7e573894-cf96-4fe6-b1b6-056f32edb239`: 53,405/54,046 lines, 7,590/7,750
+branches, 3,003/3,079 functions, and 82,664/84,099 regions. Compared with
+preceding accepted snapshot `b8ebf101-9fdf-484c-b4e1-2d0ce151edcc`, covered/source
+totals changed by `+36/+36` lines, `+14/+14` branches, `+1/+1` functions, and
+`+68/+70` regions. The native WebP encoder reports 2,014/2,091 lines,
+445/470 branches, 93/93 functions, and 2,986/3,234 regions. The known LLVM
 segment-normalization warning remains; the strict aggregate shortfall is 641
-lines, 160 branches, 76 functions, and 1,433 regions. Coverage is implementation evidence, not
+lines, 160 branches, 76 functions, and 1,435 regions. Coverage is implementation evidence, not
 Pillow parity; the new backfill checkpoint is covered by existing feature-gate
 execution, and no coverage-only test was added. Managed durations remain
 cache- and runner-sensitive.

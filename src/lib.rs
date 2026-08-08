@@ -987,7 +987,8 @@ pub fn encode_with_policy(
 /// cache population after each 256 pixels, Huffman-tree simple-tree symbol
 /// discovery scans after each 64 code-length slots, Huffman RLE preparation and
 /// canonical-code assignment scans after each 64 code-length
-/// symbols, Huffman-tree insertion scans after each 64 candidate nodes,
+/// symbols, Huffman-tree ordering comparisons and insertion scans after each 64
+/// comparisons or candidate nodes,
 /// Huffman-tree code-length-token frequency scans after each 16 compressed
 /// token entries, trailing zero-repeat token trim scans after each 16 compressed
 /// token entries,
