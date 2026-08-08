@@ -5490,8 +5490,8 @@ short-write/rollback semantics, and the other roadmap categories below.
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
    transient encoded-output allocation and peak-memory accounting; interior
    encode interruption beyond the documented checkpoints, including remaining
-   Deflate emission/structural cleanup, BMP row-conversion subsegments, and
-   finer JPEG/WebP codec work; progress and CPU/instruction
+   Deflate emission/structural cleanup and finer JPEG/WebP codec work; progress
+   and CPU/instruction
    interruption semantics; stable structured error detail where a new
    codec-internal identity or offset can be defined; and short-write,
    rollback, and partial-container cleanup. Keep allocation accounting and
