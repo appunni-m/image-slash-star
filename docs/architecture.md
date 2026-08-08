@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`5af768432579730f01e6af0bf595ac4f02a371df`; the claim-ledger baseline remains
+`b153381bd9657b1f9da3707ca1d6f015ab174042`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -572,7 +572,8 @@ VP8L additionally charges around RGB-equal grayscale preparation after each
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy analysis, transform selection/application, bounded backward-reference
-length-cost table and equal-cost interval setup after each 1,024 entries,
+length-cost table, equal-cost interval setup, and saturated cost-interval
+fallback scans after each 1,024 entries,
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
@@ -601,7 +602,8 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L
 predictor/cross-color/entropy/transform, bounded backward-reference
-length-cost table and equal-cost interval setup after each 1,024 entries,
+length-cost table, equal-cost interval setup, and saturated cost-interval
+fallback scans after each 1,024 entries,
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
