@@ -279,6 +279,9 @@ fn pad_plane(
     padded_width: usize,
     padded_height: usize,
 ) -> Vec<u8> {
+    if width == padded_width && height == padded_height {
+        return input.to_vec();
+    }
     let mut output = vec![0; padded_width.wrapping_mul(padded_height)];
     for y in 0..padded_height {
         let source_y = y.min(height.saturating_sub(1));
@@ -292,7 +295,8 @@ fn pad_plane(
 }
 
 // VP8 operates on 16x16 macroblocks, so non-aligned input dimensions require
-// an O(padded-pixel) edge-replication pass before analysis. Keep the ordinary
+// an O(padded-pixel) edge-replication pass before analysis. Aligned planes
+// need no replication and take the direct-clone path. Keep the ordinary
 // encoder on the original tight loop, while the caller-controlled path polls
 // the shared Y/U/V padding work at the same 1,024-item granularity as the
 // surrounding WebP preparation stages. The allocation itself remains covered
@@ -306,6 +310,9 @@ fn pad_plane_with_token(
     token: Option<&crate::CancellationToken>,
     padding_items: &mut usize,
 ) -> CodecResult<Vec<u8>> {
+    if width == padded_width && height == padded_height {
+        return Ok(input.to_vec());
+    }
     let Some(token) = token else {
         return Ok(pad_plane(input, width, height, padded_width, padded_height));
     };
