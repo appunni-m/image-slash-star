@@ -10177,6 +10177,52 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             lossless_expected,
             "an ample WebP VP8L budget preserves byte identity"
         );
+        // Lossless VP8L palette construction now polls after each 1,024 source
+        // pixels. This is a caller-work-budget boundary, not Pillow parity:
+        // Pillow exposes neither a caller token nor a work-budget result or
+        // sink-rollback contract, so it adds no parity row or fixture entry.
+        let palette_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let palette_scan_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_scan_policy,
+        ) {
+            Ok(_) => return Err("VP8L palette scan budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_scan_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        let mut palette_scan_sink = vec![0xBA];
+        let palette_scan_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_scan_policy,
+            &mut palette_scan_sink,
+        ) {
+            Ok(_) => return Err("VP8L palette scan budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_scan_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        assert_eq!(palette_scan_sink, vec![0xBA]);
         // The non-palette VP8L preparation path now scans RGB-equal pixels
         // with a checkpoint after each 1,024 pixels. Varying alpha keeps this
         // deterministic grayscale probe above the 256-color palette limit,
@@ -10918,9 +10964,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(
             huffman_emission_sink,
-            vec![
-                0xB6, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P',
-            ]
+            vec![0xB6],
+            "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
         let mut cache_probe_pixels = Vec::with_capacity(512 * 512 * 3);
         for _ in 0..512 {
@@ -10979,9 +11024,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(
             cache_probe_sink,
-            vec![
-                0xB5, b'R', b'I', b'F', b'F', 156, 4, 0, 0, b'W', b'E', b'B', b'P'
-            ]
+            vec![0xB5],
+            "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
         // Lossless VP8L Huffman RLE preparation now charges after each 64
         // code-length symbols while optimizing and tokenizing the fixed

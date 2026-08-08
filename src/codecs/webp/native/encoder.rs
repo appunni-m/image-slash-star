@@ -67,6 +67,7 @@ const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
 const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
@@ -1768,6 +1769,32 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     Ok(frame)
 }
 
+fn collect_palette(
+    pixels: &[u32],
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u32>, EncodingError> {
+    if let Some(token) = token {
+        let mut palette = std::collections::BTreeSet::new();
+        let mut pixels_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
+        for &pixel in pixels {
+            palette.insert(pixel);
+            pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+            if pixels_until_checkpoint == 0 {
+                check_token(Some(token))?;
+                pixels_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
+            }
+        }
+        Ok(palette.into_iter().collect())
+    } else {
+        Ok(pixels
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect())
+    }
+}
+
 /// Encode image data with the indicated color type.
 ///
 /// # Panics
@@ -1843,12 +1870,7 @@ fn encode_frame(
     }
     check_token(token)?;
 
-    let palette = pixels
-        .iter()
-        .copied()
-        .collect::<std::collections::BTreeSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
+    let palette = collect_palette(&pixels, token)?;
     let palette_size = (palette.len() <= 256).then_some(palette.len());
     let transform_bits = if palette_size.is_some() { 5 } else { 3 };
     let (entropy_mode, red_and_blue_zero) = analyze_entropy(
