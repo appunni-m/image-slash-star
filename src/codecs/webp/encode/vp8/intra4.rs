@@ -6,8 +6,8 @@ use super::{
         vp8_fdct_4x4, vp8_fdct_4x4_with_control, vp8_idct_add_4x4, vp8_idct_add_4x4_with_control,
     },
     quant::{
-        QuantMatrix, SegmentMatrices, quantize_block, quantize_block_with_control,
-        trellis_quantize_block, trellis_quantize_block_with_control,
+        QuantMatrix, SegmentMatrices, TrellisQuantizationInput, quantize_block,
+        quantize_block_with_control, trellis_quantize_block, trellis_quantize_block_with_control,
     },
 };
 use crate::codecs::CodecResult;
@@ -197,16 +197,7 @@ trait SelectionCheckpointControl {
         levels: &mut [i16; 16],
         matrix: &QuantMatrix,
     ) -> CodecResult<bool>;
-    fn trellis_quantize_block(
-        &mut self,
-        coefficients: &mut [i16; 16],
-        levels: &mut [i16; 16],
-        initial_context: usize,
-        coefficient_type: usize,
-        matrix: &QuantMatrix,
-        lambda: i32,
-        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
-    ) -> CodecResult<bool>;
+    fn trellis_quantize_block(&mut self, input: TrellisQuantizationInput<'_>) -> CodecResult<bool>;
     fn after_candidate(&mut self) -> CodecResult<()>;
     fn after_block(&mut self) -> CodecResult<()>;
 }
@@ -244,16 +235,16 @@ impl SelectionCheckpointControl for NoopSelectionCheckpoint {
     }
 
     #[inline(always)]
-    fn trellis_quantize_block(
-        &mut self,
-        coefficients: &mut [i16; 16],
-        levels: &mut [i16; 16],
-        initial_context: usize,
-        coefficient_type: usize,
-        matrix: &QuantMatrix,
-        lambda: i32,
-        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
-    ) -> CodecResult<bool> {
+    fn trellis_quantize_block(&mut self, input: TrellisQuantizationInput<'_>) -> CodecResult<bool> {
+        let TrellisQuantizationInput {
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+        } = input;
         Ok(trellis_quantize_block(
             coefficients,
             levels,
@@ -313,26 +304,8 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
     }
 
     #[inline]
-    fn trellis_quantize_block(
-        &mut self,
-        coefficients: &mut [i16; 16],
-        levels: &mut [i16; 16],
-        initial_context: usize,
-        coefficient_type: usize,
-        matrix: &QuantMatrix,
-        lambda: i32,
-        probabilities: &[[[[u8; 11]; 3]; 8]; 4],
-    ) -> CodecResult<bool> {
-        trellis_quantize_block_with_control(
-            coefficients,
-            levels,
-            initial_context,
-            coefficient_type,
-            matrix,
-            lambda,
-            probabilities,
-            || self.after_candidate_stage(),
-        )
+    fn trellis_quantize_block(&mut self, input: TrellisQuantizationInput<'_>) -> CodecResult<bool> {
+        trellis_quantize_block_with_control(input, || self.after_candidate_stage())
     }
 
     #[inline]
@@ -583,15 +556,15 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     });
                     let mut coefficients = checkpoint.forward_transform(&residual)?;
                     let mut levels = [0; 16];
-                    let nonzero = checkpoint.trellis_quantize_block(
-                        &mut coefficients,
-                        &mut levels,
-                        context,
-                        3,
-                        &matrices.y1,
-                        matrices.lambda_trellis_i4,
-                        coefficient_probabilities,
-                    )?;
+                    let nonzero = checkpoint.trellis_quantize_block(TrellisQuantizationInput {
+                        coefficients: &mut coefficients,
+                        levels: &mut levels,
+                        initial_context: context,
+                        coefficient_type: 3,
+                        matrix: &matrices.y1,
+                        lambda: matrices.lambda_trellis_i4,
+                        probabilities: coefficient_probabilities,
+                    })?;
                     checkpoint.after_candidate_stage()?;
                     let reconstructed = checkpoint.inverse_transform(&prediction, &coefficients)?;
                     (nonzero, levels, reconstructed)
