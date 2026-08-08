@@ -179,12 +179,18 @@ pub(super) struct Intra4Result {
 }
 
 trait SelectionCheckpointControl {
+    fn after_candidate(&mut self) -> CodecResult<()>;
     fn after_block(&mut self) -> CodecResult<()>;
 }
 
 struct NoopSelectionCheckpoint;
 
 impl SelectionCheckpointControl for NoopSelectionCheckpoint {
+    #[inline(always)]
+    fn after_candidate(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
     #[inline(always)]
     fn after_block(&mut self) -> CodecResult<()> {
         Ok(())
@@ -196,6 +202,11 @@ struct TokenSelectionCheckpoint<'a> {
 }
 
 impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
+    #[inline]
+    fn after_candidate(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
     #[inline]
     fn after_block(&mut self) -> CodecResult<()> {
         crate::codecs::error::check_cancelled(Some(self.token))
@@ -401,21 +412,27 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                 result.modes[block_index.wrapping_sub(1)]
             };
             let context = usize::from(top_nonzero[block_x].wrapping_add(left_nonzero[block_y]));
-            let selected_mode = distortion_only.then(|| {
-                // The complete intra4 mode set is statically non-empty.
-                #[allow(clippy::expect_used)]
-                Intra4Mode::ALL
-                    .into_iter()
-                    .min_by_key(|&mode| {
-                        let prediction = predict(mode, &top, &left, block_top_left);
+            let selected_mode = if distortion_only {
+                let mut selected: Option<(u32, Intra4Mode)> = None;
+                for mode in Intra4Mode::ALL {
+                    let prediction = predict(mode, &top, &left, block_top_left);
+                    let score =
                         256_u32
                             .wrapping_mul(squared_error_4x4(&block_source, &prediction))
                             .wrapping_add(11_u32.wrapping_mul(u32::from(fixed_mode_cost(
                                 top_mode, left_mode, mode,
-                            ))))
-                    })
-                    .expect("VP8 always has intra4 candidates")
-            });
+                            ))));
+                    if selected.is_none_or(|(best, _)| score < best) {
+                        selected = Some((score, mode));
+                    }
+                    checkpoint.after_candidate()?;
+                }
+                // The complete intra4 mode set is statically non-empty.
+                #[allow(clippy::expect_used)]
+                Some(selected.expect("VP8 always has intra4 candidates").1)
+            } else {
+                None
+            };
 
             type Candidate = (u64, Intra4Mode, [i16; 16], [u8; 16], u32, u32, u32, u32);
             let mut best: Option<Candidate> = None;
@@ -469,6 +486,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                         .as_ref()
                         .is_some_and(|best| preliminary_score >= best.0)
                 {
+                    checkpoint.after_candidate()?;
                     continue;
                 }
                 let rate = flat_penalty.wrapping_add(residual_cost(
@@ -492,6 +510,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     ));
                 }
                 let _ = nonzero;
+                checkpoint.after_candidate()?;
             }
             // The selected mode is always evaluated by the loop above.
             #[allow(clippy::expect_used)]

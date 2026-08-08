@@ -497,7 +497,8 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
-macroblock-analysis, intra4 mode selection after each completed luma 4×4 block,
+macroblock-analysis, intra4 mode-selection candidate trials and each completed
+luma 4×4 block,
 the outer 64-macroblock mode-selection checkpoint, and
 mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
 logical first-partition intervals, 16,384-boolean first-partition bit intervals,
@@ -547,7 +548,8 @@ token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, required padded-plane edge
 replication, RGBA transparent-area cleanup, macroblock-analysis and
-segment-assignment, intra4 mode selection after each completed luma 4×4 block,
+segment-assignment, intra4 mode-selection candidate trials and each completed
+luma 4×4 block,
 the outer 64-macroblock mode-selection checkpoint, and mode-selection work
 beyond those implemented boundaries, WebP coefficient-probability
 adaptation and first-partition segment-probability prepass after each 1,024
@@ -651,14 +653,14 @@ The finer lossy WebP VP8 mode-selection slice is implemented in
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
 selection retains the outer checkpoint after each 64 completed macroblocks
 for intra16/chroma and completed-decision work, and now also polls after each
-completed luma 4×4 block during intra4 selection. The committed fixture
+intra4 candidate trial and completed luma 4×4 block. The committed fixture
 `tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp` is small
-enough to avoid the outer 64-macroblock boundary but reaches the first
-completed intra4 block: whole-buffer and direct-sink calls reject at exactly
+enough to avoid the outer 64-macroblock boundary but reaches the first intra4
+candidate trial: whole-buffer and direct-sink calls reject at exactly
 `maximum: 12`, `observed: 13`, while the direct-sink sentinel `[0xAE]`
 remains untouched; an ample budget preserves the exact encoded bytes. The
-no-token path uses the original tight selection loop, and candidate
-evaluation inside a block remains one uninterruptible unit.
+no-token path uses the original tight selection loop; each token-aware
+candidate trial remains one uninterruptible unit.
 Pillow exposes neither a caller token nor a typed work-budget result,
 caller-owned sink, or rollback contract; this is Rust-only evidence with no
 parity row, fixture-manifest row, diagnostic origin, new test function, or
