@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`8a549091c618c7282c43b8566da79d6f592d4bae`; the claim-ledger baseline remains
+`863b68844fa871500bf7c88b29de77f76c24b258`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -728,7 +728,7 @@ coverage. The known LLVM JSON segment-normalization warning remains; the
 aggregate shortfall is 722 lines, 187 branches, 78 functions, and 1,609
 regions.
 
-Current test-runtime acceptance record: warm feature-matrix fanout
+Test-runtime acceptance record: warm feature-matrix fanout (`8a54909`)
 
 The harness-only revision `8a549091c618c7282c43b8566da79d6f592d4bae`
 retains the same 33 native, `wasm32-unknown-unknown`, and
@@ -761,6 +761,38 @@ the slice changes only the test harness; the existing LLVM
 segment-normalization warning remains. These execution, target, and coverage
 records remain separate from Pillow parity, and no synthetic coverage test was
 added.
+
+Current WebP no-token hot-path acceptance record
+
+The implementation revision
+`863b68844fa871500bf7c88b29de77f76c24b258` removes two unconditional
+`check_token(None)` calls from the ordinary no-token VP8L sampling-compaction
+and lossy RGBA alpha-palette packing loops. Token-aware branches and their
+documented checkpoint cadence are unchanged. This is a production-path
+overhead correction, not a new work-boundary contract: it changes no
+Pillow-visible bytes or errors and adds no fixture, parity row, diagnostic
+origin, coverage-only hook, or unit test. The focused Rust-only
+`encode_work_budget_is_a_non_parity_result_contract` passed 1/1 locally in
+4,280 ms.
+
+Exact-head Pillow parity run
+`f62f657b-1c02-4f8a-a1ca-13914aa39bdd` passed 1,445/1,445 checks in 1,393 ms.
+The source-changing feature-matrix run
+`3b71a559-834a-4b4b-a3be-d285baae833a` passed all 33 configured lanes in
+40,485 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Nightly LLVM run
+`aead67da-dff1-43a4-aa3c-8cd4dd1dad4f` passed 85/85 tests in 62,290 ms and
+ingested snapshot `95f8cdcd-961b-4656-b14b-ab58aa8fbb6b`, retaining
+54,143/54,865 lines, 7,663/7,850 branches, 3,077/3,155 functions, and
+83,567/85,174 regions. Compared with snapshot
+`0e5bcd27-f18c-4b11-81fb-5ff6613b3f54`, covered/source deltas are
+`-6/-6` lines, `-4/-4` branches, `+0/+0` functions, and `-12/-14` regions;
+the denominator changes are the removed no-op polling code, not suppressed
+coverage. The known LLVM segment-normalization warning remains, and the
+aggregate shortfall is 722 lines, 187 branches, 78 functions, and 1,607
+regions. These execution, target, and coverage records remain separate from
+Pillow parity, and no synthetic coverage test was added.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
