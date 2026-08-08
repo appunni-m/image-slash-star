@@ -9881,6 +9881,30 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample simple-palette budget preserves byte identity"
         );
 
+        // This short palette has both delta directions but stays below the
+        // 18-entry rotation threshold, exercising that public branch without
+        // widening the work-budget contract or adding a private test hook.
+        let mixed_small_values = [
+            0_u8, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
+        ];
+        let mut mixed_small_pixels = Vec::with_capacity(mixed_small_values.len() * 3);
+        for value in mixed_small_values {
+            mixed_small_pixels.extend_from_slice(&[value, value, value]);
+        }
+        let mixed_small_image = DecodedImage::new(16, 1, mixed_small_pixels, ColorType::Rgb8);
+        let mixed_small_expected =
+            image_slash_star::encode(&mixed_small_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &mixed_small_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            mixed_small_expected,
+            "an ample mixed-short-palette budget preserves byte identity"
+        );
+
         // A transparent pixel makes the sorted palette begin with zero. The
         // remaining deterministic high-color fixture reaches palette mode and
         // proves the token-aware transparent-zero rotation through the public
