@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-08 against current implementation revision
-`589186a6e3f0a1f8fd47ca84dcc73133620ed9fa`; the claim-ledger baseline remains
+`7ab2a043b1e07106370416500bc13ae6af52cefd`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -4281,21 +4281,56 @@ workspace after removing the separate 1,920×1,920 witness. These are targeted
 boundary witnesses, not general benchmarks or claims of universal codec speedup;
 managed durations remain cache- and runner-sensitive observations.
 
-Current acceptance record: WebP VP8L entropy-mode analysis, entropy-bin histogram
-clustering pre-passes, histogram population, combined entropy-cost, merge,
-backward-reference cost-manager setup and
-interval-update/cleanup, non-saturated
-interval split/merge, saturated fallback,
-and cost plus repeated-run hash-chain insertion and copy-token cache population,
-Huffman RLE, canonical-code, Huffman-tree simple-tree symbol-discovery,
-token-frequency, trailing-token-trim, and code-length-emission checkpoints,
-and RGB-equal grayscale-preparation checkpoints, candidate-trial prefix reuse,
-lossy WebP RGBA alpha-palette source-collection, index-packing, and candidate-scan checkpoints,
-and lossless WebP
-VP8L image-palette-construction, palette-mode index-packing, palette-index lookup, palette sign, and
-nearest-delta candidate-scan checkpoints, and lossless WebP VP8L RGBA hidden-RGB
-cleanup checkpoints,
-plus compile-only matrix runtime
+Current acceptance record: WebP VP8L work-control checkpoints cover entropy
+analysis, histogram clustering/population/merge/cost, backward-reference
+intervals, repeated-run hash chains, copy-token cache/replay, Huffman
+preparation and emission, grayscale preparation, candidate-trial prefix reuse,
+lossy alpha-palette collection/packing/scanning, lossless VP8L source-pixel
+materialization, image-palette construction, palette ordering/lookup/packing,
+hidden-RGB cleanup, and the bounded feature-matrix runtime. The accepted
+implementation revision is
+`7ab2a043b1e07106370416500bc13ae6af52cefd`.
+
+The new token-aware lossless VP8L RGB/RGBA source-materialization branch polls
+after each 1,024 source pixels, while the no-token maps remain the original
+tight iterators. The existing feature-gated contract proves the source boundary
+at `maximum: 2`, `observed: 3`, with sink sentinel `[0xC4]` untouched; later
+lossless VP8L boundaries are image-palette construction `6/7` (`[0xBA]`),
+hidden-RGB cleanup `18/19` (`[0xB7]`), palette lookup `9,820/9,821`
+(`[0xA9]`), and palette-mode packing `5,205/5,206` with the existing WebP
+prefix preserved. The downstream exact work-budget witnesses were recalibrated
+for the four conversion intervals, including entropy `23/24`, histogram `62/63`,
+combined cost `80/81`, merge `8,258/8,259`, cost estimate `14,092/14,093`,
+Huffman-RLE `828/829` (sink `827/828`), grayscale `195/196`, Huffman frequency
+`44,001/44,002` (sink `44,000/44,001`), emission `144,869/144,870`, and cache
+`136,928/136,929`.
+
+This is Rust-only resource-contract evidence: Pillow has no caller token, typed
+work-budget result, or caller-owned sink/rollback contract, so the revision adds
+no parity row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook. The managed Pillow parity run
+`6e6167c4-2161-4e7a-bcd4-98a1cff7e5a5` passed 1,445/1,445 checks with zero
+skips in 775 ms. The first feature-matrix attempt
+`b7851f54-9f74-4eb8-a406-2534e563c1ee` recorded one native/all AVIF sink-byte
+failure; accepted retry `aae19360-07a7-4ade-be11-e594e80bd6e6` passed all 33
+configured lanes in 8,317 ms, ended with capability-table agreement, and had no
+targeted lock-wait/build-directory/package-cache matches. No AVIF implementation
+changed in this revision.
+
+Coverage MCP run `a04ade4a-8d73-481c-82bb-7c3952d57f45` passed 85/85 tests in
+71,770 ms and ingested snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`:
+53,323/53,939 lines, 7,557/7,708 branches, 3,001/3,077 functions, and
+82,502/83,879 regions. Compared with the preceding accepted snapshot
+`ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by
+`+37/+37` lines, `+6/+6` branches, `+1/+1` functions, and `+51/+51` regions.
+The changed native WebP encoder reports 1,956/2,006 lines, 423/438 branches,
+91/91 functions, and 2,870/3,062 regions. The known LLVM
+segment-normalization warning and the strict aggregate shortfall of 616 lines,
+151 branches, 76 functions, and 1,377 regions remain. These are implementation
+coverage metrics, not Pillow parity metrics; managed durations remain
+cache- and runner-sensitive.
+
+## Historical acceptance record: superseded WebP work-control revisions
 
 The token-aware VP8L entropy-mode analysis now charges cooperative checkpoints
 after each 64 symbols while scanning its fixed-alphabet histogram costs. The
@@ -4339,12 +4374,19 @@ construction path now charges a token-aware checkpoint after each 1,024 source
 pixels while collecting the source-color set; the no-token path retains its
 bulk collection and byte output. The deterministic 64×64 RGB lossless WebP
 fixture proves ample-budget byte identity, then exact whole-buffer and
-caller-owned-sink rejection at `maximum: 2`, `observed: 3`, with sentinel
-`[0xBA]` untouched. Pillow has no caller token, work-budget result, or
-sink-rollback contract, so this remains Rust-only evidence with no parity row,
-fixture-manifest row, diagnostic origin, new test function, or coverage-only
-hook. The implementation is committed at
-`53886bfdc7ea4eee996f5a892e1742a8acd91a9b`. Candidate
+caller-owned-sink rejection at `maximum: 6`, `observed: 7`, with sentinel
+`[0xBA]` untouched after accounting for four earlier conversion intervals.
+Pillow has no caller token, work-budget result, or sink-rollback contract, so
+this remains Rust-only evidence with no parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook. The implementation
+is committed at `53886bfdc7ea4eee996f5a892e1742a8acd91a9b`. The current
+source-materialization checkpoint is committed at
+`7ab2a043b1e07106370416500bc13ae6af52cefd`: it charges token-aware RGB/RGBA
+materialization after each 1,024 source pixels, leaves the no-token maps tight,
+and rejects the same 64×64 RGB fixture at `maximum: 2`, `observed: 3`, with
+sink sentinel `[0xC4]` untouched. Pillow cannot exercise this caller-budget
+contract, so it adds no parity row, fixture-manifest row, diagnostic origin,
+new test function, or coverage-only hook. Candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
 and each 64-symbol population scan. Huffman RLE preparation, canonical-code
 assignment, and compressed Huffman-token generation now charge after each 64
@@ -4398,15 +4440,15 @@ this remains Rust-only evidence with no parity row, fixture-manifest row,
 diagnostic origin, new test function, or coverage-only hook. This closes the
 next causal interior checkpoint in the current WebP work-control slice. The
 deterministic 128×128 RGB lookup probe proves exact whole-buffer and
-caller-owned-sink rejection at `maximum: 9,804`, `observed: 9,805`, with
+caller-owned-sink rejection at `maximum: 9,820`, `observed: 9,821`, with
 sentinel `[0xA9]` untouched. Pillow has no caller token, work-budget result, or
 caller-owned sink, so this lookup checkpoint is Rust-only evidence with no
 parity row, fixture-manifest row, diagnostic origin, new test function, or
 coverage-only hook. The same existing contract now uses a deterministic 128×8
 RGB fixture built from the existing 128-entry palette to reach lossless VP8L
 palette-mode index packing. It proves ample-budget byte identity, then exact
-whole-buffer and caller-owned-sink rejection at `maximum: 5,204`, `observed:
-5,205`; the sink preserves the delivered prefix `[0xC3, 0x52, 0x49, 0x46,
+whole-buffer and caller-owned-sink rejection at `maximum: 5,205`, `observed:
+5,206`; the sink preserves the delivered prefix `[0xC3, 0x52, 0x49, 0x46,
 0x46, 0xEA, 0x03, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]`. The token-aware
 packing path polls after each 1,024 source pixels, while the no-token linear
 packing loop remains byte preserving. Pillow has no caller token, typed
@@ -4416,28 +4458,28 @@ coverage-only hook. The implementation is committed at
 `589186a6e3f0a1f8fd47ca84dcc73133620ed9fa`.
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at the
-entropy-analysis boundary `maximum: 19`, `observed: 20` with sentinel `[0xAD]`,
-the histogram-population boundary `maximum: 58`, `observed: 59` with `[0xB8]`,
-the combined entropy-cost boundary `maximum: 76`, `observed: 77` with `[0xAE]`,
-the histogram-merge boundary `maximum: 8,254`, `observed: 8,255` with `[0xAF]`
-untouched, and the cost-estimate boundary `maximum: 14,088`, `observed: 14,089`
+entropy-analysis boundary `maximum: 23`, `observed: 24` with sentinel `[0xAD]`,
+the histogram-population boundary `maximum: 62`, `observed: 63` with `[0xB8]`,
+the combined entropy-cost boundary `maximum: 80`, `observed: 81` with `[0xAE]`,
+the histogram-merge boundary `maximum: 8,258`, `observed: 8,259` with `[0xAF]`
+untouched, and the cost-estimate boundary `maximum: 14,092`, `observed: 14,093`
 with `[0xB0]` untouched, plus exact Huffman-RLE preparation boundaries at
-`maximum: 812`, `observed: 813` for the whole-buffer return path and
-`maximum: 811`, `observed: 812` with `[0xB1]` untouched for the caller-owned
+`maximum: 828`, `observed: 829` for the whole-buffer return path and
+`maximum: 827`, `observed: 828` with `[0xB1]` untouched for the caller-owned
 sink. The same
 existing contract now uses a deterministic 128×128 RGBA grayscale probe to
-prove the preparation checkpoint boundary at `maximum: 179`, `observed: 180`
+prove the preparation checkpoint boundary at `maximum: 195`, `observed: 196`
 in both whole-buffer and caller-owned-sink paths, with `[0xB2]` untouched.
 The same contract proves the histogram-clustering min/max and bin-assignment
-pre-pass boundary at `maximum: 5,309`, `observed: 5,310` with `[0xB9]`
+pre-pass boundary at `maximum: 5,325`, `observed: 5,326` with `[0xB9]`
 untouched. The Huffman-tree frequency boundary remains
-`maximum: 43,985`, `observed: 43,986` for the whole-buffer return path and
-`maximum: 43,984`, `observed: 43,985` with `[0xB3]` untouched for the
+`maximum: 44,001`, `observed: 44,002` for the whole-buffer return path and
+`maximum: 44,000`, `observed: 44,001` with `[0xB3]` untouched for the
 caller-owned sink. The batched code-length-emission contract first proves
 normal/ample-budget fixture-byte identity, then rejects both whole-buffer and
-caller-owned-sink paths at `maximum: 144,853`, `observed: 144,854`; the new
+caller-owned-sink paths at `maximum: 144,869`, `observed: 144,870`; the new
 pre-output palette checkpoint leaves sentinel `[0xB6]` untouched. The cache
-probe now rejects both paths at `maximum: 136,672`, `observed: 136,673`; the
+probe now rejects both paths at `maximum: 136,928`, `observed: 136,929`; the
 new pre-output palette checkpoint leaves sentinel `[0xB5]` untouched. The old
 late cost-manager and trailing-trim maxima were tied to the
 previous per-token polling schedule and are superseded by the batched emission
@@ -4457,7 +4499,7 @@ fixture, diagnostic origin, new test function, or coverage-only hook.
 The same existing contract now uses a deterministic 128×128 fully transparent
 RGBA lossless WebP probe with nonzero hidden RGB values to prove ordinary and
 ample-budget byte identity, then exact whole-buffer and caller-owned-sink
-rejection at `maximum: 2`, `observed: 3`, with sentinel `[0xB7]` untouched.
+rejection at `maximum: 18`, `observed: 19`, with sentinel `[0xB7]` untouched.
 The token-aware VP8L cleanup polls after each 1,024 scanned pixels; the
 ordinary no-token path retains its bulk loop. Pillow has no caller token,
 work-budget result, or sink-rollback contract, so this remains Rust-only
