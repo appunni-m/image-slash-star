@@ -10982,11 +10982,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let transform_image = DecodedImage::new(1_024, 1, transform_pixels, ColorType::Rgb8);
         // The lossless VP8L fixed-predictor path now checkpoints its full
-        // source snapshot copy and its interior transform after each 1,024
-        // pixels. This wide one-row probe reaches the real transform boundary
-        // after the earlier predictor setup and snapshot polls. Pillow has no
-        // caller token or work-budget result, so this remains Rust-only
-        // evidence with no parity row or coverage-only hook.
+        // source snapshot copy, image-width tile-row copy, and interior
+        // transform after each 1,024 pixels. This wide one-row probe reaches
+        // the real predictor row-copy boundary after the earlier setup polls.
+        // Pillow has no caller token or work-budget result, so this remains
+        // Rust-only evidence with no parity row or coverage-only hook.
         let transform_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_675);
         let transform_error = match image_slash_star::encode_with_policy(
             &transform_image,

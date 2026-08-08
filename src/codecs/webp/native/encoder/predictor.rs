@@ -170,7 +170,24 @@ fn tile_histogram(
         if row_index.is_multiple_of(16) {
             checkpoint(token)?;
         }
-        current[..width].copy_from_slice(&source[y * width..(y + 1) * width]);
+        // A token-aware tile scan must not hide an entire image-width row copy
+        // between checkpoints. Keep the ordinary no-token path on the
+        // original bulk copy because Pillow has no caller work budget.
+        if let Some(token) = token {
+            let mut copied = 0;
+            while copied < width {
+                let end = copied
+                    .saturating_add(TRANSFORM_CHECKPOINT_PIXELS)
+                    .min(width);
+                current[copied..end].copy_from_slice(&source[y * width + copied..y * width + end]);
+                copied = end;
+                if copied.is_multiple_of(TRANSFORM_CHECKPOINT_PIXELS) {
+                    checkpoint(Some(token))?;
+                }
+            }
+        } else {
+            current[..width].copy_from_slice(&source[y * width..(y + 1) * width]);
+        }
         current[width] = if y + 1 < height {
             source[(y + 1) * width]
         } else {
