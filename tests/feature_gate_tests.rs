@@ -14341,13 +14341,72 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample fixture-derived selection budget preserves byte identity"
         );
 
-        // Segment clustering scans the bounded alpha domain in 64-value
-        // chunks. The first chunk is the ninth admitted checkpoint for this
-        // committed fixture, before any intra4 candidate work begins. Pillow
+        // Analysis histogram construction now charges after each 64 completed
+        // 4x4 blocks. This fixture reaches the first histogram boundary at
+        // the ninth admitted checkpoint, before segment clustering. Pillow
         // has no caller token, typed work-budget result, or sink-rollback
         // contract, so this is Rust-only feature-gate evidence with no new
         // parity row, fixture-manifest row, or coverage-only hook.
-        let segment_cluster_policy = image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let analysis_histogram_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(8);
+        let analysis_histogram_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &analysis_histogram_policy,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived analysis histogram budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            analysis_histogram_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+        let mut analysis_histogram_sink = vec![0xB6];
+        let analysis_histogram_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &analysis_histogram_policy,
+            &mut analysis_histogram_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived analysis histogram sink budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            analysis_histogram_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 8,
+                observed: 9,
+            }
+        ));
+        assert_eq!(analysis_histogram_sink, vec![0xB6]);
+
+        // Segment clustering scans the bounded alpha domain in 64-value
+        // chunks. The first chunk is the tenth admitted checkpoint for this
+        // committed fixture, after the histogram boundary and before any
+        // intra4 candidate work begins. Pillow has no caller token, typed
+        // work-budget result, or sink-rollback contract, so this is Rust-only
+        // feature-gate evidence with no new parity row, fixture-manifest row,
+        // diagnostic origin, or coverage-only hook.
+        let segment_cluster_policy = image_slash_star::EncodePolicy::new().with_max_work_units(9);
         let segment_cluster_error = match image_slash_star::encode_with_policy(
             &selection_fixture,
             ImageFormat::WebP,
@@ -14365,8 +14424,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 8,
-                observed: 9,
+                maximum: 9,
+                observed: 10,
             }
         ));
         let mut segment_cluster_sink = vec![0xB5];
@@ -14390,8 +14449,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 8,
-                observed: 9,
+                maximum: 9,
+                observed: 10,
             }
         ));
         assert_eq!(segment_cluster_sink, vec![0xB5]);

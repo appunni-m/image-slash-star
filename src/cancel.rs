@@ -12,7 +12,8 @@
 //! RGB/RGBA-to-YUV conversion items, padded-plane edge replication when
 //! padding is required, filter-edge adjustment, RGBA transparent-area cleanup
 //! after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
-//! collection and index packing after each 1,024 source pixels, analysis after
+//! collection and index packing after each 1,024 source pixels, analysis
+//! histogram construction after each 64 completed 4×4 blocks, analysis after
 //! each 1,024 macroblocks, segment-clustering alpha-domain chunks after each
 //! 64 values, segment-assignment macroblocks after each 1,024 items, and
 //! mode-selection batches after each 64 completed macroblocks (roughly 1,024

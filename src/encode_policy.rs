@@ -23,9 +23,10 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// RGB/RGBA-to-YUV conversion items and RGBA transparent-area cleanup after
 /// each 1,024 scanned or flattened pixels, RGBA alpha-palette source
 /// collection and index packing after each 1,024 source pixels, required
-/// padded-plane edge replication, filter-edge adjustment, analysis after each
-/// 1,024 macroblocks, segment-clustering alpha-domain chunks after each 64
-/// values, segment-assignment macroblocks after each 1,024 items, and
+/// padded-plane edge replication, filter-edge adjustment, analysis histogram
+/// construction after each 64 completed 4×4 blocks, analysis after each 1,024
+/// macroblocks, segment-clustering alpha-domain chunks after each 64 values,
+/// segment-assignment macroblocks after each 1,024 items, and
 /// mode-selection batches after each 64 completed macroblocks (roughly 1,024
 /// luma blocks), method-6 trellis
 /// quantization coefficient candidates and path-reconstruction nodes, plus
@@ -116,8 +117,9 @@ impl EncodePolicy {
     /// conversion items and each 1,024 scanned or flattened RGBA
     /// transparent-area cleanup pixels, and after each 1,024 RGBA alpha-palette
     /// source pixels during source collection and index packing, after each
-    /// required padded-plane item, analysis macroblock, segment-clustering
-    /// alpha-domain chunk of 64 values, segment-assignment macroblock,
+    /// required padded-plane item, analysis histogram batch of 64 completed
+    /// 4×4 blocks, analysis macroblock, segment-clustering alpha-domain chunk
+    /// of 64 values, segment-assignment macroblock,
     /// mode-selection batch of 64 completed macroblocks (roughly 1,024 luma
     /// blocks), method-6 trellis quantization coefficient candidates and
     /// path-reconstruction nodes, squared-error pixels, spectral-distortion

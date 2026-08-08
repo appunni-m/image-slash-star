@@ -9,11 +9,13 @@ const NUM_SEGMENTS: usize = 4;
 const MAX_K_MEANS_ITERATIONS: usize = 6;
 const MAX_COEFFICIENT_THRESHOLD: usize = 31;
 const ANALYSIS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+const ANALYSIS_HISTOGRAM_CHECKPOINT_BLOCKS: usize = 64;
 const SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES: usize = 64;
 
 trait AnalysisCheckpointControl {
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()>;
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()>;
     fn checkpoint_segment_cluster(&mut self) -> CodecResult<()>;
     fn checkpoint_segment_assignment(&mut self) -> CodecResult<()>;
 }
@@ -23,6 +25,11 @@ struct NoopAnalysisCheckpoint;
 impl AnalysisCheckpointControl for NoopAnalysisCheckpoint {
     #[inline(always)]
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
         Ok(())
     }
 
@@ -40,6 +47,7 @@ impl AnalysisCheckpointControl for NoopAnalysisCheckpoint {
 struct TokenAnalysisCheckpoint<'a> {
     token: &'a crate::CancellationToken,
     analysis_items: usize,
+    analysis_histogram_blocks: usize,
     segment_assignment_items: usize,
 }
 
@@ -50,6 +58,18 @@ impl AnalysisCheckpointControl for TokenAnalysisCheckpoint<'_> {
         if self
             .analysis_items
             .is_multiple_of(ANALYSIS_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
+        self.analysis_histogram_blocks = self.analysis_histogram_blocks.saturating_add(1);
+        if self
+            .analysis_histogram_blocks
+            .is_multiple_of(ANALYSIS_HISTOGRAM_CHECKPOINT_BLOCKS)
         {
             crate::codecs::error::check_cancelled(Some(self.token))?;
         }
@@ -198,7 +218,10 @@ fn predict_block<const SIZE: usize>(
     output
 }
 
-fn collect_histogram(blocks: &[(&[u8], &[u8], usize)]) -> Histogram {
+fn collect_histogram<C: AnalysisCheckpointControl>(
+    blocks: &[(&[u8], &[u8], usize)],
+    checkpoint: &mut C,
+) -> CodecResult<Histogram> {
     let mut distribution = [0i32; MAX_COEFFICIENT_THRESHOLD + 1];
     for &(source, prediction, stride) in blocks {
         for block_y in 0..stride / 4 {
@@ -221,6 +244,7 @@ fn collect_histogram(blocks: &[(&[u8], &[u8], usize)]) -> Histogram {
                         .min(MAX_COEFFICIENT_THRESHOLD);
                     distribution[bin] = distribution[bin].wrapping_add(1);
                 }
+                checkpoint.checkpoint_analysis_histogram_block()?;
             }
         }
     }
@@ -235,7 +259,7 @@ fn collect_histogram(blocks: &[(&[u8], &[u8], usize)]) -> Histogram {
             histogram.last_non_zero = i32::from(bin.to_le_bytes()[0]);
         }
     }
-    histogram
+    Ok(histogram)
 }
 
 fn histogram_alpha(histogram: Histogram) -> i32 {
@@ -431,6 +455,7 @@ pub(super) fn analyze(
         let mut checkpoint = TokenAnalysisCheckpoint {
             token,
             analysis_items: 0,
+            analysis_histogram_blocks: 0,
             segment_assignment_items: 0,
         };
         analyze_with_checkpoint(planes, dimensions, quality, method, &mut checkpoint)
@@ -497,7 +522,8 @@ fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
                 for mode in 0..2 {
                     let prediction =
                         predict_block::<16>(y_top.as_deref(), y_left.as_deref(), y_top_left, mode);
-                    let alpha = histogram_alpha(collect_histogram(&[(&y_block, &prediction, 16)]));
+                    let histogram = collect_histogram(&[(&y_block, &prediction, 16)], checkpoint)?;
+                    let alpha = histogram_alpha(histogram);
                     if alpha > best_luma_alpha {
                         best_luma_alpha = alpha;
                         luma_mode = mode;
@@ -552,10 +578,11 @@ fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
                     predict_block::<8>(u_top.as_deref(), u_left.as_deref(), u_top_left, mode);
                 let v_prediction =
                     predict_block::<8>(v_top.as_deref(), v_left.as_deref(), v_top_left, mode);
-                let alpha = histogram_alpha(collect_histogram(&[
-                    (&u_block, &u_prediction, 8),
-                    (&v_block, &v_prediction, 8),
-                ]));
+                let histogram = collect_histogram(
+                    &[(&u_block, &u_prediction, 8), (&v_block, &v_prediction, 8)],
+                    checkpoint,
+                )?;
+                let alpha = histogram_alpha(histogram);
                 best_chroma_alpha = best_chroma_alpha.max(alpha);
                 if mode == 0 || alpha < smallest_chroma_alpha {
                     smallest_chroma_alpha = alpha;
