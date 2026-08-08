@@ -14154,7 +14154,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
 
         // The basic VP8 probe above already proves ordinary/ample byte
         // identity. This 512x512 fixture is retained only for the real
-        // analysis and macroblock checkpoint boundaries below.
+        // analysis and macroblock checkpoint boundaries below. Its aligned
+        // planes also exercise the direct-clone path that avoids needless
+        // edge-replication work when no padding is required.
         let analysis_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(326);
         let analysis_error = match image_slash_star::encode_with_policy(
             &analysis_image,
@@ -14199,6 +14201,61 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(analysis_sink, vec![0xAB]);
+
+        // Segment assignment re-walks the analyzed macroblocks after the
+        // analysis poll. It now charges its own 1,024-macroblock interval;
+        // Pillow has no caller token or work-budget result, so this remains
+        // Rust-only evidence with no parity row, fixture-manifest entry,
+        // diagnostic origin, new test function, or coverage-only hook.
+        let segment_assignment_bounded =
+            image_slash_star::EncodePolicy::new().with_max_work_units(328);
+        let segment_assignment_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &segment_assignment_bounded,
+        ) {
+            Ok(_) => {
+                return Err("bounded WebP segment-assignment budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            segment_assignment_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 328,
+                observed: 329,
+            }
+        ));
+        let mut segment_assignment_sink = vec![0xA7];
+        let segment_assignment_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &analysis_options,
+            &segment_assignment_bounded,
+            &mut segment_assignment_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP segment-assignment sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            segment_assignment_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 328,
+                observed: 329,
+            }
+        ));
+        assert_eq!(segment_assignment_sink, vec![0xA7]);
 
         // The following selection pass now charges its own 1,024-macroblock
         // interior checkpoint. The preceding analysis checkpoint is allowed

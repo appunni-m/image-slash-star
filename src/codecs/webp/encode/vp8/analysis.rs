@@ -9,6 +9,58 @@ const NUM_SEGMENTS: usize = 4;
 const MAX_K_MEANS_ITERATIONS: usize = 6;
 const MAX_COEFFICIENT_THRESHOLD: usize = 31;
 const ANALYSIS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+const SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+
+trait AnalysisCheckpointControl {
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()>;
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()>;
+}
+
+struct NoopAnalysisCheckpoint;
+
+impl AnalysisCheckpointControl for NoopAnalysisCheckpoint {
+    #[inline(always)]
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenAnalysisCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    analysis_items: usize,
+    segment_assignment_items: usize,
+}
+
+impl AnalysisCheckpointControl for TokenAnalysisCheckpoint<'_> {
+    #[inline]
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        self.analysis_items = self.analysis_items.saturating_add(1);
+        if self
+            .analysis_items
+            .is_multiple_of(ANALYSIS_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        self.segment_assignment_items = self.segment_assignment_items.saturating_add(1);
+        if self
+            .segment_assignment_items
+            .is_multiple_of(SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) struct MacroblockAnalysis {
@@ -248,10 +300,11 @@ fn boundary(
     (top, left, top_left)
 }
 
-fn assign_segments(
+fn assign_segments<C: AnalysisCheckpointControl>(
     macroblocks: &mut [MacroblockAnalysis],
     alpha_counts: &[i32; MAX_ALPHA + 1],
-) -> [SegmentAnalysis; NUM_SEGMENTS] {
+    checkpoint: &mut C,
+) -> CodecResult<[SegmentAnalysis; NUM_SEGMENTS]> {
     let minimum = alpha_counts
         .iter()
         .position(|&count| count != 0)
@@ -323,6 +376,7 @@ fn assign_segments(
         let segment = map[macroblock.alpha as usize];
         macroblock.segment = segment;
         macroblock.alpha = centers[usize::from(segment)].to_le_bytes()[0];
+        checkpoint.checkpoint_segment_assignment()?;
     }
 
     let minimum_center = *centers.iter().min().unwrap_or(&0);
@@ -331,7 +385,7 @@ fn assign_segments(
         maximum_center = minimum_center.wrapping_add(1);
     }
     let center_range = maximum_center.wrapping_sub(minimum_center);
-    std::array::from_fn(|index| {
+    Ok(std::array::from_fn(|index| {
         let alpha = 255_i32
             .wrapping_mul(centers[index].wrapping_sub(weighted_average))
             .checked_div(center_range)
@@ -343,7 +397,7 @@ fn assign_segments(
             .unwrap_or_default()
             .clamp(0, 255);
         SegmentAnalysis { alpha, beta }
-    })
+    }))
 }
 
 pub(super) fn analyze(
@@ -352,6 +406,26 @@ pub(super) fn analyze(
     quality: u8,
     method: u8,
     token: Option<&crate::CancellationToken>,
+) -> CodecResult<FrameAnalysis> {
+    if let Some(token) = token {
+        let mut checkpoint = TokenAnalysisCheckpoint {
+            token,
+            analysis_items: 0,
+            segment_assignment_items: 0,
+        };
+        analyze_with_checkpoint(planes, dimensions, quality, method, &mut checkpoint)
+    } else {
+        let mut checkpoint = NoopAnalysisCheckpoint;
+        analyze_with_checkpoint(planes, dimensions, quality, method, &mut checkpoint)
+    }
+}
+
+fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
+    planes: [&[u8]; 3],
+    dimensions: (usize, usize),
+    quality: u8,
+    method: u8,
+    checkpoint: &mut C,
 ) -> CodecResult<FrameAnalysis> {
     let [y_plane, u_plane, v_plane] = planes;
     let (width, height) = dimensions;
@@ -363,8 +437,6 @@ pub(super) fn analyze(
     let mut alpha_counts = [0i32; MAX_ALPHA + 1];
     let mut alpha_sum = 0_i32;
     let mut chroma_alpha_sum = 0_i32;
-    let mut analysis_items = 0usize;
-
     for macroblock_y in 0..macroblock_height {
         for macroblock_x in 0..macroblock_width {
             let y_x = macroblock_x.wrapping_mul(16);
@@ -491,10 +563,7 @@ pub(super) fn analyze(
                 luma_mode,
                 chroma_mode,
             });
-            analysis_items = analysis_items.saturating_add(1);
-            if analysis_items.is_multiple_of(ANALYSIS_CHECKPOINT_MACROBLOCKS) {
-                crate::codecs::error::check_cancelled(token)?;
-            }
+            checkpoint.checkpoint_analysis_macroblock()?;
         }
     }
 
@@ -509,7 +578,7 @@ pub(super) fn analyze(
     let chroma_alpha = chroma_alpha_sum
         .checked_div(macroblock_count)
         .unwrap_or_default();
-    let segments = assign_segments(&mut macroblocks, &alpha_counts);
+    let segments = assign_segments(&mut macroblocks, &alpha_counts, checkpoint)?;
     Ok(FrameAnalysis {
         alpha,
         chroma_alpha,
