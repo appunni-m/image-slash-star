@@ -979,6 +979,7 @@ pub fn encode_with_policy(
 /// cost-manager interval-update and cleanup scans after each 256
 /// cumulative interval entries, saturated cost-interval fallback scans after
 /// each 1,024 entries, repeated-run hash-chain insertion after each 256 pixels,
+/// and long backward-reference result backfills after each 256 entries,
 /// plus token/Huffman cost scans after
 /// each 1,024 tokens or 64 symbols, copy-token
 /// cache population after each 256 pixels, Huffman-tree simple-tree symbol

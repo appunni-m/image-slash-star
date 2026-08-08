@@ -37,7 +37,8 @@
 //! cost-manager interval-update and cleanup
 //! scans after each 256 cumulative interval entries, saturated cost-interval
 //! fallback scans after each 1,024 entries, repeated-run hash-chain insertion
-//! after each 256 pixels, plus cost/Huffman scans
+//! after each 256 pixels, long backward-reference result backfills after each
+//! 256 entries, plus cost/Huffman scans
 //! after each 1,024 tokens or 64 symbols,
 //! copy-token cache population after each 256 pixels,
 //! Huffman-tree simple-tree symbol discovery scans after each 64 code-length
