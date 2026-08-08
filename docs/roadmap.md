@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against current implementation revision
-`79d53951ba83b700f2647d5912718c634cecd417`; the claim-ledger baseline remains
+`f1de82ef6d5cde827daf6f5fa195d938a9abe67b`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `a44748e1-74fa-489a-9cf8-623f29ca4611` covers implementation, test, and runtime revision `79d53951ba83b700f2647d5912718c634cecd417`: 53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and 83,038/84,511 regions. Compared with the preceding accepted snapshot `5248c52b-ea17-446d-a089-1389c67a13c9`, covered/source totals changed by 0/0 lines, 0/0 branches, 0/0 functions, and 0/0 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix run used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 659 lines, 164 branches, 78 functions, and 1,473 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `a44748e1-74fa-489a-9cf8-623f29ca4611` covers implementation revision `79d53951ba83b700f2647d5912718c634cecd417`: 53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and 83,038/84,511 regions. Compared with the preceding accepted snapshot `5248c52b-ea17-446d-a089-1389c67a13c9`, covered/source totals changed by 0/0 lines, 0/0 branches, 0/0 functions, and 0/0 regions. The current test/runtime harness follow-up is `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`: warm feature-matrix lanes default to `MATRIX_TEST_OPT_LEVEL=2`, and exact-revision run `db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured native/WASI lanes in 8,806 ms with one test worker per lane, one build job per lane, debug 0, and verbose 0; its log ends with `capability tables OK: every native and wasm32-wasip1 lane agrees` and has no `lock-wait` match. The regular Cargo test profile remains `opt-level = 2`, and explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 659 lines, 164 branches, 78 functions, and 1,473 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4381,8 +4381,24 @@ materialization, image-palette construction, palette ordering/lookup/packing,
 hidden-RGB cleanup, long backward-reference result backfills, and the bounded
 meta-histogram sampling row/column comparisons and symbol compaction, Huffman-node
 ordering comparisons, and the bounded feature-matrix runtime. The accepted
-implementation revision is
-`79d53951ba83b700f2647d5912718c634cecd417`.
+codec implementation/coverage revision is
+`79d53951ba83b700f2647d5912718c634cecd417`; the current test/runtime
+harness follow-up is
+`f1de82ef6d5cde827daf6f5fa195d938a9abe67b`.
+
+The harness follow-up defaults the isolated feature-matrix test binaries to
+the existing Cargo test `opt-level = 2`. The existing native AVIF
+structural-sink witness also pins `sequence_time=1` in its caller-built
+options, preventing wall-clock BMFF timestamps from making repeated sink
+comparisons fail. Managed run
+`db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured lanes in
+8,806 ms on a warm cache with one test worker per lane, one build job per lane,
+debug 0, and verbose 0; its retained log has the native/WASI capability
+agreement marker and no `lock-wait` match. The parent level-1 run took 11,478
+ms, while the first level-2 run rebuilt isolated artifacts in 25,946 ms. These
+are runner- and cache-sensitive observations. This slice changes no
+production codec behavior, Pillow parity row, parity fixture, diagnostic
+origin, or coverage-only test.
 
 The AVIF grid slice retains the validated primary `grid` payload as
 `AvifGridProperties` (`version`, raw `flags`, `rows`, `columns`,
