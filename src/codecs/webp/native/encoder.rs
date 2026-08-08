@@ -70,6 +70,7 @@ const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_8_BITSTREAM_CHECKPOINT_BITS: usize = 8;
 const VP8L_16_BITSTREAM_CHECKPOINT_BITS: usize = 16;
 const VP8L_32_BITSTREAM_CHECKPOINT_BITS: usize = 32;
@@ -1628,6 +1629,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
     let packed_width = width.div_ceil(pixels_per_group);
     let mut packed = Vec::with_capacity(packed_width * height);
     if let Some(token) = token {
+        let mut source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
         for (row_index, row) in pixels.chunks_exact(width).enumerate() {
             if row_index.is_multiple_of(64) {
                 check_token(Some(token))?;
@@ -1639,6 +1641,12 @@ fn apply_palette<C: BitWriterCheckpoint>(
                     packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
                 }
                 packed.push(packed_pixel);
+                source_pixels_until_checkpoint =
+                    source_pixels_until_checkpoint.saturating_sub(group.len());
+                if source_pixels_until_checkpoint == 0 {
+                    check_token(Some(token))?;
+                    source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
+                }
             }
         }
     } else {

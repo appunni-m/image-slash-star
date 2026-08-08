@@ -10009,6 +10009,83 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(palette_lookup_sink, vec![0xA9]);
 
+        let mut palette_packing_pixels = Vec::with_capacity(128 * 8 * 3);
+        let mut palette_packing_state = 0x1234_5678_u32;
+        for _ in 0..128 * 8 {
+            palette_packing_state = palette_packing_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let palette_index = usize::try_from((palette_packing_state >> 25) & 0x7f)?;
+            palette_packing_pixels.extend_from_slice(&palette_work_fixture[palette_index]);
+        }
+        let palette_packing_image =
+            DecodedImage::new(128, 8, palette_packing_pixels, ColorType::Rgb8);
+        // Lossless VP8L palette-mode index packing now polls after each
+        // 1,024 source pixels. This is a caller-work-budget boundary, not
+        // Pillow parity: the oracle has no caller token, typed work-budget
+        // result, or caller-owned sink contract.
+        let palette_packing_expected =
+            image_slash_star::encode(&palette_packing_image, ImageFormat::WebP, &lossless_options)?;
+        let palette_packing_unlimited =
+            image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &palette_packing_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &palette_packing_unlimited,
+            )?,
+            palette_packing_expected,
+            "an ample VP8L palette-packing budget preserves byte identity"
+        );
+        let palette_packing_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(5_204);
+        let palette_packing_error = match image_slash_star::encode_with_policy(
+            &palette_packing_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_packing_policy,
+        ) {
+            Ok(_) => return Err("VP8L palette-packing budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_packing_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 5_204,
+                observed: 5_205,
+            }
+        ));
+        let mut palette_packing_sink = vec![0xC3];
+        let palette_packing_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &palette_packing_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_packing_policy,
+            &mut palette_packing_sink,
+        ) {
+            Ok(_) => return Err("bounded VP8L palette packing wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_packing_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 5_204,
+                observed: 5_205,
+            }
+        ));
+        let mut palette_packing_expected_prefix = vec![0xC3];
+        palette_packing_expected_prefix.extend_from_slice(&[
+            b'R', b'I', b'F', b'F', 0xEA, 0x03, 0x00, 0x00, b'W', b'E', b'B', b'P',
+        ]);
+        assert_eq!(palette_packing_sink, palette_packing_expected_prefix);
+
         // A small monotone palette reaches the same public token-aware path
         // but has only forward deltas, proving its bounded early return with
         // a real lossless encode rather than a coverage-only call.
