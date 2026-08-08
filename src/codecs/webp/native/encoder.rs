@@ -87,6 +87,7 @@ const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
 const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
 const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
+const WEBP_PALETTE_CHECKPOINT_VALUES: usize = 64;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES: usize = 64;
 
 trait BitWriterCheckpoint: Clone {
@@ -1276,6 +1277,62 @@ fn minimize_palette_deltas(palette: &mut [u32]) {
     }
 }
 
+// The palette has at most 256 entries, but each nearest-delta selection can
+// still scan a large suffix. This token-aware path preserves the no-token
+// ordering and tie behavior while bounding both palette passes.
+fn minimize_palette_deltas_with_checkpoint(
+    palette: &mut [u32],
+    token: &crate::CancellationToken,
+) -> Result<(), EncodingError> {
+    let mut signs = 0_u8;
+    let mut previous = 0_u32;
+    for (index, &color) in palette.iter().enumerate() {
+        if index.is_multiple_of(WEBP_PALETTE_CHECKPOINT_VALUES) {
+            check_token(Some(token))?;
+        }
+        let difference = subtract_pixels(color, previous);
+        for (shift, positive, negative) in [(16, 1, 2), (8, 8, 16), (0, 64, 128)] {
+            let component = ((difference >> shift) & 0xff) as u8;
+            if component != 0 {
+                signs |= if component < 0x80 { positive } else { negative };
+            }
+        }
+        previous = color;
+    }
+    if signs & (signs << 1) == 0 {
+        return Ok(());
+    }
+    let mut sortable_length = palette.len();
+    if sortable_length > 17 && palette[0] == 0 {
+        sortable_length -= 1;
+        palette.swap(0, sortable_length);
+    }
+    previous = 0;
+    for index in 0..sortable_length {
+        if index.is_multiple_of(WEBP_PALETTE_CHECKPOINT_VALUES) {
+            check_token(Some(token))?;
+        }
+        let mut best_offset = 0;
+        let mut best_distance = u32::MAX;
+        let mut candidates_until_checkpoint = WEBP_PALETTE_CHECKPOINT_VALUES;
+        for (offset, &color) in palette[index..sortable_length].iter().enumerate() {
+            let distance = palette_color_distance(color, previous);
+            if distance < best_distance {
+                best_offset = offset;
+                best_distance = distance;
+            }
+            candidates_until_checkpoint = candidates_until_checkpoint.saturating_sub(1);
+            if candidates_until_checkpoint == 0 {
+                check_token(Some(token))?;
+                candidates_until_checkpoint = WEBP_PALETTE_CHECKPOINT_VALUES;
+            }
+        }
+        palette.swap(index, index + best_offset);
+        previous = palette[index];
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum EntropyMode {
     Direct,
@@ -1502,7 +1559,11 @@ fn apply_palette<C: BitWriterCheckpoint>(
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     check_token(token)?;
-    minimize_palette_deltas(&mut palette);
+    if let Some(token) = token {
+        minimize_palette_deltas_with_checkpoint(&mut palette, token)?;
+    } else {
+        minimize_palette_deltas(&mut palette);
+    }
     let encoded_length = if palette.len() > 17 && palette.last() == Some(&0) {
         palette.len() - 1
     } else {
