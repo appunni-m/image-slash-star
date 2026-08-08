@@ -555,8 +555,9 @@ Apple-compatible bucket sorting charges after each 1,024 sorting operations.
 GIF LZW charges
 an input-symbol interval for each dictionary-pass input symbol. Lossy WebP VP8 additionally charges after each
 batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of 1,024
-scanned or flattened RGBA transparent-area cleanup pixels, each batch of 1,024
-analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
+scanned or flattened RGBA transparent-area cleanup pixels, each batch of 64
+RGBA alpha-palette nearest-delta candidate values, each batch of 1,024 analyzed
+macroblocks, and each batch of 1,024 frame-selection macroblocks, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, partition emission, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition interval,
@@ -609,7 +610,8 @@ RGB/RGBA palette quantization, RGB median-cut hash/order, axis-ordering,
 split, and partition checkpoints, and fixed RGBA FASTOCTREE cell/bucket/lookup
 and bucket-sort checkpoints plus GIF LZW input-symbol intervals, the WebP still writer polls at
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area
-cleanup after each 1,024 scanned or flattened pixels, macroblock-analysis, and
+cleanup after each 1,024 scanned or flattened pixels, RGBA alpha-palette
+nearest-delta candidate values after each 64 candidates, macroblock-analysis, and
 mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, and
 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,

@@ -1661,7 +1661,7 @@ interval split/merge, saturated fallback,
 and cost, Huffman RLE, canonical-code,
 Huffman-tree simple-tree symbol-discovery, token-frequency and trailing-token-
 trim, and RGB-equal grayscale-preparation checkpoints, candidate-trial prefix
-reuse
+reuse, plus lossy WebP RGBA alpha-palette candidate-scan checkpoints
 plus compile-only matrix runtime
 
 The token-aware VP8L entropy-mode analysis now charges cooperative checkpoints
@@ -1706,7 +1706,8 @@ optimization is committed at `3e139ae7fc5bc1bfaeb3440c4112394cb33eeff3`; the
 entropy-analysis checkpoint slice is committed at
 `1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`. The existing
 entropy-bin clustering pre-pass checkpoint slice is committed at
-`4eae86493bad9016611648a498a81a79f90f5551`. The existing
+`4eae86493bad9016611648a498a81a79f90f5551`; the alpha-palette candidate scan
+slice is committed at `1b87a06bf0b8c866bd843df3ecb8c63e447f475c`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at the
 entropy-analysis boundary `maximum: 19`, `observed: 20` with sentinel `[0xAD]`,
@@ -1743,6 +1744,15 @@ The same contract proves the VP8L copy-token cache-population boundary at
 `maximum: 136,843`, `observed: 136,844` for the caller-owned sink; its sink
 retains `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45,
 0x42, 0x50]`.
+The same existing contract uses a deterministic 128×128 RGBA lossy WebP probe
+with 128 alpha palette values (0–63 and 192–255) to reach the nearest-delta
+alpha-palette ordering scan. It proves ordinary and ample-budget byte identity,
+then exact whole-buffer and caller-owned-sink rejection at
+`maximum: 40`, `observed: 41`; the sentinel `[0xA8]` remains untouched. The
+token-aware scan checks after each 64 candidates, while the no-token path keeps
+the original first-minimum ordering and byte output. Pillow has no caller work
+budget or sink contract, so this is Rust-only evidence with no parity row,
+fixture, diagnostic origin, new test function, or coverage-only hook.
 This is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
 origin, new test function, or coverage-only hook was added. The existing
@@ -1759,18 +1769,18 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`c66f3451-cccb-446a-bced-cb89dfe180b3` passed 1,445/1,445 checks with zero
-skips in 53,594 ms; feature-matrix run
-`7e49d2e7-6009-4577-825b-92abd4f451c3` passed all configured lanes in 61,301 ms
+`574d0091-bc76-461e-9054-b442bad97b79` passed 1,445/1,445 checks with zero
+skips in 50,399 ms; feature-matrix run
+`e928af2d-5263-4479-8f83-8d0050ddb9d1` passed all configured lanes in 63,437 ms
 with the terminal capability agreement and no targeted lock-wait/
 build-directory/package-cache matches. Managed LLVM coverage run
-`c5b0dd02-4c6d-4117-b36e-180be1fe8680` passed 85/85 tests in 84,707 ms and
-ingested snapshot `3cd6077e-e33f-4f1d-9084-c007b59ca287`: 53,125/53,734
-lines, 7,496/7,646 branches, 2,996/3,072 functions, and 82,167/83,522
-regions. Compared with snapshot `e6a43193-bc52-428d-ab2c-e6c3c2f26ef1`,
-covered/source totals changed by +6/+6 lines, +4/+4 branches, +0/+0
-functions, and +15/+16 regions. Native WebP encoder reports 1,756/1,801
-lines, 361/376 branches, 86/86 functions, and 2,529/2,705 regions; its
+`690cb88f-b554-4708-b263-43acdcb0fe80` passed 85/85 tests in 86,884 ms and
+ingested snapshot `a8dc7811-d16c-496d-97b8-2417664d7a5b`: 53,144/53,753
+lines, 7,502/7,652 branches, 2,996/3,072 functions, and 82,207/83,562
+regions. Compared with snapshot `3cd6077e-e33f-4f1d-9084-c007b59ca287`,
+covered/source totals changed by +19/+19 lines, +6/+6 branches, +0/+0
+functions, and +40/+40 regions. Native WebP encoder reports 1,775/1,820
+lines, 367/382 branches, 86/86 functions, and 2,569/2,745 regions; its
 histogram module reports 764/764 lines, 160/160 branches, 39/39 functions,
 and 1,153/1,176 regions; its backward-reference module reports 1,587/1,605
 lines, 428/440 branches, 68/68 functions, and 2,417/2,522 regions. Coverage

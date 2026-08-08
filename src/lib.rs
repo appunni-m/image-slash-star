@@ -960,7 +960,8 @@ pub fn encode_with_policy(
 /// encoding polls RGB-equal grayscale preparation after each 1,024 pixels,
 /// followed by the remaining preparation stages,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
-/// after each 1,024 scanned or flattened pixels, analysis/mode-selection/
+/// after each 1,024 scanned or flattened pixels, RGBA alpha-palette nearest-delta
+/// candidate scans after each 64 candidates, analysis/mode-selection/
 /// probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit and
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit,
 /// 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
