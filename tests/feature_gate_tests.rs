@@ -9859,6 +9859,60 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(palette_work_sink, vec![0xA7]);
+
+        // A small monotone palette reaches the same public token-aware path
+        // but has only forward deltas, proving its bounded early return with
+        // a real lossless encode rather than a coverage-only call.
+        let mut simple_palette_pixels = Vec::with_capacity(16 * 3);
+        for value in 0_u8..16 {
+            simple_palette_pixels.extend_from_slice(&[value, value, value]);
+        }
+        let simple_palette_image = DecodedImage::new(16, 1, simple_palette_pixels, ColorType::Rgb8);
+        let simple_palette_expected =
+            image_slash_star::encode(&simple_palette_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &simple_palette_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            simple_palette_expected,
+            "an ample simple-palette budget preserves byte identity"
+        );
+
+        // A transparent pixel makes the sorted palette begin with zero. The
+        // remaining deterministic high-color fixture reaches palette mode and
+        // proves the token-aware transparent-zero rotation through the public
+        // encoder, not through a private coverage-only input.
+        let mut reordered_palette_pixels = Vec::with_capacity(128 * 4 * 4);
+        reordered_palette_pixels.extend_from_slice(&[0, 0, 0, 0]);
+        let mut reordered_palette_state = 0x9abc_def0_u32;
+        for _ in 1..128 * 4 {
+            reordered_palette_state = reordered_palette_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let palette_index = usize::try_from((reordered_palette_state >> 25) & 0x7f)?;
+            let [red, green, blue] = palette_work_fixture[palette_index];
+            reordered_palette_pixels.extend_from_slice(&[red, green, blue, 255]);
+        }
+        let reordered_palette_image =
+            DecodedImage::new(128, 4, reordered_palette_pixels, ColorType::Rgba8);
+        let reordered_palette_expected = image_slash_star::encode(
+            &reordered_palette_image,
+            ImageFormat::WebP,
+            &lossless_options,
+        )?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &reordered_palette_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            reordered_palette_expected,
+            "an ample transparent-palette budget preserves byte identity"
+        );
         let alpha_palette_values = (0_u16..64)
             .chain(192_u16..256)
             .map(u8::try_from)
