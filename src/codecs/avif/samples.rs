@@ -5,9 +5,9 @@ use std::num::NonZeroU32;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifItemColorProperties, AvifItemIccProfile, AvifItemRelationship,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
+    AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
+    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1255,6 +1255,85 @@ impl Meta {
         }
         Ok(item_ids)
     }
+
+    fn grid_properties(
+        &self,
+        input: &[u8],
+        primary_item_id: u32,
+    ) -> ParseResult<Option<AvifGridProperties>> {
+        let item = self
+            .items
+            .iter()
+            .find(|item| item.id == primary_item_id)
+            .ok_or_else(|| parse_failure!())?;
+        if item.kind != *b"grid" {
+            return Ok(None);
+        }
+        let location = self
+            .location(primary_item_id)
+            .ok_or_else(|| parse_failure!())?;
+        let total_length = location.extents.iter().try_fold(0usize, |length, extent| {
+            length
+                .checked_add(extent.len())
+                .ok_or_else(|| parse_failure!())
+        })?;
+        if total_length < 4 {
+            return Err(parse_failure!());
+        }
+
+        // The grid item payload is at most twelve bytes for the supported
+        // version. Copy only that bounded prefix, even when an untrusted iloc
+        // entry describes a much larger item.
+        let mut prefix = [0u8; 12];
+        let mut copied = 0usize;
+        for extent in &location.extents {
+            let bytes = extent.bytes(input)?;
+            let remaining = prefix.len().saturating_sub(copied);
+            let count = bytes.len().min(remaining);
+            prefix[copied..copied.saturating_add(count)].copy_from_slice(&bytes[..count]);
+            copied = copied.saturating_add(count);
+            if copied == prefix.len() {
+                break;
+            }
+        }
+
+        let version = prefix[0];
+        if version != 0 {
+            return Err(CodecError::Unsupported(format!(
+                "AVIF grid item version {version} is not implemented"
+            )));
+        }
+        let flags = prefix[1];
+        let rows = u32::from(prefix[2]).saturating_add(1);
+        let columns = u32::from(prefix[3]).saturating_add(1);
+        let field_width: usize = if flags & 1 == 0 { 2 } else { 4 };
+        let expected_length = 4usize.saturating_add(field_width.saturating_mul(2));
+        if total_length != expected_length || copied < expected_length {
+            return Err(parse_failure!());
+        }
+        let (output_width, output_height) = if field_width == 2 {
+            (
+                u32::from(u16::from_be_bytes([prefix[4], prefix[5]])),
+                u32::from(u16::from_be_bytes([prefix[6], prefix[7]])),
+            )
+        } else {
+            (
+                u32::from_be_bytes([prefix[4], prefix[5], prefix[6], prefix[7]]),
+                u32::from_be_bytes([prefix[8], prefix[9], prefix[10], prefix[11]]),
+            )
+        };
+        if output_width == 0 || output_height == 0 {
+            return Err(parse_failure!());
+        }
+        Ok(Some(AvifGridProperties::new(
+            version,
+            flags,
+            rows,
+            columns,
+            output_width,
+            output_height,
+        )))
+    }
 }
 
 pub(super) struct EncodedSample {
@@ -1295,6 +1374,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) item_color_properties: Vec<AvifItemColorProperties>,
     pub(super) item_icc_profiles: Vec<AvifItemIccProfile>,
     pub(super) grid_item_ids: Vec<u32>,
+    pub(super) grid_properties: Option<AvifGridProperties>,
     pub(super) transform: Option<AvifTransformProperties>,
 }
 
@@ -2147,6 +2227,11 @@ fn extract_inner_with_metadata(
         .map(|meta| meta.grid_item_ids(meta.primary_item_id))
         .transpose()?
         .unwrap_or_default();
+    let grid_properties = meta
+        .as_ref()
+        .map(|meta| meta.grid_properties(input, meta.primary_item_id))
+        .transpose()?
+        .flatten();
     let item_relationships = meta
         .as_ref()
         .map(Meta::non_alpha_item_relationships)
@@ -2179,6 +2264,7 @@ fn extract_inner_with_metadata(
         item_color_properties,
         item_icc_profiles,
         grid_item_ids,
+        grid_properties,
         transform,
     })
 }
@@ -3685,6 +3771,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&empty_payload), 0);
@@ -3710,6 +3797,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
     };
     assert_eq!(pixel_payload_bytes(&mixed_payload), 12);
@@ -3940,6 +4028,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
     };
     let _ = empty.validate();
@@ -3997,6 +4086,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -4020,6 +4110,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -4050,6 +4141,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: Some(StillPayload {
             color: EncodedPlane {
@@ -4093,6 +4185,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -4122,6 +4215,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -4146,6 +4240,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
@@ -4177,6 +4272,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         grid_item_ids: Vec::new(),
+        grid_properties: None,
         transform: None,
         still: None,
         sequence: Some(SequencePayload {
