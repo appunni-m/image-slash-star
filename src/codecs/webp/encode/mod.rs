@@ -41,8 +41,9 @@ pub mod vp8;
 /// checks after candidate-trial stages, each forward- and inverse-transform
 /// row/column subpass, each non-trellis quantization coefficient, method-6
 /// trellis-quantization coefficient candidates and path-reconstruction nodes,
-/// and each candidate. Each other individual stage remains one
-/// uninterruptible unit.
+/// each squared-error pixel, each spectral-distortion weighted-transform
+/// row/column pass, each residual-cost coefficient, and each candidate. Each
+/// other individual stage remains one uninterruptible unit.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }

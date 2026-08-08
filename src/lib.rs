@@ -1008,8 +1008,10 @@ pub fn encode_with_policy(
 /// intra4 selection checks after candidate-trial stages, each forward- and
 /// inverse-transform row/column subpass, each non-trellis quantization
 /// coefficient, method-6 trellis-quantization coefficient candidates and
-/// path-reconstruction nodes, and each candidate. Each other individual stage
-/// remains one uninterruptible unit.
+/// path-reconstruction nodes, each squared-error pixel, each
+/// spectral-distortion weighted-transform row/column pass, each residual-cost
+/// coefficient, and each candidate. Each other individual stage remains one
+/// uninterruptible unit.
 ///
 /// # Errors
 ///
