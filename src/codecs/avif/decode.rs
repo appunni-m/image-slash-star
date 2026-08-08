@@ -27,6 +27,7 @@ pub fn decode(
     let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let item_icc_profiles = std::mem::take(&mut extracted.item_icc_profiles);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
+    let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -104,6 +105,15 @@ pub fn decode(
         let source = image.source.clone().with_avif_grid_item_ids(grid_item_ids);
         image.with_source_descriptor(source)
     };
+    let image = if let Some(grid_properties) = grid_properties {
+        let source = image
+            .source
+            .clone()
+            .with_avif_grid_properties(grid_properties);
+        image.with_source_descriptor(source)
+    } else {
+        image
+    };
     Ok((
         image
             .with_opaque_blocks(retained_boxes)
@@ -132,6 +142,7 @@ pub fn decode_sequence(
     let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let item_icc_profiles = std::mem::take(&mut extracted.item_icc_profiles);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
+    let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
     let validated = super::av1::validate(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
@@ -210,6 +221,16 @@ pub fn decode_sequence(
                 .source
                 .clone()
                 .with_avif_grid_item_ids(grid_item_ids.clone());
+            frame.image.source = source;
+        }
+    }
+    if let Some(grid_properties) = grid_properties {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_grid_properties(grid_properties);
             frame.image.source = source;
         }
     }

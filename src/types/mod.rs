@@ -1040,6 +1040,81 @@ impl AvifItemIccProfile {
     }
 }
 
+/// Topology declared by an AVIF `grid` derived image item.
+///
+/// These fields are source-local container provenance. They describe the
+/// number of rows and columns, the declared output canvas, and the raw grid
+/// flags; they do not compose tiles, decode auxiliary content, or transform
+/// decoded samples. The retained `dimg` item order remains available through
+/// [`SourceDescriptor::avif_grid_item_ids`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifGridProperties {
+    version: u8,
+    flags: u8,
+    rows: u32,
+    columns: u32,
+    output_width: u32,
+    output_height: u32,
+}
+
+impl AvifGridProperties {
+    /// Create source-local AVIF grid properties.
+    #[must_use]
+    pub const fn new(
+        version: u8,
+        flags: u8,
+        rows: u32,
+        columns: u32,
+        output_width: u32,
+        output_height: u32,
+    ) -> Self {
+        Self {
+            version,
+            flags,
+            rows,
+            columns,
+            output_width,
+            output_height,
+        }
+    }
+
+    /// Return the grid item payload version.
+    #[must_use]
+    pub const fn version(&self) -> u8 {
+        self.version
+    }
+
+    /// Return the raw grid item flags.
+    #[must_use]
+    pub const fn flags(&self) -> u8 {
+        self.flags
+    }
+
+    /// Return the declared number of grid rows.
+    #[must_use]
+    pub const fn rows(&self) -> u32 {
+        self.rows
+    }
+
+    /// Return the declared number of grid columns.
+    #[must_use]
+    pub const fn columns(&self) -> u32 {
+        self.columns
+    }
+
+    /// Return the declared output canvas width.
+    #[must_use]
+    pub const fn output_width(&self) -> u32 {
+        self.output_width
+    }
+
+    /// Return the declared output canvas height.
+    #[must_use]
+    pub const fn output_height(&self) -> u32 {
+        self.output_height
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -1057,6 +1132,7 @@ pub struct SourceDescriptor {
     avif_item_color_properties: Option<Vec<AvifItemColorProperties>>,
     avif_item_icc_profiles: Option<Vec<AvifItemIccProfile>>,
     avif_grid_item_ids: Option<Vec<u32>>,
+    avif_grid_properties: Option<AvifGridProperties>,
     avif_transform: Option<AvifTransformProperties>,
 }
 
@@ -1075,6 +1151,7 @@ impl SourceDescriptor {
             avif_item_color_properties: None,
             avif_item_icc_profiles: None,
             avif_grid_item_ids: None,
+            avif_grid_properties: None,
             avif_transform: None,
         }
     }
@@ -1240,6 +1317,20 @@ impl SourceDescriptor {
         self.avif_grid_item_ids.as_deref().unwrap_or(&[])
     }
 
+    /// Record the source-local topology of a primary AVIF grid item.
+    #[must_use]
+    pub const fn with_avif_grid_properties(mut self, properties: AvifGridProperties) -> Self {
+        self.avif_grid_properties = Some(properties);
+        self
+    }
+
+    /// Return the source-local topology of a primary AVIF grid item, when
+    /// retained.
+    #[must_use]
+    pub const fn avif_grid_properties(&self) -> Option<AvifGridProperties> {
+        self.avif_grid_properties
+    }
+
     /// Record the AVIF item transforms declared by the encoded source.
     ///
     /// These properties describe source presentation metadata only. Decoded
@@ -1268,6 +1359,7 @@ impl SourceDescriptor {
             && self.avif_item_color_properties.is_none()
             && self.avif_item_icc_profiles.is_none()
             && self.avif_grid_item_ids.is_none()
+            && self.avif_grid_properties.is_none()
             && self.avif_transform.is_none()
     }
 }

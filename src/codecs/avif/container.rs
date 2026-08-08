@@ -7,10 +7,10 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifItemColorProperties, AvifItemIccProfile, AvifItemRelationship,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
-    SourceColor, SourceDescriptor,
+    AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
+    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
+    SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -265,11 +265,22 @@ struct Track {
 }
 
 /// Inspect AVIF container metadata without calling a native codec.
-pub(super) fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
-    inspect_inner(data)
+pub(super) fn inspect(
+    data: &[u8],
+    grid_properties: Option<AvifGridProperties>,
+) -> CodecResult<ImageInfo> {
+    inspect_inner_with_grid(data, grid_properties)
 }
 
+#[cfg(coverage)]
 fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
+    inspect_inner_with_grid(data, None)
+}
+
+fn inspect_inner_with_grid(
+    data: &[u8],
+    grid_properties: Option<AvifGridProperties>,
+) -> ParseResult<ImageInfo> {
     let mut budget = Budget::default();
     let mut reader = Reader::whole(data);
     let first = next_box(&mut reader, true, &mut budget)
@@ -328,7 +339,7 @@ fn inspect_inner(data: &[u8]) -> ParseResult<ImageInfo> {
         return Err(parse_need_more!(reader.offset.saturating_add(8)));
     }
 
-    let meta_details = meta.details()?;
+    let meta_details = meta.details_with_grid(grid_properties)?;
     let track_details = movie.as_ref().and_then(Movie::details);
     let prefer_tracks =
         brands.major == *b"avis" || (brands.major != *b"avif" && track_details.is_some());
@@ -931,7 +942,15 @@ fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
 }
 
 impl Meta {
+    #[cfg(coverage)]
     fn details(&self) -> CodecResult<Option<Details>> {
+        self.details_with_grid(None)
+    }
+
+    fn details_with_grid(
+        &self,
+        grid_properties: Option<AvifGridProperties>,
+    ) -> CodecResult<Option<Details>> {
         let Some(primary) = self.primary_item_id else {
             return Ok(None);
         };
@@ -1019,7 +1038,7 @@ impl Meta {
             source_color = source_color
                 .with_avif_mastering_display_color_volume(mastering_display_color_volume);
         }
-        let source = self.source_descriptor(primary)?;
+        let source = self.source_descriptor_with_grid(primary, grid_properties)?;
         Ok(Some(Details {
             width,
             height,
@@ -1031,7 +1050,16 @@ impl Meta {
         }))
     }
 
+    #[cfg(coverage)]
     fn source_descriptor(&self, primary: u32) -> ParseResult<SourceDescriptor> {
+        self.source_descriptor_with_grid(primary, None)
+    }
+
+    fn source_descriptor_with_grid(
+        &self,
+        primary: u32,
+        grid_properties: Option<AvifGridProperties>,
+    ) -> ParseResult<SourceDescriptor> {
         let mut source = if self.has_alpha(primary) {
             SourceDescriptor::new().with_alpha(SourceAlpha::Auxiliary)
         } else {
@@ -1069,6 +1097,9 @@ impl Meta {
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
+        }
+        if let Some(grid_properties) = grid_properties {
+            source = source.with_avif_grid_properties(grid_properties);
         }
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(primary) {

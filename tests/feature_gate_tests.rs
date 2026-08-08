@@ -1647,8 +1647,9 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 #[test]
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifAuxiliaryRelationship, AvifColorProperties, AvifItemColorProperties,
-        AvifItemIccProfile, AvifItemRelationship, RawIccProfile, SourceAlpha,
+        AvifAuxiliaryRelationship, AvifColorProperties, AvifGridProperties,
+        AvifItemColorProperties, AvifItemIccProfile, AvifItemRelationship, RawIccProfile,
+        SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -2087,6 +2088,26 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             None,
         ),
     ];
+    if cfg!(feature = "avif") {
+        // The grid payload is source-provenance metadata outside the Pillow
+        // parity schema. Inspection is portable, so retain this assertion in
+        // the WASI and native feature-gate lanes alike.
+        let bytes = fs::read(root.join("tests/fixtures/input/images/avif/grid.avif"))?;
+        let expected_grid = AvifGridProperties::new(0, 0, 2, 1, 80, 80);
+        let inspected = image_slash_star::inspect(&bytes)?;
+        assert_eq!(
+            inspected.source.avif_grid_properties(),
+            Some(expected_grid),
+            "grid inspect topology"
+        );
+        assert_eq!(expected_grid.version(), 0, "grid payload version");
+        assert_eq!(expected_grid.flags(), 0, "grid payload flags");
+        assert_eq!(expected_grid.rows(), 2, "grid row count");
+        assert_eq!(expected_grid.columns(), 1, "grid column count");
+        assert_eq!(expected_grid.output_width(), 80, "grid output width");
+        assert_eq!(expected_grid.output_height(), 80, "grid output height");
+    }
+
     if !cfg!(target_arch = "wasm32") && cfg!(feature = "avif") {
         cases.push((
             "avif auxiliary alpha",
@@ -2222,6 +2243,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             "grid inspect derived item IDs"
         );
         assert_eq!(
+            inspected.source.avif_grid_properties(),
+            Some(AvifGridProperties::new(0, 0, 2, 1, 80, 80)),
+            "grid inspect topology"
+        );
+        assert_eq!(
             inspected.source.avif_item_relationships(),
             expected_item_relationships.as_slice(),
             "grid inspect generic relationships"
@@ -2237,6 +2263,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             decoded.content.source.avif_grid_item_ids(),
             [2, 3].as_slice(),
             "grid decode derived item IDs"
+        );
+        assert_eq!(
+            decoded.content.source.avif_grid_properties(),
+            Some(AvifGridProperties::new(0, 0, 2, 1, 80, 80)),
+            "grid decode topology"
         );
         assert_eq!(
             decoded.content.source.avif_item_relationships(),
@@ -2256,6 +2287,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             sequence.content.frames[0].image.source.avif_grid_item_ids(),
             [2, 3].as_slice(),
             "grid sequence derived item IDs"
+        );
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_grid_properties(),
+            Some(AvifGridProperties::new(0, 0, 2, 1, 80, 80)),
+            "grid sequence topology"
         );
         assert_eq!(
             sequence.content.frames[0]
