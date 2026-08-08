@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`7ab2a043b1e07106370416500bc13ae6af52cefd`; the claim-ledger baseline remains
+`838815fee30b2810d2dedb3370f33cd7f1306303`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -568,7 +568,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation/runtime revision
-`7ab2a043b1e07106370416500bc13ae6af52cefd`, the existing
+`838815fee30b2810d2dedb3370f33cd7f1306303`, the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -596,29 +596,31 @@ Rust-only caller-budget contract, not a Pillow-observable result.
 These are Rust-only work-control results. Pillow cannot exercise a caller token,
 typed work-budget result, or caller-owned sink/rollback contract, so this
 revision adds no Pillow parity row, fixture-manifest row, diagnostic origin,
-new test function, or coverage-only hook. The unchanged 1,445-row managed
-Pillow run is regression evidence only. The first feature-matrix attempt
-`b7851f54-9f74-4eb8-a406-2534e563c1ee` recorded one native/all AVIF
-`output_sinks_receive_the_exact_encoded_bytes` failure; the accepted retry
-`aae19360-07a7-4ade-be11-e594e80bd6e6` passed all 33 configured lanes in
-8,317 ms, ended with capability-table agreement, and had no targeted lock-wait,
-build-directory, or package-cache matches. No AVIF implementation changed in
-this revision.
+new test function, or coverage-only hook. The managed Pillow parity run
+`0f9a2f5f-9d10-4e5b-831f-0dd85406a49b` passed 1,445/1,445 checks with zero
+skips in 885 ms. Feature-matrix run
+`41c5ecab-a311-44df-9704-88888a98e596` passed all 33 configured lanes in
+46,282 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
+verbose=0`, ended with capability-table agreement, and had no targeted
+lock-wait, build-directory, or package-cache matches. No AVIF implementation
+changed in this revision.
 
-The managed Pillow parity run `6e6167c4-2161-4e7a-bcd4-98a1cff7e5a5` passed
-1,445/1,445 checks with zero skips in 775 ms. Managed LLVM coverage run
-`a04ade4a-8d73-481c-82bb-7c3952d57f45` passed 85/85 tests in 71,770 ms and
-ingested snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`: 53,323/53,939
-lines, 7,557/7,708 branches, 3,001/3,077 functions, and 82,502/83,879
-regions. Compared with the preceding accepted snapshot
-`ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by
-`+37/+37` lines, `+6/+6` branches, `+1/+1` functions, and `+51/+51` regions.
-The changed `src/codecs/webp/native/encoder.rs` reports 1,956/2,006 lines,
-423/438 branches, 91/91 functions, and 2,870/3,062 regions. The known LLVM
-segment-normalization warning remains; the strict aggregate shortfall is 616
-lines, 151 branches, 76 functions, and 1,377 regions. Coverage is
-implementation evidence, not Pillow parity, and no coverage-only test was
-added. Managed durations remain cache- and runner-sensitive.
+Managed LLVM coverage run `197fbeeb-b966-419c-bc9c-aae15c9c2742` passed 85/85
+tests in 65,931 ms and ingested snapshot
+`0aaa833e-7597-469b-b3d8-2da10d2dc0d7`: 53,331/53,947 lines, 7,561/7,712
+branches, 3,001/3,077 functions, and 82,521/83,900 regions. Compared with
+preceding accepted snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`,
+covered/source totals changed by `+8/+8` lines, `+4/+4` branches, `+0/+0`
+functions, and `+19/+21` regions. The changed
+`src/codecs/webp/native/encoder/predictor.rs` reports 307/307 lines, 56/56
+branches, 23/23 functions, and 571/576 regions; the native WebP encoder
+remains 1,956/2,006 lines, 423/438 branches, 91/91 functions, and 2,870/3,062
+regions. The known LLVM segment-normalization warning remains; the strict
+aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,379
+regions. Coverage is implementation evidence, not Pillow parity; the new
+predictor copy is covered by existing feature-gate execution, and no
+coverage-only test was added. Managed durations remain cache- and
+runner-sensitive.
 
 ## Historical acceptance record: superseded WebP work-control revisions
 

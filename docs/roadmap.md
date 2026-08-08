@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-08 against current implementation revision
-`7ab2a043b1e07106370416500bc13ae6af52cefd`; the claim-ledger baseline remains
+`838815fee30b2810d2dedb3370f33cd7f1306303`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a` covers implementation, test, and runtime revision `7ab2a043b1e07106370416500bc13ae6af52cefd`: 53,323/53,939 lines, 7,557/7,708 branches, 3,001/3,077 functions, and 82,502/83,879 regions. Compared with the preceding accepted snapshot `ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by +37/+37 lines, +6/+6 branches, +1/+1 functions, and +51/+51 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix retry used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,377 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `0aaa833e-7597-469b-b3d8-2da10d2dc0d7` covers implementation, test, and runtime revision `838815fee30b2810d2dedb3370f33cd7f1306303`: 53,331/53,947 lines, 7,561/7,712 branches, 3,001/3,077 functions, and 82,521/83,900 regions. Compared with the preceding accepted snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`, covered/source totals changed by +8/+8 lines, +4/+4 branches, +0/+0 functions, and +19/+21 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix run used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,379 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4291,7 +4291,7 @@ lossy alpha-palette collection/packing/scanning, lossless VP8L source-pixel
 materialization, image-palette construction, palette ordering/lookup/packing,
 hidden-RGB cleanup, and the bounded feature-matrix runtime. The accepted
 implementation revision is
-`7ab2a043b1e07106370416500bc13ae6af52cefd`.
+`838815fee30b2810d2dedb3370f33cd7f1306303`.
 
 The new token-aware lossless VP8L RGB/RGBA source-materialization branch polls
 after each 1,024 source pixels, while the no-token maps remain the original
@@ -4317,26 +4317,29 @@ This is Rust-only resource-contract evidence: Pillow has no caller token, typed
 work-budget result, or caller-owned sink/rollback contract, so the revision adds
 no parity row, fixture-manifest row, diagnostic origin, new test function, or
 coverage-only hook. The managed Pillow parity run
-`6e6167c4-2161-4e7a-bcd4-98a1cff7e5a5` passed 1,445/1,445 checks with zero
-skips in 775 ms. The first feature-matrix attempt
-`b7851f54-9f74-4eb8-a406-2534e563c1ee` recorded one native/all AVIF sink-byte
-failure; accepted retry `aae19360-07a7-4ade-be11-e594e80bd6e6` passed all 33
-configured lanes in 8,317 ms, ended with capability-table agreement, and had no
-targeted lock-wait/build-directory/package-cache matches. No AVIF implementation
-changed in this revision.
+`0f9a2f5f-9d10-4e5b-831f-0dd85406a49b` passed 1,445/1,445 checks with zero
+skips in 885 ms. Feature-matrix run
+`41c5ecab-a311-44df-9704-88888a98e596` passed all 33 configured lanes in
+46,282 ms, retained `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
+verbose=0`, ended with capability-table agreement, and had no targeted
+lock-wait/build-directory/package-cache matches. No AVIF implementation changed
+in this revision.
 
-Coverage MCP run `a04ade4a-8d73-481c-82bb-7c3952d57f45` passed 85/85 tests in
-71,770 ms and ingested snapshot `0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`:
-53,323/53,939 lines, 7,557/7,708 branches, 3,001/3,077 functions, and
-82,502/83,879 regions. Compared with the preceding accepted snapshot
-`ae49146a-9507-45ba-ba47-1cd2278fcac9`, covered/source totals changed by
-`+37/+37` lines, `+6/+6` branches, `+1/+1` functions, and `+51/+51` regions.
-The changed native WebP encoder reports 1,956/2,006 lines, 423/438 branches,
-91/91 functions, and 2,870/3,062 regions. The known LLVM
-segment-normalization warning and the strict aggregate shortfall of 616 lines,
-151 branches, 76 functions, and 1,377 regions remain. These are implementation
-coverage metrics, not Pillow parity metrics; managed durations remain
-cache- and runner-sensitive.
+Coverage MCP run `197fbeeb-b966-419c-bc9c-aae15c9c2742` passed 85/85 tests in
+65,931 ms and ingested snapshot `0aaa833e-7597-469b-b3d8-2da10d2dc0d7`:
+53,331/53,947 lines, 7,561/7,712 branches, 3,001/3,077 functions, and
+82,521/83,900 regions. Compared with preceding accepted snapshot
+`0cb357a3-7bc8-4bf2-ad15-bceb300ce77a`, covered/source totals changed by
+`+8/+8` lines, `+4/+4` branches, `+0/+0` functions, and `+19/+21` regions.
+The changed `src/codecs/webp/native/encoder/predictor.rs` reports 307/307
+lines, 56/56 branches, 23/23 functions, and 571/576 regions; the native WebP
+encoder remains 1,956/2,006 lines, 423/438 branches, 91/91 functions, and
+2,870/3,062 regions. The known LLVM segment-normalization warning remains; the
+strict aggregate shortfall is 616 lines, 151 branches, 76 functions, and 1,379
+regions. These are implementation coverage metrics, not Pillow parity metrics;
+the new predictor copy is covered by existing feature-gate execution, and no
+coverage-only test was added. Managed durations remain cache- and
+runner-sensitive.
 
 ## Historical acceptance record: superseded WebP work-control revisions
 
