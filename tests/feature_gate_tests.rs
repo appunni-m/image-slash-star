@@ -9773,6 +9773,83 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        let alpha_palette_values = (0_u16..64)
+            .chain(192_u16..256)
+            .map(u8::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut alpha_palette_pixels = Vec::with_capacity(128 * 128 * 4);
+        for index in 0..128 * 128 {
+            let alpha = alpha_palette_values[index % alpha_palette_values.len()];
+            alpha_palette_pixels.extend_from_slice(&[37, 83, 149, alpha]);
+        }
+        let alpha_palette_image =
+            DecodedImage::new(128, 128, alpha_palette_pixels, ColorType::Rgba8);
+        let mut alpha_options = EncodeOptions::for_format(ImageFormat::WebP);
+        if let EncodeOptions::WebP(options) = &mut alpha_options {
+            options.lossless = Some(false);
+            options.quality = Some(75);
+        }
+        // Lossy WebP RGBA alpha-palette ordering now polls the nearest-delta
+        // candidate scan after each 64 candidates. Pillow has no caller work
+        // budget or sink contract, so this is Rust-only work-control evidence
+        // and intentionally has no parity row or fixture-manifest entry.
+        let alpha_unlimited = image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
+        let alpha_expected =
+            image_slash_star::encode(&alpha_palette_image, ImageFormat::WebP, &alpha_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &alpha_palette_image,
+                ImageFormat::WebP,
+                &alpha_options,
+                &alpha_unlimited,
+            )?,
+            alpha_expected,
+            "an ample WebP alpha-palette budget preserves byte identity"
+        );
+
+        let alpha_policy = image_slash_star::EncodePolicy::new().with_max_work_units(40);
+        let alpha_palette_error = match image_slash_star::encode_with_policy(
+            &alpha_palette_image,
+            ImageFormat::WebP,
+            &alpha_options,
+            &alpha_policy,
+        ) {
+            Ok(_) => return Err("WebP alpha-palette budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_palette_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 40,
+                observed: 41,
+            }
+        ));
+
+        let mut alpha_sink = vec![0xA8];
+        let alpha_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &alpha_palette_image,
+            ImageFormat::WebP,
+            &alpha_options,
+            &alpha_policy,
+            &mut alpha_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP alpha-palette budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 40,
+                observed: 41,
+            }
+        ));
+        assert_eq!(alpha_sink, vec![0xA8]);
         let lossless_unlimited =
             image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         let lossless_expected =

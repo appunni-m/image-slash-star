@@ -87,6 +87,7 @@ const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
 const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
 const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
+const WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES: usize = 64;
 
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
@@ -1859,21 +1860,44 @@ pub(crate) fn encode_alpha(
             palette_values.swap(0, sortable_len);
         }
         predicted = 0;
-        for index in 0..sortable_len {
-            if index.is_multiple_of(64) {
-                check_token(token)?;
-            }
-            let (offset, _) = palette_values[index..sortable_len]
-                .iter()
-                .enumerate()
-                .map(|(offset, &value)| {
+        if let Some(token) = token {
+            for index in 0..sortable_len {
+                if index.is_multiple_of(WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES) {
+                    check_token(Some(token))?;
+                }
+                let mut candidates_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES;
+                let mut best_offset = 0;
+                let mut best_distance = u8::MAX;
+                for (offset, &value) in palette_values[index..sortable_len].iter().enumerate() {
                     let delta = value.wrapping_sub(predicted);
-                    (offset, delta.min(0u8.wrapping_sub(delta)))
-                })
-                .min_by_key(|&(_, distance)| distance)
-                .unwrap();
-            palette_values.swap(index, index + offset);
-            predicted = palette_values[index];
+                    let distance = delta.min(0u8.wrapping_sub(delta));
+                    if distance < best_distance {
+                        best_offset = offset;
+                        best_distance = distance;
+                    }
+                    candidates_until_checkpoint = candidates_until_checkpoint.saturating_sub(1);
+                    if candidates_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        candidates_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES;
+                    }
+                }
+                palette_values.swap(index, index + best_offset);
+                predicted = palette_values[index];
+            }
+        } else {
+            for index in 0..sortable_len {
+                let (offset, _) = palette_values[index..sortable_len]
+                    .iter()
+                    .enumerate()
+                    .map(|(offset, &value)| {
+                        let delta = value.wrapping_sub(predicted);
+                        (offset, delta.min(0u8.wrapping_sub(delta)))
+                    })
+                    .min_by_key(|&(_, distance)| distance)
+                    .unwrap();
+                palette_values.swap(index, index + offset);
+                predicted = palette_values[index];
+            }
         }
     }
     let palette = palette_values
