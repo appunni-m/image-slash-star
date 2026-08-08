@@ -131,11 +131,12 @@ esac
 echo "feature matrix: cache=$matrix_cache_state lanes=$MATRIX_JOBS test_threads=$MATRIX_TEST_THREADS build_jobs=$MATRIX_BUILD_JOBS debug=$MATRIX_DEBUG verbose=$MATRIX_VERBOSE"
 
 # The feature-gate suite includes real codec work-budget and cancellation
-# contracts, so unoptimized test binaries make the WASI runtime lane needlessly
-# expensive. Keep the isolated matrix lanes at level 1 to balance their
-# compile-heavy fan-out against runtime, below the repository's level-2 test
-# profile; callers may still override this matrix-only setting explicitly.
-MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-1}
+# contracts, so the repository's level-2 test profile is the runtime baseline
+# for the isolated matrix lanes as well. This keeps the codec-heavy native and
+# WASI checks representative without changing a production profile; callers
+# may still override this matrix-only setting explicitly when compile fan-out
+# matters more than repeated runtime.
+MATRIX_TEST_OPT_LEVEL=${MATRIX_TEST_OPT_LEVEL:-2}
 case "$MATRIX_TEST_OPT_LEVEL" in
     0|1|2|3|s|z)
         ;;
