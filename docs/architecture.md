@@ -615,7 +615,8 @@ cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
-code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
+code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
+Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
 code-length-emission scans after each 16 compressed token entries, histogram-clustering min/max and
 bin-assignment pre-passes after each 64 tile histograms, histogram clustering
@@ -661,7 +662,8 @@ cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and canonical-code assignment scans after each 64
-code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes,
+code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
+Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
 code-length-emission scans after each 16 compressed token entries, histogram-clustering min/max and
 bin-assignment pre-passes after each 64 tile histograms, histogram population,
