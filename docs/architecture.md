@@ -3,12 +3,18 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`79d53951ba83b700f2647d5912718c634cecd417`; the claim-ledger baseline remains
+`f1de82ef6d5cde827daf6f5fa195d938a9abe67b`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
 declaration-level reference.
+
+The current feature-matrix harness runs its codec-heavy native and
+`wasm32-wasip1` test binaries at `MATRIX_TEST_OPT_LEVEL=2`, matching the
+regular Cargo test profile. That is validation-harness configuration, not a
+production-codegen or Pillow-oracle setting; callers may override it when
+compile fan-out is the limiting resource.
 
 ## What the crate owns
 

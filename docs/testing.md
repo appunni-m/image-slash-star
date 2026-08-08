@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`79d53951ba83b700f2647d5912718c634cecd417`; the claim-ledger baseline remains
+`f1de82ef6d5cde827daf6f5fa195d938a9abe67b`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -659,6 +659,24 @@ Pillow exposes neither a caller token nor a typed work-budget result,
 caller-owned sink, or rollback contract; this remains Rust-only evidence with
 no parity row, fixture-manifest row, diagnostic origin, new test function, or
 coverage-only hook.
+
+The feature-matrix runtime follow-up is committed at
+`f1de82ef6d5cde827daf6f5fa195d938a9abe67b`. Its isolated native and
+`wasm32-wasip1` test lanes now default to `MATRIX_TEST_OPT_LEVEL=2`, matching
+the repository's regular Cargo test profile; the override remains available
+for compile-heavy environments. The existing native AVIF structural-sink
+contract also pins `sequence_time=1` in its caller-built options so repeated
+sequence encodes compare identical BMFF timestamps rather than wall-clock
+metadata. This is harness/input determinism only: production codec behavior,
+Pillow manifest rows, parity fixtures, and coverage origins are unchanged.
+The exact-revision managed feature-matrix run
+`db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured lanes in
+8,806 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
+`debug=0`, and `verbose=0`; its log records the native/WASI capability
+agreement marker and no `lock-wait` match. The parent level-1 run
+`1ddb3b47-4876-4914-be5e-d4c215c8f4ef` took 11,478 ms on the same host; the
+first level-2 run rebuilt isolated artifacts in 25,946 ms. These are
+cache- and runner-sensitive observations, not universal speed claims.
 
 Exact-head managed validation for implementation/runtime revision
 `79d53951ba83b700f2647d5912718c634cecd417` passed Pillow parity run
