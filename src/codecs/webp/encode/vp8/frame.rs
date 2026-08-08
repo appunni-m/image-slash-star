@@ -24,7 +24,11 @@ const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 22)
     | (1 << 23)
     | (1 << 24);
-const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+// Each macroblock selection evaluates sixteen luma 4×4 blocks. Polling after
+// 64 completed macroblocks therefore bounds the token-aware mode-selection
+// batch to roughly 1,024 luma blocks without adding a callback to the inner
+// block loop.
+const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum LumaDecision {

@@ -13,7 +13,9 @@
 //! padding is required, filter-edge adjustment, RGBA transparent-area cleanup
 //! after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
 //! collection and index packing after each 1,024 source pixels, analysis and
-//! segment-assignment macroblocks after each 1,024 items, 8-bit, 16-bit, 32-bit,
+//! segment-assignment macroblocks after each 1,024 items, and mode-selection
+//! batches after each 64 completed macroblocks (roughly 1,024 luma blocks),
+//! 8-bit, 16-bit, 32-bit,
 //! 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit,
 //! 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and
 //! 16,384-boolean first-partition bit intervals, 8-bit, 16-bit, 32-bit, 64-bit,

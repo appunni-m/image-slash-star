@@ -14257,8 +14257,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(segment_assignment_sink, vec![0xA7]);
 
-        // The following selection pass now charges its own 1,024-macroblock
-        // interior checkpoint. The preceding analysis checkpoint is allowed
+        // The following selection pass now charges its own 64-macroblock
+        // interior batch (sixteen 4x4 luma blocks per macroblock, roughly
+        // 1,024 luma blocks). The preceding analysis checkpoint is allowed
         // through, so the next charge is observed as 330. This remains
         // Rust-only work-control evidence with no parity row or coverage-only
         // hook.
