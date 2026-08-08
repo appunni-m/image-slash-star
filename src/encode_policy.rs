@@ -25,10 +25,10 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// collection and index packing after each 1,024 source pixels, analysis/partition
 /// stages, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit intervals,
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals,
-/// and 1,024-byte boolean-bitstream output intervals, and the lossless WebP
-/// VP8L image-palette construction and palette-mode index packing after each
-/// 1,024 source pixels and RGBA hidden-RGB cleanup after each 1,024 scanned
-/// pixels,
+/// and 1,024-byte boolean-bitstream output intervals, and lossless WebP VP8L
+/// RGB/RGBA source-pixel materialization, image-palette construction, and
+/// palette-mode index packing after each 1,024 source pixels, plus RGBA
+/// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor/cross-color/entropy/transform, bounded backward-reference
 /// setup, token-aware cost-manager interval-update and cleanup scans after
 /// each 256 cumulative interval entries, repeated-run hash-chain insertion
@@ -104,9 +104,10 @@ impl EncodePolicy {
     /// logical and 16,384-boolean first-partition interval, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
-    /// encoding charges checkpoints around image-palette construction and
-    /// palette-mode index packing after each 1,024 source pixels and RGBA
-    /// hidden-RGB cleanup after each 1,024 scanned pixels, predictor, cross-color, entropy,
+    /// encoding charges checkpoints during RGB/RGBA source-pixel
+    /// materialization, image-palette construction, and palette-mode index
+    /// packing after each 1,024 source pixels, plus RGBA hidden-RGB cleanup
+    /// after each 1,024 scanned pixels, predictor, cross-color, entropy,
     /// transform, bounded backward-reference setup and token-aware cost-manager
     /// interval-update and cleanup scans after each 256 cumulative interval
     /// entries, repeated-run hash-chain insertion after each 256 pixels,

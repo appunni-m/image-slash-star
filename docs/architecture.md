@@ -567,8 +567,9 @@ adaptation, partition emission, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256
 each 16,384-boolean first-partition-bit interval,
 each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient interval, each 16,384-boolean coefficient-bit
 interval, each 1,024-byte boolean-bitstream
-output interval, and final container assembly. Lossless WebP VP8L image-palette
-construction after each 1,024 source pixels, palette-index lookup candidate
+output interval, and final container assembly. Lossless WebP VP8L RGB/RGBA
+source-pixel materialization and image-palette construction after each 1,024
+source pixels, palette-index lookup candidate
 scans, palette sign collection, and nearest-delta ordering
 likewise charge after each 64 palette
 entries or candidate values in the token-aware path.
@@ -582,8 +583,9 @@ traversal charges after each 1,024 coefficients, baseline entropy traversal
 additionally charges after each 1,024 MCUs, and entropy coding charges after
 each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
-Lossless WebP VP8L image-palette construction and palette-mode index packing
-additionally charge after each 1,024 source pixels; it also charges around RGBA
+Lossless WebP VP8L RGB/RGBA source-pixel materialization, image-palette
+construction, and palette-mode index packing additionally charge after each
+1,024 source pixels; it also charges around RGBA
 hidden-RGB cleanup after each
 1,024 scanned pixels, RGB-equal grayscale preparation after each 1,024 pixels,
 predictor tile scans, mode application, and
@@ -608,7 +610,9 @@ bin-assignment pre-passes after each 64 tile histograms, histogram clustering
 (including token-aware population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
-VP8L bitstream-output interval. This is
+VP8L bitstream-output interval. The token-aware source-materialization branch
+is separate; no-token VP8L source maps retain their original tight iterators.
+This is
 deterministic work control, not CPU-time,
 instruction-count, transient-memory, or recoverable-OOM accounting.
 
@@ -626,8 +630,9 @@ mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit,
 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
-VP8L image-palette construction and palette-mode index packing after each 1,024
-source pixels and hidden-RGB cleanup after each 1,024 scanned pixels, plus
+VP8L RGB/RGBA source-pixel materialization, image-palette construction, and
+palette-mode index packing after each 1,024 source pixels and hidden-RGB cleanup
+after each 1,024 scanned pixels, plus
 palette-index lookup candidate scans after each 64 palette entries, palette sign
 and nearest-delta candidate scans after each 64 palette entries
 or candidate values, predictor/cross-color/entropy/transform, bounded backward-reference
