@@ -945,13 +945,17 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
         token,
     )?;
 
+    // Candidate trials share the already-emitted prefix. Keeping that prefix
+    // out of each trial avoids an O(prefix × candidate-count) copy/allocation
+    // while preserving the parent writer until a winning trial is selected.
     let initial_bytes = w.writer.clone();
+    let initial_byte_length = initial_bytes.len();
     let initial_buffer = w.buffer;
     let initial_nbits = w.nbits;
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
     for (tokens, cache_bits) in candidates {
-        let mut bytes = initial_bytes.clone();
+        let mut bytes = Vec::new();
         let (byte_length, buffer, nbits, checkpoint) = {
             let mut trial = BitWriter {
                 writer: &mut bytes,
@@ -974,7 +978,9 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
             )?;
             let checkpoint = trial.checkpoint.clone();
             (
-                trial.writer.len() + usize::from(trial.nbits).div_ceil(8),
+                initial_byte_length
+                    .saturating_add(trial.writer.len())
+                    .saturating_add(usize::from(trial.nbits).div_ceil(8)),
                 trial.buffer,
                 trial.nbits,
                 checkpoint,
@@ -987,7 +993,10 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
             best = Some((byte_length, bytes, buffer, nbits, checkpoint));
         }
     }
-    let (_, bytes, buffer, nbits, checkpoint) = best.unwrap();
+    let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
+    let mut bytes = initial_bytes;
+    bytes.reserve(suffix.len());
+    bytes.extend_from_slice(&suffix);
     *w.writer = bytes;
     w.buffer = buffer;
     w.nbits = nbits;
