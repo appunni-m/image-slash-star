@@ -10012,6 +10012,55 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // work budget, cancellation checkpoint, or sink-rollback contract.
         // This is consequently a Rust-only feature-gate result with no
         // Pillow parity row or fixture-manifest entry.
+        // The token-aware Huffman-node ordering path keeps the stable output
+        // order of the no-token sort while polling every 64 comparisons. This
+        // existing 128-entry palette fixture reaches that first comparison
+        // checkpoint before any structural sink delivery. Pillow has no
+        // caller token or typed work-budget result, so this remains outside
+        // the parity manifest and adds no coverage-only hook.
+        let huffman_sort_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_412);
+        let huffman_sort_error = match image_slash_star::encode_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_sort_policy,
+        ) {
+            Ok(_) => return Err("WebP Huffman-sort budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_sort_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_412,
+                observed: 2_413,
+            }
+        ));
+        let mut huffman_sort_sink = vec![0xC6];
+        let huffman_sort_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_sort_policy,
+            &mut huffman_sort_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP Huffman sorting wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_sort_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_412,
+                observed: 2_413,
+            }
+        ));
+        assert_eq!(huffman_sort_sink, vec![0xC6]);
+
         let palette_work_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_000);
         let palette_work_error = match image_slash_star::encode_with_policy(
             &palette_work_image,
