@@ -28,15 +28,17 @@ pub mod vp8;
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
 /// VP8 encoding polls required padded Y/U/V edge-replication items after each
 /// 1,024 items, analysis and segment-assignment macroblocks after each 1,024
-/// items, mode-selection batches after each 64 completed macroblocks (roughly
-/// 1,024 luma blocks), filter-edge adjustment, coefficient-statistics
+/// items, intra4 mode selection after each completed luma 4×4 block and its
+/// outer 64-macroblock batch for intra16/chroma work, filter-edge adjustment,
+/// coefficient-statistics
 /// collection, and the
 /// first-partition segment-probability prepass after each 1,024 selected
 /// macroblocks, transparent-area cleanup after each 1,024 scanned or flattened
 /// pixels, and alpha-palette source collection and index packing after each
 /// 1,024 source pixels when a caller supplies a cancellation token. Aligned
 /// planes are cloned directly because no edge replication is needed. The
-/// no-token helpers retain their original tight paths.
+/// no-token helpers retain their original tight paths; candidate evaluation
+/// within an intra4 block remains one uninterruptible unit.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }
