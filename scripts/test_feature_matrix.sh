@@ -67,10 +67,12 @@ MATRIX_JOBS=${MATRIX_JOBS:-}
 if [ -z "$MATRIX_JOBS" ]; then
     if [ "$matrix_cache_state" = warm ]; then
         # Warm lanes still run native tests, target checks, and WASI processes;
-        # each lane is not merely a cached fingerprint lookup. One lane per
-        # logical CPU keeps those independent jobs from oversubscribing the
-        # host while retaining enough concurrency to overlap target families.
-        MATRIX_JOBS=$matrix_cpu_count
+        # each lane is not merely a cached fingerprint lookup. The lanes use
+        # one test/compiler worker each, so admitting up to two independent
+        # lanes per logical CPU overlaps the target families without creating
+        # nested test/compiler fan-out. The default is capped for large hosts;
+        # callers can lower it for a smaller or more heavily shared runner.
+        MATRIX_JOBS=$((matrix_cpu_count * 2))
         if [ "$MATRIX_JOBS" -gt 24 ]; then
             MATRIX_JOBS=24
         fi
@@ -90,8 +92,8 @@ esac
 # The Rust test harness otherwise starts one worker per logical CPU in every
 # active lane. With several lanes running concurrently that multiplies into a
 # heavily oversubscribed matrix. Cold lanes keep the aggregate test-worker
-# budget near the host CPU count; warm lanes use one worker per lane because
-# the lanes already execute independently and their codec work is CPU-bound.
+# budget near the host CPU count; warm lanes use one worker per lane while the
+# scheduler overlaps independent target/feature processes.
 # Callers can override this when a runner has a different process/thread
 # balance.
 MATRIX_TEST_THREADS=${MATRIX_TEST_THREADS:-}
