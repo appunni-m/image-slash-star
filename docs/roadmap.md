@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against current implementation revision
-`310830dd94ea74b8aa54173e5c6d2a63f1015136`; the claim-ledger baseline remains
+`79d53951ba83b700f2647d5912718c634cecd417`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `5d21852b-4a5f-421a-9900-590a65b21f04` covers implementation, test, and runtime revision `310830dd94ea74b8aa54173e5c6d2a63f1015136`: 53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and 83,052/84,511 regions. Compared with the preceding accepted snapshot `2ed526ed-3c23-442f-b7e8-b4209956f8f8`, covered/source totals changed by +46/+44 lines, +11/+12 branches, +5/+5 functions, and +67/+54 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix run used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 659 lines, 164 branches, 78 functions, and 1,459 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `a44748e1-74fa-489a-9cf8-623f29ca4611` covers implementation, test, and runtime revision `79d53951ba83b700f2647d5912718c634cecd417`: 53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and 83,038/84,511 regions. Compared with the preceding accepted snapshot `5248c52b-ea17-446d-a089-1389c67a13c9`, covered/source totals changed by 0/0 lines, 0/0 branches, 0/0 functions, and 0/0 regions; the regular Cargo test profile remains `opt-level = 2`, while the warm feature-matrix run used 12 concurrent lanes, one test worker per lane, one build job per lane, debug 0, and verbose 0; explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 659 lines, 164 branches, 78 functions, and 1,473 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -225,7 +225,9 @@ public reusable conversion layer would violate project scope.
 
 The current API-023/API-036 work-control record now includes the lossy WebP
 VP8 required padded Y/U/V edge-replication pass and filter-edge adjustment
-after each 1,024 padded item or selected macroblock as applicable, the lossy
+after each 1,024 padded item or selected macroblock as applicable, plus
+mode-selection batches after each 64 completed macroblocks (roughly 1,024
+luma blocks), the lossy
 VP8 analysis segment-assignment pass, coefficient-statistics collection and first-partition segment-probability
 prepass after each 1,024 selected macroblocks, the
 lossy WebP RGBA alpha-palette source collection and index packing after each 1,024
@@ -240,6 +242,14 @@ ordering comparisons after each 64 comparisons. These are covered
 by the existing Rust-only feature-gate contract.
 The remaining API backlog still covers deeper codec interruption, transient
 allocation accounting, progress, and rollback.
+
+The current API-023/API-036 checkpoint set also includes lossy WebP VP8
+mode-selection batches after each 64 completed macroblocks (roughly 1,024
+luma 4×4 blocks). The no-token path keeps its original tight selection loop;
+the remaining interior gap is finer per-block/candidate interruption, not the
+absence of a mode-selection boundary. The existing feature-gated work-budget
+contract is the Rust-only evidence because Pillow has no caller token, typed
+work-budget result, caller-owned sink, or rollback equivalent.
 | ID | Class | Finding | Attack and acceptance |
 | --- | --- | --- | --- |
 | API-008 | Missing representation | No YCbCr/YCCK/BGR transfer mode exists, constraining otherwise codec-native JPEG/TIFF/WebP/AVIF input contracts. | Add a mode only when at least one decode or encode fixture needs byte-preserving transfer. Avoid adding modes merely to mirror another library. |
@@ -747,7 +757,9 @@ union. That has several consequences for this crate.
 ### Assurance gaps beyond line and branch coverage
 
 QA-026's current feature-gated work-budget evidence also covers the token-aware
-VP8L Huffman-node ordering comparisons after each 64 comparisons. This remains
+VP8L Huffman-node ordering comparisons after each 64 comparisons and lossy VP8
+mode-selection batches after each 64 completed macroblocks (roughly 1,024 luma
+blocks). This remains
 Rust-only contract evidence: Pillow parity continues to own only
 Pillow-observable bytes, success, and error behavior, while caller budgets,
 typed work-budget errors, sink prefixes, and rollback are outside its oracle.
@@ -1055,6 +1067,19 @@ both whole-buffer and direct-sink paths; the segment-assignment sentinel
 has no equivalent token, typed work-budget result, or sink/rollback contract,
 so it adds no parity row or fixture. Finer WebP work, other codec interiors,
 allocation accounting, and complete rollback semantics remain active gaps.
+
+The lossy WebP VP8 mode-selection pass now charges a token-aware checkpoint
+after each 64 completed macroblocks, with sixteen luma 4×4 blocks per
+macroblock (roughly 1,024 luma blocks per batch); the no-token selection loop
+remains unchanged. The compact 128×128 RGB feature-gate probe contains exactly
+64 macroblocks and reaches this Rust-only boundary after the preceding 16
+conversion units at `maximum: 16`, `observed: 17` in both whole-buffer and
+direct-sink paths, with the sink sentinel untouched; the larger 512×512 probe
+remains reserved for analysis and segment assignment. Pillow has no caller token,
+typed work-budget result, or caller-owned sink/rollback contract, so this adds
+no parity row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook. Finer per-block/candidate work remains an explicit API-036
+interior gap.
 
 The lossy WebP VP8 coefficient-statistics collection is now also checkpointed
 after each 1,024 selected macroblocks, with its original no-token traversal
@@ -4344,7 +4369,7 @@ boundary witnesses, not general benchmarks or claims of universal codec speedup;
 managed durations remain cache- and runner-sensitive observations.
 
 Current acceptance record: AVIF grid topology provenance, lossy WebP VP8
-padded-plane, analysis segment-assignment, filter-edge-adjustment, coefficient-statistics, and
+padded-plane, analysis segment-assignment, mode-selection, filter-edge-adjustment, coefficient-statistics, and
 segment-probability-prepass work,
 plus WebP VP8L
 work-control checkpoints cover entropy
@@ -4357,7 +4382,7 @@ hidden-RGB cleanup, long backward-reference result backfills, and the bounded
 meta-histogram sampling row/column comparisons and symbol compaction, Huffman-node
 ordering comparisons, and the bounded feature-matrix runtime. The accepted
 implementation revision is
-`310830dd94ea74b8aa54173e5c6d2a63f1015136`.
+`79d53951ba83b700f2647d5912718c634cecd417`.
 
 The AVIF grid slice retains the validated primary `grid` payload as
 `AvifGridProperties` (`version`, raw `flags`, `rows`, `columns`,
@@ -4395,12 +4420,12 @@ fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
 
 Exact-head managed validation for this revision passed Pillow parity run
-`b6fc2cdc-fa0d-4da5-90dd-5c54b8a550df` with 1,445/1,445 checks, feature-matrix
-run `ed1d3025-bfe8-4ef1-b67c-fa55682c7310` across 12 warm lanes in 58,152 ms,
-and nightly LLVM run `e6bf9b48-82cd-4c90-9c91-13010f3abbf9` with 85/85 tests.
+`84506c50-2af7-49ef-8192-800b3cab5892` with 1,445/1,445 checks, feature-matrix
+run `9a786539-eb17-44a0-b308-86c19a22e6cb` across 12 warm lanes in 29,178 ms,
+and nightly LLVM run `4af5ba0f-7349-400c-b630-a97312ee3291` with 85/85 tests.
 The LLVM run ingested snapshot
-`5d21852b-4a5f-421a-9900-590a65b21f04` at 53,711/54,370 lines,
-7,638/7,802 branches, 3,033/3,111 functions, and 83,052/84,511 regions;
+`a44748e1-74fa-489a-9cf8-623f29ca4611` at 53,711/54,370 lines,
+7,638/7,802 branches, 3,033/3,111 functions, and 83,038/84,511 regions;
 the known segment-normalization warning remains. These are implementation,
 Pillow-oracle, and target-matrix records with separate evidence ownership.
 
