@@ -9792,6 +9792,66 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(sink, vec![0xA8]);
 
+        // Lossy VP8 pads each plane to a 16x16 macroblock boundary before
+        // analysis. The token-aware path now charges the shared Y/U/V
+        // edge-replication pass after each 1,024 padded samples; Pillow has no
+        // caller token, typed work-budget result, or sink-rollback contract,
+        // so this is Rust-only evidence with no parity row or manifest entry.
+        let padded_image = DecodedImage::new(17, 17, vec![128; 17 * 17 * 3], ColorType::Rgb8);
+        let padded_expected = image_slash_star::encode(&padded_image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &padded_image,
+                ImageFormat::WebP,
+                &options,
+                &unlimited,
+            )?,
+            padded_expected,
+            "an ample padded-plane budget preserves byte identity"
+        );
+        let padded_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let padded_error = match image_slash_star::encode_with_policy(
+            &padded_image,
+            ImageFormat::WebP,
+            &options,
+            &padded_policy,
+        ) {
+            Ok(_) => return Err("WebP padded-plane budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            padded_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        let mut padded_sink = vec![0xA9];
+        let padded_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &padded_image,
+            ImageFormat::WebP,
+            &options,
+            &padded_policy,
+            &mut padded_sink,
+        ) {
+            Ok(_) => return Err("WebP padded-plane sink budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            padded_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        assert_eq!(padded_sink, vec![0xA9]);
+
         // Lossless VP8L now charges checkpoints around predictor, cross-color,
         // entropy, transform, histogram/Huffman, and bitstream stages plus
         // bounded backward-reference and token-stream intervals. Pillow has no caller-controlled checkpoint
