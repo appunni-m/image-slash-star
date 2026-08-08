@@ -877,8 +877,14 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     } else {
         tokens.len()
     };
-    for huffman_token in &tokens[..token_count] {
-        check_token(token)?;
+    for (index, huffman_token) in tokens[..token_count].iter().enumerate() {
+        // Bit/output checkpoints already bound the emitted bitstream. Keep
+        // this structural token walk cooperative at the same 16-entry
+        // interval used by the code-length frequency and trim scans instead
+        // of paying one cancellation poll for every token.
+        if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) || index + 1 == token_count {
+            check_token(token)?;
+        }
         let symbol = usize::from(huffman_token.code);
         let code = u64::from(code_length_codes[symbol]);
         let code_length = code_length_lengths[symbol];

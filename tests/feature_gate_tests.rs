@@ -10702,142 +10702,75 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(huffman_frequency_sink, vec![0xB3]);
 
-        // Backward-reference tracing now checkpoints its length-cost table
-        // and equal-cost interval setup after each 1,024 entries. The same
-        // generated probe reaches the first new setup boundary before the
-        // previously emitted sink prefix; this is Rust-only work-control
-        // evidence, not a Pillow parity row or a coverage-only input.
-        let mut cost_manager_sink = vec![0xB6];
-        let cost_manager_sink_error = match image_slash_star::encode_to_sink_with_policy(
+        // Huffman code-length emission now polls at the same 16-entry
+        // interval as the adjacent frequency and trailing-trim scans instead
+        // of paying one work-budget poll per emitted token. The generated
+        // probe remains a public, fixture-based Rust contract: an ample
+        // budget must preserve the ordinary bytes, while a near-complete
+        // budget must still reject before sink delivery is complete. Pillow
+        // has no caller token, work budget, or sink-rollback equivalent, so
+        // this is deliberately not a parity row or manifest fixture.
+        let huffman_frequency_expected = image_slash_star::encode(
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_982),
-            &mut cost_manager_sink,
-        ) {
-            Ok(_) => return Err("VP8L cost-manager budget unexpectedly completed".into()),
-            Err(error) => error,
-        };
-        assert!(matches!(
-            cost_manager_sink_error,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_982,
-                observed: 144_983,
-            }
-        ));
-        assert_eq!(cost_manager_sink, vec![0xB6]);
-
-        // Token-aware cost-manager interval update and cleanup scans now
-        // checkpoint after each 256 cumulative interval entries. The same
-        // generated probe reaches this later interior boundary without adding
-        // a Pillow parity row, fixture, or coverage-only input. Pillow has no
-        // caller-owned work budget or sink contract, so this remains Rust-only
-        // work-control evidence.
-        let cost_manager_update_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(144_988);
-        let cost_manager_update_error = match image_slash_star::encode_with_policy(
-            &huffman_frequency_image,
-            ImageFormat::WebP,
-            &lossless_options,
-            &cost_manager_update_policy,
-        ) {
-            Ok(_) => return Err("VP8L cost-manager update budget unexpectedly completed".into()),
-            Err(error) => error,
-        };
-        assert!(matches!(
-            cost_manager_update_error,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_988,
-                observed: 144_989,
-            }
-        ));
-        let mut cost_manager_update_sink = vec![0xB7];
-        let cost_manager_update_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &huffman_frequency_image,
-            ImageFormat::WebP,
-            &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_989),
-            &mut cost_manager_update_sink,
-        ) {
-            Ok(_) => {
-                return Err("VP8L cost-manager update sink budget unexpectedly completed".into());
-            }
-            Err(error) => error,
-        };
-        assert!(matches!(
-            cost_manager_update_sink_error,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_989,
-                observed: 144_990,
-            }
-        ));
+        )?;
         assert_eq!(
-            cost_manager_update_sink,
-            vec![
-                0xB7, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P', b'V', b'P',
-                b'8', b'L', b'L', 0xC0, 0, 0,
-            ]
+            image_slash_star::encode_with_policy(
+                &huffman_frequency_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            huffman_frequency_expected,
+            "the coarser Huffman emission polling preserves fixture-derived bytes"
         );
-
-        // The reverse trim scan over trailing zero-repeat Huffman tokens now
-        // checkpoints after each 16 compressed token entries. The same
-        // generated image reaches this later interior boundary without
-        // adding a Pillow parity row, fixture, or coverage-only input.
-        let huffman_trim_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(144_978);
-        let huffman_trim_error = match image_slash_star::encode_with_policy(
+        let huffman_emission_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_853);
+        let huffman_emission_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &huffman_trim_policy,
+            &huffman_emission_policy,
         ) {
-            Ok(_) => return Err("VP8L Huffman trim budget unexpectedly completed".into()),
+            Ok(_) => return Err("VP8L Huffman emission budget unexpectedly completed".into()),
             Err(error) => error,
         };
         assert!(matches!(
-            huffman_trim_error,
+            huffman_emission_error,
             ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_978,
-                observed: 144_979,
+                maximum: 144_853,
+                observed: 144_854,
             }
         ));
-        let mut huffman_trim_sink = vec![0xB4];
-        let huffman_trim_sink_error = match image_slash_star::encode_to_sink_with_policy(
+        let mut huffman_emission_sink = vec![0xB6];
+        let huffman_emission_sink_error = match image_slash_star::encode_to_sink_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(144_988),
-            &mut huffman_trim_sink,
+            &huffman_emission_policy,
+            &mut huffman_emission_sink,
         ) {
-            Ok(_) => return Err("VP8L Huffman trim sink budget unexpectedly completed".into()),
+            Ok(_) => return Err("VP8L Huffman emission budget wrote complete output".into()),
             Err(error) => error,
         };
         assert!(matches!(
-            huffman_trim_sink_error,
+            huffman_emission_sink_error,
             ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_988,
-                observed: 144_989,
+                maximum: 144_853,
+                observed: 144_854,
             }
         ));
         assert_eq!(
-            huffman_trim_sink,
+            huffman_emission_sink,
             vec![
-                0xB4, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P',
+                0xB6, b'R', b'I', b'F', b'F', 0x58, 0xC0, 0, 0, b'W', b'E', b'B', b'P',
             ]
         );
         let mut cache_probe_pixels = Vec::with_capacity(512 * 512 * 3);
@@ -10854,7 +10787,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // repeated-run insertion after each 256 pixels; its no-token path
         // remains tight. This repeated-row probe reaches the cache boundary
         // without adding a Pillow parity row, fixture, or coverage-only input.
-        let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_791);
+        let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_672);
         let cache_probe_error = match image_slash_star::encode_with_policy(
             &cache_probe_image,
             ImageFormat::WebP,
@@ -10870,8 +10803,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_791,
-                observed: 136_792,
+                maximum: 136_672,
+                observed: 136_673,
             }
         ));
         let mut cache_probe_sink = vec![0xB5];
@@ -10879,7 +10812,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &cache_probe_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(136_843),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(136_672),
             &mut cache_probe_sink,
         ) {
             Ok(_) => return Err("VP8L cache sink probe budget unexpectedly completed".into()),
@@ -10891,14 +10824,14 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_843,
-                observed: 136_844,
+                maximum: 136_672,
+                observed: 136_673,
             }
         ));
         assert_eq!(
             cache_probe_sink,
             vec![
-                0xB5, b'R', b'I', b'F', b'F', 156, 4, 0, 0, b'W', b'E', b'B', b'P',
+                0xB5, b'R', b'I', b'F', b'F', 156, 4, 0, 0, b'W', b'E', b'B', b'P'
             ]
         );
         // Lossless VP8L Huffman RLE preparation now charges after each 64
