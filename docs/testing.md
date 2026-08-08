@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`a698bc5ec019d94131ae681ce87ee6d656f9d700`; the claim-ledger baseline remains
+`51c6f7effe8a12649b19cff9fb276476be7232df`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -427,8 +427,8 @@ backward-reference result backfills after each 256 entries, and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and canonical-code assignment scans after each 64
-code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
+Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
 code-length-emission scans after each 16 compressed token entries, entropy-mode histogram-cost
@@ -522,8 +522,8 @@ backward-reference result backfills after each 256 entries, and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and canonical-code assignment
-scans after each 64 code-length symbols, Huffman-tree ordering comparisons after
+Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after
 each 64 comparisons, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing
 zero-repeat-token trim, and code-length-emission scans after each 16 compressed token entries, histogram
@@ -683,6 +683,20 @@ whole-buffer and direct-sink calls, with sink sentinel `[0xB5]` untouched.
 This remains Rust-only evidence with no parity row, fixture-manifest row,
 diagnostic origin, new test function, or coverage-only hook.
 
+The latest lossless WebP VP8L Huffman run-scan slice is implemented at
+`51c6f7effe8a12649b19cff9fb276476be7232df` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. The token-aware
+code-length run scan now polls whenever it crosses a 64-symbol boundary,
+including before a long equal-length run finishes; the no-token path returns
+to the original tight helper. The existing deterministic feature-gate probe
+reaches this interior path while retaining the established Huffman-RLE
+rejections at `maximum: 828`, `observed: 829` for the whole-buffer path and
+`maximum: 827`, `observed: 828` for the caller-owned sink, with `[0xB1]`
+untouched. Pillow has no caller token, typed work-budget result, caller-owned
+sink, or rollback contract, so this is Rust-only evidence with no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook.
+
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
 `2f957016e8b52d1e76a4de3a04fa54e88f1f6dd8` through the same existing
@@ -757,27 +771,27 @@ observations; production codec behavior, Pillow manifest rows, parity
 fixtures, and coverage origins are unchanged.
 
 Latest exact-head managed validation for implementation/coverage revision
-`a698bc5ec019d94131ae681ce87ee6d656f9d700` passed Pillow parity run
-`1fc47e7f-9ffd-4254-85b6-50891a224688` with 1,445/1,445 checks in 4,280 ms;
-the histogram and segment-clustering checkpoints are Rust-only, so the Pillow
-oracle surface remains unchanged. Feature-matrix run
-`04e2015f-31b3-44c6-b653-6bc0aa4b9036` passed all configured lanes in 60,987 ms
+`51c6f7effe8a12649b19cff9fb276476be7232df` passed Pillow parity run
+`bcc9ec15-5205-4609-9baa-9977c2dce73f` with 1,445/1,445 checks in 1,925 ms;
+the Huffman run-scan checkpoint is Rust-only, so the Pillow oracle surface
+remains unchanged. Feature-matrix run
+`fd4f69b3-dd5a-45ae-9100-a293c2097c3f` passed all configured lanes in 88,028 ms
 with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and
 `verbose=0`; its retained log contains the native/WASI capability agreement
 marker and no `lock-wait` match. Nightly LLVM run
-`958e1f52-b17b-445e-a4ed-19728c245ba6` passed 85/85 tests in 62,974 ms and
-ingested snapshot `8cc6bdf3-7a44-4681-a731-ad1fb50f949b`, reporting
-54,113/54,836 lines, 7,651/7,838 branches, 3,077/3,155 functions, and
-83,521/85,129 regions. Compared with the preceding accepted snapshot
-`4d159e5e-c0b7-42e6-bf10-cff246a448b2`, covered/source totals changed by
-`+19/+19` lines, `+2/+2` branches, `+2/+2` functions, and `+20/+24`
-regions. The known LLVM JSON segment-normalization warning remains; the
-aggregate shortfall is 723 lines, 187 branches, 78 functions, and 1,608
-regions. In `src/codecs/webp/encode/vp8/analysis.rs`, coverage is 540/541
-lines, 43/44 branches, 33/33 functions, and 870/876 regions; line 391 has a
-partial branch and line 393 is uncovered for the trailing partial segment-
-cluster chunk. The histogram checkpoint is covered; the named aggregate gap
-is retained without a synthetic or coverage-only test.
+`037c9de9-0936-46db-875d-9e1d697bcc5e` passed 85/85 tests in 91,110 ms and
+ingested snapshot `74b84527-6b5c-4bd6-8c28-24c4f2ac07da`, reporting
+54,115/54,838 lines, 7,653/7,840 branches, 3,077/3,155 functions, and
+83,525/85,134 regions. Compared with the preceding accepted snapshot
+`8cc6bdf3-7a44-4681-a731-ad1fb50f949b`, covered/source totals changed by
+`+2/+2` lines, `+2/+2` branches, `+0/+0` functions, and `+4/+5` regions.
+The known LLVM JSON segment-normalization warning remains; the aggregate
+shortfall is 723 lines, 187 branches, 78 functions, and 1,609 regions. In
+`src/codecs/webp/native/encoder.rs`, coverage is 2,016/2,093 lines,
+447/472 branches, 93/93 functions, and 2,990/3,239 regions; the new
+run-scan loop and 64-symbol boundary branch are covered. Existing unrelated
+gaps remain named by the bounded coverage query; no synthetic or
+coverage-only test was added.
 
 Prior exact-head managed validation for implementation/coverage revision
 `6207722d23e014ed4fda9e2045499500d59b3c7c` passed Pillow parity run
