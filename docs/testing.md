@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`a3c3840df2d7e304aa11b14b65403104d7a6b4b2`; the claim-ledger baseline remains
+`85ca5cedc542715da19f4ff9b1d2ca9f45f8e983`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -497,7 +497,9 @@ checkpoints, polls RGB/RGBA palette quantization intervals, RGBA FASTOCTREE
 bucket-sort intervals, and GIF LZW input-symbol intervals; WebP still encoding
 polls
 preparation, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
-macroblock-analysis, intra4 mode-selection candidate-trial stages, non-trellis quantization coefficients, candidates, and each completed
+macroblock-analysis, intra4 mode-selection candidate-trial stages, forward- and
+inverse-transform row/column subpasses, non-trellis quantization coefficients,
+candidates, and each completed
 luma 4×4 block,
 the outer 64-macroblock mode-selection checkpoint, and
 mode-selection subsegments plus analysis/coefficient-probability, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
@@ -548,7 +550,9 @@ token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
 checkpoints, WebP RGB/RGBA-to-YUV conversion, required padded-plane edge
 replication, RGBA transparent-area cleanup, macroblock-analysis and
-segment-assignment, intra4 mode-selection candidate-trial stages, non-trellis quantization coefficients, candidates, and each completed
+segment-assignment, intra4 mode-selection candidate-trial stages, forward- and
+inverse-transform row/column subpasses, non-trellis quantization coefficients,
+candidates, and each completed
 luma 4×4 block,
 the outer 64-macroblock mode-selection checkpoint, and mode-selection work
 beyond those implemented boundaries, WebP coefficient-probability
@@ -648,28 +652,31 @@ caller token, typed work-budget result, or sink/rollback contract, so this is
 Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook.
 
-The finer lossy WebP VP8 mode-selection slice is implemented in
-`a3c3840df2d7e304aa11b14b65403104d7a6b4b2` through the same existing
+The finer lossy WebP VP8 mode-selection and transform slice is implemented in
+`85ca5cedc542715da19f4ff9b1d2ca9f45f8e983` through the same existing
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
-selection retains the outer checkpoint after each 64 completed macroblocks
-for intra16/chroma and completed-decision work, and now also polls after each
-intra4 candidate-trial stage, non-trellis quantization coefficient, candidate, and completed luma 4×4 block. The committed fixture
+selection retains the outer checkpoint after each 64 completed macroblocks for
+intra16/chroma and completed-decision work, and now also polls after each
+intra4 candidate-trial stage, each forward- and inverse-transform row/column
+subpass, each non-trellis quantization coefficient, candidate, and completed
+luma 4×4 block. The committed fixture
 `tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp` is small
-enough to avoid the outer 64-macroblock boundary but reaches the first intra4
-candidate-trial stage: whole-buffer and direct-sink calls reject at exactly
-`maximum: 12`, `observed: 13`, while the direct-sink sentinel `[0xAE]`
-remains untouched; an ample budget preserves the exact encoded bytes. The
-no-token path uses the original tight selection loop; each token-aware
-individual candidate-trial stage remains one uninterruptible unit; trellis
-quantization, transforms, distortion, and residual-cost interiors remain
-coarser stage boundaries. The same fixture reaches the first non-trellis
-coefficient at `maximum: 18`, `observed: 19` in both whole-buffer and
-direct-sink calls; the direct-sink sentinel `[0xAF]` remains untouched, and an
-ample budget preserves exact encoded bytes.
-Pillow exposes neither a caller token nor a typed work-budget result,
-caller-owned sink, or rollback contract; this is Rust-only evidence with no
-parity row, fixture-manifest row, diagnostic origin, new test function, or
-coverage-only hook.
+enough to avoid the outer 64-macroblock boundary. Its method-0 witness reaches
+the first candidate-trial boundary: whole-buffer and direct-sink calls reject
+at exactly `maximum: 12`, `observed: 13`, with sentinel `[0xAE]` untouched.
+The same fixture is reused with method 2 to skip that intentional
+distortion-only preselection and exercise the interiors: ample-budget encoding
+preserves exact bytes; the first forward-transform row rejects at
+`maximum: 6`, `observed: 7` with sink sentinel `[0xAD]`, the first non-trellis
+quantization coefficient at `maximum: 14`, `observed: 15` with `[0xAF]`, and
+the first inverse-transform column at `maximum: 30`, `observed: 31` with
+`[0xB0]`. All boundaries are asserted through whole-buffer and direct-sink
+calls. The no-token path keeps its original tight selection/transform loop;
+trellis quantization, distortion, and residual-cost interiors remain coarser
+stage boundaries. Pillow exposes neither a caller token nor a typed
+work-budget result, caller-owned sink, or rollback contract; this is Rust-only
+evidence with no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook.
 
 The feature-matrix runtime follow-up is committed at
 `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`. Its isolated native and
@@ -690,20 +697,20 @@ first level-2 run rebuilt isolated artifacts in 25,946 ms. These are
 cache- and runner-sensitive observations, not universal speed claims.
 
 Exact-head managed validation for implementation/coverage revision
-`a3c3840df2d7e304aa11b14b65403104d7a6b4b2` passed Pillow parity run
-`1156a22c-1262-44d6-acc8-11efeaec5eca` with 1,445/1,445 checks in 3,277 ms;
+`85ca5cedc542715da19f4ff9b1d2ca9f45f8e983` passed Pillow parity run
+`2a5f488d-849c-4716-ae29-901b38c809ca` with 1,445/1,445 checks in 8,583 ms;
 the new Rust-only work-control evidence therefore leaves the Pillow oracle
 surface unchanged. Feature-matrix run
-`9c67c422-3f18-4e7a-8212-01ce5ce31c41` passed all 33 configured lanes in
-75,432 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
+`3cb97c91-359e-4280-a4a3-f9328b392181` passed all 33 configured lanes in
+52,818 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
 `debug=0`, and `verbose=0`; its retained log records the native/WASI
 capability agreement marker and no `lock-wait` match. Nightly LLVM run
-`024b38d5-3d9e-4296-8420-0ecce8b9ed1f` passed 85/85 tests in 90,380 ms and
-ingested snapshot `ce8893e1-ae15-49d9-b179-20e381579d02`, reporting
-53,807/54,530 lines, 7,622/7,808 branches, 3,044/3,122 functions, and
-83,084/84,687 regions. The known LLVM JSON segment-normalization warning
-remains; the strict aggregate shortfall is 723 lines, 186 branches, 78
-functions, and 1,603 regions. These are implementation, target-matrix, and
+`7f277b69-377d-44dc-a374-c32c309dafdf` passed 85/85 tests in 76,358 ms and
+ingested snapshot `d247cea7-9291-457d-b2cd-5b429ddfca5d`, reporting
+53,843/54,565 lines, 7,622/7,808 branches, 3,054/3,132 functions, and
+83,123/84,724 regions. The known LLVM JSON segment-normalization warning
+remains; the strict aggregate shortfall is 722 lines, 186 branches, 78
+functions, and 1,601 regions. These are implementation, target-matrix, and
 Pillow-oracle records with separate evidence ownership.
 
 The lossy WebP VP8 coefficient-statistics slice extends the same existing
