@@ -14357,6 +14357,63 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(partition_prepass_sink, vec![0xAE]);
 
+        // VP8 filter-edge adjustment scans the selected macroblocks before
+        // the segment-probability prepass. Method 3 selects this real
+        // interior path, which now charges after each 1,024 macroblocks.
+        // Pillow has no caller token or work-budget result, so this remains
+        // Rust-only evidence with no parity row, fixture-manifest entry,
+        // diagnostic origin, new test function, or coverage-only hook.
+        let mut filter_edge_options = analysis_options.clone();
+        if let EncodeOptions::WebP(options) = &mut filter_edge_options {
+            options.method = Some(3);
+        }
+        let filter_edge_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(719);
+        let filter_edge_error = match image_slash_star::encode_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &filter_edge_options,
+            &filter_edge_bounded,
+        ) {
+            Ok(_) => return Err("bounded WebP filter-edge budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            filter_edge_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 719,
+                observed: 720,
+            }
+        ));
+        let mut filter_edge_sink = vec![0xD3];
+        let filter_edge_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &analysis_image,
+            ImageFormat::WebP,
+            &filter_edge_options,
+            &filter_edge_bounded,
+            &mut filter_edge_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "bounded WebP filter-edge sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            filter_edge_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 719,
+                observed: 720,
+            }
+        ));
+        assert_eq!(filter_edge_sink, vec![0xD3]);
+
         // The first VP8 partition charges its fixed coefficient-probability
         // signaling table after 1,024 nodes. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence with no
