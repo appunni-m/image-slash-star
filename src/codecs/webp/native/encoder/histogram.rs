@@ -347,6 +347,17 @@ pub(super) fn bits_entropy(population: &[u32]) -> u64 {
     refined_entropy(&entropy)
 }
 
+pub(super) fn bits_entropy_with_checkpoint(
+    population: &[u32],
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
+    if token.is_none() {
+        return Ok(bits_entropy(population));
+    }
+    let (entropy, _) = entropy_unrefined_with_checkpoint(population, None, token)?;
+    Ok(refined_entropy(&entropy))
+}
+
 fn combined_channel_cost(
     a: &Histogram,
     b: &Histogram,
