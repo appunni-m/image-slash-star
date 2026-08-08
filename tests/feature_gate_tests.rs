@@ -9773,6 +9773,75 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // A constant 1x512 RGB image reaches the long backward-reference result
+        // backfill. The token-aware path now polls every 256 backfilled entries
+        // instead of allowing the outer 1,024-pixel checkpoint to be skipped;
+        // this caller-work boundary is not representable by Pillow.
+        let backfill_image = DecodedImage::new(1, 512, vec![128; 1 * 512 * 3], ColorType::Rgb8);
+        let backfill_expected =
+            image_slash_star::encode(&backfill_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &backfill_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &unlimited,
+            )?,
+            backfill_expected,
+            "an ample backward-reference budget preserves byte identity"
+        );
+        let backfill_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_516);
+        let backfill_error = match image_slash_star::encode_with_policy(
+            &backfill_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &backfill_policy,
+        ) {
+            Ok(_) => return Err("backward-reference backfill budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            backfill_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_516,
+                observed: 2_517,
+            }
+        ));
+        let mut backfill_sink = vec![0xC9];
+        let backfill_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &backfill_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &backfill_policy,
+            &mut backfill_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "backward-reference backfill sink budget unexpectedly completed".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            backfill_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_516,
+                observed: 2_517,
+            }
+        ));
+        assert_eq!(
+            backfill_sink,
+            vec![
+                0xC9, 0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+            ],
+            "the later sink checkpoint preserves the validated RIFF/WEBP prefix"
+        );
         // Lossless VP8L RGB/RGBA materialization now polls after each 1,024
         // source pixels before the later stages begin. Pillow cannot exercise
         // this caller-work-budget boundary: it has no caller token, typed

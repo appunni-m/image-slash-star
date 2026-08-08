@@ -40,6 +40,7 @@ const COST_MANAGER_CHECKPOINT_ENTRIES: usize = 1_024;
 const COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES: usize = 256;
 const CACHE_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RUN_CHECKPOINT_PIXELS: usize = 256;
+const HASH_CHAIN_RESULT_CHECKPOINT_PIXELS: usize = 256;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -233,9 +234,16 @@ fn fill_hash_chain(
         }
 
         let mut maximum_base = base;
+        let mut result_work = 0usize;
         loop {
             result[base] = (best_distance, best_length);
             base -= 1;
+            result_work += 1;
+            if let Some(token) = token
+                && result_work.is_multiple_of(HASH_CHAIN_RESULT_CHECKPOINT_PIXELS)
+            {
+                checkpoint(Some(token))?;
+            }
             if best_distance == 0
                 || base == 0
                 || base < best_distance

@@ -23,6 +23,7 @@ pub mod vp8;
 /// cost manager also initializes its pixel-sized cost/length tables in 1,024-
 /// entry intervals; its capacity reservations retain the existing
 /// no-recoverable-OOM policy.
+/// Long backward-reference result backfills also poll after each 256 entries.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. RGBA lossy encoding
 /// also polls transparent-area cleanup after each 1,024 scanned or flattened
