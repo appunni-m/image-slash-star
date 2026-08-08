@@ -8072,6 +8072,11 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             // One worker keeps those comparisons deterministic and avoids
             // spawning a large codec thread pool for a two-frame fixture.
             options.max_threads = Some(1);
+            // Pin the BMFF creation/modification time so repeated structural
+            // delivery calls compare the same bytes instead of wall-clock
+            // metadata. This is a test-input determinism control, not a
+            // Pillow-parity field or a production timestamp policy.
+            options.sequence_time = Some(1);
         }
         let avif_expected =
             image_slash_star::encode(&avif_image, ImageFormat::Avif, &avif_options)?;
