@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`8a549091c618c7282c43b8566da79d6f592d4bae`; the claim-ledger baseline remains
+`863b68844fa871500bf7c88b29de77f76c24b258`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -356,7 +356,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L Huffman run-scan checkpoints | Token-aware code-length run scans poll whenever each 64-symbol boundary is crossed, including before a long equal-length run finishes; the no-token path retains the original tight helper |
 | Lossy WebP VP8 boolean-output flush checkpoints | Token-aware boolean flushes drain pending output runs through the existing 1,024-byte output accounting before returning; no-token encoding keeps the original flush helper |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
-| Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token path retains its existing byte-preserving loop |
+| Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token branch avoids token polling and retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
 | Lossy WebP VP8 analysis histogram checkpoints | Token-aware histogram construction polls after each 64 completed 4×4 blocks; the no-token path retains the original tight transform loop |
 | Lossy WebP VP8 segment-assignment checkpoints | Token-aware analysis segment assignment polls after each 1,024 macroblocks; the no-token path retains the original tight rewrite pass |
