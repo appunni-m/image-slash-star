@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`51c6f7effe8a12649b19cff9fb276476be7232df`; the claim-ledger baseline remains
+`2945ad28fde44976f33459c7664482f9c61a2b70`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -696,6 +696,37 @@ untouched. Pillow has no caller token, typed work-budget result, caller-owned
 sink, or rollback contract, so this is Rust-only evidence with no parity row,
 fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
+
+The latest lossy WebP VP8 boolean-output flush slice is implemented at
+`2945ad28fde44976f33459c7664482f9c61a2b70` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware boolean
+flushes now drain pending delayed `0xff` output runs in 1,024-byte chunks,
+charging the existing output accounting after each chunk and final byte before
+returning; the no-token path retains the original flush helper. This is
+Rust-only interruption evidence: Pillow has no caller token, typed work-budget
+result, caller-owned sink, or rollback contract, so there is no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook.
+
+Exact-head managed validation for this revision passed Pillow parity run
+`b62b000d-ff77-4ead-9297-b8a87b69dca7` with 1,445/1,445 checks in 2,338 ms.
+Feature-matrix run `9e62cd19-0cb2-4fb9-95a4-8818dd1f2eaa` passed all configured
+lanes in 74,279 ms with `cache=cold`, `lanes=6`, `test_threads=2`,
+`build_jobs=2`, `debug=0`, and `verbose=0`; its retained log says every native
+and `wasm32-wasip1` lane agrees and has no `lock-wait` match. Nightly LLVM run
+`174827b8-3e88-4885-8709-eabebc67a7c6` passed 85/85 tests in 83,593 ms and
+ingested snapshot `c5bb524f-600d-42ba-9143-e16d2a47b0d0`, reporting
+54,149/54,871 lines, 7,667/7,854 branches, 3,077/3,155 functions, and
+83,579/85,188 regions. Compared with the preceding implementation snapshot
+`74b84527-6b5c-4bd6-8c28-24c4f2ac07da`, covered/source totals changed by
+`+34/+33` lines, `+14/+14` branches, `+0/+0` functions, and `+54/+54`
+regions. In `src/codecs/webp/encode/vp8/bool_enc.rs`, coverage is 150/150
+lines, 33/34 branches, 10/10 functions, and 216/221 regions: all lines and
+functions are exercised, while the bounded query retains partial branch/region
+records from generic token-aware instantiations without adding synthetic
+coverage. The known LLVM JSON segment-normalization warning remains; the
+aggregate shortfall is 722 lines, 187 branches, 78 functions, and 1,609
+regions.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
