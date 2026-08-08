@@ -961,7 +961,8 @@ pub fn encode_with_policy(
 /// followed by the remaining preparation stages,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, RGBA alpha-palette nearest-delta
-/// candidate scans after each 64 candidates; lossless VP8L palette-index lookup
+/// candidate scans after each 64 candidates; lossless VP8L image-palette
+/// construction after each 1,024 source pixels, palette-index lookup
 /// candidate scans after each 64 palette entries, palette sign and nearest-delta
 /// candidate scans after each 64 palette entries or candidates;
 /// analysis/mode-selection/

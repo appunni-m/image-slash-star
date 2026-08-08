@@ -20,7 +20,7 @@
 //! progressive scan coefficient items after each 1,024 coefficients, and
 //! progressive scan-event frequency items after each 1,024 events,
 //! forward-DCT/quantization blocks, and bitstream stages, and
-//! lossless WebP VP8L
+//! lossless WebP VP8L image-palette construction after each 1,024 source pixels,
 //! RGB-equal grayscale preparation, predictor tile scans, mode application, and
 //! subtract-green transforms after
 //! each 1,024 pixels,
