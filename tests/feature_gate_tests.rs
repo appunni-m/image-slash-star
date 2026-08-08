@@ -11662,14 +11662,17 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xB5],
             "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
-        // A 16,384x16 RGBA probe keeps two real meta-histogram groups while
-        // making the first 1,537 tile symbols equal across adjacent rows.
-        // This reaches the interior sampling comparison after its first
-        // 1,024 symbols. Pillow exposes neither a caller token nor a typed
-        // work-budget or sink-rollback contract, so this is Rust-only
-        // work-control evidence with no parity row or manifest fixture.
-        let sampling_probe_width = 16_384;
+        // A 12,288x16 RGBA probe keeps two real meta-histogram groups while
+        // making the first 1,025 tile symbols equal across adjacent rows and
+        // the following symbols different. This reaches the interior sampling
+        // comparison after its first 1,024 symbols without carrying the
+        // previous 2,048-tile allocation. Pillow exposes neither a caller
+        // token nor a typed work-budget or sink-rollback contract, so this is
+        // Rust-only work-control evidence with no parity row or manifest
+        // fixture.
+        let sampling_probe_width = 12_288;
         let sampling_probe_height = 16;
+        let sampling_probe_equal_tiles = 1_025;
         let mut sampling_probe_pixels =
             Vec::with_capacity(sampling_probe_width * sampling_probe_height * 4);
         for y in 0..sampling_probe_height {
@@ -11677,7 +11680,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             for x in 0..sampling_probe_width {
                 let tile = x / 8;
                 let within_tile = (y % 8) * 8 + (x % 8);
-                let (red, green, blue) = if tile < 1_536 {
+                let (red, green, blue) = if tile < sampling_probe_equal_tiles {
                     if x % 2 == 0 {
                         (17, 53, 91)
                     } else {
@@ -11705,7 +11708,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // ample-budget byte identity; this wider fixture is reserved for the
         // interior sampling boundary and sink rollback.
         let sampling_probe_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(967_091);
+            image_slash_star::EncodePolicy::new().with_max_work_units(600_000);
         let sampling_probe_error = match image_slash_star::encode_with_policy(
             &sampling_probe_image,
             ImageFormat::WebP,
@@ -11721,8 +11724,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 967_091,
-                observed: 967_092,
+                maximum: 600_000,
+                observed: 600_001,
             }
         ));
         let mut sampling_probe_sink = vec![0xB7];
@@ -11742,8 +11745,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 967_091,
-                observed: 967_092,
+                maximum: 600_000,
+                observed: 600_001,
             }
         ));
         assert_eq!(sampling_probe_sink, vec![0xB7]);
