@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`52623efa026c775b2d1c5157e10cf485e5fca789`; the claim-ledger baseline remains
+`3e139ae7fc5bc1bfaeb3440c4112394cb33eeff3`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -359,7 +359,10 @@ insertion and copy-token cache-population checkpoints after each 256 pixels, Huf
 simple-tree symbol-discovery checkpoints
 after each 64 code-length slots, code-length-token frequency, and trailing
 zero-repeat token trim checkpoints after each 16 compressed token entries; the
-no-token paths retain their original tight loops.
+no-token paths retain their original tight loops. Candidate trials reuse the
+already-emitted prefix and retain only each trial's suffix, avoiding repeated
+prefix copies without changing the selected bitstream or adding a new public
+work-budget result.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
