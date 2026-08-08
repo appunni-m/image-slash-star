@@ -5,6 +5,7 @@ use super::{
     dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
     quant::{SegmentMatrices, quantize_reconstruct_block, trellis_quantize_block},
 };
+use crate::codecs::CodecResult;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -177,7 +178,50 @@ pub(super) struct Intra4Result {
     pub(super) nonzero: u32,
 }
 
-#[allow(clippy::too_many_arguments)]
+trait SelectionCheckpointControl {
+    fn after_block(&mut self) -> CodecResult<()>;
+}
+
+struct NoopSelectionCheckpoint;
+
+impl SelectionCheckpointControl for NoopSelectionCheckpoint {
+    #[inline(always)]
+    fn after_block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenSelectionCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+}
+
+impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
+    #[inline]
+    fn after_block(&mut self) -> CodecResult<()> {
+        crate::codecs::error::check_cancelled(Some(self.token))
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Intra4SelectionInput<'a> {
+    source: &'a [u8; 256],
+    top_boundary: &'a [u8; 20],
+    left_boundary: &'a [u8; 16],
+    top_left: u8,
+    top_modes: &'a [Intra4Mode; 4],
+    left_modes: &'a [Intra4Mode; 4],
+    top_nonzero: [u8; 4],
+    left_nonzero: [u8; 4],
+    matrices: &'a SegmentMatrices,
+    lambda_i4: u32,
+    lambda_mode: u32,
+    texture_lambda: u32,
+    distortion_only: bool,
+    coefficient_probabilities: &'a [[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
+}
+
+#[allow(clippy::expect_used, clippy::too_many_arguments)]
 pub(super) fn select_macroblock(
     source: &[u8; 256],
     top_boundary: &[u8; 20],
@@ -185,8 +229,8 @@ pub(super) fn select_macroblock(
     top_left: u8,
     top_modes: &[Intra4Mode; 4],
     left_modes: &[Intra4Mode; 4],
-    mut top_nonzero: [u8; 4],
-    mut left_nonzero: [u8; 4],
+    top_nonzero: [u8; 4],
+    left_nonzero: [u8; 4],
     matrices: &SegmentMatrices,
     lambda_i4: u32,
     lambda_mode: u32,
@@ -195,6 +239,91 @@ pub(super) fn select_macroblock(
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Intra4Result {
+    select_macroblock_with_control(
+        Intra4SelectionInput {
+            source,
+            top_boundary,
+            left_boundary,
+            top_left,
+            top_modes,
+            left_modes,
+            top_nonzero,
+            left_nonzero,
+            matrices,
+            lambda_i4,
+            lambda_mode,
+            texture_lambda,
+            distortion_only,
+            coefficient_probabilities,
+            trellis,
+        },
+        &mut NoopSelectionCheckpoint,
+    )
+    .expect("the no-token selection controller cannot fail")
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn select_macroblock_with_token(
+    source: &[u8; 256],
+    top_boundary: &[u8; 20],
+    left_boundary: &[u8; 16],
+    top_left: u8,
+    top_modes: &[Intra4Mode; 4],
+    left_modes: &[Intra4Mode; 4],
+    top_nonzero: [u8; 4],
+    left_nonzero: [u8; 4],
+    matrices: &SegmentMatrices,
+    lambda_i4: u32,
+    lambda_mode: u32,
+    texture_lambda: u32,
+    distortion_only: bool,
+    coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    trellis: bool,
+    token: &crate::CancellationToken,
+) -> CodecResult<Intra4Result> {
+    select_macroblock_with_control(
+        Intra4SelectionInput {
+            source,
+            top_boundary,
+            left_boundary,
+            top_left,
+            top_modes,
+            left_modes,
+            top_nonzero,
+            left_nonzero,
+            matrices,
+            lambda_i4,
+            lambda_mode,
+            texture_lambda,
+            distortion_only,
+            coefficient_probabilities,
+            trellis,
+        },
+        &mut TokenSelectionCheckpoint { token },
+    )
+}
+
+fn select_macroblock_with_control<C: SelectionCheckpointControl>(
+    input: Intra4SelectionInput<'_>,
+    checkpoint: &mut C,
+) -> CodecResult<Intra4Result> {
+    let Intra4SelectionInput {
+        source,
+        top_boundary,
+        left_boundary,
+        top_left,
+        top_modes,
+        left_modes,
+        mut top_nonzero,
+        mut left_nonzero,
+        matrices,
+        lambda_i4,
+        lambda_mode,
+        texture_lambda,
+        distortion_only,
+        coefficient_probabilities,
+        trellis,
+    } = input;
     let mut result = Intra4Result {
         modes: [Intra4Mode::Dc; 16],
         levels: [[0; 16]; 16],
@@ -396,9 +525,10 @@ pub(super) fn select_macroblock(
                 result.reconstructed[destination_offset..destination_offset.wrapping_add(4)]
                     .copy_from_slice(&reconstructed[source_offset..source_offset.wrapping_add(4)]);
             }
+            checkpoint.after_block()?;
         }
     }
-    result
+    Ok(result)
 }
 
 fn average_two(a: u8, b: u8) -> u8 {
