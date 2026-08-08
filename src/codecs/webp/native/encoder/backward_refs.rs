@@ -36,6 +36,7 @@ const HASH_MULTIPLIER_LO: u32 = 0x5bd1_e996;
 const COLOR_HASH_MUL: u32 = 0x1e35_a7bd;
 const COST_CHECKPOINT_SYMBOLS: usize = 64;
 const COST_CHECKPOINT_TOKENS: usize = 1_024;
+const COST_MANAGER_CHECKPOINT_ENTRIES: usize = 1_024;
 const CACHE_CHECKPOINT_PIXELS: usize = 256;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
@@ -1074,6 +1075,51 @@ impl CostManager {
         }
     }
 
+    fn new_with_checkpoint(
+        pixel_count: usize,
+        model: &CostModel,
+        token: CheckpointToken<'_>,
+    ) -> CheckpointResult<Self> {
+        // The token-aware trace must not spend a full bounded match-length
+        // table or equal-cost interval pass without a cooperative boundary.
+        // Keep the no-token constructor separate so ordinary encoding retains
+        // its original tight setup path.
+        let Some(token) = token else {
+            return Ok(Self::new(pixel_count, model));
+        };
+        const SCALE: i64 = 1 << 23;
+        let cache_size = pixel_count.min(MAX_LENGTH);
+        let mut length_costs = Vec::with_capacity(cache_size);
+        for value in 0..cache_size {
+            let (symbol, extra) = if value == 0 { (0, 0) } else { prefix(value) };
+            length_costs.push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
+            if (value + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+                checkpoint(Some(token))?;
+            }
+        }
+        let mut length_intervals = Vec::new();
+        let mut start = 0;
+        while start < length_costs.len() {
+            let cost = length_costs[start];
+            let mut end = start + 1;
+            while end < length_costs.len() && length_costs[end] == cost {
+                end += 1;
+                if end.is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+                    checkpoint(Some(token))?;
+                }
+            }
+            length_intervals.push((cost, start, end));
+            start = end;
+        }
+        Ok(Self {
+            costs: vec![i64::MAX; pixel_count],
+            lengths: vec![1; pixel_count],
+            length_costs,
+            length_intervals,
+            intervals: Vec::new(),
+        })
+    }
+
     fn update(&mut self, index: usize, position: usize, cost: i64) {
         if self.costs[index] > cost {
             self.costs[index] = cost;
@@ -1219,7 +1265,7 @@ fn trace_backwards(
     checkpoint(token)?;
     const SCALE: i64 = 1 << 23;
     let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
-    let mut manager = CostManager::new(pixels.len(), &model);
+    let mut manager = CostManager::new_with_checkpoint(pixels.len(), &model, token)?;
     checkpoint(token)?;
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
 
