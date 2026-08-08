@@ -9773,6 +9773,92 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // This deterministic 128-entry palette fixture reaches lossless
+        // VP8L palette mode and forces both forward and reverse RGB deltas.
+        // The Rust-only work contract must therefore cover the inner nearest
+        // candidate scan, not just the surrounding image-stream stages.
+        let palette_work_fixture = (0_usize..128)
+            .map(|index| {
+                let value = u8::try_from((index * 37) & 0xff)?;
+                Ok::<[u8; 3], std::num::TryFromIntError>([
+                    value,
+                    value.wrapping_mul(73).wrapping_add(17),
+                    value.wrapping_mul(109).wrapping_add(83),
+                ])
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut palette_work_pixels = Vec::with_capacity(128 * 4 * 3);
+        let mut palette_work_state = 0x1234_5678_u32;
+        for index in 0..128 * 4 {
+            let palette_index = if index < 128 {
+                index
+            } else {
+                palette_work_state = palette_work_state
+                    .wrapping_mul(1_664_525)
+                    .wrapping_add(1_013_904_223);
+                usize::try_from((palette_work_state >> 25) & 0x7f)?
+            };
+            palette_work_pixels.extend_from_slice(&palette_work_fixture[palette_index]);
+        }
+        let palette_work_image = DecodedImage::new(128, 4, palette_work_pixels, ColorType::Rgb8);
+        let palette_work_expected =
+            image_slash_star::encode(&palette_work_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &palette_work_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            palette_work_expected,
+            "an ample lossless WebP palette budget preserves byte identity"
+        );
+        // Pillow cannot exercise this as parity: it has no caller-controlled
+        // work budget, cancellation checkpoint, or sink-rollback contract.
+        // This is consequently a Rust-only feature-gate result with no
+        // Pillow parity row or fixture-manifest entry.
+        let palette_work_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_000);
+        let palette_work_error = match image_slash_star::encode_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_work_policy,
+        ) {
+            Ok(_) => return Err("WebP palette work budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_work_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3_000,
+                observed: 3_001,
+            }
+        ));
+        let mut palette_work_sink = vec![0xA7];
+        let palette_work_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_work_policy,
+            &mut palette_work_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP palette work wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_work_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3_000,
+                observed: 3_001,
+            }
+        ));
+        assert_eq!(palette_work_sink, vec![0xA7]);
         let alpha_palette_values = (0_u16..64)
             .chain(192_u16..256)
             .map(u8::try_from)
