@@ -1005,9 +1005,10 @@ pub fn encode_with_policy(
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
 /// API additionally checks at retained-frame boundaries and codec-specific
 /// checkpoints. The no-token WebP selection path remains tight; token-aware
-/// selection checks after candidate-trial stages and after each candidate, and
-/// non-trellis quantization also checks after each coefficient. Each other
-/// individual stage remains one uninterruptible unit.
+/// intra4 selection checks after candidate-trial stages, each forward- and
+/// inverse-transform row/column subpass, each non-trellis quantization
+/// coefficient, and each candidate. Each other individual stage remains one
+/// uninterruptible unit.
 ///
 /// # Errors
 ///

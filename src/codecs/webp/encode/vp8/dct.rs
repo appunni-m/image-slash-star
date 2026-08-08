@@ -1,5 +1,7 @@
 //! 4×4 forward DCT and 4×4 Walsh-Hadamard Transform for VP8 (RFC 6386 Section 14).
 
+use crate::codecs::CodecResult;
+
 fn low_i16(value: i32) -> i16 {
     let bytes = value.to_le_bytes();
     i16::from_le_bytes([bytes[0], bytes[1]])
@@ -9,7 +11,16 @@ fn low_i16(value: i32) -> i16 {
 ///
 /// This is the transform used by libwebp 1.6.0 for susceptibility analysis and
 /// coefficient generation (`src/dsp/enc.c`, `FTransform_C`, lines 165–194).
+#[inline(always)]
 pub fn vp8_fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
+    vp8_fdct_4x4_with_control(block, || Ok(())).unwrap_or_default()
+}
+
+/// Apply the forward transform while polling after each row and column pass.
+pub fn vp8_fdct_4x4_with_control<F>(block: &[i16; 16], mut checkpoint: F) -> CodecResult<[i16; 16]>
+where
+    F: FnMut() -> CodecResult<()>,
+{
     let mut temporary = [0i32; 16];
     for row in 0_usize..4 {
         let offset = row.wrapping_mul(4);
@@ -33,6 +44,7 @@ pub fn vp8_fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
             .wrapping_sub(a2.wrapping_mul(5_352))
             .wrapping_add(937)
             >> 9;
+        checkpoint()?;
     }
 
     let mut output = [0i16; 16];
@@ -58,12 +70,26 @@ pub fn vp8_fdct_4x4(block: &[i16; 16]) -> [i16; 16] {
                 .wrapping_add(51_000)
                 >> 16,
         );
+        checkpoint()?;
     }
-    output
+    Ok(output)
 }
 
 /// Applies libwebp's integer VP8 inverse transform to a prediction block.
+#[inline(always)]
 pub fn vp8_idct_add_4x4(prediction: &[u8; 16], coefficients: &[i16; 16]) -> [u8; 16] {
+    vp8_idct_add_4x4_with_control(prediction, coefficients, || Ok(())).unwrap_or_default()
+}
+
+/// Apply the inverse transform while polling after each column and row pass.
+pub fn vp8_idct_add_4x4_with_control<F>(
+    prediction: &[u8; 16],
+    coefficients: &[i16; 16],
+    mut checkpoint: F,
+) -> CodecResult<[u8; 16]>
+where
+    F: FnMut() -> CodecResult<()>,
+{
     fn multiply_one(value: i32) -> i32 {
         (value.wrapping_mul(20_091) >> 16).wrapping_add(value)
     }
@@ -87,6 +113,7 @@ pub fn vp8_idct_add_4x4(prediction: &[u8; 16], coefficients: &[i16; 16]) -> [u8;
         temporary[offset.wrapping_add(1)] = b.wrapping_add(c);
         temporary[offset.wrapping_add(2)] = b.wrapping_sub(c);
         temporary[offset.wrapping_add(3)] = a.wrapping_sub(d);
+        checkpoint()?;
     }
 
     let mut output = [0u8; 16];
@@ -112,8 +139,9 @@ pub fn vp8_idct_add_4x4(prediction: &[u8; 16], coefficients: &[i16; 16]) -> [u8;
                 .clamp(0, 255)
                 .to_le_bytes()[0];
         }
+        checkpoint()?;
     }
-    output
+    Ok(output)
 }
 
 /// Applies libwebp's encoder-side VP8 Walsh-Hadamard transform to luma DCs.
