@@ -18,10 +18,49 @@ case "$matrix_cpu_count" in
         ;;
 esac
 matrix_target_root=${MATRIX_TARGET_ROOT:-${CARGO_TARGET_DIR:-target}/feature-matrix}
+
+# Directory existence alone does not prove that the retained lane artifacts
+# match the current source. After a codec or test change, treating those
+# directories as warm selects one compiler worker per lane even though every
+# lane must rebuild its feature-specific crate and test binary. Fingerprint
+# the inputs that can invalidate those artifacts so a changed revision uses
+# the compile-oriented cold scheduler, while documentation-only commits keep
+# the fast warm path.
+matrix_source_signature() {
+    matrix_source_files=$(git ls-files --cached --others --exclude-standard -- \
+        Cargo.lock Cargo.toml build.rs src tests \
+        scripts/test_feature_matrix.sh scripts/wasm_test_runner.js 2>/dev/null) || return 1
+    if [ -z "$matrix_source_files" ]; then
+        return 1
+    fi
+    printf '%s\n' "$matrix_source_files" |
+        LC_ALL=C sort |
+        while IFS= read -r matrix_source_file; do
+            if [ -f "$matrix_source_file" ]; then
+                cksum "$matrix_source_file"
+            else
+                printf 'missing %s\n' "$matrix_source_file"
+            fi
+        done |
+        cksum
+}
+
+matrix_source_state=
+if matrix_source_state=$(matrix_source_signature); then
+    :
+else
+    # A missing VCS checkout or an unreadable input is safer as cold than as
+    # a false warm hit; the explicit MATRIX_* overrides remain available.
+    matrix_source_state=
+fi
+matrix_cache_marker="$matrix_target_root/.matrix-source-signature"
 matrix_cache_state=cold
 if [ -d "$matrix_target_root/target-native-all" ] \
     && [ -d "$matrix_target_root/target-wasm-unknown-all" ] \
-    && [ -d "$matrix_target_root/target-wasm-wasi-all" ]; then
+    && [ -d "$matrix_target_root/target-wasm-wasi-all" ] \
+    && [ -n "$matrix_source_state" ] \
+    && [ -f "$matrix_cache_marker" ] \
+    && [ "$(sed -n '1p' "$matrix_cache_marker")" = "$matrix_source_state" ]; then
     matrix_cache_state=warm
 fi
 MATRIX_JOBS=${MATRIX_JOBS:-}
@@ -472,3 +511,16 @@ run_parallel_jobs run_matrix_lane \
 # committed fixture and the native or WASI runtime tables.
 python3 scripts/generate_capability_tables.py --check \
     --matrix-log-dir "$matrix_log_dir"
+
+# Publish the signature only after every lane and the capability-table check
+# pass. This marker is local build state, not a repository artifact. Recompute
+# it before writing so a source edit made while the matrix was running cannot
+# turn the next invocation into a false warm hit.
+if [ -n "$matrix_source_state" ]; then
+    matrix_current_source_state=$(matrix_source_signature || true)
+    if [ "$matrix_current_source_state" = "$matrix_source_state" ]; then
+        matrix_cache_marker_tmp="$matrix_cache_marker.tmp"
+        printf '%s\n' "$matrix_source_state" >"$matrix_cache_marker_tmp"
+        mv "$matrix_cache_marker_tmp" "$matrix_cache_marker"
+    fi
+fi
