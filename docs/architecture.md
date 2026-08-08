@@ -2,8 +2,8 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-08 against the committed tree based on
-`ade63113ea059668d731269ec9cda8c6d82b7243`; the claim-ledger baseline remains
+Reviewed: 2026-08-09 against the committed tree based on
+`b0f16b903bd36c4f03a9103429fa5a30a803f116`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -101,7 +101,9 @@ when present, and the bounded
 `SourceDescriptor::avif_auxiliary_relationships()` list also retains alpha
 links to supported grid-derived color items. For a primary grid,
 `SourceDescriptor::avif_grid_item_ids()` also retains its ordered derived
-color-item list, `SourceDescriptor::avif_item_relationships()` retains
+color-item list, and `SourceDescriptor::avif_grid_properties()` retains the
+validated version, raw flags, row/column counts, and declared output canvas;
+`SourceDescriptor::avif_item_relationships()` retains
 bounded `iref` edges such as the grid's ordered `dimg` references, and
 `SourceDescriptor::avif_premultiplied_relationships()` filters source-local
 `prem` edges. A source descriptor is structural provenance, not opaque
@@ -265,7 +267,9 @@ includes the AVIF item's stored TIFF-header offset prefix; no EXIF/XMP parsing,
 orientation application, or implicit encode replay is performed. Direct and
 supported grid-derived alpha `auxl` relationships, the bounded grid-derived
 item list, bounded `iref` edges, and filtered `prem` relationships are retained in
-`SourceDescriptor`; full grid topology, track-only content,
+`SourceDescriptor`; validated primary-grid payload topology is retained through
+`SourceDescriptor::avif_grid_properties()`, while tile placement/composition,
+track-only content,
 unknown-item-property semantics, and auxiliary-item decoding remain outside
 this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
@@ -287,8 +291,9 @@ declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
 Other non-primary/auxiliary profiles, track-only item properties, item
-color/property forms beyond typed CICP and raw ICC, grid topology, and
-derived/grid composition remain outside the current model; bounded direct,
+color/property forms beyond typed CICP and raw ICC, grid tile
+placement/composition, and broader derived/grid graph semantics remain outside
+the current model; bounded direct,
 supported grid-derived alpha
 `auxl`, ordinary `iref`, `prem`, and typed non-primary `colr`/`nclx`
 declarations plus non-primary `prof`/`rICC` profiles are the explicitly

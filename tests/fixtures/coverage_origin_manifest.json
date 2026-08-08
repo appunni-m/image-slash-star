@@ -15,7 +15,7 @@
     {"path": "src/codecs/avif/av1/frame.rs", "guard_count": 22, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/mod.rs", "guard_count": 13, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/sequence.rs", "guard_count": 8, "origin": "independent_implementation"},
-    {"path": "src/codecs/avif/container.rs", "guard_count": 14, "origin": "defensive_model"},
+    {"path": "src/codecs/avif/container.rs", "guard_count": 17, "origin": "defensive_model"},
     {"path": "src/codecs/avif/decode.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/avif/native.rs", "guard_count": 3, "origin": "defensive_model"},
     {"path": "src/codecs/avif/samples.rs", "guard_count": 12, "origin": "independent_implementation"},
