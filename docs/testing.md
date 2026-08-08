@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`5a4635de869f66e55490fdaf42777d0e486fd56d`; the claim-ledger baseline remains
+`310830dd94ea74b8aa54173e5c6d2a63f1015136`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -396,8 +396,8 @@ a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
 after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
 1,024 scanned or flattened RGBA transparent-area cleanup pixels, each batch of
-1,024
-analyzed macroblocks, and each batch of 1,024 frame-selection macroblocks, then
+1,024 required padded-plane items, analyzed macroblocks, segment-assignment
+macroblocks, and frame-selection macroblocks, then
 after color conversion, padding, analysis,
 segment parameters,
 mode selection, coefficient-probability adaptation, and first-partition
@@ -542,8 +542,9 @@ progressive scan coefficient items after each 1,024 coefficients, and 1,024-byte
 entropy-output intervals, PNG row and
 token-aware stored-block/all-level Deflate
 subsegments, TIFF Deflate matcher/emission
-checkpoints, WebP RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup,
-macroblock-analysis, and mode-selection subsegments, WebP coefficient-probability
+checkpoints, WebP RGB/RGBA-to-YUV conversion, required padded-plane edge
+replication, RGBA transparent-area cleanup, macroblock-analysis and
+segment-assignment, and mode-selection subsegments, WebP coefficient-probability
 adaptation and first-partition segment-probability prepass after each 1,024
 selected macroblocks, and
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition, 16,384-boolean first-partition-bit,
@@ -578,7 +579,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 The current AVIF grid-provenance portion of implementation/runtime revision
-`5a4635de869f66e55490fdaf42777d0e486fd56d` uses the existing
+`310830dd94ea74b8aa54173e5c6d2a63f1015136` uses the existing
 `source_alpha_matches_the_container_contract` feature-gated contract now also
 checks the committed `grid.avif` fixture's `AvifGridProperties`: version `0`,
 raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas. Portable
@@ -591,7 +592,7 @@ or coverage-only hook, because Pillow exposes no equivalent grid topology
 field.
 
 The carried-forward WebP work-control portion of implementation/runtime
-revision `5a4635de869f66e55490fdaf42777d0e486fd56d` uses the existing
+revision `310830dd94ea74b8aa54173e5c6d2a63f1015136` uses the existing
 `encode_work_budget_is_a_non_parity_result_contract` now includes the lossless
 VP8L RGB/RGBA source-pixel materialization checkpoint. The token-aware path
 polls after each 1,024 source pixels; the no-token path keeps its original tight
@@ -616,7 +617,8 @@ histogram population `62/63`, combined entropy cost `80/81`, histogram merge
 
 The current lossy WebP VP8 padded-plane slice extends the same
 `encode_work_budget_is_a_non_parity_result_contract`: token-aware Y/U/V
-edge-replication polls after each 1,024 padded items, while the no-token path
+edge-replication polls after each 1,024 padded items when dimensions require
+padding, while aligned planes take a direct clone and the no-token path
 retains the original tight helper and byte behavior. A 17×17 RGB probe reaches
 the first shared padded-plane checkpoint and rejects at `maximum: 2`,
 `observed: 3`; the direct-sink path reports the same typed work-budget result
@@ -625,6 +627,39 @@ evidence because Pillow has no caller token, typed work-budget result, or
 caller-owned sink/rollback contract, so it adds no parity row,
 fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
+
+The current lossy WebP VP8 segment-assignment slice extends the same existing
+contract: the analysis pass now polls its separate macroblock rewrite after
+each 1,024 items, while the no-token path retains the original tight rewrite.
+The aligned 512×512 feature-gate probe therefore reaches analysis at
+`maximum: 326`, `observed: 327`, then segment assignment at
+`maximum: 328`, `observed: 329` in both whole-buffer and direct-sink paths; the
+direct-sink segment-assignment sentinel `[0xA7]` remains untouched. The same
+aligned probe exercises the direct-clone padding fast path, which avoids
+walking/polling edge replication when no padding is needed. Pillow has no
+caller token, typed work-budget result, or sink/rollback contract, so this is
+Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
+new test function, or coverage-only hook.
+
+Exact-head managed validation for implementation/runtime revision
+`310830dd94ea74b8aa54173e5c6d2a63f1015136` passed Pillow parity run
+`b6fc2cdc-fa0d-4da5-90dd-5c54b8a550df` with 1,445/1,445 checks in 12,256 ms.
+The feature-matrix run `ed1d3025-bfe8-4ef1-b67c-fa55682c7310` completed all
+12 warm lanes in 58,152 ms with `test_threads=1`, `build_jobs=1`, and the
+`capability tables OK: every native and wasm32-wasip1 lane agrees` marker; its
+retained log has no lock-wait match. Nightly LLVM run
+`e6bf9b48-82cd-4c90-9c91-13010f3abbf9` passed 85/85 tests in 75,265 ms and
+ingested snapshot `5d21852b-4a5f-421a-9900-590a65b21f04`, reporting
+53,711/54,370 lines, 7,638/7,802 branches, 3,033/3,111 functions, and
+83,052/84,511 regions. Compared with the preceding accepted snapshot
+`2ed526ed-3c23-442f-b7e8-b4209956f8f8`, covered/source totals changed by
+46/44 lines, 11/12 branches, 5/5 functions, and 67/54 regions; the known
+LLVM JSON segment-normalization warning remains. In the snapshot,
+`src/codecs/webp/encode/vp8/analysis.rs` is 508/508 lines, 38/38 branches,
+29/29 functions, and 831/831 regions; `encoder.rs` is 741/753 lines,
+55/56 branches, 41/41 functions, and 1,286/1,317 regions, with its remaining
+defensive/error-propagation gaps retained rather than hidden. These are
+implementation and target-matrix records separate from Pillow parity.
 
 The lossy WebP VP8 coefficient-statistics slice extends the same existing
 `encode_work_budget_is_a_non_parity_result_contract`: token-aware statistics

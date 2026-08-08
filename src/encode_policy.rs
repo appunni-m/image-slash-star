@@ -22,8 +22,10 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// row-conversion checkpoints charged after each 1,024 pixels, lossy WebP VP8
 /// RGB/RGBA-to-YUV conversion items and RGBA transparent-area cleanup after
 /// each 1,024 scanned or flattened pixels, RGBA alpha-palette source
-/// collection and index packing after each 1,024 source pixels, filter-edge
-/// adjustment and analysis/partition stages, 8-bit, 16-bit, 32-bit, 64-bit,
+/// collection and index packing after each 1,024 source pixels, required
+/// padded-plane edge replication, filter-edge adjustment, analysis and
+/// segment-assignment macroblocks, plus the remaining analysis/partition
+/// stages, 8-bit, 16-bit, 32-bit, 64-bit,
 /// 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit,
 /// 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and
 /// 16,384-boolean first-partition-bit intervals,
@@ -107,7 +109,9 @@ impl EncodePolicy {
     /// WebP VP8 encoding charges checkpoints after each 1,024 RGB/RGBA-to-YUV
     /// conversion items and each 1,024 scanned or flattened RGBA
     /// transparent-area cleanup pixels, and after each 1,024 RGBA alpha-palette
-    /// source pixels during source collection and index packing, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
+    /// source pixels during source collection and index packing, after each
+    /// required padded-plane item, analysis or segment-assignment macroblock,
+    /// and after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit
     /// logical and 16,384-boolean first-partition interval, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
