@@ -39,8 +39,10 @@ pub mod vp8;
 /// planes are cloned directly because no edge replication is needed. The
 /// no-token helpers retain their original tight paths; token-aware selection
 /// checks after candidate-trial stages, each forward- and inverse-transform
-/// row/column subpass, each non-trellis quantization coefficient, and each
-/// candidate. Each other individual stage remains one uninterruptible unit.
+/// row/column subpass, each non-trellis quantization coefficient, method-6
+/// trellis-quantization coefficient candidates and path-reconstruction nodes,
+/// and each candidate. Each other individual stage remains one
+/// uninterruptible unit.
 pub fn encode(img: &DecodedImage, opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }
