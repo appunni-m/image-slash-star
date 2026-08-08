@@ -14316,6 +14316,77 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(selection_sink, vec![0xAC]);
 
+        // This committed 17x19 lossy WebP fixture is small enough to avoid
+        // the outer 64-macroblock boundary. Its padded first macroblock still
+        // reaches the new token-only checkpoint after the first completed
+        // 4x4 intra block, proving a finer selection boundary without a
+        // generated parity row or coverage-only hook. Pillow has no caller
+        // token, typed work-budget result, or sink-rollback contract, so this
+        // remains Rust-only feature-gate evidence.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let selection_fixture_data =
+            fs::read(root.join("tests/fixtures/input/images/webp/lossy_checker_17x19_q1_m0.webp"))?;
+        let selection_fixture = image_slash_star::decode(&selection_fixture_data)?.content;
+        let selection_fixture_expected =
+            image_slash_star::encode(&selection_fixture, ImageFormat::WebP, &analysis_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &selection_fixture,
+                ImageFormat::WebP,
+                &analysis_options,
+                &unlimited,
+            )?,
+            selection_fixture_expected,
+            "an ample fixture-derived selection budget preserves byte identity"
+        );
+        let selection_fixture_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(12);
+        let selection_fixture_error = match image_slash_star::encode_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &selection_fixture_policy,
+        ) {
+            Ok(_) => return Err("fixture-derived selection budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            selection_fixture_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 12,
+                observed: 13,
+            }
+        ));
+        let mut selection_fixture_sink = vec![0xAE];
+        let selection_fixture_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &selection_fixture,
+            ImageFormat::WebP,
+            &analysis_options,
+            &selection_fixture_policy,
+            &mut selection_fixture_sink,
+        ) {
+            Ok(_) => {
+                return Err(
+                    "fixture-derived selection sink budget unexpectedly wrote output".into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            selection_fixture_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 12,
+                observed: 13,
+            }
+        ));
+        assert_eq!(selection_fixture_sink, vec![0xAE]);
+
         // Coefficient-probability adaptation has 1,056 fixed probability
         // nodes and charges at 1,024 nodes. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence with no

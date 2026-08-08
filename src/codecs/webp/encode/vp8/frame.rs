@@ -24,10 +24,10 @@ const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 22)
     | (1 << 23)
     | (1 << 24);
-// Each macroblock selection evaluates sixteen luma 4×4 blocks. Polling after
-// 64 completed macroblocks therefore bounds the token-aware mode-selection
-// batch to roughly 1,024 luma blocks without adding a callback to the inner
-// block loop.
+// Each macroblock selection evaluates sixteen luma 4×4 blocks. Intra4 mode
+// selection has its own token-only checkpoint after each completed block;
+// this outer batch still bounds the remaining intra16/chroma and completed
+// macroblock work without adding a callback to their no-token paths.
 const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -262,23 +262,44 @@ pub(super) fn select_frame(
                 matrix.lambda_mode.cast_unsigned(),
             );
             let intra16_mode = intra16.mode;
-            let intra4 = intra4::select_macroblock(
-                &source_y,
-                &top_y_i4,
-                &y_left,
-                y_top_left,
-                &top_modes,
-                &neighboring_left_modes,
-                top_y_nonzero,
-                left_y_nonzero,
-                matrix,
-                matrix.lambda_i4.cast_unsigned(),
-                matrix.lambda_mode.cast_unsigned(),
-                matrix.texture_lambda.cast_unsigned(),
-                method <= 1,
-                coefficient_probabilities,
-                trellis,
-            );
+            let intra4 = if let Some(token) = token {
+                intra4::select_macroblock_with_token(
+                    &source_y,
+                    &top_y_i4,
+                    &y_left,
+                    y_top_left,
+                    &top_modes,
+                    &neighboring_left_modes,
+                    top_y_nonzero,
+                    left_y_nonzero,
+                    matrix,
+                    matrix.lambda_i4.cast_unsigned(),
+                    matrix.lambda_mode.cast_unsigned(),
+                    matrix.texture_lambda.cast_unsigned(),
+                    method <= 1,
+                    coefficient_probabilities,
+                    trellis,
+                    token,
+                )?
+            } else {
+                intra4::select_macroblock(
+                    &source_y,
+                    &top_y_i4,
+                    &y_left,
+                    y_top_left,
+                    &top_modes,
+                    &neighboring_left_modes,
+                    top_y_nonzero,
+                    left_y_nonzero,
+                    matrix,
+                    matrix.lambda_i4.cast_unsigned(),
+                    matrix.lambda_mode.cast_unsigned(),
+                    matrix.texture_lambda.cast_unsigned(),
+                    method <= 1,
+                    coefficient_probabilities,
+                    trellis,
+                )
+            };
             let luma = if method <= 1 {
                 if analysis.macroblocks[block_index].use_intra4 {
                     LumaDecision::Intra4(intra4)
