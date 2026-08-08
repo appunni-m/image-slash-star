@@ -10175,8 +10175,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let alpha_collection_image =
             DecodedImage::new(16, 64, alpha_collection_pixels, ColorType::Rgba8);
-        let alpha_collection_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(5_016);
+        let alpha_collection_policy = image_slash_star::EncodePolicy::new().with_max_work_units(5);
         let alpha_collection_error = match image_slash_star::encode_with_policy(
             &alpha_collection_image,
             ImageFormat::WebP,
@@ -10194,8 +10193,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 5_016,
-                observed: 5_017,
+                maximum: 5,
+                observed: 6,
             }
         ));
         let mut alpha_collection_sink = vec![0xC1];
@@ -10215,14 +10214,76 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 5_016,
-                observed: 5_017,
+                maximum: 5,
+                observed: 6,
             }
         ));
-        let mut alpha_collection_expected_prefix = vec![0xC1];
-        alpha_collection_expected_prefix
-            .extend_from_slice(&[b'R', b'I', b'F', b'F', 248, 0, 0, 0, b'W', b'E', b'B', b'P']);
-        assert_eq!(alpha_collection_sink, alpha_collection_expected_prefix);
+        assert_eq!(alpha_collection_sink, vec![0xC1]);
+        // Lossy WebP RGBA alpha-palette index packing now polls after each
+        // 1,024 source pixels. This is another caller-work-budget boundary,
+        // not Pillow parity: the oracle has no caller token, typed work-budget
+        // result, or caller-owned sink contract.
+        let alpha_packing_values = (0_u8..64).collect::<Vec<_>>();
+        let mut alpha_packing_pixels = Vec::with_capacity(128 * 8 * 4);
+        for index in 0..128 * 8 {
+            let alpha = alpha_packing_values[index % alpha_packing_values.len()];
+            alpha_packing_pixels.extend_from_slice(&[37, 83, 149, alpha]);
+        }
+        let alpha_packing_image = DecodedImage::new(128, 8, alpha_packing_pixels, ColorType::Rgba8);
+        let alpha_packing_expected =
+            image_slash_star::encode(&alpha_packing_image, ImageFormat::WebP, &alpha_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &alpha_packing_image,
+                ImageFormat::WebP,
+                &alpha_options,
+                &alpha_unlimited,
+            )?,
+            alpha_packing_expected,
+            "an ample WebP alpha-palette packing budget preserves byte identity"
+        );
+        let alpha_packing_policy = image_slash_star::EncodePolicy::new().with_max_work_units(11);
+        let alpha_packing_error = match image_slash_star::encode_with_policy(
+            &alpha_packing_image,
+            ImageFormat::WebP,
+            &alpha_options,
+            &alpha_packing_policy,
+        ) {
+            Ok(_) => return Err("WebP alpha-palette packing budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_packing_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 11,
+                observed: 12,
+            }
+        ));
+        let mut alpha_packing_sink = vec![0xC2];
+        let alpha_packing_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &alpha_packing_image,
+            ImageFormat::WebP,
+            &alpha_options,
+            &alpha_packing_policy,
+            &mut alpha_packing_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP alpha-palette packing wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_packing_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 11,
+                observed: 12,
+            }
+        ));
+        assert_eq!(alpha_packing_sink, vec![0xC2]);
         let lossless_unlimited =
             image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX);
         let lossless_expected =
