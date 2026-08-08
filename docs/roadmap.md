@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against current implementation revision
-`e445aed23067bbae4432fb0f70c9b7fd9adf138c`; the claim-ledger baseline remains
+`2e1ff04748204d0d7a05608511ae25a7d6f11689`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `50f7b55d-098d-4750-a68c-70bbbd90a123` covers implementation revision `e445aed23067bbae4432fb0f70c9b7fd9adf138c`: 53,808/54,475 lines, 7,640/7,804 branches, 3,037/3,115 functions, and 83,091/84,598 regions. Compared with the preceding accepted snapshot `a44748e1-74fa-489a-9cf8-623f29ca4611`, covered/source totals changed by +97/+105 lines, +2/+2 branches, +4/+4 functions, and +53/+87 regions. The current test/runtime harness follow-up is `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`: warm feature-matrix lanes default to `MATRIX_TEST_OPT_LEVEL=2`, and exact-revision run `db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured native/WASI lanes in 8,806 ms with one test worker per lane, one build job per lane, debug 0, and verbose 0; the exact current-tree run `b97eb0e4-5cc5-463e-b0e7-ce704578b92f` also passed all 33 configured lanes in 11,541 ms with the same warm single-worker settings. The retained logs record `capability tables OK: every native and wasm32-wasip1 lane agrees` and no `lock-wait` match. The regular Cargo test profile remains `opt-level = 2`, and explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 667 lines, 164 branches, 78 functions, and 1,507 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot at `81987517-21d7-457c-8417-a6de1f78efd4` covers implementation revision `2e1ff04748204d0d7a05608511ae25a7d6f11689`: 53,763/54,486 lines, 7,622/7,808 branches, 3,038/3,116 functions, and 83,029/84,619 regions. Compared with the preceding accepted snapshot `50f7b55d-098d-4750-a68c-70bbbd90a123`, covered/source totals changed by -45/+11 lines, -18/+4 branches, +1/+1 functions, and -62/+21 regions. The current test/runtime harness follow-up is `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`: warm feature-matrix lanes default to `MATRIX_TEST_OPT_LEVEL=2`, and exact-revision run `db5b85d9-8189-4589-8354-eb9d45365bf8` passed all 33 configured native/WASI lanes in 8,806 ms with one test worker per lane, one build job per lane, debug 0, and verbose 0; the exact current-tree run `4c4ba0b4-9bd7-4265-bd73-dc90f9a06ed9` also passed all 33 configured lanes in 62,131 ms with the same warm single-worker settings. The retained logs record `capability tables OK: every native and wasm32-wasip1 lane agrees` and no `lock-wait` match. The regular Cargo test profile remains `opt-level = 2`, and explicit overrides remain available. Unknown-target compile-only lanes lint the library surface without rebuilding integration targets already compiled by native/WASI lanes; this harness behavior adds no fixture, parity row, or coverage-only test. The known LLVM JSON segment-normalization warning remains; the strict aggregate shortfall is 723 lines, 186 branches, 78 functions, and 1,590 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4373,7 +4373,7 @@ hidden-RGB cleanup, long backward-reference result backfills, and the bounded
 meta-histogram sampling row/column comparisons and symbol compaction, Huffman-node
 ordering comparisons, and the bounded feature-matrix runtime. The accepted
 codec implementation/coverage revision is
-`e445aed23067bbae4432fb0f70c9b7fd9adf138c`; the current test/runtime
+`2e1ff04748204d0d7a05608511ae25a7d6f11689`; the current test/runtime
 harness follow-up is
 `f1de82ef6d5cde827daf6f5fa195d938a9abe67b`.
 
@@ -4427,7 +4427,7 @@ fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
 
 The finer lossy WebP VP8 intra4 mode-selection slice is implemented at
-`e445aed23067bbae4432fb0f70c9b7fd9adf138c` through the same existing
+`2e1ff04748204d0d7a05608511ae25a7d6f11689` through the same existing
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware frame
 selection retains the outer checkpoint after each 64 completed macroblocks
 for intra16/chroma and completed-decision work, and now polls after each
@@ -4444,20 +4444,20 @@ Rust-only feature-gate evidence with no parity row, fixture-manifest row,
 diagnostic origin, new test function, or coverage-only hook.
 
 Exact-head managed validation for implementation/coverage revision
-`e445aed23067bbae4432fb0f70c9b7fd9adf138c` passed Pillow parity run
-`52a223d3-a08b-4685-be8c-3f979078f817` with 1,445/1,445 checks in 9,485 ms;
+`2e1ff04748204d0d7a05608511ae25a7d6f11689` passed Pillow parity run
+`ea208cde-4b4c-412b-857f-d7c78eca99a8` with 1,445/1,445 checks in 12,270 ms;
 the new Rust-only work-control evidence therefore leaves the Pillow oracle
 surface unchanged. Feature-matrix run
-`b97eb0e4-5cc5-463e-b0e7-ce704578b92f` passed all 33 configured lanes in
-11,541 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
+`4c4ba0b4-9bd7-4265-bd73-dc90f9a06ed9` passed all 33 configured lanes in
+62,131 ms with `cache=warm`, `lanes=12`, `test_threads=1`, `build_jobs=1`,
 `debug=0`, and `verbose=0`; its retained log records the native/WASI
 capability agreement marker and no `lock-wait` match. Nightly LLVM run
-`2a75a495-4005-4ccd-94db-eb8dbe9624a3` passed 85/85 tests in 68,390 ms and
-ingested snapshot `50f7b55d-098d-4750-a68c-70bbbd90a123`, reporting
-53,808/54,475 lines, 7,640/7,804 branches, 3,037/3,115 functions, and
-83,091/84,598 regions. The known LLVM JSON segment-normalization warning
-remains; the strict aggregate shortfall is 667 lines, 164 branches, 78
-functions, and 1,507 regions. These are implementation, target-matrix, and
+`a097b70f-23fd-49e2-bb19-44cf38120fd1` passed 85/85 tests in 74,501 ms and
+ingested snapshot `81987517-21d7-457c-8417-a6de1f78efd4`, reporting
+53,763/54,486 lines, 7,622/7,808 branches, 3,038/3,116 functions, and
+83,029/84,619 regions. The known LLVM JSON segment-normalization warning
+remains; the strict aggregate shortfall is 723 lines, 186 branches, 78
+functions, and 1,590 regions. These are implementation, target-matrix, and
 Pillow-oracle records with separate evidence ownership.
 
 The lossy WebP VP8 coefficient-statistics slice polls after each 1,024 selected
