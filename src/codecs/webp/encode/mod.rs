@@ -25,9 +25,10 @@ pub mod vp8;
 /// no-recoverable-OOM policy.
 /// Long backward-reference result backfills also poll after each 256 entries.
 /// The no-token path retains its tight source materialization maps.
-/// Lossy: uses our own pure-Rust VP8 intra-frame encoder. RGBA lossy encoding
-/// also polls padded Y/U/V edge-replication after each 1,024 padded items,
-/// coefficient-statistics collection after each 1,024 macroblocks,
+/// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
+/// VP8 encoding polls padded Y/U/V edge-replication after each 1,024 padded items,
+/// coefficient-statistics collection and the first-partition segment-
+/// probability prepass after each 1,024 selected macroblocks,
 /// transparent-area cleanup after each 1,024 scanned or flattened pixels, and
 /// alpha-palette source collection and index packing after each 1,024 source
 /// pixels when a caller supplies a cancellation token. The no-token helpers
