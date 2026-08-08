@@ -1231,6 +1231,29 @@ impl CostManager {
         self.intervals = merged;
     }
 
+    fn insert_min_interval_with_checkpoint(
+        &mut self,
+        candidate: CostInterval,
+        token: CheckpointToken<'_>,
+    ) -> CheckpointResult<()> {
+        if candidate.start >= candidate.end {
+            return Ok(());
+        }
+        if self.intervals.len() >= 500 {
+            // The saturated fallback can cover the full bounded match length;
+            // keep a long update range cooperatively interruptible.
+            for (offset, index) in (candidate.start..candidate.end).enumerate() {
+                self.update(index, candidate.position, candidate.cost);
+                if (offset + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+                    checkpoint(token)?;
+                }
+            }
+            return Ok(());
+        }
+        self.insert_min_interval(candidate);
+        Ok(())
+    }
+
     fn push(&mut self, distance_cost: i64, position: usize, length: usize) {
         if length < 10 {
             for index in position..position + length {
@@ -1251,6 +1274,48 @@ impl CostManager {
                 position,
             });
         }
+    }
+
+    fn push_with_checkpoint(
+        &mut self,
+        distance_cost: i64,
+        position: usize,
+        length: usize,
+        token: CheckpointToken<'_>,
+    ) -> CheckpointResult<()> {
+        // Preserve the original tight path when no caller token is present.
+        if token.is_none() {
+            self.push(distance_cost, position, length);
+            return Ok(());
+        }
+        if length < 10 {
+            for index in position..position + length {
+                let cost = distance_cost + self.length_costs[index - position];
+                self.update(index, position, cost);
+            }
+            return Ok(());
+        }
+        let intervals = self.length_intervals.clone();
+        for (interval_index, (length_cost, relative_start, relative_end)) in
+            intervals.into_iter().enumerate()
+        {
+            if relative_start >= length {
+                break;
+            }
+            self.insert_min_interval_with_checkpoint(
+                CostInterval {
+                    cost: distance_cost + length_cost,
+                    start: position + relative_start,
+                    end: position + relative_end.min(length),
+                    position,
+                },
+                token,
+            )?;
+            if (interval_index + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
+                checkpoint(token)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -1316,7 +1381,12 @@ fn trace_backwards(
                 offset_cost =
                     i64::from(model.distance[distance_symbol]) + i64::from(distance_extra) * SCALE;
                 first_constant = true;
-                manager.push(previous_cost + offset_cost, position, maximum_length);
+                manager.push_with_checkpoint(
+                    previous_cost + offset_cost,
+                    position,
+                    maximum_length,
+                    token,
+                )?;
             } else {
                 if first_constant {
                     reach = position - 1 + previous_length - 1;
@@ -1341,7 +1411,12 @@ fn trace_backwards(
                     }
                     manager.update_at(split - 1, false);
                     manager.update_at(split, false);
-                    manager.push(manager.costs[split - 1] + offset_cost, split, split_length);
+                    manager.push_with_checkpoint(
+                        manager.costs[split - 1] + offset_cost,
+                        split,
+                        split_length,
+                        token,
+                    )?;
                     reach = split + split_length - 1;
                 }
             }
