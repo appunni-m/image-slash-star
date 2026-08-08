@@ -9852,6 +9852,69 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(padded_sink, vec![0xA9]);
 
+        // Lossy VP8 coefficient-statistics collection scans every selected
+        // macroblock before probability adaptation. The token-aware path now
+        // polls after each 1,024 macroblocks; Pillow has no caller token,
+        // typed work-budget result, or sink-rollback contract, so this remains
+        // Rust-only evidence in this existing feature-gated test rather than
+        // a parity row or manifest entry.
+        let statistics_image =
+            DecodedImage::new(512, 512, vec![128; 512 * 512 * 3], ColorType::Rgb8);
+        let statistics_expected =
+            image_slash_star::encode(&statistics_image, ImageFormat::WebP, &options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &statistics_image,
+                ImageFormat::WebP,
+                &options,
+                &unlimited,
+            )?,
+            statistics_expected,
+            "an ample VP8 coefficient-statistics budget preserves byte identity"
+        );
+        let statistics_policy = image_slash_star::EncodePolicy::new().with_max_work_units(712);
+        let statistics_error = match image_slash_star::encode_with_policy(
+            &statistics_image,
+            ImageFormat::WebP,
+            &options,
+            &statistics_policy,
+        ) {
+            Ok(_) => return Err("VP8 coefficient-statistics budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            statistics_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 712,
+                observed: 713,
+            }
+        ));
+        let mut statistics_sink = vec![0xAA];
+        let statistics_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &statistics_image,
+            ImageFormat::WebP,
+            &options,
+            &statistics_policy,
+            &mut statistics_sink,
+        ) {
+            Ok(_) => return Err("VP8 coefficient-statistics sink budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            statistics_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 712,
+                observed: 713,
+            }
+        ));
+        assert_eq!(statistics_sink, vec![0xAA]);
+
         // Lossless VP8L now charges checkpoints around predictor, cross-color,
         // entropy, transform, histogram/Huffman, and bitstream stages plus
         // bounded backward-reference and token-stream intervals. Pillow has no caller-controlled checkpoint
