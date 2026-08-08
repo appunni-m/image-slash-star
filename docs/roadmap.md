@@ -240,13 +240,13 @@ allocation accounting, progress, and rollback.
 | API-018 | Input model | The incremental input contract now covers detection, basic inspection, still decode, and sequence decode (`decode_prefix`/`decode_sequence_prefix`, COR-059) with exact or progress-aware `NeedMoreData { minimum }`; streaming decompression that produces partial pixels before the container completes remains future work. | Keep the same status semantics for any future streaming iterator/reader surface. |
 | API-019 | Metadata | PNG known metadata chunks, GIF extensions, JPEG APPn/COM marker payloads, WebP ICCP/EXIF/XMP chunks, TIFF metadata tags, and AVIF top-level unknown/free/skip boxes are retained as raw opaque records. Recognized AVIF `Exif` items and `mime` items with content type `application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on still and sequence decode; primary AVIF CICP/`clli`/`mdcv` color properties, `prof`/`rICC` ICC profiles, primary `av1C` chroma sample position, and `irot`/`imir`/`pasp`/`clap` item properties remain typed source descriptors. Direct alpha `auxl` provenance is represented by `SourceAlpha::Auxiliary`, the scalar and bounded plural auxiliary-relationship getters, the ordered `SourceDescriptor::avif_grid_item_ids()` list for the supported primary grid, bounded `dimg`/other `iref` edges through `SourceDescriptor::avif_item_relationships()`, filtered `prem` edges through `SourceDescriptor::avif_premultiplied_relationships()`, typed non-primary `colr`/`nclx` CICP declarations through `SourceDescriptor::avif_item_color_properties()`, and raw non-primary `prof`/`rICC` profiles through `SourceDescriptor::avif_item_icc_profiles()`. Full grid topology, unknown item properties, other non-primary/auxiliary color forms, and other item metadata remain open. | Extend the opaque model to the remaining AVIF item/property graph and exact color fields; parsed semantics are optional and format-specific. |
 | API-020 | Same-format output | Source format is retained, but encoding always asks for an explicit target. | Keep explicit target selection. Add a same-source convenience only if metadata, sequences, and unsupported modes cannot make it silently lossy. |
-| API-023 | Partial capability | Remaining gaps are transient encoded-output allocation/peak accounting (the public policy deliberately makes no recoverable-OOM promise), interior work beyond the current checkpoint set, and complete short-write/rollback semantics. The implemented decode, output-admission, cooperative work checkpoints, JPEG RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy traversal after each 1,024 MCUs, JPEG forward-DCT/quantization after each completed 8x8 block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, JPEG baseline/progressive entropy-output after each 1,024 emitted bytes, high-color GIF nearest-palette candidate ordering and bounded scans after each 1,024 work items, lossy WebP RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, lossy WebP VP8 first-partition coding after each 8, 16, 32, 64, 128, 256, 512, 1,024, 2,048, 4,096, 8,192, 32,768, 65,536, 131,072, and 262,144 logical coded bits and coefficient coding through 1,048,576 logical coded bits, lossless WebP VP8L entropy-mode histogram-cost scans after each 64 symbols, palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, entropy-bin histogram-clustering min/max and bin-assignment pre-passes after each 64 tile histograms, copy-token cache-population scans after each 256 pixels, Huffman RLE preparation and canonical-code assignment scans after each 64 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat-token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, and lossless WebP VP8L bitstream coding after each 8, 16, 32, 64, 128, 256, 512, 1,024, 2,048, 4,096, 8,192, 16,384, 32,768, 65,536, 131,072, 262,144, 524,288, and 1,048,576 logical coded bits are current behavior documented in the architecture/testing contracts, not active roadmap items. | Add one independently enforceable allocation or work dimension at a time; preserve unlimited wrappers, reject before future bounded allocation/work begins, and fixture each inclusive boundary and error-precedence rule. |
+| API-023 | Partial capability | Remaining gaps are transient encoded-output allocation/peak accounting (the public policy deliberately makes no recoverable-OOM promise), interior work beyond the current checkpoint set, and complete short-write/rollback semantics. The implemented decode, output-admission, cooperative work checkpoints, JPEG RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy traversal after each 1,024 MCUs, JPEG forward-DCT/quantization after each completed 8x8 block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, JPEG baseline/progressive entropy-output after each 1,024 emitted bytes, high-color GIF nearest-palette candidate ordering and bounded scans after each 1,024 work items, lossy WebP RGBA transparent-area cleanup and lossless WebP VP8L hidden-RGB cleanup after each 1,024 scanned pixels, lossy WebP VP8 first-partition coding after each 8, 16, 32, 64, 128, 256, 512, 1,024, 2,048, 4,096, 8,192, 32,768, 65,536, 131,072, and 262,144 logical coded bits and coefficient coding through 1,048,576 logical coded bits, lossless WebP VP8L entropy-mode histogram-cost scans after each 64 symbols, palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, entropy-bin histogram-clustering min/max and bin-assignment pre-passes after each 64 tile histograms, copy-token cache-population scans after each 256 pixels, Huffman RLE preparation and canonical-code assignment scans after each 64 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat-token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, and lossless WebP VP8L bitstream coding after each 8, 16, 32, 64, 128, 256, 512, 1,024, 2,048, 4,096, 8,192, 16,384, 32,768, 65,536, 131,072, 262,144, 524,288, and 1,048,576 logical coded bits are current behavior documented in the architecture/testing contracts, not active roadmap items. | Add one independently enforceable allocation or work dimension at a time; preserve unlimited wrappers, reject before future bounded allocation/work begins, and fixture each inclusive boundary and error-precedence rule. |
 | API-026 | Ownership limitation | Decoded samples and palettes are always owned mutable vectors. Callers cannot borrow immutable output, reuse an allocation, or transfer shared backing storage without a copy. | Let the destination-buffer work solve reuse first. Add borrowed/shared public representations only if native and WASM measurements show a material copy cost. |
 | API-027 | Sequence scalability | The source-bound `decode_frame` contract is complete with stable per-frame errors, and TIFF has a genuine per-page decode path. GIF, APNG, WebP, and AVIF still decode the full sequence for one frame, and there is no iterator. The owned source now retains a separate lazy sequence cache, but it still materializes every frame. | Extend the per-frame path to GIF/APNG/WebP/AVIF, then add iteration. Keep eager `decode_sequence` as a convenience collector and retain the shared lazy cache as the repeated-call path. |
 | API-030 | Error detail | Codec-dispatched failures now retain a stable operation `stage`, the encoded-input byte `offset`, and a container-structure `identity` through the corresponding accessors. Caller-owned sink rejection has the separate `OutputWrite` category with selected output format, encode stage, and diagnostic message; `EncodePolicy` failures carry the selected format, encode operation, typed `EncodedOutputBytes` or `EncodeWorkUnits` resource, maximum, and observed result/checkpoint value. `Unsupported` additionally exposes `unsupported_reason()` for target-unavailable and not-implemented capability failures. BMP header, palette, pixel-span, bitfield, and RLE parse failures now retain stable context, ICO header, directory, entry-range, and embedded PNG/DIB/CUR failures now retain stable ICO context, TIFF compressed strip/tile payload failures now retain `tiff_strip`/`tiff_tile` context, and WebP inspection/container-chunk failures now retain stable WebP context. WebP still and sequence payload-decoder failures now retain `webp_bitstream` at the validated VP8/VP8L payload start, or the current ANMF container offset for animation; finer decoder-internal cursors remain intentionally limited. | Extend structured fields without promising unstable prose. Every newly represented field needs malformed, boundary, capability, and output-destination fixtures. |
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms; direct alpha provenance is represented by `SourceAlpha::Auxiliary` plus scalar and bounded plural source-local relationships, the supported primary grid retains its ordered derived item IDs, bounded `iref` edges—including `prem`—are retained as source descriptors, typed non-primary/auxiliary `colr`/`nclx` CICP declarations retain their source-local item IDs through `SourceDescriptor::avif_item_color_properties()`, and non-primary/auxiliary `prof`/`rICC` profiles retain their exact item IDs and raw profile bytes through `SourceDescriptor::avif_item_icc_profiles()`. Other non-primary/auxiliary color forms, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
-| API-036 | Work control | Remaining gaps are progress semantics, CPU/instruction interruption inside codec work beyond the documented checkpoints, finer WebP stages beyond the current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit logical VP8 first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit/524,288-bit/1,048,576-bit logical VP8 coefficient, and 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/16,384-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit/524,288-bit/1,048,576-bit VP8L intervals plus the lossless VP8L entropy-mode histogram-cost scans after each 64 symbols, palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, entropy-bin histogram-clustering min/max and bin-assignment pre-passes after each 64 tile histograms, 256-pixel copy-token cache-population scans, 64-code-length-symbol Huffman RLE preparation and canonical-code assignment scans, 64-candidate-node Huffman-tree insertion scans, 16-compressed-token-entry Huffman-tree frequency and trailing-token-trim scans, 16-compressed-token-entry Huffman code-length-emission scans, plus the 1,024-pixel RGBA transparent-area cleanup checkpoints, JPEG interior work beyond its current 1,024-pixel RGB-to-YCbCr, 1,024-pixel chroma-downsample output, 1,024-MCU baseline entropy traversal, completed 8x8 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, and 1,024-byte entropy-output intervals, and short-write/rollback cleanup. Current cancellation and sink-boundary behavior belongs in the architecture/testing contracts. | Define progress and rollback semantics without claiming universal interior interruption; add checkpoints only for a real long-running operation and retain a separate Rust-only feature-gate contract when Pillow has no equivalent result. |
+| API-036 | Work control | Remaining gaps are progress semantics, CPU/instruction interruption inside codec work beyond the documented checkpoints, finer WebP stages beyond the current logical-bit, output-byte, and documented codec-internal intervals, JPEG interior work beyond its current 1,024-pixel RGB-to-YCbCr, 1,024-pixel chroma-downsample output, 1,024-MCU baseline entropy traversal, completed 8x8 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, and 1,024-byte entropy-output intervals, and short-write/rollback cleanup. Current cancellation and sink-boundary behavior belongs in the architecture/testing contracts. | Define progress and rollback semantics without claiming universal interior interruption; add checkpoints only for a real long-running operation and retain a separate Rust-only feature-gate contract when Pillow has no equivalent result. |
 | API-038 | Detection policy | Auto-detection cannot be restricted to an allowed-format set. The explicit-format still API validates a selected format, but `DecodePolicy` cannot express an allowed set or combine that restriction with partial-input flow. | Let a decode policy carry an optional allow-list while retaining signature validation and feature-independent `detect_format`; keep it distinct from the explicit-format dispatch API. |
 | API-041 | WASM boundary | Rust enums, structured errors, byte ownership, and 64-bit sizes have no stable JavaScript transfer schema. | Design a versioned binding contract after native API semantics settle; preserve precise error kinds and avoid string-only JS failures. |
 | API-043 | Partial-input contract | The non-terminal `NeedMoreData { minimum }` state now exists for detection, basic inspection, still decode, and sequence decode, with exact minimum-byte or progress semantics; terminal results must never be retried. | Keep the status stable for any future streaming surface and document per-operation progress. |
@@ -758,7 +758,7 @@ union. That has several consequences for this crate.
 | QA-022 | WASM compile success provides no browser evidence for boundary copies, memory growth, exceptions, worker use, or real artifact size. | Run a small Playwright/WebDriver-free JS harness in a pinned browser runtime and Node for every published artifact target. |
 | QA-023 | Emitted bytes are primarily re-opened through Pillow, which can share libjpeg/libwebp/libtiff/libavif implementations with the oracle path. | Decode representative outputs with an independent implementation or browser and record that evidence separately from Pillow parity. |
 | QA-024 | Round-trip tests do not publish a uniform rule separating lossless exact samples, lossy decoded tolerances, and deterministic encoded bytes. | Add an assertion policy per format/mode/option row and reject ambiguous generic “round trip passed” claims. |
-| QA-026 | Policy and interruption evidence | Decode/output policy boundaries, cache/retry behavior, sink preflight, structural cancellation, and the currently implemented Rust-only work-budget checkpoints—including JPEG RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy traversal after each 1,024 MCUs, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, entropy output after each 1,024 emitted bytes, high-color GIF nearest-palette candidate ordering and bounded scans after each 1,024 work items, lossy WebP RGBA transparent-area cleanup plus VP8 first-partition intervals through 262,144 logical bits and coefficient intervals through 1,048,576 logical bits, VP8 boolean boundaries, 1,024-byte boolean output, lossless VP8L 256-pixel copy-token cache-population scans, palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, Huffman RLE preparation and canonical-code assignment scans after each 64 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat-token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, and lossless VP8L logical bitstream intervals through 1,048,576 bits—are accepted in the feature-gated integration contract. The Pillow manifest remains the source of Pillow-observable success/error/byte evidence; it does not own caller budgets, cancellation, sink prefixes, or rollback. | Add only real remaining codec/interior/allocation/short-write boundaries, keep them in the existing feature-gate contract, and record parity as unchanged regression evidence rather than adding synthetic Pillow rows. |
+| QA-026 | Policy and interruption evidence | Decode/output policy boundaries, cache/retry behavior, sink preflight, structural cancellation, and the currently implemented Rust-only work-budget checkpoints—including JPEG RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy traversal after each 1,024 MCUs, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, entropy output after each 1,024 emitted bytes, high-color GIF nearest-palette candidate ordering and bounded scans after each 1,024 work items, lossy WebP RGBA transparent-area cleanup plus lossless VP8L hidden-RGB cleanup after each 1,024 scanned pixels, VP8 first-partition intervals through 262,144 logical bits and coefficient intervals through 1,048,576 logical bits, VP8 boolean boundaries, 1,024-byte boolean output, lossless VP8L 256-pixel copy-token cache-population scans, palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, Huffman RLE preparation and canonical-code assignment scans after each 64 code-length symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat-token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, and lossless VP8L logical bitstream intervals through 1,048,576 bits—are accepted in the feature-gated integration contract. The Pillow manifest remains the source of Pillow-observable success/error/byte evidence; it does not own caller budgets, cancellation, sink prefixes, or rollback. | Add only real remaining codec/interior/allocation/short-write boundaries, keep them in the existing feature-gate contract, and record parity as unchanged regression evidence rather than adding synthetic Pillow rows. |
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
 | QA-030 | No benchmark checks output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocation/peak-memory measurements alongside time and artifact size; never optimize from source line count. |
@@ -4288,7 +4288,7 @@ token-frequency, trailing-token-trim, and code-length-emission checkpoints,
 and RGB-equal grayscale-preparation checkpoints, candidate-trial prefix reuse,
 lossy WebP RGBA alpha-palette candidate-scan checkpoints, and lossless WebP
 VP8L palette-index lookup, palette sign, and nearest-delta candidate-scan
-checkpoints
+checkpoints, and lossless WebP VP8L RGBA hidden-RGB cleanup checkpoints,
 plus compile-only matrix runtime
 
 The token-aware VP8L entropy-mode analysis now charges cooperative checkpoints
@@ -4319,11 +4319,13 @@ reverse trailing zero-repeat-token trim scan now charge after each 16 compressed
 token entries. Huffman code-length emission now charges after each 16 compressed
 token entries; its existing feature-gated Rust-only work-control assertion
 drives the Huffman-tree path, whose canonical-code assignment and sorted-node insertion
-scans charge after each 64 code-length slots or candidate nodes. The palette-index
-lookup slice and current production revision are committed at
-`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the preceding production slice is
+scans charge after each 64 code-length slots or candidate nodes. The preceding
+palette-index lookup slice is committed at
+`dd1f8be02234d89d49f79c23aacf569768ad1b8e`; the current lossless-RGBA-cleanup
+production revision is committed at
+`464126042af49a945a63a505cb1675ebe703a904`; the earlier production slice is
 committed at revision
-`84a9abbd8fca78fc468e3e46be8baa5ca37e005f5`; the earlier production slice is
+`84a9abbd8fca78fc468e3e46be8baa5ca37e005f5`; an earlier production slice is
 committed at revision
 `b1fafe4bacd60628b2385e14a843bb6bf827c1e2`; the current contract and backward
 cost-manager setup are committed at `0675baea3b97104d68636e8fe363ed61ba625c01`
@@ -4407,6 +4409,16 @@ token-aware scan checks after each 64 candidates, while the no-token path keeps
 the original first-minimum ordering and byte output. Pillow has no caller work
 budget or sink contract, so this is Rust-only evidence with no parity row,
 fixture, diagnostic origin, new test function, or coverage-only hook.
+The same existing contract now uses a deterministic 128×128 fully transparent
+RGBA lossless WebP probe with nonzero hidden RGB values to prove ordinary and
+ample-budget byte identity, then exact whole-buffer and caller-owned-sink
+rejection at `maximum: 2`, `observed: 3`, with sentinel `[0xB7]` untouched.
+The token-aware VP8L cleanup polls after each 1,024 scanned pixels; the
+ordinary no-token path retains its bulk loop. Pillow has no caller token,
+work-budget result, or sink-rollback contract, so this remains Rust-only
+evidence with no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook. The implementation is committed at
+`464126042af49a945a63a505cb1675ebe703a904`.
 This is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
 origin, new test function, or coverage-only hook was added. The existing
@@ -4423,23 +4435,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`ffb55fc7-ad94-4d26-b8b3-bcf7a3cf6eaa` passed 1,445/1,445 checks with zero
-skips in 1,002 ms; feature-matrix run
-`5e02f54d-a300-4cbd-aaec-8847ec7435ef` passed all 33 configured lanes in
-39,841 ms, with `cache=warm lanes=12 test_threads=1 build_jobs=1 debug=0
-verbose=0` and the terminal capability agreement; targeted searches returned
-no lock-wait, build-directory, or package-cache matches. Coverage MCP run
-`36d06757-30af-4342-9394-51b3b1f07aa2` passed 85/85 tests in 62,524 ms and
-ingested snapshot `d197d0bb-8fab-45d2-b140-45e6db91511a`: 53,219/53,833
-lines, 7,532/7,682 branches, 2,998/3,074 functions, and 82,345/83,711
-regions. Compared with snapshot `3e0b3832-a8b1-4743-bbd7-fcbf06f2137e`,
-covered/source totals changed by +16/+26 lines, +5/+6 branches, +1/+1
-functions, and +27/+50 regions. Native WebP encoder reports 1,850/1,900
-lines, 397/412 branches, 88/88 functions, and 2,707/2,894 regions. Coverage
+`878d2ec1-2003-4a63-8392-39223d0b86ef` passed 1,445/1,445 checks with zero
+skips in 2,338 ms; feature-matrix run
+`cb1b7396-7f55-4997-9348-7a5aac8b365e` passed all configured lanes in 54,615
+ms and ended with the terminal capability agreement; targeted searches
+returned no lock-wait, build-directory, or package-cache matches. Coverage MCP
+run `ed9d7d26-6e4f-42bf-8d3f-94ffb4de6b87` passed 85/85 tests in 66,943 ms and
+ingested snapshot `134df260-62ba-4716-9f3c-01596205eca0`: 53,230/53,844
+lines, 7,538/7,688 branches, 2,998/3,074 functions, and 82,361/83,727
+regions. Compared with snapshot `d197d0bb-8fab-45d2-b140-45e6db91511a`,
+covered/source totals changed by +11/+11 lines, +6/+6 branches, +0/+0
+functions, and +16/+16 regions. Native WebP encoder reports 1,861/1,911
+lines, 403/418 branches, 88/88 functions, and 2,723/2,910 regions. Coverage
 is implementation evidence, not Pillow parity; the known LLVM
 segment-normalization warning and the 614-line, 150-branch, 76-function,
 1,366-region aggregate shortfall remain. Managed durations remain cache- and
-runner-sensitive. The palette-index lookup checkpoint is Rust-only evidence
+runner-sensitive. The lossless RGBA cleanup checkpoint is Rust-only evidence
 and adds no parity row, fixture-manifest row, diagnostic origin, or new test
 function.
 
@@ -5317,19 +5328,9 @@ regions; residual reports 362/372 lines, 48/48 branches, 21/21 functions, and
 coverage, not Pillow-oracle parity, and no coverage-only hook was added.
 
 Remaining work is finer WebP bitstream and other interior work beyond the
-current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit/524,288-bit/1,048,576-bit coefficient, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/16,384-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit/524,288-bit/1,048,576-bit VP8L
-bitstream, the 64-symbol VP8L entropy-mode histogram-cost analysis, the
-64-tile-histogram entropy-bin min/max and bin-assignment pre-passes, histogram population, combined entropy-cost,
-histogram-merge, the implemented backward-reference cost/Huffman scans and
-non-saturated interval split/merge/fallback
-boundaries, 256-pixel copy-token
-cache-population checkpoints, 64-code-length-symbol Huffman RLE preparation and
-canonical-code assignment scans, 64-candidate-node Huffman-tree insertion
-scans, 16-compressed-token-entry Huffman-tree frequency, trailing-token-trim,
-and code-length-emission scans, 64-palette-entry palette-index lookup scans,
-and 1,024-pixel RGBA cleanup checkpoints.
-Finer Huffman/tree and other uncheckpointed work beyond those bounded scans
-remain open, as do JPEG interior work beyond
+current logical-bit, output-byte, and documented codec-internal checkpoints.
+Finer Huffman/tree and other uncheckpointed work remain open, as do JPEG
+interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
 baseline entropy traversal after each 1,024 MCUs, completed 8x8
 JPEG forward-DCT/quantization-block, optimized baseline Huffman frequency gathering,
@@ -5339,48 +5340,14 @@ interior and transient-allocation boundaries,
 short-write/rollback semantics, and the other roadmap categories below.
 
 1. Finish the remaining API-023/030 and QA-026 work-control/error-detail gaps:
-   transient encoded-output allocation accounting, interior encode interruption
-   beyond the implemented PNG 1,024-byte row, PNG stored-block boundary/copy and all-level
-   Deflate checkpoints, BMP row-conversion subsegments,
-   and JPEG baseline/progressive 1,024-pixel RGB-to-YCbCr and chroma-downsample output, baseline entropy
-   traversal after each 1,024 MCUs, completed 8x8 forward-DCT/quantization-block, optimized baseline
-   Huffman frequency gathering after each 1,024 AC
-   coefficients, progressive scan block slots after each 1,024 blocks, progressive scan-event frequency items after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, plus 1,024-byte entropy-output intervals
-   are now implemented; lossy WebP RGBA
-   transparent-area cleanup also charges after each 1,024 scanned or flattened
-   pixels; high-color GIF nearest-palette candidate ordering and bounded scans
-   now also charge 1,024-item intervals, and the VP8L histogram population,
-   combined entropy-cost, histogram-merge, and backward-reference cost/Huffman
-   scans now charge after each 64 symbols or 1,024 tokens; backward-reference
-   length-cost table and equal-cost interval setup also charge after each 1,024
-   entries, the token-aware non-saturated interval split/merge path now charges
-   after each 1,024 interval-work entries, and the saturated cost-interval
-   fallback plus long length-interval enumeration now charge after each 1,024
-   entries; entropy-bin histogram min/max and bin-assignment pre-passes now
-   charge after each 64 tile histograms; repeated-run hash-chain insertion now also charges after each 256
-   pixels; copy-token cache
-   population now charges after each 256 pixels, simple-tree symbol discovery
-   now charges after each 64 code-length slots, and Huffman RLE
-   preparation/tokenization plus canonical-code assignment now charge after
-   each 64 code-length symbols, Huffman-tree insertion scans charge after each
-   64 candidate nodes, Huffman-tree code-length-token frequency plus trailing
-   zero-repeat token trim scans charge after each 16 compressed token entries,
-   Huffman code-length emission now charges at the same 16-entry interval, and
-   lossless VP8L palette-index lookup scans charge after each 64 palette
-   candidates.
-   Remaining JPEG and WebP interior work, including finer Huffman/tree work
-   beyond this bounded emission scan and other uncheckpointed interior work, is
-   still open.
-   Continue
-   with the
-   implemented WebP VP8 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition plus 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient,
-   16,384-boolean first-partition/coefficient-bit, and 1,024-byte
-   boolean-bitstream output intervals
-and the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical VP8L bitstream intervals; remaining finer WebP bitstream stages,
-   work-budget semantics, and short-write/rollback
-   cleanup. Keep
-   allocation accounting and structural writing as distinct open resource
-   boundaries.
+   transient encoded-output allocation and peak-memory accounting; interior
+   encode interruption beyond the documented checkpoints, including PNG
+   stored-block/copy and all-level Deflate work, BMP row-conversion
+   subsegments, and finer JPEG/WebP codec work; progress and CPU/instruction
+   interruption semantics; stable structured error detail where a new
+   codec-internal identity or offset can be defined; and short-write,
+   rollback, and partial-container cleanup. Keep allocation accounting and
+   structural writing as distinct open resource boundaries.
 2. Complete the remaining non-alpha non-primary/auxiliary AVIF item-metadata,
    relationship, and color-item retention under API-019/034/040. Typed
    non-primary `colr`/`nclx` CICP declarations are now retained through
