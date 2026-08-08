@@ -3,7 +3,10 @@
 use super::{
     cost::{rd_score, residual_cost, spectral_distortion_4x4, squared_error_4x4},
     dct::{vp8_fdct_4x4, vp8_idct_add_4x4},
-    quant::{SegmentMatrices, quantize_block, trellis_quantize_block},
+    quant::{
+        QuantMatrix, SegmentMatrices, quantize_block, quantize_block_with_control,
+        trellis_quantize_block,
+    },
 };
 use crate::codecs::CodecResult;
 
@@ -180,6 +183,12 @@ pub(super) struct Intra4Result {
 
 trait SelectionCheckpointControl {
     fn after_candidate_stage(&mut self) -> CodecResult<()>;
+    fn quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        matrix: &QuantMatrix,
+    ) -> CodecResult<bool>;
     fn after_candidate(&mut self) -> CodecResult<()>;
     fn after_block(&mut self) -> CodecResult<()>;
 }
@@ -190,6 +199,16 @@ impl SelectionCheckpointControl for NoopSelectionCheckpoint {
     #[inline(always)]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         Ok(())
+    }
+
+    #[inline(always)]
+    fn quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        matrix: &QuantMatrix,
+    ) -> CodecResult<bool> {
+        Ok(quantize_block(coefficients, levels, matrix))
     }
 
     #[inline(always)]
@@ -211,6 +230,18 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
     #[inline]
     fn after_candidate_stage(&mut self) -> CodecResult<()> {
         crate::codecs::error::check_cancelled(Some(self.token))
+    }
+
+    #[inline]
+    fn quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        matrix: &QuantMatrix,
+    ) -> CodecResult<bool> {
+        quantize_block_with_control(coefficients, levels, matrix, || {
+            self.after_candidate_stage()
+        })
     }
 
     #[inline]
@@ -482,8 +513,8 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     let mut coefficients = vp8_fdct_4x4(&residual);
                     checkpoint.after_candidate_stage()?;
                     let mut levels = [0; 16];
-                    let nonzero = quantize_block(&mut coefficients, &mut levels, &matrices.y1);
-                    checkpoint.after_candidate_stage()?;
+                    let nonzero =
+                        checkpoint.quantize_block(&mut coefficients, &mut levels, &matrices.y1)?;
                     let reconstructed = vp8_idct_add_4x4(&prediction, &coefficients);
                     checkpoint.after_candidate_stage()?;
                     (nonzero, levels, reconstructed)

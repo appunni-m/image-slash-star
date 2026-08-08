@@ -10,6 +10,7 @@ use super::{
     cost::{bit_cost, level_cost},
     tokenize::COEFF_BANDS,
 };
+use crate::codecs::CodecResult;
 
 // ── VP8 quantization step tables ──
 //
@@ -331,11 +332,25 @@ pub(super) fn trellis_quantize_block(
 ///
 /// `coefficients` are replaced with their dequantized reconstruction values,
 /// while the returned levels use VP8 zigzag order.
+#[inline(always)]
 pub(super) fn quantize_block(
     coefficients: &mut [i16; 16],
     levels: &mut [i16; 16],
     matrix: &QuantMatrix,
 ) -> bool {
+    quantize_block_with_control(coefficients, levels, matrix, || Ok(())).unwrap_or_default()
+}
+
+/// Quantizes one transform block while polling after each coefficient.
+pub(super) fn quantize_block_with_control<F>(
+    coefficients: &mut [i16; 16],
+    levels: &mut [i16; 16],
+    matrix: &QuantMatrix,
+    mut checkpoint: F,
+) -> CodecResult<bool>
+where
+    F: FnMut() -> CodecResult<()>,
+{
     const MAX_LEVEL: u32 = 2_047;
 
     let mut nonzero = false;
@@ -367,6 +382,7 @@ pub(super) fn quantize_block(
             coefficients[coefficient_index] = 0;
             levels[zigzag_index] = 0;
         }
+        checkpoint()?;
     }
-    nonzero
+    Ok(nonzero)
 }
