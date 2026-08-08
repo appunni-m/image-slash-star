@@ -10090,6 +10090,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             palette_packing_expected,
             "an ample VP8L palette-packing budget preserves byte identity"
         );
+        // This 1,024-pixel palette probe also reaches the token-aware VP8L
+        // cost-manager setup. Its pixel-sized cost/length tables now poll
+        // while initializing, before any structural sink segment is allowed
+        // to arrive; Pillow has no equivalent caller-work boundary.
         let palette_packing_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(5_205);
         let palette_packing_error = match image_slash_star::encode_with_policy(
@@ -10132,11 +10136,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 observed: 5_206,
             }
         ));
-        let mut palette_packing_expected_prefix = vec![0xC3];
-        palette_packing_expected_prefix.extend_from_slice(&[
-            b'R', b'I', b'F', b'F', 0xEA, 0x03, 0x00, 0x00, b'W', b'E', b'B', b'P',
-        ]);
-        assert_eq!(palette_packing_sink, palette_packing_expected_prefix);
+        assert_eq!(
+            palette_packing_sink,
+            vec![0xC3],
+            "the cost-manager setup boundary now rejects before sink delivery"
+        );
 
         // A small monotone palette reaches the same public token-aware path
         // but has only forward deltas, proving its bounded early return with

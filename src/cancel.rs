@@ -32,8 +32,9 @@
 //! palette-index lookup candidate scans after each 64 palette entries,
 //! entropy, histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
 //! 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, 1,024-byte bitstream-output, and bounded
-//! backward-reference length-cost table and equal-cost interval setup after
-//! each 1,024 entries, token-aware cost-manager interval-update and cleanup
+//! backward-reference cost/length-table initialization and length-cost table
+//! and equal-cost interval setup after each 1,024 entries, token-aware
+//! cost-manager interval-update and cleanup
 //! scans after each 256 cumulative interval entries, saturated cost-interval
 //! fallback scans after each 1,024 entries, repeated-run hash-chain insertion
 //! after each 256 pixels, plus cost/Huffman scans
