@@ -67,6 +67,7 @@ const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
@@ -1805,6 +1806,78 @@ fn collect_palette(
     }
 }
 
+// Materializing the native ARGB pixels is itself an O(pixel-count) stage. Keep
+// the existing no-token maps byte-for-byte and add bounded polling only to the
+// caller-controlled path; Pillow has no equivalent caller work budget.
+fn convert_pixels(
+    data: &[u8],
+    color: ColorType,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u32>, EncodingError> {
+    let bytes_per_pixel = match color {
+        ColorType::Rgb8 => 3,
+        ColorType::Rgba8 => 4,
+    };
+    if let Some(token) = token {
+        let mut pixels = Vec::with_capacity(data.len() / bytes_per_pixel);
+        let mut pixels_until_checkpoint = VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS;
+        match color {
+            ColorType::Rgb8 => {
+                for pixel in data.chunks_exact(3) {
+                    pixels.push(
+                        0xff00_0000
+                            | (u32::from(pixel[0]) << 16)
+                            | (u32::from(pixel[1]) << 8)
+                            | u32::from(pixel[2]),
+                    );
+                    pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+                    if pixels_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        pixels_until_checkpoint = VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS;
+                    }
+                }
+            }
+            ColorType::Rgba8 => {
+                for pixel in data.chunks_exact(4) {
+                    pixels.push(
+                        (u32::from(pixel[3]) << 24)
+                            | (u32::from(pixel[0]) << 16)
+                            | (u32::from(pixel[1]) << 8)
+                            | u32::from(pixel[2]),
+                    );
+                    pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+                    if pixels_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        pixels_until_checkpoint = VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS;
+                    }
+                }
+            }
+        }
+        Ok(pixels)
+    } else {
+        Ok(match color {
+            ColorType::Rgb8 => data
+                .chunks_exact(3)
+                .map(|pixel| {
+                    0xff00_0000
+                        | (u32::from(pixel[0]) << 16)
+                        | (u32::from(pixel[1]) << 8)
+                        | u32::from(pixel[2])
+                })
+                .collect(),
+            ColorType::Rgba8 => data
+                .chunks_exact(4)
+                .map(|pixel| {
+                    (u32::from(pixel[3]) << 24)
+                        | (u32::from(pixel[0]) << 16)
+                        | (u32::from(pixel[1]) << 8)
+                        | u32::from(pixel[2])
+                })
+                .collect(),
+        })
+    }
+}
+
 /// Encode image data with the indicated color type.
 ///
 /// # Panics
@@ -1832,26 +1905,7 @@ fn encode_frame(
         return Err(EncodingError::InvalidDimensions);
     }
 
-    let mut pixels: Vec<u32> = match color {
-        ColorType::Rgb8 => data
-            .chunks_exact(3)
-            .map(|pixel| {
-                0xff00_0000
-                    | (u32::from(pixel[0]) << 16)
-                    | (u32::from(pixel[1]) << 8)
-                    | u32::from(pixel[2])
-            })
-            .collect(),
-        ColorType::Rgba8 => data
-            .chunks_exact(4)
-            .map(|pixel| {
-                (u32::from(pixel[3]) << 24)
-                    | (u32::from(pixel[0]) << 16)
-                    | (u32::from(pixel[1]) << 8)
-                    | u32::from(pixel[2])
-            })
-            .collect(),
-    };
+    let mut pixels = convert_pixels(data, color, token)?;
     check_token(token)?;
 
     // Pillow's lossless WebP path uses libwebp's default `exact=false`.

@@ -9773,10 +9773,62 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // Lossless VP8L RGB/RGBA materialization now polls after each 1,024
+        // source pixels before the later stages begin. Pillow cannot exercise
+        // this caller-work-budget boundary: it has no caller token, typed
+        // work-budget result, or sink-rollback contract. This real public
+        // encode therefore remains Rust-only evidence with no parity row,
+        // manifest fixture, diagnostic origin, new test function, or
+        // coverage-only hook.
+        let conversion_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let conversion_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &conversion_policy,
+        ) {
+            Ok(_) => return Err("VP8L pixel conversion budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            conversion_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        let mut conversion_sink = vec![0xC4];
+        let conversion_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &conversion_policy,
+            &mut conversion_sink,
+        ) {
+            Ok(_) => return Err("VP8L pixel conversion sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            conversion_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2,
+                observed: 3,
+            }
+        ));
+        assert_eq!(conversion_sink, vec![0xC4]);
+
         // Lossless VP8L RGBA cleanup now polls after each 1,024 scanned
         // pixels while replacing hidden RGB values in fully transparent
         // pixels. This deterministic 128x128 fixture reaches that first
-        // interior checkpoint after the encoder's two fixed admission polls.
+        // interior checkpoint after the 16 conversion intervals and the
+        // encoder's two fixed admission polls.
+        // Pillow cannot exercise this caller-work-budget boundary either.
         // Pillow has no caller token, work-budget result, or sink-rollback
         // contract, so this remains Rust-only evidence with no parity row,
         // manifest fixture, diagnostic origin, new test function, or
@@ -9805,7 +9857,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             alpha_cleanup_expected,
             "an ample VP8L RGBA cleanup budget preserves byte identity"
         );
-        let alpha_cleanup_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        let alpha_cleanup_policy = image_slash_star::EncodePolicy::new().with_max_work_units(18);
         let alpha_cleanup_error = match image_slash_star::encode_with_policy(
             &alpha_cleanup_image,
             ImageFormat::WebP,
@@ -9821,8 +9873,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 2,
-                observed: 3,
+                maximum: 18,
+                observed: 19,
             }
         ));
         let mut alpha_cleanup_sink = vec![0xB7];
@@ -9842,8 +9894,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 2,
-                observed: 3,
+                maximum: 18,
+                observed: 19,
             }
         ));
         assert_eq!(alpha_cleanup_sink, vec![0xB7]);
@@ -9966,7 +10018,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample palette-lookup budget preserves byte identity"
         );
         let palette_lookup_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(9_804);
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_820);
         let palette_lookup_error = match image_slash_star::encode_with_policy(
             &palette_lookup_image,
             ImageFormat::WebP,
@@ -9982,8 +10034,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_804,
-                observed: 9_805,
+                maximum: 9_820,
+                observed: 9_821,
             }
         ));
         let mut palette_lookup_sink = vec![0xA9];
@@ -10003,8 +10055,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_804,
-                observed: 9_805,
+                maximum: 9_820,
+                observed: 9_821,
             }
         ));
         assert_eq!(palette_lookup_sink, vec![0xA9]);
@@ -10039,7 +10091,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample VP8L palette-packing budget preserves byte identity"
         );
         let palette_packing_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(5_204);
+            image_slash_star::EncodePolicy::new().with_max_work_units(5_205);
         let palette_packing_error = match image_slash_star::encode_with_policy(
             &palette_packing_image,
             ImageFormat::WebP,
@@ -10055,8 +10107,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 5_204,
-                observed: 5_205,
+                maximum: 5_205,
+                observed: 5_206,
             }
         ));
         let mut palette_packing_sink = vec![0xC3];
@@ -10076,8 +10128,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 5_204,
-                observed: 5_205,
+                maximum: 5_205,
+                observed: 5_206,
             }
         ));
         let mut palette_packing_expected_prefix = vec![0xC3];
@@ -10376,10 +10428,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample WebP VP8L budget preserves byte identity"
         );
         // Lossless VP8L palette construction now polls after each 1,024 source
-        // pixels. This is a caller-work-budget boundary, not Pillow parity:
-        // Pillow exposes neither a caller token nor a work-budget result or
-        // sink-rollback contract, so it adds no parity row or fixture entry.
-        let palette_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2);
+        // pixels. The conversion stage has four earlier intervals on this
+        // 64x64 fixture, so this boundary remains separate from the preceding
+        // conversion assertion. Pillow exposes neither a caller token nor a
+        // work-budget result or sink-rollback contract, so it adds no parity
+        // row or fixture entry.
+        let palette_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6);
         let palette_scan_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10395,8 +10449,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 2,
-                observed: 3,
+                maximum: 6,
+                observed: 7,
             }
         ));
         let mut palette_scan_sink = vec![0xBA];
@@ -10416,8 +10470,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 2,
-                observed: 3,
+                maximum: 6,
+                observed: 7,
             }
         ));
         assert_eq!(palette_scan_sink, vec![0xBA]);
@@ -10449,7 +10503,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             grayscale_lossless_expected,
             "an ample VP8L grayscale budget preserves byte identity"
         );
-        let grayscale_policy = image_slash_star::EncodePolicy::new().with_max_work_units(179);
+        let grayscale_policy = image_slash_star::EncodePolicy::new().with_max_work_units(195);
         let grayscale_error = match image_slash_star::encode_with_policy(
             &grayscale_lossless_image,
             ImageFormat::WebP,
@@ -10465,8 +10519,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 179,
-                observed: 180,
+                maximum: 195,
+                observed: 196,
             }
         ));
         let mut grayscale_sink = vec![0xB2];
@@ -10486,8 +10540,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 179,
-                observed: 180,
+                maximum: 195,
+                observed: 196,
             }
         ));
         assert_eq!(grayscale_sink, vec![0xB2]);
@@ -10550,7 +10604,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // setup polls. Pillow has no caller token or work-budget result, so
         // this remains Rust-only evidence with no parity row or coverage-only
         // hook.
-        let transform_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_674);
+        let transform_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_675);
         let transform_error = match image_slash_star::encode_with_policy(
             &transform_image,
             ImageFormat::WebP,
@@ -10566,8 +10620,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 3_674,
-                observed: 3_675,
+                maximum: 3_675,
+                observed: 3_676,
             }
         ));
         let mut transform_sink = vec![0xAA];
@@ -10589,8 +10643,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 3_674,
-                observed: 3_675,
+                maximum: 3_675,
+                observed: 3_676,
             }
         ));
         assert_eq!(transform_sink, vec![0xAA]);
@@ -10611,7 +10665,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // reaches that real transform boundary after the earlier setup polls.
         // Pillow has no caller token or work-budget result, so this remains
         // Rust-only evidence with no parity row or coverage-only hook.
-        let subtract_green_policy = image_slash_star::EncodePolicy::new().with_max_work_units(58);
+        let subtract_green_policy = image_slash_star::EncodePolicy::new().with_max_work_units(59);
         let subtract_green_error = match image_slash_star::encode_with_policy(
             &subtract_green_image,
             ImageFormat::WebP,
@@ -10627,8 +10681,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58,
-                observed: 59,
+                maximum: 59,
+                observed: 60,
             }
         ));
         let mut subtract_green_sink = vec![0xAB];
@@ -10648,8 +10702,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58,
-                observed: 59,
+                maximum: 59,
+                observed: 60,
             }
         ));
         assert_eq!(subtract_green_sink, vec![0xAB]);
@@ -10663,7 +10717,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             sampling_pixels.extend_from_slice(&[red, green, blue]);
         }
         let sampling_image = DecodedImage::new(8_192, 8, sampling_pixels, ColorType::Rgb8);
-        let sampling_policy = image_slash_star::EncodePolicy::new().with_max_work_units(129_538);
+        let sampling_policy = image_slash_star::EncodePolicy::new().with_max_work_units(129_602);
         // The lossless VP8L cross-color sampling pass now charges an interior
         // checkpoint after each 1,024 scanned or compacted tile-map samples.
         // This 8,192x8 probe creates a 1,024-entry tile map and reaches that
@@ -10685,8 +10739,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 129_538,
-                observed: 129_539,
+                maximum: 129_602,
+                observed: 129_603,
             }
         ));
         let mut sampling_sink = vec![0xAC];
@@ -10706,8 +10760,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 129_538,
-                observed: 129_539,
+                maximum: 129_602,
+                observed: 129_603,
             }
         ));
         assert_eq!(sampling_sink, vec![0xAC]);
@@ -10716,7 +10770,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // symbols while scanning its fixed-alphabet histogram costs. Pillow
         // has no caller token or work-budget result, so this remains Rust-only
         // evidence with no parity row or coverage-only hook.
-        let entropy_analysis_policy = image_slash_star::EncodePolicy::new().with_max_work_units(19);
+        let entropy_analysis_policy = image_slash_star::EncodePolicy::new().with_max_work_units(23);
         let entropy_analysis_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10732,8 +10786,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 19,
-                observed: 20,
+                maximum: 23,
+                observed: 24,
             }
         ));
         let mut entropy_analysis_sink = vec![0xAD];
@@ -10755,8 +10809,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 19,
-                observed: 20,
+                maximum: 23,
+                observed: 24,
             }
         ));
         assert_eq!(entropy_analysis_sink, vec![0xAD]);
@@ -10765,7 +10819,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // the entropy-analysis polls above. Keeping this boundary distinct
         // prevents the new interior checkpoint from silently replacing the
         // existing histogram evidence.
-        let histogram_policy = image_slash_star::EncodePolicy::new().with_max_work_units(58);
+        let histogram_policy = image_slash_star::EncodePolicy::new().with_max_work_units(62);
         let histogram_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10781,8 +10835,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58,
-                observed: 59,
+                maximum: 62,
+                observed: 63,
             }
         ));
         let mut histogram_sink = vec![0xB8];
@@ -10802,8 +10856,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58,
-                observed: 59,
+                maximum: 62,
+                observed: 63,
             }
         ));
         assert_eq!(histogram_sink, vec![0xB8]);
@@ -10814,7 +10868,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // work-budget result, so this remains Rust-only evidence with no
         // parity row or coverage-only hook.
         let combined_histogram_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(76);
+            image_slash_star::EncodePolicy::new().with_max_work_units(80);
         let combined_histogram_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10830,8 +10884,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 76,
-                observed: 77,
+                maximum: 80,
+                observed: 81,
             }
         ));
         let mut combined_histogram_sink = vec![0xAE];
@@ -10853,8 +10907,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 76,
-                observed: 77,
+                maximum: 80,
+                observed: 81,
             }
         ));
         assert_eq!(combined_histogram_sink, vec![0xAE]);
@@ -10890,7 +10944,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // is Rust-only work-control evidence: Pillow has no caller token,
         // work-budget result, or caller-owned sink.
         let histogram_merge_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(8_254);
+            image_slash_star::EncodePolicy::new().with_max_work_units(8_258);
         let histogram_merge_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10906,8 +10960,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 8_254,
-                observed: 8_255,
+                maximum: 8_258,
+                observed: 8_259,
             }
         ));
         let mut histogram_merge_sink = vec![0xAF];
@@ -10929,8 +10983,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 8_254,
-                observed: 8_255,
+                maximum: 8_258,
+                observed: 8_259,
             }
         ));
         assert_eq!(histogram_merge_sink, vec![0xAF]);
@@ -10941,7 +10995,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // caller token, work-budget result, or caller-owned sink, so this is
         // Rust-only work-control evidence with no parity row or coverage hook.
         let cost_estimate_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(14_088);
+            image_slash_star::EncodePolicy::new().with_max_work_units(14_092);
         let cost_estimate_error = match image_slash_star::encode_with_policy(
             &lossless_image,
             ImageFormat::WebP,
@@ -10957,8 +11011,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 14_088,
-                observed: 14_089,
+                maximum: 14_092,
+                observed: 14_093,
             }
         ));
         let mut cost_estimate_sink = vec![0xB0];
@@ -10978,8 +11032,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 14_088,
-                observed: 14_089,
+                maximum: 14_092,
+                observed: 14_093,
             }
         ));
         assert_eq!(cost_estimate_sink, vec![0xB0]);
@@ -11023,7 +11077,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // no caller token, work-budget result, or caller-owned sink, so this
         // is Rust-only work-control evidence with no parity row or fixture.
         let entropy_bin_prepass_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(5_309);
+            image_slash_star::EncodePolicy::new().with_max_work_units(5_325);
         let mut entropy_bin_prepass_sink = vec![0xB9];
         let entropy_bin_prepass_error = match image_slash_star::encode_to_sink_with_policy(
             &huffman_frequency_image,
@@ -11041,8 +11095,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 5_309,
-                observed: 5_310,
+                maximum: 5_325,
+                observed: 5_326,
             }
         ));
         assert_eq!(entropy_bin_prepass_sink, vec![0xB9]);
@@ -11050,7 +11104,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // frequency boundary without adding a Pillow parity row, fixture, or
         // coverage-only input.
         let huffman_frequency_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(43_985);
+            image_slash_star::EncodePolicy::new().with_max_work_units(44_001);
         let huffman_frequency_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
@@ -11066,8 +11120,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 43_985,
-                observed: 43_986,
+                maximum: 44_001,
+                observed: 44_002,
             }
         ));
         let mut huffman_frequency_sink = vec![0xB3];
@@ -11075,7 +11129,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &huffman_frequency_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(43_984),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(44_000),
             &mut huffman_frequency_sink,
         ) {
             Ok(_) => {
@@ -11089,8 +11143,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 43_984,
-                observed: 43_985,
+                maximum: 44_000,
+                observed: 44_001,
             }
         ));
         assert_eq!(huffman_frequency_sink, vec![0xB3]);
@@ -11119,7 +11173,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "the coarser Huffman emission polling preserves fixture-derived bytes"
         );
         let huffman_emission_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(144_853);
+            image_slash_star::EncodePolicy::new().with_max_work_units(144_869);
         let huffman_emission_error = match image_slash_star::encode_with_policy(
             &huffman_frequency_image,
             ImageFormat::WebP,
@@ -11135,8 +11189,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_853,
-                observed: 144_854,
+                maximum: 144_869,
+                observed: 144_870,
             }
         ));
         let mut huffman_emission_sink = vec![0xB6];
@@ -11156,8 +11210,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 144_853,
-                observed: 144_854,
+                maximum: 144_869,
+                observed: 144_870,
             }
         ));
         assert_eq!(
@@ -11179,7 +11233,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // repeated-run insertion after each 256 pixels; its no-token path
         // remains tight. This repeated-row probe reaches the cache boundary
         // without adding a Pillow parity row, fixture, or coverage-only input.
-        let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_672);
+        let cache_probe_policy = image_slash_star::EncodePolicy::new().with_max_work_units(136_928);
         let cache_probe_error = match image_slash_star::encode_with_policy(
             &cache_probe_image,
             ImageFormat::WebP,
@@ -11195,8 +11249,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_672,
-                observed: 136_673,
+                maximum: 136_928,
+                observed: 136_929,
             }
         ));
         let mut cache_probe_sink = vec![0xB5];
@@ -11204,7 +11258,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &cache_probe_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(136_672),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(136_928),
             &mut cache_probe_sink,
         ) {
             Ok(_) => return Err("VP8L cache sink probe budget unexpectedly completed".into()),
@@ -11216,8 +11270,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 136_672,
-                observed: 136_673,
+                maximum: 136_928,
+                observed: 136_929,
             }
         ));
         assert_eq!(
@@ -11229,7 +11283,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // code-length symbols while optimizing and tokenizing the fixed
         // alphabets. This is Rust-only work-control evidence: Pillow has no
         // caller token, work budget, or caller-owned sink.
-        let huffman_rle_policy = image_slash_star::EncodePolicy::new().with_max_work_units(812);
+        let huffman_rle_policy = image_slash_star::EncodePolicy::new().with_max_work_units(828);
         let huffman_rle_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11245,8 +11299,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 812,
-                observed: 813,
+                maximum: 828,
+                observed: 829,
             }
         ));
         let mut huffman_rle_sink = vec![0xB1];
@@ -11254,7 +11308,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(811),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(827),
             &mut huffman_rle_sink,
         ) {
             Ok(_) => return Err("VP8L Huffman RLE sink budget unexpectedly completed".into()),
@@ -11266,8 +11320,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 811,
-                observed: 812,
+                maximum: 827,
+                observed: 828,
             }
         ));
         assert_eq!(huffman_rle_sink, vec![0xB1]);
@@ -11281,7 +11335,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // caller token or work-budget result, so this remains Rust-only
         // evidence with no parity row or coverage-only hook.
         let bitstream_8_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(184);
+            image_slash_star::EncodePolicy::new().with_max_work_units(200);
         let bitstream_8_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11297,8 +11351,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 184,
-                observed: 185,
+                maximum: 200,
+                observed: 201,
             }
         ));
         let mut bitstream_8_checkpoint_sink = vec![0xC8];
@@ -11306,7 +11360,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(183),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(199),
             &mut bitstream_8_checkpoint_sink,
         ) {
             Ok(_) => {
@@ -11320,8 +11374,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 183,
-                observed: 184,
+                maximum: 199,
+                observed: 200,
             }
         ));
         assert_eq!(bitstream_8_checkpoint_sink, vec![0xC8]);
@@ -11329,7 +11383,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // The 16-bit VP8L boundary remains independently enforced after the
         // new 8-bit poll.
         let bitstream_16_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(186);
+            image_slash_star::EncodePolicy::new().with_max_work_units(202);
         let bitstream_16_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11345,8 +11399,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 186,
-                observed: 187,
+                maximum: 202,
+                observed: 203,
             }
         ));
         let mut bitstream_16_checkpoint_sink = vec![0xC7];
@@ -11354,7 +11408,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(185),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(201),
             &mut bitstream_16_checkpoint_sink,
         ) {
             Ok(_) => {
@@ -11368,8 +11422,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 185,
-                observed: 186,
+                maximum: 201,
+                observed: 202,
             }
         ));
         assert_eq!(bitstream_16_checkpoint_sink, vec![0xC7]);
@@ -11378,7 +11432,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // Rust-only work-control evidence: Pillow has no caller budget or
         // equivalent result.
         let bitstream_32_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(190);
+            image_slash_star::EncodePolicy::new().with_max_work_units(206);
         let bitstream_32_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11394,8 +11448,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 190,
-                observed: 191,
+                maximum: 206,
+                observed: 207,
             }
         ));
         let mut bitstream_32_checkpoint_sink = vec![0xC6];
@@ -11403,7 +11457,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(189),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(205),
             &mut bitstream_32_checkpoint_sink,
         ) {
             Ok(_) => {
@@ -11417,8 +11471,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 189,
-                observed: 190,
+                maximum: 205,
+                observed: 206,
             }
         ));
         assert_eq!(bitstream_32_checkpoint_sink, vec![0xC6]);
@@ -11427,7 +11481,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // enforced after the finer 32-bit boundary. Pillow has no caller
         // budget or equivalent result.
         let bitstream_64_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(32_551);
+            image_slash_star::EncodePolicy::new().with_max_work_units(32_567);
         let bitstream_64_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11443,8 +11497,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 32_551,
-                observed: 32_552,
+                maximum: 32_567,
+                observed: 32_568,
             }
         ));
         let mut bitstream_64_checkpoint_sink = vec![0xC5];
@@ -11452,7 +11506,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(32_550),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(32_566),
             &mut bitstream_64_checkpoint_sink,
         ) {
             Ok(_) => {
@@ -11466,8 +11520,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 32_550,
-                observed: 32_551,
+                maximum: 32_566,
+                observed: 32_567,
             }
         ));
         assert_eq!(bitstream_64_checkpoint_sink, vec![0xC5]);
@@ -11477,7 +11531,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // boundaries. Pillow has
         // no caller budget or equivalent result.
         let finest_bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(54_486);
+            image_slash_star::EncodePolicy::new().with_max_work_units(54_502);
         let finest_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11493,8 +11547,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_486,
-                observed: 54_487,
+                maximum: 54_502,
+                observed: 54_503,
             }
         ));
         let mut finest_bitstream_checkpoint_sink = vec![0xAB];
@@ -11503,7 +11557,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(54_485),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(54_501),
                 &mut finest_bitstream_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11517,8 +11571,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_485,
-                observed: 54_486,
+                maximum: 54_501,
+                observed: 54_502,
             }
         ));
         assert_eq!(finest_bitstream_checkpoint_sink, vec![0xAB]);
@@ -11527,7 +11581,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // independently enforced after the finer 128-bit boundary.
         // Pillow has no caller budget or equivalent result.
         let fine_bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(54_539);
+            image_slash_star::EncodePolicy::new().with_max_work_units(54_555);
         let fine_bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11543,8 +11597,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_539,
-                observed: 54_540,
+                maximum: 54_555,
+                observed: 54_556,
             }
         ));
         let mut fine_bitstream_checkpoint_sink = vec![0xAA];
@@ -11553,7 +11607,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(54_538),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(54_554),
                 &mut fine_bitstream_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11567,8 +11621,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_538,
-                observed: 54_539,
+                maximum: 54_554,
+                observed: 54_555,
             }
         ));
         assert_eq!(fine_bitstream_checkpoint_sink, vec![0xAA]);
@@ -11577,7 +11631,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // independently enforced after the finer 128-bit and 256-bit
         // boundaries. Pillow has no caller budget or equivalent result.
         let bitstream_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(54_924);
+            image_slash_star::EncodePolicy::new().with_max_work_units(54_940);
         let bitstream_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11593,8 +11647,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_924,
-                observed: 54_925,
+                maximum: 54_940,
+                observed: 54_941,
             }
         ));
         let mut bitstream_checkpoint_sink = vec![0xAA];
@@ -11602,7 +11656,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(54_923),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(54_939),
             &mut bitstream_checkpoint_sink,
         ) {
             Ok(_) => {
@@ -11616,8 +11670,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 54_923,
-                observed: 54_924,
+                maximum: 54_939,
+                observed: 54_940,
             }
         ));
         assert_eq!(bitstream_checkpoint_sink, vec![0xAA]);
@@ -11626,7 +11680,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // 1,024 written bits. This is Rust-only work-control evidence:
         // Pillow has no caller token or equivalent budget result.
         let bitstream_1024_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(56_178);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_194);
         let bitstream_1024_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11642,8 +11696,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_178,
-                observed: 56_179,
+                maximum: 56_194,
+                observed: 56_195,
             }
         ));
         let mut bitstream_1024_checkpoint_sink = vec![0xA9];
@@ -11652,7 +11706,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(56_177),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(56_193),
                 &mut bitstream_1024_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11668,8 +11722,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_177,
-                observed: 56_178,
+                maximum: 56_193,
+                observed: 56_194,
             }
         ));
         assert_eq!(bitstream_1024_checkpoint_sink, vec![0xA9]);
@@ -11678,7 +11732,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // each 2,048 written bits. This is Rust-only work-control evidence:
         // Pillow has no caller token or equivalent budget result.
         let bitstream_2048_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(56_544);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_560);
         let bitstream_2048_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11694,8 +11748,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_544,
-                observed: 56_545,
+                maximum: 56_560,
+                observed: 56_561,
             }
         ));
         let mut bitstream_2048_checkpoint_sink = vec![0xA8];
@@ -11704,7 +11758,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(56_543),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(56_559),
                 &mut bitstream_2048_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11720,8 +11774,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_543,
-                observed: 56_544,
+                maximum: 56_559,
+                observed: 56_560,
             }
         ));
         assert_eq!(bitstream_2048_checkpoint_sink, vec![0xA8]);
@@ -11730,7 +11784,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // each 4,096 written bits. This is Rust-only work-control evidence:
         // Pillow has no caller token or equivalent budget result.
         let bitstream_4096_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(57_058);
+            image_slash_star::EncodePolicy::new().with_max_work_units(57_074);
         let bitstream_4096_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11746,8 +11800,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 57_058,
-                observed: 57_059,
+                maximum: 57_074,
+                observed: 57_075,
             }
         ));
         let mut bitstream_4096_checkpoint_sink = vec![0xA7];
@@ -11756,7 +11810,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(57_057),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(57_073),
                 &mut bitstream_4096_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11772,8 +11826,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 57_057,
-                observed: 57_058,
+                maximum: 57_073,
+                observed: 57_074,
             }
         ));
         assert_eq!(bitstream_4096_checkpoint_sink, vec![0xA7]);
@@ -11782,7 +11836,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // each 8,192 written bits. This is Rust-only work-control evidence:
         // Pillow has no caller token or equivalent budget result.
         let bitstream_8192_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(58_082);
+            image_slash_star::EncodePolicy::new().with_max_work_units(58_098);
         let bitstream_8192_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -11798,8 +11852,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58_082,
-                observed: 58_083,
+                maximum: 58_098,
+                observed: 58_099,
             }
         ));
         let mut bitstream_8192_checkpoint_sink = vec![0xA4];
@@ -11808,7 +11862,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 &output_lossless_image,
                 ImageFormat::WebP,
                 &lossless_options,
-                &image_slash_star::EncodePolicy::new().with_max_work_units(58_081),
+                &image_slash_star::EncodePolicy::new().with_max_work_units(58_097),
                 &mut bitstream_8192_checkpoint_sink,
             ) {
                 Ok(_) => {
@@ -11824,8 +11878,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 58_081,
-                observed: 58_082,
+                maximum: 58_097,
+                observed: 58_098,
             }
         ));
         assert_eq!(bitstream_8192_checkpoint_sink, vec![0xA4]);
@@ -11849,7 +11903,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         let bitstream_16384_image =
             DecodedImage::new(128, 128, bitstream_16384_pixels, ColorType::Rgb8);
         let bitstream_16384_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(9_325);
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_341);
         let bitstream_16384_error = match image_slash_star::encode_with_policy(
             &bitstream_16384_image,
             ImageFormat::WebP,
@@ -11865,8 +11919,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_325,
-                observed: 9_326,
+                maximum: 9_341,
+                observed: 9_342,
             }
         ));
         let mut bitstream_16384_sink = vec![0xA3];
@@ -11874,7 +11928,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_16384_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(9_324),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(9_340),
             &mut bitstream_16384_sink,
         ) {
             Ok(_) => {
@@ -11890,8 +11944,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_324,
-                observed: 9_325,
+                maximum: 9_340,
+                observed: 9_341,
             }
         ));
         assert_eq!(bitstream_16384_sink, vec![0xA3]);
@@ -11900,7 +11954,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // bitstream interval. This remains Rust-only work-control evidence:
         // Pillow has no caller budget or equivalent result.
         let bitstream_32768_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(9_326);
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_342);
         let bitstream_32768_error = match image_slash_star::encode_with_policy(
             &bitstream_16384_image,
             ImageFormat::WebP,
@@ -11916,8 +11970,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_326,
-                observed: 9_327,
+                maximum: 9_342,
+                observed: 9_343,
             }
         ));
         let mut bitstream_32768_sink = vec![0xA2];
@@ -11925,7 +11979,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_16384_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(9_325),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(9_341),
             &mut bitstream_32768_sink,
         ) {
             Ok(_) => {
@@ -11941,8 +11995,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_325,
-                observed: 9_326,
+                maximum: 9_341,
+                observed: 9_342,
             }
         ));
         assert_eq!(bitstream_32768_sink, vec![0xA2]);
@@ -11951,7 +12005,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // bitstream interval. This remains Rust-only work-control evidence:
         // Pillow has no caller budget or equivalent result.
         let bitstream_65536_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(9_327);
+            image_slash_star::EncodePolicy::new().with_max_work_units(9_343);
         let bitstream_65536_error = match image_slash_star::encode_with_policy(
             &bitstream_16384_image,
             ImageFormat::WebP,
@@ -11967,8 +12021,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_327,
-                observed: 9_328,
+                maximum: 9_343,
+                observed: 9_344,
             }
         ));
         let mut bitstream_65536_sink = vec![0xA1];
@@ -11976,7 +12030,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_16384_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(9_326),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(9_342),
             &mut bitstream_65536_sink,
         ) {
             Ok(_) => {
@@ -11992,8 +12046,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 9_326,
-                observed: 9_327,
+                maximum: 9_342,
+                observed: 9_343,
             }
         ));
         assert_eq!(bitstream_65536_sink, vec![0xA1]);
@@ -12016,7 +12070,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // bitstream interval. This remains Rust-only work-control evidence:
         // Pillow has no caller budget or equivalent result.
         let bitstream_131072_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(41_478);
+            image_slash_star::EncodePolicy::new().with_max_work_units(41_542);
         let bitstream_131072_error = match image_slash_star::encode_with_policy(
             &bitstream_131072_image,
             ImageFormat::WebP,
@@ -12032,8 +12086,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 41_478,
-                observed: 41_479,
+                maximum: 41_542,
+                observed: 41_543,
             }
         ));
         let mut bitstream_131072_sink = vec![0xA0];
@@ -12041,7 +12095,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_131072_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(41_477),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(41_541),
             &mut bitstream_131072_sink,
         ) {
             Ok(_) => {
@@ -12057,8 +12111,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 41_477,
-                observed: 41_478,
+                maximum: 41_541,
+                observed: 41_542,
             }
         ));
         assert_eq!(bitstream_131072_sink, vec![0xA0]);
@@ -12081,7 +12135,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(262_182),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(262_602),
         ) {
             Ok(_) => return Err("VP8L 262144-bit bitstream budget unexpectedly completed".into()),
             Err(error) => error,
@@ -12092,8 +12146,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 262_182,
-                observed: 262_183,
+                maximum: 262_602,
+                observed: 262_603,
             }
         ));
         let mut bitstream_262144_sink = vec![0x9F];
@@ -12101,7 +12155,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(262_181),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(262_601),
             &mut bitstream_262144_sink,
         ) {
             Ok(_) => {
@@ -12117,8 +12171,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 262_181,
-                observed: 262_182,
+                maximum: 262_601,
+                observed: 262_602,
             }
         ));
         assert_eq!(bitstream_262144_sink, vec![0x9F]);
@@ -12130,7 +12184,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(327_718),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(328_138),
         ) {
             Ok(_) => return Err("VP8L 524288-bit bitstream budget unexpectedly completed".into()),
             Err(error) => error,
@@ -12141,8 +12195,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 327_718,
-                observed: 327_719,
+                maximum: 328_138,
+                observed: 328_139,
             }
         ));
         let mut bitstream_524288_sink = vec![0x9E];
@@ -12150,7 +12204,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(327_717),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(328_137),
             &mut bitstream_524288_sink,
         ) {
             Ok(_) => {
@@ -12166,8 +12220,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 327_717,
-                observed: 327_718,
+                maximum: 328_137,
+                observed: 328_138,
             }
         ));
         assert_eq!(bitstream_524288_sink, vec![0x9E]);
@@ -12179,7 +12233,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(458_790),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(459_210),
         ) {
             Ok(_) => return Err("VP8L 1048576-bit bitstream budget unexpectedly completed".into()),
             Err(error) => error,
@@ -12190,8 +12244,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 458_790,
-                observed: 458_791,
+                maximum: 459_210,
+                observed: 459_211,
             }
         ));
         let mut bitstream_1048576_sink = vec![0x9D];
@@ -12199,7 +12253,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &bitstream_262144_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(458_789),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(459_209),
             &mut bitstream_1048576_sink,
         ) {
             Ok(_) => {
@@ -12215,8 +12269,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 458_789,
-                observed: 458_790,
+                maximum: 459_209,
+                observed: 459_210,
             }
         ));
         assert_eq!(bitstream_1048576_sink, vec![0x9D]);
@@ -12225,7 +12279,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // output interval. This is a separate Rust-only work-control
         // boundary; it is not Pillow byte/pixel parity evidence.
         let output_checkpoint_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(56_532);
+            image_slash_star::EncodePolicy::new().with_max_work_units(56_548);
         let output_checkpoint_error = match image_slash_star::encode_with_policy(
             &output_lossless_image,
             ImageFormat::WebP,
@@ -12241,8 +12295,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_532,
-                observed: 56_533,
+                maximum: 56_548,
+                observed: 56_549,
             }
         ));
         let mut output_checkpoint_sink = vec![0xAA];
@@ -12250,7 +12304,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &output_lossless_image,
             ImageFormat::WebP,
             &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(56_531),
+            &image_slash_star::EncodePolicy::new().with_max_work_units(56_547),
             &mut output_checkpoint_sink,
         ) {
             Ok(_) => return Err("VP8L output checkpoint sink budget unexpectedly completed".into()),
@@ -12262,8 +12316,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 56_531,
-                observed: 56_532,
+                maximum: 56_547,
+                observed: 56_548,
             }
         ));
         assert_eq!(output_checkpoint_sink, vec![0xAA]);

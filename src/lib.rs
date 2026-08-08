@@ -957,7 +957,8 @@ pub fn encode_with_policy(
 /// hash/order, axis-ordering, split, partition, and high-color nearest-palette
 /// candidate-ordering/scan checkpoints, fixed RGBA FASTOCTREE cell/bucket/lookup
 /// and bucket-sort intervals, and LZW input-symbol intervals, and WebP still
-/// encoding polls RGB-equal grayscale preparation after each 1,024 pixels,
+/// encoding polls lossless VP8L RGB/RGBA source-pixel materialization after
+/// each 1,024 source pixels, RGB-equal grayscale preparation after each 1,024 pixels,
 /// followed by the remaining preparation stages,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
