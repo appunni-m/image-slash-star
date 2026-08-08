@@ -1203,9 +1203,6 @@ fn optimize_sampling(
         }
     } else {
         for y in 0..height {
-            if y.is_multiple_of(64) {
-                check_token(None)?;
-            }
             for x in 0..width {
                 symbols[y * width + x] = symbols[square_size * (y * old_width + x)];
             }
@@ -2299,10 +2296,7 @@ pub(crate) fn encode_alpha(
             }
         }
     } else {
-        for (row_index, row) in alpha.chunks_exact(width as usize).enumerate() {
-            if row_index.is_multiple_of(64) {
-                check_token(None)?;
-            }
+        for row in alpha.chunks_exact(width as usize) {
             for group in row.chunks(pixels_per_group) {
                 let mut pixel = 0xff00_0000u32;
                 for (index, &value) in group.iter().enumerate() {
