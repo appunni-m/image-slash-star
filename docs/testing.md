@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-08 against current implementation revision
-`b153381bd9657b1f9da3707ca1d6f015ab174042`; the claim-ledger baseline remains
+`2dd22a3f8f535563ae5db4f80c55829ddcf2c94f`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -411,8 +411,9 @@ VP8L additionally charges around predictor tile scans/mode application and
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
 entropy analysis, transform selection/application, bounded backward-reference
-length-cost table, equal-cost interval setup, and saturated cost-interval
-fallback scans after each 1,024 entries,
+length-cost table and equal-cost interval setup after each 1,024 entries,
+non-saturated interval split/merge after each 1,024 interval-work entries, and
+saturated cost-interval fallback scans after each 1,024 entries,
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
@@ -492,8 +493,9 @@ logical first-partition intervals, 16,384-boolean first-partition bit intervals,
 and
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L predictor/cross-color/entropy/transform, bounded backward-reference
-length-cost table, equal-cost interval setup, and saturated cost-interval
-fallback scans after each 1,024 entries,
+length-cost table and equal-cost interval setup after each 1,024 entries,
+non-saturated interval split/merge after each 1,024 interval-work entries, and
+saturated cost-interval fallback scans after each 1,024 entries,
 search/match-length/cache/trace and copy-token cache-population scans after each
 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
@@ -561,7 +563,7 @@ defensive/specification contract below, not by synthetic parity rows.
 ## Current revision-bound evidence
 
 For implementation revision
-`b153381bd9657b1f9da3707ca1d6f015ab174042`, the existing work-budget test
+`2dd22a3f8f535563ae5db4f80c55829ddcf2c94f`, the existing work-budget test
 evidence remains at commit `0675baea3b97104d68636e8fe363ed61ba625c01`, and runtime harness commit
 `5af768432579730f01e6af0bf595ac4f02a371df`, the fixture manifest and managed
 commands report:
@@ -583,9 +585,11 @@ Pillow assertions, and feature-gate assertions do not belong to the oracle
 matrix.
 
 For the current implementation and test/runtime revision, token-aware WebP
-backward-reference tracing now checkpoints the saturated cost-interval fallback
-and its long length-interval enumeration after each 1,024 entries, while the
-ordinary no-token path retains its original tight loops. The existing Rust-only
+backward-reference tracing now checkpoints the non-saturated interval
+split/merge comparisons after each 1,024 interval-work entries, the saturated
+cost-interval fallback, and its long length-interval enumeration after each
+1,024 entries, while the ordinary no-token path retains its original tight
+loops. The existing Rust-only
 work-budget contract exercises the RGB-equal grayscale preparation checkpoint
 after each 1,024 pixels, the backward-reference length-cost table and equal-cost
 interval setup after each 1,024 entries, the VP8L copy-token cache
@@ -599,26 +603,26 @@ or coverage-only hook. The cache probe proves `maximum: 136,752`,
 `observed: 136,790` in the caller-owned-sink path, with sink prefix
 `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45, 0x42,
 0x50]`. Managed Pillow parity run
-`a7977d85-8a6c-4638-9f1b-767d6b02f067` passed 1,445/1,445 checks with zero
-skips in 68,249 ms. Feature-matrix run
-`7fc37983-e5fd-4ba5-b02d-daa39aa7a445` passed all 33/33 configured lanes in
-36,684 ms after the source rebuild. Its retained log records `cache=warm lanes=12 test_threads=1
+`49b5b22c-e8fc-4480-b6a3-ad309dae729a` passed 1,445/1,445 checks with zero
+skips in 56,159 ms. Feature-matrix run
+`a3b01f06-c30b-4dbf-80ba-3bd870a6ed61` passed all 33/33 configured lanes in
+63,198 ms after the source rebuild. Its retained log records `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, ends with `capability tables OK: every native
 and wasm32-wasip1 lane agrees`, and targeted searches returned no
 lock-wait/build-directory/package-cache match. Managed LLVM coverage run
-`4e4dd8e1-8e8c-4604-bbb9-0580814310bd` passed 85/85 tests in 53,103 ms and
-ingested snapshot `a859ed98-2a59-4668-bc56-7876f7cd8a9f`:
-52,958/53,567 lines, 7,443/7,590 branches, 2,991/3,067 functions, and
-81,900/83,240 regions. Compared with the preceding accepted snapshot
-`b437b475-f927-458a-accd-def4c5ed79e1`, covered/source totals changed by
-`+55/+66/+9/+14/+2/+2/+63/+86` for covered/source lines, covered/source
+`6b603258-557a-4872-8f99-a17d625a5d6a` passed 85/85 tests in 88,233 ms and
+ingested snapshot `94d9c28e-055e-4808-89a6-99887ab072ff`:
+53,042/53,652 lines, 7,472/7,622 branches, 2,993/3,069 functions, and
+82,026/83,373 regions. Compared with the preceding accepted snapshot
+`a859ed98-2a59-4668-bc56-7876f7cd8a9f`, covered/source totals changed by
+`+84/+85/+29/+32/+2/+2/+126/+133` for covered/source lines, covered/source
 branches, covered/source functions, and covered/source regions. The changed
 native WebP encoder reports 1,750/1,795 lines, 361/376 branches, 86/86
 functions, and 2,512/2,688 regions; its backward-reference module reports
-1,443/1,460 lines, 381/390 branches, 64/64 functions, and 2,197/2,286
+1,527/1,545 lines, 410/422 branches, 66/66 functions, and 2,323/2,419
 regions. The known LLVM JSON segment-normalization warning remains. The
-strict aggregate shortfall is 609 lines, 147 branches, 76 functions, and
-1,340 regions; coverage is
+strict aggregate shortfall is 610 lines, 150 branches, 76 functions, and
+1,347 regions; coverage is
 implementation evidence, not Pillow parity, and no coverage-only test was
 added. A same-workspace warm-cache comparison measured 7.31 seconds at 12
 lanes/1 test worker versus 11.11 seconds at 12 lanes/3 workers and 11.55
@@ -1604,7 +1608,8 @@ because managed cache and runner state can differ.
 ## Latest implementation acceptance
 
 Current acceptance record: WebP VP8L histogram population, combined
-entropy-cost, merge, backward-reference cost-manager setup, saturated fallback,
+entropy-cost, merge, backward-reference cost-manager setup, non-saturated
+interval split/merge, saturated fallback,
 and cost, Huffman RLE, canonical-code,
 Huffman-tree simple-tree symbol-discovery, token-frequency and trailing-token-
 trim, and RGB-equal grayscale-preparation checkpoints
@@ -1614,9 +1619,10 @@ The token-aware VP8L histogram analysis path now charges cooperative
 checkpoints after each 64 symbols while scanning histogram populations,
 combined entropy costs, and histogram merges. The backward-reference length-cost
 table and equal-cost interval setup now charge after each 1,024 entries. The
-token-aware saturated cost-interval fallback and long length-interval
-enumeration also charge after each 1,024 entries, while the ordinary no-token
-path retains its original tight loops. Candidate
+token-aware non-saturated interval split/merge path now charges after each
+1,024 interval-work entries; the saturated cost-interval fallback and long
+length-interval enumeration also charge after each 1,024 entries, while the
+ordinary no-token path retains its original tight loops. Candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
 and each 64-symbol population scan. Huffman RLE preparation, canonical-code
 assignment, and compressed Huffman-token generation now charge after each 64
@@ -1631,7 +1637,9 @@ slice is committed at revision
 cost-manager setup are committed at `0675baea3b97104d68636e8fe363ed61ba625c01`
 (following `063f00e145aff455c30656b3559c8881b8e51a6f`), and the saturated
 cost-interval implementation is committed at
-`b153381bd9657b1f9da3707ca1d6f015ab174042`. The existing
+`b153381bd9657b1f9da3707ca1d6f015ab174042`; the non-saturated interval
+split/merge implementation is committed at
+`2dd22a3f8f535563ae5db4f80c55829ddcf2c94f`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` uses deterministic RGB
 probes and proves exact whole-buffer and caller-owned-sink rejection at
 `maximum: 19`, `observed: 20` with sentinel `[0xAD]`, `maximum: 37`,
@@ -1660,7 +1668,10 @@ retains `[0xB5, 0x52, 0x49, 0x46, 0x46, 0x9C, 0x04, 0x00, 0x00, 0x57, 0x45,
 0x42, 0x50]`.
 This is Rust-only work-control evidence: Pillow has no caller token,
 work-budget result, or caller-owned sink, so no parity row, fixture, diagnostic
-origin, new test function, or coverage-only hook was added.
+origin, new test function, or coverage-only hook was added. The existing
+feature-gated assertion reaches the earlier setup rejection before the finer
+non-saturated interval split/merge checkpoint, so no exact observed boundary is
+claimed for that path.
 
 The test harness follow-up that removes duplicate unknown-target integration
 linting is committed at
@@ -1671,22 +1682,22 @@ now lint the library surface instead of rebuilding integration targets already
 compiled by every native and WASI feature lane; all 33 lanes, the two
 unknown-target no-run checks, 45 feature-gate assertions per native/WASI lane,
 and capability-table agreement remain in scope. Managed Pillow parity run
-`a7977d85-8a6c-4638-9f1b-767d6b02f067` passed 1,445/1,445 checks in 68,249
-ms; feature-matrix run `7fc37983-e5fd-4ba5-b02d-daa39aa7a445` passed all 33/33
-configured lanes in 36,684 ms after the source rebuild with `cache=warm lanes=12 test_threads=1
+`49b5b22c-e8fc-4480-b6a3-ad309dae729a` passed 1,445/1,445 checks in 56,159
+ms; feature-matrix run `a3b01f06-c30b-4dbf-80ba-3bd870a6ed61` passed all 33/33
+configured lanes in 63,198 ms after the source rebuild with `cache=warm lanes=12 test_threads=1
 build_jobs=1 debug=0 verbose=0`, the terminal capability agreement, and no
 targeted lock-wait/build-directory/package-cache matches. Coverage MCP run
-`4e4dd8e1-8e8c-4604-bbb9-0580814310bd` passed 85/85 tests in 53,103 ms and
-ingested snapshot `a859ed98-2a59-4668-bc56-7876f7cd8a9f`: 52,958/53,567
-lines, 7,443/7,590 branches, 2,991/3,067 functions, and 81,900/83,240
-regions. Compared with snapshot `b437b475-f927-458a-accd-def4c5ed79e1`,
-covered/source totals changed by +55/+66 lines, +9/+14 branches, +2/+2
-functions, and +63/+86 regions. Native WebP encoder reports 1,750/1,795
+`6b603258-557a-4872-8f99-a17d625a5d6a` passed 85/85 tests in 88,233 ms and
+ingested snapshot `94d9c28e-055e-4808-89a6-99887ab072ff`: 53,042/53,652
+lines, 7,472/7,622 branches, 2,993/3,069 functions, and 82,026/83,373
+regions. Compared with snapshot `a859ed98-2a59-4668-bc56-7876f7cd8a9f`,
+covered/source totals changed by +84/+85 lines, +29/+32 branches, +2/+2
+functions, and +126/+133 regions. Native WebP encoder reports 1,750/1,795
 lines, 361/376 branches, 86/86 functions, and 2,512/2,688 regions; its
-backward-reference module reports 1,443/1,460 lines, 381/390 branches, 64/64
-functions, and 2,197/2,286 regions. Coverage is implementation evidence, not Pillow parity; the known LLVM
-segment-normalization warning and the 609-line, 147-branch, 76-function,
-1,340-region aggregate shortfall remain. A same-workspace warm-cache comparison
+backward-reference module reports 1,527/1,545 lines, 410/422 branches, 66/66
+functions, and 2,323/2,419 regions. Coverage is implementation evidence, not Pillow parity; the known LLVM
+segment-normalization warning and the 610-line, 150-branch, 76-function,
+1,347-region aggregate shortfall remain. A same-workspace warm-cache comparison
 measured 7.31 seconds at 12 lanes/1 test worker versus 11.11 seconds at 12
 lanes/3 workers and 11.55 seconds at 6 lanes/2 workers; these are local
 execution observations, not universal speed claims. Managed durations remain
