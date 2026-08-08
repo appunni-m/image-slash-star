@@ -174,6 +174,16 @@ struct TrellisNode {
     level: i16,
 }
 
+pub(super) struct TrellisQuantizationInput<'a> {
+    pub(super) coefficients: &'a mut [i16; 16],
+    pub(super) levels: &'a mut [i16; 16],
+    pub(super) initial_context: usize,
+    pub(super) coefficient_type: usize,
+    pub(super) matrix: &'a QuantMatrix,
+    pub(super) lambda: i32,
+    pub(super) probabilities: &'a [[[[u8; 11]; 3]; 8]; 4],
+}
+
 /// Trellis quantization used by libwebp's method 6 luma search.
 #[inline(always)]
 pub(super) fn trellis_quantize_block(
@@ -186,13 +196,15 @@ pub(super) fn trellis_quantize_block(
     probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> bool {
     trellis_quantize_block_with_control(
-        coefficients,
-        levels,
-        initial_context,
-        coefficient_type,
-        matrix,
-        lambda,
-        probabilities,
+        TrellisQuantizationInput {
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+        },
         || Ok(()),
     )
     .unwrap_or_default()
@@ -200,18 +212,21 @@ pub(super) fn trellis_quantize_block(
 
 /// Trellis-quantize one block while polling its dynamic-programming work.
 pub(super) fn trellis_quantize_block_with_control<F>(
-    coefficients: &mut [i16; 16],
-    levels: &mut [i16; 16],
-    initial_context: usize,
-    coefficient_type: usize,
-    matrix: &QuantMatrix,
-    lambda: i32,
-    probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    input: TrellisQuantizationInput<'_>,
     mut checkpoint: F,
 ) -> CodecResult<bool>
 where
     F: FnMut() -> CodecResult<()>,
 {
+    let TrellisQuantizationInput {
+        coefficients,
+        levels,
+        initial_context,
+        coefficient_type,
+        matrix,
+        lambda,
+        probabilities,
+    } = input;
     const WEIGHTS: [i64; 16] = [30, 27, 19, 11, 27, 24, 17, 10, 19, 17, 12, 8, 11, 10, 8, 6];
     const MAX_LEVEL: u32 = 2_047;
     const MAX_SCORE: i64 = i64::MAX / 4;
