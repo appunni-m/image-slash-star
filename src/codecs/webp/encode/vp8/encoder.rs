@@ -112,27 +112,34 @@ fn encode_vp8_planes(
     let chroma_height = height.div_ceil(2);
     let padded_chroma_width = padded_width / 2;
     let padded_chroma_height = padded_height / 2;
-    let y_plane = pad_plane(
+    let mut padding_items = 0_usize;
+    let y_plane = pad_plane_with_token(
         &y_plane,
         width as usize,
         height as usize,
         padded_width as usize,
         padded_height as usize,
-    );
-    let u_plane = pad_plane(
+        token,
+        &mut padding_items,
+    )?;
+    let u_plane = pad_plane_with_token(
         &u_plane,
         chroma_width as usize,
         chroma_height as usize,
         padded_chroma_width as usize,
         padded_chroma_height as usize,
-    );
-    let v_plane = pad_plane(
+        token,
+        &mut padding_items,
+    )?;
+    let v_plane = pad_plane_with_token(
         &v_plane,
         chroma_width as usize,
         chroma_height as usize,
         padded_chroma_width as usize,
         padded_chroma_height as usize,
-    );
+        token,
+        &mut padding_items,
+    )?;
     crate::codecs::error::check_cancelled(token)?;
     let analysis = analyze(
         [&y_plane, &u_plane, &v_plane],
@@ -284,6 +291,40 @@ fn pad_plane(
     output
 }
 
+// VP8 operates on 16x16 macroblocks, so non-aligned input dimensions require
+// an O(padded-pixel) edge-replication pass before analysis. Keep the ordinary
+// encoder on the original tight loop, while the caller-controlled path polls
+// the shared Y/U/V padding work at the same 1,024-item granularity as the
+// surrounding WebP preparation stages. The allocation itself remains covered
+// by the existing no-recoverable-OOM policy.
+fn pad_plane_with_token(
+    input: &[u8],
+    width: usize,
+    height: usize,
+    padded_width: usize,
+    padded_height: usize,
+    token: Option<&crate::CancellationToken>,
+    padding_items: &mut usize,
+) -> CodecResult<Vec<u8>> {
+    let Some(token) = token else {
+        return Ok(pad_plane(input, width, height, padded_width, padded_height));
+    };
+    let mut output = vec![0; padded_width.wrapping_mul(padded_height)];
+    for y in 0..padded_height {
+        let source_y = y.min(height.saturating_sub(1));
+        for x in 0..padded_width {
+            output[y.wrapping_mul(padded_width).wrapping_add(x)] = input[source_y
+                .wrapping_mul(width)
+                .wrapping_add(x.min(width.saturating_sub(1)))];
+            *padding_items = (*padding_items).saturating_add(1);
+            if (*padding_items).is_multiple_of(PAD_CHECKPOINT_ITEMS) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+        }
+    }
+    Ok(output)
+}
+
 // ===========================================================================
 // Bitstream helpers
 // ===========================================================================
@@ -294,6 +335,7 @@ const GAMMA_FIX: i32 = 12;
 const GAMMA_TAB_FIX: i32 = 7;
 const GAMMA_TAB_SIZE: usize = 1 << (GAMMA_FIX - GAMMA_TAB_FIX);
 const YUV_CHECKPOINT_ITEMS: usize = 1_024;
+const PAD_CHECKPOINT_ITEMS: usize = 1_024;
 const TRANSPARENT_AREA_CHECKPOINT_PIXELS: usize = 1_024;
 
 trait TransparentAreaCheckpoint {
