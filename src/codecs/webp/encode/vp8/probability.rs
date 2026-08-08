@@ -10,6 +10,7 @@ use crate::codecs::CodecResult;
 type Statistics = [[[[u32; 11]; 3]; 8]; 4];
 
 const PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
+const STATISTICS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AdaptedProbabilities {
@@ -130,11 +131,53 @@ fn record_block(
     1
 }
 
-fn collect_statistics(
+trait StatisticsCheckpointControl {
+    fn observe(&mut self) -> CodecResult<()>;
+}
+
+struct NoopStatisticsCheckpoint;
+
+impl StatisticsCheckpointControl for NoopStatisticsCheckpoint {
+    #[inline(always)]
+    fn observe(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct TokenStatisticsCheckpoint<'a> {
+    token: &'a crate::CancellationToken,
+    macroblock_items: usize,
+}
+
+impl<'a> TokenStatisticsCheckpoint<'a> {
+    fn new(token: &'a crate::CancellationToken) -> Self {
+        Self {
+            token,
+            macroblock_items: 0,
+        }
+    }
+}
+
+impl StatisticsCheckpointControl for TokenStatisticsCheckpoint<'_> {
+    #[inline]
+    fn observe(&mut self) -> CodecResult<()> {
+        self.macroblock_items = self.macroblock_items.saturating_add(1);
+        if self
+            .macroblock_items
+            .is_multiple_of(STATISTICS_CHECKPOINT_MACROBLOCKS)
+        {
+            crate::codecs::error::check_cancelled(Some(self.token))?;
+        }
+        Ok(())
+    }
+}
+
+fn collect_statistics_with_checkpoint<C: StatisticsCheckpointControl>(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     token_buffer: bool,
-) -> Statistics {
+    checkpoint: &mut C,
+) -> CodecResult<Statistics> {
     let mut statistics = [[[[0; 11]; 3]; 8]; 4];
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
@@ -219,9 +262,10 @@ fn collect_statistics(
                     }
                 }
             }
+            checkpoint.observe()?;
         }
     }
-    statistics
+    Ok(statistics)
 }
 
 pub(super) fn adapt_coefficients(
@@ -230,7 +274,23 @@ pub(super) fn adapt_coefficients(
     token_buffer: bool,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<AdaptedProbabilities> {
-    let statistics = collect_statistics(decisions, macroblock_width, token_buffer);
+    let statistics = if let Some(token) = token {
+        let mut checkpoint = TokenStatisticsCheckpoint::new(token);
+        collect_statistics_with_checkpoint(
+            decisions,
+            macroblock_width,
+            token_buffer,
+            &mut checkpoint,
+        )?
+    } else {
+        let mut checkpoint = NoopStatisticsCheckpoint;
+        collect_statistics_with_checkpoint(
+            decisions,
+            macroblock_width,
+            token_buffer,
+            &mut checkpoint,
+        )?
+    };
     let mut coefficients = COEFF_PROBS;
     let mut updates = [[[[false; 11]; 3]; 8]; 4];
     let mut probability_items: usize = 0;
