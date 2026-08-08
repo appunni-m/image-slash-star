@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-08 against the committed tree based on
-`3e139ae7fc5bc1bfaeb3440c4112394cb33eeff3`; the claim-ledger baseline remains
+`1a8cae394ad0265e4f0a3bf84511b80e7e2a7842`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -353,8 +353,9 @@ translation cannot be bypassed.
 | `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
 | `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
 
-The WebP VP8L token-aware list includes cost-manager interval-update and cleanup
-scans after each 256 cumulative interval entries, repeated-run hash-chain
+The WebP VP8L token-aware list includes entropy-mode histogram-cost scans after
+each 64 symbols, cost-manager interval-update and cleanup scans after each 256
+cumulative interval entries, repeated-run hash-chain
 insertion and copy-token cache-population checkpoints after each 256 pixels, Huffman-tree
 simple-tree symbol-discovery checkpoints
 after each 64 code-length slots, code-length-token frequency, and trailing
@@ -576,7 +577,8 @@ VP8L additionally charges around RGB-equal grayscale preparation after each
 1,024 pixels, predictor tile scans, mode application, and
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
-entropy analysis, transform selection/application, bounded backward-reference
+entropy-mode histogram-cost analysis after each 64 symbols, transform
+selection/application, bounded backward-reference
 length-cost table and equal-cost interval setup after each 1,024 entries,
 token-aware cost-manager interval-update and cleanup scans after each 256
 cumulative interval entries,
