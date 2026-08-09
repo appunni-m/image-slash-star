@@ -69,6 +69,7 @@ const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_MAX_PALETTE_ENTRIES: usize = 256;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
@@ -2343,8 +2344,9 @@ fn collect_palette(
             }
         }
         // The ordered drain is also O(unique-color-count), which can remain
-        // image-scaled after the source scan has finished. Keep the ordinary
-        // no-token collect unchanged and poll only the caller-controlled path.
+        // image-scaled after the source scan has finished. Keep the complete
+        // drain for the caller-controlled path so its work-budget cadence
+        // remains stable; the ordinary path can stop at the palette cutoff.
         let mut values = Vec::with_capacity(palette.len());
         let mut values_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
         for value in palette {
@@ -2357,12 +2359,21 @@ fn collect_palette(
         }
         Ok(values)
     } else {
-        Ok(pixels
-            .iter()
-            .copied()
-            .collect::<std::collections::BTreeSet<_>>()
-            .into_iter()
-            .collect())
+        let mut palette = std::collections::BTreeSet::new();
+        for &pixel in pixels {
+            palette.insert(pixel);
+            if palette.len() > VP8L_MAX_PALETTE_ENTRIES {
+                // More than 256 colors can never select palette mode. Keep a
+                // sorted 257-entry sentinel so the caller can distinguish
+                // that case without retaining or ordering the rest of the
+                // image's unique colors; this vector is ignored by every
+                // non-palette stream. The token-aware path deliberately keeps
+                // its complete ordered drain for the established work-budget
+                // contract below.
+                return Ok(palette.into_iter().collect());
+            }
+        }
+        Ok(palette.into_iter().collect())
     }
 }
 
@@ -2495,7 +2506,7 @@ fn encode_frame(
     check_token(token)?;
 
     let palette = collect_palette(&pixels, token)?;
-    let palette_size = (palette.len() <= 256).then_some(palette.len());
+    let palette_size = (palette.len() <= VP8L_MAX_PALETTE_ENTRIES).then_some(palette.len());
     let transform_bits = if palette_size.is_some() { 5 } else { 3 };
     let (entropy_mode, red_and_blue_zero) = analyze_entropy(
         &pixels,
