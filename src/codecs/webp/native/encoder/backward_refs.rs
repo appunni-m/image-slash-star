@@ -846,9 +846,22 @@ fn population_estimate_fixed_with_checkpoint(
     Ok(refined + initial + (u64::from(extra) << 13))
 }
 
-pub(super) fn estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
+#[derive(Default)]
+struct CostEstimateScratch {
+    green: Vec<u32>,
+}
+
+impl CostEstimateScratch {
+    fn prepare(&mut self, cache_bits: u8) -> &mut [u32] {
+        let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+        self.green.resize(280 + cache_size, 0);
+        self.green.fill(0);
+        &mut self.green
+    }
+}
+
+fn estimated_bits_into(tokens: &[Token], cache_bits: u8, scratch: &mut CostEstimateScratch) -> u64 {
+    let green = scratch.prepare(cache_bits);
     let mut red = [0_u32; 256];
     let mut blue = [0_u32; 256];
     let mut alpha = [0_u32; 256];
@@ -876,7 +889,7 @@ pub(super) fn estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
             Token::Cache(index) => green[280 + index] += 1,
         }
     }
-    population_estimate_fixed(&green)
+    population_estimate_fixed(green)
         + population_estimate_fixed(&red)
         + population_estimate_fixed(&blue)
         + population_estimate_fixed(&alpha)
@@ -888,12 +901,12 @@ fn estimated_bits_with_checkpoint(
     tokens: &[Token],
     cache_bits: u8,
     token: CheckpointToken<'_>,
+    scratch: &mut CostEstimateScratch,
 ) -> CheckpointResult<u64> {
     if token.is_none() {
-        return Ok(estimated_bits(tokens, cache_bits));
+        return Ok(estimated_bits_into(tokens, cache_bits, scratch));
     }
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
+    let green = scratch.prepare(cache_bits);
     let mut red = [0_u32; 256];
     let mut blue = [0_u32; 256];
     let mut alpha = [0_u32; 256];
@@ -924,7 +937,7 @@ fn estimated_bits_with_checkpoint(
             checkpoint(token)?;
         }
     }
-    Ok(population_estimate_fixed_with_checkpoint(&green, token)?
+    Ok(population_estimate_fixed_with_checkpoint(green, token)?
         + population_estimate_fixed_with_checkpoint(&red, token)?
         + population_estimate_fixed_with_checkpoint(&blue, token)?
         + population_estimate_fixed_with_checkpoint(&alpha, token)?
@@ -932,9 +945,12 @@ fn estimated_bits_with_checkpoint(
         + (u64::from(extra) << 23))
 }
 
-fn cache_estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
+fn cache_estimated_bits_into(
+    tokens: &[Token],
+    cache_bits: u8,
+    scratch: &mut CostEstimateScratch,
+) -> u64 {
+    let green = scratch.prepare(cache_bits);
     let mut red = [0_u32; 256];
     let mut blue = [0_u32; 256];
     let mut alpha = [0_u32; 256];
@@ -951,7 +967,7 @@ fn cache_estimated_bits(tokens: &[Token], cache_bits: u8) -> u64 {
             Token::Cache(index) => green[280 + index] += 1,
         }
     }
-    population_estimate_fixed(&green)
+    population_estimate_fixed(green)
         + population_estimate_fixed(&red)
         + population_estimate_fixed(&blue)
         + population_estimate_fixed(&alpha)
@@ -961,12 +977,12 @@ fn cache_estimated_bits_with_checkpoint(
     tokens: &[Token],
     cache_bits: u8,
     token: CheckpointToken<'_>,
+    scratch: &mut CostEstimateScratch,
 ) -> CheckpointResult<u64> {
     if token.is_none() {
-        return Ok(cache_estimated_bits(tokens, cache_bits));
+        return Ok(cache_estimated_bits_into(tokens, cache_bits, scratch));
     }
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
+    let green = scratch.prepare(cache_bits);
     let mut red = [0_u32; 256];
     let mut blue = [0_u32; 256];
     let mut alpha = [0_u32; 256];
@@ -986,7 +1002,7 @@ fn cache_estimated_bits_with_checkpoint(
             checkpoint(token)?;
         }
     }
-    Ok(population_estimate_fixed_with_checkpoint(&green, token)?
+    Ok(population_estimate_fixed_with_checkpoint(green, token)?
         + population_estimate_fixed_with_checkpoint(&red, token)?
         + population_estimate_fixed_with_checkpoint(&blue, token)?
         + population_estimate_fixed_with_checkpoint(&alpha, token)?)
@@ -1891,14 +1907,17 @@ pub(super) fn candidates(
         return Ok(vec![(Vec::new(), 0)]);
     }
     let chain = fill_hash_chain(pixels, width, quality, token)?;
-    let choose_cache = |source: Vec<Token>| -> CheckpointResult<(Vec<Token>, u8, u64)> {
+    let mut estimate_scratch = CostEstimateScratch::default();
+    let choose_cache = |source: Vec<Token>,
+                        scratch: &mut CostEstimateScratch|
+     -> CheckpointResult<(Vec<Token>, u8, u64)> {
         let maximum = if allow_cache { max_cache_bits } else { 0 };
         // The inclusive range always contains cache-bit value zero.
         let mut best = None;
         for bits in 0..=maximum {
             checkpoint(token)?;
             let cached = with_cache(pixels, &source, bits, token)?;
-            let cost = cache_estimated_bits_with_checkpoint(&cached, bits, token)?;
+            let cost = cache_estimated_bits_with_checkpoint(&cached, bits, token, scratch)?;
             if best
                 .as_ref()
                 .is_none_or(|(_, _, best_cost)| cost < *best_cost)
@@ -1909,12 +1928,13 @@ pub(super) fn candidates(
         let Some((tokens, bits, _)) = best else {
             unreachable!("the inclusive cache-bit range is never empty");
         };
-        let cost = estimated_bits_with_checkpoint(&tokens, bits, token)?;
+        let cost = estimated_bits_with_checkpoint(&tokens, bits, token, scratch)?;
         checkpoint(token)?;
         Ok((tokens, bits, cost))
     };
     let improve = |mut candidate: (Vec<Token>, u8, u64),
-                   source_chain: &[(usize, usize)]|
+                   source_chain: &[(usize, usize)],
+                   scratch: &mut CostEstimateScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
         if quality >= 25 {
             checkpoint(token)?;
@@ -1926,7 +1946,7 @@ pub(super) fn candidates(
                 candidate.1,
                 token,
             )?;
-            let cost = estimated_bits_with_checkpoint(&traced, candidate.1, token)?;
+            let cost = estimated_bits_with_checkpoint(&traced, candidate.1, token, scratch)?;
             if cost < candidate.2 {
                 candidate = (traced, candidate.1, cost);
             }
@@ -1934,10 +1954,10 @@ pub(super) fn candidates(
         Ok(candidate)
     };
 
-    let standard = choose_cache(lz77(pixels, width, &chain, token)?)?;
-    let rle = choose_cache(rle(pixels, width, token)?)?;
+    let standard = choose_cache(lz77(pixels, width, &chain, token)?, &mut estimate_scratch)?;
+    let rle = choose_cache(rle(pixels, width, token)?, &mut estimate_scratch)?;
     let mut primary = if standard.2 <= rle.2 {
-        improve(standard, &chain)?
+        improve(standard, &chain, &mut estimate_scratch)?
     } else {
         rle
     };
@@ -1947,8 +1967,11 @@ pub(super) fn candidates(
     // configuration for palette images containing at most sixteen colors.
     if allow_cache && max_cache_bits <= 4 {
         let chain = box_chain(pixels, width, &chain, token)?;
-        let mut box_candidate =
-            improve(choose_cache(lz77(pixels, width, &chain, token)?)?, &chain)?;
+        let mut box_candidate = improve(
+            choose_cache(lz77(pixels, width, &chain, token)?, &mut estimate_scratch)?,
+            &chain,
+            &mut estimate_scratch,
+        )?;
         result.push((std::mem::take(&mut box_candidate.0), box_candidate.1));
     }
     Ok(result)
