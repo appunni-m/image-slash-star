@@ -10034,6 +10034,67 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // WebP source-mode preparation now expands L8 pixels in token-aware
+        // 1,024-pixel intervals before VP8L work begins. Pillow has no caller
+        // token, typed work-budget result, or caller-owned sink, so this is
+        // Rust-only evidence with no parity row, manifest fixture, diagnostic
+        // origin, new test function, or coverage-only hook.
+        let preparation_image = DecodedImage::new(1_024, 1, vec![128; 1_024], ColorType::L8);
+        let preparation_expected =
+            image_slash_star::encode(&preparation_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &preparation_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &unlimited,
+            )?,
+            preparation_expected,
+            "an ample WebP source-preparation budget preserves byte identity"
+        );
+        let preparation_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3);
+        let preparation_error = match image_slash_star::encode_with_policy(
+            &preparation_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &preparation_policy,
+        ) {
+            Ok(_) => return Err("WebP source preparation budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            preparation_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        let mut preparation_sink = vec![0xCA];
+        let preparation_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &preparation_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &preparation_policy,
+            &mut preparation_sink,
+        ) {
+            Ok(_) => return Err("WebP source preparation sink budget wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            preparation_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 3,
+                observed: 4,
+            }
+        ));
+        assert_eq!(preparation_sink, vec![0xCA]);
+
         // A constant 1x512 RGB image reaches the long backward-reference result
         // backfill. The token-aware path now polls every 256 backfilled entries
         // instead of allowing the outer 1,024-pixel checkpoint to be skipped;
