@@ -894,12 +894,14 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         15,
         token,
     )?;
-    let symbols = if let Some(token) = token {
-        let mut symbols = Vec::with_capacity(3);
+    let mut symbols = [0_usize; 3];
+    let symbol_count = if let Some(token) = token {
+        let mut count = 0;
         for (index, &length) in lengths.iter().enumerate() {
             if length != 0 {
-                symbols.push(index);
-                if symbols.len() == 3 {
+                symbols[count] = index;
+                count += 1;
+                if count == symbols.len() {
                     break;
                 }
             }
@@ -907,19 +909,24 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
                 check_token(Some(token))?;
             }
         }
-        symbols
+        count
     } else {
-        lengths
-            .iter()
-            .enumerate()
-            .filter_map(|(symbol, &length)| (length != 0).then_some(symbol))
-            .take(3)
-            .collect::<Vec<_>>()
+        let mut count = 0;
+        for (index, &length) in lengths.iter().enumerate() {
+            if length != 0 {
+                symbols[count] = index;
+                count += 1;
+                if count == symbols.len() {
+                    break;
+                }
+            }
+        }
+        count
     };
-    if symbols.len() <= 2 && symbols.iter().all(|&symbol| symbol < 256) {
-        let first = symbols.first().copied().unwrap_or(0);
+    if symbol_count <= 2 && symbols[..symbol_count].iter().all(|&symbol| symbol < 256) {
+        let first = symbols[0];
         w.write_bits(1, 1)?;
-        w.write_bits(u64::from(symbols.len() == 2), 1)?;
+        w.write_bits(u64::from(symbol_count == 2), 1)?;
         if first <= 1 {
             w.write_bits(0, 1)?;
             w.write_bits(first as u64, 1)?;
@@ -927,12 +934,12 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
             w.write_bits(1, 1)?;
             w.write_bits(first as u64, 8)?;
         }
-        if symbols.len() == 2 {
+        if symbol_count == 2 {
             w.write_bits(symbols[1] as u64, 8)?;
         }
         lengths.fill(0);
         codes.fill(0);
-        if symbols.len() == 2 {
+        if symbol_count == 2 {
             lengths[symbols[0]] = 1;
             lengths[symbols[1]] = 1;
             codes[symbols[1]] = 1;
