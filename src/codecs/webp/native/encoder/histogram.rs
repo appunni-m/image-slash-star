@@ -785,11 +785,27 @@ pub(super) fn cluster(
             histogram.analyze();
         }
     }
-    let mut clusters = originals
-        .iter()
-        .filter(|histogram| histogram.used.iter().any(|&used| used))
-        .cloned()
-        .collect::<Vec<_>>();
+    // Filtering and cloning the populated tile histograms is image-scaled
+    // work. Keep the token-aware path interruptible at the same 64-histogram
+    // cadence used by the clustering scans while retaining the original
+    // iterator for the ordinary no-token path.
+    let mut clusters = Vec::new();
+    if let Some(token) = token {
+        for (index, histogram) in originals.iter().enumerate() {
+            if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
+                checkpoint(Some(token))?;
+            }
+            if histogram.used.iter().any(|&used| used) {
+                clusters.push(histogram.clone());
+            }
+        }
+    } else {
+        clusters = originals
+            .iter()
+            .filter(|histogram| histogram.used.iter().any(|&used| used))
+            .cloned()
+            .collect::<Vec<_>>();
+    }
     if clusters.len() > 2 * BIN_SIZE && quality < 100 {
         entropy_bin_combine(&mut clusters, token)?;
     }
