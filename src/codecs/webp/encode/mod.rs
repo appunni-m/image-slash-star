@@ -51,9 +51,11 @@ fn checkpoint_after_prepare_pixel(
 /// preparation, RGBA alpha/RGB extraction, RGB/RGBA source-pixel materialization,
 /// image-palette construction, and palette-mode index packing after each 1,024
 /// source pixels, plus transparent-pixel hidden-RGB cleanup after each 1,024
-/// scanned pixels. Predictor mode application also polls its pre-transform
-/// source snapshot copy after each 1,024 pixels when a caller supplies a
-/// cancellation token. The token-aware lossless backward-reference cost manager
+/// scanned pixels. Predictor mode application polls its pre-transform source
+/// snapshot copy after each 1,024 source pixels and copies each wide source row
+/// in completed 1,024-pixel chunks when a caller supplies a cancellation token;
+/// the no-token path retains its original bulk row copy. The token-aware
+/// lossless backward-reference cost manager
 /// also initializes its pixel-sized cost/length tables in 1,024-entry intervals;
 /// its capacity reservations retain the existing no-recoverable-OOM policy.
 /// Token-aware lossless VP8L hash-chain candidate selection polls after each

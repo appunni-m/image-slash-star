@@ -10800,6 +10800,85 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(token_stream_sink, vec![0xDC]);
+        // Predictor mode application now checkpoints each 1,024-pixel chunk
+        // of a wide pre-transform row copy. The caller-built 4,096x1 RGB probe
+        // reaches a row-copy boundary at 10,728/10,729 in both
+        // whole-buffer and caller-owned-sink paths. Pillow has no caller
+        // token, typed work-budget result, sink, or rollback equivalent, so
+        // this remains Rust-only evidence with no parity row or fixture.
+        let predictor_row_width = 4_096_u32;
+        let mut predictor_row_pixels = Vec::with_capacity(predictor_row_width as usize * 3);
+        for x in 0..predictor_row_width {
+            let value = x.to_le_bytes()[0];
+            predictor_row_pixels.extend_from_slice(&[
+                value.wrapping_mul(3),
+                value.wrapping_mul(5),
+                value.wrapping_mul(7),
+            ]);
+        }
+        let predictor_row_image = DecodedImage::new(
+            predictor_row_width,
+            1,
+            predictor_row_pixels,
+            ColorType::Rgb8,
+        );
+        let predictor_row_expected =
+            image_slash_star::encode(&predictor_row_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &predictor_row_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &unlimited,
+            )?,
+            predictor_row_expected,
+            "an ample predictor row-copy budget preserves byte identity"
+        );
+        let predictor_row_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(10_728);
+        let predictor_row_error = match image_slash_star::encode_with_policy(
+            &predictor_row_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &predictor_row_policy,
+        ) {
+            Ok(_) => return Err("VP8L predictor row-copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            predictor_row_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 10_728,
+                observed: 10_729,
+            }
+        ));
+        let mut predictor_row_sink = vec![0xDB];
+        let predictor_row_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &predictor_row_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &predictor_row_policy,
+            &mut predictor_row_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L predictor row-copy sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            predictor_row_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 10_728,
+                observed: 10_729,
+            }
+        ));
+        assert_eq!(predictor_row_sink, vec![0xDB]);
         // Populated VP8L tile-histogram collection now polls after each 64
         // histograms while filtering and cloning the cluster input. The
         // existing 64x64 lossless probe has exactly 64 histogram tiles and

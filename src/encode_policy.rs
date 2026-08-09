@@ -47,7 +47,9 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// trial suffix and RIFF frame, and container/metadata output copies after
 /// each 1,024 bytes,
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
-/// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
+/// predictor source-snapshot copying, predictor mode-application wide
+/// source-row copies after each completed 1,024-pixel chunk, and
+/// predictor/cross-color/entropy/transform,
 /// VP8L meta-histogram sampling row/column comparisons and symbol compaction
 /// after each 1,024 symbols,
 /// bounded backward-reference cost/length-table initialization and setup after
@@ -149,8 +151,8 @@ impl EncodePolicy {
     /// after each 1,024 scanned pixels, lossy WebP VP8/ALPH RIFF payload and
     /// alpha-stream, lossless VP8L candidate-trial suffix and RIFF frame, and
     /// container/metadata output copies after each 1,024 bytes,
-    /// predictor
-    /// image-width tile-row copies,
+    /// predictor mode-application wide source-row copies after each completed
+    /// 1,024-pixel chunk,
     /// predictor tile scans, cross-color, entropy,
     /// transform, bounded backward-reference cost/length-table initialization
     /// and setup after each 1,024 entries, token-aware cost-manager interval-
