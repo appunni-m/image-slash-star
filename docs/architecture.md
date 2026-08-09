@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `b9aff15d42432e01f1120f1b7fd9f731ed86101e`; the claim-ledger fixture tuple
+revision `56efb2215f9f37d412368f43109cd9ebab3bd87e`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -11,7 +11,8 @@ test/runtime revision and is
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
-CostManager interval-scratch reuse, WebP CostManager population-buffer reuse, GIF indexed
+CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
+WebP CostManager candidate-estimate scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -642,7 +643,8 @@ vector, cleanup compacts the existing interval vector, length-interval tables
 are borrowed instead of cloned for each push, and interval split/rebuild work
 reuses bounded manager scratch vectors. Cost-model population histograms are
 transformed in their existing vectors, so fixed-alphabet cost arrays do not
-allocate temporary conversion vectors. Cost decisions, checkpoint ordering,
+allocate temporary conversion vectors, and sequential candidate cost estimates
+reuse their bounded green histogram scratch. Cost decisions, checkpoint ordering,
 encoded bytes, and sink output remain unchanged. This is a bounded
 internal-allocation optimization, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `b9aff15d42432e01f1120f1b7fd9f731ed86101e`, and benchmark-protocol revision
+revision `56efb2215f9f37d412368f43109cd9ebab3bd87e`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`b9aff15d42432e01f1120f1b7fd9f731ed86101e`; the accepted managed records
+`56efb2215f9f37d412368f43109cd9ebab3bd87e`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -633,6 +633,27 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L candidate-estimate scratch slice is implemented at
+production and Rust test/runtime revision
+`56efb2215f9f37d412368f43109cd9ebab3bd87e`, following the CostModel
+population-buffer reuse at `b9aff15d42432e01f1120f1b7fd9f731ed86101e`.
+Sequential cache-bit candidate trials now reuse a bounded green histogram
+vector through `CostEstimateScratch`; its capacity grows only when a larger
+cache-bit estimate requires it, and each trial clears the existing storage
+instead of allocating a new green vector. Ordinary and token-aware estimator
+ordering, checkpoint sites, cost decisions, encoded bytes, errors, and sink
+output remain unchanged. The existing WebP encode matrix (28/13/47 rows), full
+fixture matrix, all 45 feature-gated Rust contracts, full all-feature suite,
+strict Clippy, rustfmt, and all 33 native/WASI feature-matrix lanes passed
+locally. Clean `fixture-benchmark@3` observations at this revision passed the
+Pillow-parity workload (1.218692 s wall) and the separate Rust-only feature-gate
+workload (2.966705 s wall); these are host/cache/toolchain observations, not a
+comparative or universal performance claim. Pillow remains the byte/error
+oracle, while this scratch ownership is Rust-only evidence: no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook was added. No managed parity, feature-matrix, or Coverage MCP rerun is
+claimed at this revision.
 
 The lossless WebP VP8L CostModel population-buffer reuse slice is implemented
 at production and Rust test/runtime revision
@@ -2706,6 +2727,23 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L candidate-estimate scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`56efb2215f9f37d412368f43109cd9ebab3bd87e`, following the preceding
+`b9aff15d42432e01f1120f1b7fd9f731ed86101e` CostModel population-buffer reuse.
+Sequential cache-bit candidate trials now reuse a bounded green histogram
+vector through `CostEstimateScratch` instead of allocating a new green vector
+for each estimate. Ordinary and token-aware estimator ordering, checkpoint
+sites, cost decisions, encoded bytes, errors, and sink output remain unchanged.
+Existing WebP fixture rows (28/13/47), the full fixture matrix, all 45
+feature-gated Rust contracts, strict Clippy, and the clean benchmark protocol
+provide the regression evidence. Pillow remains the byte/error oracle; scratch
+ownership is Rust-only evidence. No parity row, fixture-manifest entry,
+diagnostic origin, new test function, or coverage-only hook was added, and no
+managed parity, feature-matrix, or Coverage MCP rerun is claimed at this
+revision.
 
 Current acceptance record: WebP VP8L CostModel population-buffer reuse
 
