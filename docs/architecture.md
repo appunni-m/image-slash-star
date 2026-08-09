@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `95944b05de49cf5ae4172f2f0fe90fa2a727a1c1`; the claim-ledger fixture
+revision `05e823facedf3ece60767f02e371fc8bcc1a69a4`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`f19b2ca5-539d-4a5e-a694-6c2cc9ec3962` (1,445/1,445 passed in 611 ms), and
-the latest feature matrix is `bc8f464e-9f91-4534-88fa-62154fdaa68d` (passed in
-23,524 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `2d8b78fd-f833-4f10-914e-4b340803650f` from run
-`c5c68da2-913d-4811-b9b4-1992ef025436`, also at that revision: 55,629/56,486
-lines, 7,955/8,162 branches, 3,112/3,208 functions, and 85,523/87,434
+`15b2b36b-ddde-492c-94f9-85493146e74c` (1,445/1,445 passed in 865 ms), and
+the latest feature matrix is `7d670eae-978f-42ab-8e2a-2e0c30ca9dc8` (passed in
+15,478 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `b67dfb0a-615c-4872-a1c2-76c95870ac2c` from run
+`06e03a38-f8bb-45d1-b40b-6182b7167f49`, also at that revision: 55,634/56,491
+lines, 7,957/8,164 branches, 3,112/3,208 functions, and 85,530/87,441
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,361/2,429 lines,
-502/528 branches, 89/89 functions, and 3,401/3,649 regions; its backward-
+functions. The WebP encoder projection records 2,366/2,434 lines,
+504/530 branches, 89/89 functions, and 3,408/3,656 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
