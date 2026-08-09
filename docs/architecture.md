@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `6e243f7e92becc664cf3d17e68fcecf25a873863`; the claim-ledger fixture tuple
+revision `a15a4c5840d51cd7bc451846ee0ff9d4aad144f7`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -16,7 +16,8 @@ WebP CostManager candidate-estimate scratch reuse, WebP CostManager
 cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
 buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency
 scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
-scratch reuse, WebP VP8L meta-pixel scratch reuse, GIF indexed
+scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
+scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -698,6 +699,14 @@ sampling, then consumed completely by the recursive meta-stream write before
 the next candidate uses it; metadata grouping, encoded bytes, errors, and sink
 output remain unchanged. This is a Rust-only allocation optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L Huffman construction retains the leaf-node vector and token-aware
+merge-sort buffer across sequential tree builds. The recursive boxed nodes are
+still owned and dropped per tree, and the traversal stack remains local; only
+the bounded vector storage is reused. Ordering, tree selection, checkpoint
+behavior, encoded bytes, errors, and sink output remain unchanged. This is a
+Rust-only bounded allocation optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
