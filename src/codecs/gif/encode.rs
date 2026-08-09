@@ -546,7 +546,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }));
 
     let _ = prepare_image_with_token(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8), None);
-    let _ = indexed_rgb(&[0], &[0, 0, 0]);
+    let mut masked = [0u8];
+    mask_equal_indexed_pixels(&[0], &[0, 0, 0], &mut masked, &[0, 0, 0], 0);
     let _ = add_frame_durations(
         FrameDuration {
             numerator: 0,
@@ -1573,7 +1574,8 @@ fn write_gif_with_token(
     }
 
     let mut first = Some(first);
-    let mut previous_quantized_rgb = None::<Vec<u8>>;
+    let mut previous_indices = None::<Vec<u8>>;
+    let mut previous_palette = None::<Vec<u8>>;
     let mut previous_disposal = None::<u8>;
     for (frame_index, frame) in frames.iter().enumerate() {
         crate::codecs::error::check_cancelled(token)?;
@@ -1586,27 +1588,28 @@ fn write_gif_with_token(
                 CodecError::Dimensions("GIF sequence frame preparation regressed".to_owned())
             })?
         };
-        let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette);
+        // Retain the compact indexed representation for the next frame's
+        // difference check. Materializing a full RGB copy here costs three
+        // bytes per pixel even though the comparison only needs palette lookups.
+        let current_indices = prepared.indices.clone();
+        let current_palette = prepared.palette.clone();
         let previous_can_mask = previous_disposal != Some(2);
         if previous_can_mask
-            && let Some(previous) = previous_quantized_rgb.as_deref()
-            && previous.len() == quantized_rgb.len()
+            && let (Some(previous_indices), Some(previous_palette)) =
+                (previous_indices.as_deref(), previous_palette.as_deref())
+            && previous_indices.len() == current_indices.len()
             && let Some(transparent) = prepared.transparent
         {
-            // Coalescing has already reserved a transparent entry whenever
-            // the palette has room. A full 256-color palette deliberately has
-            // none, matching Pillow's inability to mask unchanged pixels.
-            for (index, (before, after)) in previous
-                .chunks_exact(3)
-                .zip(quantized_rgb.chunks_exact(3))
-                .enumerate()
-            {
-                if before == after {
-                    prepared.indices[index] = transparent;
-                }
-            }
+            mask_equal_indexed_pixels(
+                previous_indices,
+                previous_palette,
+                &mut prepared.indices,
+                &current_palette,
+                transparent,
+            );
         }
-        previous_quantized_rgb = Some(quantized_rgb);
+        previous_indices = Some(current_indices);
+        previous_palette = Some(current_palette);
         let (color_count, size_field, minimum_code_size) = table_parameters(&prepared.palette);
         let mut transparent = prepared.transparent;
         if let Some(requested) = settings.transparency_override {
@@ -1728,13 +1731,22 @@ fn write_color_table(output: &mut Vec<u8>, palette: &[u8], color_count: usize) {
     output.resize(output.len().saturating_add(padding), 0);
 }
 
-fn indexed_rgb(indices: &[u8], palette: &[u8]) -> Vec<u8> {
-    let mut rgb = Vec::with_capacity(indices.len().saturating_mul(3));
-    for &index in indices {
-        let offset = usize::from(index).saturating_mul(3);
-        rgb.extend_from_slice(&palette[offset..offset.saturating_add(3)]);
+fn mask_equal_indexed_pixels(
+    previous_indices: &[u8],
+    previous_palette: &[u8],
+    current_indices: &mut [u8],
+    current_palette: &[u8],
+    transparent: u8,
+) {
+    for (index, current_index) in current_indices.iter_mut().enumerate() {
+        let previous_offset = usize::from(previous_indices[index]).saturating_mul(3);
+        let current_offset = usize::from(*current_index).saturating_mul(3);
+        if previous_palette[previous_offset..previous_offset.saturating_add(3)]
+            == current_palette[current_offset..current_offset.saturating_add(3)]
+        {
+            *current_index = transparent;
+        }
     }
-    rgb
 }
 
 fn interlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {
