@@ -86,15 +86,15 @@ pub(crate) fn encode_sequence_to_sink(
         .map_err(CodecError::from_image_error)?;
     crate::codecs::error::check_cancelled(token)?;
 
-    let page_bases = sequence_page_bases(&pages)?;
-    relocate_pages(&mut pages, &page_bases)?;
+    relocate_pages(&mut pages)?;
 
     // Classic TIFF aligns each page start to a 16-byte boundary. Padding is
     // delivered explicitly so the sink receives the exact same bytes as the
     // whole-buffer sequence encoder, including inter-page and final padding.
     let zero_padding = [0u8; 15];
     let mut written = 0usize;
-    for (page, &base) in pages.iter().zip(&page_bases) {
+    for page in &pages {
+        let base = checked_align_16(written)?;
         let padding = base
             .checked_sub(written)
             .ok_or_else(|| CodecError::Dimensions("TIFF page layout regressed".to_owned()))?;
@@ -477,31 +477,18 @@ where
     Ok(total)
 }
 
-fn sequence_page_bases(pages: &[EncodedPage]) -> CodecResult<Vec<usize>> {
+fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
     let mut end = 0usize;
-    let mut bases = Vec::with_capacity(pages.len());
-    for page in pages {
-        let base = checked_align_16(end)?;
-        bases.push(base);
-        end = base
-            .checked_add(page.bytes.len())
-            .ok_or_else(|| CodecError::Dimensions("TIFF sequence length overflows".to_owned()))?;
-    }
-    Ok(bases)
-}
-
-fn relocate_pages(pages: &mut [EncodedPage], bases: &[usize]) -> CodecResult<()> {
-    if pages.len() != bases.len() {
-        return Err(CodecError::Dimensions(
-            "TIFF page layout count mismatch".to_owned(),
-        ));
-    }
     for index in 0..pages.len() {
-        let base = bases[index];
+        let base = checked_align_16(end)?;
+        let page_len = pages[index].bytes.len();
         let next_ifd = index
             .checked_add(1)
-            .and_then(|next_index| bases.get(next_index).zip(pages.get(next_index)))
-            .map(|(next_base, next_page)| {
+            .and_then(|next_index| pages.get(next_index))
+            .map(|next_page| {
+                let next_base = checked_align_16(base.checked_add(page_len).ok_or_else(|| {
+                    CodecError::Dimensions("TIFF sequence length overflows".to_owned())
+                })?)?;
                 next_base.checked_add(next_page.ifd_offset).ok_or_else(|| {
                     CodecError::Dimensions("TIFF next-IFD offset overflows".to_owned())
                 })
@@ -535,6 +522,9 @@ fn relocate_pages(pages: &mut [EncodedPage], bases: &[usize]) -> CodecResult<()>
             })?;
             relocated_field.copy_from_slice(&bounded_u32(relocated).to_le_bytes());
         }
+        end = base
+            .checked_add(page_len)
+            .ok_or_else(|| CodecError::Dimensions("TIFF sequence length overflows".to_owned()))?;
     }
     Ok(())
 }
