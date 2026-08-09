@@ -23,6 +23,26 @@ use super::{
     tokenize::COEFF_PROBS,
 };
 
+const OUTPUT_COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+fn extend_with_output_checkpoint(
+    output: &mut Vec<u8>,
+    source: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let Some(token) = token else {
+        output.extend_from_slice(source);
+        return Ok(());
+    };
+    for chunk in source.chunks(OUTPUT_COPY_CHECKPOINT_BYTES) {
+        output.extend_from_slice(chunk);
+        if chunk.len() == OUTPUT_COPY_CHECKPOINT_BYTES {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 struct Vp8EncodeContext<'a> {
     quality: u8,
@@ -57,7 +77,7 @@ pub(crate) fn encode_vp8_lossy(
         },
     )?;
     crate::codecs::error::check_cancelled(token)?;
-    Ok(build_webp_container(&vp8_data, width, height))
+    build_webp_container(&vp8_data, width, height, token)
 }
 
 pub(crate) fn encode_vp8_lossy_rgba(
@@ -85,12 +105,7 @@ pub(crate) fn encode_vp8_lossy_rgba(
         },
     )?;
     crate::codecs::error::check_cancelled(token)?;
-    Ok(build_extended_webp_container(
-        &vp8_data,
-        alpha_chunk,
-        width,
-        height,
-    ))
+    build_extended_webp_container(&vp8_data, alpha_chunk, width, height, token)
 }
 
 fn encode_vp8_planes(
@@ -897,7 +912,12 @@ fn build_frame_header(width: u32, height: u32, partition0_size: u32) -> Vec<u8> 
 }
 
 /// Build RIFF/WEBP/VP8 container.
-fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
+fn build_webp_container(
+    vp8_data: &[u8],
+    _width: u32,
+    _height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let vp8_chunk_size = low_u32(vp8_data.len().wrapping_add(vp8_data.len() & 1));
     let riff_size = 12_u32.wrapping_add(vp8_chunk_size);
 
@@ -913,33 +933,44 @@ fn build_webp_container(vp8_data: &[u8], _width: u32, _height: u32) -> Vec<u8> {
     out.extend_from_slice(&vp8_chunk_size.to_le_bytes());
 
     // VP8 data (includes frame header + bool-encoded data)
-    out.extend_from_slice(vp8_data);
+    extend_with_output_checkpoint(&mut out, vp8_data, token)?;
 
     // Pad to even length (RIFF requirement)
     if vp8_data.len() & 1 != 0 {
         out.push(0);
     }
 
-    out
+    Ok(out)
 }
 
-fn append_chunk(output: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
+fn append_chunk(
+    output: &mut Vec<u8>,
+    name: &[u8; 4],
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     output.extend_from_slice(name);
     output.extend_from_slice(&low_u32(data.len()).to_le_bytes());
-    output.extend_from_slice(data);
+    extend_with_output_checkpoint(output, data, token)?;
     if data.len() & 1 != 0 {
         output.push(0);
     }
+    Ok(())
 }
 
-fn append_vp8_chunk(output: &mut Vec<u8>, data: &[u8]) {
+fn append_vp8_chunk(
+    output: &mut Vec<u8>,
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     let padded_length = data.len().saturating_add(data.len() & 1);
     output.extend_from_slice(b"VP8 ");
     output.extend_from_slice(&low_u32(padded_length).to_le_bytes());
-    output.extend_from_slice(data);
+    extend_with_output_checkpoint(output, data, token)?;
     if data.len() & 1 != 0 {
         output.push(0);
     }
+    Ok(())
 }
 
 fn build_extended_webp_container(
@@ -947,7 +978,8 @@ fn build_extended_webp_container(
     alpha_chunk: &[u8],
     width: u32,
     height: u32,
-) -> Vec<u8> {
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let mut output = Vec::new();
     output.extend_from_slice(b"RIFF");
     output.extend_from_slice(&[0; 4]);
@@ -957,11 +989,11 @@ fn build_extended_webp_container(
     vp8x.extend_from_slice(&[0x10, 0, 0, 0]);
     vp8x.extend_from_slice(&width.wrapping_sub(1).to_le_bytes()[..3]);
     vp8x.extend_from_slice(&height.wrapping_sub(1).to_le_bytes()[..3]);
-    append_chunk(&mut output, b"VP8X", &vp8x);
-    append_chunk(&mut output, b"ALPH", alpha_chunk);
-    append_vp8_chunk(&mut output, vp8_data);
+    append_chunk(&mut output, b"VP8X", &vp8x, token)?;
+    append_chunk(&mut output, b"ALPH", alpha_chunk, token)?;
+    append_vp8_chunk(&mut output, vp8_data, token)?;
 
     let riff_size = low_u32(output.len().saturating_sub(8));
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
-    output
+    Ok(output)
 }
