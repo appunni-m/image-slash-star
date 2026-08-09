@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `dd99a47d5342f7c4e7d50b09f98cdcbb8b41e812`, and benchmark-protocol revision
+revision `2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`dd99a47d5342f7c4e7d50b09f98cdcbb8b41e812`; the accepted managed records
+`2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,19 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The ICO BMP-payload ownership slice is implemented at production revision
+`2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`. BMP-backed ICO entries now append
+converted BGR/BGRA rows directly into the pre-sized DIB output instead of
+materializing a separate converted-pixel buffer and copying it into that
+output. Row cancellation polls, DIB bytes, directory lengths, and sink output
+are unchanged. All 20 ICO encode parity rows, the complete 28-function fixture
+matrix, all 45 feature-gated Rust contracts, full all-feature tests, strict
+Clippy, and the native/WASM feature matrix passed locally. Pillow remains the
+exact byte/error oracle; payload ownership is a Rust implementation boundary
+with no Pillow allocation contract. No new fixture, test function, diagnostic
+origin, or coverage-only hook was added. No managed parity, feature-matrix, or
+Coverage MCP rerun is claimed for this revision.
 
 The BMP row-scratch ownership slice is implemented at production revision
 `dd99a47d5342f7c4e7d50b09f98cdcbb8b41e812`. One-bit, indexed, RGB, and RGBA

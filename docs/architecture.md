@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `dd99a47d5342f7c4e7d50b09f98cdcbb8b41e812`; the claim-ledger fixture tuple
+revision `2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -11,8 +11,8 @@ test/runtime revision and is
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG
-grayscale source ownership, BMP row-scratch reuse, PNG source pixel ownership,
-TIFF conditional source ownership, candidate-prefix
+grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly,
+PNG source pixel ownership, TIFF conditional source ownership, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
 census/materialization/depth slices have not received a managed coverage rerun.
@@ -605,6 +605,13 @@ payload, BMP prepares bounded palette/row segments, and every codec may retain
 complete working state until a validated segment is ready. These are
 structural-delivery boundaries, not transient-allocation or recoverable-OOM
 guarantees.
+
+BMP-backed ICO entries assemble converted BGR/BGRA rows directly into their
+pre-sized DIB buffer, avoiding a separate converted-pixel staging buffer. The
+directory still owns the complete embedded payload because its fixed header
+must precede that payload; this slice removes only the inner pixel staging copy
+and does not claim complete allocator accounting, recoverable-OOM handling, or
+streaming.
 
 The shared PNG/TIFF zlib-ng compressor seeds its bit writer with the zlib
 header and returns that owned buffer directly, then appends the Adler-32
