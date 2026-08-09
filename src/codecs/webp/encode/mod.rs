@@ -56,6 +56,9 @@ fn checkpoint_after_prepare_pixel(
 /// cancellation token. The token-aware lossless backward-reference cost manager
 /// also initializes its pixel-sized cost/length tables in 1,024-entry intervals;
 /// its capacity reservations retain the existing no-recoverable-OOM policy.
+/// Token-aware lossless VP8L hash-chain candidate selection polls after each
+/// 64 completed candidate trials across the pass; the no-token candidate loop
+/// remains a separate tight path.
 /// Long backward-reference result backfills also poll after each 256 entries.
 /// Token-aware lossless VP8L assembly copies the complete RIFF frame payload
 /// after each 1,024 bytes; the no-token path retains one bulk copy.
