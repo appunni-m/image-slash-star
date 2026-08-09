@@ -3,12 +3,13 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`f8fd846f0f1ebd7bc15444698626009a31ef7004`; the claim-ledger fixture tuple
-remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`,
-while the current Pillow parity run is
-`27531635-5dc3-495f-8d70-40f74323f0fa` and the current Coverage MCP snapshot
-is `90285a8d-64e1-403c-bff3-1c3267104936` from run
-`e55c08c4-1bdc-4044-bcfd-5ae919ad03a3`.
+`8562fe2b0672593000b7d0c1ea1370590efc2f18`; the claim-ledger fixture tuple
+remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
+The current Pillow parity run is
+`10535481-2d0c-4483-92e1-f9982a9cce62`; the exact-head feature-matrix run is
+`4d43c84b-9633-4ef3-8867-837c0c99a34e`; and the current Coverage MCP snapshot
+is `26731242-1c01-4bf5-bf37-635c21ff690c` from run
+`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2048,6 +2049,29 @@ fractions, duplicate associations, and malformed property payloads are
 rejected by both bounded parsers. The test is specification/defensive-model
 evidence because Pillow's observable result does not expose item properties or
 structured provenance.
+
+The current AVIF unknown-item-property slice is also separate from Pillow
+parity. The existing `source_alpha_matches_the_container_contract` test
+mutates `alpha.avif` only in memory to associate a `zzzz` property with item 2,
+then checks the exact item ID, four-byte kind, and payload on inspection, still
+decode, and sequence-frame decode while proving decoded pixels are unchanged.
+Pillow has no item-level property result, so this is Rust
+source-provenance/specification evidence: no parity row, fixture file,
+diagnostic origin, new test function, or coverage-only hook was added.
+
+Current acceptance for implementation revision
+`8562fe2b0672593000b7d0c1ea1370590efc2f18`: managed Pillow parity run
+`10535481-2d0c-4483-92e1-f9982a9cce62` passed 1,445/1,445 checks in 5,860 ms;
+feature-matrix run `4d43c84b-9633-4ef3-8867-837c0c99a34e` passed with
+`cache=cold`, `lanes=6`, `test_threads=2`, and `build_jobs=2`, and its retained
+log ended with `capability tables OK: every native and wasm32-wasip1 lane
+agrees` with no `lock-wait` match. Nightly LLVM run
+`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5` passed 85/85 tests in 67,939 ms and
+ingested snapshot `26731242-1c01-4bf5-bf37-635c21ff690c`: 54,459/55,280
+lines, 7,725/7,920 branches, 3,095/3,178 functions, and 83,987/85,828
+regions. The known LLVM JSON segment-normalization warning remains. These
+coverage numbers are Rust implementation evidence, not Pillow parity, and no
+coverage-only test was used.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
