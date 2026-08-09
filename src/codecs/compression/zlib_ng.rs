@@ -1005,10 +1005,16 @@ impl SlowMatcher {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level6_tiff(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
     token: Option<&crate::CancellationToken>,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
-    compress_level6_with_token(data, input_chunks, token, 16_383)
+    let tokens = if let Some(token) = token {
+        tokenize_lookahead_medium_repeated_with_token(data, row_len, height, 128, 128, 16, token)?
+    } else {
+        tokenize_lookahead_medium_repeated(data, row_len, height, 128, 128, 16)
+    };
+    finish_level6_tokens(data, tokens, token, 16_383)
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
@@ -1024,6 +1030,17 @@ pub(super) fn compress_level6_with_token(
     } else {
         tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
     };
+    finish_level6_tokens(data, tokens, token, block_tokens)
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+fn finish_level6_tokens(
+    data: &[u8],
+    tokens: Vec<Token>,
+    token: Option<&crate::CancellationToken>,
+    block_tokens: usize,
+) -> crate::codecs::CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
     if let Some(token) = token {
@@ -1040,6 +1057,60 @@ pub(super) fn compress_level6_with_token(
         output.extend_from_slice(&adler32(data).to_be_bytes());
         Ok(output)
     }
+}
+
+#[cfg(feature = "tiff")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+fn tokenize_lookahead_medium_repeated(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+) -> Vec<Token> {
+    let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
+    let mut available = 0usize;
+    for _ in 0..height {
+        if available != 0 {
+            matcher.refill_boundary();
+        }
+        available = available.wrapping_add(row_len);
+        debug_assert!(available <= data.len());
+        matcher.process(available, false);
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process(available, true);
+    matcher.tokens
+}
+
+#[cfg(feature = "tiff")]
+fn tokenize_lookahead_medium_repeated_with_token(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    max_chain: usize,
+    nice_match: usize,
+    max_insert: usize,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<Token>> {
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
+    let mut available = 0usize;
+    for _ in 0..height {
+        checkpoint.poll()?;
+        if available != 0 {
+            matcher.refill_boundary_with(&mut checkpoint)?;
+        }
+        available = available.wrapping_add(row_len);
+        debug_assert!(available <= data.len());
+        matcher.process_with(available, false, &mut checkpoint)?;
+        checkpoint.poll()?;
+    }
+    debug_assert_eq!(available, data.len());
+    matcher.process_with(available, true, &mut checkpoint)?;
+    checkpoint.poll()?;
+    Ok(matcher.tokens)
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]

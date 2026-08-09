@@ -197,11 +197,7 @@ fn encode_page_with_token(
         Cow::Owned(encode_lzw(raw.as_ref(), token)?)
     } else if compression == COMPRESSION_DEFLATE {
         crate::codecs::error::check_cancelled(token)?;
-        Cow::Owned(compress_zlib_tiff(
-            raw.as_ref(),
-            &vec![row_len; height],
-            token,
-        )?)
+        Cow::Owned(compress_zlib_tiff(raw.as_ref(), row_len, height, token)?)
     } else {
         Cow::Owned(encode_packbits(raw.as_ref(), row_len, token)?)
     };
