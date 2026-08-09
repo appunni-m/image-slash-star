@@ -1249,13 +1249,6 @@ struct CostManager {
 }
 
 impl CostManager {
-    #[cfg(coverage)]
-    fn new(pixel_count: usize, model: &CostModel) -> Self {
-        let mut manager = Self::default();
-        manager.prepare_without_checkpoint(pixel_count, model);
-        manager
-    }
-
     fn prepare_without_checkpoint(&mut self, pixel_count: usize, model: &CostModel) {
         const SCALE: i64 = 1 << 23;
         let cache_size = pixel_count.min(MAX_LENGTH);
@@ -2124,7 +2117,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut population = [70_000, 1];
     population_cost_in_place(&mut population);
     let model = cost_model(&[Token::Literal(0xff00_0000)], 0, 1);
-    let mut manager = CostManager::new(8, &model);
+    let mut manager = CostManager::default();
+    manager.prepare_without_checkpoint(8, &model);
     manager.insert_min_interval(CostInterval {
         cost: 0,
         start: 1,
@@ -2146,7 +2140,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         end: 3,
         position: 0,
     });
-    let mut manager = CostManager::new(8, &model);
+    let mut manager = CostManager::default();
+    manager.prepare_without_checkpoint(8, &model);
     manager.insert_min_interval(CostInterval {
         cost: 5,
         start: 0,
@@ -2165,7 +2160,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         end: 3,
         position: 0,
     });
-    let mut manager = CostManager::new(8, &model);
+    let mut manager = CostManager::default();
+    manager.prepare_without_checkpoint(8, &model);
     manager.intervals = vec![
         CostInterval {
             cost: 5,
@@ -2186,7 +2182,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         end: 4,
         position: 0,
     });
-    let mut manager = CostManager::new(8, &model);
+    let mut manager = CostManager::default();
+    manager.prepare_without_checkpoint(8, &model);
     manager.insert_min_interval(CostInterval {
         cost: 1,
         start: 0,
