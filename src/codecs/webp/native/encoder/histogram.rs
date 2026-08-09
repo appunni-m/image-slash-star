@@ -38,6 +38,7 @@ const POPULATION_CHECKPOINT_SYMBOLS: usize = 64;
 const MERGE_CHECKPOINT_SYMBOLS: usize = 64;
 const CLUSTER_CHECKPOINT_HISTOGRAMS: usize = 64;
 const CLUSTER_CHECKPOINT_ROWS: usize = 256;
+const MAX_RETAINED_PAIR_QUEUE: usize = 4_096;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -465,6 +466,18 @@ pub(super) struct HistogramScratch {
     symbols: Vec<u16>,
     remapped: Vec<Histogram>,
     merge: Histogram,
+    pair_queue: Vec<Pair>,
+}
+
+fn reset_pair_queue(queue: &mut Vec<Pair>) {
+    queue.clear();
+}
+
+fn retain_pair_queue(queue: &mut Vec<Pair>) {
+    queue.clear();
+    if queue.capacity() > MAX_RETAINED_PAIR_QUEUE {
+        *queue = Vec::new();
+    }
 }
 
 fn prepare_histograms(histograms: &mut Vec<Histogram>, length: usize, cache_bits: u8) {
@@ -632,8 +645,10 @@ fn stochastic_combine(
     histograms: &mut Vec<Histogram>,
     minimum: usize,
     merge: &mut Histogram,
+    queue: &mut Vec<Pair>,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<bool> {
+    reset_pair_queue(queue);
     if histograms.len() < minimum {
         return Ok(true);
     }
@@ -641,7 +656,7 @@ fn stochastic_combine(
     let maximum_failures = outer_iterations / 2;
     let mut failures = 0;
     let mut seed = 1_u32;
-    let mut queue: Vec<Pair> = Vec::with_capacity(9);
+    queue.reserve(9);
     for _ in 0..outer_iterations {
         checkpoint(token)?;
         failures += 1;
@@ -659,7 +674,7 @@ fn stochastic_combine(
             if second >= first {
                 second += 1;
             }
-            let cost = push_pair(&mut queue, 9, histograms, first, second, best, token)?;
+            let cost = push_pair(queue, 9, histograms, first, second, best, token)?;
             if cost < 0 {
                 best = cost;
                 if queue.len() == 9 {
@@ -701,21 +716,24 @@ fn stochastic_combine(
                 }
                 queue[index] = pair;
             }
-            update_head(&mut queue, index);
+            update_head(queue, index);
             index += 1;
         }
         failures = 0;
     }
-    Ok(histograms.len() <= minimum)
+    let complete = histograms.len() <= minimum;
+    retain_pair_queue(queue);
+    Ok(complete)
 }
 
 fn greedy_combine(
     histograms: &mut Vec<Histogram>,
     merge: &mut Histogram,
+    queue: &mut Vec<Pair>,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     let maximum = histograms.len() * histograms.len();
-    let mut queue = Vec::new();
+    reset_pair_queue(queue);
     for first in 0..histograms.len() {
         if first.is_multiple_of(16) {
             checkpoint(token)?;
@@ -724,7 +742,7 @@ fn greedy_combine(
             if second.is_multiple_of(64) {
                 checkpoint(token)?;
             }
-            push_pair(&mut queue, maximum, histograms, first, second, 0, token)?;
+            push_pair(queue, maximum, histograms, first, second, 0, token)?;
         }
     }
     while let Some(chosen) = queue.first().cloned() {
@@ -750,7 +768,7 @@ fn greedy_combine(
                 queue.swap_remove(index);
             } else {
                 fix_pair(&mut queue[index], moved_from, second);
-                update_head(&mut queue, index);
+                update_head(queue, index);
                 index += 1;
             }
         }
@@ -759,10 +777,11 @@ fn greedy_combine(
                 checkpoint(token)?;
             }
             if index != first {
-                push_pair(&mut queue, maximum, histograms, first, index, 0, token)?;
+                push_pair(queue, maximum, histograms, first, index, 0, token)?;
             }
         }
     }
+    retain_pair_queue(queue);
     Ok(())
 }
 
@@ -864,8 +883,19 @@ pub(super) fn cluster<'a>(
         u64::from(quality).pow(3) * (MAX_HISTO_GREEDY - 1),
         1_000_000,
     ) as usize;
-    if stochastic_combine(&mut scratch.clusters, threshold, &mut scratch.merge, token)? {
-        greedy_combine(&mut scratch.clusters, &mut scratch.merge, token)?;
+    if stochastic_combine(
+        &mut scratch.clusters,
+        threshold,
+        &mut scratch.merge,
+        &mut scratch.pair_queue,
+        token,
+    )? {
+        greedy_combine(
+            &mut scratch.clusters,
+            &mut scratch.merge,
+            &mut scratch.pair_queue,
+            token,
+        )?;
     }
 
     scratch.symbols.resize(scratch.originals.len(), 0);
@@ -903,6 +933,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut a = Histogram::new(0);
     let mut b = Histogram::new(0);
     let mut merge = Histogram::default();
+    let mut pair_queue = Vec::new();
     a.add_token(Token::Literal(0xff00_0000), 1);
     b.add_token(Token::Literal(0xff00_00ff), 1);
     a.analyze();
@@ -942,7 +973,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for histogram in &mut no_pairs {
         histogram.analyze();
     }
-    let _ = stochastic_combine(&mut no_pairs, 4, &mut merge, None);
+    let _ = stochastic_combine(&mut no_pairs, 4, &mut merge, &mut pair_queue, None);
 
     let mut mergeable = Vec::new();
     for _ in 0..24 {
@@ -951,7 +982,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         mergeable.push(histogram);
     }
-    let _ = stochastic_combine(&mut mergeable, 1, &mut merge, None);
+    let _ = stochastic_combine(&mut mergeable, 1, &mut merge, &mut pair_queue, None);
     let mut large_mergeable = Vec::new();
     for _ in 0..64 {
         let mut histogram = Histogram::new(0);
@@ -959,7 +990,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         large_mergeable.push(histogram);
     }
-    let _ = stochastic_combine(&mut large_mergeable, 1, &mut merge, None);
+    let _ = stochastic_combine(&mut large_mergeable, 1, &mut merge, &mut pair_queue, None);
 
     let mut distinct = Vec::new();
     for index in 0..8 {
@@ -968,7 +999,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         distinct.push(histogram);
     }
-    let _ = stochastic_combine(&mut distinct, 1, &mut merge, None);
+    let _ = stochastic_combine(&mut distinct, 1, &mut merge, &mut pair_queue, None);
 
     let mut high_entropy = Vec::new();
     let mut high_entropy_tokens = Vec::new();
@@ -988,7 +1019,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         high_entropy.push(histogram);
     }
     assert!(matches!(
-        stochastic_combine(&mut high_entropy, 1, &mut merge, None),
+        stochastic_combine(&mut high_entropy, 1, &mut merge, &mut pair_queue, None),
         Ok(false)
     ));
     let mut scratch = HistogramScratch::default();
