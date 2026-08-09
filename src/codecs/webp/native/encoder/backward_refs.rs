@@ -410,18 +410,21 @@ fn rle_into(
     Ok(())
 }
 
+// The box pass consumes each primary-chain entry once, in forward position
+// order, so it can replace that chain in place instead of allocating a second
+// pixel-sized result vector.
 fn box_chain(
     pixels: &[u32],
     width: usize,
-    best_chain: &[(usize, usize)],
+    chain: &mut [(usize, usize)],
     token: CheckpointToken<'_>,
-) -> CheckpointResult<Vec<(usize, usize)>> {
+) -> CheckpointResult<()> {
     const WINDOW_OFFSETS_SIZE_MAX: usize = 32;
 
-    let mut chain = vec![(0, 0); pixels.len()];
     if pixels.len() < 2 {
-        return Ok(chain);
+        return Ok(());
     }
+    chain[0] = (0, 0);
 
     let mut counts = vec![1_u16; pixels.len()];
     for position in (0..pixels.len() - 1).rev() {
@@ -471,7 +474,7 @@ fn box_chain(
         if position.is_multiple_of(1024) {
             checkpoint(token)?;
         }
-        let (mut best_offset, mut best_length) = best_chain[position];
+        let (mut best_offset, mut best_length) = chain[position];
         let recompute = best_length < MAX_LENGTH || !window_offsets.contains(&best_offset);
         if recompute {
             let use_previous = previous_length > 1 && previous_length < MAX_LENGTH;
@@ -567,6 +570,7 @@ fn box_chain(
         }
 
         if best_length <= MIN_LENGTH {
+            chain[position] = (0, 0);
             previous_offset = 0;
             previous_length = 0;
         } else {
@@ -575,7 +579,7 @@ fn box_chain(
             previous_length = best_length;
         }
     }
-    Ok(chain)
+    Ok(())
 }
 
 fn color_hash(pixel: u32, bits: u8) -> usize {
@@ -1991,7 +1995,7 @@ pub(super) fn candidates(
     if pixels.is_empty() {
         return Ok(vec![(Vec::new(), 0)]);
     }
-    let chain = fill_hash_chain(pixels, width, quality, token)?;
+    let mut chain = fill_hash_chain(pixels, width, quality, token)?;
     let mut estimate_scratch = CostEstimateScratch::default();
     let mut cache_scratch = CacheTransformScratch::default();
     let mut trace_scratch = TraceScratch::default();
@@ -2070,7 +2074,7 @@ pub(super) fn candidates(
     // libwebp evaluates its low-distance "box" chain as a separate crunch
     // configuration for palette images containing at most sixteen colors.
     if allow_cache && max_cache_bits <= 4 {
-        let chain = box_chain(pixels, width, &chain, token)?;
+        box_chain(pixels, width, &mut chain, token)?;
         lz77(pixels, width, &chain, token, &mut source_scratch)?;
         let mut box_candidate = improve(
             choose_cache(&source_scratch, &mut estimate_scratch, &mut cache_scratch)?,
@@ -2121,7 +2125,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut retained_chain = vec![(0, 0); long_uniform.len()];
     retained_chain[1] = (1, MAX_LENGTH);
     retained_chain[MAX_LENGTH + 1] = (MAX_LENGTH + 1, MAX_LENGTH);
-    let _ = box_chain(&long_uniform, 1, &retained_chain, None);
+    let _ = box_chain(&long_uniform, 1, &mut retained_chain, None);
 
     let _ = fast_slog(70_000);
     let _ = prefix(300);
