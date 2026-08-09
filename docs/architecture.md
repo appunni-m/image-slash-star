@@ -3,18 +3,19 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `533f97ee45bcc750fb0373da6272c3955963ce22`; the claim-ledger fixture
+revision `bb654ca65ec0bc5a15000d32f7cf924b233a9738`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`331169e5-e7b7-4328-94cb-57c8779f807f` (1,445/1,445 passed in 568 ms), and the
-latest feature matrix is `3bbf783f-a160-4efe-be66-8e79bf185700` (passed in
-26,665 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `3a4b9d14-b1c4-4576-8d00-da3f3c89596c` from run
-`ad600045-94ee-4806-9d02-144befaddba1`, also at that revision: 55,607/56,463
-lines, 7,951/8,158 branches, 3,113/3,209 functions, and 85,467/87,378
+`9d3512a2-8270-42b1-a907-c058fd882677` (1,445/1,445 passed in 590 ms), and the
+latest feature matrix is `11a51b59-415c-46ab-8697-d3c4cafa865b` (passed in
+22,092 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `b6280073-65f9-44b9-b49e-89f75eee32cb` from run
+`c67a5431-6c99-43d2-9d4e-dd380bc378d7`, also at that revision: 55,604/56,460
+lines, 7,951/8,158 branches, 3,113/3,209 functions, and 85,489/87,400
 regions. The snapshot retains the known LLVM JSON segment-normalization
-warning. Predictor coverage is 366/366 lines, 68/68 branches, and 24/24
+warning. Histogram coverage is 846/846 lines, 182/182 branches, and 41/41
+functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
 functions. These are Rust implementation/coverage metrics, not Pillow-oracle
 coverage or allocator/OOM accounting.
@@ -825,6 +826,14 @@ color map before the map is emitted. Transform ordering, encoded bytes, errors,
 and sink output remain unchanged. These are Rust-only scratch-ownership
 optimizations, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP VP8L histogram clustering reuses one `Histogram` merge workspace across
+entropy-bin, stochastic, and greedy combinations instead of cloning all five
+channel vectors for each trial. The merge is completed in scratch before the
+source histogram is swapped and removed, so cancellation rollback, cluster
+ordering, encoded bytes, errors, and sink output remain unchanged. This is a
+Rust-only merge-scratch allocation optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
