@@ -3,18 +3,18 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `bb654ca65ec0bc5a15000d32f7cf924b233a9738`; the claim-ledger fixture
+revision `dc65e760117e9bc5155c16fdf68ffffe97524c25`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`9d3512a2-8270-42b1-a907-c058fd882677` (1,445/1,445 passed in 590 ms), and the
-latest feature matrix is `11a51b59-415c-46ab-8697-d3c4cafa865b` (passed in
-22,092 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `b6280073-65f9-44b9-b49e-89f75eee32cb` from run
-`c67a5431-6c99-43d2-9d4e-dd380bc378d7`, also at that revision: 55,604/56,460
-lines, 7,951/8,158 branches, 3,113/3,209 functions, and 85,489/87,400
+`1935d463-5cce-4016-998a-7035d20c34a9` (1,445/1,445 passed in 658 ms), and the
+latest feature matrix is `5a524032-009d-47c2-ba48-7f3ca1e29178` (passed in
+21,808 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `a6858d88-f16e-4f18-9d85-059afa70045f` from run
+`077e16ef-8ec6-4530-8b4f-ed5a1088d1c6`, also at that revision: 55,630/56,487
+lines, 7,953/8,160 branches, 3,115/3,211 functions, and 85,516/87,427
 regions. The snapshot retains the known LLVM JSON segment-normalization
-warning. Histogram coverage is 846/846 lines, 182/182 branches, and 41/41
+warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
 functions. These are Rust implementation/coverage metrics, not Pillow-oracle
@@ -834,6 +834,14 @@ source histogram is swapped and removed, so cancellation rollback, cluster
 ordering, encoded bytes, errors, and sink output remain unchanged. This is a
 Rust-only merge-scratch allocation optimization, not allocator/OOM accounting,
 recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L histogram clustering also retains one pair queue in
+`HistogramScratch` across stochastic and greedy passes. It clears the queue
+between passes and keeps capacity only up to 4,096 `Pair` entries; larger
+transient queues are released instead of becoming retained memory. Candidate
+ordering, merge decisions, encoded bytes, errors, and sink output remain
+unchanged. This is a Rust-only pair-queue allocation optimization, not
+allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
