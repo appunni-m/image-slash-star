@@ -42,6 +42,13 @@ enum HuffmanTreeNode {
 #[derive(Clone, Debug)]
 enum HuffmanTreeInner {
     Single(u16),
+    // A simple code with two symbols is always a one-bit table. Keep the two
+    // symbols inline instead of allocating the fixed three-node tree and
+    // two-entry table used by the general representation.
+    TwoNode {
+        zero: u16,
+        one: u16,
+    },
     Tree {
         tree: Vec<HuffmanTreeNode>,
         table: Vec<u32>,
@@ -197,15 +204,7 @@ impl HuffmanTree {
     }
 
     pub(crate) fn build_two_node(zero: u16, one: u16) -> Self {
-        Self(HuffmanTreeInner::Tree {
-            tree: vec![
-                HuffmanTreeNode::Leaf(zero),
-                HuffmanTreeNode::Leaf(one),
-                HuffmanTreeNode::Empty,
-            ],
-            table: vec![(1 << 16) | u32::from(zero), (1 << 16) | u32::from(one)],
-            table_mask: 0x1,
-        })
+        Self(HuffmanTreeInner::TwoNode { zero, one })
     }
 
     #[cfg(coverage)]
@@ -216,7 +215,7 @@ impl HuffmanTree {
     pub(crate) const fn single_symbol(&self) -> Option<u16> {
         match &self.0 {
             HuffmanTreeInner::Single(symbol) => Some(*symbol),
-            HuffmanTreeInner::Tree { .. } => None,
+            HuffmanTreeInner::TwoNode { .. } | HuffmanTreeInner::Tree { .. } => None,
         }
     }
 
@@ -279,6 +278,15 @@ impl HuffmanTree {
                     bit_reader,
                 )
             }
+            HuffmanTreeInner::TwoNode { zero, one } => {
+                let symbol = if bit_reader.peek_full() & 1 == 0 {
+                    *zero
+                } else {
+                    *one
+                };
+                bit_reader.consume(1)?;
+                Ok(symbol)
+            }
             HuffmanTreeInner::Single(symbol) => Ok(*symbol),
         }
     }
@@ -301,6 +309,14 @@ impl HuffmanTree {
                 }
                 None
             }
+            HuffmanTreeInner::TwoNode { zero, one } => Some((
+                1,
+                if bit_reader.peek_full() & 1 == 0 {
+                    *zero
+                } else {
+                    *one
+                },
+            )),
             HuffmanTreeInner::Single(symbol) => Some((0, *symbol)),
         }
     }
