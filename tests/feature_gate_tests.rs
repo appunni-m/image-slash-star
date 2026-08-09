@@ -11819,6 +11819,58 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xB5],
             "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
+        // Lossless VP8L meta-pixel materialization now polls after each 1,024
+        // retained histogram symbols. The existing 512x512 cache probe
+        // produces 4,096 symbols after sampling; the whole-buffer path reaches
+        // its first materialization checkpoint at 132,284/132,285 work units.
+        // Pillow has no caller token, typed work-budget result, or
+        // caller-owned sink, so this remains Rust-only evidence with no parity
+        // row, fixture-manifest row, diagnostic origin, new test function, or
+        // coverage-only hook.
+        let meta_pixel_policy = image_slash_star::EncodePolicy::new().with_max_work_units(132_284);
+        let meta_pixel_error = match image_slash_star::encode_with_policy(
+            &cache_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &meta_pixel_policy,
+        ) {
+            Ok(_) => return Err("VP8L meta-pixel budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            meta_pixel_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 132_284,
+                observed: 132_285,
+            }
+        ));
+        let mut meta_pixel_sink = vec![0xB4];
+        let meta_pixel_sink_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(132_283);
+        let meta_pixel_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &cache_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &meta_pixel_sink_policy,
+            &mut meta_pixel_sink,
+        ) {
+            Ok(_) => return Err("VP8L meta-pixel sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            meta_pixel_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 132_283,
+                observed: 132_284,
+            }
+        ));
+        assert_eq!(meta_pixel_sink, vec![0xB4]);
         // A 12,288x16 RGBA probe keeps two real meta-histogram groups while
         // making the first 1,025 tile symbols equal across adjacent rows and
         // the following symbols different. This reaches the interior sampling

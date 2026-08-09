@@ -1275,10 +1275,27 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             encoded_histogram_bits =
                 optimize_sampling(&mut symbols, width, height, histogram_bits, 9, token)?;
             w.write_bits(u64::from(encoded_histogram_bits - 2), 3)?;
-            let meta_pixels = symbols
-                .iter()
-                .map(|&symbol| u32::from(symbol) << 8)
-                .collect::<Vec<_>>();
+            // Meta-pixel materialization scales with the retained histogram
+            // tile map after sampling. Keep the ordinary no-token map
+            // unchanged and poll only the caller-controlled path.
+            let meta_pixels = if let Some(token) = token {
+                let mut meta_pixels = Vec::with_capacity(symbols.len());
+                let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+                for &symbol in &symbols {
+                    meta_pixels.push(u32::from(symbol) << 8);
+                    symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
+                    if symbols_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+                    }
+                }
+                meta_pixels
+            } else {
+                symbols
+                    .iter()
+                    .map(|&symbol| u32::from(symbol) << 8)
+                    .collect::<Vec<_>>()
+            };
             let meta_width = width.div_ceil(1 << encoded_histogram_bits);
             write_image_stream_configured(
                 w,
