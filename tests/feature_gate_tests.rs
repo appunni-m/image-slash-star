@@ -258,6 +258,66 @@ impl FromJson for DetectionCase {
     }
 }
 
+// The work-budget contract must compare the whole-buffer and caller-sink
+// APIs at the same boundary. Native test lanes can execute those independent
+// encodes concurrently; WASM lanes retain the same deterministic sequential
+// calls because the target does not provide a portable test-thread runtime.
+fn run_work_budget_pair(
+    image: &DecodedImage,
+    format: ImageFormat,
+    options: &EncodeOptions,
+    whole_policy: &image_slash_star::EncodePolicy,
+    sink_policy: &image_slash_star::EncodePolicy,
+    sentinel: u8,
+) -> (
+    image_slash_star::ImageResult<Vec<u8>>,
+    image_slash_star::ImageResult<usize>,
+    Vec<u8>,
+) {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::thread::scope(|scope| {
+            let whole = scope.spawn(|| {
+                image_slash_star::encode_with_policy(image, format, options, whole_policy)
+            });
+            let sink = scope.spawn(|| {
+                let mut bytes = vec![sentinel];
+                let result = image_slash_star::encode_to_sink_with_policy(
+                    image,
+                    format,
+                    options,
+                    sink_policy,
+                    &mut bytes,
+                );
+                (result, bytes)
+            });
+            let whole = match whole.join() {
+                Ok(result) => result,
+                Err(_) => panic!("whole-buffer work-budget worker panicked"),
+            };
+            let (sink, bytes) = match sink.join() {
+                Ok(result) => result,
+                Err(_) => panic!("caller-sink work-budget worker panicked"),
+            };
+            (whole, sink, bytes)
+        })
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        let whole = image_slash_star::encode_with_policy(image, format, options, whole_policy);
+        let mut bytes = vec![sentinel];
+        let sink = image_slash_star::encode_to_sink_with_policy(
+            image,
+            format,
+            options,
+            sink_policy,
+            &mut bytes,
+        );
+        (whole, sink, bytes)
+    }
+}
+
 impl FromJson for InspectionFixture {
     fn from_json(value: Value) -> Result<Self, support::json::Error> {
         let mut object = Object::new(value)?;
@@ -13106,9 +13166,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(bitstream_65536_sink, vec![0xA1]);
 
-        let mut bitstream_131072_pixels = Vec::with_capacity(256 * 256 * 3);
+        let mut bitstream_131072_pixels = Vec::with_capacity(64 * 64 * 3);
         let mut bitstream_131072_state = 0x9E37_79B9u32;
-        for _ in 0..256 * 256 {
+        for _ in 0..64 * 64 {
             bitstream_131072_state = bitstream_131072_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
@@ -13119,10 +13179,11 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let bitstream_131072_image =
-            DecodedImage::new(256, 256, bitstream_131072_pixels, ColorType::Rgb8);
-        // The deterministic 256×256 probe reaches the next VP8L logical
-        // bitstream interval. This remains Rust-only work-control evidence:
-        // Pillow has no caller budget or equivalent result.
+            DecodedImage::new(64, 64, bitstream_131072_pixels, ColorType::Rgb8);
+        // The compact deterministic 64×64 probe reaches the next VP8L
+        // logical bitstream interval without carrying pixels that the
+        // bounded calls never consume. This remains Rust-only work-control
+        // evidence: Pillow has no caller budget or equivalent result.
         let bitstream_131072_policy =
             image_slash_star::EncodePolicy::new().with_max_work_units(41_542);
         let bitstream_131072_error = match image_slash_star::encode_with_policy(
@@ -13350,47 +13411,38 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let bitstream_2097152_image =
             DecodedImage::new(296, 296, bitstream_2097152_pixels, ColorType::Rgb8);
-        let bitstream_2097152_error = match image_slash_star::encode_with_policy(
-            &bitstream_2097152_image,
-            ImageFormat::WebP,
-            &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(648_911),
-        ) {
-            Ok(_) => return Err("VP8L 2097152-bit bitstream budget unexpectedly completed".into()),
-            Err(error) => error,
-        };
+        let bitstream_2097152_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(648_911);
+        let bitstream_2097152_sink_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(648_910);
+        let (bitstream_2097152_error, bitstream_2097152_sink_error, bitstream_2097152_sink) =
+            run_work_budget_pair(
+                &bitstream_2097152_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &bitstream_2097152_policy,
+                &bitstream_2097152_sink_policy,
+                0x9C,
+            );
         assert!(matches!(
             bitstream_2097152_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 648_911,
                 observed: 648_912,
-            }
+            })
         ));
-        let mut bitstream_2097152_sink = vec![0x9C];
-        let bitstream_2097152_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &bitstream_2097152_image,
-            ImageFormat::WebP,
-            &lossless_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(648_910),
-            &mut bitstream_2097152_sink,
-        ) {
-            Ok(_) => {
-                return Err("VP8L 2097152-bit bitstream sink budget unexpectedly completed".into());
-            }
-            Err(error) => error,
-        };
         assert!(matches!(
             bitstream_2097152_sink_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 648_910,
                 observed: 648_911,
-            }
+            })
         ));
         assert_eq!(bitstream_2097152_sink, vec![0x9C]);
 
@@ -14829,54 +14881,39 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // remains Rust-only evidence with no parity row or coverage-only hook.
         let coefficient_bit_policy_2097152 =
             image_slash_star::EncodePolicy::new().with_max_work_units(7_861_562);
-        let coefficient_bit_error_2097152 = match image_slash_star::encode_with_policy(
+        let coefficient_bit_sink_policy_2097152 =
+            image_slash_star::EncodePolicy::new().with_max_work_units(8_386_322);
+        let (
+            coefficient_bit_error_2097152,
+            coefficient_bit_sink_error_2097152,
+            coefficient_bit_sink_2097152,
+        ) = run_work_budget_pair(
             &coefficient_ladder_probe,
             ImageFormat::WebP,
             &coefficient_ladder_options,
             &coefficient_bit_policy_2097152,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 2097152-bit coefficient budget unexpectedly completed".into(),
-                );
-            }
-            Err(error) => error,
-        };
+            &coefficient_bit_sink_policy_2097152,
+            0xDB,
+        );
         assert!(matches!(
             coefficient_bit_error_2097152,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 7_861_562,
                 observed: 7_861_563,
-            }
+            })
         ));
-        let mut coefficient_bit_sink_2097152 = vec![0xDB];
-        let coefficient_bit_sink_error_2097152 = match image_slash_star::encode_to_sink_with_policy(
-            &coefficient_ladder_probe,
-            ImageFormat::WebP,
-            &coefficient_ladder_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(8_386_322),
-            &mut coefficient_bit_sink_2097152,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 2097152-bit coefficient sink budget unexpectedly wrote output"
-                        .into(),
-                );
-            }
-            Err(error) => error,
-        };
         assert!(matches!(
             coefficient_bit_sink_error_2097152,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 8_386_322,
                 observed: 8_386_323,
-            }
+            })
         ));
         assert_eq!(coefficient_bit_sink_2097152, vec![0xDB]);
 
