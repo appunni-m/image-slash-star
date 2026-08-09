@@ -8,9 +8,9 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
     AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
-    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
-    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
-    SourceAlpha, SourceColor, SourceDescriptor,
+    AvifItemProperty, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
+    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
+    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -205,7 +205,10 @@ enum Property {
     Mirror(AvifMirrorAxis),
     PixelAspectRatio(AvifPixelAspectRatio),
     CleanAperture(AvifCleanAperture),
-    Other,
+    Other {
+        kind: FourCc,
+        data: Vec<u8>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -658,7 +661,10 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
                 is_alpha: is_alpha_urn(urn),
             })
         }
-        _ => Ok(Property::Other),
+        _ => Ok(Property::Other {
+            kind: property.kind,
+            data: property.payload.to_vec(),
+        }),
     }
 }
 
@@ -676,7 +682,12 @@ fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
                 data: data.to_vec(),
             }));
         }
-        kind if kind != *b"nclx" => return Ok(Property::Other),
+        kind if kind != *b"nclx" => {
+            return Ok(Property::Other {
+                kind,
+                data: payload.to_vec(),
+            });
+        }
         _ => {}
     }
     let color = AvifColorProperties {
@@ -1094,6 +1105,10 @@ impl Meta {
         if !item_icc_profiles.is_empty() {
             source = source.with_avif_item_icc_profiles(item_icc_profiles);
         }
+        let item_properties = self.non_primary_item_properties(primary);
+        if !item_properties.is_empty() {
+            source = source.with_avif_item_properties(item_properties);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1189,6 +1204,25 @@ impl Meta {
                         Property::IccProfile(profile) => Some(AvifItemIccProfile::new(
                             association.item_id,
                             profile.clone(),
+                        )),
+                        _ => None,
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn non_primary_item_properties(&self, primary: u32) -> Vec<AvifItemProperty> {
+        self.associations
+            .iter()
+            .filter(|association| association.item_id != primary)
+            .filter_map(|association| {
+                self.properties.get(association.property_index).and_then(
+                    |property| match property {
+                        Property::Other { kind, data } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *kind,
+                            data.clone(),
                         )),
                         _ => None,
                     },
@@ -1764,7 +1798,10 @@ fn coverage_nested_parser_prefixes() {
     let ipma_payload = coverage_full_box(0, 0, &[0, 0, 0, 1, 0, 1, 1, 1]);
     coverage_each_prefix(&ipma_payload, |payload| {
         let mut meta = Meta {
-            properties: vec![Property::Other],
+            properties: vec![Property::Other {
+                kind: *b"ispe",
+                data: Vec::new(),
+            }],
             ..Meta::default()
         };
         let _ = parse_ipma(payload, &mut meta, &mut Budget::default());
@@ -1772,7 +1809,10 @@ fn coverage_nested_parser_prefixes() {
     let ipma_v1_payload = coverage_full_box(1, 0, &[0, 0, 0, 1, 0, 0, 0, 1, 1, 1]);
     coverage_each_prefix(&ipma_v1_payload, |payload| {
         let mut meta = Meta {
-            properties: vec![Property::Other],
+            properties: vec![Property::Other {
+                kind: *b"ispe",
+                data: Vec::new(),
+            }],
             ..Meta::default()
         };
         let _ = parse_ipma(payload, &mut meta, &mut Budget::default());
@@ -1780,7 +1820,10 @@ fn coverage_nested_parser_prefixes() {
     let ipma_wide_payload = coverage_full_box(0, 1, &[0, 0, 0, 1, 0, 1, 1, 0, 1]);
     coverage_each_prefix(&ipma_wide_payload, |payload| {
         let mut meta = Meta {
-            properties: vec![Property::Other],
+            properties: vec![Property::Other {
+                kind: *b"ispe",
+                data: Vec::new(),
+            }],
             ..Meta::default()
         };
         let _ = parse_ipma(payload, &mut meta, &mut Budget::default());
@@ -1940,7 +1983,10 @@ fn coverage_nested_parser_prefixes() {
     let _ = std::hint::black_box(parse_ipma(
         &ipma_payload,
         &mut Meta {
-            properties: vec![Property::Other],
+            properties: vec![Property::Other {
+                kind: *b"ispe",
+                data: Vec::new(),
+            }],
             ..Meta::default()
         },
         &mut coverage_record_budget(),
@@ -2185,7 +2231,10 @@ fn coverage_malformed_leaf_corpus() {
             let _ = parse_ipma(
                 &payload,
                 &mut Meta {
-                    properties: vec![Property::Other],
+                    properties: vec![Property::Other {
+                        kind: *b"ispe",
+                        data: Vec::new(),
+                    }],
                     ..Meta::default()
                 },
                 &mut Budget::default(),
@@ -2592,7 +2641,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         });
     }
 
-    let properties = vec![Property::Other];
+    let properties = vec![Property::Other {
+        kind: *b"ispe",
+        data: Vec::new(),
+    }];
     let mut meta = Meta {
         properties,
         ..Meta::default()
@@ -2689,7 +2741,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     details_meta.items[0].kind = *b"av01";
     let _ = std::hint::black_box(details_meta.details());
     details_meta.properties.extend([
-        Property::Other,
+        Property::Other {
+            kind: *b"ispe",
+            data: Vec::new(),
+        },
         Property::Ispe {
             width: 2,
             height: 3,

@@ -26,6 +26,7 @@ pub fn decode(
     let premultiplied_relationships = std::mem::take(&mut extracted.premultiplied_relationships);
     let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let item_icc_profiles = std::mem::take(&mut extracted.item_icc_profiles);
+    let item_properties = std::mem::take(&mut extracted.item_properties);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
@@ -99,6 +100,15 @@ pub fn decode(
             .with_avif_item_icc_profiles(item_icc_profiles);
         image.with_source_descriptor(source)
     };
+    let image = if item_properties.is_empty() {
+        image
+    } else {
+        let source = image
+            .source
+            .clone()
+            .with_avif_item_properties(item_properties);
+        image.with_source_descriptor(source)
+    };
     let image = if grid_item_ids.is_empty() {
         image
     } else {
@@ -141,6 +151,7 @@ pub fn decode_sequence(
     let premultiplied_relationships = std::mem::take(&mut extracted.premultiplied_relationships);
     let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
     let item_icc_profiles = std::mem::take(&mut extracted.item_icc_profiles);
+    let item_properties = std::mem::take(&mut extracted.item_properties);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
@@ -211,6 +222,16 @@ pub fn decode_sequence(
                 .source
                 .clone()
                 .with_avif_item_icc_profiles(item_icc_profiles.clone());
+            frame.image.source = source;
+        }
+    }
+    if !item_properties.is_empty() {
+        for frame in &mut sequence.frames {
+            let source = frame
+                .image
+                .source
+                .clone()
+                .with_avif_item_properties(item_properties.clone());
             frame.image.source = source;
         }
     }

@@ -1040,6 +1040,49 @@ impl AvifItemIccProfile {
     }
 }
 
+/// An unparsed property associated with a non-primary AVIF item.
+///
+/// The property kind and payload are retained exactly as stored in the
+/// `ipco` property box, while the item identifier remains source-local. This
+/// is container provenance only: the property is not replayed, interpreted,
+/// or applied to decoded samples.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AvifItemProperty {
+    item_id: u32,
+    kind: [u8; 4],
+    data: Vec<u8>,
+}
+
+impl AvifItemProperty {
+    /// Create a source-local unparsed AVIF item property.
+    #[must_use]
+    pub fn new(item_id: u32, kind: [u8; 4], data: Vec<u8>) -> Self {
+        Self {
+            item_id,
+            kind,
+            data,
+        }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the four-byte property kind.
+    #[must_use]
+    pub const fn kind(&self) -> [u8; 4] {
+        self.kind
+    }
+
+    /// Return the raw property payload, excluding its BMFF box framing.
+    #[must_use]
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+}
+
 /// Topology declared by an AVIF `grid` derived image item.
 ///
 /// These fields are source-local container provenance. They describe the
@@ -1131,6 +1174,7 @@ pub struct SourceDescriptor {
     avif_premultiplied_relationships: Option<Vec<AvifItemRelationship>>,
     avif_item_color_properties: Option<Vec<AvifItemColorProperties>>,
     avif_item_icc_profiles: Option<Vec<AvifItemIccProfile>>,
+    avif_item_properties: Option<Vec<AvifItemProperty>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_grid_properties: Option<AvifGridProperties>,
     avif_transform: Option<AvifTransformProperties>,
@@ -1150,6 +1194,7 @@ impl SourceDescriptor {
             avif_premultiplied_relationships: None,
             avif_item_color_properties: None,
             avif_item_icc_profiles: None,
+            avif_item_properties: None,
             avif_grid_item_ids: None,
             avif_grid_properties: None,
             avif_transform: None,
@@ -1299,6 +1344,19 @@ impl SourceDescriptor {
         self.avif_item_icc_profiles.as_deref().unwrap_or(&[])
     }
 
+    /// Record unparsed properties associated with non-primary AVIF items.
+    #[must_use]
+    pub fn with_avif_item_properties(mut self, properties: Vec<AvifItemProperty>) -> Self {
+        self.avif_item_properties = (!properties.is_empty()).then_some(properties);
+        self
+    }
+
+    /// Return unparsed non-primary AVIF item properties in source order.
+    #[must_use]
+    pub fn avif_item_properties(&self) -> &[AvifItemProperty] {
+        self.avif_item_properties.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1358,6 +1416,7 @@ impl SourceDescriptor {
             && self.avif_premultiplied_relationships.is_none()
             && self.avif_item_color_properties.is_none()
             && self.avif_item_icc_profiles.is_none()
+            && self.avif_item_properties.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_grid_properties.is_none()
             && self.avif_transform.is_none()

@@ -1648,8 +1648,8 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifAuxiliaryRelationship, AvifColorProperties, AvifGridProperties,
-        AvifItemColorProperties, AvifItemIccProfile, AvifItemRelationship, RawIccProfile,
-        SourceAlpha,
+        AvifItemColorProperties, AvifItemIccProfile, AvifItemProperty, AvifItemRelationship,
+        RawIccProfile, SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -1832,182 +1832,181 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         }
         Ok(output)
     };
-    let append_item_icc_profile_association =
-        |input: &[u8]| -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-            let ipco_type = input
-                .windows(4)
-                .position(|window| window == b"ipco")
-                .ok_or("AVIF alpha fixture has no ipco box")?;
-            let ipco = ipco_type
-                .checked_sub(4)
-                .ok_or("AVIF ipco box has no size field")?;
-            let ipco_size = u32::from_be_bytes(input[ipco..ipco + 4].try_into()?) as usize;
-            let ipco_end = ipco
-                .checked_add(ipco_size)
-                .ok_or("AVIF ipco box end overflowed")?;
-            let property = avif_box(b"colr", b"profitem-icc");
-            let mut output = Vec::with_capacity(
-                input
-                    .len()
-                    .checked_add(property.len())
-                    .and_then(|length| length.checked_add(1))
-                    .ok_or("AVIF item ICC output length overflowed")?,
-            );
-            output.extend_from_slice(&input[..ipco_end]);
-            output.extend_from_slice(&property);
-            output.extend_from_slice(&input[ipco_end..]);
-            let new_ipco_end = ipco_end
+    let append_item_property_association = |input: &[u8],
+                                            kind: &[u8; 4],
+                                            payload: &[u8]|
+     -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let ipco_type = input
+            .windows(4)
+            .position(|window| window == b"ipco")
+            .ok_or("AVIF alpha fixture has no ipco box")?;
+        let ipco = ipco_type
+            .checked_sub(4)
+            .ok_or("AVIF ipco box has no size field")?;
+        let ipco_size = u32::from_be_bytes(input[ipco..ipco + 4].try_into()?) as usize;
+        let ipco_end = ipco
+            .checked_add(ipco_size)
+            .ok_or("AVIF ipco box end overflowed")?;
+        let property = avif_box(kind, payload);
+        let mut output = Vec::with_capacity(
+            input
+                .len()
                 .checked_add(property.len())
-                .ok_or("AVIF expanded ipco end overflowed")?;
-            let mut property_cursor = ipco
-                .checked_add(8)
-                .ok_or("AVIF ipco property cursor overflowed")?;
-            let mut property_count = 0usize;
-            while property_cursor < new_ipco_end {
-                let size_end = property_cursor
-                    .checked_add(4)
-                    .ok_or("AVIF property size offset overflowed")?;
-                let property_size = usize::try_from(u32::from_be_bytes(
-                    output[property_cursor..size_end].try_into()?,
-                ))?;
-                if property_size < 8 {
-                    return Err("AVIF item ICC property has an invalid size".into());
-                }
-                property_cursor = property_cursor
-                    .checked_add(property_size)
-                    .ok_or("AVIF property cursor overflowed")?;
-                if property_cursor > new_ipco_end {
-                    return Err("AVIF item ICC property exceeds ipco".into());
-                }
-                property_count = property_count
-                    .checked_add(1)
-                    .ok_or("AVIF property count overflowed")?;
+                .and_then(|length| length.checked_add(1))
+                .ok_or("AVIF item ICC output length overflowed")?,
+        );
+        output.extend_from_slice(&input[..ipco_end]);
+        output.extend_from_slice(&property);
+        output.extend_from_slice(&input[ipco_end..]);
+        let new_ipco_end = ipco_end
+            .checked_add(property.len())
+            .ok_or("AVIF expanded ipco end overflowed")?;
+        let mut property_cursor = ipco
+            .checked_add(8)
+            .ok_or("AVIF ipco property cursor overflowed")?;
+        let mut property_count = 0usize;
+        while property_cursor < new_ipco_end {
+            let size_end = property_cursor
+                .checked_add(4)
+                .ok_or("AVIF property size offset overflowed")?;
+            let property_size = usize::try_from(u32::from_be_bytes(
+                output[property_cursor..size_end].try_into()?,
+            ))?;
+            if property_size < 8 {
+                return Err("AVIF item ICC property has an invalid size".into());
             }
-            if property_cursor != new_ipco_end {
-                return Err("AVIF ipco properties do not fill the box".into());
+            property_cursor = property_cursor
+                .checked_add(property_size)
+                .ok_or("AVIF property cursor overflowed")?;
+            if property_cursor > new_ipco_end {
+                return Err("AVIF item ICC property exceeds ipco".into());
             }
-            let property_index = u8::try_from(property_count)?;
+            property_count = property_count
+                .checked_add(1)
+                .ok_or("AVIF property count overflowed")?;
+        }
+        if property_cursor != new_ipco_end {
+            return Err("AVIF ipco properties do not fill the box".into());
+        }
+        let property_index = u8::try_from(property_count)?;
 
-            let ipma_type = output
+        let ipma_type = output
+            .windows(4)
+            .position(|window| window == b"ipma")
+            .ok_or("AVIF alpha fixture has no ipma box")?;
+        let ipma = ipma_type
+            .checked_sub(4)
+            .ok_or("AVIF ipma box has no size field")?;
+        let ipma_size = usize::try_from(u32::from_be_bytes(output[ipma..ipma + 4].try_into()?))?;
+        let ipma_end = ipma
+            .checked_add(ipma_size)
+            .ok_or("AVIF ipma box end overflowed")?;
+        if output.get(ipma + 8) != Some(&0) {
+            return Err("AVIF alpha fixture ipma version changed".into());
+        }
+        let entry_count = u32::from_be_bytes(output[ipma + 12..ipma + 16].try_into()?);
+        let mut cursor = ipma + 16;
+        let mut insertion = None;
+        let mut association_count_offset = None;
+        for _ in 0..entry_count {
+            let item_id_end = cursor
+                .checked_add(2)
+                .ok_or("AVIF ipma item ID offset overflowed")?;
+            let item_id = u16::from_be_bytes(output[cursor..item_id_end].try_into()?);
+            let count_offset = item_id_end;
+            let association_count = *output
+                .get(count_offset)
+                .ok_or("AVIF ipma association count is missing")?;
+            let association_start = count_offset
+                .checked_add(1)
+                .ok_or("AVIF ipma association start overflowed")?;
+            let association_end = association_start
+                .checked_add(usize::from(association_count))
+                .ok_or("AVIF ipma association end overflowed")?;
+            if item_id == 2 {
+                insertion = Some(association_end);
+                association_count_offset = Some(count_offset);
+            }
+            cursor = association_end;
+        }
+        if cursor != ipma_end {
+            return Err("AVIF alpha fixture ipma layout changed".into());
+        }
+        let insertion = insertion.ok_or("AVIF alpha fixture has no auxiliary item")?;
+        let association_count_offset = association_count_offset
+            .ok_or("AVIF alpha fixture auxiliary association count is missing")?;
+        output.insert(insertion, property_index);
+        output[association_count_offset] = output[association_count_offset]
+            .checked_add(1)
+            .ok_or("AVIF ipma association count overflowed")?;
+
+        let property_delta = u32::try_from(property.len())?;
+        let total_delta = property_delta
+            .checked_add(1)
+            .ok_or("AVIF item ICC metadata delta overflowed")?;
+        for kind in [b"ipco", b"ipma"] {
+            let type_offset = output
                 .windows(4)
-                .position(|window| window == b"ipma")
-                .ok_or("AVIF alpha fixture has no ipma box")?;
-            let ipma = ipma_type
+                .position(|window| window == kind)
+                .ok_or_else(|| format!("AVIF alpha fixture has no {kind:?} box"))?;
+            let size_start = type_offset
                 .checked_sub(4)
-                .ok_or("AVIF ipma box has no size field")?;
-            let ipma_size =
-                usize::try_from(u32::from_be_bytes(output[ipma..ipma + 4].try_into()?))?;
-            let ipma_end = ipma
-                .checked_add(ipma_size)
-                .ok_or("AVIF ipma box end overflowed")?;
-            if output.get(ipma + 8) != Some(&0) {
-                return Err("AVIF alpha fixture ipma version changed".into());
-            }
-            let entry_count = u32::from_be_bytes(output[ipma + 12..ipma + 16].try_into()?);
-            let mut cursor = ipma + 16;
-            let mut insertion = None;
-            let mut association_count_offset = None;
-            for _ in 0..entry_count {
-                let item_id_end = cursor
-                    .checked_add(2)
-                    .ok_or("AVIF ipma item ID offset overflowed")?;
-                let item_id = u16::from_be_bytes(output[cursor..item_id_end].try_into()?);
-                let count_offset = item_id_end;
-                let association_count = *output
-                    .get(count_offset)
-                    .ok_or("AVIF ipma association count is missing")?;
-                let association_start = count_offset
-                    .checked_add(1)
-                    .ok_or("AVIF ipma association start overflowed")?;
-                let association_end = association_start
-                    .checked_add(usize::from(association_count))
-                    .ok_or("AVIF ipma association end overflowed")?;
-                if item_id == 2 {
-                    insertion = Some(association_end);
-                    association_count_offset = Some(count_offset);
-                }
-                cursor = association_end;
-            }
-            if cursor != ipma_end {
-                return Err("AVIF alpha fixture ipma layout changed".into());
-            }
-            let insertion = insertion.ok_or("AVIF alpha fixture has no auxiliary item")?;
-            let association_count_offset = association_count_offset
-                .ok_or("AVIF alpha fixture auxiliary association count is missing")?;
-            output.insert(insertion, property_index);
-            output[association_count_offset] = output[association_count_offset]
-                .checked_add(1)
-                .ok_or("AVIF ipma association count overflowed")?;
+                .ok_or_else(|| format!("AVIF {kind:?} box has no size field"))?;
+            let delta = if kind == b"ipco" { property_delta } else { 1 };
+            let size = u32::from_be_bytes(output[size_start..size_start + 4].try_into()?)
+                .checked_add(delta)
+                .ok_or("AVIF metadata box size overflowed")?;
+            output[size_start..size_start + 4].copy_from_slice(&size.to_be_bytes());
+        }
+        for kind in [b"iprp", b"meta"] {
+            let type_offset = output
+                .windows(4)
+                .position(|window| window == kind)
+                .ok_or_else(|| format!("AVIF alpha fixture has no {kind:?} box"))?;
+            let size_start = type_offset
+                .checked_sub(4)
+                .ok_or_else(|| format!("AVIF {kind:?} box has no size field"))?;
+            let size = u32::from_be_bytes(output[size_start..size_start + 4].try_into()?)
+                .checked_add(total_delta)
+                .ok_or("AVIF metadata box size overflowed")?;
+            output[size_start..size_start + 4].copy_from_slice(&size.to_be_bytes());
+        }
 
-            let property_delta = u32::try_from(property.len())?;
-            let total_delta = property_delta
-                .checked_add(1)
-                .ok_or("AVIF item ICC metadata delta overflowed")?;
-            for kind in [b"ipco", b"ipma"] {
-                let type_offset = output
-                    .windows(4)
-                    .position(|window| window == kind)
-                    .ok_or_else(|| format!("AVIF alpha fixture has no {kind:?} box"))?;
-                let size_start = type_offset
-                    .checked_sub(4)
-                    .ok_or_else(|| format!("AVIF {kind:?} box has no size field"))?;
-                let delta = if kind == b"ipco" { property_delta } else { 1 };
-                let size = u32::from_be_bytes(output[size_start..size_start + 4].try_into()?)
-                    .checked_add(delta)
-                    .ok_or("AVIF metadata box size overflowed")?;
-                output[size_start..size_start + 4].copy_from_slice(&size.to_be_bytes());
-            }
-            for kind in [b"iprp", b"meta"] {
-                let type_offset = output
-                    .windows(4)
-                    .position(|window| window == kind)
-                    .ok_or_else(|| format!("AVIF alpha fixture has no {kind:?} box"))?;
-                let size_start = type_offset
-                    .checked_sub(4)
-                    .ok_or_else(|| format!("AVIF {kind:?} box has no size field"))?;
-                let size = u32::from_be_bytes(output[size_start..size_start + 4].try_into()?)
+        let iloc_type = output
+            .windows(4)
+            .position(|window| window == b"iloc")
+            .ok_or("AVIF alpha fixture has no iloc box")?;
+        let iloc = iloc_type
+            .checked_sub(4)
+            .ok_or("AVIF iloc box has no size field")?;
+        if output[iloc + 12] != 0x44 || output[iloc + 13] != 0 {
+            return Err("AVIF alpha fixture iloc layout changed".into());
+        }
+        let item_count = u16::from_be_bytes(output[iloc + 14..iloc + 16].try_into()?);
+        let mut iloc_cursor = iloc + 16;
+        for _ in 0..item_count {
+            iloc_cursor = iloc_cursor
+                .checked_add(4)
+                .ok_or("AVIF iloc item offset overflowed")?;
+            let extent_count = u16::from_be_bytes(output[iloc_cursor..iloc_cursor + 2].try_into()?);
+            iloc_cursor = iloc_cursor
+                .checked_add(2)
+                .ok_or("AVIF iloc extent count overflowed")?;
+            for _ in 0..extent_count {
+                let offset_end = iloc_cursor
+                    .checked_add(4)
+                    .ok_or("AVIF iloc offset overflowed")?;
+                let old_offset = u32::from_be_bytes(output[iloc_cursor..offset_end].try_into()?)
                     .checked_add(total_delta)
-                    .ok_or("AVIF metadata box size overflowed")?;
-                output[size_start..size_start + 4].copy_from_slice(&size.to_be_bytes());
-            }
-
-            let iloc_type = output
-                .windows(4)
-                .position(|window| window == b"iloc")
-                .ok_or("AVIF alpha fixture has no iloc box")?;
-            let iloc = iloc_type
-                .checked_sub(4)
-                .ok_or("AVIF iloc box has no size field")?;
-            if output[iloc + 12] != 0x44 || output[iloc + 13] != 0 {
-                return Err("AVIF alpha fixture iloc layout changed".into());
-            }
-            let item_count = u16::from_be_bytes(output[iloc + 14..iloc + 16].try_into()?);
-            let mut iloc_cursor = iloc + 16;
-            for _ in 0..item_count {
+                    .ok_or("AVIF iloc extent offset overflowed")?;
+                output[iloc_cursor..offset_end].copy_from_slice(&old_offset.to_be_bytes());
                 iloc_cursor = iloc_cursor
-                    .checked_add(4)
-                    .ok_or("AVIF iloc item offset overflowed")?;
-                let extent_count =
-                    u16::from_be_bytes(output[iloc_cursor..iloc_cursor + 2].try_into()?);
-                iloc_cursor = iloc_cursor
-                    .checked_add(2)
-                    .ok_or("AVIF iloc extent count overflowed")?;
-                for _ in 0..extent_count {
-                    let offset_end = iloc_cursor
-                        .checked_add(4)
-                        .ok_or("AVIF iloc offset overflowed")?;
-                    let old_offset =
-                        u32::from_be_bytes(output[iloc_cursor..offset_end].try_into()?)
-                            .checked_add(total_delta)
-                            .ok_or("AVIF iloc extent offset overflowed")?;
-                    output[iloc_cursor..offset_end].copy_from_slice(&old_offset.to_be_bytes());
-                    iloc_cursor = iloc_cursor
-                        .checked_add(8)
-                        .ok_or("AVIF iloc extent overflowed")?;
-                }
+                    .checked_add(8)
+                    .ok_or("AVIF iloc extent overflowed")?;
             }
-            Ok(output)
-        };
+        }
+        Ok(output)
+    };
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
         (
             "gif binary mask",
@@ -2410,7 +2409,8 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // item ICC results, so this remains source-provenance evidence without
         // a parity row; decoded samples and the primary color declaration stay
         // unchanged.
-        let item_icc_bytes = append_item_icc_profile_association(&item_color_bytes)?;
+        let item_icc_bytes =
+            append_item_property_association(&item_color_bytes, b"colr", b"profitem-icc")?;
         let expected_item_icc = [AvifItemIccProfile::new(
             2,
             RawIccProfile {
@@ -2442,6 +2442,39 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_item_icc_profiles(),
             expected_item_icc.as_slice(),
             "item ICC sequence declaration"
+        );
+
+        // Unknown item properties are retained as raw source provenance. The
+        // property has no Pillow-observable equivalent and must not alter the
+        // primary color result or decoded samples.
+        let unknown_payload = b"opaque-item-property";
+        let unknown_bytes =
+            append_item_property_association(&item_icc_bytes, b"zzzz", unknown_payload)?;
+        let expected_unknown = [AvifItemProperty::new(2, *b"zzzz", unknown_payload.to_vec())];
+        let unknown_inspected = image_slash_star::inspect(&unknown_bytes)?;
+        assert_eq!(
+            unknown_inspected.source.avif_item_properties(),
+            expected_unknown.as_slice(),
+            "unknown item property inspect declaration"
+        );
+        let unknown_decoded = image_slash_star::decode(&unknown_bytes)?;
+        assert_eq!(
+            unknown_decoded.content.source.avif_item_properties(),
+            expected_unknown.as_slice(),
+            "unknown item property decode declaration"
+        );
+        assert_eq!(
+            unknown_decoded.content.pixels, baseline_decoded.content.pixels,
+            "unknown item property preserves decoded pixels"
+        );
+        let unknown_sequence = image_slash_star::decode_sequence(&unknown_bytes)?;
+        assert_eq!(
+            unknown_sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_properties(),
+            expected_unknown.as_slice(),
+            "unknown item property sequence declaration"
         );
     }
     Ok(())
