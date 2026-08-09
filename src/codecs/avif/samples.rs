@@ -5,8 +5,8 @@ use std::num::NonZeroU32;
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
-    AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+    AvifContentLightLevel, AvifGridProperties, AvifItemCodecProperties, AvifItemColorProperties,
+    AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
     AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
     AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
@@ -618,11 +618,7 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             Ok(Property::Pixi { depth })
         }
         kind if kind == *b"av1C" => {
-            let mut reader = Reader::new(input, property.payload);
-            if reader.u8()? != 0x81 {
-                return Err(parse_failure!());
-            }
-            reader.skip(3)?;
+            let _ = parse_av1c_declaration(property.payload.bytes(input)?)?;
             Ok(Property::Av1C(property.payload))
         }
         kind if kind == *b"colr" => parse_colr(input, property.payload),
@@ -648,6 +644,33 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             data: property.payload.bytes(input)?.to_vec(),
         }),
     }
+}
+
+fn parse_av1c_declaration(payload: &[u8]) -> ParseResult<(u8, AvifChromaSamplePosition)> {
+    let span = ByteSpan {
+        start: 0,
+        end: payload.len(),
+    };
+    let mut reader = Reader::new(payload, span);
+    if reader.u8()? != 0x81 {
+        return Err(parse_failure!());
+    }
+    let _ = reader.u8()?;
+    let flags = reader.u8()?;
+    let _ = reader.u8()?;
+    let high_bit_depth = flags & 0x40 != 0;
+    let twelve_bit = flags & 0x20 != 0;
+    if twelve_bit && !high_bit_depth {
+        return Err(parse_failure!());
+    }
+    let bit_depth = if twelve_bit {
+        12
+    } else if high_bit_depth {
+        10
+    } else {
+        8
+    };
+    Ok((bit_depth, AvifChromaSamplePosition::from_code(flags & 3)))
 }
 
 fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -1084,11 +1107,8 @@ impl Meta {
         }) {
             // The span was created from a bounded property payload, so it is
             // still within `input` after container validation.
-            let bytes = &input[span.start..span.end];
-            // `parse_property` has already consumed all four `av1C` bytes
-            // before storing this span, so the flags byte is bounded here.
-            let flags = bytes[2];
-            let chroma_sample_position = AvifChromaSamplePosition::from_code(flags & 3);
+            let bytes = span.bytes(input)?;
+            let (_, chroma_sample_position) = parse_av1c_declaration(bytes)?;
             source_color = source_color.with_avif_chroma_sample_position(chroma_sample_position);
         }
         if let Some(profile) =
@@ -1339,6 +1359,39 @@ impl Meta {
         Ok(result)
     }
 
+    fn non_primary_item_codec_properties(
+        &self,
+        input: &[u8],
+        primary_item_id: u32,
+    ) -> ParseResult<Vec<AvifItemCodecProperties>> {
+        let mut result = Vec::new();
+        for item in &self.items {
+            if item.id == primary_item_id {
+                continue;
+            }
+            let mut codec = None;
+            for property in self.associated(item.id) {
+                if let Property::Av1C(span) = property {
+                    if codec.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    let data = span.bytes(input)?.to_vec();
+                    let (bit_depth, chroma_sample_position) = parse_av1c_declaration(&data)?;
+                    codec = Some((data, bit_depth, chroma_sample_position));
+                }
+            }
+            if let Some((data, bit_depth, chroma_sample_position)) = codec {
+                result.push(AvifItemCodecProperties::new(
+                    item.id,
+                    data,
+                    bit_depth,
+                    chroma_sample_position,
+                ));
+            }
+        }
+        Ok(result)
+    }
+
     fn grid_item_ids(&self, primary_item_id: u32) -> ParseResult<Vec<u32>> {
         let item = self
             .items
@@ -1474,6 +1527,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) item_icc_profiles: Vec<AvifItemIccProfile>,
     pub(super) item_properties: Vec<AvifItemProperty>,
     pub(super) item_plane_properties: Vec<AvifItemPlaneProperties>,
+    pub(super) item_codec_properties: Vec<AvifItemCodecProperties>,
     pub(super) grid_item_ids: Vec<u32>,
     pub(super) grid_properties: Option<AvifGridProperties>,
     pub(super) transform: Option<AvifTransformProperties>,
@@ -2359,6 +2413,11 @@ fn extract_inner_with_metadata(
         .map(|meta| meta.non_primary_item_plane_properties(meta.primary_item_id))
         .transpose()?
         .unwrap_or_default();
+    let item_codec_properties = meta
+        .as_ref()
+        .map(|meta| meta.non_primary_item_codec_properties(input, meta.primary_item_id))
+        .transpose()?
+        .unwrap_or_default();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2376,6 +2435,7 @@ fn extract_inner_with_metadata(
         item_icc_profiles,
         item_properties,
         item_plane_properties,
+        item_codec_properties,
         grid_item_ids,
         grid_properties,
         transform,
@@ -3885,6 +3945,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -3913,6 +3974,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4146,6 +4208,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4206,6 +4269,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4232,6 +4296,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4265,6 +4330,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4311,6 +4377,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4343,6 +4410,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4370,6 +4438,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4404,6 +4473,7 @@ fn coverage_structural_states() {
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
         item_plane_properties: Vec::new(),
+        item_codec_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
