@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `efc5491e1806741e796b8e74118c2db66bee382e`; the claim-ledger fixture
+revision `d68596f0d8b4a3d34a73bdcfc52eeeaac9a775f3`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`a8c83ffb-379a-4556-8e69-2c02c33a9962` (1,445/1,445 passed in 809 ms), and
-the latest feature matrix is `7be7cb89-2795-42ef-a74a-086636379971` (passed in
-40,436 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `8421d772-0f33-4398-90fa-938da1b595fa` from run
-`5e6bdbee-7bec-4013-ab2f-72a3233f8b9d`, also at that revision: 55,659/56,528
-lines, 7,964/8,174 branches, 3,112/3,208 functions, and 85,580/87,518
+`183071da-d525-4f61-bf46-e5e27fb62378` (1,445/1,445 passed in 733 ms), and
+the latest feature matrix is `0060304b-12f3-42a5-9609-7fd04bfbcd90` (passed in
+33,108 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `86396b11-7b70-4a25-8363-70be4073b522` from run
+`c7e64ad4-ff06-47fe-b6aa-bea2a1d5ac08`, also at that revision: 55,653/56,522
+lines, 7,964/8,174 branches, 3,110/3,206 functions, and 85,574/87,512
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
@@ -20,7 +20,8 @@ functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
 functions. The WebP encoder projection records 2,391/2,471 lines,
 511/540 branches, 89/89 functions, and 3,458/3,733 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
-and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
+and 2,813/2,973 regions. The lossless-transform projection records 462/462
+lines, 30/30 branches, 25/25 functions, and 892/892 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
 
 This document explains the stable mental model and ownership boundaries of
@@ -883,6 +884,15 @@ The bounded workspaces' lifetimes are local to `analyze_entropy`, so no state
 crosses an image-stream boundary. These are Rust-only entropy-analysis
 workspace optimizations, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.
+
+VP8L color-indexing transform stores its bounded 256-entry RGBA source table
+and its 256-entry packed-byte expansion table in stack arrays. The largest
+specialized expansion is 8,192 bytes, and the two paths are mutually
+exclusive; the dimension-dependent per-row packed-index buffer remains a
+heap workspace. Color-table padding, packed-index ordering, decoded bytes,
+errors, and sink behavior remain unchanged. This is a Rust-only transform
+workspace optimization, not a claim that the full transform is allocation-free,
+or that allocator/OOM, stack-depth, or streaming behavior is proven.
 
 WebP VP8L alpha encoding now builds the delta table directly from the retained
 u8 palette values instead of materializing a second shifted `Vec<u32>`. Palette
