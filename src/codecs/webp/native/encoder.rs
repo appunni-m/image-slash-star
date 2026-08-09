@@ -2732,7 +2732,10 @@ pub(crate) fn encode_alpha(
         }
         palette_indices[usize::from(value)] = index as u8;
     }
-    let mut palette_delta = Vec::with_capacity(palette_len);
+    // Alpha palettes are bounded to the 8-bit palette alphabet. Keep the
+    // sorted source values available for index lookup without allocating a
+    // second heap vector for their transformed view.
+    let mut palette_delta = [0_u32; 256];
     let mut previous = 0u32;
     for (index, &value) in palette_values.iter().enumerate() {
         if index.is_multiple_of(64) {
@@ -2743,7 +2746,7 @@ pub(crate) fn encode_alpha(
         let red = ((pixel >> 16) & 0xff).wrapping_sub((previous >> 16) & 0xff) & 0xff;
         let green = ((pixel >> 8) & 0xff).wrapping_sub((previous >> 8) & 0xff) & 0xff;
         let blue = (pixel & 0xff).wrapping_sub(previous & 0xff) & 0xff;
-        palette_delta.push(alpha << 24 | red << 16 | green << 8 | blue);
+        palette_delta[index] = alpha << 24 | red << 16 | green << 8 | blue;
         previous = pixel;
     }
 
@@ -2791,7 +2794,7 @@ pub(crate) fn encode_alpha(
 
     match token {
         Some(token) => encode_alpha_stream(
-            &palette_delta,
+            &palette_delta[..palette_len],
             palette_len,
             &packed,
             packed_width,
@@ -2804,7 +2807,7 @@ pub(crate) fn encode_alpha(
             },
         ),
         None => encode_alpha_stream(
-            &palette_delta,
+            &palette_delta[..palette_len],
             palette_len,
             &packed,
             packed_width,
