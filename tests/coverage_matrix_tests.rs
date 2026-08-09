@@ -36,7 +36,7 @@ fn cached_encode_sequence(path: &Path, bytes: &[u8]) -> CachedEncodeSequence {
     let entry = {
         let mut cache = cache
             .lock()
-            .expect("encode fixture cache mutex must not be poisoned");
+            .map_err(|_| "encode fixture cache mutex must not be poisoned".to_owned())?;
         cache
             .entry(path.to_owned())
             .or_insert_with(|| Arc::new(OnceLock::new()))
