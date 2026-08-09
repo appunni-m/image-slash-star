@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`3dc95ea179b4be2c664ec2402ca0c8635e463e7f`; the claim-ledger baseline remains
+`c9acf5d219e82c9c1077c3ec3e0c5df345ee28c5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -416,6 +416,7 @@ VP8L additionally charges around predictor image-width tile-row copies, tile
 scans/mode application and
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
+sampled meta-pixel materialization after each 1,024 retained histogram symbols,
 including meta-histogram row/column comparisons and symbol compaction after
 each 1,024 symbols,
 entropy-mode histogram-cost analysis after each 64 symbols, transform
@@ -967,6 +968,46 @@ Pillow has no caller token, typed work-budget result, caller-owned sink, or
 rollback contract, so the existing feature-gated contract remains the correct
 home. No new test function, fixture-manifest row, diagnostic origin,
 synthetic unit test, or coverage-only hook was added.
+
+Current WebP meta-pixel materialization acceptance record
+
+Implementation revision `c9acf5d219e82c9c1077c3ec3e0c5df345ee28c5` adds a
+token-aware checkpoint to lossless VP8L meta-pixel materialization after
+`optimize_sampling`, polling after each 1,024 retained histogram symbols. The
+ordinary no-token symbols-to-meta-pixels map retains its original iterator and
+collection. The existing `encode_work_budget_is_a_non_parity_result_contract`
+uses the 512×512 `cache_probe_image`, which produces 4,096 retained symbols;
+the whole-buffer path rejects at `maximum: 132,284`, `observed: 132,285`, and
+the direct-sink path rejects at `maximum: 132,283`, `observed: 132,284`, with
+sentinel `[0xB4]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added.
+
+Exact-head managed feature-matrix run
+`5f4d9367-1ffd-487d-ae69-d97d236c3709` passed all 33 configured lanes in
+62,249 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Exact-head Pillow parity run
+`d4f38bd8-b3f7-4ab6-8ffe-eb595b96c260` passed 1,445/1,445 checks in 1,541 ms.
+
+Nightly LLVM run `35d447c9-9c6b-4621-9bb8-d83312b1fe8e` passed 85/85 tests in
+67,126 ms and ingested snapshot
+`c05b6728-0313-4a05-89e2-291fb61e283b`, retaining 54,250/55,075 lines,
+7,698/7,898 branches, 3,080/3,160 functions, and 83,740/85,566 regions.
+Compared with the preceding accepted snapshot
+`4abde553-9342-4f9a-9602-4d2a80243b30`, covered/source deltas are `+7/+11`
+lines, `+3/+4` branches, `+0/+0` functions, and `+19/+21` regions. The
+current `src/codecs/webp/native/encoder.rs` file is 2,024/2,107 lines,
+446/474 branches, 93/93 functions, and 3,008/3,263 regions; the histogram
+file remains 782/782 lines, 172/172 branches, 39/39 functions, and
+1,184/1,210 regions. The known LLVM JSON segment-normalization warning
+remains; the current aggregate shortfall is 825 lines, 200 branches,
+80 functions, and 1,826 regions. The parity, feature-matrix, and coverage
+records remain separate evidence systems.
 
 Current WebP palette-drain acceptance record
 
