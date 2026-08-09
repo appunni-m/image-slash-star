@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`ee29a1f749266731849ad08fcc160874a3daeccfc8be10b7838aaf1d08a06da9`, and
+`6760835419c717006f66d66e8c2f037112187aee983f41744b2665eb5090a284`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6542,12 +6542,12 @@ generated-matrix SHA-256
 The map also pins the independent inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 69 named witnesses, 78 distinct active WebP rows, 44 successful
+properties, 68 named witnesses, 78 distinct active WebP rows, 45 successful
 structural witnesses, and 40 malformed parser witnesses.
 
 The frame-header, color-indexing size-band, subtract-green, color-transform,
 meta-Huffman, entropy-image, successful cache-boundary, simple-Huffman-tree,
-and full-Huffman-tree
+full-Huffman-tree, and distance-mapping
 properties are
 `witnessed` only at their explicitly listed scopes: the color-indexing rows
 remain Pillow-origin outer-result fixtures while the independent inspector
@@ -6556,10 +6556,11 @@ is parsed independently, the color-transform rows prove the selected block
 sizes, the meta-Huffman rows prove the selected one- and two-group forms, the
 entropy-image rows prove the selected 2×1 and 24×24 dimensions, and the cache
 rows prove the selected 1- and 10-bit widths, and the full-tree rows prove the
-two listed high-entropy forms, and the simple-tree rows prove the two listed
-successful forms. The other 5 properties remain deliberately
+two listed high-entropy forms, the simple-tree rows prove the two listed
+successful forms, and the distance rows prove the two listed mappings. The
+other 4 properties remain deliberately
 marked `candidate` at the full-category level; their named rows are
-Pillow-origin outer-result fixtures, while the 44 successful structural
+Pillow-origin outer-result fixtures, while the 45 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
 entropy-image facts. The 40 malformed witnesses independently check rejection
