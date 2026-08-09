@@ -36,6 +36,7 @@ HASHED_FILES = {
     "incremental_input": "tests/fixtures/incremental_input_manifest.json",
     "diagnostic": "tests/fixtures/diagnostic_manifest.json",
     "coverage_origins": "tests/fixtures/coverage_origin_manifest.json",
+    "webp_property_map": "tests/fixtures/webp_vp8l_property_map.json",
 }
 
 DOCS = [

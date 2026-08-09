@@ -3,8 +3,11 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against current implementation revision
-`487348d01389eb8d100b8a668c9921d97634c022`; the claim-ledger baseline remains
-`f1048bc0399fad9801559ca7fcfd3163427b5832`.
+`487348d01389eb8d100b8a668c9921d97634c022`; the current claim-ledger tuple is
+pinned to that implementation revision, Pillow parity run
+`c7e67804-f563-43a4-8814-8cf8b5e88319`, and Coverage MCP snapshot
+`026d33d8-47e7-4d36-99a1-08757710f186` from run
+`96813ff1-b9e7-45ac-945c-2c0318bc8538`.
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -63,7 +66,7 @@ ecosystem comparison. It is intentionally kept in the roadmap instead of
 creating another active document. Delete resolved rows as their behavior moves
 into the README, architecture reference, rustdoc, or testing contract.
 
-The correction evidence below is the committed state based on
+The original correction evidence below is the committed state based on
 `f1048bc0399fad9801559ca7fcfd3163427b5832`, identified by manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`
 and generated matrix SHA-256
@@ -133,7 +136,7 @@ testing contract, rustdoc, committed fixtures, and claim ledger. New confirmed
 defects belong in the immediate correction queue below; future capability work
 belongs in the API, codec, FTR, and QA backlog tables.
 
-The claim-ledger baseline all-feature Coverage MCP run
+The original claim-ledger baseline all-feature Coverage MCP run
 `9bbe6760-7aa9-4ed8-8b31-bbf65444b85a`, snapshot
 `f9a2fc69-ad68-493e-9c46-8837d0dd8d52`, passed 58 tests with zero failures
 or skips and reports 47,943/47,943 lines, 6,578/6,578 branches,
@@ -671,7 +674,7 @@ Minute gaps:
 | WEP-019 | A partial WebP demux can know the canvas and N frames while the last frame remains incomplete. Whole-slice APIs collapse this into success or malformed without progress. | Reuse API-043/047 and expose a partial-frame state only in the future streaming demux. |
 | WEP-020 | libwebp animation decode reports cumulative timestamps, while the common model stores individual durations. Rounding, zero-duration frames, overflow, and final timestamp must be proved separately. | Assert both exact source duration and checked cumulative presentation time. |
 | WEP-021 | Lossy pixel output depends on fancy upsampling, filtering, dithering, cropping/scaling options, and premultiplied/output layout choices in common decoders. Only one implicit reconstruction policy is tested. | Freeze the Pillow-compatible reconstruction path, compare scalar/WASM behavior, and expose alternatives only when they are codec transfer choices rather than processing. |
-| WEP-022 | VP8L aggregate fixtures do not publish a witness for each transform combination, meta-prefix group, color-cache boundary, simple/full Huffman tree form, distance mapping, and entropy-image dimension. | Add a property-to-fixture map and minimize first-divergence cases before performance refactors. |
+| WEP-022 | VP8L aggregate fixtures do not yet prove each transform combination, meta-prefix group, color-cache boundary, simple/full Huffman tree form, distance mapping, and entropy-image dimension. The revision-pinned property map names 14 candidate properties and 70 active witnesses, but deliberately claims only Pillow outer results. | Add independently checked structural provenance or a minimized first-divergence parser witness, then promote candidates one property at a time without changing their Pillow-origin boundary. |
 
 #### ICO and CUR
 
@@ -906,7 +909,7 @@ and sink boundary with sentinel `[0xC7]` untouched; Pillow parity remains the
 unchanged outer-result regression gate.
 
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
-| QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. | Maintain a compact property-to-fixture map per codec so every claimed syntax/state has a named minimal witness. |
+| QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records the named candidates and the exact boundary of what Pillow proves. | Extend the same map discipline to each codec and replace candidate-only VP8L entries with independently checked structural witnesses before claiming state coverage. |
 | QA-030 | No benchmark checks output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocation/peak-memory measurements alongside time and artifact size; never optimize from source line count. |
 | QA-031 | Legal-but-unsupported format classes are not a uniform fixture lane. Some are absent entirely, while malformed inputs dominate error coverage. | Add active negative-capability rows for every named legal class and require `Unsupported` rather than incidental `Malformed`. |
 | QA-033 | Generator reproducibility is checked through hashes inside generated data, but a clean regeneration/no-diff run is not a mandatory CI gate for every script and asset. | Run generators in a clean checkout, fail on any diff, and record pinned Python/native tool identities. |
@@ -1166,6 +1169,22 @@ being repeated as unfinished work.
 3. Advance the dependency-ordered metadata, frame/page/strip/tile, incremental
    I/O, deeper interruption, native/WASM, packaging, and size-measurement rows
    only after the preceding contracts have evidence.
+
+The WebP VP8L property-map slice is now recorded in
+`tests/fixtures/webp_vp8l_property_map.json` and checked by
+`python3 scripts/verify_webp_vp8l_property_map.py`. At the current source
+revision it contains 14 properties, 70 named witnesses, and 56 distinct
+active WebP rows, pinned to manifest SHA-256
+`bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3` and
+matrix SHA-256
+`b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
+Every property remains a `candidate`: its named fixture proves only the
+Pillow outer result, while VP8L transform selection, meta-Huffman groups,
+color-cache width, simple/full Huffman form, distance mapping, and
+entropy-image dimensions still need independently checked structural
+provenance. The map therefore closes the row-to-property accounting gap
+without converting internal-state candidates into Pillow parity or adding a
+synthetic/unit/coverage-only test.
 
 Completed first: COR-001 through COR-072, including exact WebP mode
 preparation and alpha payload selection, strict JPEG/WebP option rejection,

@@ -1,0 +1,220 @@
+{
+  "format_version": 1,
+  "schema": "image-slash-star/webp-vp8l-property-map@1",
+  "scope": "webp/vp8l",
+  "source_revision": "487348d01389eb8d100b8a668c9921d97634c022",
+  "oracle": {
+    "name": "Pillow",
+    "version": "12.2.0",
+    "codec_backend": "libwebp 1.6.0"
+  },
+  "inputs": {
+    "manifest_path": "manifest.yaml",
+    "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
+    "matrix_path": "tests/fixtures/coverage_matrix.json",
+    "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510"
+  },
+  "evidence_policy": {
+    "pillow_outer_result": "The named row proves only the Pillow-observable pixels, bytes, metadata, or error result asserted by the matrix.",
+    "candidate": "The fixture is a deliberate structural candidate or minimized error boundary, but its VP8L internal state is not proven by Pillow.",
+    "structural_witness_needed": "A future independent VP8L parser or retained source provenance must establish the exact transform, cache, Huffman, distance, or entropy-image state."
+  },
+  "properties": [
+    {
+      "id": "vp8l.frame.header_and_outer_result",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_vp8l"},
+        {"operation": "decode", "row_id": "lossless_transform_variants"}
+      ],
+      "gap": "The rows prove successful VP8L decode and exact outer results, not every header or stream-state branch."
+    },
+    {
+      "id": "vp8l.transform.predictor_modes",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_xor"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_product"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_radial"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diamond"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_bilinear"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_stripes"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_steps"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_saw"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_quadrants"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode5"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode6"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode7"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode8"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode9"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode10"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode13"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_sparse"}
+      ],
+      "gap": "Source pattern names are intent candidates; Pillow does not report which predictor transform or mode the encoded stream selected."
+    },
+    {
+      "id": "vp8l.transform.color_indexing_size_bands",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette16"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette17"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette32"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette64"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette256"}
+      ],
+      "gap": "Source palette cardinality names the intended bands, but only a VP8L structural witness can prove the color-indexing transform and encoded table size."
+    },
+    {
+      "id": "vp8l.transform.color",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_horizontal"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_vertical"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_diagonal"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"}
+      ],
+      "gap": "The decoded pixels are parity evidence; they do not identify a VP8L color-transform record or its block size."
+    },
+    {
+      "id": "vp8l.transform.subtract_green",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "encode", "row_id": "enc_lossless_subtract_green"}
+      ],
+      "gap": "The encoded bytes are Pillow parity for this save operation, but the matrix does not decode or label the selected VP8L transform."
+    },
+    {
+      "id": "vp8l.meta_huffman.prefix_groups",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
+      ],
+      "gap": "The rows are high-entropy/meta-cache candidates; Pillow exposes no meta-Huffman group count or prefix assignment."
+    },
+    {
+      "id": "vp8l.entropy_image_dimensions",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
+      ],
+      "gap": "The matrix does not retain the VP8L entropy-image width, height, or grouping bits."
+    },
+    {
+      "id": "vp8l.color_cache.boundaries",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_color_cache"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_cache_truncated_10"}
+      ],
+      "gap": "The success/error outcomes are retained, but cache enablement, cache-bit width, and lookup boundaries are not oracle fields."
+    },
+    {
+      "id": "vp8l.huffman.simple_tree_form",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_empty_code_length_tree"}
+      ],
+      "gap": "Solid and low-cardinality inputs are candidates for simple trees; Pillow does not report the simple-tree flag or symbol form."
+    },
+    {
+      "id": "vp8l.huffman.full_tree_form",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_incomplete_huffman_tree"}
+      ],
+      "gap": "High-entropy inputs are full-tree candidates; a Pillow row cannot prove code-length alphabets, canonical lengths, or tree validity."
+    },
+    {
+      "id": "vp8l.distance_mapping",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_plane_distance_clamp"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_plane_distance_truncated_12"}
+      ],
+      "gap": "The named fixtures target plane-distance behavior, but Pillow exposes neither distance symbols nor the VP8L distance-map result."
+    },
+    {
+      "id": "vp8l.transform.malformed_forms",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_duplicate_transform"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_predictor_transform_stream_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_transform_stream_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_size_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_stream_truncated"}
+      ],
+      "gap": "Pillow error results are active negative parity rows; exact parser phase and transform fields remain Rust/specification evidence, not Pillow fields."
+    },
+    {
+      "id": "vp8l.huffman.malformed_forms",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_empty_code_length_tree"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_incomplete_huffman_tree"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_max_symbol"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_zero_symbol"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_max_value_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_length_alphabet_truncated"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_huffman_stream_truncated"}
+      ],
+      "gap": "The malformed rows preserve Pillow's outer error outcome, not the internal Huffman failure phase or code-length state."
+    },
+    {
+      "id": "vp8l.cache.malformed_forms",
+      "status": "candidate",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": false,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_color_cache"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_cache_truncated_10"},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_single_cache_truncated_18"}
+      ],
+      "gap": "These are named cache error boundaries, but cache size and insertion/lookup state require independent structural provenance."
+    }
+  ]
+}
