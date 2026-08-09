@@ -1066,7 +1066,7 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
     let mut bytes = initial_bytes;
     bytes.reserve(suffix.len());
-    bytes.extend_from_slice(&suffix);
+    extend_bytes_with_checkpoint(&mut bytes, &suffix, token)?;
     *w.writer = bytes;
     w.buffer = buffer;
     w.nbits = nbits;

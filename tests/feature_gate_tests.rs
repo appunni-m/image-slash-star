@@ -13237,6 +13237,71 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(lossless_container_sink, vec![0xAB]);
 
+        // VP8L candidate trials already reuse the emitted prefix, but the
+        // selected trial suffix was still copied as one bulk operation. This
+        // is a Rust-only work-control boundary: Pillow has no caller token,
+        // typed work-budget result, or caller-owned sink. The deterministic
+        // LCG probe reaches a 49,236-byte lossless output and makes the
+        // causal difference observable: the pre-fix bulk suffix control
+        // completed at 139,125, while the token-aware copy adds 48 complete
+        // 1,024-byte intervals and rejects at 139,172/139,173.
+        let candidate_copy_expected =
+            image_slash_star::encode(&bitstream_16384_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(candidate_copy_expected.len(), 49_236);
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &bitstream_16384_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &unlimited,
+            )?,
+            candidate_copy_expected,
+            "an ample candidate-copy budget preserves byte identity"
+        );
+        let candidate_copy_error = match image_slash_star::encode_with_policy(
+            &bitstream_16384_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(139_172),
+        ) {
+            Ok(_) => return Err("VP8L candidate-copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            candidate_copy_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 139_172,
+                observed: 139_173,
+            }
+        ));
+        let mut candidate_copy_sink = vec![0xDB];
+        let candidate_copy_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &bitstream_16384_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(139_171),
+            &mut candidate_copy_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L candidate-copy sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            candidate_copy_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 139_171,
+                observed: 139_172,
+            }
+        ));
+        assert_eq!(candidate_copy_sink, vec![0xDB]);
+
         // Lossy VP8 RGB-to-YUV conversion now charges an interior checkpoint
         // after each 1,024 conversion items. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence and adds no
