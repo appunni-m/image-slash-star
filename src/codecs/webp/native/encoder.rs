@@ -1127,6 +1127,32 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     max_cache_bits: u8,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
+    let mut scratch = TokenStreamScratch::default();
+    write_image_stream_configured_with_scratch(
+        w,
+        pixels,
+        width,
+        write_meta_huffman_bit,
+        histogram_bits,
+        quality,
+        max_cache_bits,
+        &mut scratch,
+        token,
+    )
+}
+
+#[allow(clippy::too_many_arguments, clippy::unwrap_used)]
+fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
+    pixels: &[u32],
+    width: usize,
+    write_meta_huffman_bit: bool,
+    histogram_bits: u8,
+    quality: u32,
+    max_cache_bits: u8,
+    token_scratch: &mut TokenStreamScratch,
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
     let candidates = backward_refs::candidates(
         pixels,
         width,
@@ -1145,7 +1171,6 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
     let mut scratch = Vec::new();
-    let mut token_scratch = TokenStreamScratch::default();
     for (tokens, cache_bits) in candidates {
         scratch.clear();
         let (byte_length, buffer, nbits, checkpoint) = {
@@ -1166,7 +1191,7 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
                     histogram_bits,
                     quality,
                 },
-                &mut token_scratch,
+                token_scratch,
                 token,
             )?;
             let checkpoint = trial.checkpoint.clone();
@@ -1235,6 +1260,10 @@ struct TokenStreamScratch {
     meta_pixels: Vec<u32>,
     huffman_nodes: Vec<WeightedHuffmanEncodingNode>,
     huffman_node_sort_scratch: Vec<WeightedHuffmanEncodingNode>,
+    // Multi-group token streams encode a metadata image once per candidate.
+    // Retain the nested stream scratch so its bounded buffers survive the
+    // outer candidate loop; the metadata stream disables further recursion.
+    meta_stream: Option<Box<TokenStreamScratch>>,
 }
 
 #[derive(Clone, Copy)]
@@ -1504,24 +1533,39 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             // Meta-pixel materialization scales with the retained histogram
             // tile map after sampling. Keep the ordinary no-token map
             // unchanged and poll only the caller-controlled path.
-            let meta_pixels = &mut scratch.meta_pixels;
-            meta_pixels.clear();
-            meta_pixels.reserve(symbols.len());
-            if let Some(token) = token {
-                let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
-                for &symbol in &symbols {
-                    meta_pixels.push(u32::from(symbol) << 8);
-                    symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
-                    if symbols_until_checkpoint == 0 {
-                        check_token(Some(token))?;
-                        symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+            {
+                let meta_pixels = &mut scratch.meta_pixels;
+                meta_pixels.clear();
+                meta_pixels.reserve(symbols.len());
+                if let Some(token) = token {
+                    let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+                    for &symbol in &symbols {
+                        meta_pixels.push(u32::from(symbol) << 8);
+                        symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
+                        if symbols_until_checkpoint == 0 {
+                            check_token(Some(token))?;
+                            symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+                        }
                     }
+                } else {
+                    meta_pixels.extend(symbols.iter().map(|&symbol| u32::from(symbol) << 8));
                 }
-            } else {
-                meta_pixels.extend(symbols.iter().map(|&symbol| u32::from(symbol) << 8));
             }
             let meta_width = width.div_ceil(1 << encoded_histogram_bits);
-            write_image_stream_configured(w, meta_pixels, meta_width, false, 3, quality, 0, token)?;
+            let meta_scratch = scratch
+                .meta_stream
+                .get_or_insert_with(|| Box::new(TokenStreamScratch::default()));
+            write_image_stream_configured_with_scratch(
+                w,
+                &scratch.meta_pixels,
+                meta_width,
+                false,
+                3,
+                quality,
+                0,
+                meta_scratch.as_mut(),
+                token,
+            )?;
         }
     }
     let group_count = histograms.len();
