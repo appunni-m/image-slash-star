@@ -39,6 +39,30 @@
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [0]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_vertical",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [1]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_horizontal",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [2]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_bilinear",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [3]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode5",
       "expect": {"stream_index": 0, "stream": {"green_values_contains": [5]}}
     },
