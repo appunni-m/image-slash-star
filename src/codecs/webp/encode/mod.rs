@@ -69,6 +69,10 @@ fn checkpoint_after_prepare_pixel(
 /// after each 1,024 bytes; the no-token path retains one bulk copy.
 /// Token-aware VP8L candidate-trial selection also copies the winning suffix
 /// after each 1,024 bytes; the no-token path retains one bulk suffix copy.
+/// Token-aware entropy-mode analysis polls its pixel histogram after each
+/// completed 1,024-pixel chunk on rows wider than 1,024 pixels; narrower rows
+/// remain bounded by their existing row-start polls, and the no-token pass is
+/// a direct loop without token scheduling.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
 /// VP8 encoding polls required padded Y/U/V edge-replication items after each

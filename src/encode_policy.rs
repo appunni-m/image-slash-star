@@ -42,11 +42,12 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// source-mode preparation and RGBA alpha/RGB extraction after each 1,024
 /// source pixels, plus lossless WebP VP8L RGB/RGBA source-pixel
 /// materialization, image-palette construction, and palette-mode index packing
-/// after each 1,024 source pixels, plus RGBA
+/// after each 1,024 source pixels, entropy-mode pixel histogram scans after
+/// each completed 1,024-pixel chunk on rows wider than 1,024 pixels, plus RGBA
+/// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// lossy WebP VP8/ALPH RIFF payload, alpha-stream, lossless VP8L candidate-
 /// trial suffix and RIFF frame, and container/metadata output copies after
 /// each 1,024 bytes,
-/// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor mode-application wide
 /// source-row copies after each completed 1,024-pixel chunk, and
 /// predictor/cross-color/entropy/transform,
@@ -152,8 +153,9 @@ impl EncodePolicy {
     /// alpha-stream, lossless VP8L candidate-trial suffix and RIFF frame, and
     /// container/metadata output copies after each 1,024 bytes,
     /// predictor mode-application wide source-row copies after each completed
-    /// 1,024-pixel chunk,
-    /// predictor tile scans, cross-color, entropy,
+    /// 1,024-pixel chunk, entropy-mode pixel histogram scans after each
+    /// completed 1,024-pixel chunk on rows wider than 1,024 pixels, predictor
+    /// tile scans, cross-color, entropy,
     /// transform, bounded backward-reference cost/length-table initialization
     /// and setup after each 1,024 entries, token-aware cost-manager interval-
     /// update and cleanup scans after each 256 cumulative interval entries,
