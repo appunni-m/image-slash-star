@@ -92,6 +92,7 @@ const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
 const VP8L_524288_BITSTREAM_CHECKPOINT_BITS: usize = 524_288;
 const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
+const VP8L_2097152_BITSTREAM_CHECKPOINT_BITS: usize = 2_097_152;
 const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
 const VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS: usize = 1_024;
 const WEBP_PALETTE_CHECKPOINT_VALUES: usize = 64;
@@ -217,6 +218,12 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
                                                                                     / VP8L_8_BITSTREAM_CHECKPOINT_BITS,
                                                                             ) {
                                                                                 check_token(Some(self.token))?;
+                                                                                if previous_8_interval.is_multiple_of(
+                                                                                    VP8L_2097152_BITSTREAM_CHECKPOINT_BITS
+                                                                                        / VP8L_8_BITSTREAM_CHECKPOINT_BITS,
+                                                                                ) {
+                                                                                    check_token(Some(self.token))?;
+                                                                                }
                                                                             }
                                                                         }
                                                                     }
