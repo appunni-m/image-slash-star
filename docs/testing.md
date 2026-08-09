@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`988fe4cba828923a8ff4acb9c3203e3bf53272c4af141e95dabfb00f32b083dc`, and
+`3adb086127098ec724228a35594d9d1207d5176e93445e143bfa7ebaf32ef29a`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6542,16 +6542,17 @@ generated-matrix SHA-256
 The map also pins the independent inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 72 named witnesses, 78 distinct active WebP rows, 39 successful
+properties, 72 named witnesses, 78 distinct active WebP rows, 40 successful
 structural witnesses, and 40 malformed parser witnesses.
 
-The color-indexing size-band property and the subtract-green property are
+The color-indexing size-band, subtract-green, and color-transform properties are
 `witnessed` only at their explicitly listed scopes: the color-indexing rows
 remain Pillow-origin outer-result fixtures while the independent inspector
-proves the transform and table-size fields, and the subtract-green encode
-artifact is parsed independently. The other 12 properties remain deliberately
+proves the transform and table-size fields, the subtract-green encode artifact
+is parsed independently, and the color-transform rows prove the selected block
+sizes. The other 11 properties remain deliberately
 marked `candidate` at the full-category level; their named rows are
-Pillow-origin outer-result fixtures, while the 39 successful structural
+Pillow-origin outer-result fixtures, while the 40 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
 entropy-image facts. The 40 malformed witnesses independently check rejection
