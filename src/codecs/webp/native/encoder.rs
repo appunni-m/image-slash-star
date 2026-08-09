@@ -320,6 +320,7 @@ fn build_huffman_tree(
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
+    optimized: &mut Vec<u32>,
     length_limit: u8,
     token: Option<&crate::CancellationToken>,
 ) -> Result<bool, EncodingError> {
@@ -339,8 +340,9 @@ fn build_huffman_tree(
         node: Node,
     }
 
-    let mut optimized = frequencies.to_vec();
-    optimize_huffman_for_rle_with_checkpoint(&mut optimized, token)?;
+    optimized.clear();
+    optimized.extend_from_slice(frequencies);
+    optimize_huffman_for_rle_with_checkpoint(&mut *optimized, token)?;
     let optimized_symbol_count = if let Some(token) = token {
         let mut count = 0_usize;
         for (index, &frequency) in optimized.iter().enumerate() {
@@ -881,9 +883,17 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     lengths: &mut [u8],
     codes: &mut [u16],
     huffman_tokens: &mut Vec<HuffmanToken>,
+    optimized_frequencies: &mut Vec<u32>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
-    build_huffman_tree(frequencies, lengths, codes, 15, token)?;
+    build_huffman_tree(
+        frequencies,
+        lengths,
+        codes,
+        optimized_frequencies,
+        15,
+        token,
+    )?;
     let symbols = if let Some(token) = token {
         let mut symbols = Vec::with_capacity(3);
         for (index, &length) in lengths.iter().enumerate() {
@@ -949,6 +959,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
+        optimized_frequencies,
         7,
         token,
     )?;
@@ -1200,6 +1211,7 @@ impl GroupCodes {
 struct TokenStreamScratch {
     groups: Vec<GroupCodes>,
     huffman_tokens: Vec<HuffmanToken>,
+    optimized_frequencies: Vec<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -1341,6 +1353,7 @@ fn write_group<C: BitWriterCheckpoint>(
     populations: &[Vec<u32>; 5],
     group: &mut GroupCodes,
     huffman_tokens: &mut Vec<HuffmanToken>,
+    optimized_frequencies: &mut Vec<u32>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     group.prepare(populations);
@@ -1354,6 +1367,7 @@ fn write_group<C: BitWriterCheckpoint>(
             channel_lengths,
             channel_codes,
             huffman_tokens,
+            optimized_frequencies,
             token,
         )?;
     }
@@ -1503,12 +1517,20 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     let group_count = histograms.len();
     let group_scratch = &mut scratch.groups;
     let huffman_tokens = &mut scratch.huffman_tokens;
+    let optimized_frequencies = &mut scratch.optimized_frequencies;
     if group_scratch.len() < group_count {
         group_scratch.resize_with(group_count, GroupCodes::default);
     }
     for (group, histogram) in group_scratch.iter_mut().take(group_count).zip(&histograms) {
         check_token(token)?;
-        write_group(w, &histogram.populations, group, huffman_tokens, token)?;
+        write_group(
+            w,
+            &histogram.populations,
+            group,
+            huffman_tokens,
+            optimized_frequencies,
+            token,
+        )?;
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
@@ -2712,12 +2734,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut lengths = vec![0; 4];
     let mut codes = vec![0; 4];
     let mut huffman_tokens = Vec::new();
+    let mut optimized_frequencies = Vec::new();
     let _ = write_huffman_tree(
         &mut tree_writer,
         &[1, 0, 0, 0],
         &mut lengths,
         &mut codes,
         &mut huffman_tokens,
+        &mut optimized_frequencies,
         None,
     );
     let _ = tree_writer.flush();
@@ -2739,6 +2763,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut trimmed_lengths,
         &mut trimmed_codes,
         &mut huffman_tokens,
+        &mut optimized_frequencies,
         None,
     );
     let _ = trimmed_tree_writer.flush();
@@ -2763,6 +2788,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &populations,
         &mut group,
         &mut huffman_tokens,
+        &mut optimized_frequencies,
         None,
     );
     let _ = group_writer.flush();
