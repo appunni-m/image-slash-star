@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `6e96b2c7f5587543b840bfde78ef0f2a239c1f3c`; the claim-ledger fixture tuple
+revision `f13a5aa3b99fed752875f67c9a73c27b4f97a538`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -14,7 +14,8 @@ GIF sequence frame ownership, GIF indexed frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
 PNG source pixel ownership, TIFF conditional source ownership, TIFF repeated-row
-Deflate planning, PNG all-level repeated-row Deflate planning, candidate-prefix
+Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row
+Deflate planning, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
 token-materialization, and Huffman-tree leaf
@@ -679,6 +680,13 @@ directly instead of allocating a second vector containing only page lengths.
 The same alignment and classic-TIFF overflow checks still run before output
 admission or relocation, so this is a bounded bookkeeping optimization rather
 than a streaming, rollback, or complete allocator guarantee.
+
+TIFF multi-page sink delivery derives each aligned page base from the running
+delivered output position while relocating pages instead of allocating a
+page-count-sized base vector. Next-IFD links, relocated offsets, page alignment,
+overflow checks, cancellation, sink segment boundaries, and output bytes remain
+unchanged. This is bounded sink-path bookkeeping, not a streaming, rollback, or
+complete allocator guarantee.
 
 TIFF Deflate pages pass the repeated row length and row count directly to the
 level-six zlib-ng tokenizer instead of allocating a temporary row-length vector.
