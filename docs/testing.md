@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `2e272b2405ec108fb2b531df07665f0e81c2f1f8`, and benchmark-protocol revision
+revision `d7a43f6314b2570baefbc048d0ef532395154f3e`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,15 +11,15 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`dedb5e2e-8124-4aa2-8e9c-c7db7e998db8` (1,445/1,445 passed in 648 ms) and
-feature matrix `db97b171-6f32-477c-84c1-335a1f323098` (passed in 21,489 ms);
+`74d6b9ee-d771-4ad3-99c4-27a17c9512f7` (1,445/1,445 passed in 579 ms) and
+feature matrix `64fb001e-366c-43d9-8dc4-7ac507e945ce` (passed in 21,842 ms);
 both recorded checkout HEAD
-`2e272b2405ec108fb2b531df07665f0e81c2f1f8`.
+`d7a43f6314b2570baefbc048d0ef532395154f3e`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no Coverage MCP rerun has yet been
-recorded for `2e272b2405ec108fb2b531df07665f0e81c2f1f8`. The exact-head managed
+recorded for `d7a43f6314b2570baefbc048d0ef532395154f3e`. The exact-head managed
 parity and feature-matrix records above are test-result evidence, not coverage
 metrics.
 
@@ -638,6 +638,35 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L cache-transform output-scratch reuse slice is
+implemented at production and Rust test/runtime revision
+`d7a43f6314b2570baefbc048d0ef532395154f3e`, following nested metadata output
+scratch reuse at `2e272b2405ec108fb2b531df07665f0e81c2f1f8`. Cache-bit candidate
+transforms now retain a reusable transformed-token buffer alongside the
+existing color-cache table; each trial swaps its output with the current best
+candidate, returning the replaced vector to scratch while keeping only the
+selected token vector independently owned. Cache-bit ordering, checkpoint
+behavior, encoded bytes, errors, and sink output remain unchanged. The existing
+WebP encode matrix (28/13/47 rows), full fixture matrix, all 45 feature-gated
+Rust contracts, full all-feature suite, strict Clippy, rustfmt, and all
+configured native/WASI feature-matrix lanes passed locally. Clean
+`fixture-benchmark@3` observations at this revision passed the Pillow-parity
+workload in 0.948031 s wall / 2.776938 user s / 0.193214 sys s /
+250,478,592-byte peak RSS, and the separate Rust-only feature-gate workload in
+1.590595 s wall / 2.264828 user s / 0.096149 sys s /
+150,044,672-byte peak RSS. The native release `rlib` was 7,979,320 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,848,101 bytes. These
+are host/cache/toolchain observations, not comparative or universal
+performance claims; peak RSS is a direct-child POSIX observation. Pillow
+remains the byte/error oracle, while transformed-token ownership is Rust-only
+evidence: no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook was added. Exact-head managed Pillow parity run
+`74d6b9ee-d771-4ad3-99c4-27a17c9512f7` passed 1,445/1,445 checks, and exact-head
+feature-matrix run `64fb001e-366c-43d9-8dc4-7ac507e945ce` passed all configured
+native/WASI lanes with the capability agreement marker and no `lock-wait`
+match. Both managed runs have `coverage_ingest.status=not_configured`; they are
+test-result evidence, not Coverage MCP metrics.
 
 The lossless WebP VP8L nested metadata output-scratch reuse slice is
 implemented at production and Rust test/runtime revision
@@ -3007,6 +3036,36 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L cache-transform output-scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`d7a43f6314b2570baefbc048d0ef532395154f3e`, following the preceding
+`2e272b2405ec108fb2b531df07665f0e81c2f1f8` nested metadata output-scratch
+reuse. Cache-bit candidate transforms now retain a reusable transformed-token
+buffer alongside the existing color-cache table; each trial swaps its output
+with the current best candidate, returning the replaced vector to scratch
+while keeping only the selected token vector independently owned. Cache-bit
+ordering, checkpoint behavior, encoded bytes, errors, and sink output remain
+unchanged. Existing WebP fixture rows (28/13/47), the full fixture matrix, all
+45 feature-gated Rust contracts, strict Clippy, and the clean benchmark
+protocol provide the regression evidence. The clean benchmark passed the
+Pillow-parity workload in 0.948031 s wall / 2.776938 user s / 0.193214 sys s /
+250,478,592-byte peak RSS and the separate Rust-only feature-gate workload in
+1.590595 s wall / 2.264828 user s / 0.096149 sys s /
+150,044,672-byte peak RSS. The native release `rlib` was 7,979,320 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,848,101 bytes. These
+are host/cache/toolchain observations, not comparative or universal
+performance claims. Pillow remains the byte/error oracle; transformed-token
+ownership is Rust-only evidence. No parity row, fixture-manifest entry,
+diagnostic origin, new test function, or coverage-only hook was added.
+Exact-head managed Pillow parity run
+`74d6b9ee-d771-4ad3-99c4-27a17c9512f7` passed 1,445/1,445 checks in 579 ms.
+Exact-head feature-matrix run
+`64fb001e-366c-43d9-8dc4-7ac507e945ce` passed all configured native/WASI lanes
+in 21,842 ms; its retained log has the capability agreement marker and no
+`lock-wait` match. Both managed runs have no configured coverage ingestion, so
+no Coverage MCP metric is claimed.
 
 Current acceptance record: WebP VP8L nested metadata output-scratch reuse
 
