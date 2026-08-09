@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `98f1e5e8b154cab176e227e41f7b0bde83d52f7b`; the claim-ledger fixture tuple
+revision `3c6638abe1e32d33f4cfa8fc00d4fbba3bef4a32`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -20,7 +20,8 @@ scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
 scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
 metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
 WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
-reuse, WebP VP8L trace CostModel histogram reuse, GIF indexed
+reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
+token scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -760,6 +761,14 @@ checkpoints, and the no-token path remains direct. Trace ordering, checkpoint
 behavior, encoded bytes, errors, and sink output remain unchanged. This is a
 Rust-only CostModel histogram allocation optimization, not allocator/OOM
 accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L candidate construction reuses one source-token buffer across the
+sequential LZ77, RLE, and optional low-distance box-chain candidates. Cache-bit
+selection still reads each source independently, and selected candidate vectors
+remain independently owned. Candidate ordering, checkpoint behavior, encoded
+bytes, errors, and sink output remain unchanged. This is a Rust-only
+candidate-source allocation optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
