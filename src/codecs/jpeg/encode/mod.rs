@@ -22,6 +22,7 @@ use crate::encode_options::{JpegEncodeOptions, JpegSubsampling};
 use crate::encode_policy::EncodePolicy;
 use crate::types::{DecodedImage, ImageMode};
 use crate::{CodecOperation, ImageFormat, OutputSink};
+use std::borrow::Cow;
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
 const ZIGZAG: [usize; 64] = [
@@ -448,19 +449,17 @@ pub(crate) fn encode_with_token(
     let params = quant::build_params(quality, subsampling, usize::from(num_components));
 
     // RGB → YCbCr (jccolor.c) or grayscale pass-through.
-    let (y_plane, cb_plane, cr_plane) = if num_components == 1 {
+    let (y_plane, cb_plane, cr_plane): (Cow<'_, [u8]>, Vec<u8>, Vec<u8>) = if num_components == 1 {
         let pixel_count = w.saturating_mul(h);
-        let mut y = vec![0u8; pixel_count];
         let copied = pixel_count.min(pixels.len());
         let row_width = w.max(1);
-        for row_start in (0..copied).step_by(row_width) {
+        for _row_start in (0..copied).step_by(row_width) {
             crate::codecs::error::check_cancelled(token)?;
-            let row_end = copied.min(row_start.saturating_add(row_width));
-            y[row_start..row_end].copy_from_slice(&pixels[row_start..row_end]);
         }
-        (y, Vec::new(), Vec::new())
+        (Cow::Borrowed(pixels), Vec::new(), Vec::new())
     } else {
-        rgb_to_ycbcr(pixels, w, h, token)?
+        let (y, cb, cr) = rgb_to_ycbcr(pixels, w, h, token)?;
+        (Cow::Owned(y), cb, cr)
     };
 
     // Sampling factors (h, v) per component; max is the reference grid.
