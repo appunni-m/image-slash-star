@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `87a42863ca46c2539aff75d18b85a669f7dac88b`; the claim-ledger fixture tuple
+revision `36ce85ba244d7195baef8d5fea7adcdd3cbcc613`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -23,7 +23,7 @@ WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
 reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
 token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
 traversal fixed-stack storage, WebP VP8L hash-chain result storage reuse, WebP
-VP8L image-stream scratch reuse, GIF indexed
+VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -802,6 +802,16 @@ streams, while each stream still resets its logical contents before writing.
 Stream boundaries, candidate ordering, encoded bytes, errors, and sink output
 remain unchanged. This is a Rust-only image-stream scratch optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L token streams retain one bounded histogram-clustering scratch object
+per encoder image-stream scratch. Its original-tile histograms, cluster copies,
+symbol map, and remapped group histograms reset their logical contents and are
+reused across sequential candidate streams; cache-dependent population lengths
+still resize before each use. Nested metadata streams retain their own scratch
+object, so no histogram state crosses an active stream boundary. Clustering
+ordering, encoded bytes, errors, and sink output remain unchanged. This is a
+Rust-only histogram scratch optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
