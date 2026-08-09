@@ -10337,18 +10337,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // a parity row or manifest entry.
         let statistics_image =
             DecodedImage::new(512, 512, vec![128; 512 * 512 * 3], ColorType::Rgb8);
-        let statistics_expected =
-            image_slash_star::encode(&statistics_image, ImageFormat::WebP, &options)?;
-        assert_eq!(
-            image_slash_star::encode_with_policy(
-                &statistics_image,
-                ImageFormat::WebP,
-                &options,
-                &unlimited,
-            )?,
-            statistics_expected,
-            "an ample VP8 coefficient-statistics budget preserves byte identity"
-        );
+        // The basic VP8 witness above already proves ordinary/ample byte
+        // identity for these options. This larger fixture is reserved for
+        // the real coefficient-statistics boundary below.
         let statistics_policy = image_slash_star::EncodePolicy::new().with_max_work_units(712);
         let statistics_error = match image_slash_star::encode_with_policy(
             &statistics_image,
@@ -13179,9 +13170,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(bitstream_131072_sink, vec![0xA0]);
 
-        let mut bitstream_262144_pixels = Vec::with_capacity(656 * 656 * 3);
+        // A compact 248x248 high-entropy probe still reaches the 262,144-,
+        // 524,288-, and 1,048,576-bit boundaries; the former 656x656 probe
+        // carried pixels that those bounded calls never consumed.
+        let mut bitstream_262144_pixels = Vec::with_capacity(248 * 248 * 3);
         let mut bitstream_262144_state = 0xC001_C0DEu32;
-        for _ in 0..656 * 656 {
+        for _ in 0..248 * 248 {
             bitstream_262144_state = bitstream_262144_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
@@ -13192,7 +13186,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let bitstream_262144_image =
-            DecodedImage::new(656, 656, bitstream_262144_pixels, ColorType::Rgb8);
+            DecodedImage::new(248, 248, bitstream_262144_pixels, ColorType::Rgb8);
         let bitstream_262144_error = match image_slash_star::encode_with_policy(
             &bitstream_262144_image,
             ImageFormat::WebP,
