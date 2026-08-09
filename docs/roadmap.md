@@ -3,19 +3,19 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `d74b71b5869008eaec2e3abc21efb312e58ed410`, and benchmark-protocol
+revision `fb2ce854ac541095e04f0a98e89895cfdb7ed97c`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`41bf32b0-79c8-483e-bd13-1b263a070109` (1,445/1,445 passed in 598 ms) and
-feature matrix `580101e5-5e8e-4f8b-a1f4-f34839d979b1` (passed in 24,278 ms);
+`b1f50d4f-06f5-497d-a89e-b4cb315eb338` (1,445/1,445 passed in 5,669 ms) and
+feature matrix `9fdf3c9e-ba03-4beb-9be2-fd628eb5777b` (passed in 58,221 ms);
 both recorded checkout HEAD
-`d74b71b5869008eaec2e3abc21efb312e58ed410`.
+`fb2ce854ac541095e04f0a98e89895cfdb7ed97c`.
 The accepted Coverage MCP snapshot is
-`d840b5cc-8134-4f96-87f1-bdf477b50cc8` from run
-`72cacd35-7d51-4d15-a181-54996a34745f`; it records 55,757/56,627 lines,
-7,993/8,204 branches, 3,110/3,206 functions, and 85,725/87,669 regions at
+`a480ff61-8156-4ffc-baa0-eeaa681a0b24` from run
+`0f31d9d4-98a7-4a89-9c68-81729a0cfc70`; it records 55,775/56,646 lines,
+7,996/8,208 branches, 3,113/3,209 functions, and 85,746/87,691 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -190,7 +190,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `d840b5cc-8134-4f96-87f1-bdf477b50cc8` covers source revision `d74b71b5869008eaec2e3abc21efb312e58ed410`: 55,757/56,627 lines, 7,993/8,204 branches, 3,110/3,206 functions, and 85,725/87,669 regions. Exact-head feature-matrix run `580101e5-5e8e-4f8b-a1f4-f34839d979b1` passed all configured lanes in 24,278 ms; exact-head Pillow parity run `41bf32b0-79c8-483e-bd13-1b263a070109` passed 1,445/1,445 checks in 598 ms; and nightly LLVM run `72cacd35-7d51-4d15-a181-54996a34745f` passed 85/85 tests in 49,924 ms and ingested the accepted snapshot above. The aggregate shortfall is 870 lines, 211 branches, 96 functions, and 1,944 regions. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27 functions. These are Rust implementation/coverage metrics, not Pillow-oracle parity metrics or allocator/OOM accounting; the known LLVM JSON segment-normalization warning remains. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `a480ff61-8156-4ffc-baa0-eeaa681a0b24` covers source revision `fb2ce854ac541095e04f0a98e89895cfdb7ed97c`: 55,775/56,646 lines, 7,996/8,208 branches, 3,113/3,209 functions, and 85,746/87,691 regions. Exact-head feature-matrix run `9fdf3c9e-ba03-4beb-9be2-fd628eb5777b` passed all configured lanes in 58,221 ms; exact-head Pillow parity run `b1f50d4f-06f5-497d-a89e-b4cb315eb338` passed 1,445/1,445 checks in 5,669 ms; and nightly LLVM run `0f31d9d4-98a7-4a89-9c68-81729a0cfc70` passed 85/85 tests in 54,865 ms and ingested the accepted snapshot above. The aggregate shortfall is 871 lines, 212 branches, 96 functions, and 1,945 regions. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27 functions. These are Rust implementation/coverage metrics, not Pillow-oracle parity metrics or allocator/OOM accounting; the known LLVM JSON segment-normalization warning remains. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 Revision-bound note: the WebP VP8L color-index row scratch removal is
 implemented at `d64e773338e1f7316f04653eddc55e306641d465`, following the
@@ -289,6 +289,51 @@ the 023 snapshot, line, branch, and function totals are unchanged and only
 one covered/total region was added; no prior coverage was suppressed. These
 are separate Rust coverage and parity records; the known LLVM warning and
 aggregate shortfall remain visible.
+
+Revision-bound note: the WebP VP8L Huffman node-packing storage boundary is
+implemented at `fb2ce854ac541095e04f0a98e89895cfdb7ed97c`, following the
+checked branch-offset storage boundary at
+`d74b71b5869008eaec2e3abc21efb312e58ed410`. General VP8L Huffman tree slots
+now use one tagged `u32`: zero represents an empty slot, `symbol + 1`
+represents a `u16` leaf, and the high-bit tag plus a validated 31-bit value
+represents a child offset. This halves the node word width while preserving
+tree topology, canonical symbol order, decoded bytes, errors, and sink output;
+the validated VP8L alphabet bounds keep every constructed offset below the tag
+bit.
+
+This is Rust-only node-layout evidence: Pillow exposes only the final byte/error
+result, so the existing fixture matrix is byte/error regression evidence rather
+than proof of the packed representation. No parity row, fixture-manifest row,
+diagnostic origin, new test function, coverage-only hook, or unit test was
+added. The clean schema-`@3` benchmark at this revision measured 1.128109 s
+wall / 2.852262 user s / 0.192440 sys s / 258,310,144-byte peak RSS for Pillow
+parity; 3.255994 s wall / 2.808708 user s / 0.386944 sys s /
+266,305,536-byte peak RSS for the Rust-only feature-gate suite; a 7.368309 s
+native release build with a 7,954,480-byte `rlib`; and a 6.385956 s
+`wasm32-unknown-unknown` determinism compile with a 24,038,221-byte artifact.
+These are single-host/cache/toolchain observations, not comparative or
+universal performance claims; allocation counts, retained cache bytes,
+caller-buffer reuse, peak stack depth, and WASM runtime resources remain
+unmeasured.
+
+Exact-head managed Pillow parity run
+`b1f50d4f-06f5-497d-a89e-b4cb315eb338` passed 1,445/1,445 checks; exact-head
+feature matrix `9fdf3c9e-ba03-4beb-9be2-fd628eb5777b` passed all configured
+native/WASI lanes; and Coverage MCP run
+`0f31d9d4-98a7-4a89-9c68-81729a0cfc70` passed 85/85 tests and ingested snapshot
+`a480ff61-8156-4ffc-baa0-eeaa681a0b24` with 55,775/56,646 lines,
+7,996/8,208 branches, 3,113/3,209 functions, and 85,746/87,691 regions. The
+changed `src/codecs/webp/native/huffman.rs` projection is 340/342 lines,
+56/58 branches, 13/13 functions, and 504/511 regions. Compared with the
+branch-offset snapshot, covered and total line counts rose by 18/19, covered
+and total branch counts rose by 3/4, covered and total function counts rose by
+3/3, and covered and total region counts rose by 21/22. The aggregate line,
+branch, and region rates moved slightly down because the new representation
+adds defensive tag-boundary and representation-decoding regions that valid
+Pillow-observable VP8L inputs cannot independently select; all changed
+functions are covered. These are Rust implementation/coverage metrics, not
+Pillow-parity coverage; the known LLVM warning and aggregate shortfall remain
+visible.
 
 Revision-bound note: the WebP VP8L Huffman branch-offset storage boundary is
 implemented at
@@ -8394,6 +8439,54 @@ The aggregate shortfall therefore remains 857 lines, 207 branches, 96
 functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
+
+Current acceptance record: WebP VP8L Huffman node packing
+
+The production and Rust test/runtime slice is implemented at
+`fb2ce854ac541095e04f0a98e89895cfdb7ed97c`, following the checked branch-offset
+storage boundary at
+`d74b71b5869008eaec2e3abc21efb312e58ed410`. General VP8L Huffman tree slots
+now use one tagged `u32`: zero represents an empty slot, `symbol + 1`
+represents a `u16` leaf, and the high-bit tag plus a validated 31-bit value
+represents a child offset. This halves the node word width while preserving
+tree topology, canonical symbol order, decoded bytes, errors, and sink output;
+the validated VP8L alphabet bounds keep every constructed offset below the tag
+bit.
+
+This is Rust implementation and Rust-only node-layout evidence. Pillow exposes
+only the final byte/error result, so the existing fixture matrix is byte/error
+regression evidence rather than proof of this storage boundary. No parity row,
+fixture-manifest row, diagnostic origin, new test function, coverage-only hook,
+or unit test was added. The clean schema-`@3` benchmark passed Pillow parity in
+1.128109 s wall / 2.852262 user s / 0.192440 sys s /
+258,310,144-byte peak RSS and the separate Rust-only feature-gate suite in
+3.255994 s wall / 2.808708 user s / 0.386944 sys s /
+266,305,536-byte peak RSS. The native release build measured 7.368309 s wall
+with a 7,954,480-byte `rlib`; the WASM compile measured 6.385956 s wall with a
+24,038,221-byte artifact. These are single-host/cache/toolchain observations,
+not comparative or universal performance claims; allocation counts, retained
+cache bytes, caller-buffer reuse, peak stack depth, and WASM runtime resources
+remain unmeasured.
+
+Exact-head managed Pillow parity run
+`b1f50d4f-06f5-497d-a89e-b4cb315eb338` passed 1,445/1,445 checks in 5,669 ms.
+Exact-head feature-matrix run
+`9fdf3c9e-ba03-4beb-9be2-fd628eb5777b` passed all configured native/WASI lanes
+in 58,221 ms. Nightly LLVM run
+`0f31d9d4-98a7-4a89-9c68-81729a0cfc70` passed 85/85 tests in 54,865 ms and
+ingested snapshot `a480ff61-8156-4ffc-baa0-eeaa681a0b24`: 55,775/56,646
+lines, 7,996/8,208 branches, 3,113/3,209 functions, and 85,746/87,691
+regions. The changed `src/codecs/webp/native/huffman.rs` projection is
+340/342 lines, 56/58 branches, 13/13 functions, and 504/511 regions.
+Compared with the branch-offset snapshot, covered and total line counts rose
+by 18/19, covered and total branch counts rose by 3/4, covered and total
+function counts rose by 3/3, and covered and total region counts rose by 21/22.
+The aggregate line, branch, and region rates moved slightly down because the
+new representation adds defensive tag-boundary and representation-decoding
+regions that valid Pillow-observable VP8L inputs cannot independently select;
+all changed functions are covered. These are implementation/Rust coverage
+metrics, not Pillow-parity coverage; the known LLVM JSON segment-normalization
+warning and aggregate shortfall remain visible.
 
 Current acceptance record: WebP VP8L Huffman branch-offset storage
 
