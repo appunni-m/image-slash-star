@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `ecc5ac4c95a608f3c709fb0de98a89c3f131df59`; the claim-ledger fixture tuple
+revision `5d386f0e8d0c4f8780cc59cf3080f9107c0d66c2`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -13,7 +13,7 @@ Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
 CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
 WebP CostManager candidate-estimate scratch reuse, WebP CostManager
-cache-transform scratch reuse, GIF indexed
+cache-transform scratch reuse, WebP VP8L trace-cache reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -646,7 +646,8 @@ reuses bounded manager scratch vectors. Cost-model population histograms are
 transformed in their existing vectors, so fixed-alphabet cost arrays do not
 allocate temporary conversion vectors, sequential candidate cost estimates
 reuse their bounded green histogram scratch, and cache-bit token transforms
-reuse bounded cache-table scratch. Cost decisions, checkpoint ordering,
+reuse bounded cache-table scratch. The trace replay reuses its completed
+dynamic-programming cache. Cost decisions, checkpoint ordering,
 encoded bytes, and sink output remain unchanged. This is a bounded
 internal-allocation optimization, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.
