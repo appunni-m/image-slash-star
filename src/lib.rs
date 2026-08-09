@@ -963,7 +963,9 @@ pub fn encode_with_policy(
 /// followed by the remaining preparation stages,
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
-/// collection and index packing after each 1,024 source pixels, and nearest-delta candidate scans
+/// collection and index packing after each 1,024 source pixels, lossy WebP
+/// compressed/raw alpha-stream buffer copies after each 1,024 output bytes, and
+/// nearest-delta candidate scans
 /// after each 64 candidates; lossless VP8L image-palette
 /// construction and palette-mode index packing after each 1,024 source pixels,
 /// palette-index lookup

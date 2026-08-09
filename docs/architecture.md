@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`c9acf5d219e82c9c1077c3ec3e0c5df345ee28c5`; the claim-ledger baseline remains
+`8d07256f934bf7cf8c09962ace3b29cdbd9b9215`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -357,6 +357,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L Huffman-node ordering checkpoints | Token-aware stable bottom-up ordering polls after each 64 comparisons; the no-token path retains the original stable sort |
 | Lossless WebP VP8L Huffman run-scan checkpoints | Token-aware code-length run scans poll whenever each 64-symbol boundary is crossed, including before a long equal-length run finishes; the no-token path retains the original tight helper |
 | Lossy WebP VP8 boolean-output flush checkpoints | Token-aware boolean flushes drain pending output runs through the existing 1,024-byte output accounting before returning; no-token encoding keeps the original flush helper |
+| Lossy WebP alpha-stream buffer-copy checkpoints | Token-aware compressed and raw alpha streams copy in 1,024-byte chunks and poll after each complete chunk; the existing final stage check covers a short tail, while the no-token path keeps one bulk copy |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token branch avoids token polling and retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
@@ -683,7 +684,9 @@ intra4 mode selection after each candidate-trial stage, forward- and inverse-tra
 and its outer 64-macroblock batch for intra16/chroma work,
 filter-edge adjustment, RGBA transparent-area cleanup after each 1,024 scanned
 or flattened pixels, RGBA alpha-palette source
-collection and index packing after each 1,024 source pixels, nearest-delta
+collection and index packing after each 1,024 source pixels, lossy WebP
+compressed/raw alpha-stream buffer copies after each 1,024 output bytes,
+nearest-delta
 candidate values after each 64 candidates, macroblock-analysis, and
 intra4 mode selection after each candidate-trial stage, forward- and inverse-transform row/column subpass, non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, candidate, and completed luma 4×4 block
 and its outer 64-macroblock batch for intra16/chroma work, plus
