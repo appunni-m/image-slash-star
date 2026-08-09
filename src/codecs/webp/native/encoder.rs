@@ -1123,35 +1123,19 @@ fn write_image_stream<C: BitWriterCheckpoint>(
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
+    scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
-    write_image_stream_configured(w, pixels, width, write_meta_huffman_bit, 3, 80, 11, token)
-}
-
-// `backward_refs::candidates` always returns at least one crunch configuration.
-#[allow(clippy::too_many_arguments, clippy::unwrap_used)]
-fn write_image_stream_configured<C: BitWriterCheckpoint>(
-    w: &mut BitWriter<'_, C>,
-    pixels: &[u32],
-    width: usize,
-    write_meta_huffman_bit: bool,
-    histogram_bits: u8,
-    quality: u32,
-    max_cache_bits: u8,
-    token: Option<&crate::CancellationToken>,
-) -> Result<(), EncodingError> {
-    let mut output_scratch = Vec::new();
-    let mut token_scratch = TokenStreamScratch::default();
     write_image_stream_configured_with_scratch(
         w,
         pixels,
         width,
         write_meta_huffman_bit,
-        histogram_bits,
-        quality,
-        max_cache_bits,
-        &mut output_scratch,
-        &mut token_scratch,
+        3,
+        80,
+        11,
+        &mut scratch.output,
+        &mut scratch.tokens,
         token,
     )
 }
@@ -1281,6 +1265,12 @@ struct TokenStreamScratch {
     // Retain the nested stream scratch so its bounded buffers survive the
     // outer candidate loop; the metadata stream disables further recursion.
     meta_stream: Option<Box<TokenStreamScratch>>,
+}
+
+#[derive(Default)]
+struct ImageStreamScratch {
+    output: Vec<u8>,
+    tokens: TokenStreamScratch,
 }
 
 #[derive(Clone, Copy)]
@@ -2058,6 +2048,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
     width: usize,
     height: usize,
     mut palette: Vec<u32>,
+    scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     check_token(token)?;
@@ -2083,7 +2074,18 @@ fn apply_palette<C: BitWriterCheckpoint>(
             difference
         })
         .collect::<Vec<_>>();
-    write_image_stream_configured(w, &palette_delta, encoded_length, false, 3, 20, 0, token)?;
+    write_image_stream_configured_with_scratch(
+        w,
+        &palette_delta,
+        encoded_length,
+        false,
+        3,
+        20,
+        0,
+        &mut scratch.output,
+        &mut scratch.tokens,
+        token,
+    )?;
 
     let packing_bits = match palette.len() {
         0..=2 => 3,
@@ -2130,7 +2132,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
     }
     w.write_bits(0, 1)?;
     let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
-    write_image_stream_configured(
+    write_image_stream_configured_with_scratch(
         w,
         &packed,
         packed_width,
@@ -2138,6 +2140,8 @@ fn apply_palette<C: BitWriterCheckpoint>(
         5,
         80,
         maximum_cache_bits,
+        &mut scratch.output,
+        &mut scratch.tokens,
         token,
     )
 }
@@ -2156,6 +2160,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     checkpoint: C,
 ) -> Result<Vec<u8>, EncodingError> {
     let mut frame = Vec::new();
+    let mut stream_scratch = ImageStreamScratch::default();
     {
         let w = &mut BitWriter {
             writer: &mut frame,
@@ -2171,7 +2176,15 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
         w.write_bits(0x0, 3)?; // version
 
         if entropy_mode == EntropyMode::Palette {
-            apply_palette(w, pixels, width as usize, height as usize, palette, token)?;
+            apply_palette(
+                w,
+                pixels,
+                width as usize,
+                height as usize,
+                palette,
+                &mut stream_scratch,
+                token,
+            )?;
         } else {
             let grayscale = pixels_are_grayscale_with_checkpoint(pixels, token)?;
             let use_subtract_green = matches!(
@@ -2217,7 +2230,14 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 w.write_bits(u64::from(predictor_bits - 2), 3)?;
                 let predictor_width =
                     (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
-                write_image_stream(w, &predictor_map, predictor_width, false, token)?;
+                write_image_stream(
+                    w,
+                    &predictor_map,
+                    predictor_width,
+                    false,
+                    &mut stream_scratch,
+                    token,
+                )?;
             }
 
             if use_predictor && !red_and_blue_zero {
@@ -2233,11 +2253,18 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 w.write_bits(1, 2)?;
                 w.write_bits(u64::from(color_bits - 2), 3)?;
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
-                write_image_stream(w, &color_map, color_width, false, token)?;
+                write_image_stream(
+                    w,
+                    &color_map,
+                    color_width,
+                    false,
+                    &mut stream_scratch,
+                    token,
+                )?;
             }
 
             w.write_bits(0, 1)?; // transforms done
-            write_image_stream(w, pixels, width as usize, true, token)?;
+            write_image_stream(w, pixels, width as usize, true, &mut stream_scratch, token)?;
         }
 
         w.flush()?;
@@ -2468,6 +2495,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     checkpoint: C,
 ) -> Result<Vec<u8>, EncodingError> {
     let mut encoded = Vec::new();
+    let mut stream_scratch = ImageStreamScratch::default();
     let mut writer = BitWriter {
         writer: &mut encoded,
         buffer: 0,
@@ -2477,7 +2505,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     writer.write_bits(1, 1)?; // transform present
     writer.write_bits(3, 2)?; // color-indexing transform
     writer.write_bits((palette_len - 1) as u64, 8)?;
-    write_image_stream_configured(
+    write_image_stream_configured_with_scratch(
         &mut writer,
         palette_delta,
         palette_len,
@@ -2485,11 +2513,24 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         3,
         20,
         0,
+        &mut stream_scratch.output,
+        &mut stream_scratch.tokens,
         token,
     )?;
 
     writer.write_bits(0, 1)?; // transforms done
-    write_image_stream_configured(&mut writer, packed, packed_width, true, 5, 32, 2, token)?;
+    write_image_stream_configured_with_scratch(
+        &mut writer,
+        packed,
+        packed_width,
+        true,
+        5,
+        32,
+        2,
+        &mut stream_scratch.output,
+        &mut stream_scratch.tokens,
+        token,
+    )?;
     writer.flush()?;
 
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
@@ -2940,12 +2981,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
         .collect::<Vec<_>>();
     palette.push(0);
+    let mut palette_scratch = ImageStreamScratch::default();
     let _ = apply_palette(
         &mut palette_writer,
         &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
         2,
         2,
         palette,
+        &mut palette_scratch,
         None,
     );
     let _ = palette_writer.flush();
@@ -2957,7 +3000,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
-    let _ = apply_palette(&mut palette_trim_writer, &[0; 4], 2, 2, vec![0; 18], None);
+    let _ = apply_palette(
+        &mut palette_trim_writer,
+        &[0; 4],
+        2,
+        2,
+        vec![0; 18],
+        &mut palette_scratch,
+        None,
+    );
     let _ = palette_trim_writer.flush();
 
     let mut palette4_bytes = Vec::new();
@@ -2973,6 +3024,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         2,
         2,
         vec![0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        &mut palette_scratch,
         None,
     );
     let _ = palette4_writer.flush();
@@ -2993,6 +3045,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         2,
         2,
         palette16,
+        &mut palette_scratch,
         None,
     );
     let _ = palette16_writer.flush();
