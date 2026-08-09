@@ -2,15 +2,14 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-09 against production implementation revision
-`9e2ffcc5b190c4044c08b0496bafe30b918561f8` and current test/runtime revision
-`15965fbda46db35dc4b9f547d757ee9c6ac20ec0`; the claim-ledger fixture tuple
+Reviewed: 2026-08-09 against production implementation and test/runtime revision
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`9cd5adbc-b0c2-4edd-96b8-1539f3374182`; the exact-head feature-matrix run is
-`50e0cb86-c8fe-49b4-b43b-e529e349b552`; and the current Coverage MCP snapshot
-is `2ff3c38e-1d61-4aa0-98e9-d444d67cb809` from run
-`d91b95a2-ff4c-4fce-b11c-ce2d19ab392c`.
+`a4839050-7de4-4e3c-8a60-102c75d789f4`; the exact-head feature-matrix run is
+`f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8`; and the current Coverage MCP snapshot
+is `9427f8d2-a9e8-4698-92d1-b0c06f0f855e` from run
+`1ee268ab-2660-4094-b7d2-504846bec32f`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -451,11 +450,11 @@ pre-passes after each 64 tile histograms, token-to-row transitions after each
 256 rows, and histogram clustering (including token-aware
 population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
-intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte
+intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals, and 1,024-byte
 bitstream output intervals; the same contract
 proves unlimited lossless RGB byte identity, bounded typed rejection, and an
 untouched sink, including separate exact-boundary probes for the 8-bit, 16-bit, 32-bit, 64-bit
-and 128-bit logical intervals, the existing 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical intervals, and the emitted-output
+and 128-bit logical intervals, the existing 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical intervals, and the emitted-output
 intervals. This is still Rust-only work-control
 evidence: no Pillow row,
 fixture, diagnostic field, or coverage-only hook is added.
@@ -543,7 +542,7 @@ Huffman-tree code-length-token frequency, trailing
 zero-repeat-token trim, and code-length-emission scans after each 16 compressed token entries, histogram
 population, combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit,
-512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
+512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result,
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
 additionally polls after each 1,024 progressive scan block slots, each 1,024
 progressive scan-event frequency items, each 1,024 progressive scan coefficient
@@ -583,7 +582,7 @@ selected macroblocks, and
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition, 16,384-boolean first-partition-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient, and 16,384-boolean coefficient-bit intervals
 plus the 1,024-byte boolean-bitstream output
-intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical VP8L bitstream intervals, lossless VP8L palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, and VP8L stages,
+intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical VP8L bitstream intervals, lossless VP8L palette-index lookup candidate scans after each 64 palette entries, palette sign collection and nearest-delta candidate scans after each 64 palette entries or candidate values, and VP8L stages,
 remaining finer WebP bitstream work beyond those intervals, progress callbacks, short-write
 semantics, or rollback cleanup;
 the separate checkpoint work-budget contract is covered below.
@@ -2081,7 +2080,7 @@ diagnostic origin, new test function, or coverage-only hook was added.
 The exact raw payload is retained alongside the typed fields; aggregate LLVM
 execution remains implementation coverage, not Pillow-parity coverage.
 
-Current acceptance for production implementation revision
+Historical acceptance for production implementation revision
 `9e2ffcc5b190c4044c08b0496bafe30b918561f8` and test/runtime revision
 `15965fbda46db35dc4b9f547d757ee9c6ac20ec0`: managed Pillow parity run
 `9cd5adbc-b0c2-4edd-96b8-1539f3374182` passed 1,445/1,445 checks in 936 ms;
@@ -2096,7 +2095,7 @@ regions. The known LLVM JSON segment-normalization warning remains. These
 coverage numbers are Rust implementation evidence, not Pillow parity, and no
 coverage-only test was used.
 
-The current test-runtime-only follow-up removes one redundant ample-budget
+The historical test-runtime-only follow-up removed one redundant ample-budget
 comparison from the existing Rust-only work-budget contract and replaces its
 late VP8L bitstream probe with a deterministic 248x248 high-entropy probe.
 The compact probe still reaches the 262,144-, 524,288-, and 1,048,576-bit
@@ -2113,6 +2112,34 @@ time (reported `real=1.68`); the native release and wasm32-unknown-unknown
 compile workloads also passed. These are fixed-host/cache observations, not
 universal speed claims. The Rust-only contract and benchmark remain separate
 from Pillow-oracle evidence.
+
+Current acceptance record: WebP VP8L 2,097,152-bit work-budget boundary
+
+The next lossless WebP VP8L logical-bitstream checkpoint is implemented at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
+296x296 high-entropy RGB probe and proves exact whole-buffer/direct-sink
+rejection at the 2,097,152-bit boundary: maximum/observed
+`648,911/648,912` and `648,910/648,911`, with sentinel `[0x9C]` untouched.
+The no-token bit-writer path is unchanged. This is Rust-only work-control
+evidence: Pillow has no caller token, typed work-budget result, caller-owned
+sink, or rollback equivalent. No Pillow parity row, parity fixture, diagnostic
+origin, new test function, or coverage-only hook was added.
+
+Local focused and full all-feature tests passed, as did strict all-target
+Clippy and rustfmt. Exact-head managed Pillow parity run
+`a4839050-7de4-4e3c-8a60-102c75d789f4` passed 1,445/1,445 checks in 640 ms;
+feature-matrix run `f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8` passed in 52,030 ms
+with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`,
+and `verbose=0`, ending with native/WASI capability agreement and no
+`lock-wait` match. Nightly LLVM run
+`1ee268ab-2660-4094-b7d2-504846bec32f` passed 85/85 tests in 64,265 ms and
+ingested snapshot `9427f8d2-a9e8-4698-92d1-b0c06f0f855e`: 54,755/55,605
+lines, 7,796/8,000 branches, 3,110/3,201 functions, and 84,422/86,315
+regions. The known LLVM JSON segment-normalization warning remains. The
+schema-@2 local benchmark separately measured the Pillow parity fixture suite
+at 1.075 s wall time and the Rust-only feature-gate suite at 1.874 s; these
+are fixed-host observations, not universal performance claims.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as

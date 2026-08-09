@@ -2,13 +2,12 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-09 against production implementation revision
-`9e2ffcc5b190c4044c08b0496bafe30b918561f8` and current test/runtime revision
-`15965fbda46db35dc4b9f547d757ee9c6ac20ec0`; the claim-ledger fixture tuple
+Reviewed: 2026-08-09 against production implementation and test/runtime revision
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for the current test/runtime revision is
-`2ff3c38e-1d61-4aa0-98e9-d444d67cb809` from run
-`d91b95a2-ff4c-4fce-b11c-ce2d19ab392c`.
+`9427f8d2-a9e8-4698-92d1-b0c06f0f855e` from run
+`1ee268ab-2660-4094-b7d2-504846bec32f`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -371,6 +370,7 @@ translation cannot be bypassed.
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls L1/P8/L8/La8/CMYK source-mode preparation and RGBA alpha/RGB extraction after each 1,024 source pixels, RGB-equal grayscale preparation after each 1,024 pixels, the remaining preparation stages, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, and RGBA alpha-palette source collection and index packing after each 1,024 source pixels, lossless VP8L RGB/RGBA source-pixel materialization, predictor source-snapshot copying, image-palette construction and palette-mode index packing after each 1,024 source pixels, analysis histogram construction after each 64 completed 4×4 blocks, analysis/mode-selection/coefficient-probability/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, cost-manager interval-update and cleanup scans after each 256 cumulative interval entries, repeated-run hash-chain insertion, and copy-token cache-population scans after each 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols, Huffman RLE preparation and in-run code-length scans after each 64 symbols, canonical-code assignment scans after each 64 symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, histogram clustering, Huffman-tree/group emission, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, 1,024-byte output, lossy VP8/ALPH RIFF payload-copy, lossless VP8L RIFF frame-copy, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy after each 1,024 MCUs, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block slots after each 1,024 blocks, progressive scan-event frequency items and progressive scan coefficient traversal items after each 1,024 events or coefficients, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
+| Lossless WebP VP8L 2,097,152-bit checkpoint | The token-aware bit writer polls at the 2,097,152 logical-bit interval; the existing no-token path remains unchanged. The exact whole-buffer/direct-sink boundary is covered by the Rust-only feature-gate contract because Pillow has no caller token, typed work-budget result, or caller-owned sink. |
 | Lossless WebP VP8L predictor row-copy checkpoints | Token-aware predictor tile scans copy image-width rows in 1,024-pixel chunks and poll after each completed chunk; the no-token path retains its original bulk row copy |
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
@@ -690,7 +690,7 @@ populated-tile collection, min/max, and bin-assignment pre-passes after each 64
 tile histograms, histogram clustering
 (including token-aware population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
-intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
+intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream interval, and each 1,024-byte
 VP8L bitstream-output interval. The token-aware source-materialization branch
 is separate; no-token VP8L source maps retain their original tight iterators.
 This is
@@ -755,7 +755,7 @@ populated-tile collection, min/max and bin-assignment pre-passes after each 64
 tile histograms, histogram population,
 combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
-2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
+2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly
 boundaries, and the JPEG still writer additionally polls after each 1,024
 converted RGB or chroma-downsample output pixel, each 1,024 AC coefficients
 during optimized baseline Huffman frequency gathering, each 1,024 progressive
@@ -781,7 +781,7 @@ documented checkpoints—including remaining finer WebP bitstream work beyond th
 implemented 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit logical VP8 first-partition and 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/32,768-bit/65,536-bit/131,072-bit/262,144-bit/524,288-bit/1,048,576-bit logical VP8 coefficient intervals,
 the 16,384-boolean first-partition and coefficient-bit intervals, and the
 1,024-byte boolean-bitstream-output
-intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical VP8L bitstream intervals, and CPU work inside codec
+intervals, the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical VP8L bitstream intervals, and CPU work inside codec
 rows other than the implemented PNG adaptive-filter subsegments, BMP
 row-conversion subsegments, token-aware PNG stored-block/all-level Deflate
 stages, and LZW input-symbol intervals, WebP

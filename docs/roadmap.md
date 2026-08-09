@@ -2,15 +2,14 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-09 against production implementation revision
-`9e2ffcc5b190c4044c08b0496bafe30b918561f8` and current test/runtime revision
-`15965fbda46db35dc4b9f547d757ee9c6ac20ec0`; the claim-ledger fixture tuple
+Reviewed: 2026-08-09 against production implementation and test/runtime revision
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`9cd5adbc-b0c2-4edd-96b8-1539f3374182`; the exact-head feature-matrix run is
-`50e0cb86-c8fe-49b4-b43b-e529e349b552`; and the current Coverage MCP snapshot
-is `2ff3c38e-1d61-4aa0-98e9-d444d67cb809` from run
-`d91b95a2-ff4c-4fce-b11c-ce2d19ab392c`.
+`a4839050-7de4-4e3c-8a60-102c75d789f4`; the exact-head feature-matrix run is
+`f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8`; and the current Coverage MCP snapshot
+is `9427f8d2-a9e8-4698-92d1-b0c06f0f855e` from run
+`1ee268ab-2660-4094-b7d2-504846bec32f`.
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -182,7 +181,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot `2ff3c38e-1d61-4aa0-98e9-d444d67cb809` covers current test/runtime revision `15965fbda46db35dc4b9f547d757ee9c6ac20ec0`: 54,750/55,600 lines, 7,794/7,998 branches, 3,110/3,201 functions, and 84,415/86,308 regions. The exact-head feature-matrix run `50e0cb86-c8fe-49b4-b43b-e529e349b552` passed with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the native/WASI capability agreement marker and no `lock-wait` match. The exact-head Pillow parity run `9cd5adbc-b0c2-4edd-96b8-1539f3374182` passed 1,445/1,445 checks in 936 ms, and nightly LLVM run `d91b95a2-ff4c-4fce-b11c-ce2d19ab392c` passed 85/85 tests in 47,468 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 850 lines, 204 branches, 91 functions, and 1,893 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot `9427f8d2-a9e8-4698-92d1-b0c06f0f855e` covers production/test revision `5aa0d77b37a5d81e1149e5169915ce21c59b6454`: 54,755/55,605 lines, 7,796/8,000 branches, 3,110/3,201 functions, and 84,422/86,315 regions. The exact-head feature-matrix run `f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8` passed with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the native/WASI capability agreement marker and no `lock-wait` match. The exact-head Pillow parity run `a4839050-7de4-4e3c-8a60-102c75d789f4` passed 1,445/1,445 checks in 640 ms, and nightly LLVM run `1ee268ab-2660-4094-b7d2-504846bec32f` passed 85/85 tests in 64,265 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 850 lines, 204 branches, 91 functions, and 1,893 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -295,6 +294,11 @@ equivalent.
 | API-033 | Output-sample ambiguity | Callers cannot choose source-preserving versus normalized samples, byte order, alpha association, or a codec-native output colorspace. | Define explicit output policy only for byte-preserving codec needs. The default remains Pillow-observable normalized transfer bytes. |
 | API-034 | Missing metadata | PNG source color fields (sRGB intent, gamma, chromaticities, raw ICC profile), primary AVIF CICP/`clli` fields (primaries, transfer, matrix, range, maxCLL, maxPALL), primary AVIF `mdcv` mastering-display fields, primary AVIF `prof`/`rICC` ICC profile bytes, primary `av1C` chroma sample position, and primary AVIF `irot`/`imir`/`pasp`/`clap` declarations are retained. Recognized AVIF EXIF/XMP item payloads are retained raw, without semantic parsing or pixel transforms; direct alpha provenance is represented by `SourceAlpha::Auxiliary` plus scalar and bounded plural source-local relationships, the supported primary grid retains its ordered derived item IDs and validated version/flags/row/column/output-canvas topology through `SourceDescriptor::avif_grid_properties()`, bounded `iref` edges—including `prem`—are retained as source descriptors, typed non-primary/auxiliary `colr`/`nclx` CICP declarations retain their source-local item IDs through `SourceDescriptor::avif_item_color_properties()`, non-primary/auxiliary `prof`/`rICC` profiles retain their exact item IDs and raw profile bytes through `SourceDescriptor::avif_item_icc_profiles()`, unknown associated non-primary properties retain their source-local item ID, four-byte kind, and exact payload through `SourceDescriptor::avif_item_properties()`, known non-primary/auxiliary `ispe`/`pixi` declarations retain source-local item IDs, dimensions, and uniform channel depth through `SourceDescriptor::avif_item_plane_properties()`, and non-primary/auxiliary `av1C` declarations retain source-local item IDs, exact payload, declared bit depth, and chroma sample position through `SourceDescriptor::avif_item_codec_properties()` without interpretation or pixel transforms. Grid tile placement/composition, plane range/quality semantics, other non-primary/auxiliary color forms, JPEG Adobe/JFIF color interpretation, TIFF colorimetric tags, and WebP color metadata are not yet retained. | Preserve the remaining opaque profiles and exact container fields per format. Never imply that retaining color, metadata, or transform fields means pixel conversion was applied. |
 | API-036 | Work control | The lossy WebP VP8 required padded Y/U/V edge-replication pass, 64-value segment-clustering chunks, analysis segment-assignment pass, intra4 mode-selection candidate-trial stages, forward- and inverse-transform row/column subpasses, non-trellis quantization coefficients, method-6 trellis-quantization coefficient candidates and path-reconstruction nodes, squared-error pixels, spectral-distortion weighted-transform row/column passes, residual-cost coefficients, candidates and each completed luma 4×4 block with an outer 64-macroblock checkpoint, filter-edge adjustment, coefficient-statistics collection, and first-partition segment-probability prepass now poll after each 1,024 padded item or selected macroblock as applicable; aligned planes use a direct clone because no replication is needed. Remaining gaps are progress semantics, CPU/instruction interruption inside codec work beyond the documented checkpoints, work inside one documented pixel, weighted-transform row/column pass, residual-cost coefficient, or other codec unit, finer WebP stages beyond the current logical-bit, output-byte, and documented codec-internal intervals, JPEG interior work beyond its current 1,024-pixel RGB-to-YCbCr, 1,024-pixel chroma-downsample output, 1,024-MCU baseline entropy traversal, completed 8x8 forward-DCT/quantization-block, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block-slot generation after each 1,024 blocks, progressive scan-event frequency gathering after each 1,024 events, progressive scan coefficient traversal after each 1,024 coefficients, and 1,024-byte entropy-output intervals, and short-write/rollback cleanup. Current cancellation and sink-boundary behavior belongs in the architecture/testing contracts. | Define progress and rollback semantics without claiming universal interior interruption; add checkpoints only for a real long-running operation and retain a separate Rust-only feature-gate contract when Pillow has no equivalent result. |
+The current API-023/API-036 work-control record now includes the lossless WebP
+VP8L 2,097,152-logical-bit interval in the existing token-aware path; the
+no-token path remains unchanged. It is a Rust-only resource boundary because
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback equivalent.
 The current API-023/API-036 work-control record also includes token-aware
 lossy WebP VP8 analysis histogram construction after each 64 completed 4×4
 blocks. The no-token path retains the original tight transform loop; the
@@ -842,6 +846,9 @@ QA-026 also includes the lossy WebP VP8 analysis histogram checkpoint after
 each 64 completed 4×4 blocks. Its evidence remains in the existing
 fixture-based Rust-only work-budget contract; Pillow parity remains the
 unchanged outer-result regression gate.
+The current lossless WebP VP8L logical-bitstream checkpoint set extends through
+2,097,152 bits; the 296x296 boundary witness and exact sink sentinel remain in
+that same existing feature-gated contract.
 
 QA-026 also includes the lossy WebP compressed/raw alpha-stream buffer-copy
 checkpoint after each complete 1,024-byte output interval. Its whole-buffer and
@@ -1391,7 +1398,7 @@ RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup, macroblock-analysis,
 and mode-selection subsegments, WebP stages, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals, 1,024-byte boolean-bitstream output intervals,
 JPEG progressive scan coefficient traversal after each 1,024 coefficients,
-and the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical VP8L bitstream intervals; finer WebP bitstream work
+and the 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical VP8L bitstream intervals; finer WebP bitstream work
 beyond those intervals, other Deflate
 emission/structural interruption, progress, transient
 allocation accounting, and universal
@@ -6006,7 +6013,7 @@ regions. The LLVM JSON segment-normalization warning remains; these are Rust
 implementation metrics, not Pillow-parity coverage, and the aggregate
 shortfall remains 836 lines, 198 branches, 87 functions, and 1,865 regions.
 
-Current acceptance record: AVIF non-primary codec declarations
+Historical acceptance record: AVIF non-primary codec declarations
 
 The AVIF codec-declaration slice is implemented at
 `9e2ffcc5b190c4044c08b0496bafe30b918561f8`. Native and portable AVIF parsers
@@ -6043,7 +6050,7 @@ regions. The LLVM JSON segment-normalization warning remains; these are Rust
 implementation metrics, not Pillow-parity coverage, and the aggregate
 shortfall is 850 lines, 204 branches, 91 functions, and 1,893 regions.
 
-Current acceptance record: compact WebP VP8L work-budget probe
+Historical acceptance record: compact WebP VP8L work-budget probe
 
 The test-runtime-only slice is implemented at
 `15965fbda46db35dc4b9f547d757ee9c6ac20ec0`. The existing
@@ -6067,6 +6074,34 @@ all four workloads at this revision: 0.973 s wall time for the Pillow parity
 fixture suite and 1.683 s for the separate Rust-only feature-gate suite; the
 native release and wasm32-unknown-unknown compile workloads also passed. These
 are fixed-host/cache observations, not universal speed claims.
+
+Current acceptance record: WebP VP8L 2,097,152-bit work-budget boundary
+
+The next lossless WebP VP8L logical-bitstream checkpoint is implemented at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses a deterministic
+296x296 high-entropy RGB probe and proves exact whole-buffer/direct-sink
+rejection at the 2,097,152-bit boundary: maximum/observed
+`648,911/648,912` and `648,910/648,911`, with sentinel `[0x9C]` untouched.
+The no-token bit-writer path is unchanged. This is Rust-only work-control
+evidence: Pillow has no caller token, typed work-budget result, caller-owned
+sink, or rollback equivalent. No Pillow parity row, parity fixture, diagnostic
+origin, new test function, or coverage-only hook was added.
+
+Local focused and full all-feature tests passed, as did strict all-target
+Clippy and rustfmt. Exact-head managed Pillow parity run
+`a4839050-7de4-4e3c-8a60-102c75d789f4` passed 1,445/1,445 checks in 640 ms;
+feature-matrix run `f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8` passed in 52,030 ms
+with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`,
+and `verbose=0`, ending with native/WASI capability agreement and no
+`lock-wait` match. Nightly LLVM run
+`1ee268ab-2660-4094-b7d2-504846bec32f` passed 85/85 tests in 64,265 ms and
+ingested snapshot `9427f8d2-a9e8-4698-92d1-b0c06f0f855e`: 54,755/55,605
+lines, 7,796/8,000 branches, 3,110/3,201 functions, and 84,422/86,315
+regions. The known LLVM JSON segment-normalization warning remains. The
+schema-@2 local benchmark separately measured the Pillow parity fixture suite
+at 1.075 s wall time and the Rust-only feature-gate suite at 1.874 s; these
+are fixed-host observations, not universal performance claims.
 
 Historical acceptance record: WebP VP8 65,536-bit logical checkpoints
 
@@ -6710,7 +6745,7 @@ source-snapshot copying after each 1,024 source pixels, predictor and mode appli
 after each 1,024 pixels, cross-color/entropy/transform,
 bounded backward-reference search/match-length/cache/trace and repeated-run
 hash-chain insertion after each 256 pixels, histogram/Huffman,
-token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte output stages, now
+token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals, and 1,024-byte output stages, now
 charge additional checkpoints.
 Whole-buffer encoders still allocate before the output-admission check; the
 JPEG, PNG, BMP, ICO, and TIFF still sink paths, plus the one-frame JPEG
@@ -6719,7 +6754,7 @@ already charge the documented interior stages, including the RGBA transparent-ar
 cleanup checkpoint, while WebP VP8 currently has
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition plus 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit coefficient intervals, 16,384-boolean
 first-partition/coefficient-bit intervals, and 1,024-byte boolean-bitstream
-output intervals; VP8L has 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream and 1,024-byte output
+output intervals; VP8L has 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream and 1,024-byte output
 intervals. The lossy WebP VP8 padded Y/U/V edge-replication pass now checks
 after each 1,024 padded items; its no-token helper retains the original tight
 path. Coefficient-statistics collection now checks after each 1,024 selected
