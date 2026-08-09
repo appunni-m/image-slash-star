@@ -314,14 +314,26 @@ impl<C: BitWriterCheckpoint> BitWriter<'_, C> {
     }
 }
 
+#[derive(Clone)]
+enum HuffmanEncodingNode {
+    Leaf(usize),
+    Branch(Box<Self>, Box<Self>),
+}
+
+#[derive(Clone)]
+struct WeightedHuffmanEncodingNode {
+    count: u32,
+    sort_value: isize,
+    node: HuffmanEncodingNode,
+}
+
 // Every pop occurs while at least two nodes remain.
 #[allow(clippy::unwrap_used)]
 fn build_huffman_tree(
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
-    optimized: &mut Vec<u32>,
-    rle_good: &mut Vec<bool>,
+    scratch: &mut HuffmanTreeScratch<'_>,
     length_limit: u8,
     token: Option<&crate::CancellationToken>,
 ) -> Result<bool, EncodingError> {
@@ -329,21 +341,14 @@ fn build_huffman_tree(
     assert_eq!(frequencies.len(), lengths.len());
     assert_eq!(frequencies.len(), codes.len());
 
-    #[derive(Clone)]
-    enum Node {
-        Leaf(usize),
-        Branch(Box<Node>, Box<Node>),
-    }
-    #[derive(Clone)]
-    struct WeightedNode {
-        count: u32,
-        sort_value: isize,
-        node: Node,
-    }
-
+    let optimized = &mut *scratch.optimized_frequencies;
+    let nodes = &mut *scratch.nodes;
+    let node_sort_scratch = &mut *scratch.node_sort_scratch;
+    nodes.clear();
+    node_sort_scratch.clear();
     optimized.clear();
     optimized.extend_from_slice(frequencies);
-    optimize_huffman_for_rle_with_checkpoint(&mut *optimized, rle_good, token)?;
+    optimize_huffman_for_rle_with_checkpoint(optimized, scratch.huffman_rle_good, token)?;
     let optimized_symbol_count = if let Some(token) = token {
         let mut count = 0_usize;
         for (index, &frequency) in optimized.iter().enumerate() {
@@ -370,33 +375,33 @@ fn build_huffman_tree(
     let mut count_min = 1_u32;
     loop {
         check_token(token)?;
-        let mut nodes = if let Some(token) = token {
-            let mut nodes = Vec::new();
+        nodes.clear();
+        if let Some(token) = token {
             for (value, &frequency) in optimized.iter().enumerate() {
                 if (value + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
                     check_token(Some(token))?;
                 }
                 if frequency != 0 {
-                    nodes.push(WeightedNode {
+                    nodes.push(WeightedHuffmanEncodingNode {
                         count: frequency.max(count_min),
                         sort_value: value as isize,
-                        node: Node::Leaf(value),
+                        node: HuffmanEncodingNode::Leaf(value),
                     });
                 }
             }
-            nodes
         } else {
-            optimized
-                .iter()
-                .enumerate()
-                .filter(|&(_, &frequency)| frequency != 0)
-                .map(|(value, &frequency)| WeightedNode {
-                    count: frequency.max(count_min),
-                    sort_value: value as isize,
-                    node: Node::Leaf(value),
-                })
-                .collect::<Vec<_>>()
-        };
+            nodes.extend(
+                optimized
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &frequency)| frequency != 0)
+                    .map(|(value, &frequency)| WeightedHuffmanEncodingNode {
+                        count: frequency.max(count_min),
+                        sort_value: value as isize,
+                        node: HuffmanEncodingNode::Leaf(value),
+                    }),
+            );
+        }
         if let Some(token) = token {
             // The token-aware path keeps the stable ordering of the original
             // sort with a bounded bottom-up merge sort. A large fixed alphabet
@@ -405,7 +410,7 @@ fn build_huffman_tree(
             // avoids turning cancellation-aware encoding into a quadratic
             // slow path.
             let mut comparisons = 0_usize;
-            let mut scratch = nodes.clone();
+            node_sort_scratch.clone_from(nodes);
             let mut width = 1_usize;
             while width < nodes.len() {
                 let mut start = 0_usize;
@@ -414,7 +419,7 @@ fn build_huffman_tree(
                     let end = middle.saturating_add(width).min(nodes.len());
                     let mut left = start;
                     let mut right = middle;
-                    for slot in &mut scratch[start..end] {
+                    for slot in &mut node_sort_scratch[start..end] {
                         let take_left =
                             if left == middle {
                                 false
@@ -439,7 +444,7 @@ fn build_huffman_tree(
                     }
                     start = end;
                 }
-                core::mem::swap(&mut nodes, &mut scratch);
+                core::mem::swap(nodes, node_sort_scratch);
                 width = width.saturating_mul(2);
             }
         } else {
@@ -475,10 +480,10 @@ fn build_huffman_tree(
             };
             nodes.insert(
                 position,
-                WeightedNode {
+                WeightedHuffmanEncodingNode {
                     count,
                     sort_value: -1,
-                    node: Node::Branch(Box::new(left.node), Box::new(right.node)),
+                    node: HuffmanEncodingNode::Branch(Box::new(left.node), Box::new(right.node)),
                 },
             );
         }
@@ -488,8 +493,8 @@ fn build_huffman_tree(
         while let Some((node, depth)) = stack.pop() {
             check_token(token)?;
             match node {
-                Node::Leaf(value) => lengths[*value] = depth,
-                Node::Branch(left, right) => {
+                HuffmanEncodingNode::Leaf(value) => lengths[*value] = depth,
+                HuffmanEncodingNode::Branch(left, right) => {
                     stack.push((right, depth + 1));
                     stack.push((left, depth + 1));
                 }
@@ -514,6 +519,9 @@ fn build_huffman_tree(
         }
         count_min *= 2;
     }
+
+    nodes.clear();
+    node_sort_scratch.clear();
 
     // Assign codes
     codes.fill(0);
@@ -708,6 +716,8 @@ struct HuffmanTreeScratch<'a> {
     huffman_tokens: &'a mut Vec<HuffmanToken>,
     optimized_frequencies: &'a mut Vec<u32>,
     huffman_rle_good: &'a mut Vec<bool>,
+    nodes: &'a mut Vec<WeightedHuffmanEncodingNode>,
+    node_sort_scratch: &'a mut Vec<WeightedHuffmanEncodingNode>,
 }
 
 fn compressed_huffman_tokens_into(lengths: &[u8], tokens: &mut Vec<HuffmanToken>) {
@@ -895,15 +905,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     scratch: &mut HuffmanTreeScratch<'_>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
-    build_huffman_tree(
-        frequencies,
-        lengths,
-        codes,
-        scratch.optimized_frequencies,
-        scratch.huffman_rle_good,
-        15,
-        token,
-    )?;
+    build_huffman_tree(frequencies, lengths, codes, scratch, 15, token)?;
     let mut symbols = [0_usize; 3];
     let symbol_count = if let Some(token) = token {
         let mut count = 0;
@@ -976,8 +978,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
-        scratch.optimized_frequencies,
-        scratch.huffman_rle_good,
+        scratch,
         7,
         token,
     )?;
@@ -1232,6 +1233,8 @@ struct TokenStreamScratch {
     optimized_frequencies: Vec<u32>,
     huffman_rle_good: Vec<bool>,
     meta_pixels: Vec<u32>,
+    huffman_nodes: Vec<WeightedHuffmanEncodingNode>,
+    huffman_node_sort_scratch: Vec<WeightedHuffmanEncodingNode>,
 }
 
 #[derive(Clone, Copy)]
@@ -1527,6 +1530,8 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         huffman_tokens: &mut scratch.huffman_tokens,
         optimized_frequencies: &mut scratch.optimized_frequencies,
         huffman_rle_good: &mut scratch.huffman_rle_good,
+        nodes: &mut scratch.huffman_nodes,
+        node_sort_scratch: &mut scratch.huffman_node_sort_scratch,
     };
     if group_scratch.len() < group_count {
         group_scratch.resize_with(group_count, GroupCodes::default);
@@ -2745,10 +2750,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut huffman_tokens = Vec::new();
     let mut optimized_frequencies = Vec::new();
     let mut huffman_rle_good = Vec::new();
+    let mut huffman_nodes = Vec::new();
+    let mut huffman_node_sort_scratch = Vec::new();
     let mut huffman_scratch = HuffmanTreeScratch {
         huffman_tokens: &mut huffman_tokens,
         optimized_frequencies: &mut optimized_frequencies,
         huffman_rle_good: &mut huffman_rle_good,
+        nodes: &mut huffman_nodes,
+        node_sort_scratch: &mut huffman_node_sort_scratch,
     };
     let _ = write_huffman_tree(
         &mut tree_writer,
