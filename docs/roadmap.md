@@ -3,8 +3,9 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against production implementation revision
-`5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision
-`35cf266552fa4cfaaef1e231bb01bead1c00d99b`; the claim-ledger fixture tuple
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`, Rust test/runtime revision
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`, and benchmark-protocol revision
+`4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
 `d058105b-71d1-4fc5-9bc5-7ea473edbb7c`; the exact-head feature-matrix run is
@@ -665,7 +666,7 @@ Minute gaps:
 | --- | --- | --- |
 | WEP-003 | Animation decode now returns full rendered canvases while separately retaining exact ANMF rectangles, blend, and disposal. It still does not expose the raw nested frame bitstream needed for exact container reconstruction. | Add the bounded demux/source-frame view described by WEP-011 without changing rendered decode semantics. |
 | WEP-004 | Pillow mode normalization is much broader than the current encoder. | Add `LA` first, then integer/float/16-bit/YCbCr only as fixture-backed private conversions. |
-| WEP-007 | Encoder and decoder are among the largest source areas. The committed schema-`@2` fixture benchmark protocol now records revision/hash-bound parity and Rust-only suite timings with a fixed four-worker test budget, plus native/WASM compile artifact sizes; the parity harness shares immutable source-fixture decodes across its partitioned test functions. It still does not measure codec-specific output-size, peak-memory, or runtime-WASM behavior. | Extend the fixed lossy/lossless/alpha/animation workload set with output-size, peak-memory, and runtime-WASM measurements; compare repeated same-host revisions before making a universal performance claim. |
+| WEP-007 | Encoder and decoder are among the largest source areas. The schema-`@3` fixture benchmark protocol records revision/hash-bound parity and Rust-only suite timings with a fixed four-worker test budget, native/WASM compile artifact sizes, and direct-child POSIX CPU/peak-RSS observations; the parity harness shares immutable source-fixture decodes across its partitioned test functions. It still does not measure codec-specific output-size, allocator count, retained-cache size, or runtime-WASM behavior. | Extend the fixed lossy/lossless/alpha/animation workload set with output-size, allocator/cache, and runtime-WASM measurements; compare repeated same-host revisions before making a universal performance claim. |
 | WEP-001 | The API does not retain whether a source was VP8, VP8L, or extended WebP, nor expose intrinsic alpha/animation/container flags separately from normalized mode. | Add source encoding properties to inspection without leaking internal decoder state. |
 | WEP-005 | Transparent RGB and straight-versus-premultiplied alpha behavior is not a named contract across lossy, lossless, and animation paths. | Add exact invisible-RGB and alpha-edge fixtures before any optimization changes. |
 | WEP-008 | Near-lossless, alpha quality/filter, exact transparent RGB, presets, target size/PSNR, SNS, filtering, partitions, and sharp-YUV controls are untyped or absent. | Compare Pillow 12.2.0 and pinned libwebp 1.6.0; expose only deterministic options that the in-tree encoder implements. |
@@ -831,7 +832,7 @@ typed work-budget errors, sink prefixes, and rollback are outside its oracle.
 | QA-006 | The encode manifest samples many options but is not a Cartesian source-mode × target-format matrix. | Add one row per Pillow-accepted/rejected mode boundary and one cross-format decode→encode row for every claimed transcode. |
 | QA-008 | No exact public error-message policy exists, despite retaining oracle messages. | Decide whether Rust messages are stable; test kind plus structured fields, and treat Pillow text as diagnostic evidence rather than equality unless intentionally mapped. |
 | QA-009 | No fuzzing, mutation corpus, or differential randomized test runs in CI. | Add format-aware fuzzing after limits; preserve minimized failures as fixtures. |
-| QA-010 | `scripts/benchmark_fixture_workloads.py` schema-`@2` provides a clean-revision protocol with a fixed four-worker budget, separate Pillow-parity and Rust feature-gate wall/user/sys timings, manifest/matrix hashes, native release-library size, and WASM compile-artifact size. At revision `f8fd846f0f1ebd7bc15444698626009a31ef7004`, all four workloads passed with 1.06 s parity, 2.49 s Rust-only feature-gate, 7,863,416-byte native `rlib`, and 24,830,966-byte WASM artifact observations. Peak RSS, stack depth, allocator counts, and WASM runtime measurements remain uncollected. | Run the protocol on fixed lossy/lossless/alpha/animation workloads, add peak-memory/stack/allocator and WASM-runtime collectors, and compare repeated same-host revisions before any "fast", "small", or "lightweight" claim. |
+| QA-010 | `scripts/benchmark_fixture_workloads.py` schema-`@3` provides a clean-revision protocol with a fixed four-worker budget, separate Pillow-parity and Rust feature-gate wall/user/sys timings, direct-child POSIX peak-RSS observations, manifest/matrix hashes, native release-library size, and WASM compile-artifact size. At benchmark revision `4415a84463103d3d0916821a3ed8637b832442d6`, all four workloads passed: 1.089135 s / 2.860993 user s / 0.222043 sys s / 251,002,880-byte peak RSS for Pillow parity; 1.588432 s / 2.140313 user s / 0.100214 sys s / 151,781,376-byte peak RSS for the separate Rust-only feature-gate suite; 7,970,888-byte native `rlib`; and 25,080,461-byte WASM artifact. Peak RSS is a direct-child POSIX observation, not a universal process-tree or memory claim. Stack depth, allocator counts, retained-cache size, caller-buffer reuse, and WASM runtime measurements remain uncollected. | Run the protocol on fixed lossy/lossless/alpha/animation workloads, add stack/allocator/cache/buffer-reuse and WASM-runtime collectors, and compare repeated same-host revisions before any "fast", "small", or "lightweight" claim. |
 | QA-011 | No semver/public API diff runs before release. | Add a public API snapshot once enum/type decisions settle. |
 | QA-012 | Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification. | Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity. |
 | QA-013 | `cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured. | Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer. |
@@ -921,7 +922,7 @@ unchanged outer-result regression gate.
 
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
 | QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records 70 named Pillow witnesses, 29 successful structural checks, 40 malformed parser checks, and the exact boundary of what Pillow proves. | Extend the same map discipline to each codec and replace candidate-only VP8L entries with independently checked structural witnesses before claiming state coverage. |
-| QA-030 | The schema-`@2` fixture benchmark protocol separates parity and Rust-only suite time with a fixed four-worker budget and records compiled artifact sizes; the parity harness now shares immutable repeated source decodes across its partitioned test functions. It does not yet measure output allocation count, retained encoded+decoded cache memory, sequence amplification, or caller-buffer reuse. | Add allocator/peak-memory and buffer-reuse measurements alongside time and artifact size; never optimize from source line count. |
+| QA-030 | The schema-`@3` fixture benchmark protocol separates parity and Rust-only suite time with a fixed four-worker budget, records compiled artifact sizes, and now records direct-child POSIX user/sys time and peak RSS; the parity harness shares immutable repeated source decodes across its partitioned test functions. It still does not measure output allocation count, retained encoded+decoded cache memory, sequence amplification, caller-buffer reuse, stack depth, or runtime WASM. | Add allocator/cache/buffer-reuse, stack, and runtime-WASM measurements alongside time, peak RSS, and artifact size; never optimize from source line count. |
 | QA-031 | Legal-but-unsupported format classes are not a uniform fixture lane. Some are absent entirely, while malformed inputs dominate error coverage. | Add active negative-capability rows for every named legal class and require `Unsupported` rather than incidental `Malformed`. |
 | QA-033 | Generator reproducibility is checked through hashes inside generated data, but a clean regeneration/no-diff run is not a mandatory CI gate for every script and asset. | Run generators in a clean checkout, fail on any diff, and record pinned Python/native tool identities. |
 | QA-034 | Debug and optimized builds are not compared for exact results. Overflow checks, floating-point/codegen choices, and `cfg(debug_assertions)` can expose behavior that line coverage in one profile misses. | Run a compact deterministic parity subset in both profiles and compare structured errors and artifacts. |
@@ -6104,7 +6105,7 @@ schema-@2 local benchmark separately measured the Pillow parity fixture suite
 at 1.075 s wall time and the Rust-only feature-gate suite at 1.874 s; these
 are fixed-host observations, not universal performance claims.
 
-Current acceptance record: WebP work-budget witness runtime
+Historical acceptance record: WebP work-budget witness runtime
 
 The test-only runtime slice is implemented at
 `35cf266552fa4cfaaef1e231bb01bead1c00d99b`; production behavior remains at
@@ -6142,6 +6143,33 @@ reported 1.08 s and 1.57 s. Native release and wasm32-unknown-unknown compile
 workloads also passed. These are fixed-host/cache observations, not universal
 speed claims; the Rust-only runtime measurement remains separate from the
 Pillow-oracle result.
+
+Current acceptance record: direct-child peak-RSS benchmark measurement
+
+The benchmark-protocol slice is implemented at
+`4415a84463103d3d0916821a3ed8637b832442d6`; production behavior remains at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`, and the Rust-only feature-gate
+contract remains at test/runtime revision
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`. Schema-`@3` of
+`scripts/benchmark_fixture_workloads.py` uses POSIX `wait4` instead of relying
+on `/usr/bin/time -l`, which can be denied while querying macOS sysctls. It
+records direct-child CPU time and peak RSS per selected workload while keeping
+Pillow parity and Rust-only workload provenance in separate records.
+
+The clean revision-bound run passed all four workloads. The Pillow parity
+fixture suite reported 1.089135 s wall, 2.860993 user s, 0.222043 sys s, and
+251,002,880 bytes peak RSS. The separate Rust-only feature-gate suite reported
+1.588432 s wall, 2.140313 user s, 0.100214 sys s, and 151,781,376 bytes peak
+RSS. The native release `rlib` was 7,970,888 bytes and the
+`wasm32-unknown-unknown` determinism artifact was 25,080,461 bytes. Peak RSS
+is a direct-child POSIX observation, not a universal process-tree, allocator,
+or memory claim.
+
+This changes measurement tooling only: no production codec behavior, Pillow
+parity row or fixture, diagnostic origin, new test function, or coverage-only
+hook changed. Allocation counts, retained encoded/decoded cache bytes,
+caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
+QA-010/QA-030.
 
 Historical acceptance record: WebP VP8 65,536-bit logical checkpoints
 

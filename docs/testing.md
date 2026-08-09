@@ -3,8 +3,9 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision
-`35cf266552fa4cfaaef1e231bb01bead1c00d99b`; the claim-ledger fixture tuple
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`, Rust test/runtime revision
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`, and benchmark-protocol revision
+`4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
 `d058105b-71d1-4fc5-9bc5-7ea473edbb7c`; the exact-head feature-matrix run is
@@ -2142,7 +2143,7 @@ schema-@2 local benchmark separately measured the Pillow parity fixture suite
 at 1.075 s wall time and the Rust-only feature-gate suite at 1.874 s; these
 are fixed-host observations, not universal performance claims.
 
-Current acceptance record: WebP work-budget witness runtime
+Historical acceptance record: WebP work-budget witness runtime
 
 The test-only runtime slice is implemented at
 `35cf266552fa4cfaaef1e231bb01bead1c00d99b`; production behavior remains at
@@ -2180,6 +2181,33 @@ reported 1.08 s and 1.57 s. Native release and wasm32-unknown-unknown compile
 workloads also passed. These are fixed-host/cache observations, not universal
 speed claims; the Rust-only runtime measurement remains separate from the
 Pillow-oracle result.
+
+Current acceptance record: direct-child peak-RSS benchmark measurement
+
+The benchmark-protocol slice is implemented at
+`4415a84463103d3d0916821a3ed8637b832442d6`; production behavior remains at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`, and the Rust-only feature-gate
+contract remains at test/runtime revision
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`. Schema-`@3` of
+`scripts/benchmark_fixture_workloads.py` uses POSIX `wait4` instead of relying
+on `/usr/bin/time -l`, which can be denied while querying macOS sysctls. It
+records direct-child CPU time and peak RSS per selected workload while keeping
+Pillow parity and Rust-only workload provenance in separate records.
+
+The clean revision-bound run passed all four workloads. The Pillow parity
+fixture suite reported 1.089135 s wall, 2.860993 user s, 0.222043 sys s, and
+251,002,880 bytes peak RSS. The separate Rust-only feature-gate suite reported
+1.588432 s wall, 2.140313 user s, 0.100214 sys s, and 151,781,376 bytes peak
+RSS. The native release `rlib` was 7,970,888 bytes and the
+`wasm32-unknown-unknown` determinism artifact was 25,080,461 bytes. Peak RSS
+is a direct-child POSIX observation, not a universal process-tree, allocator,
+or memory claim.
+
+This changes measurement tooling only: no production codec behavior, Pillow
+parity row or fixture, diagnostic origin, new test function, or coverage-only
+hook changed. Allocation counts, retained encoded/decoded cache bytes,
+caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
+QA-010/QA-030.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
@@ -6256,7 +6284,7 @@ report answers "which implementation paths executed?"; it does not answer
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
 | VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts and malformed parser code/phase/bit-offset witnesses, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
-| Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` | Clean-revision workload timings with a fixed four-worker test-harness budget, manifest/matrix hashes, and native release/WASM compile artifact sizes with parity and Rust-only provenance kept separate | Universal performance, peak-memory, allocation, stack, caller-buffer-reuse, or WASM-runtime claims |
+| Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` schema-`@3` | Clean-revision workload timings with a fixed four-worker test-harness budget, manifest/matrix hashes, native release/WASM compile artifact sizes, and direct-child POSIX CPU/peak-RSS observations with parity and Rust-only provenance kept separate | Universal performance or process-tree memory claims, allocator counts, retained-cache size, stack, caller-buffer-reuse, or WASM-runtime claims |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
@@ -6309,11 +6337,15 @@ The `pillow_parity_fixture_suite` record runs only the generated
 and structured-diagnostic fields have no Pillow result field. Release-library
 and `wasm32-unknown-unknown` compile workloads record artifact sizes. These
 are revision-bound observations for a fixed host/cache/toolchain, not universal
-benchmarks. The protocol intentionally reports allocation counts, retained
-encoded/decoded cache bytes, caller-buffer reuse, peak RSS, peak stack, and
-WASM runtime time/memory as unmeasured until dedicated collectors exist.
+benchmarks. On POSIX, schema-`@3` collects `reported_user_seconds`,
+`reported_sys_seconds`, and `peak_resident_bytes` with `peak_resident_source` set
+to `posix_wait4_direct_child`. The peak value is a direct-child observation and
+must not be read as a universal process-tree or allocator measurement; non-POSIX
+hosts report it as unavailable. Allocation counts, retained encoded/decoded cache
+bytes, caller-buffer reuse, peak stack, and WASM runtime time/memory remain
+unmeasured until dedicated collectors exist.
 
-The schema-`@2` workload fixes both Cargo test targets at
+The schema-`@3` workload fixes both Cargo test targets at
 `--test-threads=4`. This bounded parallel budget represents normal local
 execution without allowing host CPU count to change the measured command. The
 parity harness also shares immutable, fixture-derived source sequences across
@@ -6322,15 +6354,16 @@ cache. Neither scheduling change changes the 1,024 decode/393 encode fixture
 denominator, adds a parity row, or turns the Rust-only feature-gate contract
 into Pillow evidence.
 
-A clean local run at source revision
-`f8fd846f0f1ebd7bc15444698626009a31ef7004` passed all four workloads on the
+A clean local run at benchmark revision
+`4415a84463103d3d0916821a3ed8637b832442d6` passed all four workloads on the
 arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its observations were
-1.06 s for the 1,024-row/393-row Pillow parity suite, 2.49 s for the separate
-Rust feature-gate suite, 7,863,416 bytes for the native release `rlib`, and
-24,830,966 bytes for the `wasm32-unknown-unknown` determinism test artifact;
-peak RSS was unavailable from the host's portable timing interface. These
-values are a revision-bound execution record, not a universal benchmark or a
-parity claim for the Rust-only workload.
+1.089135 s wall / 2.860993 user / 0.222043 sys / 251,002,880-byte peak RSS for
+the 1,445-row Pillow parity suite; 1.588432 s wall / 2.140313 user / 0.100214
+sys / 151,781,376-byte peak RSS for the separate Rust-only feature-gate suite;
+7,970,888 bytes for the native release `rlib`; and 25,080,461 bytes for the
+`wasm32-unknown-unknown` determinism test artifact. The two peak values are
+direct-child POSIX observations. These values are a revision-bound execution
+record, not a universal benchmark or a parity claim for the Rust-only workload.
 
 ### Feature and target matrix
 
