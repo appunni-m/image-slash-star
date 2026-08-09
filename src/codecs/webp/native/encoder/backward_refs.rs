@@ -1851,7 +1851,9 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     path.reverse();
 
     let mut output = Vec::with_capacity(path.len());
-    let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
+    // The dynamic-programming cache is dead after path reconstruction. Reset
+    // and reuse it for token replay instead of allocating a second table.
+    cache.fill(0);
     let mut position: usize = 0;
     if FINE_TRACE {
         checkpoint(token)?;
