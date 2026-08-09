@@ -13957,13 +13957,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut partition_262144_options {
             options.quality = Some(100);
         }
-        // A deterministic 625x625 high-entropy probe reaches the 524,288-,
+        // A deterministic 609x625 high-entropy probe reaches the 524,288-,
         // 1,048,576-, and 2,097,152-bit coefficient intervals at quality
         // 100. It keeps one fixture for the whole ladder while avoiding the
         // false boundary attribution produced by the smaller checkerboard.
-        let mut coefficient_ladder_probe_pixels = Vec::with_capacity(625 * 625 * 3);
+        let mut coefficient_ladder_probe_pixels = Vec::with_capacity(609 * 625 * 3);
         let mut coefficient_ladder_state = 0xC001_C0DEu32;
-        for _ in 0..625 * 625 {
+        for _ in 0..609 * 625 {
             coefficient_ladder_state = coefficient_ladder_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
@@ -13974,7 +13974,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let coefficient_ladder_probe =
-            DecodedImage::new(625, 625, coefficient_ladder_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(609, 625, coefficient_ladder_probe_pixels, ColorType::Rgb8);
         let mut coefficient_ladder_options = analysis_options.clone();
         if let EncodeOptions::WebP(options) = &mut coefficient_ladder_options {
             options.quality = Some(100);
