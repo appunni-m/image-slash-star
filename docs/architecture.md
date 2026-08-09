@@ -3,15 +3,15 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf` and test/runtime revision
-`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`; the claim-ledger fixture tuple
+`fe77d46c239da119e36942d5523255c47b8e06c8` and test/runtime revision
+`fe77d46c239da119e36942d5523255c47b8e06c8`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current WebP candidate-prefix
-optimization and entropy-analysis pixel slice have not received a managed
-coverage rerun.
+optimization, candidate-suffix allocation recycling, and entropy-analysis
+pixel slice have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -437,10 +437,11 @@ polls after each 64 comparisons, while the no-token path retains its original
 stable sort; the
 no-token paths retain their original tight loops. Candidate trials leave the
 already-emitted prefix in the parent writer and retain only each trial's
-suffix, avoiding redundant prefix clone/re-copy work without changing the
-selected bitstream or adding a new public work-budget result; the token-aware
-winner suffix is copied in 1,024-byte intervals, while the no-token winner
-copy remains bulk.
+suffix, while recycling losing or replaced winning suffix allocations as
+scratch. This avoids redundant prefix clone/re-copy work and fresh per-trial
+suffix allocations without changing the selected bitstream or adding a new
+public work-budget result; the token-aware winner suffix is copied in 1,024-byte
+intervals, while the no-token winner copy remains bulk.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
