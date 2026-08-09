@@ -77,11 +77,11 @@ impl HuffmanTree {
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss
     )]
-    pub(crate) fn build_implicit(code_lengths: Vec<u16>) -> Result<Self, DecodingError> {
+    pub(crate) fn build_implicit(code_lengths: &[u16]) -> Result<Self, DecodingError> {
         // Count symbols and build histogram
         let mut num_symbols = 0;
         let mut code_length_hist = [0; MAX_ALLOWED_CODE_LENGTH + 1];
-        for &length in &code_lengths {
+        for &length in code_lengths {
             if length == 0 {
                 continue;
             }
@@ -334,8 +334,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let two = HuffmanTree::build_two_node(1, 2);
     assert!(!two.is_single_node());
-    assert!(HuffmanTree::build_implicit(vec![1, 1]).is_ok());
-    assert!(HuffmanTree::build_implicit(vec![1, 1, 1]).is_err());
+    assert!(HuffmanTree::build_implicit(&[1, 1]).is_ok());
+    assert!(HuffmanTree::build_implicit(&[1, 1, 1]).is_err());
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
     assert!(
         HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Empty], 0, 0, &mut reader).is_err()
