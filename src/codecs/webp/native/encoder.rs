@@ -66,6 +66,7 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
 const VP8L_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const VP8L_TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
@@ -1588,6 +1589,67 @@ fn pixels_are_grayscale_with_checkpoint(
     Ok(true)
 }
 
+// Keep pixel accumulation separate from token scheduling so the wide-row
+// token path can add a post-chunk poll while the no-token traversal remains
+// a direct loop over the existing heap-backed histogram table.
+#[inline(always)]
+fn accumulate_entropy_pixel(
+    histograms: &mut [[u32; 256]],
+    pixels: &[u32],
+    width: usize,
+    y: usize,
+    x: usize,
+    previous_pixel: &mut u32,
+) {
+    const ALPHA: usize = 0;
+    const ALPHA_PREDICTED: usize = 1;
+    const GREEN: usize = 2;
+    const GREEN_PREDICTED: usize = 3;
+    const RED: usize = 4;
+    const RED_PREDICTED: usize = 5;
+    const BLUE: usize = 6;
+    const BLUE_PREDICTED: usize = 7;
+    const RED_SUB_GREEN: usize = 8;
+    const RED_PREDICTED_SUB_GREEN: usize = 9;
+    const BLUE_SUB_GREEN: usize = 10;
+    const BLUE_PREDICTED_SUB_GREEN: usize = 11;
+    const PALETTE: usize = 12;
+
+    let pixel = pixels[y * width + x];
+    let difference = subtract_pixels(pixel, *previous_pixel);
+    *previous_pixel = pixel;
+    if difference == 0 || (y != 0 && pixel == pixels[(y - 1) * width + x]) {
+        return;
+    }
+
+    histograms[ALPHA][((pixel >> 24) & 0xff) as usize] += 1;
+    histograms[RED][((pixel >> 16) & 0xff) as usize] += 1;
+    histograms[GREEN][((pixel >> 8) & 0xff) as usize] += 1;
+    histograms[BLUE][(pixel & 0xff) as usize] += 1;
+    histograms[ALPHA_PREDICTED][((difference >> 24) & 0xff) as usize] += 1;
+    histograms[RED_PREDICTED][((difference >> 16) & 0xff) as usize] += 1;
+    histograms[GREEN_PREDICTED][((difference >> 8) & 0xff) as usize] += 1;
+    histograms[BLUE_PREDICTED][(difference & 0xff) as usize] += 1;
+
+    let green = ((pixel >> 8) & 0xff) as u8;
+    let red = ((pixel >> 16) & 0xff) as u8;
+    let blue = (pixel & 0xff) as u8;
+    histograms[RED_SUB_GREEN][usize::from(red.wrapping_sub(green))] += 1;
+    histograms[BLUE_SUB_GREEN][usize::from(blue.wrapping_sub(green))] += 1;
+
+    let predicted_green = ((difference >> 8) & 0xff) as u8;
+    let predicted_red = ((difference >> 16) & 0xff) as u8;
+    let predicted_blue = (difference & 0xff) as u8;
+    histograms[RED_PREDICTED_SUB_GREEN]
+        [usize::from(predicted_red.wrapping_sub(predicted_green))] += 1;
+    histograms[BLUE_PREDICTED_SUB_GREEN]
+        [usize::from(predicted_blue.wrapping_sub(predicted_green))] += 1;
+
+    let hash = ((((u64::from(pixel) + u64::from(pixel >> 19)) * 0x39c5_fba7) & 0xffff_ffff) >> 24)
+        as usize;
+    histograms[PALETTE][hash] += 1;
+}
+
 // The direct entropy mode makes the mode table non-empty.
 #[allow(clippy::unwrap_used)]
 fn analyze_entropy(
@@ -1616,54 +1678,56 @@ fn analyze_entropy(
     const PALETTE: usize = 12;
     let mut histograms = vec![[0_u32; 256]; 13];
     let mut previous_pixel = pixels[0];
-    for y in 0..height {
-        if y.is_multiple_of(16) {
-            check_token(token)?;
-        }
-        for x in 0..width {
-            if x.is_multiple_of(1024) {
-                check_token(token)?;
-            }
-            let pixel = pixels[y * width + x];
-            let difference = subtract_pixels(pixel, previous_pixel);
-            previous_pixel = pixel;
-            if difference == 0 || (y != 0 && pixel == pixels[(y - 1) * width + x]) {
-                continue;
-            }
-            let add_channels = |histograms: &mut [[u32; 256]], base: [usize; 4], color: u32| {
-                for (channel, shift) in [24, 16, 8, 0].into_iter().enumerate() {
-                    histograms[base[channel]][((color >> shift) & 0xff) as usize] += 1;
+    if let Some(token) = token {
+        if width > VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS {
+            let mut scanned_pixels = 0_usize;
+            for y in 0..height {
+                if y.is_multiple_of(16) {
+                    check_token(Some(token))?;
                 }
-            };
-            add_channels(&mut histograms, [ALPHA, RED, GREEN, BLUE], pixel);
-            add_channels(
-                &mut histograms,
-                [
-                    ALPHA_PREDICTED,
-                    RED_PREDICTED,
-                    GREEN_PREDICTED,
-                    BLUE_PREDICTED,
-                ],
-                difference,
-            );
-            let add_sub_green =
-                |histograms: &mut [[u32; 256]], red: usize, blue: usize, color: u32| {
-                    let green = ((color >> 8) & 0xff) as u8;
-                    let red_value = ((color >> 16) & 0xff) as u8;
-                    let blue_value = (color & 0xff) as u8;
-                    histograms[red][usize::from(red_value.wrapping_sub(green))] += 1;
-                    histograms[blue][usize::from(blue_value.wrapping_sub(green))] += 1;
-                };
-            add_sub_green(&mut histograms, RED_SUB_GREEN, BLUE_SUB_GREEN, pixel);
-            add_sub_green(
-                &mut histograms,
-                RED_PREDICTED_SUB_GREEN,
-                BLUE_PREDICTED_SUB_GREEN,
-                difference,
-            );
-            let hash = ((((u64::from(pixel) + u64::from(pixel >> 19)) * 0x39c5_fba7) & 0xffff_ffff)
-                >> 24) as usize;
-            histograms[PALETTE][hash] += 1;
+                for x in 0..width {
+                    if x.is_multiple_of(1024) {
+                        check_token(Some(token))?;
+                    }
+                    accumulate_entropy_pixel(
+                        &mut histograms,
+                        pixels,
+                        width,
+                        y,
+                        x,
+                        &mut previous_pixel,
+                    );
+                    scanned_pixels += 1;
+                    if scanned_pixels.is_multiple_of(VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS) {
+                        check_token(Some(token))?;
+                    }
+                }
+            }
+        } else {
+            for y in 0..height {
+                if y.is_multiple_of(16) {
+                    check_token(Some(token))?;
+                }
+                for x in 0..width {
+                    if x.is_multiple_of(1024) {
+                        check_token(Some(token))?;
+                    }
+                    accumulate_entropy_pixel(
+                        &mut histograms,
+                        pixels,
+                        width,
+                        y,
+                        x,
+                        &mut previous_pixel,
+                    );
+                }
+            }
+        }
+    } else {
+        for y in 0..height {
+            for x in 0..width {
+                accumulate_entropy_pixel(&mut histograms, pixels, width, y, x, &mut previous_pixel);
+            }
         }
     }
     for category in [

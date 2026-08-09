@@ -12163,6 +12163,81 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(entropy_analysis_sink, vec![0xAD]);
 
+        let mut entropy_pixel_probe_pixels = Vec::with_capacity(4_096 * 3);
+        let mut entropy_pixel_probe_state = 0x1357_9bdf_u32;
+        for _ in 0..4_096 {
+            entropy_pixel_probe_state = entropy_pixel_probe_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let [red, green, blue, _] = entropy_pixel_probe_state.to_le_bytes();
+            entropy_pixel_probe_pixels.extend_from_slice(&[red, green, blue]);
+        }
+        let entropy_pixel_probe =
+            DecodedImage::new(4_096, 1, entropy_pixel_probe_pixels, ColorType::Rgb8);
+        let entropy_pixel_probe_expected =
+            image_slash_star::encode(&entropy_pixel_probe, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &entropy_pixel_probe,
+                ImageFormat::WebP,
+                &lossless_options,
+                &lossless_unlimited,
+            )?,
+            entropy_pixel_probe_expected,
+            "an ample VP8L entropy-analysis budget preserves byte identity"
+        );
+        // The lossless VP8L entropy-mode pixel histogram pass now charges a
+        // checkpoint after each completed 1,024-pixel chunk when a row is
+        // wider than the existing row-start cadence. This 4,096x1 probe
+        // reaches the first new post-scan boundary at 21/22 work units in
+        // both whole-buffer and caller-owned-sink paths. Pillow has no caller
+        // token or work-budget result, so this remains Rust-only evidence
+        // with no parity row, fixture entry, diagnostic origin, or
+        // coverage-only hook.
+        let entropy_pixel_probe_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(21);
+        let entropy_pixel_probe_error = match image_slash_star::encode_with_policy(
+            &entropy_pixel_probe,
+            ImageFormat::WebP,
+            &lossless_options,
+            &entropy_pixel_probe_policy,
+        ) {
+            Ok(_) => return Err("VP8L entropy pixel probe unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            entropy_pixel_probe_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 21,
+                observed: 22,
+            }
+        ));
+        let mut entropy_pixel_probe_sink = vec![0xAF];
+        let entropy_pixel_probe_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &entropy_pixel_probe,
+            ImageFormat::WebP,
+            &lossless_options,
+            &entropy_pixel_probe_policy,
+            &mut entropy_pixel_probe_sink,
+        ) {
+            Ok(_) => return Err("VP8L entropy pixel probe sink unexpectedly wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            entropy_pixel_probe_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 21,
+                observed: 22,
+            }
+        ));
+        assert_eq!(entropy_pixel_probe_sink, vec![0xAF]);
+
         // The VP8L histogram population scan remains separately bounded after
         // the entropy-analysis polls above. Keeping this boundary distinct
         // prevents the new interior checkpoint from silently replacing the
