@@ -19,8 +19,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
-import re
 import subprocess
 import sys
 import tempfile
@@ -31,7 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = ROOT / "manifest.yaml"
 MATRIX_PATH = ROOT / "tests" / "fixtures" / "coverage_matrix.json"
-SCHEMA = "image-slash-star/fixture-benchmark@2"
+SCHEMA = "image-slash-star/fixture-benchmark@3"
 # Keep the harness parallel enough to represent normal local execution while
 # fixing its fan-out across revisions and hosts. The command records this
 # value, so comparisons never silently change their test-thread budget.
@@ -80,44 +80,65 @@ def matrix_summary() -> dict:
     }
 
 
-def time_command() -> list[str]:
-    # POSIX `-p` is available on both macOS and Linux and preserves the child
-    # exit status.  The verbose variants can fail in restricted sandboxes
-    # while trying to query host sysctls; peak RSS remains explicitly null
-    # unless a future runner supplies it through the same parser.
-    return ["/usr/bin/time", "-p"]
+def _peak_resident_bytes(max_rss: int) -> int:
+    """Normalize ``wait4``'s platform-specific ``ru_maxrss`` unit."""
+
+    # Darwin reports bytes; Linux and the other POSIX platforms report KiB.
+    return int(max_rss) if sys.platform == "darwin" else int(max_rss) * 1024
 
 
-def parse_resource_measurements(text: str) -> dict:
-    def time_value(label: str) -> float | None:
-        patterns = (
-            rf"^\s*([0-9]+(?:\.[0-9]+)?)\s+{label}\s*$",
-            rf"^\s*{label}\s+([0-9]+(?:\.[0-9]+)?)\s*$",
-        )
-        for pattern in patterns:
-            match = re.search(pattern, text, re.MULTILINE)
-            if match:
-                return float(match.group(1))
-        return None
-
-    peak = re.search(r"maximum resident set size:\s+([0-9]+)", text, re.IGNORECASE)
-    if peak is not None:
-        peak_bytes = int(peak.group(1))
-        peak_source = "usr_bin_time"
-    else:
-        peak_kib = re.search(
-            r"Maximum resident set size \(kbytes\):\s+([0-9]+)",
-            text,
-            re.IGNORECASE,
-        )
-        peak_bytes = int(peak_kib.group(1)) * 1024 if peak_kib else None
-        peak_source = "usr_bin_time" if peak_kib else None
+def _unmeasured_resources() -> dict:
     return {
-        "reported_real_seconds": time_value("real"),
-        "reported_user_seconds": time_value("user"),
-        "reported_sys_seconds": time_value("sys"),
-        "peak_resident_bytes": peak_bytes,
-        "peak_resident_source": peak_source,
+        "reported_user_seconds": None,
+        "reported_sys_seconds": None,
+        "peak_resident_bytes": None,
+        "peak_resident_source": None,
+    }
+
+
+def run_measured_command(
+    command: list[str], stdout_path: Path, stderr_path: Path
+) -> tuple[int, dict]:
+    """Run one workload and collect direct-child POSIX resource usage.
+
+    ``/usr/bin/time -l`` is not portable and can be denied by the macOS
+    sandbox while querying sysctls.  ``wait4`` gives the parent the direct
+    child's peak RSS and CPU usage without depending on that host utility.
+    Non-POSIX hosts retain the benchmark's timing behavior and report the
+    resource fields as unavailable rather than fabricating values.
+    """
+
+    if not (hasattr(os, "fork") and hasattr(os, "wait4")):
+        with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+            result = subprocess.run(
+                command,
+                cwd=ROOT,
+                stdout=stdout,
+                stderr=stderr,
+                check=False,
+            )
+        return result.returncode, _unmeasured_resources()
+
+    with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+        pid = os.fork()
+        if pid == 0:
+            try:
+                os.chdir(ROOT)
+                os.dup2(stdout.fileno(), 1)
+                os.dup2(stderr.fileno(), 2)
+                os.execvpe(command[0], command, os.environ.copy())
+            except BaseException as error:  # pragma: no cover - child fallback
+                message = f"benchmark child exec failed: {error}\n".encode()
+                os.write(2, message)
+                os._exit(127)
+
+        _, status, usage = os.wait4(pid, 0)
+
+    return os.waitstatus_to_exitcode(status), {
+        "reported_user_seconds": round(usage.ru_utime, 6),
+        "reported_sys_seconds": round(usage.ru_stime, 6),
+        "peak_resident_bytes": _peak_resident_bytes(usage.ru_maxrss),
+        "peak_resident_source": "posix_wait4_direct_child",
     }
 
 
@@ -126,30 +147,21 @@ def run_workload(workload_id: str, provenance: str, command: list[str]) -> dict:
     with tempfile.TemporaryDirectory(prefix="image-slash-star-benchmark-") as temp_dir:
         stdout_path = Path(temp_dir) / "stdout.log"
         stderr_path = Path(temp_dir) / "stderr.log"
-        with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open(
-            "w", encoding="utf-8"
-        ) as stderr:
-            result = subprocess.run(
-                time_command() + command,
-                cwd=ROOT,
-                stdout=stdout,
-                stderr=stderr,
-                text=True,
-            )
+        exit_code, measurements = run_measured_command(command, stdout_path, stderr_path)
         timing_text = stderr_path.read_text(encoding="utf-8", errors="replace")
         stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace")
     elapsed = time.perf_counter() - started
-    measurements = parse_resource_measurements(timing_text)
+    measurements["reported_real_seconds"] = round(elapsed, 6)
     record = {
         "id": workload_id,
         "provenance": provenance,
         "command": command,
-        "status": "passed" if result.returncode == 0 else "failed",
-        "exit_code": result.returncode,
+        "status": "passed" if exit_code == 0 else "failed",
+        "exit_code": exit_code,
         "wall_seconds": round(elapsed, 6),
         **measurements,
     }
-    if result.returncode != 0:
+    if exit_code != 0:
         record["stdout_tail"] = stdout_text[-2000:]
         record["stderr_tail"] = timing_text[-4000:]
     return record
@@ -240,6 +252,7 @@ def main() -> int:
         "evidence_policy": {
             "pillow_parity": "The parity workload measures only the existing Pillow-observable fixture matrix.",
             "rust_non_parity": "The non-parity workload measures existing feature-gated Rust contracts; it adds no parity claim.",
+            "resource_measurement": "Peak RSS and CPU time are direct-child POSIX wait4 observations; other resource dimensions remain unmeasured.",
             "observation": "Timings and memory are host/cache/toolchain observations, not universal performance claims.",
         },
         "workloads": [],
@@ -247,7 +260,6 @@ def main() -> int:
             "allocation_count",
             "retained_encoded_and_decoded_cache_bytes",
             "caller_buffer_reuse",
-            "peak_resident_memory",
             "peak_stack_and_recursion_depth",
             "wasm_runtime_time_and_memory",
         ],
