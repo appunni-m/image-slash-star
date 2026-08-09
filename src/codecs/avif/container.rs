@@ -7,8 +7,8 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
-    AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+    AvifContentLightLevel, AvifGridProperties, AvifItemCodecProperties, AvifItemColorProperties,
+    AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
     AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
     AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
     SourceColor, SourceDescriptor,
@@ -194,6 +194,7 @@ enum Property {
     Av1C {
         depth: u8,
         chroma_sample_position: AvifChromaSamplePosition,
+        data: Vec<u8>,
     },
     AuxC {
         is_alpha: bool,
@@ -829,6 +830,7 @@ fn parse_clap(payload: &[u8]) -> ParseResult<Property> {
 
 // libavif 1.4.1 src/read.c:2648-2693.
 fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
+    let data = payload.to_vec();
     let mut reader = Reader::new(payload);
     if reader.u8()? != 0x81 {
         return Err(parse_failure!());
@@ -852,6 +854,7 @@ fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     Ok(Property::Av1C {
         depth,
         chroma_sample_position,
+        data,
     })
 }
 
@@ -994,6 +997,7 @@ impl Meta {
                 | Property::Av1C {
                     depth,
                     chroma_sample_position: _,
+                    ..
                 } => Some(*depth),
                 _ => None,
             })
@@ -1113,6 +1117,10 @@ impl Meta {
         let item_plane_properties = self.non_primary_item_plane_properties(primary)?;
         if !item_plane_properties.is_empty() {
             source = source.with_avif_item_plane_properties(item_plane_properties);
+        }
+        let item_codec_properties = self.non_primary_item_codec_properties(primary)?;
+        if !item_codec_properties.is_empty() {
+            source = source.with_avif_item_codec_properties(item_codec_properties);
         }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
@@ -1265,6 +1273,41 @@ impl Meta {
                     dimensions.map_or((None, None), |(width, height)| (Some(width), Some(height)));
                 result.push(AvifItemPlaneProperties::new(
                     item.id, width, height, bit_depth,
+                ));
+            }
+        }
+        Ok(result)
+    }
+
+    fn non_primary_item_codec_properties(
+        &self,
+        primary: u32,
+    ) -> ParseResult<Vec<AvifItemCodecProperties>> {
+        let mut result = Vec::new();
+        for item in &self.items {
+            if item.id == primary {
+                continue;
+            }
+            let mut codec = None;
+            for property in self.associated(item.id) {
+                if let Property::Av1C {
+                    depth,
+                    chroma_sample_position,
+                    data,
+                } = property
+                    && codec
+                        .replace((*depth, *chroma_sample_position, data.clone()))
+                        .is_some()
+                {
+                    return Err(parse_failure!());
+                }
+            }
+            if let Some((bit_depth, chroma_sample_position, data)) = codec {
+                result.push(AvifItemCodecProperties::new(
+                    item.id,
+                    data,
+                    bit_depth,
+                    chroma_sample_position,
                 ));
             }
         }

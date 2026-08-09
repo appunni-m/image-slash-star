@@ -1140,6 +1140,62 @@ impl AvifItemPlaneProperties {
     }
 }
 
+/// Source-local AVIF codec configuration associated with a non-primary item.
+///
+/// `data` retains the complete `av1C` payload exactly as stored; the typed
+/// depth and chroma-position fields expose the declarations already needed by
+/// the bounded decoder. These fields are source provenance only: they do not
+/// select a decoder, transform decoded samples, or compose auxiliary items.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AvifItemCodecProperties {
+    item_id: u32,
+    data: Vec<u8>,
+    bit_depth: u8,
+    chroma_sample_position: AvifChromaSamplePosition,
+}
+
+impl AvifItemCodecProperties {
+    /// Create source-local AVIF codec configuration.
+    #[must_use]
+    pub fn new(
+        item_id: u32,
+        data: Vec<u8>,
+        bit_depth: u8,
+        chroma_sample_position: AvifChromaSamplePosition,
+    ) -> Self {
+        Self {
+            item_id,
+            data,
+            bit_depth,
+            chroma_sample_position,
+        }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the exact `av1C` payload, excluding BMFF box framing.
+    #[must_use]
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    /// Return the declared AV1 bit depth.
+    #[must_use]
+    pub const fn bit_depth(&self) -> u8 {
+        self.bit_depth
+    }
+
+    /// Return the declared AV1 chroma sample position.
+    #[must_use]
+    pub const fn chroma_sample_position(&self) -> AvifChromaSamplePosition {
+        self.chroma_sample_position
+    }
+}
+
 /// Topology declared by an AVIF `grid` derived image item.
 ///
 /// These fields are source-local container provenance. They describe the
@@ -1233,6 +1289,7 @@ pub struct SourceDescriptor {
     avif_item_icc_profiles: Option<Vec<AvifItemIccProfile>>,
     avif_item_properties: Option<Vec<AvifItemProperty>>,
     avif_item_plane_properties: Option<Vec<AvifItemPlaneProperties>>,
+    avif_item_codec_properties: Option<Vec<AvifItemCodecProperties>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_grid_properties: Option<AvifGridProperties>,
     avif_transform: Option<AvifTransformProperties>,
@@ -1254,6 +1311,7 @@ impl SourceDescriptor {
             avif_item_icc_profiles: None,
             avif_item_properties: None,
             avif_item_plane_properties: None,
+            avif_item_codec_properties: None,
             avif_grid_item_ids: None,
             avif_grid_properties: None,
             avif_transform: None,
@@ -1432,6 +1490,22 @@ impl SourceDescriptor {
         self.avif_item_plane_properties.as_deref().unwrap_or(&[])
     }
 
+    /// Record bounded `av1C` declarations for non-primary AVIF items.
+    #[must_use]
+    pub fn with_avif_item_codec_properties(
+        mut self,
+        properties: Vec<AvifItemCodecProperties>,
+    ) -> Self {
+        self.avif_item_codec_properties = (!properties.is_empty()).then_some(properties);
+        self
+    }
+
+    /// Return non-primary AVIF codec declarations in source item order.
+    #[must_use]
+    pub fn avif_item_codec_properties(&self) -> &[AvifItemCodecProperties] {
+        self.avif_item_codec_properties.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1493,6 +1567,7 @@ impl SourceDescriptor {
             && self.avif_item_icc_profiles.is_none()
             && self.avif_item_properties.is_none()
             && self.avif_item_plane_properties.is_none()
+            && self.avif_item_codec_properties.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_grid_properties.is_none()
             && self.avif_transform.is_none()

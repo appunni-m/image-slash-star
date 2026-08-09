@@ -1647,9 +1647,10 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 #[test]
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        AvifAuxiliaryRelationship, AvifColorProperties, AvifGridProperties,
-        AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
-        AvifItemRelationship, RawIccProfile, SourceAlpha,
+        AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifColorProperties,
+        AvifGridProperties, AvifItemCodecProperties, AvifItemColorProperties, AvifItemIccProfile,
+        AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship, RawIccProfile,
+        SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -2167,6 +2168,12 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             );
             let expected_plane_properties =
                 [AvifItemPlaneProperties::new(2, Some(64), Some(64), Some(8))];
+            let expected_codec_properties = [AvifItemCodecProperties::new(
+                2,
+                vec![0x81, 0x00, 0x1c, 0x00],
+                8,
+                AvifChromaSamplePosition::Unknown,
+            )];
             assert_eq!(
                 info.source.avif_item_plane_properties(),
                 expected_plane_properties.as_slice(),
@@ -2176,6 +2183,16 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 decoded.content.source.avif_item_plane_properties(),
                 expected_plane_properties.as_slice(),
                 "{name} decode plane declarations"
+            );
+            assert_eq!(
+                info.source.avif_item_codec_properties(),
+                expected_codec_properties.as_slice(),
+                "{name} inspect codec declarations"
+            );
+            assert_eq!(
+                decoded.content.source.avif_item_codec_properties(),
+                expected_codec_properties.as_slice(),
+                "{name} decode codec declarations"
             );
             assert!(
                 info.source.avif_item_relationships().is_empty(),
@@ -2202,6 +2219,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                     .avif_item_plane_properties(),
                 expected_plane_properties.as_slice(),
                 "{name} sequence plane declarations"
+            );
+            assert_eq!(
+                sequence.content.frames[0]
+                    .image
+                    .source
+                    .avif_item_codec_properties(),
+                expected_codec_properties.as_slice(),
+                "{name} sequence codec declarations"
             );
         } else if name == "avif opaque" {
             assert!(
@@ -2246,6 +2271,32 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             AvifItemPlaneProperties::new(5, Some(80), Some(64), Some(8)),
             AvifItemPlaneProperties::new(6, Some(80), Some(64), Some(8)),
         ];
+        let expected_item_codec_properties = [
+            AvifItemCodecProperties::new(
+                2,
+                vec![0x81, 0x20, 0x00, 0x00],
+                8,
+                AvifChromaSamplePosition::Unknown,
+            ),
+            AvifItemCodecProperties::new(
+                3,
+                vec![0x81, 0x20, 0x00, 0x00],
+                8,
+                AvifChromaSamplePosition::Unknown,
+            ),
+            AvifItemCodecProperties::new(
+                5,
+                vec![0x81, 0x00, 0x1c, 0x00],
+                8,
+                AvifChromaSamplePosition::Unknown,
+            ),
+            AvifItemCodecProperties::new(
+                6,
+                vec![0x81, 0x00, 0x1c, 0x00],
+                8,
+                AvifChromaSamplePosition::Unknown,
+            ),
+        ];
         let inspected = image_slash_star::inspect(&bytes)?;
         assert_eq!(
             inspected.source.alpha(),
@@ -2282,6 +2333,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             expected_item_plane_properties.as_slice(),
             "grid inspect plane declarations"
         );
+        assert_eq!(
+            inspected.source.avif_item_codec_properties(),
+            expected_item_codec_properties.as_slice(),
+            "grid inspect codec declarations"
+        );
 
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(
@@ -2308,6 +2364,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             decoded.content.source.avif_item_plane_properties(),
             expected_item_plane_properties.as_slice(),
             "grid decode plane declarations"
+        );
+        assert_eq!(
+            decoded.content.source.avif_item_codec_properties(),
+            expected_item_codec_properties.as_slice(),
+            "grid decode codec declarations"
         );
         let sequence = image_slash_star::decode_sequence(&bytes)?;
         assert_eq!(
@@ -2346,6 +2407,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_item_plane_properties(),
             expected_item_plane_properties.as_slice(),
             "grid sequence plane declarations"
+        );
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_codec_properties(),
+            expected_item_codec_properties.as_slice(),
+            "grid sequence codec declarations"
         );
 
         // `prem` is an AVIF source relationship from an alpha item to the
@@ -2556,6 +2625,21 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         ));
         assert!(matches!(
             image_slash_star::decode_sequence(&duplicate_pixi),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+
+        let duplicate_av1c =
+            append_item_property_association(&alpha, b"av1C", &[0x81, 0x00, 0x1c, 0x00])?;
+        assert!(matches!(
+            image_slash_star::inspect(&duplicate_av1c),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode(&duplicate_av1c),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode_sequence(&duplicate_av1c),
             Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
         ));
     }
