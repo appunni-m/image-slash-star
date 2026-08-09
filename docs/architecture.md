@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `d7a43f6314b2570baefbc048d0ef532395154f3e`; the claim-ledger fixture tuple
+revision `a7538a957a04efed5950b7ea16ff98b42ebff7da`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -19,7 +19,7 @@ scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
 scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
 scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
 metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
-GIF indexed
+WebP VP8L trace path/output scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -733,6 +733,15 @@ only the selected token vector remains independently owned. Cache-bit ordering,
 checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only candidate-buffer allocation optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L trace-back candidate improvement retains the dynamic-programming
+cache, path-length reconstruction buffer, and transformed-token output buffer
+across sequential trace attempts. A selected trace keeps its token vector
+independently owned; a rejected trace or replaced candidate returns its vector
+to scratch. Trace ordering, checkpoint behavior, encoded bytes, errors, and sink
+output remain unchanged. This is a Rust-only trace-scratch allocation
+optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
