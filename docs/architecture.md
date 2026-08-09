@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `e9aabbc0cc1f4cd208f1b63be74b065809d1f5d7`; the claim-ledger fixture tuple
+revision `2e272b2405ec108fb2b531df07665f0e81c2f1f8`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -17,7 +17,8 @@ cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
 buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency
 scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
 scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
-scratch reuse, WebP VP8L nested metadata-stream scratch reuse, GIF indexed
+scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
+metadata output-scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -715,6 +716,14 @@ candidate suffix remains independently selected and the parent writer's prefix,
 checkpoint ordering, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only nested-scratch allocation optimization, not allocator/OOM
 accounting, recoverable-OOM handling, or a streaming guarantee.
+
+The nested metadata image's candidate output buffer is also retained by the
+parent scratch boundary. Losing suffixes remain reusable trial storage, and
+the winning suffix's capacity is returned after its bytes are delivered to the
+parent writer. Candidate selection, checkpoint behavior, encoded bytes, errors,
+and sink output remain unchanged. This is a Rust-only output-scratch allocation
+optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
