@@ -1560,7 +1560,8 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
     let n_mcu_x = comps[0].blocks_per_row.saturating_mul(8).div_ceil(mcu_w);
     let n_mcu_y = comps[0].block_rows.saturating_mul(8).div_ceil(mcu_h);
 
-    let mut bw = huffman::BitWriter::new();
+    let mut bw = huffman::BitWriter::with_output(std::mem::take(out));
+    let mut entropy_start = bw.out.len();
     let mut last_dc = [0i32; 4];
     let mut mcus_until_restart = usize::from(restart_interval);
     let mut next_restart = 0u8;
@@ -1569,10 +1570,10 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
         for mx in 0..n_mcu_x {
             if restart_interval != 0 && mcus_until_restart == 0 {
                 bw.flush();
-                checkpoint.observe(bw.out.len())?;
-                out.append(&mut bw.out);
+                checkpoint.observe(bw.out.len().saturating_sub(entropy_start))?;
                 checkpoint.reset();
-                marker::write_rst(out, next_restart);
+                marker::write_rst(&mut bw.out, next_restart);
+                entropy_start = bw.out.len();
                 next_restart = next_restart.saturating_add(1) & 7;
                 last_dc.fill(0);
                 mcus_until_restart = usize::from(restart_interval);
@@ -1601,14 +1602,14 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
                     }
                 }
             }
-            checkpoint.observe(bw.out.len())?;
+            checkpoint.observe(bw.out.len().saturating_sub(entropy_start))?;
             checkpoint.baseline_mcu()?;
             mcus_until_restart = mcus_until_restart.saturating_sub(1);
         }
     }
     bw.flush();
-    checkpoint.observe(bw.out.len())?;
-    out.extend_from_slice(&bw.out);
+    checkpoint.observe(bw.out.len().saturating_sub(entropy_start))?;
+    *out = bw.into_output();
     Ok(())
 }
 
@@ -1812,7 +1813,8 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
             .collect::<Vec<_>>();
         marker::write_sos(output, &scan_components, scan.ss, scan.se, scan.ah, scan.al);
 
-        let mut writer = huffman::BitWriter::new();
+        let mut writer = huffman::BitWriter::with_output(std::mem::take(output));
+        let entropy_start = writer.out.len();
         for event in events {
             match event {
                 ProgressiveEvent::Symbol { table, value } => {
@@ -1829,11 +1831,11 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
                 }
                 ProgressiveEvent::Bits { value, width } => writer.write_bits(value, width),
             }
-            checkpoint.observe(writer.out.len())?;
+            checkpoint.observe(writer.out.len().saturating_sub(entropy_start))?;
         }
         writer.flush();
-        checkpoint.observe(writer.out.len())?;
-        output.extend_from_slice(&writer.out);
+        checkpoint.observe(writer.out.len().saturating_sub(entropy_start))?;
+        *output = writer.into_output();
         checkpoint.reset();
         crate::codecs::error::check_cancelled(token)?;
     }

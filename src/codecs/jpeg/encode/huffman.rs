@@ -219,11 +219,19 @@ pub(crate) struct BitWriter {
 
 impl BitWriter {
     pub(crate) fn new() -> Self {
+        Self::with_output(Vec::new())
+    }
+
+    pub(crate) fn with_output(out: Vec<u8>) -> Self {
         BitWriter {
-            out: Vec::new(),
+            out,
             buf: 0,
             bits: 0,
         }
+    }
+
+    pub(crate) fn into_output(self) -> Vec<u8> {
+        self.out
     }
 
     /// Write `len` bits of `code` (MSB-first).
