@@ -99,6 +99,18 @@
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [11]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode5",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [12]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode13",
       "expect": {"stream_index": 0, "stream": {"green_values_contains": [13]}}
     },
@@ -201,6 +213,12 @@
       "expect": {"stream_index": 0, "stream": {"huffman_groups": 2}}
     },
     {
+      "property_id": "vp8l.meta_huffman.prefix_groups",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_random_walk",
+      "expect": {"stream_index": 2, "stream": {"meta_huffman_bits": 2, "entropy_image_size": [24, 24], "huffman_groups": 2}}
+    },
+    {
       "property_id": "vp8l.entropy_image_dimensions",
       "operation": "decode",
       "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -213,10 +231,22 @@
       "expect": {"stream_index": 0, "stream": {"entropy_image_size": [2, 1], "huffman_groups": 2}}
     },
     {
+      "property_id": "vp8l.entropy_image_dimensions",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_random_walk",
+      "expect": {"stream_index": 2, "stream": {"entropy_image_size": [24, 24], "huffman_groups": 2}}
+    },
+    {
       "property_id": "vp8l.color_cache.boundaries",
       "operation": "decode",
       "row_id": "lossless_transform_variants_vp8l_single_cache_peek",
       "expect": {"stream_index": 0, "stream": {"color_cache_bits": 1, "cache_lookups_at_least": 2}}
+    },
+    {
+      "property_id": "vp8l.color_cache.boundaries",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_product",
+      "expect": {"stream_index": 2, "stream": {"color_cache_bits": 10, "cache_lookups_at_least": 2}}
     },
     {
       "property_id": "vp8l.huffman.simple_tree_form",
