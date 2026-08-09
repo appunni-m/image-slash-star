@@ -435,8 +435,10 @@ fn write_1bit_rows(
     written: &mut usize,
 ) -> CodecResult<()> {
     let packed_width = width.div_ceil(8);
+    let mut row = Vec::with_capacity(stride);
     for output_row in 0..height {
         crate::codecs::error::check_cancelled(token)?;
+        row.clear();
         let source = source_row(output_row, height);
         let start = source
             .checked_mul(packed_width)
@@ -447,7 +449,6 @@ fn write_1bit_rows(
         let source_row = pixels
             .get(start..end)
             .ok_or_else(|| CodecError::Dimensions("BMP pixel buffer is too short".to_owned()))?;
-        let mut row = Vec::with_capacity(stride);
         row.extend_from_slice(source_row);
         row.resize(stride, 0);
         emit(&row, token, writer, written)?;
@@ -473,8 +474,10 @@ fn write_rows(
     let source_stride = width
         .checked_mul(channels)
         .ok_or_else(|| CodecError::Dimensions("BMP source row length overflows".to_owned()))?;
+    let mut row = Vec::with_capacity(stride);
     for output_row in 0..height {
         crate::codecs::error::check_cancelled(token)?;
+        row.clear();
         let source = source_row(output_row, height);
         let start = source
             .checked_mul(source_stride)
@@ -485,7 +488,6 @@ fn write_rows(
         let source_row = pixels
             .get(start..end)
             .ok_or_else(|| CodecError::Dimensions("BMP pixel buffer is too short".to_owned()))?;
-        let mut row = Vec::with_capacity(stride);
         for (pixel_index, pixel) in source_row.chunks_exact(channels).enumerate() {
             convert(pixel, &mut row);
             if pixel_index != 0 && pixel_index.is_multiple_of(ROW_CHECKPOINT_PIXELS) {
