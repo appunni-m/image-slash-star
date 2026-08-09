@@ -38,9 +38,11 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// 16,384-boolean first-partition-bit intervals,
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit intervals,
 /// and 1,024-byte boolean-bitstream output intervals, including pending VP8
-/// boolean-output runs drained in those same chunks, and lossless WebP VP8L
-/// RGB/RGBA source-pixel materialization, image-palette construction, and
-/// palette-mode index packing after each 1,024 source pixels, plus RGBA
+/// boolean-output runs drained in those same chunks, and WebP L1/P8/L8/La8/CMYK
+/// source-mode preparation and RGBA alpha/RGB extraction after each 1,024
+/// source pixels, plus lossless WebP VP8L RGB/RGBA source-pixel
+/// materialization, image-palette construction, and palette-mode index packing
+/// after each 1,024 source pixels, plus RGBA
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
 /// VP8L meta-histogram sampling row/column comparisons and symbol compaction
@@ -129,9 +131,11 @@ impl EncodePolicy {
     /// logical and 16,384-boolean first-partition interval, after each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit,
     /// 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit interval, and between its
     /// major analysis, mode-selection, probability, and bitstream stages; VP8L
-    /// encoding charges checkpoints during RGB/RGBA source-pixel
-    /// materialization, image-palette construction, and palette-mode index
-    /// packing after each 1,024 source pixels, plus RGBA hidden-RGB cleanup
+    /// encoding charges checkpoints during L1/P8/L8/La8/CMYK source-mode
+    /// preparation and RGBA alpha/RGB extraction after each 1,024 source
+    /// pixels, plus RGB/RGBA source-pixel materialization, image-palette
+    /// construction, and palette-mode index packing after each 1,024 source
+    /// pixels, plus RGBA hidden-RGB cleanup
     /// after each 1,024 scanned pixels, predictor image-width tile-row copies,
     /// predictor tile scans, cross-color, entropy,
     /// transform, bounded backward-reference cost/length-table initialization

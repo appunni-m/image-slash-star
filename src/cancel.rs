@@ -35,7 +35,8 @@
 //! path-reconstruction nodes, squared-error pixels, spectral-distortion
 //! weighted-transform row/column passes, residual-cost coefficients, and
 //! bitstream stages, and
-//! lossless WebP VP8L RGB/RGBA source-pixel materialization, predictor
+//! WebP L1/P8/L8/La8/CMYK source-mode preparation and RGBA alpha/RGB extraction
+//! after each 1,024 source pixels, lossless WebP VP8L RGB/RGBA source-pixel materialization, predictor
 //! source-snapshot copying, image-palette construction, and palette-mode index
 //! packing after each 1,024 source pixels,
 //! RGB-equal grayscale preparation, predictor image-width tile-row copies,

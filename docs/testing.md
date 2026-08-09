@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`446a4a723b8a5ed066b20b0086669cb927ec92b4`; the claim-ledger baseline remains
+`0f9a59b55a15ca4899aead8b2fa2ff9b97f27ef6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -908,6 +908,44 @@ predictor source file is 320/320 lines, 62/62 branches, 23/23 functions, and
 the current aggregate shortfall is 726 lines, 190 branches, 78 functions,
 and 1,614 regions. The parity, feature-matrix, and coverage records remain
 separate evidence systems.
+
+Current WebP source-preparation acceptance record
+
+Implementation revision `0f9a59b55a15ca4899aead8b2fa2ff9b97f27ef6` adds
+token-aware checkpoints to WebP L1/P8/L8/La8/CMYK source-mode preparation and
+RGBA alpha/RGB extraction. The token-aware branches poll after each 1,024
+source pixels; the no-token maps and iterators retain their original tight
+paths and byte behavior. The existing
+`encode_work_budget_is_a_non_parity_result_contract` reaches the first L8
+source-preparation boundary with a generated 1,024×1 probe at
+`maximum: 3`, `observed: 4` in both whole-buffer and caller-owned-sink calls;
+the sink sentinel remains `[0xCA]`.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so the witness remains in the existing feature-gated
+contract. No new test function, fixture-manifest row, diagnostic origin,
+synthetic unit test, or coverage-only hook was added.
+
+Exact-head managed feature-matrix run
+`f19bbffa-e118-4d90-8bd4-baa0f1d204d7` passed all 33 configured lanes in
+30,317 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Exact-head Pillow parity run
+`3ad9c7f6-1d86-4c18-a712-19711dc6e12c` passed 1,445/1,445 checks in 5,987 ms.
+
+Nightly LLVM run `eece1b04-2370-4d9b-a268-24a64cf4ef5d` passed 85/85 tests in
+51,686 ms and ingested snapshot
+`36e1f4f0-be46-48c1-81da-3d3fb9680562`, retaining 54,217/55,037 lines,
+7,681/7,880 branches, 3,080/3,160 functions, and 83,672/85,494 regions.
+Compared with the preceding accepted snapshot
+`48ef5dc3-f331-483d-92bf-4508c82f0102`, covered/source deltas are
+`+74/+172` lines, `+18/+30` branches, `+3/+5` functions, and `+105/+320`
+regions. The known LLVM JSON segment-normalization warning remains; the
+current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
+1,822 regions. In `src/codecs/webp/encode/mod.rs`, coverage is 617/740 lines,
+84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
+feature-matrix, and coverage records remain separate evidence systems.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
