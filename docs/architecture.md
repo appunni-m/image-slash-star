@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `5d386f0e8d0c4f8780cc59cf3080f9107c0d66c2`; the claim-ledger fixture tuple
+revision `cc00fe4f4e67e40bb9570dedac8d4b185745202f`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -13,7 +13,8 @@ Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
 CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
 WebP CostManager candidate-estimate scratch reuse, WebP CostManager
-cache-transform scratch reuse, WebP VP8L trace-cache reuse, GIF indexed
+cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
+buffer reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -651,6 +652,14 @@ dynamic-programming cache. Cost decisions, checkpoint ordering,
 encoded bytes, and sink output remain unchanged. This is a bounded
 internal-allocation optimization, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.
+
+WebP VP8L candidate trials retain their `GroupCodes` objects in bounded scratch.
+Each group's five channel length/code arrays resize and reset in place, then
+remain live until all token references for that trial have been emitted. This
+removes repeated per-group buffer allocation without changing histogram
+ownership, token-reference lookup, checkpoint ordering, encoded bytes, errors,
+or sink output. It is a Rust-only allocation optimization, not allocator/OOM
+accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
