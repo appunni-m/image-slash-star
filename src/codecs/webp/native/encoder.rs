@@ -2631,26 +2631,28 @@ fn collect_alpha_palette(
     alpha: &[u8],
     token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
-    if let Some(token) = token {
-        let mut palette = std::collections::BTreeSet::new();
-        let mut samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
-        for &value in alpha {
-            palette.insert(value);
-            samples_until_checkpoint = samples_until_checkpoint.saturating_sub(1);
-            if samples_until_checkpoint == 0 {
-                check_token(Some(token))?;
-                samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
-            }
+    // Alpha values have a fixed 8-bit alphabet. A presence table preserves
+    // BTreeSet's sorted, unique result while keeping the bounded membership
+    // workspace on the stack; the returned Vec remains the single owned
+    // palette representation required by the later delta/index passes.
+    let mut present = [false; 256];
+    let mut samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
+    for &value in alpha {
+        present[usize::from(value)] = true;
+        samples_until_checkpoint = samples_until_checkpoint.saturating_sub(1);
+        if samples_until_checkpoint == 0 {
+            check_token(token)?;
+            samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
         }
-        Ok(palette.into_iter().collect())
-    } else {
-        Ok(alpha
-            .iter()
-            .copied()
-            .collect::<std::collections::BTreeSet<_>>()
-            .into_iter()
-            .collect())
     }
+
+    let mut palette = Vec::with_capacity(256);
+    for (value, &is_present) in present.iter().enumerate() {
+        if is_present {
+            palette.push(value as u8);
+        }
+    }
+    Ok(palette)
 }
 
 // Every sorted palette suffix is non-empty by construction.
