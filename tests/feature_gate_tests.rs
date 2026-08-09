@@ -9846,6 +9846,105 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             alpha_expected,
             "an ample WebP VP8 alpha budget preserves byte identity"
         );
+        // The lossy WebP alpha stream copies its selected raw alpha plane
+        // after the compressed candidate is built. That image-scaled copy now
+        // polls after each complete 1,024-byte interval. The existing 64x64
+        // alpha_image reaches the first raw-copy interval at 1,485/1,486
+        // work units in both whole-buffer and direct-sink paths. Pillow has
+        // no caller token, typed work-budget result, or caller-owned sink,
+        // so this is Rust-only evidence with no parity row, fixture-manifest
+        // row, diagnostic origin, new test function, or coverage-only hook.
+        let alpha_copy_policy = image_slash_star::EncodePolicy::new().with_max_work_units(1_485);
+        let alpha_copy_error = match image_slash_star::encode_with_policy(
+            &alpha_image,
+            ImageFormat::WebP,
+            &options,
+            &alpha_copy_policy,
+        ) {
+            Ok(_) => return Err("WebP alpha-copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_copy_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_485,
+                observed: 1_486,
+            }
+        ));
+        let mut alpha_copy_sink = vec![0xB6];
+        let alpha_copy_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &alpha_image,
+            ImageFormat::WebP,
+            &options,
+            &alpha_copy_policy,
+            &mut alpha_copy_sink,
+        ) {
+            Ok(_) => return Err("WebP alpha-copy sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_copy_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 1_485,
+                observed: 1_486,
+            }
+        ));
+        assert_eq!(alpha_copy_sink, vec![0xB6]);
+
+        // The same real alpha image completes at 176,838 work units without
+        // the four raw-copy intervals. The bounded path therefore rejects at
+        // the first work unit that the new copy accounting contributes; this
+        // whole-call edge is the regression witness that would complete with
+        // the former bulk-copy implementation.
+        let alpha_copy_total_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(176_838);
+        let alpha_copy_total_error = match image_slash_star::encode_with_policy(
+            &alpha_image,
+            ImageFormat::WebP,
+            &options,
+            &alpha_copy_total_policy,
+        ) {
+            Ok(_) => return Err("WebP alpha-copy total budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_copy_total_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 176_838,
+                observed: 176_839,
+            }
+        ));
+        let mut alpha_copy_total_sink = vec![0xB5];
+        let alpha_copy_total_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &alpha_image,
+            ImageFormat::WebP,
+            &options,
+            &alpha_copy_total_policy,
+            &mut alpha_copy_total_sink,
+        ) {
+            Ok(_) => return Err("WebP alpha-copy total sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            alpha_copy_total_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 176_838,
+                observed: 176_839,
+            }
+        ));
+        assert_eq!(alpha_copy_total_sink, vec![0xB5]);
 
         let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
         let error = match image_slash_star::encode_with_policy(
