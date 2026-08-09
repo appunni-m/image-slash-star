@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`, and benchmark-protocol revision
+revision `228e419a0168ab083770c1fa009cf5c83d1711f3`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`; the accepted managed records
+`228e419a0168ab083770c1fa009cf5c83d1711f3`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -632,6 +632,23 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
+The WebP animation assembly ownership slice is implemented at production
+revision `228e419a0168ab083770c1fa009cf5c83d1711f3`. Each completed frame now
+remains in its existing encoded buffer until the canvas alpha state is known;
+the final ANMF prefix is stack-backed and its nested VP8/VP8L chunks are
+written directly into the final RIFF buffer. This removes the temporary copied
+chunk buffer and temporary ANMF payload, along with their staging copies. The
+existing `test_encode_matrix_webp_animation` Pillow row and the complete
+28-function fixture matrix preserve exact encoded bytes; the ample-token
+sequence path is byte-identical as well. Token-aware animation assembly now
+polls the remaining final-output chunk copy, while the removed staging copies
+no longer create intermediate cancellation checkpoints. This is a
+Pillow-observable byte regression gate plus a Rust-only ownership/cancellation
+implementation boundary; Pillow has no allocation or caller-token contract.
+No new fixture, test function, diagnostic origin, or coverage-only hook was
+added. No managed parity, feature-matrix, or Coverage MCP rerun is claimed for
+this revision.
+
 The shared PNG/TIFF zlib-ng output-buffer ownership slice is implemented at
 production and Rust test/runtime revision
 `ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`. Every no-token and token-aware
@@ -1183,7 +1200,7 @@ are cache- and runner-sensitive observations, not universal benchmarks. No
 Rust source changed, so the accepted LLVM snapshot and Pillow-parity result
 remain the preceding records above.
 
-Current WebP container/metadata assembly acceptance record
+Earlier WebP container/metadata assembly acceptance record
 
 Implementation revision `51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2` keeps the
 ordinary no-token WebP sequence/metadata assembly copies as bulk appends,
