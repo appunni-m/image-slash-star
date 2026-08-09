@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`9266e4f26749870c1dd680b08598ed6d378ef1c3`, Rust test/runtime revision
-`9266e4f26749870c1dd680b08598ed6d378ef1c3`, and benchmark-protocol revision
+`b78d0ffedc3bb193624eb11fd12d68378713489e`, Rust test/runtime revision
+`b78d0ffedc3bb193624eb11fd12d68378713489e`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -16,7 +16,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`9266e4f26749870c1dd680b08598ed6d378ef1c3`.
+`b78d0ffedc3bb193624eb11fd12d68378713489e`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -450,6 +450,8 @@ transitions after each 256 rows, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE token materialization after each 16 emitted compressed code-length
+tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
@@ -550,6 +552,8 @@ cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
 Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE token materialization after each 16 emitted compressed code-length
+tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after
 each 64 comparisons, Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing
@@ -662,7 +666,8 @@ histogram population `62/63`, combined entropy cost `80/81`, histogram merge
 `8,258/8,259`, cost estimate `14,092/14,093`, Huffman-RLE `828/829` (or
 `827/828` for the sink), grayscale preparation `195/196`, Huffman frequency
 `44,001/44,002` (or `44,000/44,001` for the sink), code-length emission
-`144,869/144,870`, and cache population `136,928/136,929`.
+`144,869/144,870`, Huffman-RLE token materialization `2,424/2,425` (or
+`2,423/2,424` for the sink), and cache population `136,928/136,929`.
 
 The current lossy WebP VP8 padded-plane slice extends the same
 `encode_work_budget_is_a_non_parity_result_contract`: token-aware Y/U/V
@@ -739,6 +744,20 @@ work-control evidence: Pillow has no caller token, typed work-budget result,
 caller-owned sink, or rollback contract, so no parity row, fixture-manifest
 entry, diagnostic origin, new test function, or coverage-only hook was added.
 
+The following lossless VP8L Huffman-RLE token-materialization slice is
+implemented at production and test/runtime revision
+`b78d0ffedc3bb193624eb11fd12d68378713489e` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware code-length
+RLE expansion now polls after each 16 emitted compressed tokens, while the
+no-token helper retains its original tight construction path. The existing
+caller-built 128×4 RGB palette probe proves `2,424/2,425` whole-buffer and
+`2,423/2,424` caller-owned-sink rejection with `[0xC9]` untouched. This is
+Rust-only work-control evidence: Pillow has no caller token, typed work-budget
+result, caller-owned sink, or rollback contract, so no parity row,
+fixture-manifest entry, diagnostic origin, new test function, or coverage-only
+hook was added. No managed parity, feature-matrix, or Coverage MCP rerun is
+claimed at this revision.
+
 The latest lossy WebP VP8 boolean-output flush slice is implemented at
 `2945ad28fde44976f33459c7664482f9c61a2b70` through the same existing
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware boolean
@@ -750,7 +769,7 @@ result, caller-owned sink, or rollback contract, so there is no parity row,
 fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
 
-Exact-head managed validation for this revision passed Pillow parity run
+Historical exact-head managed validation for the preceding WebP work-control revision passed Pillow parity run
 `b62b000d-ff77-4ead-9297-b8a87b69dca7` with 1,445/1,445 checks in 2,338 ms.
 Feature-matrix run `9e62cd19-0cb2-4fb9-95a4-8818dd1f2eaa` passed all configured
 lanes in 74,279 ms with `cache=cold`, `lanes=6`, `test_threads=2`,
@@ -1670,9 +1689,11 @@ interval setup after each 1,024 entries, the token-aware cost-manager
 interval-update and cleanup scans after each 256 cumulative interval entries,
 the VP8L copy-token cache population and traced copy-token replay scans after
 each 256 pixels, the Huffman-tree simple-tree symbol-discovery scan after each
-64 code-length slots, the code-length-token frequency scan, the trailing
-zero-repeat-token trim scan, and Huffman code-length emission after each 16
-compressed token entries through deterministic feature-gated probes; these add no Pillow parity row, fixture,
+64 code-length slots, Huffman RLE token materialization after each 16 emitted
+compressed code-length tokens, the code-length-token frequency scan, the
+trailing zero-repeat-token trim scan, and Huffman code-length emission after
+each 16 compressed token entries through deterministic feature-gated probes;
+these add no Pillow parity row, fixture,
 diagnostic origin, or coverage-only hook because Pillow has no caller token,
 work-budget result, or caller-owned sink. The VP8L candidate-trial writer now copies the
 already-emitted prefix once and retains only each trial suffix, removing the
@@ -2368,6 +2389,21 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L Huffman-RLE token-materialization checkpoint
+
+The production/test/runtime slice is implemented at
+`b78d0ffedc3bb193624eb11fd12d68378713489e`. Token-aware code-length Huffman
+RLE expansion now materializes compressed tokens through a 16-token checkpoint
+boundary; the no-token helper retains the original tight construction path and
+ordinary/ample-policy encoded bytes remain unchanged. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves exact whole-buffer
+`2,424/2,425` and caller-owned-sink `2,423/2,424` rejections with sentinel
+`[0xC9]` untouched. This is Rust-only work-control evidence, not Pillow parity:
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback equivalent, so the slice adds no parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook. No managed parity,
+feature-matrix, or Coverage MCP rerun is claimed at this revision.
 
 Current acceptance record: WebP VP8 analysis-buffer reuse and budget-pair runtime tuning
 
@@ -3301,9 +3337,11 @@ Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook. The implementation is committed at
 `589186a6e3f0a1f8fd47ca84dcc73133620ed9fa`. Candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
-and each 64-symbol population scan. Huffman RLE preparation, canonical-code
-assignment, and compressed Huffman-token generation now charge after each 64
-code-length symbols. Huffman-tree simple-tree symbol discovery now charges after
+and each 64-symbol population scan. Huffman RLE preparation and in-run
+code-length scans charge after each 64 source symbols, while compressed
+Huffman-token materialization charges after each 16 emitted tokens.
+Canonical-code assignment and compressed Huffman-token generation charge after
+each 64 code-length symbols. Huffman-tree simple-tree symbol discovery now charges after
 each 64 code-length slots; code-length-token frequency accumulation and the
 reverse trailing zero-repeat-token trim scan now charge after each 16 compressed
 token entries. Huffman code-length emission now charges after each 16 compressed
@@ -6521,7 +6559,8 @@ const-specialized no-token path retains its 1,024-pixel cadence. Remaining work
 is finer WebP bitstream and other interior work beyond the
 current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit coefficient, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/16,384-bit VP8L
 bitstream, the 64-symbol VP8L histogram/cost/merge/backward-reference scans,
-64-code-length-symbol Huffman RLE preparation and canonical-code assignment,
+64-code-length-symbol Huffman RLE preparation, 16-emitted-token Huffman-RLE
+materialization, and canonical-code assignment,
 64-candidate-node Huffman-tree insertion scans, 16-compressed-token-entry
 Huffman-tree frequency scans, and 1,024-pixel RGBA cleanup
 checkpoints, JPEG interior work beyond
