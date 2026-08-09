@@ -437,15 +437,15 @@
     },
     {
       "id": "vp8l.meta_huffman.prefix_groups",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
       ],
-      "gap": "The rows are high-entropy/meta-cache candidates; Pillow exposes no meta-Huffman group count or prefix assignment."
+      "gap": "The independent parser now proves the named meta-Huffman group forms (one and two groups) and their selected prefix streams; other group counts and prefix assignments remain outside this witnessed scope."
     },
     {
       "id": "vp8l.entropy_image_dimensions",
