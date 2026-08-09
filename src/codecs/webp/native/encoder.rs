@@ -2160,11 +2160,11 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
 
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
     compressed.push(1); // lossless compression, no filtering, no preprocessing
-    compressed.extend_from_slice(&encoded);
+    extend_bytes_with_checkpoint(&mut compressed, &encoded, token)?;
 
     let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
     uncompressed.push(0); // no compression, no filtering, no preprocessing
-    uncompressed.extend_from_slice(alpha);
+    extend_bytes_with_checkpoint(&mut uncompressed, alpha, token)?;
 
     check_token(token)?;
     Ok(if uncompressed.len() <= compressed.len() {
@@ -2172,6 +2172,29 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     } else {
         compressed
     })
+}
+
+// Alpha output may be copied from either the compressed VP8L stream or the
+// raw alpha plane. Keep the ordinary path's single bulk copy, but bound the
+// caller-controlled path at the same 1,024-byte output interval used by the
+// bit writer. Pillow has no caller token or typed work-budget result for this
+// copy, so this is Rust-only work-control evidence.
+fn extend_bytes_with_checkpoint(
+    output: &mut Vec<u8>,
+    source: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    let Some(token) = token else {
+        output.extend_from_slice(source);
+        return Ok(());
+    };
+    for chunk in source.chunks(VP8L_OUTPUT_CHECKPOINT_BYTES) {
+        output.extend_from_slice(chunk);
+        if chunk.len() == VP8L_OUTPUT_CHECKPOINT_BYTES {
+            check_token(Some(token))?;
+        }
+    }
+    Ok(())
 }
 
 fn collect_alpha_palette(
