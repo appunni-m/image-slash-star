@@ -321,6 +321,7 @@ fn build_huffman_tree(
     lengths: &mut [u8],
     codes: &mut [u16],
     optimized: &mut Vec<u32>,
+    rle_good: &mut Vec<bool>,
     length_limit: u8,
     token: Option<&crate::CancellationToken>,
 ) -> Result<bool, EncodingError> {
@@ -342,7 +343,7 @@ fn build_huffman_tree(
 
     optimized.clear();
     optimized.extend_from_slice(frequencies);
-    optimize_huffman_for_rle_with_checkpoint(&mut *optimized, token)?;
+    optimize_huffman_for_rle_with_checkpoint(&mut *optimized, rle_good, token)?;
     let optimized_symbol_count = if let Some(token) = token {
         let mut count = 0_usize;
         for (index, &frequency) in optimized.iter().enumerate() {
@@ -547,11 +548,12 @@ fn build_huffman_tree(
     Ok(true)
 }
 
-fn optimize_huffman_for_rle(counts: &mut [u32]) {
+fn optimize_huffman_for_rle(counts: &mut [u32], good: &mut Vec<bool>) {
     let Some(length) = counts.iter().rposition(|&count| count != 0).map(|i| i + 1) else {
         return;
     };
-    let mut good = vec![false; length];
+    good.resize(length, false);
+    good.fill(false);
     let mut symbol = counts[0];
     let mut stride = 0;
     for i in 0..=length {
@@ -603,10 +605,11 @@ fn optimize_huffman_for_rle(counts: &mut [u32]) {
 
 fn optimize_huffman_for_rle_with_checkpoint(
     counts: &mut [u32],
+    good: &mut Vec<bool>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     if token.is_none() {
-        optimize_huffman_for_rle(counts);
+        optimize_huffman_for_rle(counts, good);
         return Ok(());
     }
     let length = {
@@ -627,7 +630,8 @@ fn optimize_huffman_for_rle_with_checkpoint(
         };
         length
     };
-    let mut good = vec![false; length];
+    good.resize(length, false);
+    good.fill(false);
     let mut symbol = counts[0];
     let mut stride = 0;
     for i in 0..=length {
@@ -698,6 +702,12 @@ fn optimize_huffman_for_rle_with_checkpoint(
 struct HuffmanToken {
     code: u8,
     extra: u8,
+}
+
+struct HuffmanTreeScratch<'a> {
+    huffman_tokens: &'a mut Vec<HuffmanToken>,
+    optimized_frequencies: &'a mut Vec<u32>,
+    huffman_rle_good: &'a mut Vec<bool>,
 }
 
 fn compressed_huffman_tokens_into(lengths: &[u8], tokens: &mut Vec<HuffmanToken>) {
@@ -882,15 +892,15 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
-    huffman_tokens: &mut Vec<HuffmanToken>,
-    optimized_frequencies: &mut Vec<u32>,
+    scratch: &mut HuffmanTreeScratch<'_>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     build_huffman_tree(
         frequencies,
         lengths,
         codes,
-        optimized_frequencies,
+        scratch.optimized_frequencies,
+        scratch.huffman_rle_good,
         15,
         token,
     )?;
@@ -946,19 +956,19 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
         return Ok(());
     }
-    compressed_huffman_tokens_with_checkpoint(lengths, huffman_tokens, token)?;
+    compressed_huffman_tokens_with_checkpoint(lengths, scratch.huffman_tokens, token)?;
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
     if let Some(token) = token {
-        for (index, huffman_token) in huffman_tokens.iter().enumerate() {
+        for (index, huffman_token) in scratch.huffman_tokens.iter().enumerate() {
             code_length_frequencies[usize::from(huffman_token.code)] += 1;
             if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
                 check_token(Some(token))?;
             }
         }
     } else {
-        for huffman_token in huffman_tokens.iter() {
+        for huffman_token in scratch.huffman_tokens.iter() {
             code_length_frequencies[usize::from(huffman_token.code)] += 1;
         }
     }
@@ -966,7 +976,8 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         &code_length_frequencies,
         &mut code_length_lengths,
         &mut code_length_codes,
-        optimized_frequencies,
+        scratch.optimized_frequencies,
+        scratch.huffman_rle_good,
         7,
         token,
     )?;
@@ -995,14 +1006,14 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         code_length_lengths.fill(0);
         code_length_codes.fill(0);
     }
-    let mut trimmed_length = huffman_tokens.len();
+    let mut trimmed_length = scratch.huffman_tokens.len();
     let mut trailing_zero_bits = 0;
     // The normal-tree path always emits at least one non-zero code-length
     // token before trailing zero-repeat tokens.
     if let Some(token) = token {
         let mut trimmed_tokens = 0usize;
         loop {
-            let huffman_token = huffman_tokens[trimmed_length - 1];
+            let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
             if !matches!(huffman_token.code, 0 | 17 | 18) {
                 break;
             }
@@ -1020,7 +1031,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
     } else {
         loop {
-            let huffman_token = huffman_tokens[trimmed_length - 1];
+            let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
             if !matches!(huffman_token.code, 0 | 17 | 18) {
                 break;
             }
@@ -1046,9 +1057,9 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
         trimmed_length
     } else {
-        huffman_tokens.len()
+        scratch.huffman_tokens.len()
     };
-    for (index, huffman_token) in huffman_tokens[..token_count].iter().enumerate() {
+    for (index, huffman_token) in scratch.huffman_tokens[..token_count].iter().enumerate() {
         // Bit/output checkpoints already bound the emitted bitstream. Keep
         // this structural token walk cooperative at the same 16-entry
         // interval used by the code-length frequency and trim scans instead
@@ -1219,6 +1230,7 @@ struct TokenStreamScratch {
     groups: Vec<GroupCodes>,
     huffman_tokens: Vec<HuffmanToken>,
     optimized_frequencies: Vec<u32>,
+    huffman_rle_good: Vec<bool>,
 }
 
 #[derive(Clone, Copy)]
@@ -1359,8 +1371,7 @@ fn write_group<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     populations: &[Vec<u32>; 5],
     group: &mut GroupCodes,
-    huffman_tokens: &mut Vec<HuffmanToken>,
-    optimized_frequencies: &mut Vec<u32>,
+    scratch: &mut HuffmanTreeScratch<'_>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     group.prepare(populations);
@@ -1373,8 +1384,7 @@ fn write_group<C: BitWriterCheckpoint>(
             population,
             channel_lengths,
             channel_codes,
-            huffman_tokens,
-            optimized_frequencies,
+            scratch,
             token,
         )?;
     }
@@ -1523,8 +1533,11 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     }
     let group_count = histograms.len();
     let group_scratch = &mut scratch.groups;
-    let huffman_tokens = &mut scratch.huffman_tokens;
-    let optimized_frequencies = &mut scratch.optimized_frequencies;
+    let mut huffman_scratch = HuffmanTreeScratch {
+        huffman_tokens: &mut scratch.huffman_tokens,
+        optimized_frequencies: &mut scratch.optimized_frequencies,
+        huffman_rle_good: &mut scratch.huffman_rle_good,
+    };
     if group_scratch.len() < group_count {
         group_scratch.resize_with(group_count, GroupCodes::default);
     }
@@ -1534,8 +1547,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             w,
             &histogram.populations,
             group,
-            huffman_tokens,
-            optimized_frequencies,
+            &mut huffman_scratch,
             token,
         )?;
     }
@@ -2742,13 +2754,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut codes = vec![0; 4];
     let mut huffman_tokens = Vec::new();
     let mut optimized_frequencies = Vec::new();
+    let mut huffman_rle_good = Vec::new();
+    let mut huffman_scratch = HuffmanTreeScratch {
+        huffman_tokens: &mut huffman_tokens,
+        optimized_frequencies: &mut optimized_frequencies,
+        huffman_rle_good: &mut huffman_rle_good,
+    };
     let _ = write_huffman_tree(
         &mut tree_writer,
         &[1, 0, 0, 0],
         &mut lengths,
         &mut codes,
-        &mut huffman_tokens,
-        &mut optimized_frequencies,
+        &mut huffman_scratch,
         None,
     );
     let _ = tree_writer.flush();
@@ -2769,8 +2786,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &trimmed_frequencies,
         &mut trimmed_lengths,
         &mut trimmed_codes,
-        &mut huffman_tokens,
-        &mut optimized_frequencies,
+        &mut huffman_scratch,
         None,
     );
     let _ = trimmed_tree_writer.flush();
@@ -2794,8 +2810,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut group_writer,
         &populations,
         &mut group,
-        &mut huffman_tokens,
-        &mut optimized_frequencies,
+        &mut huffman_scratch,
         None,
     );
     let _ = group_writer.flush();
