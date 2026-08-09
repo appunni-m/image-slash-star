@@ -1132,7 +1132,8 @@ fn write_image_stream<C: BitWriterCheckpoint>(
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
-    scratch: &mut ImageStreamScratch,
+    output_scratch: &mut Vec<u8>,
+    token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     write_image_stream_configured_with_scratch(
@@ -1143,8 +1144,8 @@ fn write_image_stream<C: BitWriterCheckpoint>(
         3,
         80,
         11,
-        &mut scratch.output,
-        &mut scratch.tokens,
+        output_scratch,
+        token_scratch,
         token,
     )
 }
@@ -1289,6 +1290,7 @@ struct TokenStreamScratch {
 struct ImageStreamScratch {
     output: Vec<u8>,
     tokens: TokenStreamScratch,
+    predictor: predictor::PredictorScratch,
 }
 
 #[derive(Clone, Copy)]
@@ -2238,13 +2240,14 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
             }
 
             if use_predictor {
-                let (predictor_map, predictor_bits) = if grayscale {
+                let predictor_bits = if grayscale {
                     predictor::apply_fixed(
                         pixels,
                         width as usize,
                         height as usize,
                         transform_bits,
                         12,
+                        &mut stream_scratch.predictor,
                         token,
                     )?
                 } else {
@@ -2253,6 +2256,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         width as usize,
                         height as usize,
                         transform_bits,
+                        &mut stream_scratch.predictor,
                         token,
                     )?
                 };
@@ -2263,10 +2267,11 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
                 write_image_stream(
                     w,
-                    &predictor_map,
+                    stream_scratch.predictor.modes(),
                     predictor_width,
                     false,
-                    &mut stream_scratch,
+                    &mut stream_scratch.output,
+                    &mut stream_scratch.tokens,
                     token,
                 )?;
             }
@@ -2289,13 +2294,22 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     &color_map,
                     color_width,
                     false,
-                    &mut stream_scratch,
+                    &mut stream_scratch.output,
+                    &mut stream_scratch.tokens,
                     token,
                 )?;
             }
 
             w.write_bits(0, 1)?; // transforms done
-            write_image_stream(w, pixels, width as usize, true, &mut stream_scratch, token)?;
+            write_image_stream(
+                w,
+                pixels,
+                width as usize,
+                true,
+                &mut stream_scratch.output,
+                &mut stream_scratch.tokens,
+                token,
+            )?;
         }
 
         w.flush()?;

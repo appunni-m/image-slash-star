@@ -37,6 +37,26 @@ const TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
+/// Reusable storage for the predictor transform's tile and row work.
+///
+/// Predictor selection evaluates every mode for every tile, so retaining the
+/// row buffers avoids rebuilding the same width-sized allocations for each
+/// candidate. The mode map and source snapshot also survive the transform
+/// call until the encoded map has been emitted by the parent writer.
+#[derive(Default)]
+pub(crate) struct PredictorScratch {
+    modes: Vec<u32>,
+    original: Vec<u32>,
+    upper: Vec<u32>,
+    current: Vec<u32>,
+}
+
+impl PredictorScratch {
+    pub(crate) fn modes(&self) -> &[u32] {
+        &self.modes
+    }
+}
+
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
@@ -153,13 +173,15 @@ fn tile_histogram(
     start_y: usize,
     tile_size: usize,
     mode: usize,
+    upper: &mut Vec<u32>,
+    current: &mut Vec<u32>,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<[u32; HISTOGRAM_SIZE]> {
     let end_x = (start_x + tile_size).min(width);
     let end_y = (start_y + tile_size).min(height);
     let mut histogram = [0_u32; HISTOGRAM_SIZE];
-    let mut upper = vec![0_u32; width + 1];
-    let mut current = vec![0_u32; width + 1];
+    upper.resize(width + 1, 0);
+    current.resize(width + 1, 0);
     if start_y > 0 {
         upper[..width].copy_from_slice(&source[(start_y - 1) * width..start_y * width]);
         if start_y < height {
@@ -214,7 +236,7 @@ fn tile_histogram(
             }
             update_histogram(&mut histogram, residual);
         }
-        std::mem::swap(&mut upper, &mut current);
+        std::mem::swap(upper, current);
     }
     Ok(histogram)
 }
@@ -255,30 +277,35 @@ fn apply_modes(
     width: usize,
     height: usize,
     bits: u8,
-    modes: &[u32],
+    scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     let tiles_per_row = (width + (1_usize << bits) - 1) >> bits;
+    let modes = &scratch.modes;
+    let original = &mut scratch.original;
+    let upper = &mut scratch.upper;
+    let current = &mut scratch.current;
     // The predictor transform needs the pre-transform pixels for each row. In
     // the caller-controlled path this full source snapshot is itself an
     // O(pixel-count) operation, so keep its copy cooperative. Pillow has no
     // equivalent caller budget; preserve the original bulk clone otherwise.
-    let original = if let Some(token) = token {
-        let mut original = Vec::with_capacity(source.len());
+    if let Some(token) = token {
+        original.clear();
+        original.reserve(source.len());
         for (index, &pixel) in source.iter().enumerate() {
             original.push(pixel);
             if (index + 1).is_multiple_of(TRANSFORM_CHECKPOINT_PIXELS) {
                 checkpoint(Some(token))?;
             }
         }
-        original
     } else {
         // Keep the ordinary encoder on the original bulk clone. Pillow has
         // no caller work budget, and this branch must retain its tight path.
-        source.to_vec()
-    };
-    let mut upper = vec![0_u32; width + 1];
-    let mut current = vec![0_u32; width + 1];
+        original.resize(source.len(), 0);
+        original.copy_from_slice(source);
+    }
+    upper.resize(width + 1, 0);
+    current.resize(width + 1, 0);
     let mut pixels_until_checkpoint = TRANSFORM_CHECKPOINT_PIXELS;
     for y in 0..height {
         if y.is_multiple_of(16) {
@@ -340,7 +367,7 @@ fn apply_modes(
             }
             x = end;
         }
-        std::mem::swap(&mut upper, &mut current);
+        std::mem::swap(upper, current);
     }
     Ok(())
 }
@@ -356,56 +383,64 @@ pub(crate) fn select_and_apply(
     width: usize,
     height: usize,
     bits: u8,
+    scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
-) -> CheckpointResult<(Vec<u32>, u8)> {
+) -> CheckpointResult<u8> {
     let tile_size = 1_usize << bits;
     let tiles_per_row = (width + tile_size - 1) >> bits;
     let tiles_per_column = (height + tile_size - 1) >> bits;
-    let mut modes = vec![ARGB_BLACK; tiles_per_row * tiles_per_column];
     let mut accumulated = [0_u32; HISTOGRAM_SIZE];
-    for tile_y in 0..tiles_per_column {
-        for tile_x in 0..tiles_per_row {
-            if tile_x.is_multiple_of(4) {
-                checkpoint(token)?;
-            }
-            let left_mode = (tile_x > 0)
-                .then(|| ((modes[tile_y * tiles_per_row + tile_x - 1] >> 8) & 0xff) as usize);
-            let above_mode = (tile_y > 0)
-                .then(|| ((modes[(tile_y - 1) * tiles_per_row + tile_x] >> 8) & 0xff) as usize);
-            let mut best_mode = 0;
-            let mut best_cost = i64::MAX;
-            let mut best_histogram = [0_u32; HISTOGRAM_SIZE];
-            for mode in 0..MODE_COUNT {
-                let histogram = tile_histogram(
-                    source,
-                    width,
-                    height,
-                    tile_x * tile_size,
-                    tile_y * tile_size,
-                    tile_size,
-                    mode,
-                    token,
-                )?;
-                let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
-                if cost < best_cost {
-                    best_cost = cost;
-                    best_mode = mode;
-                    best_histogram = histogram;
+    {
+        let modes = &mut scratch.modes;
+        modes.resize(tiles_per_row * tiles_per_column, ARGB_BLACK);
+        modes.fill(ARGB_BLACK);
+        for tile_y in 0..tiles_per_column {
+            for tile_x in 0..tiles_per_row {
+                if tile_x.is_multiple_of(4) {
+                    checkpoint(token)?;
                 }
+                let left_mode = (tile_x > 0)
+                    .then(|| ((modes[tile_y * tiles_per_row + tile_x - 1] >> 8) & 0xff) as usize);
+                let above_mode = (tile_y > 0)
+                    .then(|| ((modes[(tile_y - 1) * tiles_per_row + tile_x] >> 8) & 0xff) as usize);
+                let mut best_mode = 0;
+                let mut best_cost = i64::MAX;
+                let mut best_histogram = [0_u32; HISTOGRAM_SIZE];
+                for mode in 0..MODE_COUNT {
+                    let histogram = tile_histogram(
+                        source,
+                        width,
+                        height,
+                        tile_x * tile_size,
+                        tile_y * tile_size,
+                        tile_size,
+                        mode,
+                        &mut scratch.upper,
+                        &mut scratch.current,
+                        token,
+                    )?;
+                    let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
+                    if cost < best_cost {
+                        best_cost = cost;
+                        best_mode = mode;
+                        best_histogram = histogram;
+                    }
+                }
+                for (total, selected) in accumulated.iter_mut().zip(best_histogram) {
+                    *total += selected;
+                }
+                modes[tile_y * tiles_per_row + tile_x] = ARGB_BLACK | ((best_mode as u32) << 8);
             }
-            for (total, selected) in accumulated.iter_mut().zip(best_histogram) {
-                *total += selected;
-            }
-            modes[tile_y * tiles_per_row + tile_x] = ARGB_BLACK | ((best_mode as u32) << 8);
         }
     }
-    apply_modes(source, width, height, bits, &modes, token)?;
-    let best_bits = optimize_sampling(&mut modes, width, height, bits, token)?;
+    apply_modes(source, width, height, bits, scratch, token)?;
+    let modes = &mut scratch.modes;
+    let best_bits = optimize_sampling(modes, width, height, bits, token)?;
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
-    Ok((modes, best_bits))
+    Ok(best_bits)
 }
 
 // Encoder geometry and the caller-selected predictor mode satisfy the same
@@ -417,35 +452,47 @@ pub(crate) fn apply_fixed(
     height: usize,
     bits: u8,
     mode: usize,
+    scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
-) -> CheckpointResult<(Vec<u32>, u8)> {
+) -> CheckpointResult<u8> {
     let tile_size = 1_usize << bits;
     let tiles_per_row = (width + tile_size - 1) >> bits;
     let tiles_per_column = (height + tile_size - 1) >> bits;
-    let mut modes = vec![ARGB_BLACK | ((mode as u32) << 8); tiles_per_row * tiles_per_column];
-    apply_modes(source, width, height, bits, &modes, token)?;
-    let best_bits = optimize_sampling(&mut modes, width, height, bits, token)?;
+    {
+        let modes = &mut scratch.modes;
+        modes.resize(
+            tiles_per_row * tiles_per_column,
+            ARGB_BLACK | ((mode as u32) << 8),
+        );
+        modes.fill(ARGB_BLACK | ((mode as u32) << 8));
+    }
+    apply_modes(source, width, height, bits, scratch, token)?;
+    let modes = &mut scratch.modes;
+    let best_bits = optimize_sampling(modes, width, height, bits, token)?;
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
-    Ok((modes, best_bits))
+    Ok(best_bits)
 }
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let mut scratch = PredictorScratch::default();
+    let mut upper = Vec::new();
+    let mut current = Vec::new();
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = select_and_apply(&mut source, 2, 2, 1, None);
+    let _ = select_and_apply(&mut source, 2, 2, 1, &mut scratch, None);
     let source = vec![0xff00_0000, 0x0000_0001];
-    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0, None);
+    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0, &mut upper, &mut current, None);
     let source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, None);
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, &mut upper, &mut current, None);
     let source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, None);
+    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, &mut upper, &mut current, None);
     let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
     let mut source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
     let mut source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, None);
+    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
 }
