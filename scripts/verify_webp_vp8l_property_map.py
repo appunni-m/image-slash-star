@@ -502,6 +502,23 @@ def verify_properties(document: dict, rows: dict[tuple[str, str], dict]) -> tupl
         for witness in witnesses:
             verify_witness(witness, property_id, rows, seen)
             witness_count += 1
+        if status == "witnessed":
+            structural_entries = document.get("structural_witnesses")
+            structural_keys = {
+                (entry.get("operation"), entry.get("row_id"))
+                for entry in structural_entries
+                if isinstance(entry, dict) and entry.get("property_id") == property_id
+            } if isinstance(structural_entries, list) else set()
+            missing = [
+                (witness.get("operation"), witness.get("row_id"))
+                for witness in witnesses
+                if (witness.get("operation"), witness.get("row_id")) not in structural_keys
+            ]
+            if missing:
+                fail(
+                    f"{property_id}: witnessed property is missing structural "
+                    f"coverage for {missing!r}"
+                )
 
     return len(properties), witness_count, status_counts, seen
 
