@@ -4,7 +4,7 @@ Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
 `b78d0ffedc3bb193624eb11fd12d68378713489e` and test/runtime revision
-`b78d0ffedc3bb193624eb11fd12d68378713489e`; the claim-ledger fixture tuple
+`af98b51bd145ea022687d12ca0ae23abc85334a7`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
