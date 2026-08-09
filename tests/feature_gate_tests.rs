@@ -12870,6 +12870,62 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xB6],
             "the new pre-output palette checkpoint leaves the sink sentinel only"
         );
+
+        // Huffman-tree leaf census and materialization now charge each 64
+        // fixed-alphabet slots on the token-aware path. This is a production
+        // tree-construction boundary, not a Pillow-observable result: Pillow
+        // has no caller token, work-budget result, or caller-owned sink. The
+        // generated probe therefore stays in this existing Rust-only contract
+        // and adds no parity row, fixture-manifest entry, or coverage hook.
+        let huffman_tree_leaf_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(145_330);
+        let huffman_tree_leaf_error = match image_slash_star::encode_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_tree_leaf_policy,
+        ) {
+            Ok(_) => return Err("VP8L Huffman-tree leaf budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_tree_leaf_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 145_330,
+                observed: 145_331,
+            }
+        ));
+        let mut huffman_tree_leaf_sink = vec![0xF1];
+        let huffman_tree_leaf_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &huffman_frequency_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(145_335),
+            &mut huffman_tree_leaf_sink,
+        ) {
+            Ok(_) => return Err("VP8L Huffman-tree leaf sink budget completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_tree_leaf_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 145_335,
+                observed: 145_336,
+            }
+        ));
+        assert_eq!(
+            huffman_tree_leaf_sink,
+            vec![
+                0xF1, 0x52, 0x49, 0x46, 0x46, 0x58, 0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56,
+                0x50, 0x38, 0x4C, 0x4C, 0xC0, 0x00, 0x00,
+            ]
+        );
         let mut cache_probe_pixels = Vec::with_capacity(512 * 512 * 3);
         for _ in 0..512 {
             for x in 0..512_u32 {

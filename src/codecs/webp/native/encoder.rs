@@ -341,10 +341,21 @@ fn build_huffman_tree(
 
     let mut optimized = frequencies.to_vec();
     optimize_huffman_for_rle_with_checkpoint(&mut optimized, token)?;
-    let optimized_symbol_count = optimized
-        .iter()
-        .filter(|&&frequency| frequency != 0)
-        .count();
+    let optimized_symbol_count = if let Some(token) = token {
+        let mut count = 0_usize;
+        for (index, &frequency) in optimized.iter().enumerate() {
+            if (index + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                check_token(Some(token))?;
+            }
+            count += usize::from(frequency != 0);
+        }
+        count
+    } else {
+        optimized
+            .iter()
+            .filter(|&&frequency| frequency != 0)
+            .count()
+    };
     if optimized_symbol_count <= 1 {
         lengths.fill(0);
         codes.fill(0);
@@ -356,16 +367,33 @@ fn build_huffman_tree(
     let mut count_min = 1_u32;
     loop {
         check_token(token)?;
-        let mut nodes = optimized
-            .iter()
-            .enumerate()
-            .filter(|&(_, &frequency)| frequency != 0)
-            .map(|(value, &frequency)| WeightedNode {
-                count: frequency.max(count_min),
-                sort_value: value as isize,
-                node: Node::Leaf(value),
-            })
-            .collect::<Vec<_>>();
+        let mut nodes = if let Some(token) = token {
+            let mut nodes = Vec::new();
+            for (value, &frequency) in optimized.iter().enumerate() {
+                if (value + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                    check_token(Some(token))?;
+                }
+                if frequency != 0 {
+                    nodes.push(WeightedNode {
+                        count: frequency.max(count_min),
+                        sort_value: value as isize,
+                        node: Node::Leaf(value),
+                    });
+                }
+            }
+            nodes
+        } else {
+            optimized
+                .iter()
+                .enumerate()
+                .filter(|&(_, &frequency)| frequency != 0)
+                .map(|(value, &frequency)| WeightedNode {
+                    count: frequency.max(count_min),
+                    sort_value: value as isize,
+                    node: Node::Leaf(value),
+                })
+                .collect::<Vec<_>>()
+        };
         if let Some(token) = token {
             // The token-aware path keeps the stable ordering of the original
             // sort with a bounded bottom-up merge sort. A large fixed alphabet
