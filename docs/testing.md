@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `84a18ee1be94fcc4de1064f92c53303ea3950bcc`, and benchmark-protocol revision
+revision `59e4c4fa7c33e047fbb802d7722058e71a6263f1`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`84a18ee1be94fcc4de1064f92c53303ea3950bcc`; the accepted managed records
+`59e4c4fa7c33e047fbb802d7722058e71a6263f1`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,20 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The TIFF sequence length-planning slice is implemented at production revision
+`59e4c4fa7c33e047fbb802d7722058e71a6263f1`. Still and sink sequence encoders
+now derive the final aligned length directly from the already-owned encoded
+pages instead of collecting a duplicate `Vec<usize>` of page lengths. Page
+alignment, offset relocation, overflow behavior, encoded bytes, cancellation
+checkpoints, and sink delivery are unchanged. All 57 TIFF encode parity rows,
+the complete 28-function fixture matrix, all 45 feature-gated Rust contracts,
+full all-feature tests, strict Clippy, and the native/WASM feature matrix
+passed locally. Pillow remains the exact byte/error oracle; length bookkeeping
+is a Rust implementation boundary with no Pillow allocation contract. No new
+fixture, test function, diagnostic origin, or coverage-only hook was added. No
+managed parity, feature-matrix, or Coverage MCP rerun is claimed for this
+revision.
 
 The GIF indexed frame-diff state slice is implemented at production revision
 `84a18ee1be94fcc4de1064f92c53303ea3950bcc`. GIF output assembly now retains
