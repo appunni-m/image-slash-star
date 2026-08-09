@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `630baeace17edb64bdc3dc7c5f3e95ea1130baa4`; the claim-ledger fixture tuple
+revision `aa65af084624175a0279f42ffe904107e921db8b`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -25,7 +25,8 @@ token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
 traversal fixed-stack storage, WebP VP8L Huffman-tree arena reuse, WebP VP8L
 hash-chain result storage reuse, WebP
 VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, WebP VP8L
-backward-reference scratch reuse, GIF indexed
+backward-reference scratch reuse, WebP VP8L candidate-result token pool reuse,
+GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -35,7 +36,8 @@ Deflate planning, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
 token-materialization, and Huffman-tree leaf
-census/materialization/depth and arena slices have not received a managed
+census/materialization/depth, arena, and candidate-result token-pool slices have
+not received a managed
 coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
@@ -709,13 +711,14 @@ the next candidate uses it; metadata grouping, encoded bytes, errors, and sink
 output remain unchanged. This is a Rust-only allocation optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
-WebP VP8L Huffman construction retains the leaf-node vector and token-aware
-merge-sort buffer across sequential tree builds. The recursive boxed nodes are
-still owned and dropped per tree, and the traversal stack remains local; only
-the bounded vector storage is reused. Ordering, tree selection, checkpoint
-behavior, encoded bytes, errors, and sink output remain unchanged. This is a
-Rust-only bounded allocation optimization, not allocator/OOM accounting,
-recoverable-OOM handling, or a streaming guarantee.
+WebP VP8L Huffman construction retains the leaf-node vector, token-aware
+merge-sort buffer, and compact branch arena across sequential tree builds.
+Weighted node indices are copied during stable ordering, so merged subtrees do
+not allocate boxed children or deep-clone during sort; the traversal stack
+remains local. Ordering, tree selection, checkpoint behavior, encoded bytes,
+errors, and sink output remain unchanged. This is a Rust-only bounded
+allocation optimization, not allocator/OOM accounting, recoverable-OOM handling,
+or a streaming guarantee.
 
 WebP VP8L multi-group token streams retain an optional child `TokenStreamScratch`
 for the sampled metadata image, so its bounded group and Huffman buffers survive
@@ -790,15 +793,6 @@ sink output remain unchanged. This is a Rust-only Huffman traversal storage
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
 
-WebP VP8L Huffman-tree construction retains a compact index arena per token
-stream instead of allocating boxed child nodes for every merge. The
-cancellation-aware stable sort copies weighted node indices rather than deep
-cloning subtrees; the arena resets its logical contents and retains capacity
-across sequential trees and image streams. Tree ordering, code lengths,
-checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
-This is a Rust-only Huffman-tree allocation optimization, not allocator/OOM
-accounting, recoverable-OOM handling, or a streaming guarantee.
-
 WebP VP8L hash-chain construction uses the final distance/length result table
 as temporary predecessor-link storage during descending best-match
 materialization. Each link points to an earlier position, so overwriting a
@@ -835,6 +829,14 @@ retain their own workspace. Candidate ordering, encoded bytes, errors, and sink
 output remain unchanged. This is a Rust-only backward-reference scratch
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP VP8L image-stream writing returns each candidate token vector to a bounded
+two-vector pool after its trial has been emitted. A pooled vector can seed the
+next cache-selection pass, while active candidates remain independently owned
+until their trial completes and nested metadata streams keep separate pools.
+Candidate ordering, encoded bytes, errors, and sink output remain unchanged.
+This is a Rust-only candidate-result allocation optimization, not
+allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
