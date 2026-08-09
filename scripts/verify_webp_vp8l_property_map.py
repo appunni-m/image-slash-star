@@ -18,10 +18,16 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+try:
+    from inspect_webp_vp8l_structure import ParseError, inspect_path
+except ImportError as error:  # pragma: no cover - only reached outside the repo script path
+    raise RuntimeError("VP8L structural inspector is unavailable") from error
+
 ROOT = Path(__file__).resolve().parent.parent
 MAP_PATH = ROOT / "tests" / "fixtures" / "webp_vp8l_property_map.json"
 MATRIX_PATH = ROOT / "tests" / "fixtures" / "coverage_matrix.json"
 MANIFEST_PATH = ROOT / "manifest.yaml"
+INSPECTOR_PATH = ROOT / "scripts" / "inspect_webp_vp8l_structure.py"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 OPERATIONS = ("decode", "encode")
@@ -91,6 +97,8 @@ def verify_inputs(document: dict) -> None:
         fail("inputs.manifest_path must be manifest.yaml")
     if inputs.get("matrix_path") != "tests/fixtures/coverage_matrix.json":
         fail("inputs.matrix_path must name the generated coverage matrix")
+    if inputs.get("inspector_path") != "scripts/inspect_webp_vp8l_structure.py":
+        fail("inputs.inspector_path must name the committed VP8L inspector")
     if require_sha(inputs.get("manifest_sha256"), "inputs.manifest_sha256") != sha256(
         MANIFEST_PATH
     ):
@@ -99,6 +107,10 @@ def verify_inputs(document: dict) -> None:
         MATRIX_PATH
     ):
         fail("property map matrix SHA-256 does not match coverage_matrix.json")
+    if require_sha(inputs.get("inspector_sha256"), "inputs.inspector_sha256") != sha256(
+        INSPECTOR_PATH
+    ):
+        fail("property map inspector SHA-256 does not match the committed inspector")
 
     policy = document.get("evidence_policy")
     if not isinstance(policy, dict):
@@ -204,6 +216,142 @@ def verify_witness(
     return operation, asset
 
 
+def contains_all(actual: object, expected: object, label: str) -> None:
+    if not isinstance(actual, list) or not isinstance(expected, list):
+        fail(f"{label}: expected list-valued structural evidence")
+    missing = [value for value in expected if value not in actual]
+    if missing:
+        fail(f"{label}: structural evidence is missing {missing!r}")
+
+
+def verify_structure(expect: object, structure: dict, label: str) -> None:
+    if not isinstance(expect, dict):
+        fail(f"{label}: expect must be an object")
+    if "width" in expect and structure.get("width") != expect["width"]:
+        fail(f"{label}: width differs from structural witness")
+    if "height" in expect and structure.get("height") != expect["height"]:
+        fail(f"{label}: height differs from structural witness")
+    if "alpha_used" in expect and structure.get("alpha_used") != expect["alpha_used"]:
+        fail(f"{label}: alpha_used differs from structural witness")
+    if "transforms" in expect and structure.get("transforms") != expect["transforms"]:
+        fail(f"{label}: transform sequence differs from structural witness")
+    if "transforms_contains" in expect:
+        actual = structure.get("transforms")
+        contains_all(actual, expect["transforms_contains"], f"{label}: transforms")
+
+    streams = structure.get("image_streams")
+    if not isinstance(streams, list):
+        fail(f"{label}: inspector returned no image streams")
+
+    def verify_stream(stream: object, stream_expect: object, stream_label: str) -> None:
+        if not isinstance(stream, dict) or not isinstance(stream_expect, dict):
+            fail(f"{stream_label}: stream evidence must be an object")
+        for key in ("color_cache_bits", "meta_huffman_bits", "entropy_image_size", "huffman_groups"):
+            if key in stream_expect and stream.get(key) != stream_expect[key]:
+                fail(f"{stream_label}: {key} differs from structural witness")
+        for key in ("green_values_contains", "distance_prefixes_contains", "plane_codes_contains", "mapped_distances_contains"):
+            if key in stream_expect:
+                source_key = key.removesuffix("_contains")
+                contains_all(stream.get(source_key), stream_expect[key], f"{stream_label}: {source_key}")
+        if "cache_lookups_at_least" in stream_expect:
+            actual = stream.get("cache_lookups")
+            if not isinstance(actual, int) or actual < stream_expect["cache_lookups_at_least"]:
+                fail(f"{stream_label}: cache lookup count is below the structural witness")
+        if "tree_forms_at_least" in stream_expect:
+            actual = stream.get("tree_forms")
+            if not isinstance(actual, dict):
+                fail(f"{stream_label}: tree_forms are absent")
+            for form, count in stream_expect["tree_forms_at_least"].items():
+                if not isinstance(count, int) or not isinstance(actual.get(form), int) or actual[form] < count:
+                    fail(f"{stream_label}: tree form {form!r} is below the structural witness")
+
+    if "stream_index" in expect:
+        index = expect["stream_index"]
+        if not isinstance(index, int) or not 0 <= index < len(streams):
+            fail(f"{label}: stream_index is outside the inspected stream list")
+        verify_stream(streams[index], expect.get("stream", {}), f"{label}: stream[{index}]")
+    if "any_stream" in expect:
+        stream_expect = expect["any_stream"]
+        if not any(
+            isinstance(stream, dict)
+            and all(
+                key in stream and stream[key] == value
+                for key, value in stream_expect.items()
+                if key in {"color_cache_bits", "meta_huffman_bits", "entropy_image_size", "huffman_groups"}
+            )
+            and all(
+                isinstance(stream.get(key.removesuffix("_contains")), list)
+                and all(value in stream[key.removesuffix("_contains")] for value in values)
+                for key, values in stream_expect.items()
+                if key.endswith("_contains")
+            )
+            and all(
+                isinstance(stream.get("tree_forms"), dict)
+                and stream["tree_forms"].get(form, 0) >= count
+                for form, count in stream_expect.get("tree_forms_at_least", {}).items()
+            )
+            for stream in streams
+        ):
+            fail(f"{label}: no image stream matches any_stream structural witness")
+
+
+def verify_structural_witnesses(
+    document: dict,
+    rows: dict[tuple[str, str], dict],
+    seen: set[tuple[str, str]],
+) -> int:
+    witnesses = document.get("structural_witnesses")
+    if not isinstance(witnesses, list) or not witnesses:
+        fail("structural_witnesses must be a non-empty array")
+    property_ids = {
+        entry.get("id")
+        for entry in document.get("properties", [])
+        if isinstance(entry, dict)
+    }
+    count = 0
+    for witness in witnesses:
+        if not isinstance(witness, dict):
+            fail("structural witnesses must be objects")
+        property_id = witness.get("property_id")
+        if property_id not in property_ids:
+            fail(f"structural witness references unknown property {property_id!r}")
+        operation = witness.get("operation")
+        row_id = witness.get("row_id")
+        if operation != "decode" or not isinstance(row_id, str):
+            fail(f"{property_id}: structural witnesses must reference decode rows")
+        verify_witness(
+            {"operation": operation, "row_id": row_id},
+            str(property_id),
+            rows,
+            seen,
+        )
+        row = rows[(operation, row_id)]
+        path, _, _ = fixture_path(operation, row)
+        try:
+            structure = inspect_path(path)
+        except (OSError, ParseError) as error:
+            fail(f"{property_id}: structural parse failed for {row_id}: {error}")
+        verify_structure(witness.get("expect"), structure, f"{property_id}:{row_id}")
+        count += 1
+    return count
+
+
+def verify_lossless_success_corpus(rows: dict[tuple[str, str], dict]) -> int:
+    parsed = 0
+    for (operation, row_id), row in rows.items():
+        if operation != "decode" or row.get("category") != "lossless" or row.get("oracle_status") != "ok":
+            continue
+        path, _, _ = fixture_path(operation, row)
+        try:
+            inspect_path(path)
+        except (OSError, ParseError) as error:
+            fail(f"lossless VP8L success row {row_id} cannot be structurally parsed: {error}")
+        parsed += 1
+    if parsed == 0:
+        fail("no active lossless VP8L success rows were found")
+    return parsed
+
+
 def verify_properties(document: dict, rows: dict[tuple[str, str], dict]) -> tuple[int, int, Counter[str], set[tuple[str, str]]]:
     properties = document.get("properties")
     if not isinstance(properties, list) or not properties:
@@ -261,6 +409,8 @@ def main() -> int:
         verify_inputs(document)
         rows = matrix_rows(matrix)
         property_count, witness_count, status_counts, seen = verify_properties(document, rows)
+        structural_count = verify_structural_witnesses(document, rows, seen)
+        corpus_count = verify_lossless_success_corpus(rows)
     except RuntimeError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
@@ -268,9 +418,10 @@ def main() -> int:
     print(
         "webp VP8L property map OK: "
         f"{property_count} properties, {witness_count} named witnesses, "
-        f"{len(seen)} distinct active WebP rows; "
+        f"{len(seen)} distinct active WebP rows, {structural_count} structural witnesses checked; "
+        f"parsed all {corpus_count} active lossless success rows; "
         f"statuses={dict(sorted(status_counts.items()))}; "
-        "all witnesses are Pillow outer-result evidence and no internal state is claimed proven"
+        "row claims remain Pillow outer-result evidence; structural facts are independently parsed"
     )
     return 0
 
