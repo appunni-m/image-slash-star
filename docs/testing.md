@@ -4,13 +4,14 @@ Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
 `bb48d168f94bedd8c2f9caf873e5a42d54690c47`, Rust test/runtime revision
-`8e58c8eda484a90cb68b277c22b776e7e2c7cd74`, and benchmark-protocol revision
+`841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
 `0121c773-64b8-4c09-b46e-8df639b046a4`; the exact-head feature-matrix run is
-`2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; and the current Coverage MCP snapshot
-is `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
+`2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; and the accepted Coverage MCP snapshot
+remains anchored to the preceding test/runtime revision:
+`208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -2325,7 +2326,7 @@ Current acceptance record: compact VP8 work-budget witnesses
 
 The production checkpoint is implemented at
 `bb48d168f94bedd8c2f9caf873e5a42d54690c47`, with its test/runtime witness at
-`8e58c8eda484a90cb68b277c22b776e7e2c7cd74`. The existing
+`841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`. The existing
 `encode_work_budget_is_a_non_parity_result_contract` keeps its exact typed
 boundary assertions and the compact preparation probes; its actual VP8
 coefficient ladder now uses one deterministic quality-100 609×625 high-entropy
@@ -2349,15 +2350,24 @@ pairs are 200/201 and 199/200, 206/207 and 205/206, 54,502/54,503 and
 remains Rust-only test-runtime evidence because Pillow has no caller token,
 typed work-budget result, caller-owned sink, or rollback equivalent.
 
+The test-runtime follow-up at `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`
+executes the two expensive 2,097,152-bit whole-buffer/direct-sink comparisons
+concurrently on native test lanes while retaining the same exact errors and
+untouched sentinels; the WASM path remains sequential. The 131,072-bit VP8L
+witness is reduced from 256x256 to a verified 64x64 probe without changing its
+41,542/41,543 whole-buffer or 41,541/41,542 sink boundary counts. This is
+Rust-only harness evidence and adds no parity row, fixture, diagnostic origin,
+new test function, or coverage-only hook.
+
 This is Rust-only test-runtime evidence: Pillow exposes no caller token, typed
 work-budget result, caller-owned sink, or rollback equivalent. No production
 codec behavior, Pillow parity row or fixture, diagnostic origin, new test
 function, or coverage-only hook changed. Local focused/full all-feature tests,
 strict all-target Clippy, and rustfmt passed. The clean schema-@3 benchmark at
-test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74` reported
-1.096028 s wall / 2.834659 user s / 0.218079 sys s /
-249,036,800-byte peak RSS for the Pillow parity fixture suite, and 1.527918 s
-wall / 2.044725 user s / 0.154183 sys s / 129,499,136-byte peak RSS for the
+test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f` reported
+1.089032 s wall / 2.883983 user s / 0.228330 sys s /
+253,329,408-byte peak RSS for the Pillow parity fixture suite, and 1.366795 s
+wall / 2.042505 user s / 0.116231 sys s / 169,902,080-byte peak RSS for the
 separate Rust-only feature-gate suite. The native release `rlib` was 7,981,040
 bytes and the `wasm32-unknown-unknown` determinism artifact was 25,091,745
 bytes. Peak RSS is a direct-child POSIX observation, not a universal
@@ -6613,11 +6623,11 @@ denominator, adds a parity row, or turns the Rust-only feature-gate contract
 into Pillow evidence.
 
 A clean local run at test/runtime revision
-`8e58c8eda484a90cb68b277c22b776e7e2c7cd74` passed all four workloads on the
+`841ecbdba75a96f68ec23cdf6e0f7d4599786a9f` passed all four workloads on the
 arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its observations were
-1.096028 s wall / 2.834659 user / 0.218079 sys / 249,036,800-byte peak RSS for
-the 1,445-row Pillow parity suite; 1.527918 s wall / 2.044725 user / 0.154183
-sys / 129,499,136-byte peak RSS for the separate Rust-only feature-gate suite;
+1.089032 s wall / 2.883983 user / 0.228330 sys / 253,329,408-byte peak RSS for
+the 1,445-row Pillow parity suite; 1.366795 s wall / 2.042505 user / 0.116231
+sys / 169,902,080-byte peak RSS for the separate Rust-only feature-gate suite;
 7,981,040 bytes for the native release `rlib`; and 25,091,745 bytes for the
 `wasm32-unknown-unknown` determinism test artifact. The two peak values are
 direct-child POSIX observations. These values are a revision-bound execution
