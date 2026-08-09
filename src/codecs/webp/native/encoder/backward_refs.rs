@@ -489,19 +489,23 @@ fn box_chain(
             }
         }
     }
-    let window_offsets = offsets_by_code
-        .into_iter()
-        .filter(|&offset| offset != 0)
-        .collect::<Vec<_>>();
-    let window_offsets_new = window_offsets
-        .iter()
-        .copied()
-        .filter(|&offset| {
-            !window_offsets
-                .iter()
-                .any(|&other| offset == other.saturating_add(1))
-        })
-        .collect::<Vec<_>>();
+    let mut window_offsets = [0_usize; WINDOW_OFFSETS_SIZE_MAX];
+    let mut window_offsets_len = 0;
+    for offset in offsets_by_code.into_iter().filter(|&offset| offset != 0) {
+        window_offsets[window_offsets_len] = offset;
+        window_offsets_len += 1;
+    }
+    let mut window_offsets_new = [0_usize; WINDOW_OFFSETS_SIZE_MAX];
+    let mut window_offsets_new_len = 0;
+    for &offset in &window_offsets[..window_offsets_len] {
+        if !window_offsets[..window_offsets_len]
+            .iter()
+            .any(|&other| offset == other.saturating_add(1))
+        {
+            window_offsets_new[window_offsets_new_len] = offset;
+            window_offsets_new_len += 1;
+        }
+    }
 
     let mut previous_offset = 0;
     let mut previous_length = 0;
@@ -515,9 +519,9 @@ fn box_chain(
         if recompute {
             let use_previous = previous_length > 1 && previous_length < MAX_LENGTH;
             let offsets = if use_previous {
-                &window_offsets_new
+                &window_offsets_new[..window_offsets_new_len]
             } else {
-                &window_offsets
+                &window_offsets[..window_offsets_len]
             };
             best_length = if use_previous { previous_length - 1 } else { 0 };
             best_offset = if use_previous { previous_offset } else { 0 };
