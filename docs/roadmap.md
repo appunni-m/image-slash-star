@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `0d5371c223e42fedf15ae28d06f6d52083ab47c1`, and benchmark-protocol
+revision `037a2a8b883c20e9250ae302f61ff565fdc38d3f`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
@@ -12,14 +12,14 @@ The last accepted managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`f999017c-2936-4018-9a87-739de7e31216` (1,445/1,445 passed in 964 ms) and
-feature matrix `a679f61d-72da-4a83-94cf-d44e95d0c85d` (passed in 21,984 ms);
+`ac3a6dac-e804-4486-a047-371d7413c7e9` (1,445/1,445 passed in 4,505 ms) and
+feature matrix `3b225e6e-3fc7-4289-8b3c-c0adb95b48ac` (passed in 34,305 ms);
 both recorded checkout HEAD
-`0d5371c223e42fedf15ae28d06f6d52083ab47c1`.
+`037a2a8b883c20e9250ae302f61ff565fdc38d3f`.
 The accepted Coverage MCP snapshot is
-`5d0c6041-fb61-4fd1-bc43-3e5792bdf29d` from run
-`d2d141ea-c0b1-45ab-bfc2-0faf46362842`; it records 55,644/56,514 lines,
-7,967/8,178 branches, 3,110/3,206 functions, and 85,572/87,511 regions at
+`72f62562-63ab-428c-b054-07ffa38c30e1` from run
+`06311cb9-b697-46ad-9d9a-ad741cc54625`; it records 55,657/56,527 lines,
+7,967/8,178 branches, 3,110/3,206 functions, and 85,574/87,513 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -292,6 +292,41 @@ functions, and 345/346 regions; `lossless.rs` is 1,120/1,120 lines,
 the 023 snapshot, line, branch, and function totals are unchanged and only
 one covered/total region was added; no prior coverage was suppressed. These
 are separate Rust coverage and parity records; the known LLVM warning and
+aggregate shortfall remain visible.
+
+Revision-bound note: the WebP VP8L transform-order storage boundary is
+implemented at `037a2a8b883c20e9250ae302f61ff565fdc38d3f`, following the
+Huffman code-length workspace boundary at
+`0d5371c223e42fedf15ae28d06f6d52083ab47c1`. `LosslessDecoder` now stores the
+at-most-four transform IDs in `[u8; 4]` plus a length instead of a heap `Vec`;
+duplicate-transform rejection and reverse application order remain unchanged
+because the VP8L bitstream permits at most one instance of each of the four
+transform types. Encoded bytes, errors, and sink output remain unchanged. This
+is Rust-only fixed-workspace evidence: existing Pillow rows provide byte/error
+regression only, while no parity row, fixture-manifest row, diagnostic origin,
+new test function, coverage-only hook, or unit test was added. The clean
+schema-`@3` benchmark at this revision measured 6.676605 s wall / 19.346702
+user s / 1.339534 sys s / 897,744,896-byte peak RSS for Pillow parity;
+3.624539 s wall / 3.501017 user s / 0.451302 sys s /
+253,001,728-byte peak RSS for the Rust-only feature-gate suite; a 19.506975 s
+native release build with a 7,938,712-byte `rlib`; and a 4.195934 s
+`wasm32-unknown-unknown` determinism compile with a 24,028,585-byte artifact.
+These are host/cache/toolchain observations, not comparative or universal
+performance claims; allocation counts, retained encoded/decoded cache bytes,
+caller-buffer reuse, peak stack depth, and WASM runtime resources remain
+unmeasured. Exact-head managed Pillow parity run
+`ac3a6dac-e804-4486-a047-371d7413c7e9` passed 1,445/1,445 checks; exact-head
+feature matrix `3b225e6e-3fc7-4289-8b3c-c0adb95b48ac` passed all configured
+native/WASI lanes; and Coverage MCP run
+`06311cb9-b697-46ad-9d9a-ad741cc54625` passed 85/85 tests in 67,860 ms and
+ingested snapshot `72f62562-63ab-428c-b054-07ffa38c30e1` with 55,657/56,527
+line, 7,967/8,178 branch, 3,110/3,206 function, and 85,574/87,513 region
+totals. The Huffman projection is 235/236 lines, 29/30 branches, 10/10
+functions, and 346/346 regions; `lossless.rs` is 1,133/1,133 lines,
+120/120 branches, 44/44 functions, and 1,428/1,428 regions. Compared with
+the 0d snapshot, source and covered line totals rose by 13 and covered/total
+regions rose by 2; branch and function totals were unchanged. These are
+separate Rust coverage and parity records; the known LLVM warning and
 aggregate shortfall remain visible.
 
 Revision-bound note: the WebP VP8L color-indexing lookup workspace is
@@ -8104,6 +8139,44 @@ functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
 
+Current acceptance record: WebP VP8L transform-order storage
+
+The production and Rust test/runtime slice is implemented at
+`037a2a8b883c20e9250ae302f61ff565fdc38d3f`, following the Huffman code-length
+workspace boundary at
+`0d5371c223e42fedf15ae28d06f6d52083ab47c1`. `LosslessDecoder` now stores the
+at-most-four transform IDs in `[u8; 4]` plus a length instead of a heap
+`Vec`; duplicate-transform rejection and reverse application order remain
+unchanged because the VP8L bitstream permits at most one instance of each of
+the four transform types. Encoded bytes, errors, and sink output remain
+unchanged. This is Rust-only fixed-workspace evidence, while existing Pillow
+rows provide byte/error regression only; no parity row, fixture-manifest row,
+diagnostic origin, new test function, coverage-only hook, or unit test was
+added.
+
+The clean schema-`@3` benchmark passed Pillow parity in 6.676605 s wall /
+19.346702 user s / 1.339534 sys s / 897,744,896-byte peak RSS and the separate
+Rust-only feature-gate suite in 3.624539 s wall / 3.501017 user s / 0.451302
+sys s / 253,001,728-byte peak RSS. The native release build measured 19.506975
+s wall with a 7,938,712-byte `rlib`; the WASM compile measured 4.195934 s wall
+with a 24,028,585-byte artifact. These are single-host/cache/toolchain
+observations, not comparative or universal performance claims; allocation
+counts, retained encoded/decoded cache bytes, caller-buffer reuse, peak stack
+depth, and WASM runtime resources remain unmeasured. Managed parity run
+`ac3a6dac-e804-4486-a047-371d7413c7e9` passed 1,445/1,445 checks, feature
+matrix `3b225e6e-3fc7-4289-8b3c-c0adb95b48ac` passed all configured lanes, and
+Coverage MCP run `06311cb9-b697-46ad-9d9a-ad741cc54625` passed 85/85 tests in
+67,860 ms and ingested snapshot
+`72f62562-63ab-428c-b054-07ffa38c30e1`: 55,657/56,527 lines, 7,967/8,178
+branches, 3,110/3,206 functions, and 85,574/87,513 regions. The Huffman
+projection is 235/236 lines, 29/30 branches, 10/10 functions, and 346/346
+regions; `lossless.rs` is fully covered at 1,133/1,133 lines, 120/120
+branches, 44/44 functions, and 1,428/1,428 regions. Compared with the 0d
+snapshot, source and covered line totals rose by 13 and covered/total regions
+rose by 2; branch and function totals were unchanged. These are separate Rust
+coverage and parity records; the known LLVM warning and aggregate shortfall
+remain visible.
+
 Current acceptance record: WebP VP8L Huffman code-length workspace
 
 The production and Rust test/runtime slice is implemented at
@@ -10025,7 +10098,9 @@ boundary is closed at
 decoder storage boundary is closed at
 `023172675e23bdea8a59b49cf9b07c80904fb4b8`; the Huffman code-length
 workspace boundary is closed at
-`0d5371c223e42fedf15ae28d06f6d52083ab47c1`; the entropy-analysis
+`0d5371c223e42fedf15ae28d06f6d52083ab47c1`; the transform-order storage
+boundary is closed at
+`037a2a8b883c20e9250ae302f61ff565fdc38d3f`; the entropy-analysis
 histogram-workspace boundary is closed at
 `34006c8768b69866dde9dad37d2cd0f3e8623f67`; the alpha-palette materialization
 boundary is closed at
