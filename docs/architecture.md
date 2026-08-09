@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`; the claim-ledger fixture tuple
+revision `058e6b7dc89dd59b96f3d06343d9e296af7006b0`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -15,7 +15,8 @@ CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
 WebP CostManager candidate-estimate scratch reuse, WebP CostManager
 cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
 buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency
-scratch reuse, WebP VP8L Huffman symbol-array reuse, GIF indexed
+scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
+scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -683,6 +684,13 @@ the previous early-stop behavior and checkpoint schedule; tree selection,
 encoded bytes, errors, and sink output are unchanged. This is a Rust-only
 allocation optimization, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.
+
+WebP VP8L Huffman-RLE optimization reuses one boolean good-mask buffer across
+sequential channel and histogram-group tree builds. The mask is resized and
+cleared before each RLE pass, so token-aware and no-token RLE decisions remain
+unchanged while the previous per-tree mask allocation is removed. This is a
+Rust-only allocation optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
