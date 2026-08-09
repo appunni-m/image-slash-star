@@ -1,6 +1,10 @@
 //! RFC 1950 zlib wrapper and RFC 1951 DEFLATE implementation.
 
-use super::{CompressionResult, malformed, parameter};
+#[cfg(feature = "png")]
+use super::RepeatedInputChunks;
+#[cfg(any(feature = "png", coverage))]
+use super::parameter;
+use super::{CompressionResult, malformed};
 use crate::codecs::error::CodecError;
 
 pub(super) const LENGTH_BASE: [usize; 29] = [
@@ -52,7 +56,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         8,
     );
 
-    assert!(compress_zlib_chunked(&[], 10, &[]).is_err());
+    #[cfg(feature = "png")]
+    assert!(compress_zlib_png_repeated(&[], 0, 0, 10, None).is_err());
 
     assert_eq!(write_stored_block(&mut Vec::new(), &[], true), Ok(()));
     let oversized = vec![0; usize::from(u16::MAX) + 1];
@@ -344,12 +349,28 @@ pub(crate) fn compress_zlib_png_repeated(
     data: &[u8],
     row_len: usize,
     height: usize,
+    level: u8,
     token: Option<&crate::CancellationToken>,
 ) -> CompressionResult<Vec<u8>> {
-    compress_zlib_repeated(data, row_len, height, 32_767, token)
+    debug_assert_eq!(row_len.saturating_mul(height), data.len());
+    crate::codecs::error::check_cancelled(token)?;
+    let output = match level {
+        0 => match token {
+            Some(token) => compress_zlib_stored_chunked_with_token(
+                data,
+                RepeatedInputChunks::new(row_len, height),
+                token,
+            )?,
+            None => compress_zlib_stored_chunked(data, RepeatedInputChunks::new(row_len, height))?,
+        },
+        1..=9 => super::zlib_ng::compress_repeated(data, row_len, height, level, token)?,
+        _ => return Err(parameter("compression level is outside 0..=9")),
+    };
+    crate::codecs::error::check_cancelled(token)?;
+    Ok(output)
 }
 
-#[cfg(any(feature = "png", feature = "tiff"))]
+#[cfg(feature = "tiff")]
 fn compress_zlib_repeated(
     data: &[u8],
     row_len: usize,
@@ -361,81 +382,18 @@ fn compress_zlib_repeated(
     super::zlib_ng::compress_level6_repeated(data, row_len, height, token, block_tokens)
 }
 
-/// Compress a PNG stream with token-aware interior checkpoints. Stored-block
-/// copying and every zlib-ng level retain the ordinary encoded byte model; the
-/// no-token path remains on the existing helpers.
-#[cfg(feature = "png")]
-pub(crate) fn compress_zlib_chunked_with_token(
-    data: &[u8],
-    level: u8,
-    input_chunks: &[usize],
-    token: &crate::CancellationToken,
-) -> CompressionResult<Vec<u8>> {
-    crate::codecs::error::check_cancelled(Some(token))?;
-    let output = match level {
-        0 => compress_zlib_stored_chunked_with_token(data, input_chunks, token)?,
-        1 => super::zlib_ng::compress_level1_with_token(data, input_chunks, token)?,
-        2..=5 => super::zlib_ng::compress_early_level_with_token(data, input_chunks, level, token)?,
-        6 => super::zlib_ng::compress_level6_with_token(data, input_chunks, Some(token), 32_767)?,
-        7..=8 => super::zlib_ng::compress_slow_level_with_token_for_png(
-            data,
-            input_chunks,
-            level,
-            token,
-        )?,
-        9 => super::zlib_ng::compress_level9_with_token(data, input_chunks, token)?,
-        _ => {
-            let output = compress_zlib_chunked(data, level, input_chunks)?;
-            crate::codecs::error::check_cancelled(Some(token))?;
-            output
-        }
-    };
-    crate::codecs::error::check_cancelled(Some(token))?;
-    Ok(output)
-}
-
-/// Compress a sequence of input calls as one zlib stream.
-///
-/// The chunk lengths model callers such as Pillow's PNG encoder, which feeds
-/// one complete filtered scanline to zlib-ng at a time. Input-call boundaries
-/// are observable at level zero because zlib-ng emits a stored block when its
-/// buffered input first reaches the 32 KiB window size.
 #[cfg(any(feature = "png", feature = "tiff"))]
-pub(crate) fn compress_zlib_chunked(
-    data: &[u8],
-    level: u8,
-    input_chunks: &[usize],
-) -> CompressionResult<Vec<u8>> {
-    debug_assert_eq!(
-        input_chunks
-            .iter()
-            .fold(0usize, |total, &length| total.wrapping_add(length)),
-        data.len()
-    );
-    match level {
-        0 => compress_zlib_stored_chunked(data, input_chunks),
-        1 => Ok(super::zlib_ng::compress_level1(data, input_chunks)),
-        2 => Ok(super::zlib_ng::compress_level2(data, input_chunks)),
-        3 => Ok(super::zlib_ng::compress_level3(data, input_chunks)),
-        4 => Ok(super::zlib_ng::compress_level4(data, input_chunks)),
-        5 => Ok(super::zlib_ng::compress_level5(data, input_chunks)),
-        6 => Ok(super::zlib_ng::compress_level6(data, input_chunks)),
-        7 => Ok(super::zlib_ng::compress_level7(data, input_chunks)),
-        8 => Ok(super::zlib_ng::compress_level8(data, input_chunks)),
-        9 => Ok(super::zlib_ng::compress_level9(data, input_chunks)),
-        _ => Err(parameter("compression level is outside 0..=9")),
-    }
-}
-
-#[cfg(any(feature = "png", feature = "tiff"))]
-fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> CompressionResult<Vec<u8>> {
+fn compress_zlib_stored_chunked<I>(data: &[u8], input_chunks: I) -> CompressionResult<Vec<u8>>
+where
+    I: IntoIterator<Item = usize>,
+{
     const MIN_BLOCK: usize = 32_768;
     const MAX_STORED: usize = 65_535;
 
     let mut output = vec![0x78, 0x01];
     let mut pending_start = 0usize;
     let mut input_end = 0usize;
-    for &input_len in input_chunks {
+    for input_len in input_chunks {
         input_end = input_end.wrapping_add(input_len);
         while input_end.saturating_sub(pending_start) >= MIN_BLOCK {
             let maximum_end = pending_start.saturating_add(MAX_STORED);
@@ -450,11 +408,14 @@ fn compress_zlib_stored_chunked(data: &[u8], input_chunks: &[usize]) -> Compress
 }
 
 #[cfg(feature = "png")]
-fn compress_zlib_stored_chunked_with_token(
+fn compress_zlib_stored_chunked_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     token: &crate::CancellationToken,
-) -> CompressionResult<Vec<u8>> {
+) -> CompressionResult<Vec<u8>>
+where
+    I: IntoIterator<Item = usize>,
+{
     const MIN_BLOCK: usize = 32_768;
     const MAX_STORED: usize = 65_535;
 
@@ -462,7 +423,7 @@ fn compress_zlib_stored_chunked_with_token(
     let mut output = vec![0x78, 0x01];
     let mut pending_start = 0usize;
     let mut input_end = 0usize;
-    for &input_len in input_chunks {
+    for input_len in input_chunks {
         crate::codecs::error::check_cancelled(Some(token))?;
         input_end = input_end.wrapping_add(input_len);
         while input_end.saturating_sub(pending_start) >= MIN_BLOCK {

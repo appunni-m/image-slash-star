@@ -1,6 +1,6 @@
 //! PNG encoder using the internal zlib/DEFLATE implementation.
 
-use crate::codecs::compression::deflate::{compress_zlib_chunked, compress_zlib_png_repeated};
+use crate::codecs::compression::deflate::compress_zlib_png_repeated;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::encode_policy::EncodePolicy;
@@ -130,21 +130,13 @@ fn write_encoded(
         }
     };
     crate::codecs::error::check_cancelled(token)?;
-    let compressed = if compression_level == 6 {
-        compress_zlib_png_repeated(&filtered, row_bytes.saturating_add(1), height, token)?
-    } else {
-        let input_chunks = vec![row_bytes.saturating_add(1); height];
-        if let Some(token) = token {
-            crate::codecs::compression::deflate::compress_zlib_chunked_with_token(
-                &filtered,
-                compression_level,
-                &input_chunks,
-                token,
-            )?
-        } else {
-            compress_zlib_chunked(&filtered, compression_level, &input_chunks)?
-        }
-    };
+    let compressed = compress_zlib_png_repeated(
+        &filtered,
+        row_bytes.saturating_add(1),
+        height,
+        compression_level,
+        token,
+    )?;
     crate::codecs::error::check_cancelled(token)?;
 
     let mut header = [0u8; 13];

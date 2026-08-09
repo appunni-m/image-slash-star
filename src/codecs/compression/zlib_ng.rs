@@ -5,6 +5,8 @@
 //! The original zlib license notice is retained in
 //! `third_party/zlib-ng/LICENSE.md`.
 
+#[cfg(feature = "png")]
+use super::RepeatedInputChunks;
 use super::deflate::{DISTANCE_BASE, DISTANCE_EXTRA, LENGTH_BASE, LENGTH_EXTRA};
 const LITERAL_CODES: usize = 286;
 const DISTANCE_CODES: usize = 30;
@@ -51,18 +53,11 @@ enum Token {
     Match { length: usize, distance: usize },
 }
 
-/// Compress using Pillow's zlib-ng 2.3.3 level-one quick strategy.
-///
-/// `deflate_quick` retains only the newest four-byte hash candidate, emits
-/// fixed Huffman codes directly, and deliberately does not insert positions
-/// skipped by a match.
+#[cfg(feature = "png")]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let (tokens, final_tokens) = tokenize_level1(data, input_chunks);
+pub(super) fn compress_level1_repeated(data: &[u8], row_len: usize, height: usize) -> Vec<u8> {
+    let (tokens, final_tokens) = tokenize_level1(data, RepeatedInputChunks::new(row_len, height));
     let mut writer = BitWriter::with_prefix([0x78, 0x01]);
-    // deflate_quick opens its first block only after a Z_NO_FLUSH call has
-    // enough lookahead to process. On Z_FINISH it closes an opened block as
-    // non-final, then emits the remaining short lookahead in a final block.
     if tokens.is_empty() {
         emit_fixed_block(&final_tokens, true, &mut writer);
     } else {
@@ -75,13 +70,14 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 }
 
 #[cfg(feature = "png")]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level1_with_token(
+pub(super) fn compress_level1_repeated_with_token(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
     token: &crate::CancellationToken,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
-    let (tokens, final_tokens) = tokenize_level1_with_token(data, input_chunks, token)?;
+    let (tokens, final_tokens) =
+        tokenize_level1_with_token(data, RepeatedInputChunks::new(row_len, height), token)?;
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     checkpoint.poll()?;
     let mut writer = BitWriter::with_prefix([0x78, 0x01]);
@@ -98,12 +94,15 @@ pub(super) fn compress_level1_with_token(
     Ok(output)
 }
 
-fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Token>) {
+fn tokenize_level1<I>(data: &[u8], input_chunks: I) -> (Vec<Token>, Vec<Token>)
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut head = vec![0usize; HASH_SIZE];
     let mut tokens = Vec::new();
     let mut position = 0usize;
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
 
@@ -129,17 +128,20 @@ fn tokenize_level1(data: &[u8], input_chunks: &[usize]) -> (Vec<Token>, Vec<Toke
 }
 
 #[cfg(feature = "png")]
-fn tokenize_level1_with_token(
+fn tokenize_level1_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<(Vec<Token>, Vec<Token>)> {
+) -> crate::codecs::CodecResult<(Vec<Token>, Vec<Token>)>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut head = vec![0usize; HASH_SIZE];
     let mut tokens = Vec::new();
     let mut position = 0usize;
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         checkpoint.poll()?;
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
@@ -283,15 +285,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut head = vec![0usize; HASH_SIZE];
     let mut position = 0usize;
     tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens);
-    let _ = compress_level1(data, &[data.len()]);
+    #[cfg(feature = "png")]
+    let _ = compress_level1_repeated(data, data.len(), 1);
     let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
-    let _ = tokenize_level1(&level1_reinsert_data, &[MIN_LOOKAHEAD, 3]);
+    let _ = tokenize_level1(&level1_reinsert_data, [MIN_LOOKAHEAD, 3].into_iter());
     let _ = tokenize_level1(
         &level1_reinsert_data,
-        &[
+        [
             MIN_LOOKAHEAD + 1,
             level1_reinsert_data.len() - MIN_LOOKAHEAD - 1,
-        ],
+        ]
+        .into_iter(),
     );
     let level1_tail_guard_data = vec![0; WINDOW_SIZE * 2 + MAX_MATCH];
     let level1_first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
@@ -563,94 +567,43 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usiz
     candidate
 }
 
-/// Compress using Pillow's zlib-ng 2.3.3 level-three configuration.
-///
-/// Pillow's `ZipEncode.c` selects `Z_FILTERED`, a 32 KiB window, and
-/// `memLevel=9`. zlib-ng maps level three to `deflate_medium` with the
-/// `{ good: 4, lazy: 6, nice: 16, chain: 6 }` configuration.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false);
-    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-/// Compress using Pillow's zlib-ng 2.3.3 level-two fast strategy.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true);
-    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-/// Compress using Pillow's zlib-ng 2.3.3 level-four medium strategy.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false);
-    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-/// Compress using Pillow's zlib-ng 2.3.3 level-six configuration.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16);
-    let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-/// Compress using Pillow's zlib-ng 2.3.3 level-five medium strategy.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16);
-    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-/// Compress PNG levels two through five with token-aware matcher and emission
-/// checkpoints. The no-token callers above remain on their existing helpers.
 #[cfg(feature = "png")]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_early_level_with_token(
+pub(super) fn compress_early_level_repeated(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
+    level: u8,
+) -> Vec<u8> {
+    let chunks = RepeatedInputChunks::new(row_len, height);
+    let tokens = match level {
+        2 => tokenize_early_matcher(data, chunks, 4, 8, 4, true),
+        3 => tokenize_early_matcher(data, chunks, 6, 16, 6, false),
+        4 => tokenize_early_matcher(data, chunks, 24, 32, 12, false),
+        5 => tokenize_lookahead_medium(data, chunks, 32, 32, 16),
+        _ => unreachable!("early PNG level is outside 2..=5"),
+    };
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
+    emit_blocks(&tokens, 32_767, &mut writer);
+    let mut output = writer.finish();
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    output
+}
+
+#[cfg(feature = "png")]
+pub(super) fn compress_early_level_repeated_with_token(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
     level: u8,
     token: &crate::CancellationToken,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
+    let chunks = RepeatedInputChunks::new(row_len, height);
     let tokens = match level {
-        2..=4 => {
-            let (max_chain, nice_match, max_insert, fast) = match level {
-                2 => (4, 8, 4, true),
-                3 => (6, 16, 6, false),
-                4 => (24, 32, 12, false),
-                _ => unreachable!("early PNG level is outside 2..=4"),
-            };
-            tokenize_early_matcher_with_token(
-                data,
-                input_chunks,
-                max_chain,
-                nice_match,
-                max_insert,
-                fast,
-                token,
-            )?
-        }
-        5 => tokenize_lookahead_medium_with_token(data, input_chunks, 32, 32, 16, token)?,
+        2 => tokenize_early_matcher_with_token(data, chunks, 4, 8, 4, true, token)?,
+        3 => tokenize_early_matcher_with_token(data, chunks, 6, 16, 6, false, token)?,
+        4 => tokenize_early_matcher_with_token(data, chunks, 24, 32, 12, false, token)?,
+        5 => tokenize_lookahead_medium_with_token(data, chunks, 32, 32, 16, token)?,
         _ => unreachable!("early PNG level is outside 2..=5"),
     };
     let mut checkpoint = CancellationMatcherCheckpoint { token };
@@ -664,20 +617,34 @@ pub(super) fn compress_early_level_with_token(
     Ok(output)
 }
 
-/// Compress using Pillow's zlib-ng 2.3.3 level-seven slow strategy.
-pub(super) fn compress_level7(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    compress_slow_level(data, input_chunks, 32, 8, 128, 256, 0xda)
-}
-
-/// Compress using Pillow's zlib-ng 2.3.3 level-eight slow strategy.
-pub(super) fn compress_level8(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    compress_slow_level(data, input_chunks, 128, 32, 258, 1024, 0xda)
+#[cfg(feature = "png")]
+pub(super) fn compress_slow_level_repeated(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    level: u8,
+) -> Vec<u8> {
+    let (max_lazy, good_match, nice_match, max_chain) = match level {
+        7 => (32, 8, 128, 256),
+        8 => (128, 32, 258, 1024),
+        _ => unreachable!("slow PNG level is outside 7..=8"),
+    };
+    compress_slow_level(
+        data,
+        RepeatedInputChunks::new(row_len, height),
+        max_lazy,
+        good_match,
+        nice_match,
+        max_chain,
+        0xda,
+    )
 }
 
 #[cfg(feature = "png")]
-pub(super) fn compress_slow_level_with_token_for_png(
+pub(super) fn compress_slow_level_repeated_with_token(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
     level: u8,
     token: &crate::CancellationToken,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
@@ -688,7 +655,7 @@ pub(super) fn compress_slow_level_with_token_for_png(
     };
     compress_slow_level_with_token(
         data,
-        input_chunks,
+        RepeatedInputChunks::new(row_len, height),
         max_lazy,
         good_match,
         nice_match,
@@ -699,15 +666,18 @@ pub(super) fn compress_slow_level_with_token_for_png(
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn compress_slow_level(
+fn compress_slow_level<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     max_lazy: usize,
     good_match: usize,
     nice_match: usize,
     max_chain: usize,
     header: u8,
-) -> Vec<u8> {
+) -> Vec<u8>
+where
+    I: IntoIterator<Item = usize>,
+{
     let settings = SlowSettings {
         max_lazy,
         good_match,
@@ -730,7 +700,7 @@ fn compress_slow_level(
 )]
 fn compress_slow_level_with_token(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: impl IntoIterator<Item = usize>,
     max_lazy: usize,
     good_match: usize,
     nice_match: usize,
@@ -764,7 +734,10 @@ struct SlowSettings {
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Vec<Token> {
+fn slow<I>(data: &[u8], input_chunks: I, settings: SlowSettings) -> Vec<Token>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut matcher = SlowMatcher::new(
         data,
         settings.max_lazy,
@@ -773,7 +746,7 @@ fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Vec<Toke
         settings.max_chain,
     );
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
         matcher.process(available, false);
@@ -784,12 +757,15 @@ fn slow(data: &[u8], input_chunks: &[usize], settings: SlowSettings) -> Vec<Toke
 }
 
 #[cfg(feature = "png")]
-fn slow_with_token(
+fn slow_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     settings: SlowSettings,
     token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<Vec<Token>> {
+) -> crate::codecs::CodecResult<Vec<Token>>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut matcher = SlowMatcher::new(
         data,
@@ -799,7 +775,7 @@ fn slow_with_token(
         settings.max_chain,
     );
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         checkpoint.poll()?;
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
@@ -1018,20 +994,41 @@ pub(super) fn compress_level6_repeated(
     finish_level6_tokens(data, tokens, token, block_tokens)
 }
 
-#[cfg(any(feature = "png", feature = "tiff"))]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6_with_token(
+#[cfg(feature = "png")]
+pub(super) fn compress_repeated(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
+    level: u8,
     token: Option<&crate::CancellationToken>,
-    block_tokens: usize,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
-    let tokens = if let Some(token) = token {
-        tokenize_lookahead_medium_with_token(data, input_chunks, 128, 128, 16, token)?
-    } else {
-        tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
-    };
-    finish_level6_tokens(data, tokens, token, block_tokens)
+    match token {
+        Some(token) => match level {
+            1 => compress_level1_repeated_with_token(data, row_len, height, token),
+            2..=5 => compress_early_level_repeated_with_token(data, row_len, height, level, token),
+            6 => compress_level6_repeated(data, row_len, height, Some(token), 32_767),
+            7..=8 => compress_slow_level_repeated_with_token(data, row_len, height, level, token),
+            9 => compress_level9_repeated_with_token(data, row_len, height, token),
+            _ => Err(crate::codecs::error::CodecError::Parameter(
+                "invalid compression input: compression level is outside 0..=9".to_owned(),
+            )),
+        },
+        None => {
+            let output = match level {
+                1 => compress_level1_repeated(data, row_len, height),
+                2..=5 => compress_early_level_repeated(data, row_len, height, level),
+                6 => compress_level6_repeated(data, row_len, height, None, 32_767)?,
+                7..=8 => compress_slow_level_repeated(data, row_len, height, level),
+                9 => compress_level9_repeated(data, row_len, height),
+                _ => {
+                    return Err(crate::codecs::error::CodecError::Parameter(
+                        "invalid compression input: compression level is outside 0..=9".to_owned(),
+                    ));
+                }
+            };
+            Ok(output)
+        }
+    }
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
@@ -1115,19 +1112,22 @@ fn tokenize_lookahead_medium_repeated_with_token(
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn tokenize_lookahead_medium(
+fn tokenize_lookahead_medium<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     max_chain: usize,
     nice_match: usize,
     max_insert: usize,
-) -> Vec<Token> {
+) -> Vec<Token>
+where
+    I: IntoIterator<Item = usize>,
+{
     // ✅ VERIFIED: zlib-ng 2.3.3 deflate.c:102-128 and
     // deflate_medium.c:160-293. The oracle and Rust models produce the same
     // 2,272 tokens for the level-six PNG parity input.
     let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         if available != 0 {
             matcher.refill_boundary();
         }
@@ -1145,18 +1145,21 @@ fn tokenize_lookahead_medium(
 /// stay on the existing helper so token-aware control does not add polling
 /// overhead to ordinary encodes.
 #[cfg(any(feature = "png", feature = "tiff"))]
-fn tokenize_lookahead_medium_with_token(
+fn tokenize_lookahead_medium_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     max_chain: usize,
     nice_match: usize,
     max_insert: usize,
     token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<Vec<Token>> {
+) -> crate::codecs::CodecResult<Vec<Token>>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut matcher = Level6Matcher::new(data, max_chain, nice_match, max_insert);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         checkpoint.poll()?;
         if available != 0 {
             matcher.refill_boundary_with(&mut checkpoint)?;
@@ -1474,42 +1477,14 @@ impl Level6Matcher {
     }
 }
 
-/// Compress using Pillow's zlib-ng 2.3.3 level-nine `Z_FILTERED`
-/// configuration.
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
-    let tokens = tokenize_level9(data, input_chunks);
-    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
-    emit_blocks(&tokens, 32_767, &mut writer);
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32(data).to_be_bytes());
-    output
-}
-
-#[cfg(feature = "png")]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level9_with_token(
-    data: &[u8],
-    input_chunks: &[usize],
-    token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<Vec<u8>> {
-    let tokens = tokenize_level9_with_token(data, input_chunks, token)?;
-    let mut checkpoint = CancellationMatcherCheckpoint { token };
-    checkpoint.poll()?;
-    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
-    emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
-    checkpoint.poll()?;
-    let mut output = writer.finish();
-    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
-    checkpoint.poll()?;
-    Ok(output)
-}
-
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Vec<Token> {
+fn tokenize_level9<I>(data: &[u8], input_chunks: I) -> Vec<Token>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut matcher = Level9Matcher::new(data);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         if available != 0 {
             matcher.refill_boundary();
         }
@@ -1523,15 +1498,18 @@ fn tokenize_level9(data: &[u8], input_chunks: &[usize]) -> Vec<Token> {
 }
 
 #[cfg(feature = "png")]
-fn tokenize_level9_with_token(
+fn tokenize_level9_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<Vec<Token>> {
+) -> crate::codecs::CodecResult<Vec<Token>>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut matcher = Level9Matcher::new(data);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         checkpoint.poll()?;
         if available != 0 {
             matcher.refill_boundary_with(&mut checkpoint)?;
@@ -1545,6 +1523,37 @@ fn tokenize_level9_with_token(
     matcher.process_with(available, true, &mut checkpoint)?;
     checkpoint.poll()?;
     Ok(matcher.tokens)
+}
+
+#[cfg(feature = "png")]
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+pub(super) fn compress_level9_repeated(data: &[u8], row_len: usize, height: usize) -> Vec<u8> {
+    let tokens = tokenize_level9(data, RepeatedInputChunks::new(row_len, height));
+    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
+    emit_blocks(&tokens, 32_767, &mut writer);
+    let mut output = writer.finish();
+    output.extend_from_slice(&adler32(data).to_be_bytes());
+    output
+}
+
+#[cfg(feature = "png")]
+pub(super) fn compress_level9_repeated_with_token(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    token: &crate::CancellationToken,
+) -> crate::codecs::CodecResult<Vec<u8>> {
+    let tokens =
+        tokenize_level9_with_token(data, RepeatedInputChunks::new(row_len, height), token)?;
+    let mut checkpoint = CancellationMatcherCheckpoint { token };
+    checkpoint.poll()?;
+    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
+    emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
+    checkpoint.poll()?;
+    let mut output = writer.finish();
+    output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
+    checkpoint.poll()?;
+    Ok(output)
 }
 
 struct Level9Matcher {
@@ -1880,20 +1889,23 @@ fn fizzle_matches_with<P: MatcherCheckpoint>(
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-fn tokenize_early_matcher(
+fn tokenize_early_matcher<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     max_chain: usize,
     nice_match: usize,
     max_insert: usize,
     fast: bool,
-) -> Vec<Token> {
+) -> Vec<Token>
+where
+    I: IntoIterator<Item = usize>,
+{
     // ⚠️ UNVERIFIED: Rust port of zlib-ng 2.3.3 deflate_medium.c:160-293.
     // The independent oracle model matches all 3,000 level-three tokens; the
     // Rust path still requires the managed byte-parity run.
     let mut matcher = Level3Matcher::new(data, max_chain, nice_match, max_insert, fast);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
         matcher.process(available, false);
@@ -1904,19 +1916,22 @@ fn tokenize_early_matcher(
 }
 
 #[cfg(feature = "png")]
-fn tokenize_early_matcher_with_token(
+fn tokenize_early_matcher_with_token<I>(
     data: &[u8],
-    input_chunks: &[usize],
+    input_chunks: I,
     max_chain: usize,
     nice_match: usize,
     max_insert: usize,
     fast: bool,
     token: &crate::CancellationToken,
-) -> crate::codecs::CodecResult<Vec<Token>> {
+) -> crate::codecs::CodecResult<Vec<Token>>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     let mut matcher = Level3Matcher::new(data, max_chain, nice_match, max_insert, fast);
     let mut available = 0usize;
-    for &chunk_length in input_chunks {
+    for chunk_length in input_chunks {
         checkpoint.poll()?;
         available = available.wrapping_add(chunk_length);
         debug_assert!(available <= data.len());
