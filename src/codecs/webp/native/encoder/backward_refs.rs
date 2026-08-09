@@ -317,8 +317,9 @@ fn lz77(
     width: usize,
     chain: &[(usize, usize)],
     token: CheckpointToken<'_>,
-) -> CheckpointResult<Vec<Token>> {
-    let mut refs = Vec::new();
+    refs: &mut Vec<Token>,
+) -> CheckpointResult<()> {
+    refs.clear();
     let mut position = 0;
     let mut last_check: isize = -1;
     let mut next_checkpoint = 1024;
@@ -366,11 +367,17 @@ fn lz77(
         position += length;
     }
     let _ = width;
-    Ok(refs)
+    Ok(())
 }
 
-fn rle(pixels: &[u32], width: usize, token: CheckpointToken<'_>) -> CheckpointResult<Vec<Token>> {
-    let mut refs = vec![Token::Literal(pixels[0])];
+fn rle_into(
+    pixels: &[u32],
+    width: usize,
+    token: CheckpointToken<'_>,
+    refs: &mut Vec<Token>,
+) -> CheckpointResult<()> {
+    refs.clear();
+    refs.push(Token::Literal(pixels[0]));
     let mut position = 1;
     while position < pixels.len() {
         if position.is_multiple_of(1024) {
@@ -400,7 +407,7 @@ fn rle(pixels: &[u32], width: usize, token: CheckpointToken<'_>) -> CheckpointRe
             position += 1;
         }
     }
-    Ok(refs)
+    Ok(())
 }
 
 fn box_chain(
@@ -1988,7 +1995,11 @@ pub(super) fn candidates(
     let mut estimate_scratch = CostEstimateScratch::default();
     let mut cache_scratch = CacheTransformScratch::default();
     let mut trace_scratch = TraceScratch::default();
-    let choose_cache = |source: Vec<Token>,
+    // The LZ77, RLE, and optional box-chain reference streams are consumed
+    // sequentially by cache selection. Retain one token buffer across those
+    // source constructions instead of allocating a fresh vector for each.
+    let mut source_scratch = Vec::new();
+    let choose_cache = |source: &[Token],
                         scratch: &mut CostEstimateScratch,
                         cache_scratch: &mut CacheTransformScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
@@ -1997,7 +2008,7 @@ pub(super) fn candidates(
         let mut best = None;
         for bits in 0..=maximum {
             checkpoint(token)?;
-            with_cache(pixels, &source, bits, token, cache_scratch)?;
+            with_cache(pixels, source, bits, token, cache_scratch)?;
             let cost =
                 cache_estimated_bits_with_checkpoint(&cache_scratch.output, bits, token, scratch)?;
             if best
@@ -2045,16 +2056,10 @@ pub(super) fn candidates(
         Ok(candidate)
     };
 
-    let standard = choose_cache(
-        lz77(pixels, width, &chain, token)?,
-        &mut estimate_scratch,
-        &mut cache_scratch,
-    )?;
-    let rle = choose_cache(
-        rle(pixels, width, token)?,
-        &mut estimate_scratch,
-        &mut cache_scratch,
-    )?;
+    lz77(pixels, width, &chain, token, &mut source_scratch)?;
+    let standard = choose_cache(&source_scratch, &mut estimate_scratch, &mut cache_scratch)?;
+    rle_into(pixels, width, token, &mut source_scratch)?;
+    let rle = choose_cache(&source_scratch, &mut estimate_scratch, &mut cache_scratch)?;
     let mut primary = if standard.2 <= rle.2 {
         improve(standard, &chain, &mut estimate_scratch, &mut trace_scratch)?
     } else {
@@ -2066,12 +2071,9 @@ pub(super) fn candidates(
     // configuration for palette images containing at most sixteen colors.
     if allow_cache && max_cache_bits <= 4 {
         let chain = box_chain(pixels, width, &chain, token)?;
+        lz77(pixels, width, &chain, token, &mut source_scratch)?;
         let mut box_candidate = improve(
-            choose_cache(
-                lz77(pixels, width, &chain, token)?,
-                &mut estimate_scratch,
-                &mut cache_scratch,
-            )?,
+            choose_cache(&source_scratch, &mut estimate_scratch, &mut cache_scratch)?,
             &chain,
             &mut estimate_scratch,
             &mut trace_scratch,
