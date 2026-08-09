@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `4c76598e9bb71133e626f42bfb94bcf1544bfa84`; the claim-ledger fixture tuple
+revision `630baeace17edb64bdc3dc7c5f3e95ea1130baa4`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -22,7 +22,8 @@ metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
 WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
 reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
 token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
-traversal fixed-stack storage, WebP VP8L hash-chain result storage reuse, WebP
+traversal fixed-stack storage, WebP VP8L Huffman-tree arena reuse, WebP VP8L
+hash-chain result storage reuse, WebP
 VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, WebP VP8L
 backward-reference scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
@@ -34,7 +35,8 @@ Deflate planning, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
 token-materialization, and Huffman-tree leaf
-census/materialization/depth slices have not received a managed coverage rerun.
+census/materialization/depth and arena slices have not received a managed
+coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -787,6 +789,15 @@ tree. Tree shape, code lengths, checkpoint behavior, encoded bytes, errors, and
 sink output remain unchanged. This is a Rust-only Huffman traversal storage
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP VP8L Huffman-tree construction retains a compact index arena per token
+stream instead of allocating boxed child nodes for every merge. The
+cancellation-aware stable sort copies weighted node indices rather than deep
+cloning subtrees; the arena resets its logical contents and retains capacity
+across sequential trees and image streams. Tree ordering, code lengths,
+checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
+This is a Rust-only Huffman-tree allocation optimization, not allocator/OOM
+accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L hash-chain construction uses the final distance/length result table
 as temporary predecessor-link storage during descending best-match
