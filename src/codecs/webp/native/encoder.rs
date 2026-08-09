@@ -2106,17 +2106,18 @@ fn apply_palette<C: BitWriterCheckpoint>(
     w.write_bits(3, 2)?;
     w.write_bits((encoded_length - 1) as u64, 8)?;
     let mut previous = 0;
-    let palette_delta = palette[..encoded_length]
-        .iter()
-        .map(|&color| {
-            let difference = subtract_pixels(color, previous);
-            previous = color;
-            difference
-        })
-        .collect::<Vec<_>>();
+    // Palette mode is selected only for palettes with at most 256 entries.
+    // Keep the source palette intact for the later index-packing pass while
+    // avoiding a heap allocation for this bounded transformed view.
+    let mut palette_delta = [0_u32; 256];
+    for (index, &color) in palette[..encoded_length].iter().enumerate() {
+        let difference = subtract_pixels(color, previous);
+        previous = color;
+        palette_delta[index] = difference;
+    }
     write_image_stream_configured_with_scratch(
         w,
-        &palette_delta,
+        &palette_delta[..encoded_length],
         encoded_length,
         false,
         3,
