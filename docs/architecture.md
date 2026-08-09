@@ -3,11 +3,11 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`ab3af9e210b06c066d9ffb854138ba992239866a`; the claim-ledger fixture tuple
+`9e2ffcc5b190c4044c08b0496bafe30b918561f8`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for this revision is
-`f8d8347e-263d-4934-8aa5-77dabaa6ead8` from run
-`ebf5b466-55c3-4117-a434-2c1b9b8dfb2a`.
+`7b25b091-fd75-4e3f-a2c9-c6ccb7f1f434` from run
+`ded7face-c20e-4a2d-b39d-af48c4942666`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -174,6 +174,15 @@ through `SourceDescriptor::avif_item_plane_properties()`, preserving source-loca
 item ID, optional dimensions, and optional uniform channel depth; this is
 structural provenance only and does not expose planes, compose tiles, infer
 range/quality, or transform decoded samples.
+Known non-primary and auxiliary AVIF `av1C` declarations are retained as
+`AvifItemCodecProperties` records through
+`SourceDescriptor::avif_item_codec_properties()`, preserving source-local item
+ID, exact payload, declared bit depth, and chroma sample position. This is
+source provenance only: it does not select a decoder, expose planes, compose
+tiles, infer range/quality, or transform decoded samples. Pillow has no
+item-level codec-configuration result, so the real alpha/grid assertions and
+duplicate-association rejection remain Rust-only feature-gated evidence with
+no parity row or coverage hook.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the
@@ -286,9 +295,8 @@ supported grid-derived alpha `auxl` relationships, the bounded grid-derived
 item list, bounded `iref` edges, and filtered `prem` relationships are retained in
 `SourceDescriptor`; validated primary-grid payload topology is retained through
 `SourceDescriptor::avif_grid_properties()`, while tile placement/composition,
-track-only content,
-unknown-item-property semantics, and auxiliary-item decoding remain outside
-this model.
+track-only content, interpretation/replay of unknown item properties, and
+auxiliary-item decoding remain outside this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
 position, `clli` content-light-level property, `mdcv` mastering-display color
 volume, and `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
@@ -307,8 +315,9 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Other non-primary/auxiliary profiles, track-only item semantics, item
-color/property forms beyond typed CICP, raw ICC, and raw unknown properties, grid tile
+Other non-primary/auxiliary profiles beyond raw ICC, track-only item semantics,
+item color/property forms beyond typed CICP, raw ICC, raw unknown, plane, and
+codec declarations, grid tile
 placement/composition, and broader derived/grid graph semantics remain outside
 the current model; bounded direct,
 supported grid-derived alpha
