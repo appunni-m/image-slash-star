@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `2f4b2afd58d813083d878bce2b6f1cea8968799a`, and benchmark-protocol revision
+revision `5929982b72e1edca9cce7cd82658b6f66ba29c89`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`2f4b2afd58d813083d878bce2b6f1cea8968799a`; the accepted managed records
+`5929982b72e1edca9cce7cd82658b6f66ba29c89`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,21 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The JPEG entropy output-buffer ownership slice is implemented at production
+revision `5929982b72e1edca9cce7cd82658b6f66ba29c89`. Baseline and progressive
+entropy writers now take ownership of the already-built JPEG output buffer;
+restart markers remain in that buffer, and checkpoint observations use the
+same per-entropy-segment lengths as the former resettable staging writers.
+Progressive scans likewise return the same buffer after each scan. This
+removes the separate entropy staging buffers and their final copies without
+changing markers, encoded bytes, or work-budget values. The 47 JPEG encode
+parity rows, complete 28-function fixture matrix, all 45 feature-gated Rust
+contracts, and full all-feature tests passed locally. Pillow remains the exact
+encoded-byte/error oracle; buffer ownership and typed work budgets are
+Rust-only contracts. No new fixture, test function, diagnostic origin, or
+coverage-only hook was added. No managed parity, feature-matrix, or Coverage
+MCP rerun is claimed for this revision.
 
 The GIF sequence frame-ownership slice is implemented at production revision
 `2f4b2afd58d813083d878bce2b6f1cea8968799a`. After the prepared frames have
