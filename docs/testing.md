@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`336e61988c1873f32d70626e9f1fba608e7c84a6`; the claim-ledger baseline remains
+`3dc95ea179b4be2c664ec2402ca0c8635e463e7f`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -624,6 +624,9 @@ untouched. The later image-palette construction boundary is
 `maximum: 6`, `observed: 7`, with `[0xBA]` untouched after four earlier
 conversion intervals; RGBA hidden-RGB cleanup is `18/19` with `[0xB7]`, palette
 lookup is `9,820/9,821` with `[0xA9]`, and palette-mode packing is `5,205/5,206`;
+the ordered unique-color palette-drain boundary added at
+`3dc95ea179b4be2c664ec2402ca0c8635e463e7f` is `18/19` with `[0xC7]`
+untouched after its fourth 1,024-color checkpoint;
 the token-aware cost-manager table initialization now leaves only `[0xC3]`
 before that bounded sink rejection. The token-aware backward-reference result
 backfill also polls every 256 backfilled entries, so a constant 1×512 RGB
@@ -949,7 +952,7 @@ current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
 84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
 feature-matrix, and coverage records remain separate evidence systems.
 
-Current WebP histogram-collection acceptance record
+Historical acceptance record: WebP histogram collection
 
 Implementation revision `336e61988c1873f32d70626e9f1fba608e7c84a6` adds a
 token-aware checkpoint to lossless VP8L's populated tile-histogram filter and
@@ -965,24 +968,43 @@ rollback contract, so the existing feature-gated contract remains the correct
 home. No new test function, fixture-manifest row, diagnostic origin,
 synthetic unit test, or coverage-only hook was added.
 
+Current WebP palette-drain acceptance record
+
+Implementation revision `3dc95ea179b4be2c664ec2402ca0c8635e463e7f` adds a
+token-aware checkpoint to lossless VP8L's ordered unique-color palette drain
+after each 1,024 colors. The ordinary no-token `BTreeSet` drain remains the
+existing tight iterator. The same existing
+`encode_work_budget_is_a_non_parity_result_contract` uses the 64×64
+`lossless_image` probe, which reaches the fourth drain checkpoint; whole-buffer
+and direct-sink calls reject at `maximum: 18`, `observed: 19`, with sentinel
+`[0xC7]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added.
+
 Exact-head managed feature-matrix run
-`c9f91c09-dad0-4e50-893c-7b42a8b32b03` passed all 33 configured lanes in
-82,826 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`47b16e65-d4bf-414f-9cff-58c6172c3f15` passed all 33 configured lanes in
+57,196 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
 `debug=0`, and `verbose=0`; its retained log contains the capability-table
 agreement marker and no `lock-wait` match. Exact-head Pillow parity run
-`8dbdcc02-9e67-42a3-9207-f2ca4343701a` passed 1,445/1,445 checks in 10,701 ms.
+`af6b89cc-3e27-480f-9384-fba0238f83c6` passed 1,445/1,445 checks in 1,480 ms.
 
-Nightly LLVM run `f32f2768-f9e5-4459-b930-d6807865b332` passed 85/85 tests in
-70,916 ms and ingested snapshot
-`c48bc742-ea7b-4f91-963e-74f60edfadac`, retaining 54,234/55,055 lines,
-7,693/7,892 branches, 3,080/3,160 functions, and 83,706/85,528 regions.
+Nightly LLVM run `a3428d4d-cda7-49cc-86c3-97e77b65e3f4` passed 85/85 tests in
+63,570 ms and ingested snapshot
+`4abde553-9342-4f9a-9602-4d2a80243b30`, retaining 54,243/55,064 lines,
+7,695/7,894 branches, 3,080/3,160 functions, and 83,721/85,545 regions.
 Compared with the preceding accepted snapshot
-`66e5687a-1cda-4c61-bf1b-8e83f9c12146`, covered/source deltas are `+9/+9`
-lines, `+6/+6` branches, `+0/+0` functions, and `+20/+20` regions. The
-histogram source file is 782/782 lines, 172/172 branches, 39/39 functions,
-and 1,185/1,210 regions. The known LLVM JSON segment-normalization warning
+`c48bc742-ea7b-4f91-963e-74f60edfadac`, covered/source deltas are `+9/+9`
+lines, `+2/+2` branches, `+0/+0` functions, and `+15/+17` regions. The
+current `src/codecs/webp/native/encoder.rs` file is 2,017/2,096 lines,
+443/470 branches, 93/93 functions, and 2,989/3,242 regions; the histogram
+file remains 782/782 lines, 172/172 branches, 39/39 functions, and
+1,184/1,210 regions. The known LLVM JSON segment-normalization warning
 remains; the current aggregate shortfall is 821 lines, 199 branches,
-80 functions, and 1,822 regions. The parity, feature-matrix, and coverage
+80 functions, and 1,824 regions. The parity, feature-matrix, and coverage
 records remain separate evidence systems.
 
 Current WebP histogram row-transition acceptance record
@@ -2360,8 +2382,9 @@ Huffman-tree simple-tree symbol-discovery, token-frequency, trailing-token-trim,
 and code-length-emission checkpoints, plus RGB-equal grayscale-preparation
 checkpoints, candidate-trial prefix reuse, lossy WebP RGBA alpha-palette
 source-collection, index-packing, and candidate-scan checkpoints, and lossless WebP
-VP8L source-pixel materialization, image-palette-construction,
-palette-mode index-packing, palette-index lookup, palette sign, nearest-delta candidate-scan, and RGBA
+VP8L source-pixel materialization, image-palette source scans, ordered
+unique-color palette drains, palette-mode index-packing, palette-index lookup,
+palette sign, nearest-delta candidate-scan, and RGBA
 hidden-RGB cleanup checkpoints, plus compile-only matrix runtime
 
 The token-aware VP8L entropy-mode analysis now charges cooperative checkpoints

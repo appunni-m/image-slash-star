@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`336e61988c1873f32d70626e9f1fba608e7c84a6`; the claim-ledger baseline remains
+`3dc95ea179b4be2c664ec2402ca0c8635e463e7f`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -614,8 +614,9 @@ each 16,384-boolean first-partition-bit interval,
 each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient interval, each 16,384-boolean coefficient-bit
 interval, each 1,024-byte boolean-bitstream
 output interval, and final container assembly. Lossless WebP VP8L RGB/RGBA
-source-pixel materialization and image-palette construction after each 1,024
-source pixels, palette-index lookup candidate
+source-pixel materialization, image-palette source scans, and ordered
+unique-color palette drains after each 1,024 source pixels or colors,
+palette-index lookup candidate
 scans, palette sign collection, and nearest-delta ordering
 likewise charge after each 64 palette
 entries or candidate values in the token-aware path.
@@ -630,8 +631,8 @@ additionally charges after each 1,024 MCUs, and entropy coding charges after
 each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP VP8L RGB/RGBA source-pixel materialization, image-palette
-construction, and palette-mode index packing additionally charge after each
-1,024 source pixels; it also charges around RGBA
+source scans, ordered unique-color palette drains, and palette-mode index
+packing additionally charge after each 1,024 source pixels or colors; it also charges around RGBA
 hidden-RGB cleanup after each
 1,024 scanned pixels, RGB-equal grayscale preparation after each 1,024 pixels,
 predictor source-snapshot copying, tile scans, mode application, and
@@ -693,8 +694,9 @@ selected macroblocks, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 
 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical first-partition intervals, 16,384-boolean first-partition-bit intervals,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, 16,384-boolean coefficient-bit intervals,
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
-VP8L RGB/RGBA source-pixel materialization, image-palette construction, and
-palette-mode index packing after each 1,024 source pixels and hidden-RGB cleanup
+VP8L RGB/RGBA source-pixel materialization, image-palette source scans,
+ordered unique-color palette drains, and palette-mode index packing after each
+1,024 source pixels or colors and hidden-RGB cleanup
 after each 1,024 scanned pixels, plus
 palette-index lookup candidate scans after each 64 palette entries, palette sign
 and nearest-delta candidate scans after each 64 palette entries
