@@ -1785,6 +1785,11 @@ pub(super) struct CandidateScratch {
     // each trial. Retain a bounded pool so the next stream can seed cache
     // selection without allocating another pixel-scaled token buffer.
     pub(super) result_pool: Vec<Vec<Token>>,
+    // The candidate list itself is bounded to the standard and optional
+    // box-chain candidates. Retain its outer allocation across image streams;
+    // the token vectors remain independently owned by `result_pool` or the
+    // active trial.
+    pub(super) result_list: Vec<(Vec<Token>, u8)>,
 }
 
 fn trace_backwards(
@@ -2044,8 +2049,11 @@ pub(super) fn candidates(
     scratch: &mut CandidateScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<Vec<(Vec<Token>, u8)>> {
+    let mut result = core::mem::take(&mut scratch.result_list);
+    result.clear();
     if pixels.is_empty() {
-        return Ok(vec![(Vec::new(), 0)]);
+        result.push((Vec::new(), 0));
+        return Ok(result);
     }
     fill_hash_chain(
         pixels,
@@ -2141,7 +2149,7 @@ pub(super) fn candidates(
     } else {
         rle
     };
-    let mut result = vec![(std::mem::take(&mut primary.0), primary.1)];
+    result.push((std::mem::take(&mut primary.0), primary.1));
 
     // libwebp evaluates its low-distance "box" chain as a separate crunch
     // configuration for palette images containing at most sixteen colors.

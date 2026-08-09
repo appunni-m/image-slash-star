@@ -1163,7 +1163,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
-    let candidates = backward_refs::candidates(
+    let mut candidates = backward_refs::candidates(
         pixels,
         width,
         write_meta_huffman_bit,
@@ -1176,69 +1176,75 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     // Candidate trials share the already-emitted prefix. Keeping that prefix
     // out of each trial avoids an O(prefix × candidate-count) copy/allocation;
     // leave the parent writer in place until the winning suffix is selected.
-    let initial_byte_length = w.writer.len();
-    let initial_buffer = w.buffer;
-    let initial_nbits = w.nbits;
-    let initial_checkpoint = w.checkpoint.clone();
-    let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
-    for (tokens, cache_bits) in candidates {
-        output_scratch.clear();
-        let (byte_length, buffer, nbits, checkpoint) = {
-            let mut trial = BitWriter {
-                writer: output_scratch,
-                buffer: initial_buffer,
-                nbits: initial_nbits,
-                checkpoint: initial_checkpoint.clone(),
+    let result = (|| -> Result<(), EncodingError> {
+        let initial_byte_length = w.writer.len();
+        let initial_buffer = w.buffer;
+        let initial_nbits = w.nbits;
+        let initial_checkpoint = w.checkpoint.clone();
+        let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
+        for (tokens, cache_bits) in candidates.drain(..) {
+            output_scratch.clear();
+            let (byte_length, buffer, nbits, checkpoint) = {
+                let mut trial = BitWriter {
+                    writer: output_scratch,
+                    buffer: initial_buffer,
+                    nbits: initial_nbits,
+                    checkpoint: initial_checkpoint.clone(),
+                };
+                write_token_stream(
+                    &mut trial,
+                    pixels,
+                    width,
+                    &tokens,
+                    TokenStreamConfig {
+                        write_meta_huffman_bit,
+                        cache_bits,
+                        histogram_bits,
+                        quality,
+                    },
+                    token_scratch,
+                    token,
+                )?;
+                let checkpoint = trial.checkpoint.clone();
+                (
+                    initial_byte_length
+                        .saturating_add(trial.writer.len())
+                        .saturating_add(usize::from(trial.nbits).div_ceil(8)),
+                    trial.buffer,
+                    trial.nbits,
+                    checkpoint,
+                )
             };
-            write_token_stream(
-                &mut trial,
-                pixels,
-                width,
-                &tokens,
-                TokenStreamConfig {
-                    write_meta_huffman_bit,
-                    cache_bits,
-                    histogram_bits,
-                    quality,
-                },
-                token_scratch,
-                token,
-            )?;
-            let checkpoint = trial.checkpoint.clone();
-            (
-                initial_byte_length
-                    .saturating_add(trial.writer.len())
-                    .saturating_add(usize::from(trial.nbits).div_ceil(8)),
-                trial.buffer,
-                trial.nbits,
-                checkpoint,
-            )
-        };
-        if best
-            .as_ref()
-            .is_none_or(|(best_length, ..)| byte_length < *best_length)
-        {
-            let suffix = core::mem::take(output_scratch);
-            if let Some((_, previous_suffix, ..)) =
-                best.replace((byte_length, suffix, buffer, nbits, checkpoint))
+            if best
+                .as_ref()
+                .is_none_or(|(best_length, ..)| byte_length < *best_length)
             {
-                *output_scratch = previous_suffix;
+                let suffix = core::mem::take(output_scratch);
+                if let Some((_, previous_suffix, ..)) =
+                    best.replace((byte_length, suffix, buffer, nbits, checkpoint))
+                {
+                    *output_scratch = previous_suffix;
+                }
             }
+            token_scratch.candidates.result_pool.push(tokens);
         }
-        token_scratch.candidates.result_pool.push(tokens);
-    }
-    // At most the standard and optional box-chain candidates are emitted for
-    // one stream. Keep the pool bounded even when the cache scratch already
-    // has sufficient capacity and did not consume a pooled vector.
-    token_scratch.candidates.result_pool.truncate(2);
-    let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
-    w.writer.reserve(suffix.len());
-    extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
-    *output_scratch = suffix;
-    w.buffer = buffer;
-    w.nbits = nbits;
-    w.checkpoint = checkpoint;
-    Ok(())
+        // At most the standard and optional box-chain candidates are emitted
+        // for one stream. Keep the pool bounded even when the cache scratch
+        // already has sufficient capacity and did not consume a pooled vector.
+        token_scratch.candidates.result_pool.truncate(2);
+        let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
+        w.writer.reserve(suffix.len());
+        extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
+        *output_scratch = suffix;
+        w.buffer = buffer;
+        w.nbits = nbits;
+        w.checkpoint = checkpoint;
+        Ok(())
+    })();
+    // `drain` leaves the result-list allocation available for the next image
+    // stream. Restore it even when a token-aware trial is cancelled or fails.
+    token_scratch.candidates.result_list = candidates;
+    result
 }
 
 struct GroupCodes {
