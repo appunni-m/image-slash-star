@@ -1032,11 +1032,12 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     let initial_nbits = w.nbits;
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
+    let mut scratch = Vec::new();
     for (tokens, cache_bits) in candidates {
-        let mut bytes = Vec::new();
+        scratch.clear();
         let (byte_length, buffer, nbits, checkpoint) = {
             let mut trial = BitWriter {
-                writer: &mut bytes,
+                writer: &mut scratch,
                 buffer: initial_buffer,
                 nbits: initial_nbits,
                 checkpoint: initial_checkpoint.clone(),
@@ -1068,7 +1069,12 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
             .as_ref()
             .is_none_or(|(best_length, ..)| byte_length < *best_length)
         {
-            best = Some((byte_length, bytes, buffer, nbits, checkpoint));
+            let suffix = core::mem::take(&mut scratch);
+            if let Some((_, previous_suffix, ..)) =
+                best.replace((byte_length, suffix, buffer, nbits, checkpoint))
+            {
+                scratch = previous_suffix;
+            }
         }
     }
     let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
