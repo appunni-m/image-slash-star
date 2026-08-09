@@ -6123,6 +6123,7 @@ report answers "which implementation paths executed?"; it does not answer
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
 | VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts and malformed parser code/phase/bit-offset witnesses, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
+| Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` | Clean-revision workload timings, manifest/matrix hashes, and native release/WASM compile artifact sizes with parity and Rust-only provenance kept separate | Universal performance, peak-memory, allocation, stack, caller-buffer-reuse, or WASM-runtime claims |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
@@ -6155,6 +6156,29 @@ diagnostics. The map adds no synthetic parity row, `cfg(coverage)` hook, or
 Rust unit test. The remaining WEP-022 work is to expand the successful
 structural witnesses to every claimed combination without changing the Pillow
 parity claim.
+
+### Revision-bound fixture benchmark protocol
+
+`scripts/benchmark_fixture_workloads.py` is the executable protocol for the
+remaining QA-010/QA-030 measurement work. It refuses a dirty worktree by
+default and emits the current commit, host/toolchain identities, manifest and
+generated-matrix hashes, active-row summary, and one record per selected
+workload:
+
+```bash
+python3 scripts/benchmark_fixture_workloads.py --output /tmp/image-star-benchmark.json
+```
+
+The `pillow_parity_fixture_suite` record runs only the generated
+`coverage_matrix_tests` workload. The separate
+`rust_non_parity_feature_gate_suite` record runs the existing
+`feature_gate_tests` contract, whose cancellation, work-budget, sink, policy,
+and structured-diagnostic fields have no Pillow result field. Release-library
+and `wasm32-unknown-unknown` compile workloads record artifact sizes. These
+are revision-bound observations for a fixed host/cache/toolchain, not universal
+benchmarks. The protocol intentionally reports allocation counts, retained
+encoded/decoded cache bytes, caller-buffer reuse, peak RSS, peak stack, and
+WASM runtime time/memory as unmeasured until dedicated collectors exist.
 
 ### Feature and target matrix
 
