@@ -4,8 +4,8 @@
   "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
   "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
   "coverage": {
-    "run_id": "96813ff1-b9e7-45ac-945c-2c0318bc8538",
-    "snapshot_id": "026d33d8-47e7-4d36-99a1-08757710f186",
+    "run_id": "e55c08c4-1bdc-4044-bcfd-5ae919ad03a3",
+    "snapshot_id": "90285a8d-64e1-403c-bff3-1c3267104936",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -19,7 +19,7 @@
     "capability_tables": "44ecb9e7fe31ede7b0e74535b1207922f25bfd82ed1be922d1ec6067f9f290e1",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
-    "coverage_origins": "9456a51672e91a67194609dec32d84e62f23bbf6946a8384a1482720017df894",
+    "coverage_origins": "6f359c96de0ca483fa28c13ace2592b34a0bb0ff9ffb5cdf14877a8bb6897c2a",
     "webp_property_map": "b5724e532c28d63bf74fe62b492e82529b8bf58af2540d650f0c32c79418ae75",
     "webp_property_inspector": "833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541"
   }

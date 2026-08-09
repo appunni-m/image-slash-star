@@ -2,10 +2,11 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-09 on the committed tree based on revision
-`487348d01389eb8d100b8a668c9921d97634c022`; the current claim-ledger tuple is
-pinned to that implementation revision and accepted Coverage MCP snapshot
-`026d33d8-47e7-4d36-99a1-08757710f186`.
+Reviewed: 2026-08-09 on current implementation revision
+`f8fd846f0f1ebd7bc15444698626009a31ef7004`; the claim-ledger fixture tuple
+remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`,
+and the accepted Coverage MCP snapshot for this revision is
+`90285a8d-64e1-403c-bff3-1c3267104936`.
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
