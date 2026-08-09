@@ -11,10 +11,10 @@ The last accepted managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`8b128004-3cd6-46eb-9447-09f56390c841` (1,445/1,445 passed in 618 ms) and
-feature matrix `f94b5a83-4b25-4ff4-be0c-000cc918f115` (passed in 23,420 ms);
+`5db3e841-8bc3-4288-8e5c-ab2160394d33` (1,445/1,445 passed in 607 ms) and
+feature matrix `a130342c-215b-4493-b53b-11d93a8ee540` (passed in 15,311 ms);
 both recorded checkout HEAD
-`fc56627eb07deb931da462c077ec81dab9c6e702`.
+`f83435351aadf13e0b320dd7a42f830d52c84895`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
@@ -198,7 +198,7 @@ Pillow assertion schema.
 Revision-bound note: the trace CostManager buffer-reuse implementation at
 `fc56627eb07deb931da462c077ec81dab9c6e702` has no managed coverage snapshot.
 The current managed Pillow and feature-matrix runs are test-result evidence
-from exact-head checkout `fc56627eb07deb931da462c077ec81dab9c6e702`, not
+from exact-head checkout `f83435351aadf13e0b320dd7a42f830d52c84895`, not
 coverage metrics or a Coverage MCP claim. The accepted Coverage MCP snapshot and
 its line/branch/function/region totals remain historical implementation/Rust
 coverage evidence, separate from Pillow-oracle parity.
@@ -6392,20 +6392,21 @@ resets candidate-specific values and preserves the token-aware initialization
 checkpoints; the no-token path remains tight. Existing WebP fixture rows
 (28/13/47), the full fixture matrix, all 45 feature-gated Rust contracts,
 strict Clippy, and the clean benchmark protocol provide the regression
-evidence. The clean benchmark passed the Pillow-parity workload in 0.944112 s
-wall / 2.840572 user s / 0.212863 sys s / 250,773,504-byte peak RSS and the
-separate Rust-only feature-gate workload in 1.644726 s wall / 2.341338 user s /
-0.115296 sys s / 181,305,344-byte peak RSS. The native release `rlib` was
-7,996,912 bytes and the `wasm32-unknown-unknown` determinism artifact was
-24,857,631 bytes. These are host/cache/toolchain observations, not comparative
-or universal performance claims. Pillow remains the byte/error oracle;
+evidence. The clean warm benchmark at final checkout
+`f83435351aadf13e0b320dd7a42f830d52c84895` passed the Pillow-parity workload in
+1.153682 s wall / 3.423246 user s / 0.247221 sys s / 293,060,608-byte peak RSS
+and the separate Rust-only feature-gate workload in 1.782899 s wall /
+2.567871 user s / 0.150656 sys s / 231,702,528-byte peak RSS. The native
+release `rlib` was 7,996,744 bytes and the `wasm32-unknown-unknown` determinism
+artifact was 24,857,623 bytes. These are host/cache/toolchain observations, not
+comparative or universal performance claims. Pillow remains the byte/error oracle;
 CostManager scratch ownership is Rust-only evidence. No parity row,
 fixture-manifest entry, diagnostic origin, new test function, or coverage-only
 hook was added. Exact-head managed Pillow parity run
-`8b128004-3cd6-46eb-9447-09f56390c841` passed 1,445/1,445 checks in 618 ms.
+`5db3e841-8bc3-4288-8e5c-ab2160394d33` passed 1,445/1,445 checks in 607 ms.
 Exact-head feature-matrix run
-`f94b5a83-4b25-4ff4-be0c-000cc918f115` passed all configured native/WASI lanes
-in 23,420 ms; its retained log has the capability agreement marker and no
+`a130342c-215b-4493-b53b-11d93a8ee540` passed all configured native/WASI lanes
+in 15,311 ms; its retained log has the capability agreement marker and no
 `lock-wait` match. Both managed runs have no configured coverage ingestion, so
 no Coverage MCP metric is claimed.
 
@@ -7219,16 +7220,17 @@ scratch across sequential trace attempts. Each attempt resets candidate-specific
 values and preserves the token-aware initialization checkpoints; the no-token
 path remains tight. This is a Rust-only CostManager allocation boundary: the
 existing WebP encode rows and fixture matrix are byte/error regression evidence,
-while Pillow exposes no allocation contract. Clean `fixture-benchmark@3`
-observations passed the Pillow-parity workload (0.944112 s wall) and the
-separate Rust-only feature-gate workload (1.644726 s wall); these are
-host/cache/toolchain observations, not a comparative or universal performance
-claim. The native release `rlib` was 7,996,912 bytes and the
-`wasm32-unknown-unknown` determinism artifact was 24,857,631 bytes. No parity
-row, fixture-manifest entry, diagnostic origin, new test function, or
+while Pillow exposes no allocation contract. The clean warm
+`fixture-benchmark@3` observation at final checkout
+`f83435351aadf13e0b320dd7a42f830d52c84895` passed the Pillow-parity workload
+(1.153682 s wall) and the separate Rust-only feature-gate workload (1.782899 s
+wall); these are host/cache/toolchain observations, not a comparative or
+universal performance claim. The native release `rlib` was 7,996,744 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,857,623 bytes. No
+parity row, fixture-manifest entry, diagnostic origin, new test function, or
 coverage-only hook was added. Exact-head managed Pillow parity run
-`8b128004-3cd6-46eb-9447-09f56390c841` passed 1,445/1,445 checks; exact-head
-feature-matrix run `f94b5a83-4b25-4ff4-be0c-000cc918f115` passed all configured
+`5db3e841-8bc3-4288-8e5c-ab2160394d33` passed 1,445/1,445 checks; exact-head
+feature-matrix run `a130342c-215b-4493-b53b-11d93a8ee540` passed all configured
 native/WASI lanes with the capability agreement marker and no `lock-wait` match.
 Both managed runs have no configured coverage ingestion, so no Coverage MCP
 metric is claimed.
