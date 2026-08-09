@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`2c4d994227deb9cdc06c44228d39a6d6689d1bbf`; the claim-ledger baseline remains
+`336e61988c1873f32d70626e9f1fba608e7c84a6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -390,8 +390,8 @@ after each 64 code-length slots, code-length-token frequency, and trailing
 zero-repeat token trim checkpoints after each 16 compressed token entries; Huffman
 RLE code-length run scans also poll whenever a 64-symbol boundary is crossed
 inside a long equal-length run; the
-histogram-clustering min/max and bin-assignment pre-passes also checkpoint after
-each 64 tile histograms; the
+histogram-clustering populated-tile collection, min/max, and bin-assignment
+pre-passes also checkpoint after each 64 tile histograms; the
 meta-histogram sampling row/column comparisons and symbol compaction also
 checkpoint after each 1,024 symbols; the
 token-aware Huffman-node ordering path uses a stable bottom-up merge sort and
@@ -655,8 +655,9 @@ Huffman RLE preparation and in-run code-length scans after each 64 symbols,
 canonical-code assignment scans after each 64 symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
-code-length-emission scans after each 16 compressed token entries, histogram-clustering min/max and
-bin-assignment pre-passes after each 64 tile histograms, histogram clustering
+code-length-emission scans after each 16 compressed token entries, histogram-clustering
+populated-tile collection, min/max, and bin-assignment pre-passes after each 64
+tile histograms, histogram clustering
 (including token-aware population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, each 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream interval, and each 1,024-byte
@@ -714,8 +715,9 @@ Huffman RLE preparation and in-run code-length scans after each 64 symbols,
 canonical-code assignment scans after each 64 symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
-code-length-emission scans after each 16 compressed token entries, histogram-clustering min/max and
-bin-assignment pre-passes after each 64 tile histograms, histogram population,
+code-length-emission scans after each 16 compressed token entries, histogram-clustering
+populated-tile collection, min/max and bin-assignment pre-passes after each 64
+tile histograms, histogram population,
 combined entropy-cost, and
 histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, and
 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte bitstream-output stages, codec-result, and metadata-assembly

@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`2c4d994227deb9cdc06c44228d39a6d6689d1bbf`; the claim-ledger baseline remains
+`336e61988c1873f32d70626e9f1fba608e7c84a6`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -435,8 +435,9 @@ Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
 code-length-emission scans after each 16 compressed token entries, entropy-mode histogram-cost
 analysis after each 64 symbols,
-histogram-clustering min/max and bin-assignment pre-passes after each 64 tile
-histograms, token-to-row transitions after each 256 rows, and histogram clustering (including token-aware
+histogram-clustering populated-tile collection, min/max, and bin-assignment
+pre-passes after each 64 tile histograms, token-to-row transitions after each
+256 rows, and histogram clustering (including token-aware
 population scans after each 64
 symbols), Huffman-tree/group emission, token-stream
 intervals, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, and 1,024-byte
@@ -947,6 +948,42 @@ current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
 1,822 regions. In `src/codecs/webp/encode/mod.rs`, coverage is 617/740 lines,
 84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
 feature-matrix, and coverage records remain separate evidence systems.
+
+Current WebP histogram-collection acceptance record
+
+Implementation revision `336e61988c1873f32d70626e9f1fba608e7c84a6` adds a
+token-aware checkpoint to lossless VP8L's populated tile-histogram filter and
+clone loop after each 64 histograms. The ordinary no-token path retains its
+original iterator. The existing `encode_work_budget_is_a_non_parity_result_contract`
+uses the 64×64 `lossless_image` probe, which has exactly 64 histogram tiles;
+whole-buffer and direct-sink calls reject at `maximum: 15,198`,
+`observed: 15,199`, with sentinel `[0xC8]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so the existing feature-gated contract remains the correct
+home. No new test function, fixture-manifest row, diagnostic origin,
+synthetic unit test, or coverage-only hook was added.
+
+Exact-head managed feature-matrix run
+`c9f91c09-dad0-4e50-893c-7b42a8b32b03` passed all 33 configured lanes in
+82,826 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Exact-head Pillow parity run
+`8dbdcc02-9e67-42a3-9207-f2ca4343701a` passed 1,445/1,445 checks in 10,701 ms.
+
+Nightly LLVM run `f32f2768-f9e5-4459-b930-d6807865b332` passed 85/85 tests in
+70,916 ms and ingested snapshot
+`c48bc742-ea7b-4f91-963e-74f60edfadac`, retaining 54,234/55,055 lines,
+7,693/7,892 branches, 3,080/3,160 functions, and 83,706/85,528 regions.
+Compared with the preceding accepted snapshot
+`66e5687a-1cda-4c61-bf1b-8e83f9c12146`, covered/source deltas are `+9/+9`
+lines, `+6/+6` branches, `+0/+0` functions, and `+20/+20` regions. The
+histogram source file is 782/782 lines, 172/172 branches, 39/39 functions,
+and 1,185/1,210 regions. The known LLVM JSON segment-normalization warning
+remains; the current aggregate shortfall is 821 lines, 199 branches,
+80 functions, and 1,822 regions. The parity, feature-matrix, and coverage
+records remain separate evidence systems.
 
 Current WebP histogram row-transition acceptance record
 
