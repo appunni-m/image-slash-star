@@ -132,7 +132,8 @@ impl EncodePolicy {
     /// encoding charges checkpoints during RGB/RGBA source-pixel
     /// materialization, image-palette construction, and palette-mode index
     /// packing after each 1,024 source pixels, plus RGBA hidden-RGB cleanup
-    /// after each 1,024 scanned pixels, predictor, cross-color, entropy,
+    /// after each 1,024 scanned pixels, predictor image-width tile-row copies,
+    /// predictor tile scans, cross-color, entropy,
     /// transform, bounded backward-reference cost/length-table initialization
     /// and setup after each 1,024 entries, token-aware cost-manager interval-
     /// update and cleanup scans after each 256 cumulative interval entries,

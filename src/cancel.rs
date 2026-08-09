@@ -38,7 +38,8 @@
 //! lossless WebP VP8L RGB/RGBA source-pixel materialization, predictor
 //! source-snapshot copying, image-palette construction, and palette-mode index
 //! packing after each 1,024 source pixels,
-//! RGB-equal grayscale preparation, predictor tile scans, mode application, and
+//! RGB-equal grayscale preparation, predictor image-width tile-row copies,
+//! tile scans, mode application, and
 //! subtract-green transforms after
 //! each 1,024 pixels,
 //! RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
