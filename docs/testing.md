@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `da2b9489fc3ac1ffcf94de5f4a685705d80d8702`, and benchmark-protocol revision
+revision `26e39ed56ba25159bea3d35cd5cc8045ee3acd06`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,15 +11,15 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`5e03a0c6-ae7b-49dc-8f06-aab4b6545ec8` (1,445/1,445 passed in 623 ms) and
-feature matrix `0eae8aea-3241-4fbc-9293-80e07d6ed1fd` (passed in 14,955 ms);
+`9d57dbfd-8f64-4a43-911f-994fbad04fce` (1,445/1,445 passed in 583 ms) and
+feature matrix `84746d1c-b3cc-4a10-a659-7dad38e728f4` (passed in 30,514 ms);
 both recorded checkout HEAD
-`da2b9489fc3ac1ffcf94de5f4a685705d80d8702`.
+`26e39ed56ba25159bea3d35cd5cc8045ee3acd06`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no Coverage MCP rerun has yet been
-recorded for `da2b9489fc3ac1ffcf94de5f4a685705d80d8702`. The exact-head managed
+recorded for `26e39ed56ba25159bea3d35cd5cc8045ee3acd06`. The exact-head managed
 parity and feature-matrix records above are test-result evidence, not coverage
 metrics.
 
@@ -638,6 +638,34 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L Huffman traversal fixed-stack storage slice is implemented
+at production and Rust test/runtime revision
+`26e39ed56ba25159bea3d35cd5cc8045ee3acd06`, following box-chain storage reuse
+at `da2b9489fc3ac1ffcf94de5f4a685705d80d8702`. Huffman tree depth traversal now
+uses a bounded fixed stack sized for the largest VP8L alphabet instead of a
+temporary heap vector per tree; tree shape, code lengths, checkpoint behavior,
+encoded bytes, errors, and sink output remain unchanged. The existing WebP
+encode matrix (28/13/47 rows), full fixture matrix, all 45 feature-gated Rust
+contracts, all 83 local all-feature tests, strict Clippy, rustfmt, and all
+configured native/WASI feature-matrix lanes passed. The clean warm
+`fixture-benchmark@3` observation at source checkout
+`26e39ed56ba25159bea3d35cd5cc8045ee3acd06` passed the Pillow-parity workload in
+1.088299 s wall / 3.084727 user s / 0.286170 sys s /
+284,033,024-byte peak RSS, and the separate Rust-only feature-gate workload in
+1.613453 s wall / 2.308328 user s / 0.107688 sys s /
+193,626,112-byte peak RSS. The native release `rlib` was 7,996,704 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,839,363 bytes. These
+are host/cache/toolchain observations, not comparative or universal performance
+claims; peak RSS is a direct-child POSIX observation. Pillow remains the
+byte/error oracle, while fixed-stack ownership is Rust-only evidence: no parity
+row, fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook was added. Exact-head managed Pillow parity run
+`9d57dbfd-8f64-4a43-911f-994fbad04fce` passed 1,445/1,445 checks, and exact-head
+feature-matrix run `84746d1c-b3cc-4a10-a659-7dad38e728f4` passed all configured
+native/WASI lanes in 30,514 ms with the capability agreement marker and no
+`lock-wait` match. Both managed runs have `coverage_ingest.status=not_configured`;
+they are test-result evidence, not Coverage MCP metrics.
 
 The lossless WebP VP8L box-chain storage-reuse slice is implemented at
 production and Rust test/runtime revision
@@ -3178,6 +3206,33 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L Huffman traversal fixed-stack storage
+
+The production and Rust test/runtime slice is implemented at
+`26e39ed56ba25159bea3d35cd5cc8045ee3acd06`, following the preceding
+`da2b9489fc3ac1ffcf94de5f4a685705d80d8702` box-chain storage reuse. Huffman
+tree depth traversal now uses a bounded fixed stack sized for the largest VP8L
+alphabet instead of allocating a temporary heap vector for each tree. Tree
+shape, code lengths, checkpoint behavior, encoded bytes, errors, and sink output
+remain unchanged. Existing WebP fixture rows (28/13/47), the full fixture
+matrix, all 45 feature-gated Rust contracts, strict Clippy, and the clean
+benchmark protocol provide the regression evidence. The clean warm benchmark
+passed the Pillow-parity workload in 1.088299 s wall / 3.084727 user s /
+0.286170 sys s / 284,033,024-byte peak RSS and the separate Rust-only
+feature-gate workload in 1.613453 s wall / 2.308328 user s / 0.107688 sys s /
+193,626,112-byte peak RSS. The native release `rlib` was 7,996,704 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,839,363 bytes. These
+are host/cache/toolchain observations, not comparative or universal performance
+claims. Pillow remains the byte/error oracle; fixed-stack ownership is Rust-only
+evidence. No parity row, fixture-manifest entry, diagnostic origin, new test
+function, or coverage-only hook was added. Exact-head managed Pillow parity run
+`9d57dbfd-8f64-4a43-911f-994fbad04fce` passed 1,445/1,445 checks in 583 ms.
+Exact-head feature-matrix run
+`84746d1c-b3cc-4a10-a659-7dad38e728f4` passed all configured native/WASI lanes
+in 30,514 ms; its retained log has the capability agreement marker and no
+`lock-wait` match. Both managed runs have no configured coverage ingestion, so
+no Coverage MCP metric is claimed.
 
 Current acceptance record: WebP VP8L box-chain storage reuse
 

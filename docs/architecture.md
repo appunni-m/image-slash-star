@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `da2b9489fc3ac1ffcf94de5f4a685705d80d8702`; the claim-ledger fixture tuple
+revision `26e39ed56ba25159bea3d35cd5cc8045ee3acd06`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -21,7 +21,8 @@ scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
 metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
 WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
 reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
-token scratch reuse, WebP VP8L box-chain storage reuse, GIF indexed
+token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
+traversal fixed-stack storage, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -775,6 +776,13 @@ primary hash-chain storage in place after the primary candidate has been
 consumed, avoiding a second pixel-sized `(distance, length)` result vector.
 The box-chain search, candidate ordering, checkpoint behavior, encoded bytes,
 errors, and sink output remain unchanged. This is a Rust-only box-chain storage
+optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
+
+WebP VP8L Huffman depth traversal uses a bounded fixed stack sized for the
+largest VP8L alphabet instead of allocating a temporary heap vector for each
+tree. Tree shape, code lengths, checkpoint behavior, encoded bytes, errors, and
+sink output remain unchanged. This is a Rust-only Huffman traversal storage
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
 
