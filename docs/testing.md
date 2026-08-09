@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`863b68844fa871500bf7c88b29de77f76c24b258`; the claim-ledger baseline remains
+`446a4a723b8a5ed066b20b0086669cb927ec92b4`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -412,7 +412,8 @@ interval, after each 16,384-boolean first-partition bit interval, after each
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
 Lossless WebP
-VP8L additionally charges around predictor tile scans/mode application and
+VP8L additionally charges around predictor image-width tile-row copies, tile
+scans/mode application and
 subtract-green transforms after each 1,024 pixels,
 cross-color multiplier search/transform tiles and sampling scans/compaction,
 including meta-histogram row/column comparisons and symbol compaction after
@@ -870,6 +871,43 @@ allocation, or peak-memory evidence still required by QA-010 and QA-030.
 Exact-head Pillow parity run `995d9dcf-14c4-4566-a463-40b5b7cc573d` passed
 1,445/1,445 checks in 642 ms. The parity surface and coverage totals remain
 unchanged.
+
+Current WebP predictor row-copy acceptance record
+
+Implementation revision `446a4a723b8a5ed066b20b0086669cb927ec92b4` makes the
+token-aware VP8L predictor tile scan copy each image-width source row in
+1,024-pixel chunks and poll after each completed chunk. The ordinary no-token
+branch keeps its original bulk `copy_from_slice`, so Pillow-visible bytes and
+the no-token hot path remain unchanged. The existing
+`encode_work_budget_is_a_non_parity_result_contract` reaches this row-copy
+boundary at `maximum: 3,675`, `observed: 3,676` in both whole-buffer and
+caller-owned-sink calls; the sink sentinel remains `[0xAA]`.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so the existing feature-gate contract remains the correct
+home. No new test function, fixture-manifest row, diagnostic origin,
+synthetic unit test, or coverage-only hook was added.
+
+Exact-head managed feature-matrix run
+`e536c225-71a7-4e56-80e8-f75ecc259b1e` passed all 33 configured lanes in
+30,606 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Exact-head Pillow parity run
+`cc4ba163-57eb-4bfa-a1f9-6f9915872a20` passed 1,445/1,445 checks in 606 ms.
+
+Nightly LLVM run `8c53809f-62dd-40a2-9c64-a2e57031d396` passed 85/85 tests in
+49,992 ms and ingested snapshot
+`9cbeb2a1-b603-407f-9f4d-93d65cb73061`, retaining 54,152/54,878 lines,
+7,666/7,856 branches, 3,077/3,155 functions, and 83,583/85,197 regions.
+Compared with the preceding accepted snapshot
+`48ef5dc3-f331-483d-92bf-4508c82f0102`, covered/source deltas are `+9/+13`
+lines, `+3/+6` branches, `+0/+0` functions, and `+16/+23` regions. The
+predictor source file is 320/320 lines, 62/62 branches, 23/23 functions, and
+594/599 regions covered. The known LLVM segment-normalization warning remains;
+the current aggregate shortfall is 726 lines, 190 branches, 78 functions,
+and 1,614 regions. The parity, feature-matrix, and coverage records remain
+separate evidence systems.
 
 The finer lossy WebP VP8 mode-selection, transform, trellis, distortion, and
 residual-cost slice is implemented in
