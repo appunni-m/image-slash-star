@@ -1522,17 +1522,21 @@ fn write_gif_with_token(
     }
     // `first_frame` above proves the prepared vector has the same nonzero
     // length as `frames`.
-    let mut first = prepared_frames[0].clone();
+    let has_transparency = prepared_frames
+        .iter()
+        .any(|prepared| prepared.transparent.is_some());
+    let mut prepared_frames = prepared_frames.into_iter();
+    let mut first = prepared_frames
+        .next()
+        .ok_or_else(|| CodecError::Dimensions("GIF sequence has no frames".to_owned()))?;
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background);
     let (global_count, global_size, _) = table_parameters(&first.palette);
+    let global_palette = first.palette.clone();
     // Pillow always writes the global palette for a single frame. Its
     // include_color_table option adds a duplicate local palette rather than
     // replacing the global one.
     let global_table = true;
 
-    let has_transparency = prepared_frames
-        .iter()
-        .any(|prepared| prepared.transparent.is_some());
     let needs_89a = frames.len() > 1
         || settings.loop_count.is_some()
         || settings.transparency_override == Some(true)
@@ -1543,7 +1547,7 @@ fn write_gif_with_token(
     output.extend_from_slice(&height.to_le_bytes());
     output.push(u8::from(global_table) << 7 | global_size);
     output.extend_from_slice(&[background, 0]); // Background index and pixel aspect ratio.
-    write_color_table(&mut output, &first.palette, global_count);
+    write_color_table(&mut output, &global_palette, global_count);
 
     if let Some(loop_count) = settings.loop_count {
         output.extend_from_slice(&[
@@ -1568,14 +1572,19 @@ fn write_gif_with_token(
         output.push(0);
     }
 
+    let mut first = Some(first);
     let mut previous_quantized_rgb = None::<Vec<u8>>;
     let mut previous_disposal = None::<u8>;
-    for (frame_index, (frame, prepared)) in frames.iter().zip(&prepared_frames).enumerate() {
+    for (frame_index, frame) in frames.iter().enumerate() {
         crate::codecs::error::check_cancelled(token)?;
         let mut prepared = if frame_index == 0 {
-            first.clone()
+            first.take().ok_or_else(|| {
+                CodecError::Dimensions("GIF sequence has no first frame".to_owned())
+            })?
         } else {
-            prepared.clone()
+            prepared_frames.next().ok_or_else(|| {
+                CodecError::Dimensions("GIF sequence frame preparation regressed".to_owned())
+            })?
         };
         let quantized_rgb = indexed_rgb(&prepared.indices, &prepared.palette);
         let previous_can_mask = previous_disposal != Some(2);
@@ -1643,7 +1652,7 @@ fn write_gif_with_token(
         })?;
         output.extend_from_slice(&frame_width.to_le_bytes());
         output.extend_from_slice(&frame_height.to_le_bytes());
-        let local_table = settings.local_color_table || prepared.palette != first.palette;
+        let local_table = settings.local_color_table || prepared.palette != global_palette;
         // Pillow defaults to interlacing a sufficiently large single-frame
         // GIF, but its multi-frame writer emits non-interlaced descriptors.
         let default_interlace =
