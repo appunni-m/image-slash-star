@@ -2,43 +2,22 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `aa65af084624175a0279f42ffe904107e921db8b`; the claim-ledger fixture tuple
-remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
-The accepted Coverage MCP snapshot remains anchored to the preceding managed
-test/runtime revision and is
-`208b22e7-5a8c-4884-8fd5-856293c45d01` from run
-`afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
-Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
-CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
-WebP CostManager candidate-estimate scratch reuse, WebP CostManager
-cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
-buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency
-scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
-scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
-scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
-metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
-WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
-reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
-token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
-traversal fixed-stack storage, WebP VP8L Huffman-tree arena reuse, WebP VP8L
-hash-chain result storage reuse, WebP
-VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, WebP VP8L
-backward-reference scratch reuse, WebP VP8L candidate-result token pool reuse,
-GIF indexed
-frame-diff state, TIFF sequence
-length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
-ownership, BMP row-scratch reuse, ICO BMP payload assembly,
-PNG source pixel ownership, TIFF conditional source ownership, TIFF repeated-row
-Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row
-Deflate planning, candidate-prefix
-optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
-Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
-token-materialization, and Huffman-tree leaf
-census/materialization/depth, arena, and candidate-result token-pool slices have
-not received a managed
-coverage rerun.
+Reviewed: 2026-08-10 against production implementation and Rust test/runtime
+revision `533f97ee45bcc750fb0373da6272c3955963ce22`; the claim-ledger fixture
+tuple remains anchored to base revision
+`487348d01389eb8d100b8a668c9921d97634c022`.
+The latest exact-head managed Pillow parity run is
+`331169e5-e7b7-4328-94cb-57c8779f807f` (1,445/1,445 passed in 568 ms), and the
+latest feature matrix is `3bbf783f-a160-4efe-be66-8e79bf185700` (passed in
+26,665 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `3a4b9d14-b1c4-4576-8d00-da3f3c89596c` from run
+`ad600045-94ee-4806-9d02-144befaddba1`, also at that revision: 55,607/56,463
+lines, 7,951/8,158 branches, 3,113/3,209 functions, and 85,467/87,378
+regions. The snapshot retains the known LLVM JSON segment-normalization
+warning. Predictor coverage is 366/366 lines, 68/68 branches, and 24/24
+functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
+functions. These are Rust implementation/coverage metrics, not Pillow-oracle
+coverage or allocator/OOM accounting.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -837,6 +816,15 @@ until their trial completes and nested metadata streams keep separate pools.
 Candidate ordering, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only candidate-result allocation optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L predictor and cross-color transform selection retain their
+pixel-scaled work maps in the image-stream scratch object. Predictor mode
+selection reuses its mode map, source snapshot, and upper/current rows across
+candidate modes; cross-color selection reuses and truncates its tile-sized
+color map before the map is emitted. Transform ordering, encoded bytes, errors,
+and sink output remain unchanged. These are Rust-only scratch-ownership
+optimizations, not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
