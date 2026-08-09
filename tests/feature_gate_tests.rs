@@ -11197,6 +11197,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(huffman_sort_sink, vec![0xC6]);
 
+        // The token-aware Huffman-RLE preparation also charges long run
+        // materialization in 64-symbol chunks. This reaches the first fill
+        // checkpoint after the ordering boundary while preserving the
+        // existing no-token output. Pillow has no caller token, work budget,
+        // or caller-owned sink, so this remains Rust-only evidence without a
+        // parity row, fixture-manifest entry, new test function, or
+        // coverage-only hook.
+        let huffman_rle_fill_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(2_423);
+        let huffman_rle_fill_error = match image_slash_star::encode_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &huffman_rle_fill_policy,
+        ) {
+            Ok(_) => return Err("WebP Huffman-RLE fill budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_rle_fill_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_423,
+                observed: 2_424,
+            }
+        ));
+        let mut huffman_rle_fill_sink = vec![0xC8];
+        let huffman_rle_fill_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &palette_work_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(2_422),
+            &mut huffman_rle_fill_sink,
+        ) {
+            Ok(_) => return Err("bounded WebP Huffman-RLE fill wrote output".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            huffman_rle_fill_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 2_422,
+                observed: 2_423,
+            }
+        ));
+        assert_eq!(huffman_rle_fill_sink, vec![0xC8]);
+
         let palette_work_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3_000);
         let palette_work_error = match image_slash_star::encode_with_policy(
             &palette_work_image,

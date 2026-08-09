@@ -577,7 +577,12 @@ fn optimize_huffman_for_rle_with_checkpoint(
         }
         if i == length || counts[i] != symbol {
             if (symbol == 0 && stride >= 5) || (symbol != 0 && stride >= 7) {
-                good[i - stride..i].fill(true);
+                for (index, value) in good[i - stride..i].iter_mut().enumerate() {
+                    *value = true;
+                    if (index + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                        check_token(token)?;
+                    }
+                }
             }
             stride = 1;
             if i != length {
@@ -602,7 +607,12 @@ fn optimize_huffman_for_rle_with_checkpoint(
                 if sum == 0 {
                     count = 0;
                 }
-                counts[i - stride..i].fill(count);
+                for (index, value) in counts[i - stride..i].iter_mut().enumerate() {
+                    *value = count;
+                    if (index + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                        check_token(token)?;
+                    }
+                }
             }
             stride = 0;
             sum = 0;
