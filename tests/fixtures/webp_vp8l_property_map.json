@@ -125,6 +125,12 @@
       "expect": {"stream_index": 0, "stream": {"green_values_contains": [13]}}
     },
     {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "encode",
+      "row_id": "enc_lossless_indexed",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [4]}}
+    },
+    {
       "property_id": "vp8l.transform.color_indexing_size_bands",
       "operation": "decode",
       "row_id": "lossless_transform_variants",

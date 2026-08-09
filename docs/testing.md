@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`d49876ef5221e0561c384c27196dce6ebdda963381670315a46ef0987c2baf36`, and
+`78a0410d2c7e050e9a5746c3c423d0e70d3f7871735897221765c920cb2096d5`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6542,7 +6542,7 @@ generated-matrix SHA-256
 The map also pins the independent inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 68 named witnesses, 78 distinct active WebP rows, 45 successful
+properties, 68 named witnesses, 79 distinct active WebP rows, 46 successful
 structural witnesses, and 40 malformed parser witnesses.
 
 The frame-header, color-indexing size-band, subtract-green, color-transform,
@@ -6558,9 +6558,12 @@ entropy-image rows prove the selected 2×1 and 24×24 dimensions, and the cache
 rows prove the selected 1- and 10-bit widths, and the full-tree rows prove the
 two listed high-entropy forms, the simple-tree rows prove the two listed
 successful forms, the distance rows prove the two listed mappings, and the
-malformed groups prove their rejection code/phase/offset records. The predictor-
-mode property remains the one broad `candidate` at the full-category level. Its
-named rows are Pillow-origin outer-result fixtures, while the 45 successful structural
+malformed groups prove their rejection code/phase/offset records. The independent
+parser now sees predictor mode values 0–13, including mode 4 from the existing
+Pillow encode artifact; the predictor-mode property remains the one broad
+`candidate` at the full-category level because its source-pattern and
+transform-combination claims are wider. Its named rows are Pillow-origin
+outer-result fixtures, while the 46 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
 entropy-image facts. The 40 malformed witnesses independently check rejection
