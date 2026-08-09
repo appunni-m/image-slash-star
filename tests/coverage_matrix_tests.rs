@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use bytemuck as _;
 use image_slash_star as img;
@@ -18,6 +18,38 @@ mod support;
 use support::json::{self, FromJson, Object, Value};
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
+
+// Encode rows are partitioned into several integration-test functions for
+// parallel execution. Keep their immutable, fixture-derived source sequences
+// shared within this process so a repeated source asset is decoded once even
+// when it crosses a partition boundary. Rows that mutate sequence metadata or
+// pixels still clone the cached value below; the cache never becomes an
+// assertion or coverage-only input.
+type CachedEncodeSequence = Result<Arc<img::DecodedSequence>, String>;
+
+static ENCODE_SEQUENCE_CACHE: OnceLock<
+    Mutex<HashMap<PathBuf, Arc<OnceLock<CachedEncodeSequence>>>>,
+> = OnceLock::new();
+
+fn cached_encode_sequence(path: &Path, bytes: &[u8]) -> CachedEncodeSequence {
+    let cache = ENCODE_SEQUENCE_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let entry = {
+        let mut cache = cache
+            .lock()
+            .expect("encode fixture cache mutex must not be poisoned");
+        cache
+            .entry(path.to_owned())
+            .or_insert_with(|| Arc::new(OnceLock::new()))
+            .clone()
+    };
+    entry
+        .get_or_init(|| {
+            img::decode_sequence(bytes)
+                .map(|decoded| Arc::new(decoded.content))
+                .map_err(|error| error.to_string())
+        })
+        .clone()
+}
 
 fn matrix_verbose() -> bool {
     static MATRIX_VERBOSE: OnceLock<bool> = OnceLock::new();
@@ -3291,7 +3323,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         .join("input")
         .join("images");
     let mut asset_cache: HashMap<PathBuf, Vec<u8>> = HashMap::new();
-    let mut decoded_cache: HashMap<PathBuf, img::DecodedSequence> = HashMap::new();
+    let mut decoded_cache: HashMap<PathBuf, Arc<img::DecodedSequence>> = HashMap::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if format_filter.is_some_and(|filter| filter != fmt_name) {
@@ -3393,9 +3425,9 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     asset_cache.get(&asset_path),
                     "source asset must be cached before decode",
                 );
-                match img::decode_sequence(asset_data) {
+                match cached_encode_sequence(&asset_path, asset_data) {
                     Ok(decoded) => {
-                        entry.insert(decoded.content);
+                        entry.insert(decoded);
                     }
                     Err(error) => {
                         eprintln!("  FAIL [{}]: source decode failed: {error}", row.id);
@@ -3448,7 +3480,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             | "sequence_clear_background"
                     )
                 })
-                .then(|| cached_decoded.clone());
+                .then(|| cached_decoded.as_ref().clone());
             if let Some(decoded) = decoded_owned.as_mut()
                 && row
                     .params
@@ -3724,7 +3756,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     decoded.background = None;
                 }
             }
-            let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded);
+            let decoded = decoded_owned.as_ref().unwrap_or(cached_decoded.as_ref());
 
             let format = match fmt_name.as_str() {
                 "jpeg" => img::ImageFormat::Jpeg,

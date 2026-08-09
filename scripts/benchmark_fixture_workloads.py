@@ -31,7 +31,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = ROOT / "manifest.yaml"
 MATRIX_PATH = ROOT / "tests" / "fixtures" / "coverage_matrix.json"
-SCHEMA = "image-slash-star/fixture-benchmark@1"
+SCHEMA = "image-slash-star/fixture-benchmark@2"
+# Keep the harness parallel enough to represent normal local execution while
+# fixing its fan-out across revisions and hosts. The command records this
+# value, so comparisons never silently change their test-thread budget.
+BENCHMARK_TEST_THREADS = "4"
 
 
 def sha256(path: Path) -> str:
@@ -262,7 +266,7 @@ def main() -> int:
                 "--test",
                 "coverage_matrix_tests",
                 "--",
-                "--test-threads=1",
+                f"--test-threads={BENCHMARK_TEST_THREADS}",
             ],
         ),
         (
@@ -277,7 +281,7 @@ def main() -> int:
                 "--test",
                 "feature_gate_tests",
                 "--",
-                "--test-threads=1",
+                f"--test-threads={BENCHMARK_TEST_THREADS}",
             ],
         ),
         (
