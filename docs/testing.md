@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `fc56627eb07deb931da462c077ec81dab9c6e702`, and benchmark-protocol revision
+revision `98f1e5e8b154cab176e227e41f7b0bde83d52f7b`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,15 +11,15 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`5db3e841-8bc3-4288-8e5c-ab2160394d33` (1,445/1,445 passed in 607 ms) and
-feature matrix `a130342c-215b-4493-b53b-11d93a8ee540` (passed in 15,311 ms);
+`b458bb94-f780-4df6-9782-c45134425418` (1,445/1,445 passed in 707 ms) and
+feature matrix `2e8db749-bdf5-4020-b420-869feee0c76f` (passed in 41,897 ms);
 both recorded checkout HEAD
-`f83435351aadf13e0b320dd7a42f830d52c84895`.
+`98f1e5e8b154cab176e227e41f7b0bde83d52f7b`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no Coverage MCP rerun has yet been
-recorded for `fc56627eb07deb931da462c077ec81dab9c6e702`. The exact-head managed
+recorded for `98f1e5e8b154cab176e227e41f7b0bde83d52f7b`. The exact-head managed
 parity and feature-matrix records above are test-result evidence, not coverage
 metrics.
 
@@ -638,6 +638,34 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L trace CostModel histogram-reuse slice is implemented at
+production and Rust test/runtime revision
+`98f1e5e8b154cab176e227e41f7b0bde83d52f7b`, following trace CostManager
+buffer reuse at `fc56627eb07deb931da462c077ec81dab9c6e702`. Trace cost-model
+construction now retains and resets the green histogram and fixed
+channel/distance histograms across sequential trace attempts. The population-
+cost transformation still runs in place with the same token-aware checkpoints,
+and the no-token path remains direct. The existing WebP encode matrix (28/13/47
+rows), full fixture matrix, all 45 feature-gated Rust contracts, full
+all-feature suite, strict Clippy, rustfmt, and all configured native/WASI
+feature-matrix lanes passed locally. The clean warm `fixture-benchmark@3`
+observation at source checkout `98f1e5e8b154cab176e227e41f7b0bde83d52f7b`
+passed the Pillow-parity workload in 0.930263 s wall / 2.780541 user s /
+0.183454 sys s / 238,485,504-byte peak RSS, and the separate Rust-only
+feature-gate workload in 1.605898 s wall / 2.267140 user s /
+0.116672 sys s / 174,587,904-byte peak RSS. The native release `rlib` was
+7,997,768 bytes and the `wasm32-unknown-unknown` determinism artifact was
+24,860,447 bytes. These are host/cache/toolchain observations, not comparative
+or universal performance claims; peak RSS is a direct-child POSIX observation.
+Pillow remains the byte/error oracle, while CostModel histogram ownership is
+Rust-only evidence: no parity row, fixture-manifest row, diagnostic origin, new
+test function, or coverage-only hook was added. Exact-head managed Pillow parity
+run `b458bb94-f780-4df6-9782-c45134425418` passed 1,445/1,445 checks, and
+exact-head feature-matrix run `2e8db749-bdf5-4020-b420-869feee0c76f` passed all
+configured native/WASI lanes with the capability agreement marker and no
+`lock-wait` match. Both managed runs have `coverage_ingest.status=not_configured`;
+they are test-result evidence, not Coverage MCP metrics.
 
 The lossless WebP VP8L trace CostManager buffer-reuse slice is implemented at
 production and Rust test/runtime revision
@@ -3094,6 +3122,34 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L trace CostModel histogram reuse
+
+The production and Rust test/runtime slice is implemented at
+`98f1e5e8b154cab176e227e41f7b0bde83d52f7b`, following the preceding
+`fc56627eb07deb931da462c077ec81dab9c6e702` trace CostManager buffer reuse.
+Trace cost-model construction now retains and resets the green histogram and
+fixed channel/distance histograms across sequential trace attempts. The
+population-cost transformation still runs in place with the same token-aware
+checkpoints, and the no-token path remains direct. Existing WebP fixture rows
+(28/13/47), the full fixture matrix, all 45 feature-gated Rust contracts,
+strict Clippy, and the clean benchmark protocol provide the regression
+evidence. The clean warm benchmark passed the Pillow-parity workload in
+0.930263 s wall / 2.780541 user s / 0.183454 sys s / 238,485,504-byte peak RSS
+and the separate Rust-only feature-gate workload in 1.605898 s wall /
+2.267140 user s / 0.116672 sys s / 174,587,904-byte peak RSS. The native
+release `rlib` was 7,997,768 bytes and the `wasm32-unknown-unknown` determinism
+artifact was 24,860,447 bytes. These are host/cache/toolchain observations, not
+comparative or universal performance claims. Pillow remains the byte/error
+oracle; CostModel histogram ownership is Rust-only evidence. No parity row,
+fixture-manifest entry, diagnostic origin, new test function, or coverage-only
+hook was added. Exact-head managed Pillow parity run
+`b458bb94-f780-4df6-9782-c45134425418` passed 1,445/1,445 checks in 707 ms.
+Exact-head feature-matrix run
+`2e8db749-bdf5-4020-b420-869feee0c76f` passed all configured native/WASI lanes
+in 41,897 ms; its retained log has the capability agreement marker and no
+`lock-wait` match. Both managed runs have no configured coverage ingestion, so
+no Coverage MCP metric is claimed.
 
 Current acceptance record: WebP VP8L trace CostManager buffer reuse
 
