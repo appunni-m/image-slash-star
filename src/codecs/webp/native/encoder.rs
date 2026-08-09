@@ -1910,7 +1910,20 @@ fn collect_palette(
                 pixels_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
             }
         }
-        Ok(palette.into_iter().collect())
+        // The ordered drain is also O(unique-color-count), which can remain
+        // image-scaled after the source scan has finished. Keep the ordinary
+        // no-token collect unchanged and poll only the caller-controlled path.
+        let mut values = Vec::with_capacity(palette.len());
+        let mut values_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
+        for value in palette {
+            values.push(value);
+            values_until_checkpoint = values_until_checkpoint.saturating_sub(1);
+            if values_until_checkpoint == 0 {
+                check_token(Some(token))?;
+                values_until_checkpoint = VP8L_PALETTE_CHECKPOINT_PIXELS;
+            }
+        }
+        Ok(values)
     } else {
         Ok(pixels
             .iter()

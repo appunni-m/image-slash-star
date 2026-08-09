@@ -10212,6 +10212,54 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(histogram_collection_sink, vec![0xC8]);
+        // The ordered VP8L palette drain now polls after each 1,024 unique
+        // colors. The existing 64x64 lossless probe has more than 3,072
+        // unique colors, so its fourth drain checkpoint rejects at 18/19
+        // work units before any later stream work can obscure the boundary.
+        // This is Rust-only work-control evidence: Pillow has no caller token,
+        // typed work-budget result, caller-owned sink, or rollback contract.
+        let palette_drain_policy = image_slash_star::EncodePolicy::new().with_max_work_units(18);
+        let palette_drain_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_drain_policy,
+        ) {
+            Ok(_) => return Err("VP8L palette drain budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_drain_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 18,
+                observed: 19,
+            }
+        ));
+        let mut palette_drain_sink = vec![0xC7];
+        let palette_drain_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &palette_drain_policy,
+            &mut palette_drain_sink,
+        ) {
+            Ok(_) => return Err("VP8L palette drain sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            palette_drain_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 18,
+                observed: 19,
+            }
+        ));
+        assert_eq!(palette_drain_sink, vec![0xC7]);
         // Lossless VP8L RGB/RGBA materialization now polls after each 1,024
         // source pixels before the later stages begin. Pillow cannot exercise
         // this caller-work-budget boundary: it has no caller token, typed
