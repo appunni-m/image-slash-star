@@ -698,8 +698,8 @@ struct HuffmanToken {
     extra: u8,
 }
 
-fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
-    let mut tokens = Vec::new();
+fn compressed_huffman_tokens_into(lengths: &[u8], tokens: &mut Vec<HuffmanToken>) {
+    tokens.clear();
     let mut previous = 8;
     let mut i = 0;
     while i < lengths.len() {
@@ -767,17 +767,18 @@ fn compressed_huffman_tokens(lengths: &[u8]) -> Vec<HuffmanToken> {
         }
         i = end;
     }
-    tokens
 }
 
 fn compressed_huffman_tokens_with_checkpoint(
     lengths: &[u8],
+    tokens: &mut Vec<HuffmanToken>,
     token: Option<&crate::CancellationToken>,
-) -> Result<Vec<HuffmanToken>, EncodingError> {
+) -> Result<(), EncodingError> {
+    tokens.clear();
     if token.is_none() {
-        return Ok(compressed_huffman_tokens(lengths));
+        compressed_huffman_tokens_into(lengths, tokens);
+        return Ok(());
     }
-    let mut tokens = Vec::new();
     let mut emitted_tokens = 0_usize;
     let mut emit = |huffman_token: HuffmanToken| -> Result<(), EncodingError> {
         tokens.push(huffman_token);
@@ -871,7 +872,7 @@ fn compressed_huffman_tokens_with_checkpoint(
         }
         i = end;
     }
-    Ok(tokens)
+    Ok(())
 }
 
 fn write_huffman_tree<C: BitWriterCheckpoint>(
@@ -879,6 +880,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     frequencies: &[u32],
     lengths: &mut [u8],
     codes: &mut [u16],
+    huffman_tokens: &mut Vec<HuffmanToken>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     build_huffman_tree(frequencies, lengths, codes, 15, token)?;
@@ -927,19 +929,19 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
         return Ok(());
     }
-    let tokens = compressed_huffman_tokens_with_checkpoint(lengths, token)?;
+    compressed_huffman_tokens_with_checkpoint(lengths, huffman_tokens, token)?;
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
     if let Some(token) = token {
-        for (index, huffman_token) in tokens.iter().enumerate() {
+        for (index, huffman_token) in huffman_tokens.iter().enumerate() {
             code_length_frequencies[usize::from(huffman_token.code)] += 1;
             if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
                 check_token(Some(token))?;
             }
         }
     } else {
-        for huffman_token in &tokens {
+        for huffman_token in huffman_tokens.iter() {
             code_length_frequencies[usize::from(huffman_token.code)] += 1;
         }
     }
@@ -975,14 +977,14 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         code_length_lengths.fill(0);
         code_length_codes.fill(0);
     }
-    let mut trimmed_length = tokens.len();
+    let mut trimmed_length = huffman_tokens.len();
     let mut trailing_zero_bits = 0;
     // The normal-tree path always emits at least one non-zero code-length
     // token before trailing zero-repeat tokens.
     if let Some(token) = token {
         let mut trimmed_tokens = 0usize;
         loop {
-            let huffman_token = tokens[trimmed_length - 1];
+            let huffman_token = huffman_tokens[trimmed_length - 1];
             if !matches!(huffman_token.code, 0 | 17 | 18) {
                 break;
             }
@@ -1000,7 +1002,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
     } else {
         loop {
-            let huffman_token = tokens[trimmed_length - 1];
+            let huffman_token = huffman_tokens[trimmed_length - 1];
             if !matches!(huffman_token.code, 0 | 17 | 18) {
                 break;
             }
@@ -1026,9 +1028,9 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         }
         trimmed_length
     } else {
-        tokens.len()
+        huffman_tokens.len()
     };
-    for (index, huffman_token) in tokens[..token_count].iter().enumerate() {
+    for (index, huffman_token) in huffman_tokens[..token_count].iter().enumerate() {
         // Bit/output checkpoints already bound the emitted bitstream. Keep
         // this structural token walk cooperative at the same 16-entry
         // interval used by the code-length frequency and trim scans instead
@@ -1113,7 +1115,7 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
     let mut scratch = Vec::new();
-    let mut group_scratch = Vec::new();
+    let mut token_scratch = TokenStreamScratch::default();
     for (tokens, cache_bits) in candidates {
         scratch.clear();
         let (byte_length, buffer, nbits, checkpoint) = {
@@ -1134,7 +1136,7 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
                     histogram_bits,
                     quality,
                 },
-                &mut group_scratch,
+                &mut token_scratch,
                 token,
             )?;
             let checkpoint = trial.checkpoint.clone();
@@ -1192,6 +1194,12 @@ impl GroupCodes {
             self.codes[channel].fill(0);
         }
     }
+}
+
+#[derive(Default)]
+struct TokenStreamScratch {
+    groups: Vec<GroupCodes>,
+    huffman_tokens: Vec<HuffmanToken>,
 }
 
 #[derive(Clone, Copy)]
@@ -1332,6 +1340,7 @@ fn write_group<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     populations: &[Vec<u32>; 5],
     group: &mut GroupCodes,
+    huffman_tokens: &mut Vec<HuffmanToken>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     group.prepare(populations);
@@ -1339,7 +1348,14 @@ fn write_group<C: BitWriterCheckpoint>(
         check_token(token)?;
         let channel_lengths = &mut group.lengths[channel];
         let channel_codes = &mut group.codes[channel];
-        write_huffman_tree(w, population, channel_lengths, channel_codes, token)?;
+        write_huffman_tree(
+            w,
+            population,
+            channel_lengths,
+            channel_codes,
+            huffman_tokens,
+            token,
+        )?;
     }
     Ok(())
 }
@@ -1413,7 +1429,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     width: usize,
     tokens: &[backward_refs::Token],
     config: TokenStreamConfig,
-    group_scratch: &mut Vec<GroupCodes>,
+    scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     check_token(token)?;
@@ -1485,12 +1501,14 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         }
     }
     let group_count = histograms.len();
+    let group_scratch = &mut scratch.groups;
+    let huffman_tokens = &mut scratch.huffman_tokens;
     if group_scratch.len() < group_count {
         group_scratch.resize_with(group_count, GroupCodes::default);
     }
     for (group, histogram) in group_scratch.iter_mut().take(group_count).zip(&histograms) {
         check_token(token)?;
-        write_group(w, &histogram.populations, group, token)?;
+        write_group(w, &histogram.populations, group, huffman_tokens, token)?;
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
@@ -2677,7 +2695,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = channels(0x1122_3344);
     let _ = chunk_size(3);
     let _ = chunk_size(4);
-    let _ = compressed_huffman_tokens(&[0; 300]);
+    let mut compressed_tokens = Vec::new();
+    compressed_huffman_tokens_into(&[0; 300], &mut compressed_tokens);
     let mut odd_chunk = Vec::new();
     let _ = write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3], None);
     let mut even_chunk = Vec::new();
@@ -2692,11 +2711,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut lengths = vec![0; 4];
     let mut codes = vec![0; 4];
+    let mut huffman_tokens = Vec::new();
     let _ = write_huffman_tree(
         &mut tree_writer,
         &[1, 0, 0, 0],
         &mut lengths,
         &mut codes,
+        &mut huffman_tokens,
         None,
     );
     let _ = tree_writer.flush();
@@ -2717,6 +2738,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &trimmed_frequencies,
         &mut trimmed_lengths,
         &mut trimmed_codes,
+        &mut huffman_tokens,
         None,
     );
     let _ = trimmed_tree_writer.flush();
@@ -2736,7 +2758,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
         checkpoint: NoopBitWriterCheckpoint,
     };
     let mut group = GroupCodes::default();
-    let _ = write_group(&mut group_writer, &populations, &mut group, None);
+    let _ = write_group(
+        &mut group_writer,
+        &populations,
+        &mut group,
+        &mut huffman_tokens,
+        None,
+    );
     let _ = group_writer.flush();
 
     let mut token_bytes = Vec::new();
@@ -2746,7 +2774,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
-    let mut group_scratch = Vec::new();
+    let mut token_scratch = TokenStreamScratch::default();
     let _ = write_token_stream(
         &mut token_writer,
         &[0xff00_0000; 8],
@@ -2767,7 +2795,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             histogram_bits: 3,
             quality: 1,
         },
-        &mut group_scratch,
+        &mut token_scratch,
         None,
     );
     let _ = token_writer.flush();
