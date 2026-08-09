@@ -88,6 +88,10 @@ const VP8L_16384_BITSTREAM_CHECKPOINT_BITS: usize = 16_384;
 const VP8L_32768_BITSTREAM_CHECKPOINT_BITS: usize = 32_768;
 const VP8L_HUFFMAN_TREE_CHECKPOINT_NODES: usize = 64;
 const VP8L_HUFFMAN_TOKEN_CHECKPOINTS: usize = 16;
+// The largest VP8L alphabet has 281 leaves; a depth-first binary traversal
+// never needs more than one pending entry per leaf, so this fixed stack avoids
+// a heap allocation while retaining ample space for malformed defensive input.
+const VP8L_HUFFMAN_STACK_ENTRIES: usize = 512;
 const VP8L_65536_BITSTREAM_CHECKPOINT_BITS: usize = 65_536;
 const VP8L_131072_BITSTREAM_CHECKPOINT_BITS: usize = 131_072;
 const VP8L_262144_BITSTREAM_CHECKPOINT_BITS: usize = 262_144;
@@ -489,14 +493,23 @@ fn build_huffman_tree(
         }
 
         lengths.fill(0);
-        let mut stack = vec![(&nodes[0].node, 0_u8)];
-        while let Some((node, depth)) = stack.pop() {
+        let mut stack = [None; VP8L_HUFFMAN_STACK_ENTRIES];
+        let mut stack_len = 1;
+        stack[0] = Some((&nodes[0].node, 0_u8));
+        while stack_len != 0 {
+            stack_len -= 1;
+            let Some((node, depth)) = stack[stack_len].take() else {
+                unreachable!("Huffman traversal stack entry was empty");
+            };
             check_token(token)?;
             match node {
                 HuffmanEncodingNode::Leaf(value) => lengths[*value] = depth,
                 HuffmanEncodingNode::Branch(left, right) => {
-                    stack.push((right, depth + 1));
-                    stack.push((left, depth + 1));
+                    debug_assert!(stack_len + 2 <= VP8L_HUFFMAN_STACK_ENTRIES);
+                    stack[stack_len] = Some((right, depth + 1));
+                    stack_len += 1;
+                    stack[stack_len] = Some((left, depth + 1));
+                    stack_len += 1;
                 }
             }
         }
