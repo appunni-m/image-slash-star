@@ -3,19 +3,19 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `2bc95ea75758b944c3d40cf16b806561d18a401e`, and benchmark-protocol
+revision `5dcf6e2953b222c1f4a2d4b19e6afa14d7bbba45`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`8f4b27e7-b920-4ab8-a09a-1223dbbc04ce` (1,445/1,445 passed in 1,013 ms) and
-feature matrix `810c2b06-8cca-40a0-8996-85cb4bc38e0f` (passed in 36,302 ms);
+`e3438c7c-0123-4f14-9554-f9c3cfac2813` (1,445/1,445 passed in 1,206 ms) and
+feature matrix `c9723065-4d75-43d7-b1d3-33bbb9be2228` (passed in 24,215 ms);
 both recorded checkout HEAD
-`2bc95ea75758b944c3d40cf16b806561d18a401e`.
+`5dcf6e2953b222c1f4a2d4b19e6afa14d7bbba45`.
 The accepted Coverage MCP snapshot is
-`ef05b4d2-93d8-49d8-8c47-fda53ce7e566` from run
-`4ec9620a-460e-4c2c-8fdd-d0cdfad9803e`; it records 55,704/56,574 lines,
-7,981/8,192 branches, 3,110/3,206 functions, and 85,640/87,580 regions at
+`d314cc7f-c1b0-42d5-b136-c506770604fa` from run
+`db1639ad-966f-4e4f-8a04-be074c60ab6b`; it records 55,729/56,599 lines,
+7,987/8,198 branches, 3,110/3,206 functions, and 85,677/87,618 regions at
 the same source revision. The histogram file records 872/873 lines, 184/184
 branches, and 43/43 functions; predictor records 366/366 lines, 68/68
 branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
@@ -638,6 +638,56 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP VP8L inline eight-entry Huffman table
+
+The production and Rust test/runtime slice is implemented at
+`5dcf6e2953b222c1f4a2d4b19e6afa14d7bbba45`, following the inline four-entry
+Huffman-table boundary at
+`2bc95ea75758b944c3d40cf16b806561d18a401e`. `HuffmanTree::build_implicit`
+recognizes a valid complete canonical form whose primary table has exactly
+eight entries (maximum code length three) and stores those entries in
+`InlineTable8`; canonical completeness proves that this bounded form has no
+secondary nodes, while larger trees retain the general table/tree. Symbol
+ordering, bit consumption, decoded bytes, errors, and sink output remain
+unchanged.
+
+This is Rust implementation and Rust-only representation evidence. Pillow
+exposes only the final byte/error result, not the internal table selection, so
+the existing fixture matrix is byte/error regression evidence rather than
+proof of this storage boundary. No parity row, fixture-manifest row,
+diagnostic origin, new test function, coverage-only hook, or unit test was
+added. The clean schema-`@3` benchmark passed Pillow parity in 1.032231 s wall /
+2.786608 user s / 0.193083 sys s / 245,219,328-byte peak RSS and the separate
+Rust-only feature-gate suite in 1.579105 s wall / 2.248473 user s / 0.106248
+sys s / 163,790,848-byte peak RSS. The native release build measured 7.947735 s
+wall with a 7,944,248-byte `rlib`; the WASM compile measured 4.808797 s wall
+with a 24,033,702-byte artifact. These are single-host/cache/toolchain
+observations, not comparative or universal performance claims; allocation
+counts, retained cache bytes, caller-buffer reuse, peak stack depth, and WASM
+runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`e3438c7c-0123-4f14-9554-f9c3cfac2813` passed 1,445/1,445 checks in 1,206 ms.
+Exact-head feature-matrix run
+`c9723065-4d75-43d7-b1d3-33bbb9be2228` passed all configured native/WASI lanes
+in 24,215 ms. Nightly LLVM run
+`db1639ad-966f-4e4f-8a04-be074c60ab6b` passed 85/85 tests in 53,446 ms and
+ingested snapshot `d314cc7f-c1b0-42d5-b136-c506770604fa`: 55,729/56,599
+lines, 7,987/8,198 branches, 3,110/3,206 functions, and 85,677/87,618
+regions. The changed `src/codecs/webp/native/huffman.rs` projection is
+294/295 lines, 47/48 branches, 10/10 functions, and 435/438 regions.
+Compared with the inline-four-entry snapshot, covered and total line counts
+rose by 25, covered and total branch counts rose by 6, functions were
+unchanged, and covered regions rose by 37 while total regions rose by 38.
+Line and branch rates rose; the region rate moved slightly down because one
+newly reported region remains uncovered after LLVM segment normalization.
+Existing fixture rows exercise the new `InlineTable8` path, including 217
+bounded-table construction/return hits and 1,224 nonzero-symbol fill entries.
+The remaining projection gaps are the existing or shifted general
+`read_symbol`/`peek_symbol` line-normalization gaps. These are
+implementation/Rust coverage metrics, not Pillow-parity coverage; the known
+LLVM JSON segment-normalization warning and aggregate shortfall remain visible.
 
 Current acceptance record: WebP VP8L inline four-entry Huffman table
 
