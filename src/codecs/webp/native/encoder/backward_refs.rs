@@ -1238,6 +1238,7 @@ struct CostManagerScratch {
     merged: Vec<CostInterval>,
 }
 
+#[derive(Default)]
 struct CostManager {
     costs: Vec<i64>,
     lengths: Vec<usize>,
@@ -1248,93 +1249,110 @@ struct CostManager {
 }
 
 impl CostManager {
+    #[cfg(coverage)]
     fn new(pixel_count: usize, model: &CostModel) -> Self {
-        const SCALE: i64 = 1 << 23;
-        let cache_size = pixel_count.min(MAX_LENGTH);
-        let mut length_costs = Vec::with_capacity(cache_size);
-        for value in 0..cache_size {
-            let (symbol, extra) = if value == 0 { (0, 0) } else { prefix(value) };
-            length_costs.push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
-        }
-        let mut length_intervals = Vec::new();
-        let mut start = 0;
-        while start < length_costs.len() {
-            let cost = length_costs[start];
-            let mut end = start + 1;
-            while end < length_costs.len() && length_costs[end] == cost {
-                end += 1;
-            }
-            length_intervals.push((cost, start, end));
-            start = end;
-        }
-        Self {
-            costs: vec![i64::MAX; pixel_count],
-            lengths: vec![1; pixel_count],
-            length_costs,
-            length_intervals,
-            intervals: Vec::new(),
-            scratch: CostManagerScratch::default(),
-        }
+        let mut manager = Self::default();
+        manager.prepare_without_checkpoint(pixel_count, model);
+        manager
     }
 
-    fn new_with_checkpoint(
+    fn prepare_without_checkpoint(&mut self, pixel_count: usize, model: &CostModel) {
+        const SCALE: i64 = 1 << 23;
+        let cache_size = pixel_count.min(MAX_LENGTH);
+
+        self.length_costs.clear();
+        self.length_costs.reserve(cache_size);
+        for value in 0..cache_size {
+            let (symbol, extra) = if value == 0 { (0, 0) } else { prefix(value) };
+            self.length_costs
+                .push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
+        }
+        self.length_intervals.clear();
+        let mut start = 0;
+        while start < self.length_costs.len() {
+            let cost = self.length_costs[start];
+            let mut end = start + 1;
+            while end < self.length_costs.len() && self.length_costs[end] == cost {
+                end += 1;
+            }
+            self.length_intervals.push((cost, start, end));
+            start = end;
+        }
+        self.costs.clear();
+        self.costs.resize(pixel_count, i64::MAX);
+        self.lengths.clear();
+        self.lengths.resize(pixel_count, 1);
+        self.intervals.clear();
+        self.clear_scratch();
+    }
+
+    fn prepare_with_checkpoint(
+        &mut self,
         pixel_count: usize,
         model: &CostModel,
         token: CheckpointToken<'_>,
-    ) -> CheckpointResult<Self> {
-        // The token-aware trace must not spend a full bounded match-length
-        // table or equal-cost interval pass without a cooperative boundary.
-        // Keep the no-token constructor separate so ordinary encoding retains
-        // its original tight setup path.
+    ) -> CheckpointResult<()> {
+        if token.is_none() {
+            self.prepare_without_checkpoint(pixel_count, model);
+            return Ok(());
+        }
         let Some(token) = token else {
-            return Ok(Self::new(pixel_count, model));
+            unreachable!("checked checkpoint token is present");
         };
         const SCALE: i64 = 1 << 23;
         let cache_size = pixel_count.min(MAX_LENGTH);
-        let mut length_costs = Vec::with_capacity(cache_size);
+
+        self.length_costs.clear();
+        self.length_costs.reserve(cache_size);
         for value in 0..cache_size {
             let (symbol, extra) = if value == 0 { (0, 0) } else { prefix(value) };
-            length_costs.push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
+            self.length_costs
+                .push(i64::from(model.green[256 + symbol]) + i64::from(extra) * SCALE);
             if (value + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
                 checkpoint(Some(token))?;
             }
         }
-        let mut length_intervals = Vec::new();
+        self.length_intervals.clear();
         let mut start = 0;
-        while start < length_costs.len() {
-            let cost = length_costs[start];
+        while start < self.length_costs.len() {
+            let cost = self.length_costs[start];
             let mut end = start + 1;
-            while end < length_costs.len() && length_costs[end] == cost {
+            while end < self.length_costs.len() && self.length_costs[end] == cost {
                 end += 1;
                 if end.is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
                     checkpoint(Some(token))?;
                 }
             }
-            length_intervals.push((cost, start, end));
+            self.length_intervals.push((cost, start, end));
             start = end;
         }
         // The capacity reservations remain ordinary fallible allocations;
         // this policy does not promise recoverable OOM behavior. Once those
         // tables exist, initialize their pixel-sized contents cooperatively so
         // a caller token cannot be hidden behind two bulk vec! fills. Keep the
-        // no-token constructor above on its original tight path.
-        let mut costs = Vec::with_capacity(pixel_count);
-        let mut lengths = Vec::with_capacity(pixel_count);
+        // no-token preparation above on its original tight path.
+        self.costs.clear();
+        self.costs.reserve(pixel_count);
+        self.lengths.clear();
+        self.lengths.reserve(pixel_count);
         for index in 0..pixel_count {
-            costs.push(i64::MAX);
-            lengths.push(1);
+            self.costs.push(i64::MAX);
+            self.lengths.push(1);
             if (index + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
                 checkpoint(Some(token))?;
             }
         }
-        Ok(Self {
-            costs,
-            lengths,
-            length_costs,
-            length_intervals,
-            intervals: Vec::new(),
-            scratch: CostManagerScratch::default(),
-        })
+        self.intervals.clear();
+        self.clear_scratch();
+        Ok(())
+    }
+
+    fn clear_scratch(&mut self) {
+        self.scratch.boundaries.clear();
+        self.scratch.additions.clear();
+        self.scratch.overlaps.clear();
+        self.scratch.rebuilt.clear();
+        self.scratch.merged.clear();
     }
 
     fn update(&mut self, index: usize, position: usize, cost: i64) {
@@ -1704,6 +1722,7 @@ struct TraceScratch {
     cache: Vec<u32>,
     path: Vec<usize>,
     output: Vec<Token>,
+    manager: Option<CostManager>,
 }
 
 fn trace_backwards(
@@ -1732,213 +1751,224 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     token: CheckpointToken<'_>,
     scratch: &mut TraceScratch,
 ) -> CheckpointResult<Vec<Token>> {
-    checkpoint(token)?;
-    const SCALE: i64 = 1 << 23;
-    let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
-    let mut manager = CostManager::new_with_checkpoint(pixels.len(), &model, token)?;
-    checkpoint(token)?;
-    scratch
-        .cache
-        .resize(if cache_bits == 0 { 0 } else { 1 << cache_bits }, 0);
-    scratch.cache.fill(0);
-    let cache = &mut scratch.cache;
-    let path = &mut scratch.path;
-    let output = &mut scratch.output;
-    let mut update_work = 0usize;
+    let mut manager = scratch.manager.take().unwrap_or_default();
+    let result = (|| -> CheckpointResult<Vec<Token>> {
+        checkpoint(token)?;
+        const SCALE: i64 = 1 << 23;
+        let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
+        manager.prepare_with_checkpoint(pixels.len(), &model, token)?;
+        checkpoint(token)?;
+        scratch
+            .cache
+            .resize(if cache_bits == 0 { 0 } else { 1 << cache_bits }, 0);
+        scratch.cache.fill(0);
+        let cache = &mut scratch.cache;
+        let path = &mut scratch.path;
+        let output = &mut scratch.output;
+        let mut update_work = 0usize;
 
-    let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
-        let pixel = pixels[position];
-        let cache_index = (cache_bits != 0).then(|| color_hash(pixel, cache_bits));
-        let literal_cost = if let Some(index) = cache_index.filter(|&index| cache[index] == pixel) {
-            (i64::from(model.green[280 + index]) * 68 + 50) / 100
-        } else {
-            if let Some(index) = cache_index {
-                cache[index] = pixel;
-            }
-            let [red, green, blue, alpha] = super::channels(pixel);
-            let cost = i64::from(model.green[green])
-                + i64::from(model.red[red])
-                + i64::from(model.blue[blue])
-                + i64::from(model.alpha[alpha]);
-            (cost * 82 + 50) / 100
-        };
-        let candidate = previous_cost + literal_cost;
-        if candidate < manager.costs[position] {
-            manager.costs[position] = candidate;
-            manager.lengths[position] = 1;
-        }
-    };
-
-    add_literal(0, 0, &mut manager);
-    let mut previous_offset = usize::MAX;
-    let mut previous_length = usize::MAX;
-    let mut offset_cost = 0_i64;
-    let mut first_constant = false;
-    let mut reach = 0_usize;
-
-    const TRACE_CHECKPOINT_PIXELS: usize = 256;
-    let mut next_checkpoint = if FINE_TRACE {
-        TRACE_CHECKPOINT_PIXELS
-    } else {
-        1024
-    };
-    for position in 1..pixels.len() {
-        if position >= next_checkpoint {
-            checkpoint(token)?;
-            next_checkpoint = position.saturating_add(if FINE_TRACE {
-                TRACE_CHECKPOINT_PIXELS
-            } else {
-                1024
-            });
-        }
-        let previous_cost = manager.costs[position - 1];
-        let (distance, maximum_length) = chain[position];
-        add_literal(position, previous_cost, &mut manager);
-
-        if maximum_length >= 2 {
-            if distance != previous_offset {
-                let plane_distance = plane_code(width, distance);
-                let (distance_symbol, distance_extra) = prefix(plane_distance);
-                offset_cost =
-                    i64::from(model.distance[distance_symbol]) + i64::from(distance_extra) * SCALE;
-                first_constant = true;
-                manager.push_with_checkpoint(
-                    previous_cost + offset_cost,
-                    position,
-                    maximum_length,
-                    token,
-                )?;
-            } else {
-                if first_constant {
-                    reach = position - 1 + previous_length - 1;
-                    first_constant = false;
-                }
-                if position + maximum_length - 1 > reach {
-                    let mut split = position;
-                    let mut split_length = 0;
-                    let mut split_checkpoint = split.saturating_add(256);
-                    while split <= reach {
-                        if split >= split_checkpoint {
-                            checkpoint(token)?;
-                            split_checkpoint = split.saturating_add(256);
-                        }
-                        let (next_offset, next_length) = chain[split + 1];
-                        split_length = next_length;
-                        if next_offset != distance {
-                            split_length = chain[split].1;
-                            break;
-                        }
-                        split += 1;
+        let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
+            let pixel = pixels[position];
+            let cache_index = (cache_bits != 0).then(|| color_hash(pixel, cache_bits));
+            let literal_cost =
+                if let Some(index) = cache_index.filter(|&index| cache[index] == pixel) {
+                    (i64::from(model.green[280 + index]) * 68 + 50) / 100
+                } else {
+                    if let Some(index) = cache_index {
+                        cache[index] = pixel;
                     }
-                    manager.update_at_with_checkpoint(split - 1, false, token, &mut update_work)?;
-                    manager.update_at_with_checkpoint(split, false, token, &mut update_work)?;
+                    let [red, green, blue, alpha] = super::channels(pixel);
+                    let cost = i64::from(model.green[green])
+                        + i64::from(model.red[red])
+                        + i64::from(model.blue[blue])
+                        + i64::from(model.alpha[alpha]);
+                    (cost * 82 + 50) / 100
+                };
+            let candidate = previous_cost + literal_cost;
+            if candidate < manager.costs[position] {
+                manager.costs[position] = candidate;
+                manager.lengths[position] = 1;
+            }
+        };
+
+        add_literal(0, 0, &mut manager);
+        let mut previous_offset = usize::MAX;
+        let mut previous_length = usize::MAX;
+        let mut offset_cost = 0_i64;
+        let mut first_constant = false;
+        let mut reach = 0_usize;
+
+        const TRACE_CHECKPOINT_PIXELS: usize = 256;
+        let mut next_checkpoint = if FINE_TRACE {
+            TRACE_CHECKPOINT_PIXELS
+        } else {
+            1024
+        };
+        for position in 1..pixels.len() {
+            if position >= next_checkpoint {
+                checkpoint(token)?;
+                next_checkpoint = position.saturating_add(if FINE_TRACE {
+                    TRACE_CHECKPOINT_PIXELS
+                } else {
+                    1024
+                });
+            }
+            let previous_cost = manager.costs[position - 1];
+            let (distance, maximum_length) = chain[position];
+            add_literal(position, previous_cost, &mut manager);
+
+            if maximum_length >= 2 {
+                if distance != previous_offset {
+                    let plane_distance = plane_code(width, distance);
+                    let (distance_symbol, distance_extra) = prefix(plane_distance);
+                    offset_cost = i64::from(model.distance[distance_symbol])
+                        + i64::from(distance_extra) * SCALE;
+                    first_constant = true;
                     manager.push_with_checkpoint(
-                        manager.costs[split - 1] + offset_cost,
-                        split,
-                        split_length,
+                        previous_cost + offset_cost,
+                        position,
+                        maximum_length,
                         token,
                     )?;
-                    reach = split + split_length - 1;
+                } else {
+                    if first_constant {
+                        reach = position - 1 + previous_length - 1;
+                        first_constant = false;
+                    }
+                    if position + maximum_length - 1 > reach {
+                        let mut split = position;
+                        let mut split_length = 0;
+                        let mut split_checkpoint = split.saturating_add(256);
+                        while split <= reach {
+                            if split >= split_checkpoint {
+                                checkpoint(token)?;
+                                split_checkpoint = split.saturating_add(256);
+                            }
+                            let (next_offset, next_length) = chain[split + 1];
+                            split_length = next_length;
+                            if next_offset != distance {
+                                split_length = chain[split].1;
+                                break;
+                            }
+                            split += 1;
+                        }
+                        manager.update_at_with_checkpoint(
+                            split - 1,
+                            false,
+                            token,
+                            &mut update_work,
+                        )?;
+                        manager.update_at_with_checkpoint(split, false, token, &mut update_work)?;
+                        manager.push_with_checkpoint(
+                            manager.costs[split - 1] + offset_cost,
+                            split,
+                            split_length,
+                            token,
+                        )?;
+                        reach = split + split_length - 1;
+                    }
                 }
             }
+            manager.update_at_with_checkpoint(position, true, token, &mut update_work)?;
+            previous_offset = distance;
+            previous_length = maximum_length;
         }
-        manager.update_at_with_checkpoint(position, true, token, &mut update_work)?;
-        previous_offset = distance;
-        previous_length = maximum_length;
-    }
 
-    path.clear();
-    let mut end = pixels.len();
-    if FINE_TRACE {
-        let mut processed = 0_usize;
-        let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
-        while end != 0 {
-            let length = manager.lengths[end - 1];
-            path.push(length);
-            end -= length;
-            processed = processed.saturating_add(length);
-            while processed >= next_checkpoint {
-                checkpoint(token)?;
-                next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
+        path.clear();
+        let mut end = pixels.len();
+        if FINE_TRACE {
+            let mut processed = 0_usize;
+            let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
+            while end != 0 {
+                let length = manager.lengths[end - 1];
+                path.push(length);
+                end -= length;
+                processed = processed.saturating_add(length);
+                while processed >= next_checkpoint {
+                    checkpoint(token)?;
+                    next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
+                }
+            }
+        } else {
+            while end != 0 {
+                if end.is_multiple_of(1024) {
+                    checkpoint(token)?;
+                }
+                let length = manager.lengths[end - 1];
+                path.push(length);
+                end -= length;
             }
         }
-    } else {
-        while end != 0 {
-            if end.is_multiple_of(1024) {
-                checkpoint(token)?;
-            }
-            let length = manager.lengths[end - 1];
-            path.push(length);
-            end -= length;
-        }
-    }
-    path.reverse();
+        path.reverse();
 
-    output.clear();
-    output.reserve(path.len());
-    // The dynamic-programming cache is dead after path reconstruction. Reset
-    // and reuse it for token replay instead of allocating a second table.
-    cache.fill(0);
-    let mut position: usize = 0;
-    if FINE_TRACE {
-        checkpoint(token)?;
-        let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
-        for length in path.drain(..) {
-            if length == 1 {
-                let pixel = pixels[position];
-                if cache_bits != 0 {
-                    let index = color_hash(pixel, cache_bits);
-                    if cache[index] == pixel {
-                        output.push(Token::Cache(index));
+        output.clear();
+        output.reserve(path.len());
+        // The dynamic-programming cache is dead after path reconstruction. Reset
+        // and reuse it for token replay instead of allocating a second table.
+        cache.fill(0);
+        let mut position: usize = 0;
+        if FINE_TRACE {
+            checkpoint(token)?;
+            let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
+            for length in path.drain(..) {
+                if length == 1 {
+                    let pixel = pixels[position];
+                    if cache_bits != 0 {
+                        let index = color_hash(pixel, cache_bits);
+                        if cache[index] == pixel {
+                            output.push(Token::Cache(index));
+                        } else {
+                            cache[index] = pixel;
+                            output.push(Token::Literal(pixel));
+                        }
                     } else {
-                        cache[index] = pixel;
                         output.push(Token::Literal(pixel));
                     }
                 } else {
-                    output.push(Token::Literal(pixel));
+                    output.push(Token::Copy {
+                        distance: chain[position].0,
+                        length,
+                    });
+                    populate_cache(pixels, position, length, cache_bits, cache, token)?;
                 }
-            } else {
-                output.push(Token::Copy {
-                    distance: chain[position].0,
-                    length,
-                });
-                populate_cache(pixels, position, length, cache_bits, cache, token)?;
+                position += length;
+                while position >= next_checkpoint {
+                    checkpoint(token)?;
+                    next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
+                }
             }
-            position += length;
-            while position >= next_checkpoint {
-                checkpoint(token)?;
-                next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
-            }
-        }
-    } else {
-        for length in path.drain(..) {
-            if position.is_multiple_of(1024) {
-                checkpoint(token)?;
-            }
-            if length == 1 {
-                let pixel = pixels[position];
-                if cache_bits != 0 {
-                    let index = color_hash(pixel, cache_bits);
-                    if cache[index] == pixel {
-                        output.push(Token::Cache(index));
+        } else {
+            for length in path.drain(..) {
+                if position.is_multiple_of(1024) {
+                    checkpoint(token)?;
+                }
+                if length == 1 {
+                    let pixel = pixels[position];
+                    if cache_bits != 0 {
+                        let index = color_hash(pixel, cache_bits);
+                        if cache[index] == pixel {
+                            output.push(Token::Cache(index));
+                        } else {
+                            cache[index] = pixel;
+                            output.push(Token::Literal(pixel));
+                        }
                     } else {
-                        cache[index] = pixel;
                         output.push(Token::Literal(pixel));
                     }
                 } else {
-                    output.push(Token::Literal(pixel));
+                    output.push(Token::Copy {
+                        distance: chain[position].0,
+                        length,
+                    });
+                    populate_cache(pixels, position, length, cache_bits, cache, token)?;
                 }
-            } else {
-                output.push(Token::Copy {
-                    distance: chain[position].0,
-                    length,
-                });
-                populate_cache(pixels, position, length, cache_bits, cache, token)?;
+                position += length;
             }
-            position += length;
         }
-    }
-    Ok(core::mem::take(output))
+        Ok(core::mem::take(output))
+    })();
+    scratch.manager = Some(manager);
+    result
 }
 
 pub(super) fn candidates(
