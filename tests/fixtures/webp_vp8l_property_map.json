@@ -312,6 +312,19 @@
           "mapped_distances_contains": [1]
         }
       }
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_checker2",
+      "expect": {
+        "stream_index": 1,
+        "stream": {
+          "distance_prefixes_contains": [4],
+          "plane_codes_contains": [5],
+          "mapped_distances_contains": [16]
+        }
+      }
     }
   ],
   "malformed_witnesses": [
@@ -523,15 +536,14 @@
     },
     {
       "id": "vp8l.distance_mapping",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_plane_distance_clamp"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"},
-        {"operation": "decode", "row_id": "error_malformed_container_vp8l_plane_distance_truncated_12"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"}
       ],
-      "gap": "The named fixtures target plane-distance behavior, but Pillow exposes neither distance symbols nor the VP8L distance-map result."
+      "gap": "The independent parser now proves the two listed successful plane-distance mappings (10→1 and 5→16 at their respective plane widths); malformed distance streams and other mapping entries remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.malformed_forms",
