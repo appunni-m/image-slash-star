@@ -284,7 +284,26 @@ fn apply_modes(
         if y.is_multiple_of(16) {
             checkpoint(token)?;
         }
-        current[..width].copy_from_slice(&original[y * width..(y + 1) * width]);
+        // A wide row copy is real caller-visible work even though the
+        // predictor loop below has its own pixel checkpoints. Keep the
+        // ordinary no-token path on the original bulk copy; Pillow has no
+        // equivalent caller budget.
+        if let Some(token) = token {
+            let mut copied = 0;
+            while copied < width {
+                let end = copied
+                    .saturating_add(TRANSFORM_CHECKPOINT_PIXELS)
+                    .min(width);
+                current[copied..end]
+                    .copy_from_slice(&original[y * width + copied..y * width + end]);
+                copied = end;
+                if copied.is_multiple_of(TRANSFORM_CHECKPOINT_PIXELS) {
+                    checkpoint(Some(token))?;
+                }
+            }
+        } else {
+            current[..width].copy_from_slice(&original[y * width..(y + 1) * width]);
+        }
         current[width] = if y + 1 < height {
             original[(y + 1) * width]
         } else {

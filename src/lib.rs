@@ -993,7 +993,9 @@ pub fn encode_with_policy(
 /// boolean-output runs drained in those same chunks, and bitstream stages,
 /// lossless
 /// VP8L RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
-/// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
+/// predictor source-snapshot copying, predictor mode-application wide
+/// source-row copies after each completed 1,024-pixel chunk,
+/// predictor/cross-color/entropy/transform,
 /// VP8L meta-histogram sampling row/column comparisons and symbol compaction
 /// after each 1,024 symbols,
 /// bounded backward-reference cost/length-table initialization and length-cost
