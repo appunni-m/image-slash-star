@@ -34,8 +34,8 @@ const MAX_TABLE_BITS: u8 = 10;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HuffmanTreeNode {
-    Branch(usize), //offset in vector to children
-    Leaf(u16),     //symbol stored in leaf
+    Branch(u32), //offset in vector to children
+    Leaf(u16),   //symbol stored in leaf
     Empty,
 }
 
@@ -257,14 +257,16 @@ impl HuffmanTree {
                     let node = tree[node_index];
 
                     let offset = if let HuffmanTreeNode::Branch(offset) = node {
-                        offset
+                        usize::try_from(offset).map_err(|_| DecodingError::HuffmanError)?
                     } else {
                         // The complete canonical-code validation above prevents
                         // descending through an already assigned leaf; every
                         // non-branch node reached here is a new empty branch.
                         debug_assert_eq!(node, HuffmanTreeNode::Empty);
                         let offset = tree.len() - node_index;
-                        tree[node_index] = HuffmanTreeNode::Branch(offset);
+                        let stored_offset =
+                            u32::try_from(offset).map_err(|_| DecodingError::HuffmanError)?;
+                        tree[node_index] = HuffmanTreeNode::Branch(stored_offset);
                         tree.push(HuffmanTreeNode::Empty);
                         tree.push(HuffmanTreeNode::Empty);
                         offset
@@ -326,7 +328,9 @@ impl HuffmanTree {
         loop {
             match &tree[index] {
                 HuffmanTreeNode::Branch(children_offset) => {
-                    index += children_offset + (v & 1);
+                    index += usize::try_from(*children_offset)
+                        .map_err(|_| DecodingError::HuffmanError)?
+                        + (v & 1);
                     depth += 1;
                     v >>= 1;
                 }
