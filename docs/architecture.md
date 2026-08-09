@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `8b52b7180df0118ed9e427b5df01b906bbe32eaf`; the claim-ledger fixture tuple
+revision `4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -13,7 +13,8 @@ Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, GIF indexed frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
-PNG source pixel ownership, TIFF conditional source ownership, candidate-prefix
+PNG source pixel ownership, TIFF conditional source ownership, TIFF repeated-row
+Deflate planning, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
 token-materialization, and Huffman-tree leaf
@@ -678,6 +679,13 @@ directly instead of allocating a second vector containing only page lengths.
 The same alignment and classic-TIFF overflow checks still run before output
 admission or relocation, so this is a bounded bookkeeping optimization rather
 than a streaming, rollback, or complete allocator guarantee.
+
+TIFF Deflate pages pass the repeated row length and row count directly to the
+level-six zlib-ng tokenizer instead of allocating a temporary row-length vector.
+The specialized token-aware and no-token paths replay the same input-row
+boundaries, matcher behavior, checkpoint cadence, encoded bytes, and errors.
+This removes one image-height-sized temporary allocation per Deflate page; it
+does not claim complete allocator/OOM accounting, rollback, or streaming.
 
 BMP row conversion reuses one scratch buffer for one-bit, indexed, RGB, and
 RGBA rows within each encoder invocation. The synchronous writer consumes the

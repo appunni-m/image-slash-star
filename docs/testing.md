@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
- revision `8b52b7180df0118ed9e427b5df01b906bbe32eaf`, and benchmark-protocol revision
+revision `4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`8b52b7180df0118ed9e427b5df01b906bbe32eaf`; the accepted managed records
+`4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -633,6 +633,22 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The TIFF repeated-row Deflate allocation slice is implemented at production
+and Rust test/runtime revision
+`4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`. TIFF pages now pass their row
+length and height directly to the level-six zlib-ng path instead of allocating
+a duplicate `Vec<usize>` containing the same row length once per row. The
+specialized no-token and token-aware tokenizers replay the same row-boundary
+calls, matcher behavior, checkpoint cadence, compressed bytes, error behavior,
+and sink output; only the temporary row-length vector is removed. The existing
+57 TIFF encode Pillow rows, complete 28-function fixture matrix, all 45
+feature-gated Rust contracts, full all-feature suite, strict Clippy, rustfmt,
+and all 24 native/WASI feature-matrix lanes passed locally. Pillow remains the
+byte/error oracle, while allocation ownership is Rust-only evidence: no parity
+row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook was added. No managed parity, feature-matrix, or Coverage
+MCP rerun is claimed at this revision.
 
 The latest lossless WebP VP8L Huffman-RLE reverse-tail scan slice is implemented
 at production and Rust test/runtime revision
@@ -2590,6 +2606,21 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: TIFF repeated-row Deflate input planning
+
+The production and Rust test/runtime slice is implemented at
+`4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`. TIFF Deflate pages no longer build
+a temporary `Vec<usize>` for repeated row lengths; the level-six matcher now
+receives the row length and row count directly and replays the same input-call
+boundaries in both ordinary and token-aware paths. Encoded bytes, matcher
+boundaries, work-budget observations, errors, and sink delivery remain
+unchanged. The existing 57 TIFF Pillow rows and the complete fixture matrix
+are the observable byte/error regression evidence; the allocation change is a
+Rust-only implementation boundary because Pillow exposes no allocation or
+caller-budget contract. No new parity row, fixture-manifest entry, diagnostic
+origin, test function, or coverage-only hook was added. No managed parity,
+feature-matrix, or Coverage MCP rerun is claimed at this revision.
 
 Current acceptance record: WebP VP8L Huffman-RLE reverse-tail scan
 
