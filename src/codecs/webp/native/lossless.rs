@@ -72,6 +72,11 @@ const HUFFMAN_CODES_PER_META_CODE: usize = 5;
 type HuffmanCodeGroup = [HuffmanTree; HUFFMAN_CODES_PER_META_CODE];
 
 const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 256, 40];
+// The ordinary VP8L alphabets fit in 280 symbols. The green alphabet grows
+// beyond this only when the optional color cache is enabled, so retain that
+// enlarged case on the heap while keeping the common temporary workspace on
+// the stack.
+const MAX_STACK_HUFFMAN_SYMBOLS: usize = 256 + 24;
 
 const NUM_TRANSFORM_TYPES: usize = 4;
 
@@ -439,10 +444,26 @@ impl<'a> LosslessDecoder<'a> {
                     self.bit_reader.read_bits(3)?;
             }
 
-            let new_code_lengths =
-                self.read_huffman_code_lengths(&code_length_code_lengths, alphabet_size)?;
-
-            HuffmanTree::build_implicit(&new_code_lengths)
+            if usize::from(alphabet_size) <= MAX_STACK_HUFFMAN_SYMBOLS {
+                let mut code_lengths = [0u16; MAX_STACK_HUFFMAN_SYMBOLS];
+                self.read_huffman_code_lengths(
+                    &code_length_code_lengths,
+                    alphabet_size,
+                    &mut code_lengths,
+                )?;
+                HuffmanTree::build_implicit(&code_lengths[..usize::from(alphabet_size)])
+            } else {
+                // A color-cache green alphabet can reach 2,328 symbols. It
+                // remains dynamically sized because that representation is
+                // not bounded by the ordinary 280-symbol stack workspace.
+                let mut code_lengths = vec![0; usize::from(alphabet_size)];
+                self.read_huffman_code_lengths(
+                    &code_length_code_lengths,
+                    alphabet_size,
+                    &mut code_lengths,
+                )?;
+                HuffmanTree::build_implicit(&code_lengths)
+            }
         }
     }
 
@@ -451,7 +472,8 @@ impl<'a> LosslessDecoder<'a> {
         &mut self,
         code_length_code_lengths: &[u16],
         num_symbols: u16,
-    ) -> Result<Vec<u16>, DecodingError> {
+        code_lengths: &mut [u16],
+    ) -> Result<(), DecodingError> {
         let table = HuffmanTree::build_implicit(code_length_code_lengths)?;
 
         let mut max_symbol = if self.bit_reader.read_bits::<u8>(1)? == 1 {
@@ -465,7 +487,6 @@ impl<'a> LosslessDecoder<'a> {
             num_symbols
         };
 
-        let mut code_lengths = vec![0; usize::from(num_symbols)];
         let mut prev_code_len = 8; //default code length
 
         let mut symbol = 0;
@@ -515,7 +536,7 @@ impl<'a> LosslessDecoder<'a> {
             }
         }
 
-        Ok(code_lengths)
+        Ok(())
     }
 
     /// Decodes the image data using the huffman trees and either of the 3 methods of decoding
@@ -907,7 +928,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     code_length_code_lengths[0] = 1;
     code_length_code_lengths[1] = 1;
     let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
-    let _ = decoder.read_huffman_code_lengths(&code_length_code_lengths, 4);
+    let mut code_lengths = [0u16; MAX_STACK_HUFFMAN_SYMBOLS];
+    let _ = decoder.read_huffman_code_lengths(&code_length_code_lengths, 4, &mut code_lengths);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
     let _ = reader.fill();
