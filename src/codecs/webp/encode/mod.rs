@@ -59,6 +59,9 @@ fn checkpoint_after_prepare_pixel(
 /// Token-aware lossless VP8L hash-chain candidate selection polls after each
 /// 64 completed candidate trials across the pass; the no-token candidate loop
 /// remains a separate tight path.
+/// Token-aware palette-mode VP8L box-chain selection polls after each 64
+/// completed low-distance candidate offsets across the pass; the no-token box
+/// chain retains its original tight path.
 /// Long backward-reference result backfills also poll after each 256 entries.
 /// Token-aware lossless VP8L assembly copies the complete RIFF frame payload
 /// after each 1,024 bytes; the no-token path retains one bulk copy.

@@ -54,7 +54,8 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// each 1,024 entries, token-aware cost-manager interval-update and cleanup
 /// scans after each 256 cumulative interval entries, repeated-run hash-chain insertion
 /// after each 256 pixels, long backward-reference result backfills after each
-/// 256 entries, and saturated cost-interval scans,
+/// 256 entries, palette-mode box-chain candidate offsets after each 64 completed
+/// offsets, and saturated cost-interval scans,
 /// entropy-analysis, histogram-clustering populated-tile collection, min/max,
 /// and bin-assignment scans after each 64 tile histograms, histogram/Huffman,
 /// 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit,
@@ -154,7 +155,8 @@ impl EncodePolicy {
     /// and setup after each 1,024 entries, token-aware cost-manager interval-
     /// update and cleanup scans after each 256 cumulative interval entries,
     /// repeated-run hash-chain insertion after each 256 pixels and long
-    /// backward-reference result backfills after each 256 entries,
+    /// backward-reference result backfills after each 256 entries, palette-mode
+    /// box-chain candidate offsets after each 64 completed offsets,
     /// palette-index lookup candidate scans after each 64 palette entries,
     /// Huffman RLE preparation and in-run code-length scans after each 64
     /// symbols, canonical-code assignment scans after each 64 symbols,

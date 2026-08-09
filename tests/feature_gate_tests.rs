@@ -11228,6 +11228,96 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             "an ample simple-palette budget preserves byte identity"
         );
 
+        let box_chain_palette = [
+            [0, 0, 0],
+            [17, 29, 43],
+            [34, 58, 86],
+            [51, 87, 129],
+            [68, 116, 172],
+            [85, 145, 215],
+            [102, 174, 2],
+            [119, 203, 45],
+            [136, 232, 88],
+            [153, 5, 131],
+            [170, 34, 174],
+            [187, 63, 217],
+            [204, 92, 4],
+            [221, 121, 47],
+            [238, 150, 90],
+            [255, 179, 133],
+        ];
+        let mut box_chain_pixels = Vec::with_capacity(64 * 64 * 3);
+        let mut box_chain_state = 0x1357_9bdf_u32;
+        for _ in 0..64 * 64 {
+            box_chain_state = box_chain_state
+                .wrapping_mul(1_664_525)
+                .wrapping_add(1_013_904_223);
+            let palette_index = usize::try_from((box_chain_state >> 28) & 0x0f)?;
+            box_chain_pixels.extend_from_slice(&box_chain_palette[palette_index]);
+        }
+        let box_chain_image = DecodedImage::new(64, 64, box_chain_pixels, ColorType::Rgb8);
+        let box_chain_expected =
+            image_slash_star::encode(&box_chain_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &box_chain_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            box_chain_expected,
+            "an ample box-chain budget preserves byte identity"
+        );
+        // The lossless VP8L palette-mode box chain now charges after each 64
+        // completed low-distance candidate offsets across the pass. This is a
+        // Rust-only caller-work boundary: Pillow has no caller token, typed
+        // work-budget result, caller-owned sink, or rollback contract, so it
+        // adds no Pillow parity row, fixture-manifest entry, diagnostic origin,
+        // new test function, or coverage-only hook. The no-token box-chain
+        // loop remains its original tight path.
+        let box_chain_policy = image_slash_star::EncodePolicy::new().with_max_work_units(600);
+        let box_chain_error = match image_slash_star::encode_with_policy(
+            &box_chain_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &box_chain_policy,
+        ) {
+            Ok(_) => return Err("VP8L box-chain budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            box_chain_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 600,
+                observed: 601,
+            }
+        ));
+        let mut box_chain_sink = vec![0xD7];
+        let box_chain_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &box_chain_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &box_chain_policy,
+            &mut box_chain_sink,
+        ) {
+            Ok(_) => return Err("VP8L box-chain sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            box_chain_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 600,
+                observed: 601,
+            }
+        ));
+        assert_eq!(box_chain_sink, vec![0xD7]);
+
         // This short palette has both delta directions but stays below the
         // 18-entry rotation threshold, exercising that public branch without
         // widening the work-budget contract or adding a private test hook.
