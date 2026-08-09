@@ -3,8 +3,11 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`487348d01389eb8d100b8a668c9921d97634c022`; the claim-ledger baseline remains
-`f1048bc0399fad9801559ca7fcfd3163427b5832`.
+`487348d01389eb8d100b8a668c9921d97634c022`; the current claim-ledger tuple is
+pinned to that implementation revision, Pillow parity run
+`c7e67804-f563-43a4-8814-8cf8b5e88319`, and Coverage MCP snapshot
+`026d33d8-47e7-4d36-99a1-08757710f186` from run
+`96813ff1-b9e7-45ac-945c-2c0318bc8538`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -1886,9 +1889,12 @@ primary-byte limits, per-frame and cumulative sequence limits, and the
 metadata extent); the policy manifests cited there are the active boundary
 evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
-The claim ledger (`tests/fixtures/claim_ledger.json`) pins the revision-bound
-tuple: the base revision, Pillow manifest SHA-256, generated-matrix SHA-256,
-the Coverage MCP run/snapshot identifiers, and every fixture-manifest SHA-256.
+The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
+revision-bound tuple: implementation revision
+`487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
+generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
+fixture-manifest SHA-256, and the VP8L property-map SHA-256
+`c9b077dbc65374b71b87ffe8596f6c8fb354660d46632a73d096b92a372504b7`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
 and identifiers, and requires the four maintained documents to name the same
 revision; CI runs the verifier so the tuple cannot drift.
@@ -6114,12 +6120,33 @@ report answers "which implementation paths executed?"; it does not answer
 | Aggregate coverage | CI/Coverage MCP `cargo llvm-cov --all-features --branch --json` over the complete test suite | Execution coverage across parity tests, defensive contracts, and permitted private `cfg(coverage)` state models | Parity completeness, semantic correctness, security, or production readiness |
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
+| VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures for VP8L transform/cache/Huffman/distance/entropy-image investigation, with their Pillow outer-result origin and current hashes | Proof that Pillow selected any internal VP8L state named by a candidate fixture |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
 executed lines to the aggregate report without becoming a generated parity
 row, and a private coverage model may exercise an unreachable state without
 being user-facing behavior.
+
+### VP8L property-to-fixture map
+
+`tests/fixtures/webp_vp8l_property_map.json` is the compact property map for
+the active lossless WebP corpus. It is pinned to implementation revision
+`487348d01389eb8d100b8a668c9921d97634c022`, manifest SHA-256
+`bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`, and
+generated-matrix SHA-256
+`b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
+`python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
+properties, 70 named witnesses, and 56 distinct active WebP rows.
+
+All 14 properties are deliberately marked `candidate`: their named rows are
+Pillow-origin outer-result fixtures, but no row claims to expose VP8L transform
+selection, meta-Huffman group/prefix state, color-cache width, simple versus
+full Huffman form, distance mapping, or entropy-image dimensions. This is why
+the map adds no synthetic parity row, `cfg(coverage)` hook, or Rust unit test.
+The remaining WEP-022 work is an independently checked structural parser or
+retained provenance that can promote a minimized candidate without changing
+the Pillow parity claim.
 
 ### Feature and target matrix
 

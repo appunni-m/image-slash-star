@@ -3,8 +3,9 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`487348d01389eb8d100b8a668c9921d97634c022`; the claim-ledger baseline remains
-`f1048bc0399fad9801559ca7fcfd3163427b5832`.
+`487348d01389eb8d100b8a668c9921d97634c022`; the current claim-ledger tuple is
+pinned to that implementation revision and accepted Coverage MCP snapshot
+`026d33d8-47e7-4d36-99a1-08757710f186`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
