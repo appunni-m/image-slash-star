@@ -1287,15 +1287,16 @@ impl CostManager {
     }
 
     fn update_at(&mut self, index: usize, clean: bool) {
-        let applicable = self
-            .intervals
-            .iter()
-            .copied()
-            .take_while(|interval| interval.start <= index)
-            .filter(|interval| interval.end > index)
-            .collect::<Vec<_>>();
-        for interval in applicable {
-            self.update(index, interval.position, interval.cost);
+        // Scan the small interval set by index so each pixel update does not
+        // allocate a temporary applicable-interval vector.
+        for interval_index in 0..self.intervals.len() {
+            let interval = self.intervals[interval_index];
+            if interval.start > index {
+                break;
+            }
+            if interval.end > index {
+                self.update(index, interval.position, interval.cost);
+            }
         }
         if clean {
             self.intervals.retain(|interval| interval.end > index);
@@ -1317,30 +1318,33 @@ impl CostManager {
             return Ok(());
         };
 
-        let mut applicable = Vec::new();
         for &interval in &self.intervals {
             if interval.start > index {
                 break;
             }
-            if interval.end > index {
-                applicable.push(interval);
-            }
             checkpoint_cost_manager_update_work(Some(token), work)?;
         }
-        for interval in applicable {
-            self.update(index, interval.position, interval.cost);
-            checkpoint_cost_manager_update_work(Some(token), work)?;
+        for interval_index in 0..self.intervals.len() {
+            let interval = self.intervals[interval_index];
+            if interval.start > index {
+                break;
+            }
+            if interval.end > index {
+                self.update(index, interval.position, interval.cost);
+                checkpoint_cost_manager_update_work(Some(token), work)?;
+            }
         }
         if clean {
-            let intervals = std::mem::take(&mut self.intervals);
-            let mut retained = Vec::with_capacity(intervals.len());
-            for interval in intervals {
+            let mut retained = 0;
+            for read_index in 0..self.intervals.len() {
+                let interval = self.intervals[read_index];
                 if interval.end > index {
-                    retained.push(interval);
+                    self.intervals[retained] = interval;
+                    retained += 1;
                 }
                 checkpoint_cost_manager_update_work(Some(token), work)?;
             }
-            self.intervals = retained;
+            self.intervals.truncate(retained);
         }
         Ok(())
     }
