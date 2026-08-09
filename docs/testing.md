@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`8d07256f934bf7cf8c09962ace3b29cdbd9b9215`; the claim-ledger baseline remains
+`51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -396,7 +396,8 @@ a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
 after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
 1,024 scanned or flattened RGBA transparent-area cleanup pixels, compressed/raw
-alpha-stream buffer copies after each 1,024 output bytes, each batch of
+alpha-stream buffer copies and WebP container/metadata assembly copies after
+each 1,024 output bytes, each batch of
 1,024 required padded-plane items, each 64 completed 4×4 histogram blocks,
 each 64-value segment-clustering alpha-domain chunk, analyzed macroblocks, and
 segment-assignment macroblocks,
@@ -953,6 +954,50 @@ current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
 1,822 regions. In `src/codecs/webp/encode/mod.rs`, coverage is 617/740 lines,
 84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
 feature-matrix, and coverage records remain separate evidence systems.
+
+Current WebP container/metadata assembly acceptance record
+
+Implementation revision `51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2` keeps the
+ordinary no-token WebP sequence/metadata assembly copies as bulk appends,
+while the token-aware path copies caller-sized metadata payloads, encoded
+chunks, and ANMF frame payloads in 1,024-byte chunks and polls after each
+complete chunk. The existing `encode_work_budget_is_a_non_parity_result_contract`
+uses a deterministic 128×128 patterned RGB image with a 4,096-byte ICC
+payload; the metadata-bearing output is exactly 14,748 bytes. An ample budget
+preserves exact bytes. The pre-fix bulk-copy control completed at the exact
+threshold `889,783`; the chunked path rejects at `maximum: 889,795`,
+`observed: 889,796` in both whole-buffer and caller-owned-sink paths, with
+sentinel `[0xB7]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added.
+
+Local focused `encode_work_budget_is_a_non_parity_result_contract` passed 1/1
+in approximately 2.47 s; `cargo check --all-features --all-targets --locked`,
+strict Clippy, rustfmt check, and `git diff --check` passed.
+
+Exact-head managed feature-matrix run
+`01190d09-b63f-4238-b384-374bc480c814` passed all 33 configured lanes in
+65,433 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log contains the capability-table
+agreement marker and no `lock-wait` match. Exact-head Pillow parity run
+`76f40704-a48d-47c9-971e-daa19b4e2f86` passed 1,445/1,445 checks in 1,471 ms.
+
+Nightly LLVM run `214d548c-c893-4005-a087-17516c6f6f83` passed 85/85 tests
+in 64,548 ms and ingested snapshot
+`a9f63171-3e46-4a28-a0cf-e46f3b983be8`, retaining 54,296/55,113 lines,
+7,710/7,906 branches, 3,082/3,162 functions, and 83,813/85,639 regions.
+Compared with preceding accepted snapshot
+`29e913f2-b48a-4789-8a10-ba344b8323f4`, covered/source deltas are `+31/+23`
+lines, `+8/+4` branches, `+1/+1` functions, and `+48/+49` regions. Current
+`src/codecs/webp/encode/mod.rs` is 640/763 lines, 88/102 branches,
+48/60 functions, and 1,050/1,321 regions. Current aggregate shortfall:
+817 lines, 196 branches, 80 functions, and 1,826 regions. The known LLVM
+JSON segment-normalization warning remains. Parity, feature, coverage, and
+non-Pillow-origin records remain separate.
 
 Current WebP alpha-stream buffer-copy acceptance record
 
