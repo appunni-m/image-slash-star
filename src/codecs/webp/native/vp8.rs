@@ -953,11 +953,38 @@ fn init_final_partition(
     reader: &mut dyn Read,
     partition: &mut ArithmeticDecoder,
 ) -> Result<(), DecodingError> {
-    let mut buf = Vec::new();
-    reader.read_to_end(&mut buf)?;
-    let size = buf.len();
-    let mut chunks = vec![[0; 4]; size.div_ceil(4)];
-    chunks.as_mut_slice().as_flattened_mut()[..size].copy_from_slice(&buf);
+    let mut chunks = Vec::new();
+    let mut read_buffer = [0; 16 * 1024];
+    let mut size = 0;
+
+    // Read in bounded batches and append directly to the arithmetic decoder's
+    // word storage. The final partition has no declared size, so retain the
+    // short final word and its logical byte count without first materializing
+    // a transient heap byte Vec.
+    loop {
+        let filled = match reader.read(&mut read_buffer) {
+            Ok(count) => count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error.into()),
+        };
+        if filled == 0 {
+            break;
+        }
+
+        let complete_bytes = filled / 4 * 4;
+        for bytes in read_buffer[..complete_bytes].chunks_exact(4) {
+            chunks.push([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        }
+
+        let remainder = filled - complete_bytes;
+        if remainder != 0 {
+            let mut chunk = [0; 4];
+            chunk[..remainder].copy_from_slice(&read_buffer[complete_bytes..filled]);
+            chunks.push(chunk);
+        }
+        size += filled;
+    }
+
     partition.init(chunks, size);
 
     Ok(())
