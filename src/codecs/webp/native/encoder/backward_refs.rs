@@ -42,6 +42,7 @@ const CACHE_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RUN_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RESULT_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS: usize = 64;
+const BOX_CHAIN_CANDIDATE_CHECKPOINT_OFFSETS: usize = 64;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -82,6 +83,18 @@ fn checkpoint_hash_chain_candidate_work(
 ) -> CheckpointResult<()> {
     *work = work.saturating_add(1);
     if (*work).is_multiple_of(HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS) {
+        checkpoint(Some(token))?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn checkpoint_box_chain_candidate_work(
+    token: &crate::CancellationToken,
+    work: &mut usize,
+) -> CheckpointResult<()> {
+    *work = work.saturating_add(1);
+    if (*work).is_multiple_of(BOX_CHAIN_CANDIDATE_CHECKPOINT_OFFSETS) {
         checkpoint(Some(token))?;
     }
     Ok(())
@@ -446,6 +459,7 @@ fn box_chain(
 
     let mut previous_offset = 0;
     let mut previous_length = 0;
+    let mut candidate_work = 0_usize;
     for position in 1..pixels.len() {
         if position.is_multiple_of(1024) {
             checkpoint(token)?;
@@ -461,42 +475,85 @@ fn box_chain(
             };
             best_length = if use_previous { previous_length - 1 } else { 0 };
             best_offset = if use_previous { previous_offset } else { 0 };
-            for &offset in offsets {
-                let Some(mut candidate) = position.checked_sub(offset) else {
-                    continue;
-                };
-                if pixels[candidate] != pixels[position] {
-                    continue;
+            if let Some(token) = token {
+                for &offset in offsets {
+                    checkpoint_box_chain_candidate_work(token, &mut candidate_work)?;
+                    let Some(mut candidate) = position.checked_sub(offset) else {
+                        continue;
+                    };
+                    if pixels[candidate] != pixels[position] {
+                        continue;
+                    }
+                    let mut current = position;
+                    let mut length = 0;
+                    let mut next_checkpoint = 256;
+                    loop {
+                        let candidate_count = usize::from(counts[candidate]);
+                        let current_count = usize::from(counts[current]);
+                        if candidate_count != current_count {
+                            length += candidate_count.min(current_count);
+                            break;
+                        }
+                        length += candidate_count;
+                        if length >= next_checkpoint {
+                            checkpoint(Some(token))?;
+                            next_checkpoint = length.saturating_add(256);
+                        }
+                        candidate += candidate_count;
+                        current += current_count;
+                        if length > MAX_LENGTH
+                            || current >= pixels.len()
+                            || pixels[candidate] != pixels[current]
+                        {
+                            break;
+                        }
+                    }
+                    if length > best_length {
+                        best_offset = offset;
+                        best_length = length.min(MAX_LENGTH);
+                        if length >= MAX_LENGTH {
+                            break;
+                        }
+                    }
                 }
-                let mut current = position;
-                let mut length = 0;
-                let mut next_checkpoint = 256;
-                loop {
-                    let candidate_count = usize::from(counts[candidate]);
-                    let current_count = usize::from(counts[current]);
-                    if candidate_count != current_count {
-                        length += candidate_count.min(current_count);
-                        break;
+            } else {
+                for &offset in offsets {
+                    let Some(mut candidate) = position.checked_sub(offset) else {
+                        continue;
+                    };
+                    if pixels[candidate] != pixels[position] {
+                        continue;
                     }
-                    length += candidate_count;
-                    if length >= next_checkpoint {
-                        checkpoint(token)?;
-                        next_checkpoint = length.saturating_add(256);
+                    let mut current = position;
+                    let mut length = 0;
+                    let mut next_checkpoint = 256;
+                    loop {
+                        let candidate_count = usize::from(counts[candidate]);
+                        let current_count = usize::from(counts[current]);
+                        if candidate_count != current_count {
+                            length += candidate_count.min(current_count);
+                            break;
+                        }
+                        length += candidate_count;
+                        if length >= next_checkpoint {
+                            checkpoint(token)?;
+                            next_checkpoint = length.saturating_add(256);
+                        }
+                        candidate += candidate_count;
+                        current += current_count;
+                        if length > MAX_LENGTH
+                            || current >= pixels.len()
+                            || pixels[candidate] != pixels[current]
+                        {
+                            break;
+                        }
                     }
-                    candidate += candidate_count;
-                    current += current_count;
-                    if length > MAX_LENGTH
-                        || current >= pixels.len()
-                        || pixels[candidate] != pixels[current]
-                    {
-                        break;
-                    }
-                }
-                if length > best_length {
-                    best_offset = offset;
-                    best_length = length.min(MAX_LENGTH);
-                    if length >= MAX_LENGTH {
-                        break;
+                    if length > best_length {
+                        best_offset = offset;
+                        best_length = length.min(MAX_LENGTH);
+                        if length >= MAX_LENGTH {
+                            break;
+                        }
                     }
                 }
             }
