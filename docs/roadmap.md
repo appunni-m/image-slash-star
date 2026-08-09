@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `dc65e760117e9bc5155c16fdf68ffffe97524c25`, and benchmark-protocol
+revision `5e56c103068056e71617695a5c8bc0e47d240634`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
@@ -12,14 +12,14 @@ The last accepted managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`1935d463-5cce-4016-998a-7035d20c34a9` (1,445/1,445 passed in 658 ms) and
-feature matrix `5a524032-009d-47c2-ba48-7f3ca1e29178` (passed in 21,808 ms);
+`0e315e94-47d6-48be-b27b-1c44a4b19413` (1,445/1,445 passed in 820 ms) and
+feature matrix `ef7b94c0-c2b6-4823-b3b8-a9a1ff514028` (passed in 30,771 ms);
 both recorded checkout HEAD
-`dc65e760117e9bc5155c16fdf68ffffe97524c25`.
+`5e56c103068056e71617695a5c8bc0e47d240634`.
 The accepted Coverage MCP snapshot is
-`a6858d88-f16e-4f18-9d85-059afa70045f` from run
-`077e16ef-8ec6-4530-8b4f-ed5a1088d1c6`; it records 55,630/56,487 lines,
-7,953/8,160 branches, 3,115/3,211 functions, and 85,516/87,427 regions at
+`574b447c-e80b-4cec-a7b7-179cf7a0d9a4` from run
+`6a000cd0-8920-4fcb-aa1b-ac9479777b6f`; it records 55,637/56,494 lines,
+7,953/8,160 branches, 3,116/3,212 functions, and 85,531/87,442 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -194,21 +194,20 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `a6858d88-f16e-4f18-9d85-059afa70045f` covers source revision `dc65e760117e9bc5155c16fdf68ffffe97524c25`: 55,630/56,487 lines, 7,953/8,160 branches, 3,115/3,211 functions, and 85,516/87,427 regions. Exact-head feature-matrix run `5a524032-009d-47c2-ba48-7f3ca1e29178` passed all configured lanes in 21,808 ms with its native/WASI capability agreement marker and no `lock-wait` match; exact-head Pillow parity run `1935d463-5cce-4016-998a-7035d20c34a9` passed 1,445/1,445 checks in 658 ms; and nightly LLVM run `077e16ef-8ec6-4530-8b4f-ed5a1088d1c6` passed 85/85 tests in 52,814 ms and ingested the accepted snapshot above. The aggregate shortfall is 857 lines, 207 branches, 96 functions, and 1,911 regions. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27 functions. These are Rust implementation/coverage metrics, not Pillow-oracle parity metrics or allocator/OOM accounting; the known LLVM JSON segment-normalization warning remains. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `574b447c-e80b-4cec-a7b7-179cf7a0d9a4` covers source revision `5e56c103068056e71617695a5c8bc0e47d240634`: 55,637/56,494 lines, 7,953/8,160 branches, 3,116/3,212 functions, and 85,531/87,442 regions. Exact-head feature-matrix run `ef7b94c0-c2b6-4823-b3b8-a9a1ff514028` passed all configured lanes in 30,771 ms with its native/WASI capability agreement marker and no `lock-wait` match; exact-head Pillow parity run `0e315e94-47d6-48be-b27b-1c44a4b19413` passed 1,445/1,445 checks in 820 ms; and nightly LLVM run `6a000cd0-8920-4fcb-aa1b-ac9479777b6f` passed 85/85 tests in 51,239 ms and ingested the accepted snapshot above. The aggregate shortfall is 857 lines, 207 branches, 96 functions, and 1,911 regions. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27 functions. These are Rust implementation/coverage metrics, not Pillow-oracle parity metrics or allocator/OOM accounting; the known LLVM JSON segment-normalization warning remains. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
-Revision-bound note: the histogram pair-queue and histogram-merge
-scratch-reuse implementations are at
-`dc65e760117e9bc5155c16fdf68ffffe97524c25`, following histogram merge scratch
-reuse at `bb654ca65ec0bc5a15000d32f7cf924b233a9738` and the predictor and
-cross-color implementation at
-`533f97ee45bcc750fb0373da6272c3955963ce22`. The managed Pillow and
-feature-matrix runs are exact-head test-result evidence at `dc65e76`; the
+Revision-bound note: the candidate-result-list implementation is at
+`5e56c103068056e71617695a5c8bc0e47d240634`, following the candidate-result
+token-pool implementation at `aa65af084624175a0279f42ffe904107e921db8b` and
+the histogram pair-queue and histogram-merge scratch-reuse implementations at
+`dc65e760117e9bc5155c16fdf68ffffe97524c25` and
+`bb654ca65ec0bc5a15000d32f7cf924b233a9738`. The managed Pillow and
+feature-matrix runs are exact-head test-result evidence at `5e56c10`; the
 accepted Coverage MCP snapshot is Rust implementation evidence at the same
 source revision, separate from Pillow-oracle parity and still short of the
-100% release target. The candidate-result token-pool implementation at
-`aa65af084624175a0279f42ffe904107e921db8b` and the preceding Huffman-tree
-arena implementation at
-`630baeace17edb64bdc3dc7c5f3e95ea1130baa4` remain historical closure points.
+100% release target. The preceding Huffman-tree arena implementation at
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4` remains a historical closure
+point.
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -1270,6 +1269,7 @@ being repeated as unfinished work.
    storage, image-stream scratch reuse, histogram-clustering scratch reuse,
    histogram-merge scratch reuse, histogram-pair-queue scratch reuse,
    backward-reference scratch reuse, candidate-result token-pool reuse,
+   candidate-result-list reuse,
    predictor-transform scratch reuse, and cross-color-transform scratch reuse.
    Preserve the no-token hot path, use the existing WebP fixture rows for
    byte/error regression, and keep caller-budget-only evidence in the existing
@@ -7506,6 +7506,56 @@ Pillow parity and Rust-only feature-gate suites are regression evidence for
 this implementation-only change; no new parity fixture, feature-gate test
 function, diagnostic origin, or coverage-only hook was added.
 
+Current acceptance record: WebP VP8L candidate-result list reuse
+
+The production and Rust test/runtime slice is implemented at
+`5e56c103068056e71617695a5c8bc0e47d240634`, following candidate-result
+token-pool reuse at `aa65af084624175a0279f42ffe904107e921db8b`. The outer
+`Vec<(Vec<Token>, u8)>` returned by VP8L candidate construction now retains its
+small allocation in `CandidateScratch` across image streams. Each stream drains
+the bounded standard and optional box-chain list, and the list storage is
+restored even when a token-aware trial returns an error; candidate token
+vectors remain independently owned by the existing bounded pool or active
+trial. Candidate ordering, cache-bit selection, checkpoint behavior, encoded
+bytes, errors, and sink output remain unchanged.
+
+This is Rust implementation and Rust-only allocation-ownership evidence.
+Pillow exposes only the existing byte/error fixture matrix, not result-list
+allocation, retained capacity, caller buffers, or OOM behavior. The fixture
+matrix is therefore regression evidence, not proof of the internal result-list
+contract; no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook was added. Current changed-file projections are
+`src/codecs/webp/native/encoder.rs`: 2,371/2,439 lines, 502/528 branches,
+92/92 functions, and 3,414/3,662 regions; and
+`src/codecs/webp/native/encoder/backward_refs.rs`: 1,879/1,933 lines,
+495/528 branches, 73/73 functions, and 2,808/2,968 regions. Existing
+uncovered and partial branches remain visible; no synthetic unit or parity
+input was used to alter them.
+
+The clean schema-`@3` benchmark passed the Pillow-parity workload in 1.029030 s
+wall / 2.766949 user s / 0.204220 sys s / 252,788,736-byte peak RSS and the
+separate Rust-only feature-gate workload in 1.551884 s wall / 2.214894 user s /
+0.101167 sys s / 166,510,592-byte peak RSS. The native release `rlib` was
+8,001,576 bytes and the `wasm32-unknown-unknown` determinism artifact was
+24,771,874 bytes. These are host/cache/toolchain observations, not comparative
+or universal performance claims; allocation counts, retained encoded/decoded
+cache bytes, caller-buffer reuse, stack depth, and WASM runtime resources
+remain unmeasured.
+
+Exact-head managed Pillow parity run
+`0e315e94-47d6-48be-b27b-1c44a4b19413` passed 1,445/1,445 checks; exact-head
+feature-matrix run `ef7b94c0-c2b6-4823-b3b8-a9a1ff514028` passed all configured
+native/WASI lanes in 30,771 ms with the capability agreement marker and no
+`lock-wait` match. Nightly LLVM run
+`6a000cd0-8920-4fcb-aa1b-ac9479777b6f` passed 85/85 tests in 51,239 ms and
+ingested snapshot `574b447c-e80b-4cec-a7b7-179cf7a0d9a4`: 55,637/56,494 lines,
+7,953/8,160 branches, 3,116/3,212 functions, and 85,531/87,442 regions.
+Compared with the preceding accepted snapshot, covered totals rose by 7
+lines, 0 branches, 1 function, and 15 regions; the line-rate change reflects
+source growth with maintained coverage. These are Rust implementation/
+coverage records, not Pillow-parity coverage; the known LLVM JSON
+segment-normalization warning remains.
+
 Current acceptance record: WebP VP8L histogram pair-queue scratch reuse
 
 The production and Rust test/runtime slice is implemented at
@@ -9022,7 +9072,9 @@ and cross-color transform scratch boundaries are closed at
 `533f97ee45bcc750fb0373da6272c3955963ce22`; the histogram-merge scratch
 boundary is closed at `bb654ca65ec0bc5a15000d32f7cf924b233a9738`; the
 histogram-pair-queue scratch boundary is closed at
-`dc65e760117e9bc5155c16fdf68ffffe97524c25`; finer
+`dc65e760117e9bc5155c16fdf68ffffe97524c25`; the candidate-result-list
+scratch boundary is closed at
+`5e56c103068056e71617695a5c8bc0e47d240634`; finer
 Huffman/tree and other
 uncheckpointed work remain open, as do JPEG
 interior work beyond

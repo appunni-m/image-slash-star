@@ -3,22 +3,25 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `dc65e760117e9bc5155c16fdf68ffffe97524c25`; the claim-ledger fixture
+revision `5e56c103068056e71617695a5c8bc0e47d240634`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`1935d463-5cce-4016-998a-7035d20c34a9` (1,445/1,445 passed in 658 ms), and the
-latest feature matrix is `5a524032-009d-47c2-ba48-7f3ca1e29178` (passed in
-21,808 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `a6858d88-f16e-4f18-9d85-059afa70045f` from run
-`077e16ef-8ec6-4530-8b4f-ed5a1088d1c6`, also at that revision: 55,630/56,487
-lines, 7,953/8,160 branches, 3,115/3,211 functions, and 85,516/87,427
+`0e315e94-47d6-48be-b27b-1c44a4b19413` (1,445/1,445 passed in 820 ms), and the
+latest feature matrix is `ef7b94c0-c2b6-4823-b3b8-a9a1ff514028` (passed in
+30,771 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `574b447c-e80b-4cec-a7b7-179cf7a0d9a4` from run
+`6a000cd0-8920-4fcb-aa1b-ac9479777b6f`, also at that revision: 55,637/56,494
+lines, 7,953/8,160 branches, 3,116/3,212 functions, and 85,531/87,442
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. These are Rust implementation/coverage metrics, not Pillow-oracle
-coverage or allocator/OOM accounting.
+functions. The changed WebP encoder file records 2,371/2,439 lines,
+502/528 branches, 92/92 functions, and 3,414/3,662 regions; its backward-
+reference file records 1,879/1,933 lines, 495/528 branches, 73/73 functions,
+and 2,808/2,968 regions. These are Rust implementation/coverage metrics, not
+Pillow-oracle coverage or allocator/OOM accounting.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -817,6 +820,16 @@ until their trial completes and nested metadata streams keep separate pools.
 Candidate ordering, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only candidate-result allocation optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
+
+The VP8L candidate result list itself retains its small outer allocation across
+image streams. The standard and optional low-distance box-chain candidates are
+drained for each trial and the list storage is restored to scratch, including
+the cancellation/error return path; candidate token vectors remain independently
+owned by the existing bounded pool or active trial. Candidate ordering,
+cache-bit selection, checkpoint behavior, encoded bytes, errors, and sink
+output remain unchanged. This is a Rust-only result-list allocation
+optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 WebP VP8L predictor and cross-color transform selection retain their
 pixel-scaled work maps in the image-stream scratch object. Predictor mode
