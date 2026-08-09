@@ -616,8 +616,26 @@ fn populate_cache(
     Ok(())
 }
 
-fn with_cache_without_checkpoint(pixels: &[u32], refs: &[Token], bits: u8) -> Vec<Token> {
-    let mut cache = vec![0_u32; 1 << bits];
+#[derive(Default)]
+struct CacheTransformScratch {
+    cache: Vec<u32>,
+}
+
+impl CacheTransformScratch {
+    fn prepare(&mut self, bits: u8) -> &mut [u32] {
+        self.cache.resize(1 << bits, 0);
+        self.cache.fill(0);
+        &mut self.cache
+    }
+}
+
+fn with_cache_without_checkpoint(
+    pixels: &[u32],
+    refs: &[Token],
+    bits: u8,
+    scratch: &mut CacheTransformScratch,
+) -> Vec<Token> {
+    let cache = scratch.prepare(bits);
     let mut output = Vec::with_capacity(refs.len());
     let mut position: usize = 0;
     for &reference in refs {
@@ -634,7 +652,7 @@ fn with_cache_without_checkpoint(pixels: &[u32], refs: &[Token], bits: u8) -> Ve
             }
             Token::Copy { length, .. } => {
                 output.push(reference);
-                populate_cache_without_checkpoint(pixels, position, length, bits, &mut cache);
+                populate_cache_without_checkpoint(pixels, position, length, bits, cache);
                 position += length;
             }
             Token::Cache(_) => unreachable!(),
@@ -648,14 +666,15 @@ fn with_cache(
     refs: &[Token],
     bits: u8,
     token: CheckpointToken<'_>,
+    scratch: &mut CacheTransformScratch,
 ) -> CheckpointResult<Vec<Token>> {
     if bits == 0 {
         return Ok(refs.to_vec());
     }
     let Some(token) = token else {
-        return Ok(with_cache_without_checkpoint(pixels, refs, bits));
+        return Ok(with_cache_without_checkpoint(pixels, refs, bits, scratch));
     };
-    let mut cache = vec![0_u32; 1 << bits];
+    let cache = scratch.prepare(bits);
     let mut output = Vec::with_capacity(refs.len());
     let mut position: usize = 0;
     for &reference in refs {
@@ -675,7 +694,7 @@ fn with_cache(
             }
             Token::Copy { length, .. } => {
                 output.push(reference);
-                populate_cache(pixels, position, length, bits, &mut cache, Some(token))?;
+                populate_cache(pixels, position, length, bits, cache, Some(token))?;
                 position += length;
             }
             Token::Cache(_) => unreachable!(),
@@ -1908,15 +1927,17 @@ pub(super) fn candidates(
     }
     let chain = fill_hash_chain(pixels, width, quality, token)?;
     let mut estimate_scratch = CostEstimateScratch::default();
+    let mut cache_scratch = CacheTransformScratch::default();
     let choose_cache = |source: Vec<Token>,
-                        scratch: &mut CostEstimateScratch|
+                        scratch: &mut CostEstimateScratch,
+                        cache_scratch: &mut CacheTransformScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
         let maximum = if allow_cache { max_cache_bits } else { 0 };
         // The inclusive range always contains cache-bit value zero.
         let mut best = None;
         for bits in 0..=maximum {
             checkpoint(token)?;
-            let cached = with_cache(pixels, &source, bits, token)?;
+            let cached = with_cache(pixels, &source, bits, token, cache_scratch)?;
             let cost = cache_estimated_bits_with_checkpoint(&cached, bits, token, scratch)?;
             if best
                 .as_ref()
@@ -1954,8 +1975,16 @@ pub(super) fn candidates(
         Ok(candidate)
     };
 
-    let standard = choose_cache(lz77(pixels, width, &chain, token)?, &mut estimate_scratch)?;
-    let rle = choose_cache(rle(pixels, width, token)?, &mut estimate_scratch)?;
+    let standard = choose_cache(
+        lz77(pixels, width, &chain, token)?,
+        &mut estimate_scratch,
+        &mut cache_scratch,
+    )?;
+    let rle = choose_cache(
+        rle(pixels, width, token)?,
+        &mut estimate_scratch,
+        &mut cache_scratch,
+    )?;
     let mut primary = if standard.2 <= rle.2 {
         improve(standard, &chain, &mut estimate_scratch)?
     } else {
@@ -1968,7 +1997,11 @@ pub(super) fn candidates(
     if allow_cache && max_cache_bits <= 4 {
         let chain = box_chain(pixels, width, &chain, token)?;
         let mut box_candidate = improve(
-            choose_cache(lz77(pixels, width, &chain, token)?, &mut estimate_scratch)?,
+            choose_cache(
+                lz77(pixels, width, &chain, token)?,
+                &mut estimate_scratch,
+                &mut cache_scratch,
+            )?,
             &chain,
             &mut estimate_scratch,
         )?;
