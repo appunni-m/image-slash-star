@@ -3,18 +3,18 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `5929982b72e1edca9cce7cd82658b6f66ba29c89`; the claim-ledger fixture tuple
+revision `7a75acb33cbce80984dcf1dadd63d498b5f551e3`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-GIF sequence frame ownership, JPEG entropy output-buffer ownership,
-candidate-prefix optimization, candidate-suffix allocation recycling,
-entropy-analysis pixel, Huffman-RLE fill, Huffman-RLE token-materialization, and
-Huffman-tree leaf census/materialization/depth slices have not received a
-managed coverage rerun.
+GIF sequence frame ownership, JPEG entropy output-buffer ownership, PNG source
+pixel ownership, candidate-prefix optimization, candidate-suffix allocation
+recycling, entropy-analysis pixel, Huffman-RLE fill, Huffman-RLE
+token-materialization, and Huffman-tree leaf census/materialization/depth slices
+have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -635,6 +635,12 @@ headers remain in that buffer, while checkpoint lengths are measured relative
 to the current entropy segment so the old reset semantics are unchanged. The
 writer returns the same buffer after each segment, removing the former entropy
 staging copy without claiming allocator/OOM accounting or universal streaming.
+
+PNG filtering borrows immutable source pixels for every mode that needs no
+representation change. The L16 branch alone materializes a big-endian buffer;
+all other source modes avoid a full pre-filter raster clone. This is a bounded
+ownership optimization and does not claim destination-buffer reuse,
+allocator/OOM accounting, or streaming.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit

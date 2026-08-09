@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `5929982b72e1edca9cce7cd82658b6f66ba29c89`, and benchmark-protocol revision
+revision `7a75acb33cbce80984dcf1dadd63d498b5f551e3`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`5929982b72e1edca9cce7cd82658b6f66ba29c89`; the accepted managed records
+`7a75acb33cbce80984dcf1dadd63d498b5f551e3`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,19 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The PNG source-pixel ownership slice is implemented at production revision
+`7a75acb33cbce80984dcf1dadd63d498b5f551e3`. L1, P8, L8, La8, RGB8, and RGBA8
+encoding now borrows the immutable decoded pixel buffer through `Cow`; only
+L16 performs the required little-endian-to-big-endian owned conversion. The
+filter, compression, chunk, and policy stages are otherwise unchanged, so
+there is no source-raster clone before filtering. All 83 PNG encode parity
+rows, the complete 28-function fixture matrix, all 45 feature-gated Rust
+contracts, and full all-feature tests passed locally. Pillow remains the exact
+byte/error oracle; source ownership is a Rust implementation boundary with no
+Pillow allocation contract. No new fixture, test function, diagnostic origin,
+or coverage-only hook was added. No managed parity, feature-matrix, or Coverage
+MCP rerun is claimed for this revision.
 
 The JPEG entropy output-buffer ownership slice is implemented at production
 revision `5929982b72e1edca9cce7cd82658b6f66ba29c89`. Baseline and progressive
