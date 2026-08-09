@@ -3,11 +3,12 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`487348d01389eb8d100b8a668c9921d97634c022`; the current claim-ledger tuple is
-pinned to that implementation revision, Pillow parity run
-`c7e67804-f563-43a4-8814-8cf8b5e88319`, and Coverage MCP snapshot
-`026d33d8-47e7-4d36-99a1-08757710f186` from run
-`96813ff1-b9e7-45ac-945c-2c0318bc8538`.
+`f8fd846f0f1ebd7bc15444698626009a31ef7004`; the claim-ledger fixture tuple
+remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`,
+while the current Pillow parity run is
+`27531635-5dc3-495f-8d70-40f74323f0fa` and the current Coverage MCP snapshot
+is `90285a8d-64e1-403c-bff3-1c3267104936` from run
+`e55c08c4-1bdc-4044-bcfd-5ae919ad03a3`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -6123,7 +6124,7 @@ report answers "which implementation paths executed?"; it does not answer
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
 | VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts and malformed parser code/phase/bit-offset witnesses, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
-| Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` | Clean-revision workload timings, manifest/matrix hashes, and native release/WASM compile artifact sizes with parity and Rust-only provenance kept separate | Universal performance, peak-memory, allocation, stack, caller-buffer-reuse, or WASM-runtime claims |
+| Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` | Clean-revision workload timings with a fixed four-worker test-harness budget, manifest/matrix hashes, and native release/WASM compile artifact sizes with parity and Rust-only provenance kept separate | Universal performance, peak-memory, allocation, stack, caller-buffer-reuse, or WASM-runtime claims |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
@@ -6180,15 +6181,24 @@ benchmarks. The protocol intentionally reports allocation counts, retained
 encoded/decoded cache bytes, caller-buffer reuse, peak RSS, peak stack, and
 WASM runtime time/memory as unmeasured until dedicated collectors exist.
 
+The schema-`@2` workload fixes both Cargo test targets at
+`--test-threads=4`. This bounded parallel budget represents normal local
+execution without allowing host CPU count to change the measured command. The
+parity harness also shares immutable, fixture-derived source sequences across
+its partitioned test functions; mutable sequence-option cases clone that
+cache. Neither scheduling change changes the 1,024 decode/393 encode fixture
+denominator, adds a parity row, or turns the Rust-only feature-gate contract
+into Pillow evidence.
+
 A clean local run at source revision
-`1dd736132fd3990a1d06f5f9be8ba9137f574a03` passed all four workloads on the
-arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its warm observations
-were 3.09 s for the 1,024-row/393-row Pillow parity suite, 3.09 s for the
-separate Rust feature-gate suite, 7,863,416 bytes for the native release
-`rlib`, and 24,830,966 bytes for the `wasm32-unknown-unknown` determinism test
-artifact; peak RSS was unavailable from the host's portable timing interface.
-These values are a revision-bound execution record, not a universal benchmark
-or a parity claim for the Rust-only workload.
+`f8fd846f0f1ebd7bc15444698626009a31ef7004` passed all four workloads on the
+arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its observations were
+1.06 s for the 1,024-row/393-row Pillow parity suite, 2.49 s for the separate
+Rust feature-gate suite, 7,863,416 bytes for the native release `rlib`, and
+24,830,966 bytes for the `wasm32-unknown-unknown` determinism test artifact;
+peak RSS was unavailable from the host's portable timing interface. These
+values are a revision-bound execution record, not a universal benchmark or a
+parity claim for the Rust-only workload.
 
 ### Feature and target matrix
 
@@ -6222,7 +6232,7 @@ are present, the scheduler treats the root as warm: it allows one independent
 lane per logical CPU, capped at 24, uses one Cargo compiler worker per lane, and
 derives the test-harness budget as `floor(logical_cpus / MATRIX_JOBS)`, with a
 minimum of one and a maximum of eight workers per lane. On the measured 12-CPU
-host, the warm default is therefore 12 lanes and one test worker per lane.
+host, the warm default is therefore 24 lanes and one test worker per lane.
 `MATRIX_JOBS`, `MATRIX_TEST_THREADS`, and `MATRIX_BUILD_JOBS` can override the
 derived values for a constrained or unusually large CI runner. This bounds
 aggregate process, compiler, and test-thread fan-out without dropping any lane
