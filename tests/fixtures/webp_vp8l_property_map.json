@@ -547,9 +547,9 @@
     },
     {
       "id": "vp8l.transform.malformed_forms",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_duplicate_transform"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_predictor_transform_stream_truncated"},
@@ -557,13 +557,13 @@
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_size_truncated"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_stream_truncated"}
       ],
-      "gap": "Pillow error results are active negative parity rows; exact parser phase and transform fields remain Rust/specification evidence, not Pillow fields."
+      "gap": "The independent parser now proves the five listed malformed transform forms by rejection code, phase, and bit offset; the Pillow error rows remain outer-result evidence and other malformed forms remain outside this witnessed scope."
     },
     {
       "id": "vp8l.huffman.malformed_forms",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_empty_code_length_tree"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_incomplete_huffman_tree"},
@@ -575,19 +575,19 @@
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_length_alphabet_truncated"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_huffman_stream_truncated"}
       ],
-      "gap": "The malformed rows preserve Pillow's outer error outcome, not the internal Huffman failure phase or code-length state."
+      "gap": "The independent parser now proves the nine listed malformed Huffman boundaries by rejection code, phase, and bit offset; the broader malformed corpus remains outside this witnessed scope."
     },
     {
       "id": "vp8l.cache.malformed_forms",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_color_cache"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_cache_truncated_10"},
         {"operation": "decode", "row_id": "error_malformed_container_vp8l_single_cache_truncated_18"}
       ],
-      "gap": "These are named cache error boundaries, but cache size and insertion/lookup state require independent structural provenance."
+      "gap": "The independent parser now proves the three listed malformed cache boundaries by rejection code, phase, and bit offset; successful cache widths and other malformed forms remain separately scoped."
     }
   ]
 }
