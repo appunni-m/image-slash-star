@@ -1291,6 +1291,7 @@ struct ImageStreamScratch {
     output: Vec<u8>,
     tokens: TokenStreamScratch,
     predictor: predictor::PredictorScratch,
+    cross_color: cross_color::CrossColorScratch,
 }
 
 #[derive(Clone, Copy)]
@@ -2277,12 +2278,13 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
             }
 
             if use_predictor && !red_and_blue_zero {
-                let (color_map, color_bits) = cross_color::select_and_apply(
+                let color_bits = cross_color::select_and_apply(
                     pixels,
                     width as usize,
                     height as usize,
                     transform_bits,
                     80,
+                    &mut stream_scratch.cross_color,
                     token,
                 )?;
                 w.write_bits(1, 1)?;
@@ -2291,7 +2293,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
                 write_image_stream(
                     w,
-                    &color_map,
+                    stream_scratch.cross_color.image(),
                     color_width,
                     false,
                     &mut stream_scratch.output,

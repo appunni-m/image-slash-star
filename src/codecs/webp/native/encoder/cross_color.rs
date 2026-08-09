@@ -51,6 +51,17 @@ fn checkpoint_after_sample(
     Ok(())
 }
 
+#[derive(Default)]
+pub(super) struct CrossColorScratch {
+    image: Vec<u32>,
+}
+
+impl CrossColorScratch {
+    pub(super) fn image(&self) -> &[u32] {
+        &self.image
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 struct Multipliers {
     green_to_red: u8,
@@ -544,18 +555,19 @@ pub(super) fn optimize_sampling(
 
 /// Selects and applies libwebp's cross-color transform.
 #[allow(dead_code)]
-pub(crate) fn select_and_apply(
+pub(super) fn select_and_apply(
     argb: &mut [u32],
     width: usize,
     height: usize,
     bits: u8,
     quality: i32,
+    scratch: &mut CrossColorScratch,
     token: CheckpointToken<'_>,
-) -> CheckpointResult<(Vec<u32>, u8)> {
+) -> CheckpointResult<u8> {
     let tile_width = subsample_size(width, bits);
     let tile_height = subsample_size(height, bits);
     let tile_size = 1_usize << bits;
-    let mut image = vec![0_u32; tile_width * tile_height];
+    scratch.image.resize(tile_width * tile_height, 0);
     let mut accumulated_red = [0_u32; 256];
     let mut accumulated_blue = [0_u32; 256];
     let mut previous_y;
@@ -565,7 +577,7 @@ pub(crate) fn select_and_apply(
         previous_y = Multipliers::default();
         for tile_x in 0..tile_width {
             if tile_y != 0 {
-                let color = image[(tile_y - 1) * tile_width + tile_x];
+                let color = scratch.image[(tile_y - 1) * tile_width + tile_x];
                 previous_y = Multipliers {
                     green_to_red: color as u8,
                     green_to_blue: (color >> 8) as u8,
@@ -604,7 +616,7 @@ pub(crate) fn select_and_apply(
                 green_to_blue,
                 red_to_blue,
             };
-            image[tile_y * tile_width + tile_x] = 0xff00_0000
+            scratch.image[tile_y * tile_width + tile_x] = 0xff00_0000
                 | (u32::from(red_to_blue) << 16)
                 | (u32::from(green_to_blue) << 8)
                 | u32::from(green_to_red);
@@ -639,7 +651,9 @@ pub(crate) fn select_and_apply(
             }
         }
     }
-    let best_bits = optimize_sampling(&mut image, width, height, bits, token)?;
-    image.truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));
-    Ok((image, best_bits))
+    let best_bits = optimize_sampling(&mut scratch.image, width, height, bits, token)?;
+    scratch
+        .image
+        .truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));
+    Ok(best_bits)
 }
