@@ -1238,10 +1238,9 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
         // The ordinary path has no caller-visible copy checkpoint. Move the
         // winning suffix into the parent writer instead of copying it; keep
         // the token-aware path's chunked copy and cancellation behavior.
-        if token.is_none() {
-            w.writer.append(&mut suffix);
-        } else {
-            extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
+        match token {
+            None => w.writer.append(&mut suffix),
+            Some(token) => extend_bytes_with_checkpoint(w.writer, &suffix, Some(token))?,
         }
         *output_scratch = suffix;
         w.buffer = buffer;
