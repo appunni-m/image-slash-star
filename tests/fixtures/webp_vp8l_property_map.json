@@ -181,6 +181,12 @@
       "expect": {"transforms_contains": [{"type": "color", "size_bits": 9}]}
     },
     {
+      "property_id": "vp8l.transform.color",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_noise",
+      "expect": {"transforms_contains": [{"type": "color", "size_bits": 9}]}
+    },
+    {
       "property_id": "vp8l.transform.subtract_green",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_product",
@@ -408,16 +414,16 @@
     },
     {
       "id": "vp8l.transform.color",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_horizontal"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_vertical"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_diagonal"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"}
       ],
-      "gap": "The decoded pixels are parity evidence; they do not identify a VP8L color-transform record or its block size."
+      "gap": "The independent parser now proves the color-transform record and the named block-size boundaries (3 and 9 bits) for the four listed rows; other transform selections and sizes remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.subtract_green",
