@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `6042b77c5c568968295bae030335cb6d9cabb417`, and benchmark-protocol revision
+revision `401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,16 +11,16 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest managed checkout validation runs are Pillow parity
-`46e13ce3-09ac-411e-b5ba-4b0dd186b123` (1,445/1,445 passed) and feature matrix
-`673e9ccf-c495-460b-a4a1-31aad144de0a` (passed in 27,840 ms); the ledger records
-checkout HEAD `2cfcdb49814321d0d251cc40072d2ba0bf583d15` before the current source
-commit, so neither is exact-head evidence for `6042b77c5c568968295bae030335cb6d9cabb417`.
+`5bd106cf-fe10-421b-834e-9897d855cf83` (1,445/1,445 passed) and feature matrix
+`8b18d725-8b61-423b-9417-8ae43b6c3aec` (passed in 20,109 ms); the ledger records
+checkout HEAD `458865de920e80f81b6ac7cc89ef1c6806ab94d2` before the current source
+commit, so neither is exact-head evidence for `401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`6042b77c5c568968295bae030335cb6d9cabb417`; the accepted managed records
+`401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -639,8 +639,31 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-The lossless WebP VP8L optimized-frequency scratch-reuse slice is implemented
-at production and Rust test/runtime revision
+The lossless WebP VP8L Huffman symbol-array reuse slice is implemented at
+production and Rust test/runtime revision
+`401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`, following optimized-frequency
+scratch reuse at `6042b77c5c568968295bae030335cb6d9cabb417`. Simple-tree symbol
+discovery stores at most three indices in a fixed array instead of a heap
+vector; token-aware and no-token scans preserve their early-stop behavior and
+checkpoint schedule. Tree selection, encoded bytes, errors, and sink output
+remain unchanged. The existing WebP encode matrix (28/13/47 rows), full
+fixture matrix, all 45 feature-gated Rust contracts, full all-feature suite,
+strict Clippy, rustfmt, and all 33 native/WASI feature-matrix lanes passed
+locally. Clean `fixture-benchmark@3` observations at this revision passed the
+Pillow-parity workload (0.931031 s wall, 248,987,648-byte peak RSS) and the
+separate Rust-only feature-gate workload (1.580142 s wall, 150,962,176-byte
+peak RSS); these are host/cache/toolchain observations, not a comparative or
+universal performance claim. Pillow remains the byte/error oracle, while the
+fixed symbol storage is Rust-only evidence: no parity row, fixture-manifest
+row, diagnostic origin, new test function, or coverage-only hook was added.
+Managed checkout validation passed Pillow parity run
+`5bd106cf-fe10-421b-834e-9897d855cf83` and feature-matrix run
+`8b18d725-8b61-423b-9417-8ae43b6c3aec`, but both recorded pre-commit HEAD
+`458865de920e80f81b6ac7cc89ef1c6806ab94d2`; no exact-head managed parity,
+feature-matrix, or Coverage MCP coverage rerun is claimed for this revision.
+
+The preceding lossless WebP VP8L optimized-frequency scratch-reuse slice is
+implemented at production and Rust test/runtime revision
 `6042b77c5c568968295bae030335cb6d9cabb417`, following Huffman-token scratch
 reuse at `b770e3c4238194fa0c65f1490c20d0e8e14380d2`. Huffman tree construction
 reuses one optimized-frequency buffer across sequential channel and
@@ -2845,6 +2868,26 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L Huffman symbol-array reuse
+
+The production and Rust test/runtime slice is implemented at
+`401e9ab847eb717dd29515ccd5c8c8fe1f9cb621`, following the preceding
+`6042b77c5c568968295bae030335cb6d9cabb417` optimized-frequency scratch reuse.
+Simple-tree symbol discovery stores at most three indices in a fixed array
+instead of a heap vector; token-aware and no-token scans preserve their
+early-stop behavior and checkpoint schedule. Tree selection, encoded bytes,
+errors, and sink output remain unchanged. Existing WebP fixture rows (28/13/47),
+the full fixture matrix, all 45 feature-gated Rust contracts, strict Clippy,
+and the clean benchmark protocol provide the regression evidence. The clean
+benchmark passed the Pillow-parity workload in 0.931031 s wall and the separate
+Rust-only feature-gate workload in 1.580142 s wall; these are host/cache/toolchain
+observations, not a comparative or universal performance claim. Pillow remains
+the byte/error oracle; fixed symbol storage is Rust-only evidence. No parity
+row, fixture-manifest entry, diagnostic origin, new test function, or
+coverage-only hook was added. Managed checkout validation passed, but its ledger
+HEAD predates this commit; no exact-head managed parity, feature-matrix, or
+Coverage MCP rerun is claimed at this revision.
 
 Current acceptance record: WebP VP8L optimized-frequency scratch reuse
 
