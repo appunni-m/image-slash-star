@@ -4,7 +4,7 @@ Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
 `b78d0ffedc3bb193624eb11fd12d68378713489e`, Rust test/runtime revision
-`b78d0ffedc3bb193624eb11fd12d68378713489e`, and benchmark-protocol revision
+`af98b51bd145ea022687d12ca0ae23abc85334a7`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -16,7 +16,8 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`b78d0ffedc3bb193624eb11fd12d68378713489e`.
+`b78d0ffedc3bb193624eb11fd12d68378713489e` (production) and
+`af98b51bd145ea022687d12ca0ae23abc85334a7` (test/runtime).
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2389,6 +2390,23 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: Rust-only work-budget witness runtime cutoff
+
+The existing `run_work_budget_pair` helper is tuned at test/runtime revision
+`af98b51bd145ea022687d12ca0ae23abc85334a7`: probes below 64×64 remain
+sequential because thread setup costs more than their paired encodes, while
+larger independent whole-buffer and caller-owned-sink probes overlap on native
+test lanes; WASM remains sequential. This changes test scheduling only. It
+adds no production codec behavior, Pillow parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook. The clean
+schema-`@3` benchmark at this revision passed the Pillow parity fixture suite
+at 1.090497 s wall / 2.850926 s user / 0.234184 s sys / 248,414,208-byte
+direct-child peak RSS, and the separate Rust-only feature-gate suite at
+1.690155 s wall / 2.297903 s user / 0.185056 s sys / 185,434,112-byte
+direct-child peak RSS. These are host/cache/toolchain observations, not
+universal speed or memory claims; managed parity, feature-matrix, and Coverage
+MCP reruns remain unclaimed for the production revision `b78d0ff`.
 
 Current acceptance record: WebP VP8L Huffman-RLE token-materialization checkpoint
 
