@@ -2262,6 +2262,7 @@ fn coverage_nested_parser_prefixes() {
             Property::Av1C {
                 depth: 10,
                 chroma_sample_position: AvifChromaSamplePosition::Unknown,
+                data: Vec::new(),
             },
         ],
         associations: vec![
