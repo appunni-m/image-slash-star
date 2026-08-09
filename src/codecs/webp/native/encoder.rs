@@ -2902,8 +2902,30 @@ impl WebPEncoder {
         color: ColorType,
         token: Option<&crate::CancellationToken>,
     ) -> Result<Vec<u8>, EncodingError> {
-        let frame = encode_frame(data, width, height, color, token)?;
+        let mut frame = encode_frame(data, width, height, color, token)?;
         check_token(token)?;
+
+        // The ordinary path has no caller-visible checkpoint during the final
+        // container copy. Reuse the completed frame allocation by shifting it
+        // behind the RIFF/VP8L headers; keep the token-aware copy below so its
+        // existing output-copy checkpoints and cancellation behavior remain
+        // unchanged.
+        if token.is_none() {
+            let frame_length = frame.len();
+            let padding = frame_length % 2;
+            frame.reserve(20 + padding);
+            frame.resize(frame_length + 20, 0);
+            frame.copy_within(..frame_length, 20);
+            frame[..4].copy_from_slice(b"RIFF");
+            frame[4..8].copy_from_slice(&(chunk_size(frame_length) + 4).to_le_bytes());
+            frame[8..12].copy_from_slice(b"WEBP");
+            frame[12..16].copy_from_slice(b"VP8L");
+            frame[16..20].copy_from_slice(&(frame_length as u32).to_le_bytes());
+            if padding != 0 {
+                frame.push(0);
+            }
+            return Ok(frame);
+        }
 
         let mut output = Vec::with_capacity(frame.len().saturating_add(20));
         output.extend_from_slice(b"RIFF");
