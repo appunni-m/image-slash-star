@@ -6180,6 +6180,16 @@ benchmarks. The protocol intentionally reports allocation counts, retained
 encoded/decoded cache bytes, caller-buffer reuse, peak RSS, peak stack, and
 WASM runtime time/memory as unmeasured until dedicated collectors exist.
 
+A clean local run at source revision
+`1dd736132fd3990a1d06f5f9be8ba9137f574a03` passed all four workloads on the
+arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its warm observations
+were 3.09 s for the 1,024-row/393-row Pillow parity suite, 3.09 s for the
+separate Rust feature-gate suite, 7,863,416 bytes for the native release
+`rlib`, and 24,830,966 bytes for the `wasm32-unknown-unknown` determinism test
+artifact; peak RSS was unavailable from the host's portable timing interface.
+These values are a revision-bound execution record, not a universal benchmark
+or a parity claim for the Rust-only workload.
+
 ### Feature and target matrix
 
 The feature script checks:
