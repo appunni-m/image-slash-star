@@ -8,9 +8,10 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
     AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
-    AvifItemProperty, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode,
-    RawIccProfile, SourceAlpha, SourceColor, SourceDescriptor,
+    AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
+    SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1109,6 +1110,10 @@ impl Meta {
         if !item_properties.is_empty() {
             source = source.with_avif_item_properties(item_properties);
         }
+        let item_plane_properties = self.non_primary_item_plane_properties(primary)?;
+        if !item_plane_properties.is_empty() {
+            source = source.with_avif_item_plane_properties(item_plane_properties);
+        }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
             source = source.with_avif_grid_item_ids(grid_item_ids);
@@ -1229,6 +1234,41 @@ impl Meta {
                 )
             })
             .collect()
+    }
+
+    fn non_primary_item_plane_properties(
+        &self,
+        primary: u32,
+    ) -> ParseResult<Vec<AvifItemPlaneProperties>> {
+        let mut result = Vec::new();
+        for item in &self.items {
+            if item.id == primary {
+                continue;
+            }
+            let mut dimensions = None;
+            let mut bit_depth = None;
+            for property in self.associated(item.id) {
+                match property {
+                    Property::Ispe { width, height } => {
+                        if dimensions.replace((*width, *height)).is_some() {
+                            return Err(parse_failure!());
+                        }
+                    }
+                    Property::Pixi { depth } if bit_depth.replace(*depth).is_some() => {
+                        return Err(parse_failure!());
+                    }
+                    _ => {}
+                }
+            }
+            if dimensions.is_some() || bit_depth.is_some() {
+                let (width, height) =
+                    dimensions.map_or((None, None), |(width, height)| (Some(width), Some(height)));
+                result.push(AvifItemPlaneProperties::new(
+                    item.id, width, height, bit_depth,
+                ));
+            }
+        }
+        Ok(result)
     }
 
     fn grid_item_ids(&self, primary: u32) -> ParseResult<Vec<u32>> {

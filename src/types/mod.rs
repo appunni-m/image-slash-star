@@ -1083,6 +1083,63 @@ impl AvifItemProperty {
     }
 }
 
+/// Source-local AVIF plane declarations associated with a non-primary item.
+///
+/// `width` and `height` retain the item's `ispe` spatial extents when present;
+/// `bit_depth` retains the uniform channel depth declared by `pixi` when
+/// present. These are container provenance only: the descriptor does not
+/// expose a plane buffer, compose an auxiliary item, infer range/quality, or
+/// transform decoded samples.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifItemPlaneProperties {
+    item_id: u32,
+    width: Option<u32>,
+    height: Option<u32>,
+    bit_depth: Option<u8>,
+}
+
+impl AvifItemPlaneProperties {
+    /// Create source-local AVIF plane declarations.
+    #[must_use]
+    pub const fn new(
+        item_id: u32,
+        width: Option<u32>,
+        height: Option<u32>,
+        bit_depth: Option<u8>,
+    ) -> Self {
+        Self {
+            item_id,
+            width,
+            height,
+            bit_depth,
+        }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the `ispe` width, when the item declares one.
+    #[must_use]
+    pub const fn width(&self) -> Option<u32> {
+        self.width
+    }
+
+    /// Return the `ispe` height, when the item declares one.
+    #[must_use]
+    pub const fn height(&self) -> Option<u32> {
+        self.height
+    }
+
+    /// Return the uniform `pixi` channel depth, when the item declares one.
+    #[must_use]
+    pub const fn bit_depth(&self) -> Option<u8> {
+        self.bit_depth
+    }
+}
+
 /// Topology declared by an AVIF `grid` derived image item.
 ///
 /// These fields are source-local container provenance. They describe the
@@ -1175,6 +1232,7 @@ pub struct SourceDescriptor {
     avif_item_color_properties: Option<Vec<AvifItemColorProperties>>,
     avif_item_icc_profiles: Option<Vec<AvifItemIccProfile>>,
     avif_item_properties: Option<Vec<AvifItemProperty>>,
+    avif_item_plane_properties: Option<Vec<AvifItemPlaneProperties>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_grid_properties: Option<AvifGridProperties>,
     avif_transform: Option<AvifTransformProperties>,
@@ -1195,6 +1253,7 @@ impl SourceDescriptor {
             avif_item_color_properties: None,
             avif_item_icc_profiles: None,
             avif_item_properties: None,
+            avif_item_plane_properties: None,
             avif_grid_item_ids: None,
             avif_grid_properties: None,
             avif_transform: None,
@@ -1357,6 +1416,22 @@ impl SourceDescriptor {
         self.avif_item_properties.as_deref().unwrap_or(&[])
     }
 
+    /// Record bounded `ispe`/`pixi` declarations for non-primary AVIF items.
+    #[must_use]
+    pub fn with_avif_item_plane_properties(
+        mut self,
+        properties: Vec<AvifItemPlaneProperties>,
+    ) -> Self {
+        self.avif_item_plane_properties = (!properties.is_empty()).then_some(properties);
+        self
+    }
+
+    /// Return non-primary AVIF item plane declarations in source item order.
+    #[must_use]
+    pub fn avif_item_plane_properties(&self) -> &[AvifItemPlaneProperties] {
+        self.avif_item_plane_properties.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1417,6 +1492,7 @@ impl SourceDescriptor {
             && self.avif_item_color_properties.is_none()
             && self.avif_item_icc_profiles.is_none()
             && self.avif_item_properties.is_none()
+            && self.avif_item_plane_properties.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_grid_properties.is_none()
             && self.avif_transform.is_none()

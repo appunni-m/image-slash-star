@@ -1648,8 +1648,8 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifAuxiliaryRelationship, AvifColorProperties, AvifGridProperties,
-        AvifItemColorProperties, AvifItemIccProfile, AvifItemProperty, AvifItemRelationship,
-        RawIccProfile, SourceAlpha,
+        AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
+        AvifItemRelationship, RawIccProfile, SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -2165,6 +2165,18 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 expected_relationships.as_slice(),
                 "{name} decode auxiliary relationships"
             );
+            let expected_plane_properties =
+                [AvifItemPlaneProperties::new(2, Some(64), Some(64), Some(8))];
+            assert_eq!(
+                info.source.avif_item_plane_properties(),
+                expected_plane_properties.as_slice(),
+                "{name} inspect plane declarations"
+            );
+            assert_eq!(
+                decoded.content.source.avif_item_plane_properties(),
+                expected_plane_properties.as_slice(),
+                "{name} decode plane declarations"
+            );
             assert!(
                 info.source.avif_item_relationships().is_empty(),
                 "{name} alpha edges are not duplicated as generic relationships"
@@ -2182,6 +2194,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                     .avif_auxiliary_relationship(),
                 expected_relationship,
                 "{name} sequence auxiliary relationship"
+            );
+            assert_eq!(
+                sequence.content.frames[0]
+                    .image
+                    .source
+                    .avif_item_plane_properties(),
+                expected_plane_properties.as_slice(),
+                "{name} sequence plane declarations"
             );
         } else if name == "avif opaque" {
             assert!(
@@ -2220,6 +2240,12 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             AvifItemRelationship::new(*b"dimg", 1, 2),
             AvifItemRelationship::new(*b"dimg", 1, 3),
         ];
+        let expected_item_plane_properties = [
+            AvifItemPlaneProperties::new(2, Some(80), Some(64), Some(8)),
+            AvifItemPlaneProperties::new(3, Some(80), Some(64), Some(8)),
+            AvifItemPlaneProperties::new(5, Some(80), Some(64), Some(8)),
+            AvifItemPlaneProperties::new(6, Some(80), Some(64), Some(8)),
+        ];
         let inspected = image_slash_star::inspect(&bytes)?;
         assert_eq!(
             inspected.source.alpha(),
@@ -2251,6 +2277,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             expected_item_relationships.as_slice(),
             "grid inspect generic relationships"
         );
+        assert_eq!(
+            inspected.source.avif_item_plane_properties(),
+            expected_item_plane_properties.as_slice(),
+            "grid inspect plane declarations"
+        );
 
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(
@@ -2272,6 +2303,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             decoded.content.source.avif_item_relationships(),
             expected_item_relationships.as_slice(),
             "grid decode generic relationships"
+        );
+        assert_eq!(
+            decoded.content.source.avif_item_plane_properties(),
+            expected_item_plane_properties.as_slice(),
+            "grid decode plane declarations"
         );
         let sequence = image_slash_star::decode_sequence(&bytes)?;
         assert_eq!(
@@ -2302,6 +2338,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_item_relationships(),
             expected_item_relationships.as_slice(),
             "grid sequence generic relationships"
+        );
+        assert_eq!(
+            sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_plane_properties(),
+            expected_item_plane_properties.as_slice(),
+            "grid sequence plane declarations"
         );
 
         // `prem` is an AVIF source relationship from an alpha item to the
@@ -2476,6 +2520,44 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             expected_unknown.as_slice(),
             "unknown item property sequence declaration"
         );
+
+        // `ispe` and `pixi` are known plane declarations rather than unknown
+        // opaque properties. The committed alpha fixture already associates
+        // both with item 2; a second declaration is a conflicting source
+        // contract and must be rejected by both bounded parsers.
+        let ispe_payload = [
+            0, 0, 0, 0, // version and flags
+            0, 0, 0, 64, // width
+            0, 0, 0, 64, // height
+        ];
+        let duplicate_ispe = append_item_property_association(&alpha, b"ispe", &ispe_payload)?;
+        assert!(matches!(
+            image_slash_star::inspect(&duplicate_ispe),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode(&duplicate_ispe),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode_sequence(&duplicate_ispe),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+
+        let pixi_payload = [0, 0, 0, 0, 1, 8];
+        let duplicate_pixi = append_item_property_association(&alpha, b"pixi", &pixi_payload)?;
+        assert!(matches!(
+            image_slash_star::inspect(&duplicate_pixi),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode(&duplicate_pixi),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
+        assert!(matches!(
+            image_slash_star::decode_sequence(&duplicate_pixi),
+            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
+        ));
     }
     Ok(())
 }
