@@ -2636,9 +2636,14 @@ fn collect_alpha_palette(
     // workspace on the stack; the returned Vec remains the single owned
     // palette representation required by the later delta/index passes.
     let mut present = [false; 256];
+    let mut palette_len = 0;
     let mut samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
     for &value in alpha {
-        present[usize::from(value)] = true;
+        let slot = &mut present[usize::from(value)];
+        if !*slot {
+            *slot = true;
+            palette_len += 1;
+        }
         samples_until_checkpoint = samples_until_checkpoint.saturating_sub(1);
         if samples_until_checkpoint == 0 {
             check_token(token)?;
@@ -2646,7 +2651,7 @@ fn collect_alpha_palette(
         }
     }
 
-    let mut palette = Vec::with_capacity(256);
+    let mut palette = Vec::with_capacity(palette_len);
     for (value, &is_present) in present.iter().enumerate() {
         if is_present {
             palette.push(value as u8);
