@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `058e6b7dc89dd59b96f3d06343d9e296af7006b0`, and benchmark-protocol revision
+revision `6e243f7e92becc664cf3d17e68fcecf25a873863`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,15 +11,15 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`36fac1e0-ecb9-45d3-ab03-dd4cf3ad1a1f` (1,445/1,445 passed in 1,182 ms) and
-feature matrix `2bfd3ae0-7b9d-49be-95fd-d74f3cd6cd86` (passed in 25,201 ms);
+`9e87d06e-9bba-4e14-9b4c-e4378ea3d492` (1,445/1,445 passed in 725 ms) and
+feature matrix `a40d1a78-d1ae-437d-bd56-db097b81f0f4` (passed in 22,001 ms);
 both recorded checkout HEAD
-`058e6b7dc89dd59b96f3d06343d9e296af7006b0`.
+`6e243f7e92becc664cf3d17e68fcecf25a873863`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no Coverage MCP rerun has yet been
-recorded for `058e6b7dc89dd59b96f3d06343d9e296af7006b0`. The exact-head managed
+recorded for `6e243f7e92becc664cf3d17e68fcecf25a873863`. The exact-head managed
 parity and feature-matrix records above are test-result evidence, not coverage
 metrics.
 
@@ -638,6 +638,33 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L meta-pixel scratch-reuse slice is implemented at
+production and Rust test/runtime revision
+`6e243f7e92becc664cf3d17e68fcecf25a873863`, following Huffman-RLE mask scratch
+reuse at `058e6b7dc89dd59b96f3d06343d9e296af7006b0`. Multi-group token streams
+now clear and refill one meta-pixel materialization buffer across candidate
+trials; the recursive meta-stream write consumes it before the next candidate,
+so metadata grouping, checkpoint behavior, encoded bytes, errors, and sink
+output remain unchanged. The existing WebP encode matrix (28/13/47 rows), full
+fixture matrix, all 45 feature-gated Rust contracts, full all-feature suite,
+strict Clippy, rustfmt, and all configured native/WASI feature-matrix lanes
+passed locally. Clean `fixture-benchmark@3` observations at this revision
+passed the Pillow-parity workload in 0.942339 s wall / 2.799787 user s /
+0.184515 sys s / 253,739,008-byte peak RSS, and the separate Rust-only
+feature-gate workload in 1.740961 s wall / 2.320372 user s / 0.212541 sys s /
+169,181,184-byte peak RSS. The native release `rlib` was 7,973,968 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,793,428 bytes. These
+are host/cache/toolchain observations, not comparative or universal
+performance claims; peak RSS is a direct-child POSIX observation. Pillow
+remains the byte/error oracle, while meta-pixel buffer ownership is Rust-only
+evidence: no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook was added. Exact-head managed Pillow parity run
+`9e87d06e-9bba-4e14-9b4c-e4378ea3d492` passed 1,445/1,445 checks, and exact-head
+feature-matrix run `a40d1a78-d1ae-437d-bd56-db097b81f0f4` passed all configured
+native/WASI lanes with the capability agreement marker and no `lock-wait`
+match. Both managed runs have `coverage_ingest.status=not_configured`; they are
+test-result evidence, not Coverage MCP metrics.
 
 The lossless WebP VP8L Huffman-RLE mask-scratch reuse slice is implemented at
 production and Rust test/runtime revision
@@ -2895,6 +2922,33 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L meta-pixel scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`6e243f7e92becc664cf3d17e68fcecf25a873863`, following the preceding
+`058e6b7dc89dd59b96f3d06343d9e296af7006b0` Huffman-RLE mask scratch reuse.
+Multi-group token streams clear and refill one meta-pixel materialization
+buffer across candidate trials; the recursive meta-stream write consumes it
+before the next candidate, so metadata grouping, checkpoint behavior, encoded
+bytes, errors, and sink output remain unchanged. Existing WebP fixture rows
+(28/13/47), the full fixture matrix, all 45 feature-gated Rust contracts,
+strict Clippy, and the clean benchmark protocol provide the regression
+evidence. The clean benchmark passed the Pillow-parity workload in 0.942339 s
+wall / 2.799787 user s / 0.184515 sys s / 253,739,008-byte peak RSS and the
+separate Rust-only feature-gate workload in 1.740961 s wall / 2.320372 user s /
+0.212541 sys s / 169,181,184-byte peak RSS. The native release `rlib` was
+7,973,968 bytes and the `wasm32-unknown-unknown` determinism artifact was
+24,793,428 bytes. These are host/cache/toolchain observations, not comparative
+or universal performance claims. Pillow remains the byte/error oracle;
+meta-pixel buffer ownership is Rust-only evidence. No parity row,
+fixture-manifest entry, diagnostic origin, new test function, or coverage-only
+hook was added. Exact-head managed Pillow parity run
+`9e87d06e-9bba-4e14-9b4c-e4378ea3d492` passed 1,445/1,445 checks in 725 ms.
+Exact-head feature-matrix run `a40d1a78-d1ae-437d-bd56-db097b81f0f4` passed
+all configured native/WASI lanes in 22,001 ms; its retained log has the
+capability agreement marker and no `lock-wait` match. Both managed runs have
+no configured coverage ingestion, so no Coverage MCP metric is claimed.
 
 Current acceptance record: WebP VP8L Huffman-RLE mask scratch reuse
 
