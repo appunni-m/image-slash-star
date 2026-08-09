@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `4866fdb1d35a57a1c1f7edf4326bcebbcff0fe51`; the claim-ledger fixture tuple
+revision `6b6ff5c4c1a4d5998ee4c6c9fe2ff438ed8d77df`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -14,7 +14,7 @@ GIF sequence frame ownership, GIF indexed frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
 PNG source pixel ownership, TIFF conditional source ownership, TIFF repeated-row
-Deflate planning, candidate-prefix
+Deflate planning, PNG level-six repeated-row Deflate planning, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
 token-materialization, and Huffman-tree leaf
@@ -686,6 +686,15 @@ The specialized token-aware and no-token paths replay the same input-row
 boundaries, matcher behavior, checkpoint cadence, encoded bytes, and errors.
 This removes one image-height-sized temporary allocation per Deflate page; it
 does not claim complete allocator/OOM accounting, rollback, or streaming.
+
+PNG’s default level-six Deflate path also passes the repeated filtered-row
+length and height directly to the zlib-ng tokenizer, avoiding a temporary
+row-length vector. Other PNG compression levels retain their existing
+input-chunk slice because their strategy-specific calls still use that
+representation. Ordinary and token-aware level-six paths preserve the same
+input-row boundaries, matcher behavior, checkpoint cadence, bytes, and errors;
+this is a bounded allocation optimization, not complete allocator/OOM
+accounting or a streaming guarantee.
 
 BMP row conversion reuses one scratch buffer for one-bit, indexed, RGB, and
 RGBA rows within each encoder invocation. The synchronous writer consumes the
