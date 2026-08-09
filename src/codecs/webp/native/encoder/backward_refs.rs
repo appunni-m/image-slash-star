@@ -992,10 +992,11 @@ fn cache_estimated_bits_with_checkpoint(
         + population_estimate_fixed_with_checkpoint(&alpha, token)?)
 }
 
-fn population_cost(counts: &[u32]) -> Vec<u32> {
+fn population_cost_in_place(counts: &mut [u32]) {
     let sum: u32 = counts.iter().sum();
     if counts.iter().filter(|&&count| count != 0).count() <= 1 {
-        return vec![0; counts.len()];
+        counts.fill(0);
+        return;
     }
     let fast_log = |value: u32| -> u32 {
         if value == 0 {
@@ -1018,18 +1019,18 @@ fn population_cost(counts: &[u32]) -> Vec<u32> {
         }
     };
     let log_sum = fast_log(sum);
-    counts
-        .iter()
-        .map(|&count| log_sum - fast_log(count))
-        .collect()
+    for count in counts {
+        *count = log_sum - fast_log(*count);
+    }
 }
 
-fn population_cost_with_checkpoint(
-    counts: &[u32],
+fn population_cost_in_place_with_checkpoint(
+    counts: &mut [u32],
     token: CheckpointToken<'_>,
-) -> CheckpointResult<Vec<u32>> {
+) -> CheckpointResult<()> {
     if token.is_none() {
-        return Ok(population_cost(counts));
+        population_cost_in_place(counts);
+        return Ok(());
     }
     let mut sum = 0_u32;
     let mut nonzero = 0;
@@ -1041,7 +1042,8 @@ fn population_cost_with_checkpoint(
         }
     }
     if nonzero <= 1 {
-        return Ok(vec![0; counts.len()]);
+        counts.fill(0);
+        return Ok(());
     }
     let fast_log = |value: u32| -> u32 {
         if value == 0 {
@@ -1064,14 +1066,13 @@ fn population_cost_with_checkpoint(
         }
     };
     let log_sum = fast_log(sum);
-    let mut result = Vec::with_capacity(counts.len());
-    for (index, &count) in counts.iter().enumerate() {
-        result.push(log_sum - fast_log(count));
+    for (index, count) in counts.iter_mut().enumerate() {
+        *count = log_sum - fast_log(*count);
         if (index + 1).is_multiple_of(COST_CHECKPOINT_SYMBOLS) {
             checkpoint(token)?;
         }
     }
-    Ok(result)
+    Ok(())
 }
 
 fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
@@ -1105,13 +1106,17 @@ fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
     }
     // Each population cost is bounded by the VP8L alphabet and fixed-point
     // scale, so the reference representation is guaranteed to fit `i32`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    population_cost_in_place(&mut green);
+    population_cost_in_place(&mut red);
+    population_cost_in_place(&mut blue);
+    population_cost_in_place(&mut alpha);
+    population_cost_in_place(&mut distance);
     CostModel {
-        green: population_cost(&green),
-        red: population_cost(&red).try_into().unwrap(),
-        blue: population_cost(&blue).try_into().unwrap(),
-        alpha: population_cost(&alpha).try_into().unwrap(),
-        distance: population_cost(&distance).try_into().unwrap(),
+        green,
+        red,
+        blue,
+        alpha,
+        distance,
     }
 }
 
@@ -1157,21 +1162,17 @@ fn cost_model_with_checkpoint(
     }
     // Each population cost is bounded by the VP8L alphabet and fixed-point
     // scale, so the reference representation is guaranteed to fit `i32`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    population_cost_in_place_with_checkpoint(&mut green, token)?;
+    population_cost_in_place_with_checkpoint(&mut red, token)?;
+    population_cost_in_place_with_checkpoint(&mut blue, token)?;
+    population_cost_in_place_with_checkpoint(&mut alpha, token)?;
+    population_cost_in_place_with_checkpoint(&mut distance, token)?;
     Ok(CostModel {
-        green: population_cost_with_checkpoint(&green, token)?,
-        red: population_cost_with_checkpoint(&red, token)?
-            .try_into()
-            .unwrap(),
-        blue: population_cost_with_checkpoint(&blue, token)?
-            .try_into()
-            .unwrap(),
-        alpha: population_cost_with_checkpoint(&alpha, token)?
-            .try_into()
-            .unwrap(),
-        distance: population_cost_with_checkpoint(&distance, token)?
-            .try_into()
-            .unwrap(),
+        green,
+        red,
+        blue,
+        alpha,
+        distance,
     })
 }
 
@@ -1995,7 +1996,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let _ = fast_slog(70_000);
     let _ = prefix(300);
-    let _ = population_cost(&[70_000, 1]);
+    let mut population = [70_000, 1];
+    population_cost_in_place(&mut population);
     let model = cost_model(&[Token::Literal(0xff00_0000)], 0, 1);
     let mut manager = CostManager::new(8, &model);
     manager.insert_min_interval(CostInterval {
