@@ -80,11 +80,7 @@ pub(crate) fn encode_sequence_to_sink(
         crate::codecs::error::check_cancelled(token)?;
         pages.push(encode_page_with_token(&frame.image, opts, token)?);
     }
-    let page_lengths = pages
-        .iter()
-        .map(|page| page.bytes.len())
-        .collect::<Vec<_>>();
-    let final_len = sequence_output_len(&page_lengths)?;
+    let final_len = sequence_output_len(pages.iter().map(|page| page.bytes.len()))?;
     policy
         .check_output_len(final_len, ImageFormat::Tiff, operation)
         .map_err(CodecError::from_image_error)?;
@@ -383,17 +379,14 @@ pub fn encode_sequence_with_token(
         crate::codecs::error::check_cancelled(token)?;
         pages.push(encode_page_with_token(&frame.image, opts, token)?);
     }
-    let page_lengths = pages
-        .iter()
-        .map(|page| page.bytes.len())
-        .collect::<Vec<_>>();
     #[cfg(coverage)]
-    let page_lengths = if opts.force_sequence_len_overflow() {
-        vec![usize::MAX]
+    let final_len = if opts.force_sequence_len_overflow() {
+        sequence_output_len([usize::MAX])?
     } else {
-        page_lengths
+        sequence_output_len(pages.iter().map(|page| page.bytes.len()))?
     };
-    let final_len = sequence_output_len(&page_lengths)?;
+    #[cfg(not(coverage))]
+    let final_len = sequence_output_len(pages.iter().map(|page| page.bytes.len()))?;
     let mut output = Vec::with_capacity(final_len);
     let mut previous_next_position: Option<usize> = None;
     for mut page in pages {
@@ -471,9 +464,12 @@ fn validate_sequence_semantics(sequence: &DecodedSequence) -> CodecResult<()> {
     Ok(())
 }
 
-fn sequence_output_len(page_lengths: &[usize]) -> CodecResult<usize> {
+fn sequence_output_len<I>(page_lengths: I) -> CodecResult<usize>
+where
+    I: IntoIterator<Item = usize>,
+{
     let mut total = 0;
-    for &page_len in page_lengths {
+    for page_len in page_lengths {
         total = checked_align_16(total)?;
         total = total
             .checked_add(page_len)
@@ -642,10 +638,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     horizontal.predictor = Some(TiffPredictor::Horizontal);
     let _ = encode(&l1, &horizontal);
     let _ = checked_align_16(usize::MAX);
-    let _ = sequence_output_len(&[usize::MAX, 0]);
-    let _ = sequence_output_len(&[usize::MAX.saturating_sub(15), 16]);
+    let _ = sequence_output_len([usize::MAX, 0]);
+    let _ = sequence_output_len([usize::MAX.saturating_sub(15), 16]);
     #[cfg(not(target_pointer_width = "32"))]
-    let _ = sequence_output_len(&[u32::MAX as usize + 1]);
+    let _ = sequence_output_len([u32::MAX as usize + 1]);
     let mut sequence = DecodedSequence::from_image(rgb.clone());
     sequence.frames.push(sequence.frames[0].clone());
     // CancellationToken is a Rust-only checkpoint contract; Pillow cannot
