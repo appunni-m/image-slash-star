@@ -273,6 +273,12 @@
       "expect": {"any_stream": {"tree_forms_at_least": {"simple_single": 5}}}
     },
     {
+      "property_id": "vp8l.huffman.simple_tree_form",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette4",
+      "expect": {"any_stream": {"tree_forms_at_least": {"simple_single": 3}}}
+    },
+    {
       "property_id": "vp8l.huffman.full_tree_form",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_noise",
@@ -485,15 +491,14 @@
     },
     {
       "id": "vp8l.huffman.simple_tree_form",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"},
-        {"operation": "decode", "row_id": "error_malformed_container_vp8l_empty_code_length_tree"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"}
       ],
-      "gap": "Solid and low-cardinality inputs are candidates for simple trees; Pillow does not report the simple-tree flag or symbol form."
+      "gap": "The independent parser now proves simple-tree forms for the three listed successful rows; empty/malformed trees and other simple-tree alphabets remain outside this witnessed scope."
     },
     {
       "id": "vp8l.huffman.full_tree_form",
