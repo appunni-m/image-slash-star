@@ -3,17 +3,17 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `228e419a0168ab083770c1fa009cf5c83d1711f3`; the claim-ledger fixture tuple
+revision `2f4b2afd58d813083d878bce2b6f1cea8968799a`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-candidate-prefix optimization, candidate-suffix allocation recycling,
-entropy-analysis pixel, Huffman-RLE fill, Huffman-RLE token-materialization, and
-Huffman-tree leaf census/materialization/depth slices have not received a
-managed coverage rerun.
+GIF sequence frame ownership, candidate-prefix optimization, candidate-suffix
+allocation recycling, entropy-analysis pixel, Huffman-RLE fill, Huffman-RLE
+token-materialization, and Huffman-tree leaf census/materialization/depth slices
+have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -619,6 +619,14 @@ bytes remain unchanged; token-aware animation assembly polls only the final
 chunk copy, because the removed staging copies are no longer checkpoints. The
 ownership improvement does not claim allocator/OOM accounting or universal
 streaming.
+
+GIF sequence encoding consumes prepared frame ownership after the complete
+transparency scan. It keeps a small global-palette copy for table comparisons,
+moves the first prepared frame into the emission loop, and moves later frames
+from the iterator, removing per-frame `PreparedImage` clones and the two full
+first-frame raster copies. Palette decisions, output bytes, and explicit token
+checkpoints remain unchanged. This is a bounded ownership optimization, not
+allocator/OOM accounting or a streaming guarantee.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit
