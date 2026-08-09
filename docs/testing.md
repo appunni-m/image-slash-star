@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`f5eacca47a32d9ad0208700b2656ffc6b4d79a8e`; the claim-ledger baseline remains
+`62ccc3800be8960af5c738e0fd5015f77ba92115`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -996,6 +996,50 @@ lines, `+1/+0` branches, `+0/+0` functions, and `+5/+5` regions. The known
 LLVM JSON segment-normalization warning remains; current aggregate shortfall
 is 815 lines, 195 branches, 80 functions, and 1,826 regions. Parity,
 feature, coverage, and non-Pillow-origin records remain separate.
+
+Current lossy WebP VP8/ALPH RIFF container-copy acceptance record
+
+Implementation revision `62ccc3800be8960af5c738e0fd5015f77ba92115` keeps the
+ordinary no-token native VP8 and extended ALPH/VP8 container payload copies as
+bulk appends, while the token-aware path copies those payloads in 1,024-byte
+chunks and polls after each complete chunk. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses the deterministic
+128×128 patterned RGB `assembly_image` with a 4,096-byte ICC payload; its
+native VP8 payload is 10,605 bytes and the metadata-bearing output is exactly
+14,748 bytes. The pre-fix native VP8 bulk-copy control completed at
+`maximum: 889,806`; the chunked whole-buffer call rejects at
+`maximum: 889,806`, `observed: 889,807`. The direct-sink witness rejects at
+`maximum: 889,796`, `observed: 889,797`, with sentinel `[0xB7]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added.
+
+Local focused `encode_work_budget_is_a_non_parity_result_contract` passed 1/1
+in approximately 2.43 s; `cargo check --all-features --all-targets --locked`,
+strict Clippy, rustfmt, `git diff --check`, and the claim-ledger,
+coverage-origin, and diagnostic-provenance verifiers passed.
+
+Exact-head managed feature-matrix run
+`2515e677-dd0d-419c-a15c-303ef0f89500` passed all 33 configured lanes in
+59,414 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; its retained log reported the feature-matrix
+settings and passing lanes without a `lock-wait` match. Exact-head Pillow
+parity run `cb43336c-721c-423d-a2dd-8aa209a8de60` passed 1,445/1,445 checks
+in 1,979 ms.
+
+Nightly LLVM run `5d3138e6-7d15-4454-a687-29e5662cb9e9` passed 85/85 tests in
+58,811 ms and ingested snapshot
+`c2c0d660-6dc9-4b07-ae1e-2eda1b201d53`, retaining 54,331/55,146 lines,
+7,715/7,910 branches, 3,083/3,163 functions, and 83,850/85,682 regions.
+Compared with the preceding accepted snapshot
+`3527ccf6-8bbc-405c-9bef-421166b98599`, covered/source deltas are `+27/+27`
+lines, `+4/+4` branches, `+1/+1` functions, and `+32/+38` regions. The known
+LLVM JSON segment-normalization warning remains; current aggregate shortfall
+is 815 lines, 195 branches, 80 functions, and 1,832 regions. Parity, feature,
+coverage, and non-Pillow-origin records remain separate.
 
 Current WebP container/metadata assembly acceptance record
 
