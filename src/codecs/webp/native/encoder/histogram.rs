@@ -37,6 +37,7 @@ const MAX_HISTO_GREEDY: u64 = 100;
 const POPULATION_CHECKPOINT_SYMBOLS: usize = 64;
 const MERGE_CHECKPOINT_SYMBOLS: usize = 64;
 const CLUSTER_CHECKPOINT_HISTOGRAMS: usize = 64;
+const CLUSTER_CHECKPOINT_ROWS: usize = 256;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -749,9 +750,24 @@ pub(super) fn cluster(
             Token::Copy { length, .. } => length,
             _ => 1,
         };
-        while x >= width {
-            x -= width;
-            y += 1;
+        // A single Copy token can cross many rows before the next token is
+        // visited. Keep that token-aware geometry work interruptible without
+        // adding a branch to the ordinary no-token path.
+        if let Some(token) = token {
+            let mut rows_advanced = 0_usize;
+            while x >= width {
+                x -= width;
+                y += 1;
+                rows_advanced += 1;
+                if rows_advanced.is_multiple_of(CLUSTER_CHECKPOINT_ROWS) {
+                    checkpoint(Some(token))?;
+                }
+            }
+        } else {
+            while x >= width {
+                x -= width;
+                y += 1;
+            }
         }
     }
     if let Some(token) = token {

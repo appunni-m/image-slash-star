@@ -10095,35 +10095,36 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(preparation_sink, vec![0xCA]);
 
-        // A constant 1x512 RGB image reaches the long backward-reference result
-        // backfill. The token-aware path now polls every 256 backfilled entries
-        // instead of allowing the outer 1,024-pixel checkpoint to be skipped;
-        // this caller-work boundary is not representable by Pillow.
-        let backfill_image = DecodedImage::new(1, 512, vec![128; 512 * 3], ColorType::Rgb8);
-        let backfill_expected =
-            image_slash_star::encode(&backfill_image, ImageFormat::WebP, &lossless_options)?;
+        // A constant 1x512 RGB image reaches the lossless histogram cluster's
+        // long token-to-row transition. One Copy token crosses 512 rows, so
+        // the token-aware path now polls every 256 row transitions instead of
+        // allowing the outer per-token checkpoint to be skipped. This
+        // caller-work boundary is not representable by Pillow.
+        let cluster_row_image = DecodedImage::new(1, 512, vec![128; 512 * 3], ColorType::Rgb8);
+        let cluster_row_expected =
+            image_slash_star::encode(&cluster_row_image, ImageFormat::WebP, &lossless_options)?;
         assert_eq!(
             image_slash_star::encode_with_policy(
-                &backfill_image,
+                &cluster_row_image,
                 ImageFormat::WebP,
                 &lossless_options,
                 &unlimited,
             )?,
-            backfill_expected,
-            "an ample backward-reference budget preserves byte identity"
+            cluster_row_expected,
+            "an ample cluster-row budget preserves byte identity"
         );
-        let backfill_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_516);
-        let backfill_error = match image_slash_star::encode_with_policy(
-            &backfill_image,
+        let cluster_row_policy = image_slash_star::EncodePolicy::new().with_max_work_units(2_516);
+        let cluster_row_error = match image_slash_star::encode_with_policy(
+            &cluster_row_image,
             ImageFormat::WebP,
             &lossless_options,
-            &backfill_policy,
+            &cluster_row_policy,
         ) {
-            Ok(_) => return Err("backward-reference backfill budget unexpectedly completed".into()),
+            Ok(_) => return Err("VP8L cluster-row budget unexpectedly completed".into()),
             Err(error) => error,
         };
         assert!(matches!(
-            backfill_error,
+            cluster_row_error,
             ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
@@ -10132,23 +10133,21 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 observed: 2_517,
             }
         ));
-        let mut backfill_sink = vec![0xC9];
-        let backfill_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &backfill_image,
+        let mut cluster_row_sink = vec![0xC9];
+        let cluster_row_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &cluster_row_image,
             ImageFormat::WebP,
             &lossless_options,
-            &backfill_policy,
-            &mut backfill_sink,
+            &cluster_row_policy,
+            &mut cluster_row_sink,
         ) {
             Ok(_) => {
-                return Err(
-                    "backward-reference backfill sink budget unexpectedly completed".into(),
-                );
+                return Err("VP8L cluster-row sink budget unexpectedly completed".into());
             }
             Err(error) => error,
         };
         assert!(matches!(
-            backfill_sink_error,
+            cluster_row_sink_error,
             ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
@@ -10158,11 +10157,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(
-            backfill_sink,
-            vec![
-                0xC9, 0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
-            ],
-            "the later sink checkpoint preserves the validated RIFF/WEBP prefix"
+            cluster_row_sink,
+            vec![0xC9],
+            "the cluster-row checkpoint preserves the sink sentinel"
         );
         // Lossless VP8L RGB/RGBA materialization now polls after each 1,024
         // source pixels before the later stages begin. Pillow cannot exercise
