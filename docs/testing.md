@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `6b6ff5c4c1a4d5998ee4c6c9fe2ff438ed8d77df`, and benchmark-protocol revision
+revision `6e96b2c7f5587543b840bfde78ef0f2a239c1f3c`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`6b6ff5c4c1a4d5998ee4c6c9fe2ff438ed8d77df`; the accepted managed records
+`6e96b2c7f5587543b840bfde78ef0f2a239c1f3c`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -634,7 +634,22 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-The PNG level-six repeated-row Deflate allocation slice is implemented at
+The PNG all-level repeated-row Deflate allocation slice is implemented at
+production and Rust test/runtime revision
+`6e96b2c7f5587543b840bfde78ef0f2a239c1f3c`. PNG now passes the filtered-row
+length and height directly to the stored-block and zlib-ng compressor paths for
+compression levels 0 through 9 instead of allocating a duplicate row-length
+vector. Ordinary and token-aware paths replay the same input-call boundaries,
+matcher behavior, checkpoint cadence, compressed bytes, errors, and sink
+output. The existing 83 PNG encode Pillow rows, complete 28-function fixture
+matrix, all 45 feature-gated Rust contracts, full all-feature suite, strict
+Clippy, rustfmt, and all 33 native/WASI feature-matrix lanes passed locally.
+Pillow remains the byte/error oracle, while this allocation choice is Rust-only
+evidence: no parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook was added. No managed parity, feature-matrix,
+or Coverage MCP rerun is claimed at this revision.
+
+The preceding PNG level-six repeated-row Deflate allocation slice was implemented at
 production and Rust test/runtime revision
 `6b6ff5c4c1a4d5998ee4c6c9fe2ff438ed8d77df`. PNG’s default level-six path now
 passes the filtered-row length and height directly to the zlib-ng tokenizer
@@ -2624,7 +2639,23 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: PNG level-six repeated-row Deflate input planning
+Current acceptance record: PNG all-level repeated-row Deflate input planning
+
+The production and Rust test/runtime slice is implemented at
+`6e96b2c7f5587543b840bfde78ef0f2a239c1f3c`. PNG no longer builds a temporary
+`Vec<usize>` of repeated filtered-row lengths for compression levels 0 through
+9; the stored-block and zlib-ng strategies receive the row length and height
+directly and preserve the same input-call boundaries in ordinary and
+token-aware paths. Encoded bytes, work-budget observations, errors, and sink
+delivery remain unchanged. The existing 83 PNG Pillow rows and complete
+fixture matrix are the observable byte/error regression evidence; allocation
+ownership is a Rust-only implementation boundary because Pillow exposes no
+allocation or caller-budget contract. No new parity row, fixture-manifest
+entry, diagnostic origin, test function, or coverage-only hook was added. No
+managed parity, feature-matrix, or Coverage MCP rerun is claimed at this
+revision.
+
+Historical acceptance record: PNG level-six repeated-row Deflate input planning
 
 The production and Rust test/runtime slice is implemented at
 `6b6ff5c4c1a4d5998ee4c6c9fe2ff438ed8d77df`. PNG’s default level-six Deflate
