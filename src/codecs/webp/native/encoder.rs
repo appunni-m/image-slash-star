@@ -1127,7 +1127,8 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     max_cache_bits: u8,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
-    let mut scratch = TokenStreamScratch::default();
+    let mut output_scratch = Vec::new();
+    let mut token_scratch = TokenStreamScratch::default();
     write_image_stream_configured_with_scratch(
         w,
         pixels,
@@ -1136,7 +1137,8 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
         histogram_bits,
         quality,
         max_cache_bits,
-        &mut scratch,
+        &mut output_scratch,
+        &mut token_scratch,
         token,
     )
 }
@@ -1150,6 +1152,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     histogram_bits: u8,
     quality: u32,
     max_cache_bits: u8,
+    output_scratch: &mut Vec<u8>,
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
@@ -1170,12 +1173,11 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     let initial_nbits = w.nbits;
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
-    let mut scratch = Vec::new();
     for (tokens, cache_bits) in candidates {
-        scratch.clear();
+        output_scratch.clear();
         let (byte_length, buffer, nbits, checkpoint) = {
             let mut trial = BitWriter {
-                writer: &mut scratch,
+                writer: output_scratch,
                 buffer: initial_buffer,
                 nbits: initial_nbits,
                 checkpoint: initial_checkpoint.clone(),
@@ -1208,17 +1210,18 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
             .as_ref()
             .is_none_or(|(best_length, ..)| byte_length < *best_length)
         {
-            let suffix = core::mem::take(&mut scratch);
+            let suffix = core::mem::take(output_scratch);
             if let Some((_, previous_suffix, ..)) =
                 best.replace((byte_length, suffix, buffer, nbits, checkpoint))
             {
-                scratch = previous_suffix;
+                *output_scratch = previous_suffix;
             }
         }
     }
     let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
     w.writer.reserve(suffix.len());
     extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
+    *output_scratch = suffix;
     w.buffer = buffer;
     w.nbits = nbits;
     w.checkpoint = checkpoint;
@@ -1260,6 +1263,7 @@ struct TokenStreamScratch {
     meta_pixels: Vec<u32>,
     huffman_nodes: Vec<WeightedHuffmanEncodingNode>,
     huffman_node_sort_scratch: Vec<WeightedHuffmanEncodingNode>,
+    meta_output: Vec<u8>,
     // Multi-group token streams encode a metadata image once per candidate.
     // Retain the nested stream scratch so its bounded buffers survive the
     // outer candidate loop; the metadata stream disables further recursion.
@@ -1563,6 +1567,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                 3,
                 quality,
                 0,
+                &mut scratch.meta_output,
                 meta_scratch.as_mut(),
                 token,
             )?;
