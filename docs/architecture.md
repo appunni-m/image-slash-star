@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `7a75acb33cbce80984dcf1dadd63d498b5f551e3`; the claim-ledger fixture tuple
+revision `b14aa2d89d5e24c87f1f2693a8b0886f3440e206`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -11,10 +11,10 @@ test/runtime revision and is
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, JPEG entropy output-buffer ownership, PNG source
-pixel ownership, candidate-prefix optimization, candidate-suffix allocation
-recycling, entropy-analysis pixel, Huffman-RLE fill, Huffman-RLE
-token-materialization, and Huffman-tree leaf census/materialization/depth slices
-have not received a managed coverage rerun.
+pixel ownership, TIFF conditional source ownership, candidate-prefix
+optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
+Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
+census/materialization/depth slices have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -641,6 +641,12 @@ representation change. The L16 branch alone materializes a big-endian buffer;
 all other source modes avoid a full pre-filter raster clone. This is a bounded
 ownership optimization and does not claim destination-buffer reuse,
 allocator/OOM accounting, or streaming.
+
+TIFF page encoding borrows source pixels unless horizontal prediction is paired
+with LZW or Deflate. Those two combinations alone receive a mutable owned
+working copy; raw, PackBits, and non-predictive compressed paths do not. The
+resulting compressed payload and page layout remain owned buffers, and this
+conditional reuse does not claim allocator/OOM accounting or streaming.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit
