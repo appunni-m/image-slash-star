@@ -10423,11 +10423,12 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // typed work-budget result, or sink-rollback contract, so this remains
         // Rust-only evidence in this existing feature-gated test rather than
         // a parity row or manifest entry.
+        // The first rejected statistics checkpoint is the 713th macroblock;
+        // 27x27 macroblocks are therefore the smallest square public probe
+        // that can reach it. The basic VP8 witness above already proves
+        // ordinary/ample byte identity for these options.
         let statistics_image =
-            DecodedImage::new(512, 512, vec![128; 512 * 512 * 3], ColorType::Rgb8);
-        // The basic VP8 witness above already proves ordinary/ample byte
-        // identity for these options. This larger fixture is reserved for
-        // the real coefficient-statistics boundary below.
+            DecodedImage::new(432, 432, vec![128; 432 * 432 * 3], ColorType::Rgb8);
         let statistics_policy = image_slash_star::EncodePolicy::new().with_max_work_units(712);
         let statistics_error = match image_slash_star::encode_with_policy(
             &statistics_image,
