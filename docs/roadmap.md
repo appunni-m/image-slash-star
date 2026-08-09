@@ -693,7 +693,7 @@ Minute gaps:
 | WEP-019 | A partial WebP demux can know the canvas and N frames while the last frame remains incomplete. Whole-slice APIs collapse this into success or malformed without progress. | Reuse API-043/047 and expose a partial-frame state only in the future streaming demux. |
 | WEP-020 | libwebp animation decode reports cumulative timestamps, while the common model stores individual durations. Rounding, zero-duration frames, overflow, and final timestamp must be proved separately. | Assert both exact source duration and checked cumulative presentation time. |
 | WEP-021 | Lossy pixel output depends on fancy upsampling, filtering, dithering, cropping/scaling options, and premultiplied/output layout choices in common decoders. Only one implicit reconstruction policy is tested. | Freeze the Pillow-compatible reconstruction path, compare scalar/WASM behavior, and expose alternatives only when they are codec transfer choices rather than processing. |
-| WEP-022 | VP8L aggregate fixtures do not yet prove each transform combination, meta-prefix group, color-cache boundary, simple/full Huffman tree form, distance mapping, and entropy-image dimension. The revision-pinned property map names 14 properties (six witnessed properties—color-indexing bands, subtract-green, color transforms, meta-Huffman groups, entropy-image dimensions, and successful cache boundaries—and eight candidates) and 71 active Pillow witnesses, with 41 successful structural facts (including predictor modes 0–3 and 5–13) and 40 malformed parser code/phase/bit-offset witnesses independently checked; the Pillow rows still claim only outer results. | Expand the successful structural inspector to every claimed combination, then promote candidates one property at a time without changing their Pillow-origin boundary. |
+| WEP-022 | VP8L aggregate fixtures do not yet prove each transform combination, meta-prefix group, color-cache boundary, simple/full Huffman tree form, distance mapping, and entropy-image dimension. The revision-pinned property map names 14 properties (seven witnessed properties—color-indexing bands, subtract-green, color transforms, meta-Huffman groups, entropy-image dimensions, successful cache boundaries, and full Huffman trees—and seven candidates) and 70 active Pillow witnesses, with 42 successful structural facts (including predictor modes 0–3 and 5–13) and 40 malformed parser code/phase/bit-offset witnesses independently checked; the Pillow rows still claim only outer results. | Expand the successful structural inspector to every claimed combination, then promote candidates one property at a time without changing their Pillow-origin boundary. |
 
 #### ICO and CUR
 
@@ -931,7 +931,7 @@ and sink boundary with sentinel `[0xC7]` untouched; Pillow parity remains the
 unchanged outer-result regression gate.
 
 | QA-027 | Encoder option determinism can be affected by unordered `HashMap` extras and target-native libraries, but cross-process output stability is not checked. | Replace public catch-all options, sort any retained opaque options, and compare independent process runs. |
-| QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records 71 named Pillow witnesses, 41 successful structural checks, 40 malformed parser checks, six witnessed structural properties, eight candidate properties, and the exact boundary of what Pillow proves. | Extend the same map discipline to each codec and replace candidate-only VP8L entries with independently checked structural witnesses before claiming state coverage. |
+| QA-028 | Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records 70 named Pillow witnesses, 42 successful structural checks, 40 malformed parser checks, seven witnessed structural properties, seven candidate properties, and the exact boundary of what Pillow proves. | Extend the same map discipline to each codec and replace candidate-only VP8L entries with independently checked structural witnesses before claiming state coverage. |
 | QA-030 | The schema-`@3` fixture benchmark protocol separates parity and Rust-only suite time with a fixed four-worker budget, records compiled artifact sizes, and now records direct-child POSIX user/sys time and peak RSS; the parity harness shares immutable repeated source decodes across its partitioned test functions. It still does not measure output allocation count, retained encoded+decoded cache memory, sequence amplification, caller-buffer reuse, stack depth, or runtime WASM. | Add allocator/cache/buffer-reuse, stack, and runtime-WASM measurements alongside time, peak RSS, and artifact size; never optimize from source line count. |
 | QA-031 | Legal-but-unsupported format classes are not a uniform fixture lane. Some are absent entirely, while malformed inputs dominate error coverage. | Add active negative-capability rows for every named legal class and require `Unsupported` rather than incidental `Malformed`. |
 | QA-033 | Generator reproducibility is checked through hashes inside generated data, but a clean regeneration/no-diff run is not a mandatory CI gate for every script and asset. | Run generators in a clean checkout, fail on any diff, and record pinned Python/native tool identities. |
@@ -1195,21 +1195,23 @@ being repeated as unfinished work.
 The WebP VP8L property-map slice is now recorded in
 `tests/fixtures/webp_vp8l_property_map.json` and checked by
 `python3 scripts/verify_webp_vp8l_property_map.py`. At the current source
-revision it contains 14 properties, 71 named witnesses, 78 distinct active
-WebP rows, 41 successful structural witnesses, and 40 malformed parser
+revision it contains 14 properties, 70 named witnesses, 78 distinct active
+WebP rows, 42 successful structural witnesses, and 40 malformed parser
 witnesses, pinned to
 manifest SHA-256
 `bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3` and
 matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
 The color-indexing size-band, subtract-green, color-transform, meta-Huffman,
-entropy-image, and successful cache-boundary properties are now `witnessed` at their explicitly listed scopes: the color-indexing rows
+entropy-image, successful cache-boundary, and full-Huffman-tree properties are
+now `witnessed` at their explicitly listed scopes: the color-indexing rows
 remain Pillow outer-result evidence while the independent inspector proves
 transform and table-size fields, the subtract-green encode artifact is parsed
 independently, the color-transform rows prove the selected block sizes, the
 meta-Huffman rows prove the selected one- and two-group forms, the entropy-image
 rows prove the selected 2×1 and 24×24 dimensions, and the cache rows prove the
-selected 1- and 10-bit widths. The other eight properties remain `candidate` at the full-category level;
+selected 1- and 10-bit widths, and the full-tree rows prove the
+two listed high-entropy forms. The other seven properties remain `candidate` at the full-category level;
 their named fixtures are Pillow outer-result evidence, while the independent
 inspector proves only selected transform, meta-Huffman, color-cache,
 Huffman-tree, distance, and entropy-image facts. The malformed parser witnesses independently

@@ -279,6 +279,12 @@
       "expect": {"any_stream": {"tree_forms_at_least": {"full": 4}}}
     },
     {
+      "property_id": "vp8l.huffman.full_tree_form",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_random_walk",
+      "expect": {"stream_index": 2, "stream": {"tree_forms_at_least": {"full": 6}}}
+    },
+    {
       "property_id": "vp8l.distance_mapping",
       "operation": "decode",
       "row_id": "lossless_transform_variants_vp8l_plane_distance_clamp",
@@ -491,15 +497,14 @@
     },
     {
       "id": "vp8l.huffman.full_tree_form",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
-        {"operation": "decode", "row_id": "error_malformed_container_vp8l_incomplete_huffman_tree"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
       ],
-      "gap": "High-entropy inputs are full-tree candidates; a Pillow row cannot prove code-length alphabets, canonical lengths, or tree validity."
+      "gap": "The independent parser now proves full-tree forms for the two listed high-entropy rows; malformed and other full-tree alphabets remain outside this witnessed scope."
     },
     {
       "id": "vp8l.distance_mapping",
