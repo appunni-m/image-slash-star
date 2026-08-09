@@ -1781,6 +1781,10 @@ pub(super) struct CandidateScratch {
     cache: CacheTransformScratch,
     trace: TraceScratch,
     source: Vec<Token>,
+    // Selected candidate vectors are returned by the image-stream writer after
+    // each trial. Retain a bounded pool so the next stream can seed cache
+    // selection without allocating another pixel-scaled token buffer.
+    pub(super) result_pool: Vec<Vec<Token>>,
 }
 
 fn trace_backwards(
@@ -2055,15 +2059,27 @@ pub(super) fn candidates(
     let estimate_scratch = &mut scratch.estimate;
     let cache_scratch = &mut scratch.cache;
     let trace_scratch = &mut scratch.trace;
+    let result_pool = &mut scratch.result_pool;
     // The LZ77, RLE, and optional box-chain reference streams are consumed
     // sequentially by cache selection. Retain one token buffer across those
     // source constructions instead of allocating a fresh vector for each.
     let source_scratch = &mut scratch.source;
-    let choose_cache = |source: &[Token],
-                        scratch: &mut CostEstimateScratch,
-                        cache_scratch: &mut CacheTransformScratch|
+    let mut choose_cache = |source: &[Token],
+                            scratch: &mut CostEstimateScratch,
+                            cache_scratch: &mut CacheTransformScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
         let maximum = if allow_cache { max_cache_bits } else { 0 };
+        if cache_scratch.output.capacity() < source.len()
+            && let Some(mut reusable) = result_pool.pop()
+        {
+            reusable.clear();
+            if reusable.capacity() >= source.len() {
+                let previous = core::mem::replace(&mut cache_scratch.output, reusable);
+                result_pool.push(previous);
+            } else {
+                result_pool.push(reusable);
+            }
+        }
         // The inclusive range always contains cache-bit value zero.
         let mut best = None;
         for bits in 0..=maximum {
