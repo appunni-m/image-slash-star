@@ -1556,8 +1556,8 @@ impl CostManager {
             }
             return;
         }
-        let intervals = self.length_intervals.clone();
-        for (length_cost, relative_start, relative_end) in intervals {
+        for interval_index in 0..self.length_intervals.len() {
+            let (length_cost, relative_start, relative_end) = self.length_intervals[interval_index];
             if relative_start >= length {
                 break;
             }
@@ -1589,10 +1589,8 @@ impl CostManager {
             }
             return Ok(());
         }
-        let intervals = self.length_intervals.clone();
-        for (interval_index, (length_cost, relative_start, relative_end)) in
-            intervals.into_iter().enumerate()
-        {
+        for interval_index in 0..self.length_intervals.len() {
+            let (length_cost, relative_start, relative_end) = self.length_intervals[interval_index];
             if relative_start >= length {
                 break;
             }
