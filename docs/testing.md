@@ -2,14 +2,15 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-09 against current implementation revision
-`9e2ffcc5b190c4044c08b0496bafe30b918561f8`; the claim-ledger fixture tuple
+Reviewed: 2026-08-09 against production implementation revision
+`9e2ffcc5b190c4044c08b0496bafe30b918561f8` and current test/runtime revision
+`15965fbda46db35dc4b9f547d757ee9c6ac20ec0`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`f6f50aaf-e7d1-48f3-bf87-afbe04dfd1d1`; the exact-head feature-matrix run is
-`103f193a-4d6a-47b9-9dc9-e317ee40cc2b`; and the current Coverage MCP snapshot
-is `7b25b091-fd75-4e3f-a2c9-c6ccb7f1f434` from run
-`ded7face-c20e-4a2d-b39d-af48c4942666`.
+`9cd5adbc-b0c2-4edd-96b8-1539f3374182`; the exact-head feature-matrix run is
+`50e0cb86-c8fe-49b4-b43b-e529e349b552`; and the current Coverage MCP snapshot
+is `2ff3c38e-1d61-4aa0-98e9-d444d67cb809` from run
+`d91b95a2-ff4c-4fce-b11c-ce2d19ab392c`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2080,19 +2081,38 @@ diagnostic origin, new test function, or coverage-only hook was added.
 The exact raw payload is retained alongside the typed fields; aggregate LLVM
 execution remains implementation coverage, not Pillow-parity coverage.
 
-Current acceptance for implementation revision
-`9e2ffcc5b190c4044c08b0496bafe30b918561f8`: managed Pillow parity run
-`f6f50aaf-e7d1-48f3-bf87-afbe04dfd1d1` passed 1,445/1,445 checks in 4,274 ms;
-feature-matrix run `103f193a-4d6a-47b9-9dc9-e317ee40cc2b` passed with
+Current acceptance for production implementation revision
+`9e2ffcc5b190c4044c08b0496bafe30b918561f8` and test/runtime revision
+`15965fbda46db35dc4b9f547d757ee9c6ac20ec0`: managed Pillow parity run
+`9cd5adbc-b0c2-4edd-96b8-1539f3374182` passed 1,445/1,445 checks in 936 ms;
+feature-matrix run `50e0cb86-c8fe-49b4-b43b-e529e349b552` passed with
 `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and
 `verbose=0`, and its retained log ended with `capability tables OK: every
 native and wasm32-wasip1 lane agrees` with no `lock-wait` match. Nightly LLVM
-run `ded7face-c20e-4a2d-b39d-af48c4942666` passed 85/85 tests in 52,931 ms and
-ingested snapshot `7b25b091-fd75-4e3f-a2c9-c6ccb7f1f434`: 54,749/55,600
-lines, 7,796/7,998 branches, 3,110/3,201 functions, and 84,421/86,308
+run `d91b95a2-ff4c-4fce-b11c-ce2d19ab392c` passed 85/85 tests in 47,468 ms and
+ingested snapshot `2ff3c38e-1d61-4aa0-98e9-d444d67cb809`: 54,750/55,600
+lines, 7,794/7,998 branches, 3,110/3,201 functions, and 84,415/86,308
 regions. The known LLVM JSON segment-normalization warning remains. These
 coverage numbers are Rust implementation evidence, not Pillow parity, and no
 coverage-only test was used.
+
+The current test-runtime-only follow-up removes one redundant ample-budget
+comparison from the existing Rust-only work-budget contract and replaces its
+late VP8L bitstream probe with a deterministic 248x248 high-entropy probe.
+The compact probe still reaches the 262,144-, 524,288-, and 1,048,576-bit
+boundaries with the same whole-buffer/sink observations: 262,602/262,603 and
+262,601/262,602; 328,138/328,139 and 328,137/328,138; and 459,210/459,211
+and 459,209/459,210. Existing rejection and untouched-sentinel assertions
+remain. No production codec behavior, Pillow parity row or fixture,
+diagnostic origin, new test function, or coverage-only hook changed.
+
+The clean schema-@2 local workload protocol at this revision passed all four
+workloads: the Pillow parity fixture suite took 0.973 s wall time (reported
+`real=0.96`) and the separate Rust-only feature-gate suite took 1.683 s wall
+time (reported `real=1.68`); the native release and wasm32-unknown-unknown
+compile workloads also passed. These are fixed-host/cache observations, not
+universal speed claims. The Rust-only contract and benchmark remain separate
+from Pillow-oracle evidence.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
