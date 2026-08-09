@@ -3,12 +3,12 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`b29a8f3ef9c34063d1311aaebced5f61423d1818` and test/runtime revision
-`b29a8f3ef9c34063d1311aaebced5f61423d1818`; the claim-ledger fixture tuple
+`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78` and test/runtime revision
+`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for the current test/runtime revision is
-`003d69d6-820f-4bcc-a28f-af6be3327207` from run
-`a73364f0-0f4c-47ed-9fa8-beb218ebb88a`.
+`58a71bc8-925c-4589-9bc5-6b2a92b83f87` from run
+`12ff4489-ccb8-4b5a-9e5a-f04716ab535b`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -370,6 +370,7 @@ translation cannot be bypassed.
 | `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Validate dimensions, exact mode/color state, pixel length, and indexed palette state while reusing owned pixel buffers; unchecked constructors remain available for staged assembly |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
+| Uncapped `EncodePolicy` work-budget fast path | `Some(u64::MAX)` retains token-aware cancellation while reusing an uncapped token; finite work budgets retain their independent counter and typed limit semantics |
 | `encode_with_token`, `encode_with_token_and_policy` | Still encode with cancellation before/after encoding; GIF now polls block/frame/coalescing/output-assembly, RGB/RGBA palette quantization, and LZW input-symbol checkpoints, WebP polls L1/P8/L8/La8/CMYK source-mode preparation and RGBA alpha/RGB extraction after each 1,024 source pixels, RGB-equal grayscale preparation after each 1,024 pixels, the remaining preparation stages, lossy VP8 RGB/RGBA-to-YUV conversion, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, and RGBA alpha-palette source collection and index packing after each 1,024 source pixels, lossless VP8L RGB/RGBA source-pixel materialization, predictor source-snapshot copying, image-palette construction and palette-mode index packing after each 1,024 source pixels, analysis histogram construction after each 64 completed 4×4 blocks, analysis/mode-selection/coefficient-probability/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition-bit/8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical and 16,384-boolean coefficient-bit/1,024-byte boolean-bitstream-output/bitstream stages, lossless VP8L predictor tile scans/mode application, cross-color multiplier search/transform tiles, entropy/transform stages, bounded backward-reference search/match-length/cache/trace, cost-manager interval-update and cleanup scans after each 256 cumulative interval entries, repeated-run hash-chain insertion, and copy-token cache-population scans after each 256 pixels, plus token/Huffman cost scans after each 1,024 tokens or 64 symbols, Huffman RLE preparation and in-run code-length scans after each 64 symbols, canonical-code assignment scans after each 64 symbols, Huffman-tree insertion scans after each 64 candidate nodes, Huffman-tree code-length-token frequency and trailing zero-repeat token trim scans after each 16 compressed token entries, Huffman code-length emission after each 16 compressed token entries, histogram clustering, Huffman-tree/group emission, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical bitstream intervals, 1,024-byte output, lossy VP8/ALPH RIFF payload-copy, lossless VP8L RIFF frame-copy, token-stream, codec-result, and metadata-assembly boundaries, PNG and BMP also poll row preparation, PNG stored-block boundaries, 1,024-byte stored-block-copy intervals, and every zlib-ng level's matcher/expansion/Huffman/bitstream/checksum stages, BMP row-conversion subsegments, and structural segments in return and sink paths, JPEG polls RGB-to-YCbCr conversion and chroma-downsample output after each 1,024 pixels, baseline entropy after each 1,024 MCUs, optimized baseline Huffman frequency gathering after each 1,024 AC coefficients, progressive scan block slots after each 1,024 blocks, progressive scan-event frequency items and progressive scan coefficient traversal items after each 1,024 events or coefficients, row/block/scan checkpoints, and 1,024-byte entropy-output intervals, and TIFF polls page preparation, predictor, raw/PackBits/LZW, Deflate input-row, level-six matcher candidate/insertion/fizzle/position, expansion, Huffman, bitstream, stored-block, and checksum boundaries |
 | Lossless WebP VP8L 2,097,152-bit checkpoint | The token-aware bit writer polls at the 2,097,152 logical-bit interval; the existing no-token path remains unchanged. The exact whole-buffer/direct-sink boundary is covered by the Rust-only feature-gate contract because Pillow has no caller token, typed work-budget result, or caller-owned sink. |
 | Lossless WebP VP8L predictor row-copy checkpoints | Token-aware predictor tile scans copy image-width rows in 1,024-pixel chunks and poll after each completed chunk; the no-token path retains its original bulk row copy |
@@ -595,8 +596,14 @@ documented cooperative encode checkpoints. A checkpoint charges one unit
 before it continues; when the next charge would exceed the maximum, encoding
 returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodeWorkUnits`. The budget is layered over a caller token,
-so caller cancellation still has precedence and remains `Cancelled`. TIFF
-Deflate tokenization additionally charges at each supplied input-row boundary
+so caller cancellation still has precedence and remains `Cancelled`.
+The `u64::MAX` policy value is treated as observationally uncapped: policy
+plumbing reuses the caller token, or an uncapped token for a source-less call,
+while preserving the token-aware codec path. This avoids a redundant budget
+cell and counter mutation at every checkpoint; every finite maximum retains
+the independent budget state and exact exhaustion behavior described above.
+
+TIFF Deflate tokenization additionally charges at each supplied input-row boundary
 and inside the level-six matcher candidate, insertion, fizzle, window, and
 position intervals, so a bounded page cannot consume the complete matcher pass
 between public checkpoints. TIFF Deflate emission additionally charges while

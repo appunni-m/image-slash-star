@@ -3,15 +3,15 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`b29a8f3ef9c34063d1311aaebced5f61423d1818`, Rust test/runtime revision
-`b29a8f3ef9c34063d1311aaebced5f61423d1818`, and benchmark-protocol revision
+`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78`, Rust test/runtime revision
+`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`527419c8-2963-4436-902c-e00e89d740c0`; the exact-head feature-matrix run is
-`29aac451-8657-4382-b82e-8899a602c4eb`; and the current Coverage MCP snapshot
-is `003d69d6-820f-4bcc-a28f-af6be3327207` from run
-`a73364f0-0f4c-47ed-9fa8-beb218ebb88a`.
+`c12585d0-52f8-42cb-ba1e-0f0400756aa7`; the exact-head feature-matrix run is
+`7e39a32b-e939-4105-99f9-b3a82403ba24`; and the current Coverage MCP snapshot
+is `58a71bc8-925c-4589-9bc5-6b2a92b83f87` from run
+`12ff4489-ccb8-4b5a-9e5a-f04716ab535b`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2220,7 +2220,7 @@ hook changed. Allocation counts, retained encoded/decoded cache bytes,
 caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
 QA-010/QA-030.
 
-Current acceptance record: WebP VP8L palette-mode box-chain candidate offsets
+Historical acceptance record: WebP VP8L palette-mode box-chain candidate offsets
 
 The token-aware lossless WebP VP8L palette-mode box-chain scan is implemented
 at production and test/runtime revision
@@ -2251,6 +2251,36 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. Remaining progress
 semantics, interruption inside one candidate or other codec unit, transient
 allocation accounting, and short-write/rollback cleanup remain open.
+
+Current acceptance record: uncapped encode-work policy token fast path
+
+The production/test/runtime slice is implemented at
+`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78`. `work_budget_token` now treats
+`EncodePolicy::max_work_units() == Some(u64::MAX)` as observationally uncapped:
+it preserves the token-aware codec and cancellation path while reusing the
+source token (or a plain uncapped token) instead of allocating and mutating a
+redundant work-budget cell at every checkpoint. Finite work budgets retain the
+same budget token, counter, and typed `EncodeWorkUnits` rejection semantics.
+This is a Rust runtime/control optimization; it changes no encoded bytes,
+finite-budget boundary, Pillow oracle result, parity row, fixture, diagnostic
+origin, test function, or coverage-only hook. The existing work-budget
+contract already exercises both source-less and caller-token policy paths with
+`u64::MAX` ample policies, while finite exact-boundary witnesses remain in
+the same feature-gated test.
+
+Local focused/full all-feature tests, strict all-target Clippy, and rustfmt
+passed. Exact-head managed Pillow parity run
+`c12585d0-52f8-42cb-ba1e-0f0400756aa7` passed 1,445/1,445 checks in 643 ms.
+Feature-matrix run `7e39a32b-e939-4105-99f9-b3a82403ba24` passed all configured
+native/WASI lanes in 30,968 ms with `cache=cold`, `lanes=6`, `test_threads=2`,
+`build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the
+native/WASI capability agreement marker and no `lock-wait` match. Nightly LLVM
+run `12ff4489-ccb8-4b5a-9e5a-f04716ab535b` passed 85/85 tests in 56,905 ms and
+ingested snapshot `58a71bc8-925c-4589-9bc5-6b2a92b83f87`: 54,842/55,686 lines,
+7,834/8,040 branches, 3,112/3,203 functions, and 84,552/86,433 regions. The
+known LLVM JSON segment-normalization warning remains; the aggregate shortfall
+is 844 lines, 206 branches, 91 functions, and 1,881 regions. These are Rust
+implementation/coverage records, not Pillow-parity coverage.
 
 Historical acceptance record: WebP VP8L hash-chain candidate trials
 
