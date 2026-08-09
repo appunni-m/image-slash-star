@@ -361,19 +361,29 @@ impl<'a> LosslessDecoder<'a> {
             huffman_ysize =
                 ((u32::from(ysize) + (1u32 << huffman_bits) - 1) >> huffman_bits) as u16;
 
-            let mut data = vec![0; usize::from(huffman_xsize) * usize::from(huffman_ysize) * 4];
-            self.decode_image_stream(huffman_xsize, huffman_ysize, false, &mut data)?;
-
-            entropy_image = data
-                .chunks_exact(4)
-                .map(|pixel| {
-                    let meta_huff_code = (u16::from(pixel[0]) << 8) | u16::from(pixel[1]);
+            // The decoded metadata image is four bytes per pixel, but only
+            // its first two bytes become the retained Huffman-group index.
+            // Keep one typed allocation, decode through its byte view, and
+            // compact each selected u16 in place before returning it in
+            // HuffmanInfo. This removes the transient byte Vec and the second
+            // allocation/copy while preserving the source-byte interpretation.
+            let pixel_count = usize::from(huffman_xsize) * usize::from(huffman_ysize);
+            entropy_image.resize(pixel_count * 2, 0);
+            {
+                let data = bytemuck::cast_slice_mut::<u16, u8>(&mut entropy_image);
+                self.decode_image_stream(huffman_xsize, huffman_ysize, false, data)?;
+                for index in 0..pixel_count {
+                    let source = index * 4;
+                    let meta_huff_code = u16::from_be_bytes([data[source], data[source + 1]]);
+                    let destination = index * 2;
+                    data[destination..destination + 2]
+                        .copy_from_slice(&meta_huff_code.to_ne_bytes());
                     if u32::from(meta_huff_code) >= num_huff_groups {
                         num_huff_groups = u32::from(meta_huff_code) + 1;
                     }
-                    meta_huff_code
-                })
-                .collect::<Vec<u16>>();
+                }
+            }
+            entropy_image.truncate(pixel_count);
         }
 
         let mut hufftree_groups = Vec::new();
