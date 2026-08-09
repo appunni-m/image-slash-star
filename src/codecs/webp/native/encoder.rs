@@ -492,7 +492,21 @@ fn build_huffman_tree(
                 }
             }
         }
-        if lengths.iter().copied().max().unwrap_or(0) <= length_limit {
+        // The token-aware path keeps the fixed-alphabet depth scan
+        // interruptible without adding a callback to the ordinary path.
+        let maximum_length = if let Some(token) = token {
+            let mut maximum = 0_u8;
+            for (index, &length) in lengths.iter().enumerate() {
+                maximum = maximum.max(length);
+                if (index + 1).is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                    check_token(Some(token))?;
+                }
+            }
+            maximum
+        } else {
+            lengths.iter().copied().max().unwrap_or(0)
+        };
+        if maximum_length <= length_limit {
             break;
         }
         count_min *= 2;
