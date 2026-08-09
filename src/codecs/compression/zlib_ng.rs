@@ -59,7 +59,7 @@ enum Token {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let (tokens, final_tokens) = tokenize_level1(data, input_chunks);
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x01]);
     // deflate_quick opens its first block only after a Z_NO_FLUSH call has
     // enough lookahead to process. On Z_FINISH it closes an opened block as
     // non-final, then emits the remaining short lookahead in a final block.
@@ -69,8 +69,7 @@ pub(super) fn compress_level1(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
         emit_fixed_block(&tokens, false, &mut writer);
         emit_fixed_block(&final_tokens, true, &mut writer);
     }
-    let mut output = vec![0x78, 0x01];
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -85,8 +84,7 @@ pub(super) fn compress_level1_with_token(
     let (tokens, final_tokens) = tokenize_level1_with_token(data, input_chunks, token)?;
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     checkpoint.poll()?;
-    let mut output = vec![0x78, 0x01];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x01]);
     if tokens.is_empty() {
         emit_fixed_block_with(&final_tokens, true, &mut writer, &mut checkpoint)?;
     } else {
@@ -94,7 +92,7 @@ pub(super) fn compress_level1_with_token(
         emit_fixed_block_with(&final_tokens, true, &mut writer, &mut checkpoint)?;
     }
     checkpoint.poll()?;
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
     checkpoint.poll()?;
     Ok(output)
@@ -573,10 +571,9 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usiz
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_early_matcher(data, input_chunks, 6, 16, 6, false);
-    let mut output = vec![0x78, 0x5e];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -585,10 +582,9 @@ pub(super) fn compress_level3(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_early_matcher(data, input_chunks, 4, 8, 4, true);
-    let mut output = vec![0x78, 0x5e];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -597,10 +593,9 @@ pub(super) fn compress_level2(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_early_matcher(data, input_chunks, 24, 32, 12, false);
-    let mut output = vec![0x78, 0x5e];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -609,10 +604,9 @@ pub(super) fn compress_level4(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_lookahead_medium(data, input_chunks, 128, 128, 16);
-    let mut output = vec![0x78, 0x9c];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -621,10 +615,9 @@ pub(super) fn compress_level6(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level5(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_lookahead_medium(data, input_chunks, 32, 32, 16);
-    let mut output = vec![0x78, 0x5e];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -662,11 +655,10 @@ pub(super) fn compress_early_level_with_token(
     };
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     checkpoint.poll()?;
-    let mut output = vec![0x78, 0x5e];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x5e]);
     emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
     checkpoint.poll()?;
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
     checkpoint.poll()?;
     Ok(output)
@@ -723,10 +715,9 @@ fn compress_slow_level(
         max_chain,
     };
     let tokens = slow(data, input_chunks, settings);
-    let mut output = vec![0x78, header];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, header]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -756,11 +747,10 @@ fn compress_slow_level_with_token(
     let tokens = slow_with_token(data, input_chunks, settings, token)?;
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     checkpoint.poll()?;
-    let mut output = vec![0x78, header];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, header]);
     emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
     checkpoint.poll()?;
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
     checkpoint.poll()?;
     Ok(output)
@@ -1035,21 +1025,21 @@ pub(super) fn compress_level6_with_token(
         tokenize_lookahead_medium(data, input_chunks, 128, 128, 16)
     };
     crate::codecs::error::check_cancelled(token)?;
-    let mut output = vec![0x78, 0x9c];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
     if let Some(token) = token {
         let mut checkpoint = CancellationMatcherCheckpoint { token };
         emit_blocks_with(&tokens, block_tokens, &mut writer, &mut checkpoint)?;
         checkpoint.poll()?;
-        output.extend_from_slice(&writer.finish());
+        let mut output = writer.finish();
         output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
         checkpoint.poll()?;
+        Ok(output)
     } else {
         emit_blocks(&tokens, 16_383, &mut writer);
-        output.extend_from_slice(&writer.finish());
+        let mut output = writer.finish();
         output.extend_from_slice(&adler32(data).to_be_bytes());
+        Ok(output)
     }
-    Ok(output)
 }
 
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
@@ -1417,10 +1407,9 @@ impl Level6Matcher {
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 pub(super) fn compress_level9(data: &[u8], input_chunks: &[usize]) -> Vec<u8> {
     let tokens = tokenize_level9(data, input_chunks);
-    let mut output = vec![0x78, 0xda];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
     emit_blocks(&tokens, 32_767, &mut writer);
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32(data).to_be_bytes());
     output
 }
@@ -1435,11 +1424,10 @@ pub(super) fn compress_level9_with_token(
     let tokens = tokenize_level9_with_token(data, input_chunks, token)?;
     let mut checkpoint = CancellationMatcherCheckpoint { token };
     checkpoint.poll()?;
-    let mut output = vec![0x78, 0xda];
-    let mut writer = BitWriter::default();
+    let mut writer = BitWriter::with_prefix([0x78, 0xda]);
     emit_blocks_with(&tokens, 32_767, &mut writer, &mut checkpoint)?;
     checkpoint.poll()?;
-    output.extend_from_slice(&writer.finish());
+    let mut output = writer.finish();
     output.extend_from_slice(&adler32_with(data, &mut checkpoint)?.to_be_bytes());
     checkpoint.poll()?;
     Ok(output)
@@ -2785,6 +2773,14 @@ struct BitWriter {
 }
 
 impl BitWriter {
+    fn with_prefix(prefix: [u8; 2]) -> Self {
+        Self {
+            bytes: prefix.to_vec(),
+            current: 0,
+            used: 0,
+        }
+    }
+
     fn write_bits(&mut self, value: u32, width: u8) {
         for bit in 0..width {
             self.current |=
