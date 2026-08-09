@@ -1183,12 +1183,25 @@ struct CostInterval {
     position: usize,
 }
 
+// Interval splitting is revisited for many candidate positions. Keep its
+// bounded working vectors attached to the manager so repeated candidates do
+// not allocate and discard the same temporary state.
+#[derive(Default)]
+struct CostManagerScratch {
+    boundaries: Vec<usize>,
+    additions: Vec<CostInterval>,
+    overlaps: Vec<CostInterval>,
+    rebuilt: Vec<CostInterval>,
+    merged: Vec<CostInterval>,
+}
+
 struct CostManager {
     costs: Vec<i64>,
     lengths: Vec<usize>,
     length_costs: Vec<i64>,
     length_intervals: Vec<(i64, usize, usize)>,
     intervals: Vec<CostInterval>,
+    scratch: CostManagerScratch,
 }
 
 impl CostManager {
@@ -1217,6 +1230,7 @@ impl CostManager {
             length_costs,
             length_intervals,
             intervals: Vec::new(),
+            scratch: CostManagerScratch::default(),
         }
     }
 
@@ -1276,6 +1290,7 @@ impl CostManager {
             length_costs,
             length_intervals,
             intervals: Vec::new(),
+            scratch: CostManagerScratch::default(),
         })
     }
 
@@ -1360,26 +1375,34 @@ impl CostManager {
             return;
         }
 
-        let mut boundaries = vec![candidate.start, candidate.end];
-        for interval in &self.intervals {
+        self.scratch.boundaries.clear();
+        self.scratch
+            .boundaries
+            .extend([candidate.start, candidate.end]);
+        for interval_index in 0..self.intervals.len() {
+            let interval = self.intervals[interval_index];
             if interval.end > candidate.start && interval.start < candidate.end {
-                boundaries.push(interval.start.max(candidate.start));
-                boundaries.push(interval.end.min(candidate.end));
+                self.scratch
+                    .boundaries
+                    .push(interval.start.max(candidate.start));
+                self.scratch
+                    .boundaries
+                    .push(interval.end.min(candidate.end));
             }
         }
-        boundaries.sort_unstable();
-        boundaries.dedup();
+        self.scratch.boundaries.sort_unstable();
+        self.scratch.boundaries.dedup();
 
-        let mut additions = Vec::new();
-        for window in boundaries.windows(2) {
-            let start = window[0];
-            let end = window[1];
+        self.scratch.additions.clear();
+        for window_index in 0..self.scratch.boundaries.len().saturating_sub(1) {
+            let start = self.scratch.boundaries[window_index];
+            let end = self.scratch.boundaries[window_index + 1];
             let existing = self
                 .intervals
                 .iter()
                 .find(|interval| interval.start <= start && interval.end >= end);
             if existing.is_none_or(|interval| candidate.cost < interval.cost) {
-                additions.push(CostInterval {
+                self.scratch.additions.push(CostInterval {
                     start,
                     end,
                     ..candidate
@@ -1387,23 +1410,29 @@ impl CostManager {
             }
         }
 
-        if additions.is_empty() {
+        if self.scratch.additions.is_empty() {
             return;
         }
-        let old = std::mem::take(&mut self.intervals);
-        let mut rebuilt = Vec::new();
-        for interval in old {
-            let overlaps = additions
-                .iter()
-                .filter(|addition| addition.end > interval.start && addition.start < interval.end)
-                .copied()
-                .collect::<Vec<_>>();
-            if overlaps.is_empty() {
+        let mut old = std::mem::take(&mut self.intervals);
+        let mut rebuilt = std::mem::take(&mut self.scratch.rebuilt);
+        let mut merged = std::mem::take(&mut self.scratch.merged);
+        rebuilt.clear();
+        merged.clear();
+        for interval in old.drain(..) {
+            self.scratch.overlaps.clear();
+            for addition_index in 0..self.scratch.additions.len() {
+                let addition = self.scratch.additions[addition_index];
+                if addition.end > interval.start && addition.start < interval.end {
+                    self.scratch.overlaps.push(addition);
+                }
+            }
+            if self.scratch.overlaps.is_empty() {
                 rebuilt.push(interval);
                 continue;
             }
             let mut cursor = interval.start;
-            for addition in overlaps {
+            for overlap_index in 0..self.scratch.overlaps.len() {
+                let addition = self.scratch.overlaps[overlap_index];
                 if cursor < addition.start {
                     rebuilt.push(CostInterval {
                         end: addition.start,
@@ -1420,10 +1449,9 @@ impl CostManager {
                 });
             }
         }
-        rebuilt.extend(additions);
+        rebuilt.append(&mut self.scratch.additions);
         rebuilt.sort_by_key(|interval| interval.start);
-        let mut merged: Vec<CostInterval> = Vec::new();
-        for interval in rebuilt {
+        for interval in rebuilt.drain(..) {
             if let Some(last) = merged.last_mut()
                 && last.end == interval.start
                 && last.cost == interval.cost
@@ -1435,6 +1463,8 @@ impl CostManager {
             }
         }
         self.intervals = merged;
+        self.scratch.rebuilt = old;
+        self.scratch.merged = rebuilt;
     }
 
     fn insert_min_interval_with_checkpoint(
@@ -1462,31 +1492,40 @@ impl CostManager {
         // hundreds of candidate windows. Keep this token-aware path bounded
         // without adding polling to the ordinary no-token encoder.
         let mut work = 0usize;
-        let mut boundaries = vec![candidate.start, candidate.end];
-        for interval in &self.intervals {
+        self.scratch.boundaries.clear();
+        self.scratch
+            .boundaries
+            .extend([candidate.start, candidate.end]);
+        for interval_index in 0..self.intervals.len() {
+            let interval = self.intervals[interval_index];
             checkpoint_cost_manager_work(token, &mut work)?;
             if interval.end > candidate.start && interval.start < candidate.end {
-                boundaries.push(interval.start.max(candidate.start));
-                boundaries.push(interval.end.min(candidate.end));
+                self.scratch
+                    .boundaries
+                    .push(interval.start.max(candidate.start));
+                self.scratch
+                    .boundaries
+                    .push(interval.end.min(candidate.end));
             }
         }
-        boundaries.sort_unstable();
-        boundaries.dedup();
+        self.scratch.boundaries.sort_unstable();
+        self.scratch.boundaries.dedup();
 
-        let mut additions = Vec::new();
-        for window in boundaries.windows(2) {
-            let start = window[0];
-            let end = window[1];
+        self.scratch.additions.clear();
+        for window_index in 0..self.scratch.boundaries.len().saturating_sub(1) {
+            let start = self.scratch.boundaries[window_index];
+            let end = self.scratch.boundaries[window_index + 1];
             let mut existing = None;
-            for interval in &self.intervals {
+            for interval_index in 0..self.intervals.len() {
+                let interval = self.intervals[interval_index];
                 checkpoint_cost_manager_work(token, &mut work)?;
                 if interval.start <= start && interval.end >= end {
-                    existing = Some(*interval);
+                    existing = Some(interval);
                     break;
                 }
             }
             if existing.is_none_or(|interval| candidate.cost < interval.cost) {
-                additions.push(CostInterval {
+                self.scratch.additions.push(CostInterval {
                     start,
                     end,
                     ..candidate
@@ -1494,25 +1533,30 @@ impl CostManager {
             }
         }
 
-        if additions.is_empty() {
+        if self.scratch.additions.is_empty() {
             return Ok(());
         }
-        let old = std::mem::take(&mut self.intervals);
-        let mut rebuilt = Vec::new();
-        for interval in old {
-            let mut overlaps = Vec::new();
-            for addition in &additions {
+        let mut old = std::mem::take(&mut self.intervals);
+        let mut rebuilt = std::mem::take(&mut self.scratch.rebuilt);
+        let mut merged = std::mem::take(&mut self.scratch.merged);
+        rebuilt.clear();
+        merged.clear();
+        for interval in old.drain(..) {
+            self.scratch.overlaps.clear();
+            for addition_index in 0..self.scratch.additions.len() {
+                let addition = self.scratch.additions[addition_index];
                 checkpoint_cost_manager_work(token, &mut work)?;
                 if addition.end > interval.start && addition.start < interval.end {
-                    overlaps.push(*addition);
+                    self.scratch.overlaps.push(addition);
                 }
             }
-            if overlaps.is_empty() {
+            if self.scratch.overlaps.is_empty() {
                 rebuilt.push(interval);
                 continue;
             }
             let mut cursor = interval.start;
-            for addition in overlaps {
+            for overlap_index in 0..self.scratch.overlaps.len() {
+                let addition = self.scratch.overlaps[overlap_index];
                 if cursor < addition.start {
                     rebuilt.push(CostInterval {
                         end: addition.start,
@@ -1529,10 +1573,9 @@ impl CostManager {
                 });
             }
         }
-        rebuilt.extend(additions);
+        rebuilt.append(&mut self.scratch.additions);
         rebuilt.sort_by_key(|interval| interval.start);
-        let mut merged: Vec<CostInterval> = Vec::new();
-        for interval in rebuilt {
+        for interval in rebuilt.drain(..) {
             checkpoint_cost_manager_work(token, &mut work)?;
             if let Some(last) = merged.last_mut()
                 && last.end == interval.start
@@ -1545,6 +1588,8 @@ impl CostManager {
             }
         }
         self.intervals = merged;
+        self.scratch.rebuilt = old;
+        self.scratch.merged = rebuilt;
         Ok(())
     }
 
