@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `a15a4c5840d51cd7bc451846ee0ff9d4aad144f7`; the claim-ledger fixture tuple
+revision `e9aabbc0cc1f4cd208f1b63be74b065809d1f5d7`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -17,7 +17,7 @@ cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
 buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency
 scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
 scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
-scratch reuse, GIF indexed
+scratch reuse, WebP VP8L nested metadata-stream scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -707,6 +707,14 @@ the bounded vector storage is reused. Ordering, tree selection, checkpoint
 behavior, encoded bytes, errors, and sink output remain unchanged. This is a
 Rust-only bounded allocation optimization, not allocator/OOM accounting,
 recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L multi-group token streams retain an optional child `TokenStreamScratch`
+for the sampled metadata image, so its bounded group and Huffman buffers survive
+the outer candidate loop. The metadata stream disables further recursion; the
+candidate suffix remains independently selected and the parent writer's prefix,
+checkpoint ordering, encoded bytes, errors, and sink output remain unchanged.
+This is a Rust-only nested-scratch allocation optimization, not allocator/OOM
+accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
