@@ -47,6 +47,8 @@
 //! RGB-equal grayscale preparation, predictor mode-application wide source-row
 //! copies after each completed 1,024-pixel chunk, predictor tile scans and
 //! mode application, and subtract-green transforms after each 1,024 pixels,
+//! lossless VP8L entropy-mode pixel histogram scans after each completed
+//! 1,024-pixel chunk on rows wider than 1,024 pixels,
 //! RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
 //! cross-color multiplier search/transform and sampling scans/compaction,
 //! including VP8L meta-histogram row/column comparisons and symbol compaction

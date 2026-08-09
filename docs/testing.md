@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`9275f4e6caa394c88fda815543a29411c737f96d`, Rust test/runtime revision
-`9275f4e6caa394c88fda815543a29411c737f96d`, and benchmark-protocol revision
+`9c0ff979abd1f26b71e2d3b297fc163d16921d3a`, Rust test/runtime revision
+`9c0ff979abd1f26b71e2d3b297fc163d16921d3a`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `9275f4e6caa394c88fda815543a29411c737f96d`.
+Coverage MCP rerun has yet been recorded for `9c0ff979abd1f26b71e2d3b297fc163d16921d3a`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -436,7 +436,8 @@ sampled meta-pixel materialization after each 1,024 retained histogram symbols,
 including meta-histogram row/column comparisons and symbol compaction after
 each 1,024 symbols,
 entropy-mode histogram-cost analysis after each 64 symbols, transform
-selection/application, bounded backward-reference
+selection/application, and wide-row entropy-mode pixel histogram scans after
+each completed 1,024-pixel chunk, bounded backward-reference
 length-cost table and equal-cost interval setup after each 1,024 entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
@@ -2355,7 +2356,7 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L predictor row-copy, traced replay, and token-stream checkpoints
+Current acceptance record: VP8L predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
 
 The production trace slice is implemented at
 `9275f4e6caa394c88fda815543a29411c737f96d`, with the verified Rust witness in
@@ -2388,20 +2389,34 @@ typed work-budget result, caller-owned sink, or rollback equivalent, so it adds
 no parity row, fixture, diagnostic origin, new test function, or coverage-only
 hook.
 
-The first clean schema-`@3` benchmark at this revision reported 0.989086 s wall /
-2.839248 user s / 0.205373 sys s / 249,823,232-byte peak RSS for the Pillow
-parity fixture suite, and 1.473248 s wall / 2.153050 user s / 0.106596 sys s /
-177,537,024-byte peak RSS for the separate Rust-only feature-gate suite. Its
-warm repeat reported 0.966203 s / 2.832930 user s / 0.194616 sys s for Pillow
-parity and 1.639117 s / 2.165820 user s / 0.257353 sys s for the Rust-only
-suite. The native release `rlib` was 7,987,648 bytes and the
-`wasm32-unknown-unknown` determinism artifact was 25,088,080 bytes. These are
+The entropy-analysis follow-up is implemented at
+`9c0ff979abd1f26b71e2d3b297fc163d16921d3a`, with its verified Rust witness in
+the same test/runtime revision. It adds a post-scan checkpoint to the
+token-aware VP8L entropy-mode pixel histogram pass after each completed
+1,024-pixel chunk on rows wider than 1,024 pixels. The existing feature-gated
+contract uses a deterministic caller-built 4,096×1 RGB probe and proves exact
+whole-buffer and caller-owned-sink rejection at `maximum: 21`,
+`observed: 22`, with `[0xAF]` untouched; an ample token-aware encode remains
+byte-identical to the ordinary encode. Narrower rows retain their existing
+row-start bounds, and the no-token traversal remains direct. This is
+Rust-only work-control evidence: Pillow has no caller token, typed work-budget
+result, caller-owned sink, or rollback equivalent, so no parity row, fixture,
+diagnostic origin, new test function, or coverage-only hook was added.
+
+The first clean schema-`@3` benchmark at this revision reported 3.403293 s wall /
+3.961479 user s / 0.498780 sys s / 299,384,832-byte peak RSS for the Pillow
+parity fixture suite, and 2.558820 s wall / 3.050588 user s / 0.237591 sys s /
+252,936,192-byte peak RSS for the separate Rust-only feature-gate suite. Its
+warm repeat reported 1.120622 s / 2.911955 user s / 0.220634 sys s for Pillow
+parity and 1.648102 s / 2.320590 user s / 0.113761 sys s for the Rust-only
+suite. The native release `rlib` was 7,989,960 bytes and the
+`wasm32-unknown-unknown` determinism artifact was 25,087,071 bytes. These are
 direct-child POSIX observations from schema `@3`, not universal process-tree or
 allocator claims. The current cold and warm local feature-matrix runs both
 passed all configured native/WASI lanes with `lanes=6`, `test_threads=2`,
 `build_jobs=2`, `debug=0`, and `verbose=0`, ending with the capability-table
 agreement marker and no `lock-wait` match; the timed warm repeat completed in
-6.19 s wall time (`real 6.19`, `user 23.10`, `sys 2.49`).
+6.876 s wall time (`real 6.876`, `user 24.94`, `sys 2.72`).
 
 Previous acceptance record: compact VP8 work-budget witnesses
 

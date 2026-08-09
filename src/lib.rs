@@ -979,6 +979,8 @@ pub fn encode_with_policy(
 /// nearest-delta candidate scans
 /// after each 64 candidates; lossless VP8L image-palette
 /// construction and palette-mode index packing after each 1,024 source pixels,
+/// entropy-mode pixel histogram scans after each completed 1,024-pixel chunk on
+/// rows wider than 1,024 pixels,
 /// palette-index lookup
 /// candidate scans after each 64 palette entries, palette sign and nearest-delta
 /// candidate scans after each 64 palette entries or candidates;
@@ -995,7 +997,8 @@ pub fn encode_with_policy(
 /// VP8L RGBA hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor mode-application wide
 /// source-row copies after each completed 1,024-pixel chunk,
-/// predictor/cross-color/entropy/transform,
+/// entropy-mode pixel histogram scans after each completed 1,024-pixel chunk on
+/// rows wider than 1,024 pixels, predictor/cross-color/entropy/transform,
 /// VP8L meta-histogram sampling row/column comparisons and symbol compaction
 /// after each 1,024 symbols,
 /// bounded backward-reference cost/length-table initialization and length-cost
