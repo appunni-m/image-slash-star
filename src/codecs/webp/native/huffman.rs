@@ -53,6 +53,10 @@ enum HuffmanTreeInner {
     // four-entry primary table and no secondary nodes. Keep that table inline
     // instead of allocating the general table vector.
     InlineTable4([u32; 4]),
+    // Any valid non-simple tree whose maximum code length is three has a full
+    // eight-entry primary table and no secondary nodes. Keep that table inline
+    // instead of allocating the general table vector.
+    InlineTable8([u32; 8]),
     Tree {
         tree: Vec<HuffmanTreeNode>,
         table: Vec<u32>,
@@ -168,6 +172,27 @@ impl HuffmanTree {
             return Ok(Self(HuffmanTreeInner::InlineTable4(table)));
         }
 
+        if table_size == 8 {
+            debug_assert_eq!(tree_size, 0);
+            let mut table = [0; 8];
+            for (symbol, &length) in code_lengths.iter().enumerate() {
+                if length == 0 {
+                    continue;
+                }
+
+                let code = next_codes[length as usize];
+                next_codes[length as usize] += 1;
+                debug_assert!(length <= table_bits);
+                let mut j = (u16::reverse_bits(code) >> (16 - length)) as usize;
+                let entry = (u32::from(length) << 16) | symbol as u32;
+                while j < table_size {
+                    table[j] = entry;
+                    j += 1 << length as usize;
+                }
+            }
+            return Ok(Self(HuffmanTreeInner::InlineTable8(table)));
+        }
+
         // Populate decoding table
         let mut tree = Vec::with_capacity(2 * tree_size);
         let mut table = vec![0; table_size];
@@ -255,6 +280,7 @@ impl HuffmanTree {
             HuffmanTreeInner::Single(symbol) => Some(*symbol),
             HuffmanTreeInner::TwoNode { .. }
             | HuffmanTreeInner::InlineTable4(_)
+            | HuffmanTreeInner::InlineTable8(_)
             | HuffmanTreeInner::Tree { .. } => None,
         }
     }
@@ -332,6 +358,11 @@ impl HuffmanTree {
                 bit_reader.consume((entry >> 16) as u8)?;
                 Ok(entry as u16)
             }
+            HuffmanTreeInner::InlineTable8(table) => {
+                let entry = table[(bit_reader.peek_full() as usize) & 7];
+                bit_reader.consume((entry >> 16) as u8)?;
+                Ok(entry as u16)
+            }
             HuffmanTreeInner::Single(symbol) => Ok(*symbol),
         }
     }
@@ -364,6 +395,10 @@ impl HuffmanTree {
             )),
             HuffmanTreeInner::InlineTable4(table) => {
                 let entry = table[(bit_reader.peek_full() as usize) & 3];
+                Some(((entry >> 16) as u8, entry as u16))
+            }
+            HuffmanTreeInner::InlineTable8(table) => {
+                let entry = table[(bit_reader.peek_full() as usize) & 7];
                 Some(((entry >> 16) as u8, entry as u16))
             }
             HuffmanTreeInner::Single(symbol) => Some((0, *symbol)),
