@@ -3,8 +3,8 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`30218c18932fb58cc4afc89da9aa81da2c5d4b0b` and test/runtime revision
-`30218c18932fb58cc4afc89da9aa81da2c5d4b0b`; the claim-ledger fixture tuple
+`572ce06c5d16411959339ac3592d9c041f0f2b32` and test/runtime revision
+`019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -379,6 +379,7 @@ translation cannot be bypassed.
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
 | Lossless WebP VP8L backward-reference trace checkpoints | Token-aware backward-reference dynamic-programming trace, path reconstruction, and token replay poll after each 256 consumed pixels; the no-token path keeps its 1,024-pixel cadence through a const-specialized implementation |
+| Lossless WebP VP8L token-stream checkpoints | Token-aware reference emission polls after each 256 consumed pixels, including every boundary crossed by one copy token; the no-token reference loop retains its original tight path |
 | Lossless WebP VP8L hash-chain candidate-trial checkpoints | Token-aware backward-reference candidate selection polls after each 64 completed hash-chain trials across the pass; the no-token candidate loop retains its original tight path |
 | Lossless WebP VP8L palette-mode box-chain candidate-trial checkpoints | Token-aware palette-mode box-chain selection polls after each 64 completed low-distance candidate offsets across the pass; the no-token box-chain loop retains its original tight path |
 | Lossless WebP VP8L meta-histogram sampling checkpoints | Token-aware row/column comparisons and symbol compaction poll after each 1,024 symbols; no-token paths retain their original tight loops |
