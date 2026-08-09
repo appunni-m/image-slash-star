@@ -37,6 +37,16 @@
       }
     },
     {
+      "property_id": "vp8l.frame.header_and_outer_result",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants",
+      "expect": {
+        "width": 64,
+        "height": 64,
+        "transforms": [{"type": "color_indexing", "table_size": 1, "index_bits": 3}]
+      }
+    },
+    {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -374,14 +384,14 @@
   "properties": [
     {
       "id": "vp8l.frame.header_and_outer_result",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_vp8l"},
         {"operation": "decode", "row_id": "lossless_transform_variants"}
       ],
-      "gap": "The rows prove successful VP8L decode and exact outer results, not every header or stream-state branch."
+      "gap": "The independent parser now proves the exact header dimensions and transform records for the two listed successful rows; other VP8L headers, transform orderings, and stream states remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.predictor_modes",
