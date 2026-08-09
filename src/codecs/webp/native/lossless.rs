@@ -79,7 +79,9 @@ const NUM_TRANSFORM_TYPES: usize = 4;
 pub(crate) struct LosslessDecoder<'a> {
     bit_reader: BitReader<Box<dyn BufRead + 'a>>,
     transforms: [Option<TransformType>; NUM_TRANSFORM_TYPES],
-    transform_order: Vec<u8>,
+    // The bitstream permits at most one instance of each transform type.
+    transform_order: [u8; NUM_TRANSFORM_TYPES],
+    transform_order_len: usize,
     width: u16,
     height: u16,
 }
@@ -90,7 +92,8 @@ impl<'a> LosslessDecoder<'a> {
         Self {
             bit_reader: BitReader::new(r),
             transforms: [None, None, None, None],
-            transform_order: Vec::new(),
+            transform_order: [0; NUM_TRANSFORM_TYPES],
+            transform_order_len: 0,
             width: 0,
             height: 0,
         }
@@ -158,7 +161,10 @@ impl<'a> LosslessDecoder<'a> {
 
         let mut image_size = transformed_size;
         let mut width = transformed_width;
-        for &trans_index in self.transform_order.iter().rev() {
+        for &trans_index in self.transform_order[..self.transform_order_len]
+            .iter()
+            .rev()
+        {
             let transform = self.transforms[usize::from(trans_index)].as_ref().unwrap();
             match transform {
                 TransformType::PredictorTransform {
@@ -239,7 +245,9 @@ impl<'a> LosslessDecoder<'a> {
                 return Err(DecodingError::TransformError);
             }
 
-            self.transform_order.push(transform_type_val);
+            let transform_order_index = self.transform_order_len;
+            self.transform_order[transform_order_index] = transform_type_val;
+            self.transform_order_len += 1;
 
             let transform_type = match transform_type_val {
                 0 => {
@@ -837,7 +845,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 nbits,
             },
             transforms: [None, None, None, None],
-            transform_order: Vec::new(),
+            transform_order: [0; NUM_TRANSFORM_TYPES],
+            transform_order_len: 0,
             width,
             height,
         }
@@ -929,7 +938,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 1,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
@@ -941,7 +951,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 5,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
@@ -1074,7 +1085,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 1,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
@@ -1103,7 +1115,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 1,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
@@ -1132,7 +1145,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 1,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
@@ -1332,7 +1346,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 1,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 2,
         height: 1,
     };
@@ -1361,7 +1376,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
             nbits: 0,
         },
         transforms: [None, None, None, None],
-        transform_order: Vec::new(),
+        transform_order: [0; NUM_TRANSFORM_TYPES],
+        transform_order_len: 0,
         width: 1,
         height: 1,
     };
