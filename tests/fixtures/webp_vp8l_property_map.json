@@ -385,10 +385,12 @@
     },
     {
       "id": "vp8l.transform.color_indexing_size_bands",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette16"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette17"},
@@ -396,7 +398,7 @@
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette64"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette256"}
       ],
-      "gap": "Source palette cardinality names the intended bands, but only a VP8L structural witness can prove the color-indexing transform and encoded table size."
+      "gap": "The independent parser now proves every named color-indexing band boundary (1, 2, 4, 16, 17, 32, 64, and 256); unlisted table sizes remain represented by those inclusive bands and are not claimed individually."
     },
     {
       "id": "vp8l.transform.color",
