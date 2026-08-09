@@ -3,24 +3,24 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `5e56c103068056e71617695a5c8bc0e47d240634`; the claim-ledger fixture
+revision `4c40da5796b0ca8aba6c42da55887e6254ee2522`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`0e315e94-47d6-48be-b27b-1c44a4b19413` (1,445/1,445 passed in 820 ms), and the
-latest feature matrix is `ef7b94c0-c2b6-4823-b3b8-a9a1ff514028` (passed in
-30,771 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `574b447c-e80b-4cec-a7b7-179cf7a0d9a4` from run
-`6a000cd0-8920-4fcb-aa1b-ac9479777b6f`, also at that revision: 55,637/56,494
-lines, 7,953/8,160 branches, 3,116/3,212 functions, and 85,531/87,442
+`e049fbe4-a180-44ac-ad01-d6e86b2f8bd1` (1,445/1,445 passed in 849 ms), and the
+latest feature matrix is `a178cf7f-f22e-49d7-b7b9-641e62407093` (passed in
+28,688 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `74c1c1ec-ab1b-4c0e-ab55-f69b1ea58c8e` from run
+`2f38dff3-0177-4cae-bb93-49ee17f99c7c`, also at that revision: 55,639/56,496
+lines, 7,955/8,162 branches, 3,115/3,211 functions, and 85,536/87,447
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The changed WebP encoder file records 2,371/2,439 lines,
+functions. The WebP encoder projection records 2,371/2,439 lines,
 502/528 branches, 92/92 functions, and 3,414/3,662 regions; its backward-
-reference file records 1,879/1,933 lines, 495/528 branches, 73/73 functions,
-and 2,808/2,968 regions. These are Rust implementation/coverage metrics, not
+reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
+and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
 
 This document explains the stable mental model and ownership boundaries of
@@ -830,6 +830,13 @@ cache-bit selection, checkpoint behavior, encoded bytes, errors, and sink
 output remain unchanged. This is a Rust-only result-list allocation
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+The VP8L box-chain search now filters its bounded offset-code table into fixed
+stack arrays instead of allocating temporary `Vec` values for the full and
+incremental offset sets. The 32-entry bound, offset order, chain selection,
+checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
+This is a Rust-only box-chain workspace optimization, not allocator/OOM
+accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L predictor and cross-color transform selection retain their
 pixel-scaled work maps in the image-stream scratch object. Predictor mode
