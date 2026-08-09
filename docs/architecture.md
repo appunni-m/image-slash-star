@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `51cba9c0ec33cb3dbb20f4dc80442686af648476`; the claim-ledger fixture
+revision `940c9d82124fe0f2fc9b597fa2d7fb80e94fc4ea`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`606ffe6f-b475-4f86-b5ad-073813159d36` (1,445/1,445 passed in 8,261 ms), and
-the latest feature matrix is `78993824-2837-4f5f-8c66-1430c96d5396` (passed in
-32,371 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `071bde59-b2e6-4872-a689-be46fa30ddd9` from run
-`8e1683e3-2ea6-4197-8fb1-42cd10e79afc`, also at that revision: 55,635/56,492
-lines, 7,959/8,166 branches, 3,112/3,208 functions, and 85,538/87,449
+`98106af8-144c-4327-8c20-be3ede236be8` (1,445/1,445 passed in 622 ms), and
+the latest feature matrix is `9b692aa6-db01-4936-9875-c08cce3f92b6` (passed in
+19,227 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `a90850c1-69cc-46ff-bff6-be399f3aa542` from run
+`f9892ce9-ed50-4e19-ac77-d5a8a7b7f7ee`, also at that revision: 55,638/56,506
+lines, 7,960/8,170 branches, 3,112/3,208 functions, and 85,541/87,476
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,367/2,435 lines,
-506/532 branches, 89/89 functions, and 3,416/3,664 regions; its backward-
+functions. The WebP encoder projection records 2,370/2,449 lines,
+507/536 branches, 89/89 functions, and 3,419/3,691 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
@@ -465,6 +465,17 @@ remain within the palette limit keep their exact sorted values. The token-aware
 scan deliberately retains its complete ordered drain so its established
 caller-budget checkpoints remain observable. This is an internal runtime and
 allocation boundary, not Pillow-oracle coverage or a public palette contract.
+
+WebP ALPH assembly also separates ordinary result selection from the
+caller-controlled path. The no-token encoder compares the already-known raw
+alpha length with the encoded VP8L payload before materializing a second
+candidate: a raw winner gets one new output vector, while a compressed winner
+reuses the encoded payload allocation and inserts the one-byte ALPH header in
+place. The token-aware path retains its separate compressed and raw copies and
+1,024-byte copy checkpoints so its existing Rust-only work-budget/sink
+contract does not change. Pillow parity can regression-check the resulting
+bytes and errors, but exposes neither this allocation ownership nor the
+caller-token behavior.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
