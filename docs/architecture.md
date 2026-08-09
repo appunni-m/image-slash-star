@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `4c40da5796b0ca8aba6c42da55887e6254ee2522`; the claim-ledger fixture
+revision `e8e3414584a62f600047c0cce49afa9a7f246d1f`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`e049fbe4-a180-44ac-ad01-d6e86b2f8bd1` (1,445/1,445 passed in 849 ms), and the
-latest feature matrix is `a178cf7f-f22e-49d7-b7b9-641e62407093` (passed in
-28,688 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `74c1c1ec-ab1b-4c0e-ab55-f69b1ea58c8e` from run
-`2f38dff3-0177-4cae-bb93-49ee17f99c7c`, also at that revision: 55,639/56,496
-lines, 7,955/8,162 branches, 3,115/3,211 functions, and 85,536/87,447
+`2320e1bb-c82d-4345-9ba3-895846731544` (1,445/1,445 passed in 578 ms), and the
+latest feature matrix is `178fc148-246b-46fc-8e85-fefe35c5c7c1` (passed in
+29,320 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `c6c61771-3eea-488b-af60-6c78d27de70b` from run
+`a7e175fe-957c-4788-998d-85e4a86c185e`, also at that revision: 55,637/56,494
+lines, 7,955/8,162 branches, 3,114/3,210 functions, and 85,528/87,439
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,371/2,439 lines,
-502/528 branches, 92/92 functions, and 3,414/3,662 regions; its backward-
+functions. The WebP encoder projection records 2,369/2,437 lines,
+502/528 branches, 91/91 functions, and 3,406/3,654 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
@@ -837,6 +837,13 @@ incremental offset sets. The 32-entry bound, offset order, chain selection,
 checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only box-chain workspace optimization, not allocator/OOM
 accounting, recoverable-OOM handling, or a streaming guarantee.
+
+VP8L entropy-mode analysis now stores its fixed 13-entry cost table in a stack
+array instead of collecting the per-histogram costs into a temporary heap
+vector. Cost traversal order, cancellation/error propagation, mode selection,
+encoded bytes, and sink output remain unchanged. This is a Rust-only
+entropy-analysis workspace optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L predictor and cross-color transform selection retain their
 pixel-scaled work maps in the image-stream scratch object. Predictor mode
