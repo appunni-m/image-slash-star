@@ -1025,10 +1025,9 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     )?;
 
     // Candidate trials share the already-emitted prefix. Keeping that prefix
-    // out of each trial avoids an O(prefix × candidate-count) copy/allocation
-    // while preserving the parent writer until a winning trial is selected.
-    let initial_bytes = w.writer.clone();
-    let initial_byte_length = initial_bytes.len();
+    // out of each trial avoids an O(prefix × candidate-count) copy/allocation;
+    // leave the parent writer in place until the winning suffix is selected.
+    let initial_byte_length = w.writer.len();
     let initial_buffer = w.buffer;
     let initial_nbits = w.nbits;
     let initial_checkpoint = w.checkpoint.clone();
@@ -1073,10 +1072,8 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
         }
     }
     let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
-    let mut bytes = initial_bytes;
-    bytes.reserve(suffix.len());
-    extend_bytes_with_checkpoint(&mut bytes, &suffix, token)?;
-    *w.writer = bytes;
+    w.writer.reserve(suffix.len());
+    extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
     w.buffer = buffer;
     w.nbits = nbits;
     w.checkpoint = checkpoint;
