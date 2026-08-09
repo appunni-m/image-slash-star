@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `05e823facedf3ece60767f02e371fc8bcc1a69a4`; the claim-ledger fixture
+revision `51cba9c0ec33cb3dbb20f4dc80442686af648476`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`15b2b36b-ddde-492c-94f9-85493146e74c` (1,445/1,445 passed in 865 ms), and
-the latest feature matrix is `7d670eae-978f-42ab-8e2a-2e0c30ca9dc8` (passed in
-15,478 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `b67dfb0a-615c-4872-a1c2-76c95870ac2c` from run
-`06e03a38-f8bb-45d1-b40b-6182b7167f49`, also at that revision: 55,634/56,491
-lines, 7,957/8,164 branches, 3,112/3,208 functions, and 85,530/87,441
+`606ffe6f-b475-4f86-b5ad-073813159d36` (1,445/1,445 passed in 8,261 ms), and
+the latest feature matrix is `78993824-2837-4f5f-8c66-1430c96d5396` (passed in
+32,371 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `071bde59-b2e6-4872-a689-be46fa30ddd9` from run
+`8e1683e3-2ea6-4197-8fb1-42cd10e79afc`, also at that revision: 55,635/56,492
+lines, 7,959/8,166 branches, 3,112/3,208 functions, and 85,538/87,449
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,366/2,434 lines,
-504/530 branches, 89/89 functions, and 3,408/3,656 regions; its backward-
+functions. The WebP encoder projection records 2,367/2,435 lines,
+506/532 branches, 89/89 functions, and 3,416/3,664 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
@@ -456,6 +456,15 @@ scratch. This avoids redundant prefix clone/re-copy work and fresh per-trial
 suffix allocations without changing the selected bitstream or adding a new
 public work-budget result; the token-aware winner suffix is copied in 1,024-byte
 intervals, while the no-token winner copy remains bulk.
+
+Lossless VP8L palette discovery has the same bounded-mode invariant. The
+ordinary no-token scan returns a sorted 257-entry sentinel as soon as it sees
+the 257th distinct ARGB color, because palette mode is only eligible through
+256 entries and the full unique-color set is otherwise dead state. Inputs that
+remain within the palette limit keep their exact sorted values. The token-aware
+scan deliberately retains its complete ordered drain so its established
+caller-budget checkpoints remain observable. This is an internal runtime and
+allocation boundary, not Pillow-oracle coverage or a public palette contract.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
