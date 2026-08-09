@@ -9977,10 +9977,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             assembly_expected,
             "an ample WebP container-copy budget preserves byte identity"
         );
-        // The pre-fix bulk-copy control completed at 889,783. The chunked
-        // path rejects at the later exact complete-call boundary, proving the
-        // new output-copy polls are causal rather than a post-copy-only check.
-        let assembly_policy = image_slash_star::EncodePolicy::new().with_max_work_units(889_795);
+        // The pre-fix native VP8 container bulk-copy control completed at
+        // 889,806. The token-aware native VP8 payload copy adds ten complete
+        // 1,024-byte intervals for this 10,605-byte VP8 payload and rejects
+        // the same complete call at the later exact boundary, proving the
+        // new lossy container-copy polls are causal rather than a
+        // post-copy-only check.
+        let assembly_policy = image_slash_star::EncodePolicy::new().with_max_work_units(889_806);
         let assembly_error = match image_slash_star::encode_with_policy(
             &assembly_image,
             ImageFormat::WebP,
@@ -9996,8 +9999,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 889_795,
-                observed: 889_796,
+                maximum: 889_806,
+                observed: 889_807,
             }
         ));
         let mut assembly_sink = vec![0xB7];
@@ -10005,7 +10008,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             &assembly_image,
             ImageFormat::WebP,
             &metadata_options,
-            &assembly_policy,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(889_796),
             &mut assembly_sink,
         ) {
             Ok(_) => return Err("WebP container-copy sink budget unexpectedly completed".into()),
@@ -10017,8 +10020,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 889_795,
-                observed: 889_796,
+                maximum: 889_796,
+                observed: 889_797,
             }
         ));
         assert_eq!(assembly_sink, vec![0xB7]);
