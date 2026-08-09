@@ -1233,9 +1233,16 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
         // for one stream. Keep the pool bounded even when the cache scratch
         // already has sufficient capacity and did not consume a pooled vector.
         token_scratch.candidates.result_pool.truncate(2);
-        let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
+        let (_, mut suffix, buffer, nbits, checkpoint) = best.unwrap();
         w.writer.reserve(suffix.len());
-        extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
+        // The ordinary path has no caller-visible copy checkpoint. Move the
+        // winning suffix into the parent writer instead of copying it; keep
+        // the token-aware path's chunked copy and cancellation behavior.
+        if token.is_none() {
+            w.writer.append(&mut suffix);
+        } else {
+            extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
+        }
         *output_scratch = suffix;
         w.buffer = buffer;
         w.nbits = nbits;
