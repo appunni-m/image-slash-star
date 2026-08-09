@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `f974c84d8f04114d24a3914a3517b601645ac4b5`, and benchmark-protocol revision
+revision `e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`f974c84d8f04114d24a3914a3517b601645ac4b5`; the accepted managed records
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -633,6 +633,22 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L CostManager interval-split scratch slice is implemented
+at production and Rust test/runtime revision
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, following the interval-state reuse
+at `f974c84d8f04114d24a3914a3517b601645ac4b5`. Boundary, addition, overlap,
+rebuild, and merge vectors are retained as bounded manager scratch instead of
+being allocated for each split/rebuild call. Ordinary and token-aware interval
+ordering, checkpoint sites, cost decisions, encoded bytes, errors, and sink
+output remain unchanged. The existing WebP encode matrix (28/13/47 rows), full
+fixture matrix, all 45 feature-gated Rust contracts, full all-feature suite,
+strict Clippy, rustfmt, and all 33 native/WASI feature-matrix lanes passed
+locally. Pillow remains the byte/error oracle, while this internal scratch
+ownership is Rust-only evidence: no parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook was added. No
+managed parity, feature-matrix, or Coverage MCP rerun is claimed at this
+revision.
 
 The lossless WebP VP8L CostManager interval-state allocation slice is
 implemented at production and Rust test/runtime revision
@@ -2686,6 +2702,23 @@ evidence; allocation ownership is Rust-only because Pillow exposes no caller
 budget or allocation contract. No new parity row, fixture-manifest entry,
 diagnostic origin, test function, or coverage-only hook was added. No managed
 parity, feature-matrix, or Coverage MCP rerun is claimed at this revision.
+
+Current acceptance record: WebP VP8L CostManager interval-split scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, following the preceding
+`f974c84d8f04114d24a3914a3517b601645ac4b5` interval-state reuse. Boundary,
+addition, overlap, rebuild, and merge vectors are retained as bounded manager
+scratch instead of being allocated for each split/rebuild call. Ordinary and
+token-aware interval ordering, checkpoint sites, cost decisions, encoded bytes,
+errors, and sink output remain unchanged. The existing WebP encode rows
+(28/13/47), full fixture matrix, all 45 feature-gated Rust contracts, full
+all-feature suite, strict Clippy, rustfmt, and all 33 native/WASI
+feature-matrix lanes provide the regression evidence. Pillow remains the
+byte/error oracle, while scratch ownership is Rust-only evidence; no parity
+row, fixture-manifest entry, diagnostic origin, new test function, or
+coverage-only hook was added. No managed parity, feature-matrix, or Coverage
+MCP rerun is claimed at this revision.
 
 Current acceptance record: TIFF multi-page sink page-base planning
 

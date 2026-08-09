@@ -3,14 +3,15 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `f974c84d8f04114d24a3914a3517b601645ac4b5`; the claim-ledger fixture tuple
+revision `e9ee33d589f76f7f4c392d4ae29811db3a7e203f`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-GIF sequence frame ownership, WebP CostManager interval-state reuse, GIF indexed
+GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
+CostManager interval-scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -637,9 +638,10 @@ streaming.
 
 Lossless WebP VP8L backward-reference cost management reuses its interval state
 in place. Interval updates no longer allocate an applicable-interval scratch
-vector, cleanup compacts the existing interval vector, and length-interval
-tables are borrowed instead of cloned for each push. Cost decisions, checkpoint
-ordering, encoded bytes, and sink output remain unchanged. This is a bounded
+vector, cleanup compacts the existing interval vector, length-interval tables
+are borrowed instead of cloned for each push, and interval split/rebuild work
+reuses bounded manager scratch vectors. Cost decisions, checkpoint ordering,
+encoded bytes, and sink output remain unchanged. This is a bounded
 internal-allocation optimization, not allocator/OOM accounting, recoverable-OOM
 handling, or a streaming guarantee.
 
