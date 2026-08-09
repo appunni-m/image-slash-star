@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`c9acf5d219e82c9c1077c3ec3e0c5df345ee28c5`; the claim-ledger baseline remains
+`8d07256f934bf7cf8c09962ace3b29cdbd9b9215`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -395,7 +395,8 @@ stored-block bytes, and computing the Adler-32 trailer; the TIFF contract uses
 a single wide row plus a materially larger budget to prove bounded rejection
 inside the matcher and emission path. Lossy WebP VP8 additionally charges
 after each batch of 1,024 RGB/RGBA-to-YUV conversion items and each batch of
-1,024 scanned or flattened RGBA transparent-area cleanup pixels, each batch of
+1,024 scanned or flattened RGBA transparent-area cleanup pixels, compressed/raw
+alpha-stream buffer copies after each 1,024 output bytes, each batch of
 1,024 required padded-plane items, each 64 completed 4×4 histogram blocks,
 each 64-value segment-clustering alpha-domain chunk, analyzed macroblocks, and
 segment-assignment macroblocks,
@@ -952,6 +953,50 @@ current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
 1,822 regions. In `src/codecs/webp/encode/mod.rs`, coverage is 617/740 lines,
 84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
 feature-matrix, and coverage records remain separate evidence systems.
+
+Current WebP alpha-stream buffer-copy acceptance record
+
+Implementation revision `8d07256f934bf7cf8c09962ace3b29cdbd9b9215` keeps the
+ordinary no-token lossy WebP alpha-stream copies as one bulk append, while the
+token-aware path copies both the compressed VP8L candidate and raw alpha plane
+in 1,024-byte chunks and polls after each complete chunk. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses its 64×64
+`alpha_image` with default lossy WebP options: the first full raw-copy
+interval rejects at `maximum: 1,485`, `observed: 1,486` in both whole-buffer
+and caller-owned-sink paths, with sentinel `[0xB6]` untouched. A stronger
+complete-call witness rejects at `maximum: 176,838`, `observed: 176,839` in
+both paths; the pre-fix bulk-copy control completed at the old exact budget
+of 176,838, which proves the new rejection is caused by the chunked copy
+boundary rather than the existing final check. A short final chunk remains
+covered by the existing post-copy poll.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added; the existing feature-gated contract remains the correct home.
+
+Exact-head managed feature-matrix run
+`eb84e5dd-aee7-488a-9189-5826c6668dbf` passed all configured lanes in 54,535 ms
+with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`,
+and `verbose=0`; its retained log contains the capability-table agreement
+marker and no `lock-wait` match. Exact-head Pillow parity run
+`f03501ea-fd36-4e42-8f58-eb128e678c9a` passed 1,445/1,445 checks in 1,363 ms.
+
+Nightly LLVM run `d878a20d-c26c-4371-84de-82ffa2b69952` passed 85/85 tests in
+62,533 ms and ingested snapshot
+`29e913f2-b48a-4789-8a10-ba344b8323f4`, retaining 54,265/55,090 lines,
+7,702/7,902 branches, 3,081/3,161 functions, and 83,765/85,590 regions.
+Compared with the preceding accepted snapshot
+`c05b6728-0313-4a05-89e2-291fb61e283b`, covered/source deltas are `+15/+15`
+lines, `+4/+4` branches, `+1/+1` functions, and `+25/+24` regions. The
+current `src/codecs/webp/native/encoder.rs` file is 2,039/2,122 lines,
+450/478 branches, 94/94 functions, and 3,031/3,287 regions; the histogram
+file remains 782/782 lines, 172/172 branches, 39/39 functions, and
+1,184/1,210 regions. The known LLVM JSON segment-normalization warning
+remains; the current aggregate shortfall is 825 lines, 200 branches,
+80 functions, and 1,825 regions. The parity, feature-matrix, and coverage
+records remain separate evidence systems.
 
 Historical acceptance record: WebP histogram collection
 

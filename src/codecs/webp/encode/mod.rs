@@ -49,7 +49,8 @@ fn checkpoint_after_prepare_pixel(
 /// first-partition segment-probability prepass after each 1,024 selected
 /// macroblocks, transparent-area cleanup after each 1,024 scanned or flattened
 /// pixels, and alpha-palette source collection and index packing after each
-/// 1,024 source pixels when a caller supplies a cancellation token. Aligned
+/// 1,024 source pixels, plus compressed/raw alpha-stream buffer copies after
+/// each 1,024 output bytes, when a caller supplies a cancellation token. Aligned
 /// planes are cloned directly because no edge replication is needed. The
 /// no-token helpers retain their original tight paths; token-aware selection
 /// checks after candidate-trial stages, each forward- and inverse-transform
