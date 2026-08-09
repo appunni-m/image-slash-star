@@ -1224,7 +1224,12 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
                 *output_scratch = previous_suffix;
             }
         }
+        token_scratch.candidates.result_pool.push(tokens);
     }
+    // At most the standard and optional box-chain candidates are emitted for
+    // one stream. Keep the pool bounded even when the cache scratch already
+    // has sufficient capacity and did not consume a pooled vector.
+    token_scratch.candidates.result_pool.truncate(2);
     let (_, suffix, buffer, nbits, checkpoint) = best.unwrap();
     w.writer.reserve(suffix.len());
     extend_bytes_with_checkpoint(w.writer, &suffix, token)?;
