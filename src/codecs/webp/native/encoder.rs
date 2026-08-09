@@ -2723,10 +2723,7 @@ pub(crate) fn encode_alpha(
             }
         }
     }
-    let palette = palette_values
-        .iter()
-        .map(|&value| u32::from(value) << 8)
-        .collect::<Vec<_>>();
+    let palette_len = palette_values.len();
     let mut palette_indices = [0u8; 256];
     for (index, &value) in palette_values.iter().enumerate() {
         if index.is_multiple_of(64) {
@@ -2734,12 +2731,13 @@ pub(crate) fn encode_alpha(
         }
         palette_indices[usize::from(value)] = index as u8;
     }
-    let mut palette_delta = Vec::with_capacity(palette.len());
+    let mut palette_delta = Vec::with_capacity(palette_len);
     let mut previous = 0u32;
-    for (index, &pixel) in palette.iter().enumerate() {
+    for (index, &value) in palette_values.iter().enumerate() {
         if index.is_multiple_of(64) {
             check_token(token)?;
         }
+        let pixel = u32::from(value) << 8;
         let alpha = (pixel >> 24).wrapping_sub(previous >> 24) & 0xff;
         let red = ((pixel >> 16) & 0xff).wrapping_sub((previous >> 16) & 0xff) & 0xff;
         let green = ((pixel >> 8) & 0xff).wrapping_sub((previous >> 8) & 0xff) & 0xff;
@@ -2748,7 +2746,7 @@ pub(crate) fn encode_alpha(
         previous = pixel;
     }
 
-    let xbits = match palette.len() {
+    let xbits = match palette_len {
         0..=2 => 3,
         3..=4 => 2,
         5..=16 => 1,
@@ -2793,7 +2791,7 @@ pub(crate) fn encode_alpha(
     match token {
         Some(token) => encode_alpha_stream(
             &palette_delta,
-            palette.len(),
+            palette_len,
             &packed,
             packed_width,
             alpha,
@@ -2806,7 +2804,7 @@ pub(crate) fn encode_alpha(
         ),
         None => encode_alpha_stream(
             &palette_delta,
-            palette.len(),
+            palette_len,
             &packed,
             packed_width,
             alpha,
