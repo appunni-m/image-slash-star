@@ -276,6 +276,21 @@ fn run_work_budget_pair(
 ) {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        // Thread setup costs more than the paired encode for the compact
+        // witnesses. Keep those calls sequential while retaining overlap for
+        // the large probes that dominate this contract test's wall time.
+        if image.width.saturating_mul(image.height) < 256 * 256 {
+            let whole = image_slash_star::encode_with_policy(image, format, options, whole_policy);
+            let mut bytes = vec![sentinel];
+            let sink = image_slash_star::encode_to_sink_with_policy(
+                image,
+                format,
+                options,
+                sink_policy,
+                &mut bytes,
+            );
+            return (whole, sink, bytes);
+        }
         std::thread::scope(|scope| {
             let whole = scope.spawn(|| {
                 image_slash_star::encode_with_policy(image, format, options, whole_policy)
@@ -15367,47 +15382,33 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // planes also exercise the direct-clone path that avoids needless
         // edge-replication work when no padding is required.
         let analysis_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(326);
-        let analysis_error = match image_slash_star::encode_with_policy(
+        let (analysis_error, analysis_sink_error, analysis_sink) = run_work_budget_pair(
             &analysis_image,
             ImageFormat::WebP,
             &analysis_options,
             &analysis_bounded,
-        ) {
-            Ok(_) => return Err("bounded WebP analysis budget unexpectedly completed".into()),
-            Err(error) => error,
-        };
+            &analysis_bounded,
+            0xAB,
+        );
         assert!(matches!(
             analysis_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 326,
                 observed: 327,
-            }
+            })
         ));
-        let mut analysis_sink = vec![0xAB];
-        let analysis_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &analysis_image,
-            ImageFormat::WebP,
-            &analysis_options,
-            &analysis_bounded,
-            &mut analysis_sink,
-        ) {
-            Ok(_) => {
-                return Err("bounded WebP analysis sink budget unexpectedly wrote output".into());
-            }
-            Err(error) => error,
-        };
         assert!(matches!(
             analysis_sink_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 326,
                 observed: 327,
-            }
+            })
         ));
         assert_eq!(analysis_sink, vec![0xAB]);
 
@@ -15418,51 +15419,34 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // diagnostic origin, new test function, or coverage-only hook.
         let segment_assignment_bounded =
             image_slash_star::EncodePolicy::new().with_max_work_units(328);
-        let segment_assignment_error = match image_slash_star::encode_with_policy(
-            &analysis_image,
-            ImageFormat::WebP,
-            &analysis_options,
-            &segment_assignment_bounded,
-        ) {
-            Ok(_) => {
-                return Err("bounded WebP segment-assignment budget unexpectedly completed".into());
-            }
-            Err(error) => error,
-        };
+        let (segment_assignment_error, segment_assignment_sink_error, segment_assignment_sink) =
+            run_work_budget_pair(
+                &analysis_image,
+                ImageFormat::WebP,
+                &analysis_options,
+                &segment_assignment_bounded,
+                &segment_assignment_bounded,
+                0xA7,
+            );
         assert!(matches!(
             segment_assignment_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 328,
                 observed: 329,
-            }
+            })
         ));
-        let mut segment_assignment_sink = vec![0xA7];
-        let segment_assignment_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &analysis_image,
-            ImageFormat::WebP,
-            &analysis_options,
-            &segment_assignment_bounded,
-            &mut segment_assignment_sink,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP segment-assignment sink budget unexpectedly wrote output".into(),
-                );
-            }
-            Err(error) => error,
-        };
         assert!(matches!(
             segment_assignment_sink_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 328,
                 observed: 329,
-            }
+            })
         ));
         assert_eq!(segment_assignment_sink, vec![0xA7]);
 
@@ -15476,47 +15460,33 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         let selection_image =
             DecodedImage::new(128, 128, vec![128; 128 * 128 * 3], ColorType::Rgb8);
         let selection_bounded = image_slash_star::EncodePolicy::new().with_max_work_units(16);
-        let selection_error = match image_slash_star::encode_with_policy(
+        let (selection_error, selection_sink_error, selection_sink) = run_work_budget_pair(
             &selection_image,
             ImageFormat::WebP,
             &analysis_options,
             &selection_bounded,
-        ) {
-            Ok(_) => return Err("bounded WebP selection budget unexpectedly completed".into()),
-            Err(error) => error,
-        };
+            &selection_bounded,
+            0xAC,
+        );
         assert!(matches!(
             selection_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 16,
                 observed: 17,
-            }
+            })
         ));
-        let mut selection_sink = vec![0xAC];
-        let selection_sink_error = match image_slash_star::encode_to_sink_with_policy(
-            &selection_image,
-            ImageFormat::WebP,
-            &analysis_options,
-            &selection_bounded,
-            &mut selection_sink,
-        ) {
-            Ok(_) => {
-                return Err("bounded WebP selection sink budget unexpectedly wrote output".into());
-            }
-            Err(error) => error,
-        };
         assert!(matches!(
             selection_sink_error,
-            ImageError::LimitExceeded {
+            Err(ImageError::LimitExceeded {
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
                 maximum: 16,
                 observed: 17,
-            }
+            })
         ));
         assert_eq!(selection_sink, vec![0xAC]);
 
