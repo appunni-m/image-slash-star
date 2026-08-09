@@ -113,9 +113,19 @@ fn work_budget_token(
     policy: &EncodePolicy,
     source: Option<&CancellationToken>,
 ) -> Option<CancellationToken> {
-    policy.max_work_units().map(|maximum| match source {
-        Some(source) => CancellationToken::with_work_budget_from(source, maximum),
-        None => CancellationToken::with_work_budget(maximum),
+    policy.max_work_units().map(|maximum| {
+        // `u64::MAX` cannot be exhausted by a finite encode: checkpoint
+        // counts are derived from usize-sized input and output traversals.
+        // Preserve the token-aware codec path while avoiding a redundant
+        // budget cell and per-poll counter mutation for this common ample
+        // policy used by callers and the runtime contract tests.
+        if maximum == u64::MAX {
+            return source.cloned().unwrap_or_default();
+        }
+        match source {
+            Some(source) => CancellationToken::with_work_budget_from(source, maximum),
+            None => CancellationToken::with_work_budget(maximum),
+        }
     })
 }
 
