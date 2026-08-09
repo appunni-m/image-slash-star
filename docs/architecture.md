@@ -3,15 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`646ed73413a574368bfd01172fcd46c60622046f` and test/runtime revision
-`646ed73413a574368bfd01172fcd46c60622046f`; the claim-ledger fixture tuple
+`b78d0ffedc3bb193624eb11fd12d68378713489e` and test/runtime revision
+`b78d0ffedc3bb193624eb11fd12d68378713489e`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current WebP candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
-and Huffman-RLE fill slices have not received a managed coverage rerun.
+Huffman-RLE fill, and Huffman-RLE token-materialization slices have not
+received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -379,6 +380,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L predictor row-copy checkpoints | Token-aware predictor mode application copies each wide source row in completed 1,024-pixel chunks and polls after each completed chunk; the no-token path retains its original bulk row copy |
 | Lossless WebP VP8L entropy-analysis pixel checkpoints | Token-aware entropy-mode pixel histogram analysis polls after each completed 1,024-pixel chunk on rows wider than 1,024 pixels; narrower rows remain bounded by existing row-start polls and the no-token traversal is direct |
 | Lossless WebP VP8L Huffman-RLE fill checkpoints | Token-aware long-run marking and normalized-count fills poll after each 64 code-length values; the no-token helper retains its bulk fills, and the exact Rust-only boundary is covered by the existing feature-gate contract |
+| Lossless WebP VP8L Huffman-RLE token-materialization checkpoints | Token-aware code-length RLE expansion polls after each 16 emitted compressed tokens; the no-token helper retains its original bulk/token construction path, and the exact Rust-only boundary is covered by the existing feature-gate contract |
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
 | Lossless WebP VP8L backward-reference trace checkpoints | Token-aware backward-reference dynamic-programming trace, path reconstruction, and token replay poll after each 256 consumed pixels; the no-token path keeps its 1,024-pixel cadence through a const-specialized implementation |
@@ -427,8 +429,9 @@ code-length emission after each 16 compressed token entries, Huffman-tree
 simple-tree symbol-discovery checkpoints
 after each 64 code-length slots, code-length-token frequency, and trailing
 zero-repeat token trim checkpoints after each 16 compressed token entries; Huffman
-RLE code-length run scans and long-run materialization also poll whenever a
-64-symbol boundary is crossed inside a long equal-length run; the
+RLE code-length run scans poll whenever a 64-symbol boundary is crossed inside
+ a long equal-length run, while long-run materialization polls after each 16
+ emitted compressed code-length tokens; the
 histogram-clustering populated-tile collection, min/max, and bin-assignment
 pre-passes also checkpoint after each 64 tile histograms; the
 meta-histogram sampling row/column comparisons and symbol compaction also
