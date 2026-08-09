@@ -6579,13 +6579,13 @@ cache. Neither scheduling change changes the 1,024 decode/393 encode fixture
 denominator, adds a parity row, or turns the Rust-only feature-gate contract
 into Pillow evidence.
 
-A clean local run at benchmark revision
-`4415a84463103d3d0916821a3ed8637b832442d6` passed all four workloads on the
+A clean local run at test/runtime revision
+`291fdb03a1ec2c96e94bc37c8437e86aa1e0136c` passed all four workloads on the
 arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its observations were
-1.089135 s wall / 2.860993 user / 0.222043 sys / 251,002,880-byte peak RSS for
-the 1,445-row Pillow parity suite; 1.588432 s wall / 2.140313 user / 0.100214
-sys / 151,781,376-byte peak RSS for the separate Rust-only feature-gate suite;
-7,970,888 bytes for the native release `rlib`; and 25,080,461 bytes for the
+0.973542 s wall / 2.831607 user / 0.184717 sys / 249,495,552-byte peak RSS for
+the 1,445-row Pillow parity suite; 1.850042 s wall / 2.173100 user / 0.326967
+sys / 154,304,512-byte peak RSS for the separate Rust-only feature-gate suite;
+7,981,040 bytes for the native release `rlib`; and 25,091,745 bytes for the
 `wasm32-unknown-unknown` determinism test artifact. The two peak values are
 direct-child POSIX observations. These values are a revision-bound execution
 record, not a universal benchmark or a parity claim for the Rust-only workload.
