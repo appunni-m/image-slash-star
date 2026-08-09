@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `023172675e23bdea8a59b49cf9b07c80904fb4b8`, and benchmark-protocol
+revision `0d5371c223e42fedf15ae28d06f6d52083ab47c1`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
@@ -12,14 +12,14 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`771e1182-ee56-48a3-ac4a-495fc135b2c8` (1,445/1,445 passed in 947 ms) and
-feature matrix `350101d6-fad0-444f-bfa4-16007aac7039` (passed in 37,015 ms);
+`f999017c-2936-4018-9a87-739de7e31216` (1,445/1,445 passed in 964 ms) and
+feature matrix `a679f61d-72da-4a83-94cf-d44e95d0c85d` (passed in 21,984 ms);
 both recorded checkout HEAD
-`023172675e23bdea8a59b49cf9b07c80904fb4b8`.
+`0d5371c223e42fedf15ae28d06f6d52083ab47c1`.
 The accepted Coverage MCP snapshot is
-`5e675882-5527-4353-8462-e20339e29480` from run
-`f9278f21-a329-4d8b-a07f-1bc51f402b40`; it records 55,644/56,514 lines,
-7,967/8,178 branches, 3,110/3,206 functions, and 85,571/87,510 regions at
+`5d0c6041-fb61-4fd1-bc43-3e5792bdf29d` from run
+`d2d141ea-c0b1-45ab-bfc2-0faf46362842`; it records 55,644/56,514 lines,
+7,967/8,178 branches, 3,110/3,206 functions, and 85,572/87,511 regions at
 the same source revision. The histogram file records 872/873 lines, 184/184
 branches, and 43/43 functions; predictor records 366/366 lines, 68/68
 branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
@@ -642,6 +642,52 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP VP8L Huffman code-length workspace
+
+The production and Rust test/runtime slice is implemented at
+`0d5371c223e42fedf15ae28d06f6d52083ab47c1`, following the separate
+simple two-symbol Huffman-node storage boundary at
+`023172675e23bdea8a59b49cf9b07c80904fb4b8`. The fixed 19-entry code-length
+alphabet now remains on the stack and is borrowed through the Huffman builder;
+the dynamic decoded code-length buffer remains heap-backed for the possible
+2,328-symbol color-cache alphabet. Code ordering, bytes, errors, and sink
+output remain unchanged.
+
+This is Rust implementation and Rust-only fixed-workspace evidence. Pillow
+exposes only the final byte/error result, not the code-length storage,
+allocation ownership, or OOM behavior. The existing fixture matrix is
+therefore byte/error regression evidence, not proof of the internal workspace
+contract; no parity row, fixture-manifest row, diagnostic origin, new test
+function, coverage-only hook, or unit test was added. The clean schema-`@3`
+benchmark passed the Pillow-parity workload in 0.952934 s wall / 2.794763
+user s / 0.202921 sys s / 252,887,040-byte peak RSS and the separate Rust-only
+feature-gate workload in 2.258811 s wall / 2.640830 user s / 0.137484 sys s /
+212,762,624-byte peak RSS. The native release build measured 12.807931 s wall /
+38.694404 user s / 0.601411 sys s / 866,091,008-byte peak RSS and produced a
+7,937,704-byte `rlib`; the `wasm32-unknown-unknown` determinism compile
+measured 2.450167 s wall / 1.637902 user s / 0.683698 sys s /
+511,524,864-byte peak RSS and produced a 24,029,289-byte artifact. These are
+single-host/cache/toolchain observations, not comparative or universal
+performance claims; allocation counts, retained cache bytes, caller-buffer
+reuse, peak stack depth, and WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`f999017c-2936-4018-9a87-739de7e31216` passed 1,445/1,445 checks in 964 ms.
+Exact-head feature-matrix run
+`a679f61d-72da-4a83-94cf-d44e95d0c85d` passed all configured native/WASI lanes
+in 21,984 ms. Nightly LLVM run
+`d2d141ea-c0b1-45ab-bfc2-0faf46362842` passed 85/85 tests in 60,450 ms and
+ingested snapshot `5d0c6041-fb61-4fd1-bc43-3e5792bdf29d`: 55,644/56,514
+lines, 7,967/8,178 branches, 3,110/3,206 functions, and 85,572/87,511
+regions. The changed `src/codecs/webp/native/huffman.rs` projection is
+235/236 lines, 29/30 branches, 10/10 functions, and 345/346 regions;
+`src/codecs/webp/native/lossless.rs` is fully covered at 1,120/1,120 lines,
+120/120 branches, 44/44 functions, and 1,426/1,426 regions. Compared with the
+023 snapshot, line, branch, and function totals are unchanged and only one
+covered/total region was added; no prior coverage was suppressed. These are
+implementation/Rust coverage metrics, not Pillow-parity coverage; the known
+LLVM JSON segment-normalization warning and aggregate shortfall remain visible.
 
 Current acceptance record: WebP VP8L simple Huffman-node storage
 
