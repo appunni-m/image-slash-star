@@ -1,6 +1,6 @@
 //! PNG encoder using the internal zlib/DEFLATE implementation.
 
-use crate::codecs::compression::deflate::compress_zlib_chunked;
+use crate::codecs::compression::deflate::{compress_zlib_chunked, compress_zlib_png_repeated};
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::encode_policy::EncodePolicy;
@@ -110,7 +110,7 @@ fn write_encoded(
         Filter::Adaptive
     };
     let optimize = opts.optimize.unwrap_or(false);
-    let (filtered, input_chunks) = plain_rows(
+    let filtered = plain_rows(
         &pixels,
         row_bytes,
         height,
@@ -130,15 +130,20 @@ fn write_encoded(
         }
     };
     crate::codecs::error::check_cancelled(token)?;
-    let compressed = if let Some(token) = token {
-        crate::codecs::compression::deflate::compress_zlib_chunked_with_token(
-            &filtered,
-            compression_level,
-            &input_chunks,
-            token,
-        )?
+    let compressed = if compression_level == 6 {
+        compress_zlib_png_repeated(&filtered, row_bytes.saturating_add(1), height, token)?
     } else {
-        compress_zlib_chunked(&filtered, compression_level, &input_chunks)?
+        let input_chunks = vec![row_bytes.saturating_add(1); height];
+        if let Some(token) = token {
+            crate::codecs::compression::deflate::compress_zlib_chunked_with_token(
+                &filtered,
+                compression_level,
+                &input_chunks,
+                token,
+            )?
+        } else {
+            compress_zlib_chunked(&filtered, compression_level, &input_chunks)?
+        }
     };
     crate::codecs::error::check_cancelled(token)?;
 
@@ -392,10 +397,9 @@ fn plain_rows(
     filter: Filter,
     optimize: bool,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(Vec<u8>, Vec<usize>)> {
+) -> CodecResult<Vec<u8>> {
     let row_len = stride.saturating_add(1);
     let mut output = Vec::with_capacity(row_len.saturating_mul(height));
-    let input_chunks = vec![row_len; height];
     let mut previous = None;
     for row in pixels.chunks_exact(stride) {
         crate::codecs::error::check_cancelled(token)?;
@@ -410,7 +414,7 @@ fn plain_rows(
         )?;
         previous = Some(row);
     }
-    Ok((output, input_chunks))
+    Ok(output)
 }
 
 #[derive(Clone, Copy)]
