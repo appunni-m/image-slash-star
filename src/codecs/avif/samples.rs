@@ -6,9 +6,9 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
     AvifContentLightLevel, AvifGridProperties, AvifItemColorProperties, AvifItemIccProfile,
-    AvifItemProperty, AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
-    AvifPixelAspectRatio, AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile,
-    SourceColor,
+    AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -325,6 +325,8 @@ struct Item {
 
 #[derive(Clone)]
 enum Property {
+    Ispe { width: u32, height: u32 },
+    Pixi { depth: u8 },
     Av1C(ByteSpan),
     AuxC { is_alpha: bool },
     Color(AvifColorProperties),
@@ -581,6 +583,40 @@ fn parse_ipco(
 
 fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
     match property.kind {
+        kind if kind == *b"ispe" => {
+            let mut reader = Reader::new(input, property.payload);
+            let (version, _) = parse_full_box(&mut reader)?;
+            if version != 0 {
+                return Err(parse_failure!());
+            }
+            let width = reader.u32()?;
+            let height = reader.u32()?;
+            if width == 0 || height == 0 {
+                return Err(parse_failure!());
+            }
+            Ok(Property::Ispe { width, height })
+        }
+        kind if kind == *b"pixi" => {
+            let mut reader = Reader::new(input, property.payload);
+            let (version, _) = parse_full_box(&mut reader)?;
+            if version != 0 {
+                return Err(parse_failure!());
+            }
+            let planes = reader.u8()?;
+            if !(1..=4).contains(&planes) {
+                return Err(parse_failure!());
+            }
+            let depth = reader.u8()?;
+            if depth == 0 || depth > 16 {
+                return Err(parse_failure!());
+            }
+            for _ in 1..planes {
+                if reader.u8()? != depth {
+                    return Err(parse_failure!());
+                }
+            }
+            Ok(Property::Pixi { depth })
+        }
         kind if kind == *b"av1C" => {
             let mut reader = Reader::new(input, property.payload);
             if reader.u8()? != 0x81 {
@@ -1256,18 +1292,51 @@ impl Meta {
             .filter_map(|association| {
                 self.properties.get(association.property_index).and_then(
                     |property| match property {
-                        Property::Other { kind, data } if !matches!(kind, b"ispe" | b"pixi") => {
-                            Some(AvifItemProperty::new(
-                                association.item_id,
-                                *kind,
-                                data.clone(),
-                            ))
-                        }
+                        Property::Other { kind, data } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *kind,
+                            data.clone(),
+                        )),
                         _ => None,
                     },
                 )
             })
             .collect()
+    }
+
+    fn non_primary_item_plane_properties(
+        &self,
+        primary_item_id: u32,
+    ) -> ParseResult<Vec<AvifItemPlaneProperties>> {
+        let mut result = Vec::new();
+        for item in &self.items {
+            if item.id == primary_item_id {
+                continue;
+            }
+            let mut dimensions = None;
+            let mut bit_depth = None;
+            for property in self.associated(item.id) {
+                match property {
+                    Property::Ispe { width, height } => {
+                        if dimensions.replace((*width, *height)).is_some() {
+                            return Err(parse_failure!());
+                        }
+                    }
+                    Property::Pixi { depth } if bit_depth.replace(*depth).is_some() => {
+                        return Err(parse_failure!());
+                    }
+                    _ => {}
+                }
+            }
+            if dimensions.is_some() || bit_depth.is_some() {
+                let (width, height) =
+                    dimensions.map_or((None, None), |(width, height)| (Some(width), Some(height)));
+                result.push(AvifItemPlaneProperties::new(
+                    item.id, width, height, bit_depth,
+                ));
+            }
+        }
+        Ok(result)
     }
 
     fn grid_item_ids(&self, primary_item_id: u32) -> ParseResult<Vec<u32>> {
@@ -1404,6 +1473,7 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) item_color_properties: Vec<AvifItemColorProperties>,
     pub(super) item_icc_profiles: Vec<AvifItemIccProfile>,
     pub(super) item_properties: Vec<AvifItemProperty>,
+    pub(super) item_plane_properties: Vec<AvifItemPlaneProperties>,
     pub(super) grid_item_ids: Vec<u32>,
     pub(super) grid_properties: Option<AvifGridProperties>,
     pub(super) transform: Option<AvifTransformProperties>,
@@ -1985,6 +2055,7 @@ fn parse_sample_description(
     let mut aux_is_alpha = None;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match parse_property(input, child)? {
+            Property::Ispe { .. } | Property::Pixi { .. } => {}
             Property::Av1C(span) => {
                 if config.replace(span).is_some() {
                     return Err(parse_failure!());
@@ -2283,6 +2354,11 @@ fn extract_inner_with_metadata(
         .as_ref()
         .map(|meta| meta.non_primary_item_properties(meta.primary_item_id))
         .unwrap_or_default();
+    let item_plane_properties = meta
+        .as_ref()
+        .map(|meta| meta.non_primary_item_plane_properties(meta.primary_item_id))
+        .transpose()?
+        .unwrap_or_default();
     let _ = brands.major;
     Ok(ExtractedAvif {
         input,
@@ -2299,6 +2375,7 @@ fn extract_inner_with_metadata(
         item_color_properties,
         item_icc_profiles,
         item_properties,
+        item_plane_properties,
         grid_item_ids,
         grid_properties,
         transform,
@@ -3807,6 +3884,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -3834,6 +3912,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4066,6 +4145,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4125,6 +4205,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4150,6 +4231,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4182,6 +4264,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4227,6 +4310,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4258,6 +4342,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4284,6 +4369,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
@@ -4317,6 +4403,7 @@ fn coverage_structural_states() {
         item_color_properties: Vec::new(),
         item_icc_profiles: Vec::new(),
         item_properties: Vec::new(),
+        item_plane_properties: Vec::new(),
         grid_item_ids: Vec::new(),
         grid_properties: None,
         transform: None,
