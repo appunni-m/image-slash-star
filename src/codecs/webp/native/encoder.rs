@@ -1254,6 +1254,7 @@ impl GroupCodes {
 #[derive(Default)]
 struct TokenStreamScratch {
     groups: Vec<GroupCodes>,
+    histogram: histogram::HistogramScratch,
     huffman_tokens: Vec<HuffmanToken>,
     optimized_frequencies: Vec<u32>,
     huffman_rle_good: Vec<bool>,
@@ -1515,18 +1516,26 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         w.write_bits(u64::from(cache_bits), 4)?;
     }
     let height = pixels.len() / width;
-    let (mut symbols, histograms) = if write_meta_huffman_bit {
+    let (symbols, histograms) = if write_meta_huffman_bit {
         histogram::cluster(
             tokens,
-            width,
-            height,
+            (width, height),
             cache_bits,
             quality,
             histogram_bits,
+            &mut scratch.histogram,
             token,
         )?
     } else {
-        histogram::cluster(tokens, width, height, cache_bits, quality, 31, token)?
+        histogram::cluster(
+            tokens,
+            (width, height),
+            cache_bits,
+            quality,
+            31,
+            &mut scratch.histogram,
+            token,
+        )?
     };
     check_token(token)?;
     let multiple_groups = write_meta_huffman_bit && histograms.len() > 1;
@@ -1535,7 +1544,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         w.write_bits(u64::from(multiple_groups), 1)?;
         if multiple_groups {
             encoded_histogram_bits =
-                optimize_sampling(&mut symbols, width, height, histogram_bits, 9, token)?;
+                optimize_sampling(symbols, width, height, histogram_bits, 9, token)?;
             w.write_bits(u64::from(encoded_histogram_bits - 2), 3)?;
             // Meta-pixel materialization scales with the retained histogram
             // tile map after sampling. Keep the ordinary no-token map
@@ -1546,7 +1555,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                 meta_pixels.reserve(symbols.len());
                 if let Some(token) = token {
                     let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
-                    for &symbol in &symbols {
+                    for &symbol in symbols.iter() {
                         meta_pixels.push(u32::from(symbol) << 8);
                         symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
                         if symbols_until_checkpoint == 0 {
@@ -1588,7 +1597,11 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     if group_scratch.len() < group_count {
         group_scratch.resize_with(group_count, GroupCodes::default);
     }
-    for (group, histogram) in group_scratch.iter_mut().take(group_count).zip(&histograms) {
+    for (group, histogram) in group_scratch
+        .iter_mut()
+        .take(group_count)
+        .zip(histograms.iter())
+    {
         check_token(token)?;
         write_group(
             w,
@@ -1603,7 +1616,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     let reference_context = TokenStreamReferenceContext {
         width,
         multiple_groups,
-        symbols: &symbols,
+        symbols,
         encoded_histogram_bits,
         tile_width,
         groups: &group_scratch[..group_count],
