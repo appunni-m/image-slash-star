@@ -12275,6 +12275,55 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
+        // The VP8L traced backward-reference DP now polls after each 256
+        // processed pixels. This patterned 128x128 probe reaches the first
+        // fine trace boundary after the existing setup work; the exact
+        // whole-buffer and caller-sink limits prove that the new checkpoint,
+        // rather than a synthetic coverage hook, owns the rejection. Pillow
+        // has no caller token, work-budget result, or caller-owned sink.
+        let trace_policy = image_slash_star::EncodePolicy::new().with_max_work_units(52_493);
+        let trace_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &trace_policy,
+        ) {
+            Ok(_) => return Err("VP8L trace budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trace_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 52_493,
+                observed: 52_494,
+            }
+        ));
+        let trace_sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(52_492);
+        let mut trace_sink = vec![0xDA];
+        let trace_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &trace_sink_policy,
+            &mut trace_sink,
+        ) {
+            Ok(_) => return Err("VP8L trace sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trace_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 52_492,
+                observed: 52_493,
+            }
+        ));
+        assert_eq!(trace_sink, vec![0xDA]);
         // Huffman-tree emission now checkpoints simple-tree symbol discovery
         // after each 64 code-length slots and the code-length-token frequency
         // scan after each 16 compressed token entries. A generated LCG probe

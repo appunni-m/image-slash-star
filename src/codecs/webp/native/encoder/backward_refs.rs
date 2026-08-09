@@ -1617,6 +1617,20 @@ fn trace_backwards(
     cache_bits: u8,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<Vec<Token>> {
+    if token.is_none() {
+        return trace_backwards_impl::<false>(pixels, width, chain, source, cache_bits, token);
+    }
+    trace_backwards_impl::<true>(pixels, width, chain, source, cache_bits, token)
+}
+
+fn trace_backwards_impl<const FINE_TRACE: bool>(
+    pixels: &[u32],
+    width: usize,
+    chain: &[(usize, usize)],
+    source: &[Token],
+    cache_bits: u8,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<Vec<Token>> {
     checkpoint(token)?;
     const SCALE: i64 = 1 << 23;
     let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
@@ -1655,11 +1669,20 @@ fn trace_backwards(
     let mut first_constant = false;
     let mut reach = 0_usize;
 
-    let mut next_checkpoint = 1024;
+    const TRACE_CHECKPOINT_PIXELS: usize = 256;
+    let mut next_checkpoint = if FINE_TRACE {
+        TRACE_CHECKPOINT_PIXELS
+    } else {
+        1024
+    };
     for position in 1..pixels.len() {
         if position >= next_checkpoint {
             checkpoint(token)?;
-            next_checkpoint = position.saturating_add(1024);
+            next_checkpoint = position.saturating_add(if FINE_TRACE {
+                TRACE_CHECKPOINT_PIXELS
+            } else {
+                1024
+            });
         }
         let previous_cost = manager.costs[position - 1];
         let (distance, maximum_length) = chain[position];
