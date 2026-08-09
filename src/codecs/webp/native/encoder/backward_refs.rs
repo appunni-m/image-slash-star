@@ -619,13 +619,13 @@ fn populate_cache(
 #[derive(Default)]
 struct CacheTransformScratch {
     cache: Vec<u32>,
+    output: Vec<Token>,
 }
 
 impl CacheTransformScratch {
-    fn prepare(&mut self, bits: u8) -> &mut [u32] {
+    fn prepare(&mut self, bits: u8) {
         self.cache.resize(1 << bits, 0);
         self.cache.fill(0);
-        &mut self.cache
     }
 }
 
@@ -634,9 +634,12 @@ fn with_cache_without_checkpoint(
     refs: &[Token],
     bits: u8,
     scratch: &mut CacheTransformScratch,
-) -> Vec<Token> {
-    let cache = scratch.prepare(bits);
-    let mut output = Vec::with_capacity(refs.len());
+) {
+    scratch.prepare(bits);
+    scratch.output.clear();
+    scratch.output.reserve(refs.len());
+    let cache = &mut scratch.cache;
+    let output = &mut scratch.output;
     let mut position: usize = 0;
     for &reference in refs {
         match reference {
@@ -658,7 +661,6 @@ fn with_cache_without_checkpoint(
             Token::Cache(_) => unreachable!(),
         }
     }
-    output
 }
 
 fn with_cache(
@@ -667,15 +669,20 @@ fn with_cache(
     bits: u8,
     token: CheckpointToken<'_>,
     scratch: &mut CacheTransformScratch,
-) -> CheckpointResult<Vec<Token>> {
+) -> CheckpointResult<()> {
+    scratch.output.clear();
+    scratch.output.reserve(refs.len());
     if bits == 0 {
-        return Ok(refs.to_vec());
+        scratch.output.extend_from_slice(refs);
+        return Ok(());
     }
     let Some(token) = token else {
-        return Ok(with_cache_without_checkpoint(pixels, refs, bits, scratch));
+        with_cache_without_checkpoint(pixels, refs, bits, scratch);
+        return Ok(());
     };
-    let cache = scratch.prepare(bits);
-    let mut output = Vec::with_capacity(refs.len());
+    scratch.prepare(bits);
+    let cache = &mut scratch.cache;
+    let output = &mut scratch.output;
     let mut position: usize = 0;
     for &reference in refs {
         if position.is_multiple_of(1024) {
@@ -700,7 +707,7 @@ fn with_cache(
             Token::Cache(_) => unreachable!(),
         }
     }
-    Ok(output)
+    Ok(())
 }
 
 fn prefix(value: usize) -> (usize, u8) {
@@ -1939,13 +1946,17 @@ pub(super) fn candidates(
         let mut best = None;
         for bits in 0..=maximum {
             checkpoint(token)?;
-            let cached = with_cache(pixels, &source, bits, token, cache_scratch)?;
-            let cost = cache_estimated_bits_with_checkpoint(&cached, bits, token, scratch)?;
+            with_cache(pixels, &source, bits, token, cache_scratch)?;
+            let cost =
+                cache_estimated_bits_with_checkpoint(&cache_scratch.output, bits, token, scratch)?;
             if best
                 .as_ref()
                 .is_none_or(|(_, _, best_cost)| cost < *best_cost)
             {
-                best = Some((cached, bits, cost));
+                let cached = core::mem::take(&mut cache_scratch.output);
+                if let Some((previous, ..)) = best.replace((cached, bits, cost)) {
+                    cache_scratch.output = previous;
+                }
             }
         }
         let Some((tokens, bits, _)) = best else {
