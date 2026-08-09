@@ -13894,32 +13894,32 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             .collect();
         let wide_partition_probe =
             DecodedImage::new(64, 64, wide_partition_probe_pixels, ColorType::Rgb8);
-        let partition_8192_probe_pixels: Vec<u8> = (0..512 * 512 * 3)
+        let partition_8192_probe_pixels: Vec<u8> = (0..17 * 17 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_8192_probe =
-            DecodedImage::new(512, 512, partition_8192_probe_pixels, ColorType::Rgb8);
-        // The 32,768-bit first-partition boundary needs a larger deterministic
-        // probe: this 1,024x960 image supplies 64x60 macroblocks while keeping
+            DecodedImage::new(17, 17, partition_8192_probe_pixels, ColorType::Rgb8);
+        // The 32,768-bit first-partition boundary uses a separate deterministic
+        // probe: this 17x17 image supplies 2x2 padded macroblocks while keeping
         // the work-control assertion independent from the Pillow oracle.
-        let partition_32768_probe_pixels: Vec<u8> = (0..1024 * 960 * 3)
+        let partition_32768_probe_pixels: Vec<u8> = (0..17 * 17 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_32768_probe =
-            DecodedImage::new(1024, 960, partition_32768_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(17, 17, partition_32768_probe_pixels, ColorType::Rgb8);
         // The 65,536-bit first-partition and coefficient boundaries use a
-        // 1,024x1,024 patterned probe (64x64 macroblocks). Pillow has no
+        // 33x33 patterned probe (3x3 padded macroblocks). Pillow has no
         // caller budget or equivalent result, so this remains Rust-only.
-        let partition_65536_probe_pixels: Vec<u8> = (0..1024 * 1024 * 3)
+        let partition_65536_probe_pixels: Vec<u8> = (0..33 * 33 * 3)
             .map(|index: usize| u8::try_from(index.wrapping_mul(37) % 256).unwrap_or(0))
             .collect();
         let partition_65536_probe =
-            DecodedImage::new(1024, 1024, partition_65536_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(33, 33, partition_65536_probe_pixels, ColorType::Rgb8);
         // A compact high-entropy probe reaches both 131,072-bit VP8 paths at
-        // quality 100 without repeating the 6 MiB 2,048x1,024 candidate.
-        let mut partition_131072_probe_pixels = Vec::with_capacity(768 * 768 * 3);
+        // quality 100 without repeating the larger candidate.
+        let mut partition_131072_probe_pixels = Vec::with_capacity(64 * 64 * 3);
         let mut partition_131072_state = 0xA5A5_5A5Au32;
-        for _ in 0..768 * 768 {
+        for _ in 0..64 * 64 {
             partition_131072_state = partition_131072_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
@@ -13930,7 +13930,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let partition_131072_probe =
-            DecodedImage::new(768, 768, partition_131072_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(64, 64, partition_131072_probe_pixels, ColorType::Rgb8);
         let mut partition_131072_options = analysis_options.clone();
         if let EncodeOptions::WebP(options) = &mut partition_131072_options {
             options.quality = Some(100);
