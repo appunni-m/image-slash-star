@@ -76,6 +76,32 @@ impl Histogram {
         }
     }
 
+    fn reset(&mut self, cache_bits: u8) {
+        let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+        let lengths = [280 + cache_size, 256, 256, 256, 40];
+        for (population, &length) in self.populations.iter_mut().zip(lengths.iter()) {
+            population.resize(length, 0);
+            population.fill(0);
+        }
+        self.costs.fill(0);
+        self.trivial.fill(NON_TRIVIAL);
+        self.used.fill(true);
+        self.bit_cost = 0;
+        self.bin_id = 0;
+    }
+
+    fn copy_from(&mut self, other: &Self) {
+        for (to, from) in self.populations.iter_mut().zip(&other.populations) {
+            to.resize(from.len(), 0);
+            to.copy_from_slice(from);
+        }
+        self.costs = other.costs;
+        self.trivial = other.trivial;
+        self.used = other.used;
+        self.bit_cost = other.bit_cost;
+        self.bin_id = other.bin_id;
+    }
+
     fn add_token(&mut self, token: Token, width: usize) {
         match token {
             Token::Literal(pixel) => {
@@ -445,6 +471,24 @@ struct Pair {
     costs: [u64; 5],
 }
 
+#[derive(Default)]
+pub(super) struct HistogramScratch {
+    originals: Vec<Histogram>,
+    clusters: Vec<Histogram>,
+    symbols: Vec<u16>,
+    remapped: Vec<Histogram>,
+}
+
+fn prepare_histograms(histograms: &mut Vec<Histogram>, length: usize, cache_bits: u8) {
+    histograms.truncate(length);
+    while histograms.len() < length {
+        histograms.push(Histogram::new(cache_bits));
+    }
+    for histogram in histograms {
+        histogram.reset(cache_bits);
+    }
+}
+
 fn update_pair(
     histograms: &[Histogram],
     pair: &mut Pair,
@@ -726,18 +770,19 @@ fn greedy_combine(
     Ok(())
 }
 
-pub(super) fn cluster(
+pub(super) fn cluster<'a>(
     tokens: &[Token],
-    width: usize,
-    height: usize,
+    dimensions: (usize, usize),
     cache_bits: u8,
     quality: u32,
     histogram_bits: u8,
+    scratch: &'a mut HistogramScratch,
     token: CheckpointToken<'_>,
-) -> CheckpointResult<(Vec<u16>, Vec<Histogram>)> {
+) -> CheckpointResult<(&'a mut Vec<u16>, &'a [Histogram])> {
+    let (width, height) = dimensions;
     let tile_width = (width + (1 << histogram_bits) - 1) >> histogram_bits;
     let tile_height = (height + (1 << histogram_bits) - 1) >> histogram_bits;
-    let mut originals = vec![Histogram::new(cache_bits); tile_width * tile_height];
+    prepare_histograms(&mut scratch.originals, tile_width * tile_height, cache_bits);
     let mut x = 0;
     let mut y = 0;
     for (token_index, &item) in tokens.iter().enumerate() {
@@ -745,7 +790,7 @@ pub(super) fn cluster(
             checkpoint(token)?;
         }
         let tile = (y >> histogram_bits) * tile_width + (x >> histogram_bits);
-        originals[tile].add_token(item, width);
+        scratch.originals[tile].add_token(item, width);
         x += match item {
             Token::Copy { length, .. } => length,
             _ => 1,
@@ -771,14 +816,14 @@ pub(super) fn cluster(
         }
     }
     if let Some(token) = token {
-        for (index, histogram) in originals.iter_mut().enumerate() {
+        for (index, histogram) in scratch.originals.iter_mut().enumerate() {
             if index.is_multiple_of(16) {
                 checkpoint(Some(token))?;
             }
             histogram.analyze_with_checkpoint(Some(token))?;
         }
     } else {
-        for (index, histogram) in originals.iter_mut().enumerate() {
+        for (index, histogram) in scratch.originals.iter_mut().enumerate() {
             if index.is_multiple_of(16) {
                 checkpoint(None)?;
             }
@@ -789,61 +834,71 @@ pub(super) fn cluster(
     // work. Keep the token-aware path interruptible at the same 64-histogram
     // cadence used by the clustering scans while retaining the original
     // iterator for the ordinary no-token path.
-    let mut clusters = Vec::new();
+    let mut cluster_count = 0;
     if let Some(token) = token {
-        for (index, histogram) in originals.iter().enumerate() {
+        for (index, histogram) in scratch.originals.iter().enumerate() {
             if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
                 checkpoint(Some(token))?;
             }
             if histogram.used.iter().any(|&used| used) {
-                clusters.push(histogram.clone());
+                if cluster_count == scratch.clusters.len() {
+                    scratch.clusters.push(Histogram::new(cache_bits));
+                }
+                scratch.clusters[cluster_count].copy_from(histogram);
+                cluster_count += 1;
             }
         }
     } else {
-        clusters = originals
-            .iter()
-            .filter(|histogram| histogram.used.iter().any(|&used| used))
-            .cloned()
-            .collect::<Vec<_>>();
+        for histogram in &scratch.originals {
+            if histogram.used.iter().any(|&used| used) {
+                if cluster_count == scratch.clusters.len() {
+                    scratch.clusters.push(Histogram::new(cache_bits));
+                }
+                scratch.clusters[cluster_count].copy_from(histogram);
+                cluster_count += 1;
+            }
+        }
     }
-    if clusters.len() > 2 * BIN_SIZE && quality < 100 {
-        entropy_bin_combine(&mut clusters, token)?;
+    scratch.clusters.truncate(cluster_count);
+    if scratch.clusters.len() > 2 * BIN_SIZE && quality < 100 {
+        entropy_bin_combine(&mut scratch.clusters, token)?;
     }
     let threshold = 1 + div_round(
         u64::from(quality).pow(3) * (MAX_HISTO_GREEDY - 1),
         1_000_000,
     ) as usize;
-    if stochastic_combine(&mut clusters, threshold, token)? {
-        greedy_combine(&mut clusters, token)?;
+    if stochastic_combine(&mut scratch.clusters, threshold, token)? {
+        greedy_combine(&mut scratch.clusters, token)?;
     }
 
-    let mut symbols = vec![0_u16; originals.len()];
-    for (index, original) in originals.iter().enumerate() {
+    scratch.symbols.resize(scratch.originals.len(), 0);
+    scratch.symbols.fill(0);
+    for (index, original) in scratch.originals.iter().enumerate() {
         if index.is_multiple_of(16) {
             checkpoint(token)?;
         }
         if !original.used.iter().any(|&used| used) {
-            symbols[index] = symbols[index - 1];
+            scratch.symbols[index] = scratch.symbols[index - 1];
             continue;
         }
         let mut best = i64::MAX;
-        for (cluster_index, cluster) in clusters.iter().enumerate() {
+        for (cluster_index, cluster) in scratch.clusters.iter().enumerate() {
             if let Some(cost) = add_threshold(cluster, original, best, token)? {
                 best = cost;
-                symbols[index] = cluster_index as u16;
+                scratch.symbols[index] = cluster_index as u16;
             }
         }
     }
-    let mut remapped = vec![Histogram::new(cache_bits); clusters.len()];
-    for (index, (original, &symbol)) in originals.iter().zip(&symbols).enumerate() {
+    prepare_histograms(&mut scratch.remapped, scratch.clusters.len(), cache_bits);
+    for (index, (original, &symbol)) in scratch.originals.iter().zip(&scratch.symbols).enumerate() {
         if index.is_multiple_of(16) {
             checkpoint(token)?;
         }
         if original.used.iter().any(|&used| used) {
-            remapped[usize::from(symbol)].add_assign_with_checkpoint(original, token)?;
+            scratch.remapped[usize::from(symbol)].add_assign_with_checkpoint(original, token)?;
         }
     }
-    Ok((symbols, remapped))
+    Ok((&mut scratch.symbols, &scratch.remapped))
 }
 
 #[cfg(coverage)]
@@ -938,13 +993,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         stochastic_combine(&mut high_entropy, 1, None),
         Ok(false)
     ));
+    let mut scratch = HistogramScratch::default();
     let _ = cluster(
         &high_entropy_tokens,
-        high_entropy_tokens.len(),
-        1,
+        (high_entropy_tokens.len(), 1),
         0,
         0,
         6,
+        &mut scratch,
         None,
     );
 
@@ -954,18 +1010,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Token::Literal(0xff00_0002),
         Token::Literal(0xff00_0003),
     ];
-    let _ = cluster(&small_tokens, 4, 1, 0, 100, 0, None);
-    let _ = cluster(&small_tokens, 4, 1, 0, 0, 0, None);
+    let _ = cluster(&small_tokens, (4, 1), 0, 100, 0, &mut scratch, None);
+    let _ = cluster(&small_tokens, (4, 1), 0, 0, 0, &mut scratch, None);
 
     let many_tokens = (0..(2 * BIN_SIZE + 1))
         .map(|index| Token::Literal(0xff00_0000 | index as u32))
         .collect::<Vec<_>>();
-    let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 99, 0, None);
-    let _ = cluster(&many_tokens, many_tokens.len(), 1, 0, 100, 0, None);
+    let _ = cluster(
+        &many_tokens,
+        (many_tokens.len(), 1),
+        0,
+        99,
+        0,
+        &mut scratch,
+        None,
+    );
+    let _ = cluster(
+        &many_tokens,
+        (many_tokens.len(), 1),
+        0,
+        100,
+        0,
+        &mut scratch,
+        None,
+    );
     let many_distinct = (0..(4 * BIN_SIZE))
         .map(|index| {
             Token::Literal(0xff00_0000 | (((index as u32).wrapping_mul(0x45d9_f3b)) & 0x00ff_ffff))
         })
         .collect::<Vec<_>>();
-    let _ = cluster(&many_distinct, many_distinct.len(), 1, 0, 100, 0, None);
+    let _ = cluster(
+        &many_distinct,
+        (many_distinct.len(), 1),
+        0,
+        100,
+        0,
+        &mut scratch,
+        None,
+    );
 }
