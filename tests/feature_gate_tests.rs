@@ -276,10 +276,12 @@ fn run_work_budget_pair(
 ) {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // Thread setup costs more than the paired encode for the compact
-        // witnesses. Keep those calls sequential while retaining overlap for
-        // the large probes that dominate this contract test's wall time.
-        if image.width.saturating_mul(image.height) < 256 * 256 {
+        // Thread setup costs more than the paired encode for compact
+        // witnesses. Keep probes below 64x64 sequential while retaining
+        // overlap for larger probes that dominate this contract test's wall
+        // time; this cutoff was selected from the local benchmark protocol.
+        const PARALLEL_MIN_PIXELS: u32 = 64 * 64;
+        if image.width.saturating_mul(image.height) < PARALLEL_MIN_PIXELS {
             let whole = image_slash_star::encode_with_policy(image, format, options, whole_policy);
             let mut bytes = vec![sentinel];
             let sink = image_slash_star::encode_to_sink_with_policy(
