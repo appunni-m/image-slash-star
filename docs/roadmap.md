@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `f974c84d8f04114d24a3914a3517b601645ac4b5`, and benchmark-protocol revision
+revision `e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`f974c84d8f04114d24a3914a3517b601645ac4b5`; the accepted managed records
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`; the accepted managed records
 remain anchored to the preceding revision.
 
 This roadmap contains future product work only. Current behavior belongs in the
@@ -188,7 +188,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current shared PNG/TIFF zlib-ng output-buffer ownership optimization, WebP candidate-prefix and candidate-suffix allocation optimizations, entropy-analysis pixel implementation, Huffman-RLE fill, Huffman-RLE reverse-tail scan, and Huffman-RLE token-materialization checkpoints, VP8 analysis-buffer reuse, and Huffman-tree leaf census/materialization/depth checkpoint, plus WebP animation assembly ownership, WebP CostManager interval-state reuse, GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly, GIF indexed frame-diff state, TIFF sequence length planning, TIFF repeated-row Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row Deflate planning, PNG source-pixel ownership, and TIFF conditional source ownership, at production and test/runtime revision `f974c84d8f04114d24a3914a3517b601645ac4b5` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current shared PNG/TIFF zlib-ng output-buffer ownership optimization, WebP candidate-prefix and candidate-suffix allocation optimizations, entropy-analysis pixel implementation, Huffman-RLE fill, Huffman-RLE reverse-tail scan, and Huffman-RLE token-materialization checkpoints, VP8 analysis-buffer reuse, and Huffman-tree leaf census/materialization/depth checkpoint, plus WebP animation assembly ownership, WebP CostManager interval-state reuse, WebP CostManager interval-scratch reuse, GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly, GIF indexed frame-diff state, TIFF sequence length planning, TIFF repeated-row Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row Deflate planning, PNG source-pixel ownership, and TIFF conditional source ownership, at production and test/runtime revision `e9ee33d589f76f7f4c392d4ae29811db3a7e203f` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -1241,10 +1241,10 @@ checkpoint slices are recorded in the acceptance history below rather than
 being repeated as unfinished work.
 
 1. Continue the remaining finer WebP bitstream/interior work behind the
-   existing feature-gated witness. The next audit target is the remaining
-   CostManager interval-splitting and rebuild allocation path. Preserve the
-   no-token hot path, use the existing WebP fixture rows for byte/error
-   regression, and keep caller-budget-only evidence in the existing
+   existing feature-gated witness. The next audit target is a remaining WebP
+   inner bitstream or result-trace boundary after CostManager interval state.
+   Preserve the no-token hot path, use the existing WebP fixture rows for
+   byte/error regression, and keep caller-budget-only evidence in the existing
    feature-gated contract; do not add a unit-test hook or synthetic parity
    row.
 2. Address cross-codec allocation accounting and short-write/rollback
@@ -6381,6 +6381,23 @@ budget or allocation contract. No new parity row, fixture-manifest entry,
 diagnostic origin, test function, or coverage-only hook was added. No managed
 parity, feature-matrix, or Coverage MCP rerun is claimed at this revision.
 
+Current acceptance record: WebP VP8L CostManager interval-split scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, following the preceding
+`f974c84d8f04114d24a3914a3517b601645ac4b5` interval-state reuse. Boundary,
+addition, overlap, rebuild, and merge vectors are retained as bounded manager
+scratch instead of being allocated for each split/rebuild call. Ordinary and
+token-aware interval ordering, checkpoint sites, cost decisions, encoded bytes,
+errors, and sink output remain unchanged. The existing WebP encode rows
+(28/13/47), full fixture matrix, all 45 feature-gated Rust contracts, full
+all-feature suite, strict Clippy, rustfmt, and all 33 native/WASI
+feature-matrix lanes provide the regression evidence. Pillow remains the
+byte/error oracle, while scratch ownership is Rust-only evidence; no parity
+row, fixture-manifest entry, diagnostic origin, new test function, or
+coverage-only hook was added. No managed parity, feature-matrix, or Coverage
+MCP rerun is claimed at this revision.
+
 Current acceptance record: TIFF multi-page sink page-base planning
 
 The production and Rust test/runtime slice is implemented at
@@ -6795,7 +6812,21 @@ Pillow parity and Rust-only feature-gate suites are regression evidence for
 this implementation-only change; no new parity fixture, feature-gate test
 function, diagnostic origin, or coverage-only hook was added.
 
-The latest lossless WebP VP8L CostManager interval-state reuse slice is
+The latest lossless WebP VP8L CostManager interval-split scratch reuse slice is
+implemented at production and Rust test/runtime revision
+`e9ee33d589f76f7f4c392d4ae29811db3a7e203f`, following the preceding
+interval-state reuse at `f974c84d8f04114d24a3914a3517b601645ac4b5`. Boundary,
+addition, overlap, rebuild, and merge vectors are retained as bounded manager
+scratch instead of being allocated for each split/rebuild call. Ordinary and
+token-aware interval ordering, checkpoint sites, cost decisions, encoded bytes,
+errors, and sink output remain unchanged. This is a Rust-only allocation
+boundary: the existing WebP encode rows and fixture matrix are byte/error
+regression evidence, while Pillow exposes no allocation or caller-budget
+contract. No parity row, fixture-manifest entry, diagnostic origin, new test
+function, or coverage-only hook was added. No managed parity, feature-matrix, or
+Coverage MCP rerun is claimed at this revision.
+
+The preceding lossless WebP VP8L CostManager interval-state reuse slice is
 implemented at production and Rust test/runtime revision
 `f974c84d8f04114d24a3914a3517b601645ac4b5`, following the preceding
 `63dd8b7ebaa7d5c36699d5b9c3278ed32e9253ff` update-state change. CostManager
