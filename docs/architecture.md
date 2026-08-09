@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `5f1a7e61db30663022d4d28cc63dc2ec271e1de3`; the claim-ledger fixture tuple
+revision `dd99a47d5342f7c4e7d50b09f98cdcbb8b41e812`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -11,8 +11,8 @@ test/runtime revision and is
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
 GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG
-grayscale source ownership, PNG source pixel ownership, TIFF conditional source
-ownership, candidate-prefix
+grayscale source ownership, BMP row-scratch reuse, PNG source pixel ownership,
+TIFF conditional source ownership, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
 census/materialization/depth slices have not received a managed coverage rerun.
@@ -654,6 +654,13 @@ with LZW or Deflate. Those two combinations alone receive a mutable owned
 working copy; raw, PackBits, and non-predictive compressed paths do not. The
 resulting compressed payload and page layout remain owned buffers, and this
 conditional reuse does not claim allocator/OOM accounting or streaming.
+
+BMP row conversion reuses one scratch buffer for one-bit, indexed, RGB, and
+RGBA rows within each encoder invocation. The synchronous writer consumes the
+row before the next row is prepared, so this removes per-row allocation churn
+without changing structural delivery, encoded bytes, cancellation checkpoints,
+or sink behavior. It is a bounded transient-allocation optimization, not
+allocator/OOM accounting or a streaming guarantee.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit
