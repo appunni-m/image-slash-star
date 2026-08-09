@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`9c0ff979abd1f26b71e2d3b297fc163d16921d3a`, Rust test/runtime revision
-`9c0ff979abd1f26b71e2d3b297fc163d16921d3a`, and benchmark-protocol revision
+`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`, Rust test/runtime revision
+`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `9c0ff979abd1f26b71e2d3b297fc163d16921d3a`.
+Coverage MCP rerun has yet been recorded for `fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2356,7 +2356,7 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
+Current acceptance record: VP8L candidate-prefix retention, predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
 
 The production trace slice is implemented at
 `9275f4e6caa394c88fda815543a29411c737f96d`, with the verified Rust witness in
@@ -2403,20 +2403,32 @@ Rust-only work-control evidence: Pillow has no caller token, typed work-budget
 result, caller-owned sink, or rollback equivalent, so no parity row, fixture,
 diagnostic origin, new test function, or coverage-only hook was added.
 
-The first clean schema-`@3` benchmark at this revision reported 3.403293 s wall /
-3.961479 user s / 0.498780 sys s / 299,384,832-byte peak RSS for the Pillow
-parity fixture suite, and 2.558820 s wall / 3.050588 user s / 0.237591 sys s /
-252,936,192-byte peak RSS for the separate Rust-only feature-gate suite. Its
-warm repeat reported 1.120622 s / 2.911955 user s / 0.220634 sys s for Pillow
-parity and 1.648102 s / 2.320590 user s / 0.113761 sys s for the Rust-only
-suite. The native release `rlib` was 7,989,960 bytes and the
-`wasm32-unknown-unknown` determinism artifact was 25,087,071 bytes. These are
+The current VP8L candidate-trial assembly optimization is implemented at
+`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`. Candidate trials leave the
+already-emitted prefix in the parent writer and append only the winning suffix,
+removing a redundant prefix clone/re-copy while preserving ordinary and
+token-aware output bytes. The existing 28-row Pillow parity suite and 45-test
+Rust-only feature-gate suite pass; this is an implementation optimization, not
+a Pillow-visible result or new work-budget boundary, so no new parity fixture,
+feature-gate test function, diagnostic origin, or coverage-only hook was added.
+
+The first clean schema-`@3` benchmark at this revision reported 1.185715 s wall /
+2.957358 user s / 0.278433 sys s / 259,489,792-byte peak RSS for the Pillow
+parity fixture suite, and 2.008233 s wall / 2.445845 user s / 0.199363 sys s /
+183,812,096-byte peak RSS for the separate Rust-only feature-gate suite. Its
+warm repeat reported 1.279297 s / 3.115831 user s / 0.320139 sys s for Pillow
+parity and 1.799382 s / 2.438749 user s / 0.206024 sys s for the Rust-only
+suite. The native release `rlib` was 7,990,960 bytes and the
+`wasm32-unknown-unknown` determinism artifact was 25,077,972 bytes. These are
 direct-child POSIX observations from schema `@3`, not universal process-tree or
 allocator claims. The current cold and warm local feature-matrix runs both
 passed all configured native/WASI lanes with `lanes=6`, `test_threads=2`,
 `build_jobs=2`, `debug=0`, and `verbose=0`, ending with the capability-table
 agreement marker and no `lock-wait` match; the timed warm repeat completed in
-6.876 s wall time (`real 6.876`, `user 24.94`, `sys 2.72`).
+6.421 s wall time (`real 6.421`, `user 23.11`, `sys 2.32`).
+These paired benchmark observations do not establish a universal wall-time
+improvement for the isolated prefix-retention change; they record the reduced
+prefix clone/re-copy path and its host/cache-dependent resource observations.
 
 Previous acceptance record: compact VP8 work-budget witnesses
 
