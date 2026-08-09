@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`fe77d46c239da119e36942d5523255c47b8e06c8`, Rust test/runtime revision
-`fe77d46c239da119e36942d5523255c47b8e06c8`, and benchmark-protocol revision
+`646ed73413a574368bfd01172fcd46c60622046f`, Rust test/runtime revision
+`646ed73413a574368bfd01172fcd46c60622046f`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `fe77d46c239da119e36942d5523255c47b8e06c8`.
+Coverage MCP rerun has yet been recorded for `646ed73413a574368bfd01172fcd46c60622046f`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -725,6 +725,18 @@ untouched. Pillow has no caller token, typed work-budget result, caller-owned
 sink, or rollback contract, so this is Rust-only evidence with no parity row,
 fixture-manifest row, diagnostic origin, new test function, or coverage-only
 hook.
+
+The latest lossless VP8L Huffman-RLE fill-materialization slice is implemented
+at production and test/runtime revision
+`646ed73413a574368bfd01172fcd46c60622046f` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware long-run
+marking and normalized-count fills now poll after each 64 code-length values,
+while the no-token helper retains its bulk fills. The existing caller-built
+128×4 RGB palette probe proves `2,423/2,424` whole-buffer and `2,422/2,423`
+caller-owned-sink rejection with `[0xC8]` untouched. This is Rust-only
+work-control evidence: Pillow has no caller token, typed work-budget result,
+caller-owned sink, or rollback contract, so no parity row, fixture-manifest
+entry, diagnostic origin, new test function, or coverage-only hook was added.
 
 The latest lossy WebP VP8 boolean-output flush slice is implemented at
 `2945ad28fde44976f33459c7664482f9c61a2b70` through the same existing
@@ -2356,7 +2368,7 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L candidate-prefix retention and suffix allocation recycling, predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
+Current acceptance record: VP8L candidate-prefix retention and suffix allocation recycling, predictor row-copy, entropy-analysis pixel, traced replay, token-stream, and Huffman-RLE fill checkpoints
 
 The production trace slice is implemented at
 `9275f4e6caa394c88fda815543a29411c737f96d`, with the verified Rust witness in
@@ -2415,13 +2427,25 @@ feature-gate suite pass; this is an implementation optimization, not a
 Pillow-visible result or new work-budget boundary, so no new parity fixture,
 feature-gate test function, diagnostic origin, or coverage-only hook was added.
 
-A clean schema-`@3` benchmark at this revision reported 0.964519 s wall /
-2.852155 user s / 0.200098 sys s / 257,671,168-byte peak RSS for the Pillow
-parity fixture suite, 1.692189 s wall / 2.314349 user s / 0.161861 sys s /
-182,583,296-byte peak RSS for the separate Rust-only feature-gate suite,
-6.757744 s wall for the native release build with a 7,990,872-byte `rlib`,
-and 3.400473 s wall for the `wasm32-unknown-unknown` determinism compile with
-a 25,078,450-byte artifact. These are direct-child POSIX observations from
+The latest lossless VP8L Huffman-RLE fill-materialization checkpoint is
+implemented at production and test/runtime revision
+`646ed73413a574368bfd01172fcd46c60622046f` through the same existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware long-run
+marking and normalized-count fills now poll after each 64 code-length values,
+while the no-token helper retains its bulk fills. The existing caller-built
+128×4 RGB palette probe proves `2,423/2,424` whole-buffer and `2,422/2,423`
+caller-owned-sink rejection with `[0xC8]` untouched. This is Rust-only
+work-control evidence: Pillow has no caller token, typed work-budget result,
+caller-owned sink, or rollback contract, so no parity row, fixture-manifest
+entry, diagnostic origin, new test function, or coverage-only hook was added.
+
+A clean schema-`@3` benchmark at this revision reported 1.327542 s wall /
+3.260114 user s / 0.223734 sys s / 289,112,064-byte peak RSS for the Pillow
+parity fixture suite, 2.409336 s wall / 2.985661 user s / 0.192187 sys s /
+245,104,640-byte peak RSS for the separate Rust-only feature-gate suite,
+11.894242 s wall for the native release build with a 7,993,312-byte `rlib`,
+and 5.589502 s wall for the `wasm32-unknown-unknown` determinism compile with
+a 25,083,139-byte artifact. These are direct-child POSIX observations from
 schema `@3`, not universal process-tree, allocator, or speed claims; repeated
 allowed-dirty local observations are not release evidence. No managed parity,
 feature-matrix, or Coverage MCP rerun is recorded for this revision.
