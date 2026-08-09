@@ -3,10 +3,11 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-09 on current implementation revision
-`f8fd846f0f1ebd7bc15444698626009a31ef7004`; the claim-ledger fixture tuple
-remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`,
-and the accepted Coverage MCP snapshot for this revision is
-`90285a8d-64e1-403c-bff3-1c3267104936`.
+`8562fe2b0672593000b7d0c1ea1370590efc2f18`; the claim-ledger fixture tuple
+remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
+The accepted Coverage MCP snapshot for this revision is
+`26731242-1c01-4bf5-bf37-635c21ff690c` from run
+`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5`.
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -160,14 +161,21 @@ item-level field, so it remains Rust source-provenance evidence with no parity
 row. Raw non-primary `prof`/`rICC` profiles are retained through
 `SourceDescriptor::avif_item_icc_profiles()` as source-local item ID and exact
 profile-kind/bytes records, without replacing primary `SourceColor` or changing
-decoded pixels. Other item color/property forms remain open.
+decoded pixels. Other known item color/property forms remain open.
+Unknown associated item properties are retained separately through
+`SourceDescriptor::avif_item_properties()` as source-local item ID, four-byte
+property kind, and exact raw payload records. They are not interpreted,
+replayed, or applied to decoded samples. The existing feature-gated contract
+mutates `alpha.avif` only in memory and checks inspection, still decode, and
+sequence-frame decode; Pillow exposes no equivalent item-property result, so
+this is Rust source-provenance evidence with no parity row.
 Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
 Other non-primary item profiles, track-only and non-alpha auxiliary item
-properties, item color/property forms beyond typed CICP and raw ICC, and other
-non-primary item relationships remain future slices. Direct and
+semantics, and item color/property forms beyond typed CICP, raw ICC, and raw
+unknown-property retention remain future slices. Direct and
 supported grid-derived item and auxiliary-alpha provenance is represented
 through `SourceAlpha::Auxiliary`, the scalar
 `SourceDescriptor::avif_auxiliary_relationship()` getter, and the bounded

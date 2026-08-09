@@ -3,10 +3,11 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`f8fd846f0f1ebd7bc15444698626009a31ef7004`; the claim-ledger fixture tuple
-remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`,
-and the accepted Coverage MCP snapshot for this revision is
-`90285a8d-64e1-403c-bff3-1c3267104936`.
+`8562fe2b0672593000b7d0c1ea1370590efc2f18`; the claim-ledger fixture tuple
+remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
+The accepted Coverage MCP snapshot for this revision is
+`26731242-1c01-4bf5-bf37-635c21ff690c` from run
+`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -164,7 +165,10 @@ the source-local item ID and CICP values without replacing the primary
 profiles are retained as bounded `AvifItemIccProfile` records through
 `SourceDescriptor::avif_item_icc_profiles()`, preserving exact item IDs and
 profile bytes without replacing `SourceColor`; other item color/property forms
-remain outside this typed boundary.
+remain outside this typed boundary. Unknown associated properties are retained
+as `AvifItemProperty` records through `SourceDescriptor::avif_item_properties()`
+with source-local item ID, four-byte kind, and exact payload; they are not
+interpreted or applied to decoded samples.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the
@@ -298,8 +302,8 @@ validated, but no rotation or mirroring is applied. The primary item's `pasp`
 declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
-Other non-primary/auxiliary profiles, track-only item properties, item
-color/property forms beyond typed CICP and raw ICC, grid tile
+Other non-primary/auxiliary profiles, track-only item semantics, item
+color/property forms beyond typed CICP, raw ICC, and raw unknown properties, grid tile
 placement/composition, and broader derived/grid graph semantics remain outside
 the current model; bounded direct,
 supported grid-derived alpha
