@@ -3,16 +3,19 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`bb48d168f94bedd8c2f9caf873e5a42d54690c47`, Rust test/runtime revision
-`841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`, and benchmark-protocol revision
+`1964d6752a140e24bb1af86a6342d5abbd1f72de`, Rust test/runtime revision
+`1964d6752a140e24bb1af86a6342d5abbd1f72de`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
-The current Pillow parity run is
-`0121c773-64b8-4c09-b46e-8df639b046a4`; the exact-head feature-matrix run is
-`2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; and the accepted Coverage MCP snapshot
-remains anchored to the preceding test/runtime revision:
+The last accepted managed Pillow parity run is
+`0121c773-64b8-4c09-b46e-8df639b046a4`, and the last exact-head feature-matrix
+run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
+preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
+The accepted Coverage MCP snapshot likewise remains anchored to that preceding
+revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
-`afa2a5ab-c5a2-4be8-80c6-bd535440eafd`.
+`afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
+Coverage MCP rerun has yet been recorded for `1964d6752a140e24bb1af86a6342d5abbd1f72de`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -436,7 +439,8 @@ selection/application, bounded backward-reference
 length-cost table and equal-cost interval setup after each 1,024 entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
-search/match-length/cache/trace, repeated-run hash-chain insertion, long
+search/match-length/cache, token-aware trace after each 256 processed pixels
+(the no-token trace retains its 1,024-pixel cadence), repeated-run hash-chain insertion, long
 backward-reference result backfills after each 256 entries, copy-token
 cache-population scans after each 256 pixels, and histogram-cluster token-to-row
 transitions after each 256 rows, plus token/Huffman cost
@@ -536,7 +540,8 @@ cost/length-table initialization and length-cost/equal-cost interval setup
 after each 1,024 entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
-search/match-length/cache/trace, repeated-run hash-chain insertion, long
+search/match-length/cache, token-aware trace after each 256 processed pixels
+(the no-token trace retains its 1,024-pixel cadence), repeated-run hash-chain insertion, long
 backward-reference result backfills after each 256 entries, and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
@@ -1602,6 +1607,14 @@ loops. Token-aware repeated-run hash-chain insertion and long backward-reference
 result backfills also charge after each 256 entries; their no-token paths remain
 tight. Lossless VP8L entropy-mode analysis
 now charges after each 64 symbols while scanning fixed-alphabet histogram costs.
+The token-aware VP8L traced backward-reference dynamic-programming pass now
+polls after each 256 processed pixels; its no-token call is const-specialized to
+retain the original 1,024-pixel cadence. The same Rust-only work-budget contract
+proves whole-buffer `maximum: 52,493`, `observed: 52,494` and caller-sink
+`maximum: 52,492`, `observed: 52,493` on the patterned 128x128 RGB probe, with
+sink sentinel `[0xDA]` untouched. Pillow exposes none of the caller token,
+typed work-budget result, caller-owned sink, or rollback semantics, so this adds
+no parity row, fixture, diagnostic origin, or coverage-only hook.
 The token-aware lossless VP8L backward-reference hash-chain candidate scan now
 charges after each 64 completed candidate trials across the pass; its no-token
 candidate loop retains the original tight path. The existing Rust-only
@@ -2322,7 +2335,25 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: compact VP8 work-budget witnesses
+Current acceptance record: VP8L traced backward-reference checkpoint
+
+The production trace checkpoint is implemented at
+`1964d6752a140e24bb1af86a6342d5abbd1f72de`, with the verified Rust witness in
+the same test/runtime revision. Token-aware VP8L backward-reference dynamic
+program tracing now checkpoints every 256 processed pixels, while the
+const-specialized no-token path retains its 1,024-pixel cadence. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves the exact
+whole-buffer boundary `maximum: 52,493`, `observed: 52,494` and the direct-sink
+boundary `maximum: 52,492`, `observed: 52,493` for the patterned 128x128 RGB
+probe; the sink retains `[0xDA]`. Native and `wasm32-wasip1` all-feature
+feature-gate runs each passed all 45 tests, strict all-target Clippy and
+rustfmt passed, and the clean schema-`@3` benchmark passed both suites at this
+revision. This is Rust-only work-control evidence: Pillow has no caller token,
+typed work-budget result, caller-owned sink, or rollback equivalent, so the
+slice adds no parity row, fixture, diagnostic origin, new test function, or
+coverage-only hook.
+
+Previous acceptance record: compact VP8 work-budget witnesses
 
 The production checkpoint is implemented at
 `bb48d168f94bedd8c2f9caf873e5a42d54690c47`, with its test/runtime witness at
@@ -6361,7 +6392,10 @@ regions; residual reports 362/372 lines, 48/48 branches, 21/21 functions, and
 77/77 functions, and 2,162/2,263 regions. This is implementation/Rust
 coverage, not Pillow-oracle parity, and no coverage-only hook was added.
 
-Remaining work is finer WebP bitstream and other interior work beyond the
+The VP8L traced backward-reference dynamic-programming pass is now a documented
+checkpoint: token-aware calls poll every 256 processed pixels and the
+const-specialized no-token path retains its 1,024-pixel cadence. Remaining work
+is finer WebP bitstream and other interior work beyond the
 current 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit first-partition, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit coefficient, 8-bit/16-bit/32-bit/64-bit/128-bit/256-bit/512-bit/1,024-bit/2,048-bit/4,096-bit/8,192-bit/16,384-bit VP8L
 bitstream, the 64-symbol VP8L histogram/cost/merge/backward-reference scans,
 64-code-length-symbol Huffman RLE preparation and canonical-code assignment,
@@ -6623,12 +6657,12 @@ denominator, adds a parity row, or turns the Rust-only feature-gate contract
 into Pillow evidence.
 
 A clean local run at test/runtime revision
-`841ecbdba75a96f68ec23cdf6e0f7d4599786a9f` passed all four workloads on the
+`1964d6752a140e24bb1af86a6342d5abbd1f72de` passed all four workloads on the
 arm64 macOS host with the pinned Rust 1.96.1 toolchain. Its observations were
-1.089032 s wall / 2.883983 user / 0.228330 sys / 253,329,408-byte peak RSS for
-the 1,445-row Pillow parity suite; 1.366795 s wall / 2.042505 user / 0.116231
-sys / 169,902,080-byte peak RSS for the separate Rust-only feature-gate suite;
-7,981,040 bytes for the native release `rlib`; and 25,091,745 bytes for the
+2.424575 s wall / 3.078958 user / 0.635682 sys / 256,999,424-byte peak RSS for
+the Pillow parity suite; 1.429546 s wall / 2.108534 user / 0.123127
+sys / 191,971,328-byte peak RSS for the separate Rust-only feature-gate suite;
+7,981,248 bytes for the native release `rlib`; and 25,178,233 bytes for the
 `wasm32-unknown-unknown` determinism test artifact. The two peak values are
 direct-child POSIX observations. These values are a revision-bound execution
 record, not a universal benchmark or a parity claim for the Rust-only workload.
