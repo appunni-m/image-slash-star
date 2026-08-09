@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`c1946d239787c07d282be75a345daacb56df4489ebed12ee9d7b1056e4ddf1f0`, and
+`ae9b404e56c1a473493214d54aff406564ae95bd695ec4883dfeed0991e69d9b`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6542,12 +6542,12 @@ generated-matrix SHA-256
 The map also pins the independent inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 70 named witnesses, 78 distinct active WebP rows, 33 successful
+properties, 70 named witnesses, 78 distinct active WebP rows, 38 successful
 structural witnesses, and 40 malformed parser witnesses.
 
 All 14 properties remain deliberately marked `candidate` at the full-category
 level: their named rows are Pillow-origin outer-result fixtures, while the
-33 successful structural witnesses independently establish only selected
+38 successful structural witnesses independently establish only selected
 transform, meta-Huffman, color-cache, Huffman-tree, distance, and entropy-image
 facts. The 40 malformed witnesses independently check rejection code, parser
 phase, and bit offset (including Pillow-tolerated malformed streams that the
