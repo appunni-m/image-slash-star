@@ -3,8 +3,8 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against production implementation revision
-`572ce06c5d16411959339ac3592d9c041f0f2b32`, Rust test/runtime revision
-`019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`, and benchmark-protocol revision
+`9275f4e6caa394c88fda815543a29411c737f96d`, Rust test/runtime revision
+`9275f4e6caa394c88fda815543a29411c737f96d`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`.
+Coverage MCP rerun has yet been recorded for `9275f4e6caa394c88fda815543a29411c737f96d`.
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -187,7 +187,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current production token-stream follow-up at `572ce06c5d16411959339ac3592d9c041f0f2b32` and test/runtime revision `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current predictor row-copy implementation and test/runtime revision `9275f4e6caa394c88fda815543a29411c737f96d` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -846,7 +846,7 @@ typed work-budget errors, sink prefixes, and rollback are outside its oracle.
 | QA-006 | The encode manifest samples many options but is not a Cartesian source-mode × target-format matrix. | Add one row per Pillow-accepted/rejected mode boundary and one cross-format decode→encode row for every claimed transcode. |
 | QA-008 | No exact public error-message policy exists, despite retaining oracle messages. | Decide whether Rust messages are stable; test kind plus structured fields, and treat Pillow text as diagnostic evidence rather than equality unless intentionally mapped. |
 | QA-009 | No fuzzing, mutation corpus, or differential randomized test runs in CI. | Add format-aware fuzzing after limits; preserve minimized failures as fixtures. |
-| QA-010 | `scripts/benchmark_fixture_workloads.py` schema-`@3` provides a clean-revision protocol with a fixed four-worker budget, separate Pillow-parity and Rust feature-gate wall/user/sys timings, direct-child POSIX peak-RSS observations, manifest/matrix hashes, native release-library size, and WASM compile-artifact size. At test/runtime revision `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`, all four workloads passed: the first clean run measured 2.169517 s / 3.301343 user s / 0.664454 sys s / 265,551,872-byte peak RSS for Pillow parity; 1.614349 s / 2.243231 user s / 0.178343 sys s / 199,688,192-byte peak RSS for the separate Rust-only feature-gate suite; 7,990,184-byte native `rlib`; and 25,083,545-byte WASM artifact. A warm repeat measured 1.483468 s / 3.727710 user s / 0.295221 sys s for Pillow parity and 2.109708 s / 2.936649 user s / 0.175846 sys s for the Rust-only suite. Peak RSS is a direct-child POSIX observation, not a universal process-tree or memory claim. Stack depth, allocator counts, retained-cache size, caller-buffer reuse, and WASM runtime measurements remain uncollected. | Run the protocol on fixed lossy/lossless/alpha/animation workloads, add stack/allocator/cache/buffer-reuse and WASM-runtime collectors, and compare repeated same-host revisions before any "fast", "small", or "lightweight" claim. |
+| QA-010 | `scripts/benchmark_fixture_workloads.py` schema-`@3` provides a clean-revision protocol with a fixed four-worker budget, separate Pillow-parity and Rust feature-gate wall/user/sys timings, direct-child POSIX peak-RSS observations, manifest/matrix hashes, native release-library size, and WASM compile-artifact size. At test/runtime revision `9275f4e6caa394c88fda815543a29411c737f96d`, all four workloads passed: the first clean run measured 0.989086 s / 2.839248 user s / 0.205373 sys s / 249,823,232-byte peak RSS for Pillow parity; 1.473248 s / 2.153050 user s / 0.106596 sys s / 177,537,024-byte peak RSS for the separate Rust-only feature-gate suite; 7,987,648-byte native `rlib`; and 25,088,080-byte WASM artifact. A warm repeat measured 0.966203 s / 2.832930 user s / 0.194616 sys s for Pillow parity and 1.639117 s / 2.165820 user s / 0.257353 sys s for the Rust-only suite. Peak RSS is a direct-child POSIX observation, not a universal process-tree or memory claim. Stack depth, allocator counts, retained-cache size, caller-buffer reuse, and WASM runtime measurements remain uncollected. | Run the protocol on fixed lossy/lossless/alpha/animation workloads, add stack/allocator/cache/buffer-reuse and WASM-runtime collectors, and compare repeated same-host revisions before any "fast", "small", or "lightweight" claim. |
 | QA-011 | No semver/public API diff runs before release. | Add a public API snapshot once enum/type decisions settle. |
 | QA-012 | Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification. | Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity. |
 | QA-013 | `cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured. | Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer. |
@@ -933,6 +933,14 @@ QA-026 also includes the ordered lossless VP8L palette drain after each 1,024
 unique colors. The same existing probe proves the exact `18/19` whole-buffer
 and sink boundary with sentinel `[0xC7]` untouched; Pillow parity remains the
 unchanged outer-result regression gate.
+
+QA-026 also includes lossless VP8L predictor mode-application wide source-row
+copies in completed 1,024-pixel chunks. The caller-built 4,096×1 RGB probe in
+the existing Rust-only contract proves the exact `10,728/10,729` whole-buffer
+and caller-owned-sink boundary with `[0xDB]` untouched; the no-token path keeps
+its original bulk row copy. Pillow has no caller token, typed work-budget
+result, caller-owned sink, or rollback equivalent, so this adds no parity row,
+fixture, diagnostic origin, new test function, or coverage-only hook.
 
 QA-026 also includes lossless VP8L token-stream reference emission after each
 256 consumed pixels, including every boundary crossed by one copy token. The
@@ -1199,6 +1207,12 @@ being repeated as unfinished work.
    slice is closed at test/runtime revision
    `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`: token-aware work polls every
    256 consumed pixels while the no-token paths retain their tight behavior.
+   The predictor mode-application row-copy slice is now closed at production
+   and test/runtime revision `9275f4e6caa394c88fda815543a29411c737f96d`:
+   token-aware calls copy each wide source row in completed 1,024-pixel chunks
+   and poll after each completed chunk, while the no-token path retains its
+   original bulk row copy. The existing feature-gate witness proves the
+   `10,728/10,729` whole-buffer and sink boundary with `[0xDB]` untouched.
    Add the next real token checkpoints at stable inner boundaries, preserve the
    no-token hot path, and refresh each exact witness only after the managed
    feature matrix passes.
@@ -6316,11 +6330,11 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L traced replay and token-stream checkpoints
+Current acceptance record: VP8L predictor row-copy, traced replay, and token-stream checkpoints
 
 The production trace slice is implemented at
-`572ce06c5d16411959339ac3592d9c041f0f2b32`, with the verified Rust witness in
-test/runtime revision `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`. Token-aware VP8L backward-reference dynamic
+`9275f4e6caa394c88fda815543a29411c737f96d`, with the verified Rust witness in
+test/runtime revision `9275f4e6caa394c88fda815543a29411c737f96d`. Token-aware VP8L backward-reference dynamic
 program tracing, path reconstruction, and token replay now checkpoint every
 256 consumed pixels, while the const-specialized no-token path retains its
 1,024-pixel cadence. The existing
@@ -6339,6 +6353,15 @@ polls after each 256 consumed pixels, including every boundary crossed by one
 copy token; the existing 1×512 constant RGB witness proves `2,457/2,458` in
 both whole-buffer and sink paths with `[0xDC]` untouched. Its no-token loop
 retains the original tight path.
+Predictor mode application now copies each wide pre-transform source row in
+completed 1,024-pixel chunks and polls after each completed chunk; its no-token
+path keeps the original bulk row copy. The same existing feature-gate contract
+uses a caller-built 4,096×1 RGB probe and proves whole-buffer and caller-owned
+sink rejection at `maximum: 10,728`, `observed: 10,729`, with `[0xDB]`
+untouched. This is Rust-only work-control evidence: Pillow has no caller token,
+typed work-budget result, caller-owned sink, or rollback equivalent, so it adds
+no parity row, fixture, diagnostic origin, new test function, or coverage-only
+hook.
 
 Previous acceptance record: compact VP8 work-budget witnesses
 
