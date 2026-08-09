@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`2421f1e331f60b509e3ce5586773aef2823426627f3ca55ab278aff00f7a4ac0`, and
+`d459fc2d79234981b744da10c744b1fa9ab54b10c65169e1149a6ba0c93ae27b`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6545,14 +6545,16 @@ The map also pins the independent inspector SHA-256
 properties, 72 named witnesses, 78 distinct active WebP rows, 40 successful
 structural witnesses, and 40 malformed parser witnesses.
 
-The color-indexing size-band, subtract-green, color-transform, and meta-Huffman
+The color-indexing size-band, subtract-green, color-transform, meta-Huffman,
+and entropy-image
 properties are
 `witnessed` only at their explicitly listed scopes: the color-indexing rows
 remain Pillow-origin outer-result fixtures while the independent inspector
 proves the transform and table-size fields, the subtract-green encode artifact
 is parsed independently, the color-transform rows prove the selected block
-sizes, and the meta-Huffman rows prove the selected one- and two-group forms.
-The other 10 properties remain deliberately
+sizes, the meta-Huffman rows prove the selected one- and two-group forms, and
+the entropy-image rows prove the selected 2×1 and 24×24 dimensions. The other
+9 properties remain deliberately
 marked `candidate` at the full-category level; their named rows are
 Pillow-origin outer-result fixtures, while the 40 successful structural
 witnesses independently establish only

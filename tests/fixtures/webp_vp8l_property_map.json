@@ -449,15 +449,15 @@
     },
     {
       "id": "vp8l.entropy_image_dimensions",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
       ],
-      "gap": "The matrix does not retain the VP8L entropy-image width, height, or grouping bits."
+      "gap": "The independent parser now proves the explicitly listed entropy-image dimensions (2×1 and 24×24) and their two-group forms; other dimensions and grouping patterns remain outside this witnessed scope."
     },
     {
       "id": "vp8l.color_cache.boundaries",
