@@ -322,8 +322,8 @@ def verify_structural_witnesses(
             fail(f"structural witness references unknown property {property_id!r}")
         operation = witness.get("operation")
         row_id = witness.get("row_id")
-        if operation != "decode" or not isinstance(row_id, str):
-            fail(f"{property_id}: structural witnesses must reference decode rows")
+        if operation not in OPERATIONS or not isinstance(row_id, str):
+            fail(f"{property_id}: structural witnesses must reference active decode/encode rows")
         verify_witness(
             {"operation": operation, "row_id": row_id},
             str(property_id),
@@ -331,7 +331,15 @@ def verify_structural_witnesses(
             seen,
         )
         row = rows[(operation, row_id)]
-        path, _, _ = fixture_path(operation, row)
+        if operation == "decode":
+            path, _, _ = fixture_path(operation, row)
+        else:
+            artifact_path = row.get("encoded_ref_path")
+            if not isinstance(artifact_path, str) or not artifact_path:
+                fail(f"{property_id}: encode structural witness {row_id} has no encoded artifact")
+            path = ROOT / artifact_path
+            if not path.is_file():
+                fail(f"{property_id}: encode structural witness {row_id} artifact is missing")
         try:
             structure = inspect_path(path)
         except (OSError, ParseError) as error:
