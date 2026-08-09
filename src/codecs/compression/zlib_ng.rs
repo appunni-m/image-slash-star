@@ -1001,20 +1001,21 @@ impl SlowMatcher {
     }
 }
 
-#[cfg(feature = "tiff")]
+#[cfg(any(feature = "png", feature = "tiff"))]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
-pub(super) fn compress_level6_tiff(
+pub(super) fn compress_level6_repeated(
     data: &[u8],
     row_len: usize,
     height: usize,
     token: Option<&crate::CancellationToken>,
+    block_tokens: usize,
 ) -> crate::codecs::CodecResult<Vec<u8>> {
     let tokens = if let Some(token) = token {
         tokenize_lookahead_medium_repeated_with_token(data, row_len, height, 128, 128, 16, token)?
     } else {
         tokenize_lookahead_medium_repeated(data, row_len, height, 128, 128, 16)
     };
-    finish_level6_tokens(data, tokens, token, 16_383)
+    finish_level6_tokens(data, tokens, token, block_tokens)
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
@@ -1052,14 +1053,14 @@ fn finish_level6_tokens(
         checkpoint.poll()?;
         Ok(output)
     } else {
-        emit_blocks(&tokens, 16_383, &mut writer);
+        emit_blocks(&tokens, block_tokens, &mut writer);
         let mut output = writer.finish();
         output.extend_from_slice(&adler32(data).to_be_bytes());
         Ok(output)
     }
 }
 
-#[cfg(feature = "tiff")]
+#[cfg(any(feature = "png", feature = "tiff"))]
 #[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn tokenize_lookahead_medium_repeated(
     data: &[u8],
@@ -1084,7 +1085,7 @@ fn tokenize_lookahead_medium_repeated(
     matcher.tokens
 }
 
-#[cfg(feature = "tiff")]
+#[cfg(any(feature = "png", feature = "tiff"))]
 fn tokenize_lookahead_medium_repeated_with_token(
     data: &[u8],
     row_len: usize,

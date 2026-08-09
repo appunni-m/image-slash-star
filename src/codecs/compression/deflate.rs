@@ -336,8 +336,29 @@ pub(crate) fn compress_zlib_tiff(
     height: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CompressionResult<Vec<u8>> {
+    compress_zlib_repeated(data, row_len, height, 16_383, token)
+}
+
+#[cfg(feature = "png")]
+pub(crate) fn compress_zlib_png_repeated(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<Vec<u8>> {
+    compress_zlib_repeated(data, row_len, height, 32_767, token)
+}
+
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn compress_zlib_repeated(
+    data: &[u8],
+    row_len: usize,
+    height: usize,
+    block_tokens: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<Vec<u8>> {
     debug_assert_eq!(row_len.saturating_mul(height), data.len());
-    super::zlib_ng::compress_level6_tiff(data, row_len, height, token)
+    super::zlib_ng::compress_level6_repeated(data, row_len, height, token, block_tokens)
 }
 
 /// Compress a PNG stream with token-aware interior checkpoints. Stored-block
