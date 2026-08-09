@@ -4,14 +4,14 @@ Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-09 against production implementation revision
 `5aa0d77b37a5d81e1149e5169915ce21c59b6454`, Rust test/runtime revision
-`35cf266552fa4cfaaef1e231bb01bead1c00d99b`, and benchmark-protocol revision
+`163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`d058105b-71d1-4fc5-9bc5-7ea473edbb7c`; the exact-head feature-matrix run is
-`4f8bbb4f-210a-4b34-91e8-33c1e7589d84`; and the current Coverage MCP snapshot
-is `d4a74b4d-3804-4224-b120-430af2cde3ec` from run
-`4b74e8de-14b9-4438-9a17-7471b12b3ad4`.
+`72051344-2014-4a9d-9fb8-e5e5a56a1f73`; the exact-head feature-matrix run is
+`18bb761a-7ade-4a78-8680-1b55562053ac`; and the current Coverage MCP snapshot
+is `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c` from run
+`ed54deb4-2f1f-45fb-9e45-204cb7ba8621`.
 
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
@@ -183,7 +183,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot `d4a74b4d-3804-4224-b120-430af2cde3ec` covers production revision `5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision `35cf266552fa4cfaaef1e231bb01bead1c00d99b`: 54,755/55,605 lines, 7,796/8,000 branches, 3,110/3,201 functions, and 84,422/86,315 regions. The exact-head feature-matrix run `4f8bbb4f-210a-4b34-91e8-33c1e7589d84` passed with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the native/WASI capability agreement marker and no `lock-wait` match. The exact-head Pillow parity run `d058105b-71d1-4fc5-9bc5-7ea473edbb7c` passed 1,445/1,445 checks in 860 ms, and nightly LLVM run `4b74e8de-14b9-4438-9a17-7471b12b3ad4` passed 85/85 tests in 58,885 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 850 lines, 204 branches, 91 functions, and 1,893 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted snapshot `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c` covers production revision `5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision `163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`: 54,756/55,605 lines, 7,797/8,000 branches, 3,110/3,201 functions, and 84,427/86,315 regions. The exact-head feature-matrix run `18bb761a-7ade-4a78-8680-1b55562053ac` passed with its native/WASI capability agreement marker; the exact-head Pillow parity run `72051344-2014-4a9d-9fb8-e5e5a56a1f73` passed 1,445/1,445 checks; and nightly LLVM run `ed54deb4-2f1f-45fb-9e45-204cb7ba8621` passed 85/85 tests in 70,409 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 849 lines, 203 branches, 91 functions, and 1,888 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -836,7 +836,7 @@ typed work-budget errors, sink prefixes, and rollback are outside its oracle.
 | QA-011 | No semver/public API diff runs before release. | Add a public API snapshot once enum/type decisions settle. |
 | QA-012 | Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification. | Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity. |
 | QA-013 | `cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured. | Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer. |
-| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled still codec and supported sequence path. JPEG, PNG, BMP, GIF still and sequence, WebP still and multi-frame sequence delivery, ICO still delivery, native AVIF still and sequence delivery, and the one-frame JPEG/BMP/WebP/ICO plus multi-page TIFF sequence deliveries now exercise multiple structural writes, policy preflight, sink-triggered cancellation where implemented, and one post-delivery flush with typed flush-failure coverage; JPEG still and one-frame sequence delivery additionally cover marker/scan boundaries, GIF delivery additionally covers signature/logical-screen, color-table, extension/image sub-block, and trailer segments, TIFF still and multi-page sequence delivery additionally cover the header, strip/padding, and IFD/value segments, and AVIF delivery additionally covers top-level ISO-BMFF box boundaries. The original Rust-only cross-codec contract proves a genuine partial second structural write for every available still writer and each supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer; test revision `d5f7e416b30862819dbddb38f8b6027cc4219076` reinforces that boundary in the exact-byte sink paths and both TIFF still compression options plus sequence delivery, with the selected `OutputWrite` cause and exact delivered-prefix preservation. Other short/interrupted writes, rollback, and partial-container cleanup remain open. | Define short-write, rollback, and recoverable cleanup behavior for the current structural boundaries before claiming a universal incremental writer. |
+| QA-016 | A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled still codec and supported sequence path. JPEG, PNG, BMP, GIF still and sequence, WebP still and multi-frame sequence delivery, ICO still delivery, native AVIF still and sequence delivery, and the one-frame JPEG/BMP/WebP/ICO plus multi-page TIFF sequence deliveries now exercise multiple structural writes, policy preflight, sink-triggered cancellation where implemented, and one post-delivery flush with typed flush-failure coverage; JPEG still and one-frame sequence delivery additionally cover marker/scan boundaries, GIF delivery additionally covers signature/logical-screen, color-table, extension/image sub-block, and trailer segments, TIFF still and multi-page sequence delivery additionally cover the header, strip/padding, and IFD/value segments, and AVIF delivery additionally covers top-level ISO-BMFF box boundaries. The Rust-only cross-codec contract at test/runtime revision `163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39` proves a genuine partial second structural write and post-delivery flush rejection for every available still writer and each supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer, with the selected `OutputWrite` cause, exactly one flush attempt, exact delivered-byte preservation, and no flush after a failed structural write. Short-write recovery beyond the tested prefix, rollback, and partial-container cleanup remain open. | Define short-write, rollback, and recoverable cleanup behavior for the current structural boundaries before claiming a universal incremental writer. |
 | QA-019 | Exact encoded-byte determinism is now proven between the ARM64 native host and `wasm32-wasip1` for a fixed encoder/decoder subset; x86-64, 32-bit, and big-endian lanes are still missing. | Run deterministic fixture subsets across the remaining targets and classify unavoidable native-oracle differences explicitly. |
 | QA-020 | Peak stack use and recursion depth are not measured for nested containers, TIFF directory graphs, DEFLATE/Huffman paths, or AV1 syntax. | Add bounded deep-structure fixtures and stack instrumentation before browser/embedded recommendations. |
 | QA-021 | Reverse-mapped/generated fixtures do not all retain generator version, parameters, first-divergence purpose, and minimized-input hash in the manifest. | Extend TST-009 with reproducible generation provenance and a regeneration check. |
@@ -6144,7 +6144,7 @@ workloads also passed. These are fixed-host/cache observations, not universal
 speed claims; the Rust-only runtime measurement remains separate from the
 Pillow-oracle result.
 
-Current acceptance record: direct-child peak-RSS benchmark measurement
+Historical acceptance record: direct-child peak-RSS benchmark measurement
 
 The benchmark-protocol slice is implemented at
 `4415a84463103d3d0916821a3ed8637b832442d6`; production behavior remains at
@@ -6170,6 +6170,36 @@ parity row or fixture, diagnostic origin, new test function, or coverage-only
 hook changed. Allocation counts, retained encoded/decoded cache bytes,
 caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
 QA-010/QA-030.
+
+Current acceptance record: cross-codec flush rejection
+
+The Rust-only sink contract is implemented at test/runtime revision
+`163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`; production behavior remains at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
+`partial_structural_sink_write_preserves_prefix_across_available_encoders`
+feature-gate test now also sends complete still and supported multi-frame
+sequence deliveries to a sink whose `flush` rejects after all bytes were
+accepted. Every available path must return one typed `OutputWrite` with the
+selected format and encode stage, attempt `flush` exactly once, and preserve
+the exact bytes already delivered. Partial second-write behavior remains
+separately asserted with an observable prefix and no flush attempt.
+
+This is Rust-only destination evidence: Pillow has no caller-owned sink,
+flush hook, typed output-write cause, or rollback equivalent. No production
+codec behavior, Pillow parity row or fixture, diagnostic origin, new test
+function, or coverage-only hook changed. Exact-head managed Pillow parity run
+`72051344-2014-4a9d-9fb8-e5e5a56a1f73` passed 1,445/1,445; feature-matrix run
+`18bb761a-7ade-4a78-8680-1b55562053ac` passed with
+`cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`, `debug=0`, and
+`verbose=0`, ending with the native/WASI capability agreement marker and no
+`lock-wait` match. Nightly LLVM run
+`ed54deb4-2f1f-45fb-9e45-204cb7ba8621` passed 85/85 tests in 70,409 ms and
+ingested snapshot `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c`: 54,756/55,605
+lines, 7,797/8,000 branches, 3,110/3,201 functions, and 84,427/86,315
+regions. These coverage totals are Rust implementation evidence, not Pillow
+parity; the known LLVM JSON segment-normalization warning remains. Rollback,
+short-write recovery beyond the tested prefix, and partial-container cleanup
+remain open.
 
 Historical acceptance record: WebP VP8 65,536-bit logical checkpoints
 

@@ -4,14 +4,14 @@ Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
 `5aa0d77b37a5d81e1149e5169915ce21c59b6454`, Rust test/runtime revision
-`35cf266552fa4cfaaef1e231bb01bead1c00d99b`, and benchmark-protocol revision
+`163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`d058105b-71d1-4fc5-9bc5-7ea473edbb7c`; the exact-head feature-matrix run is
-`4f8bbb4f-210a-4b34-91e8-33c1e7589d84`; and the current Coverage MCP snapshot
-is `d4a74b4d-3804-4224-b120-430af2cde3ec` from run
-`4b74e8de-14b9-4438-9a17-7471b12b3ad4`.
+`72051344-2014-4a9d-9fb8-e5e5a56a1f73`; the exact-head feature-matrix run is
+`18bb761a-7ade-4a78-8680-1b55562053ac`; and the current Coverage MCP snapshot
+is `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c` from run
+`ed54deb4-2f1f-45fb-9e45-204cb7ba8621`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2182,7 +2182,7 @@ workloads also passed. These are fixed-host/cache observations, not universal
 speed claims; the Rust-only runtime measurement remains separate from the
 Pillow-oracle result.
 
-Current acceptance record: direct-child peak-RSS benchmark measurement
+Historical acceptance record: direct-child peak-RSS benchmark measurement
 
 The benchmark-protocol slice is implemented at
 `4415a84463103d3d0916821a3ed8637b832442d6`; production behavior remains at
@@ -2208,6 +2208,36 @@ parity row or fixture, diagnostic origin, new test function, or coverage-only
 hook changed. Allocation counts, retained encoded/decoded cache bytes,
 caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
 QA-010/QA-030.
+
+Current acceptance record: cross-codec flush rejection
+
+The Rust-only sink contract is implemented at test/runtime revision
+`163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`; production behavior remains at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
+`partial_structural_sink_write_preserves_prefix_across_available_encoders`
+feature-gate test now also sends complete still and supported multi-frame
+sequence deliveries to a sink whose `flush` rejects after all bytes were
+accepted. Every available path must return one typed `OutputWrite` with the
+selected format and encode stage, attempt `flush` exactly once, and preserve
+the exact bytes already delivered. Partial second-write behavior remains
+separately asserted with an observable prefix and no flush attempt.
+
+This is Rust-only destination evidence: Pillow has no caller-owned sink,
+flush hook, typed output-write cause, or rollback equivalent. No production
+codec behavior, Pillow parity row or fixture, diagnostic origin, new test
+function, or coverage-only hook changed. Exact-head managed Pillow parity run
+`72051344-2014-4a9d-9fb8-e5e5a56a1f73` passed 1,445/1,445; feature-matrix run
+`18bb761a-7ade-4a78-8680-1b55562053ac` passed with
+`cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`, `debug=0`, and
+`verbose=0`, ending with the native/WASI capability agreement marker and no
+`lock-wait` match. Nightly LLVM run
+`ed54deb4-2f1f-45fb-9e45-204cb7ba8621` passed 85/85 tests in 70,409 ms and
+ingested snapshot `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c`: 54,756/55,605
+lines, 7,797/8,000 branches, 3,110/3,201 functions, and 84,427/86,315
+regions. These coverage totals are Rust implementation evidence, not Pillow
+parity; the known LLVM JSON segment-normalization warning remains. Rollback,
+short-write recovery beyond the tested prefix, and partial-container cleanup
+remain open.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
