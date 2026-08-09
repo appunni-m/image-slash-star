@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `a03cd555652232b8fa909deae0983b7c93e99e1d`; the claim-ledger fixture
+revision `e86a3f8575ba3b6911ee122b9911ddc1d13b61b4`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`17a93723-8330-4283-a4f9-ace16ccd9f77` (1,445/1,445 passed in 706 ms), and
-the latest feature matrix is `5703cd8d-a9a0-4673-8d6e-a5e5a74e6998` (passed in
-16,892 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `223f74bc-97c4-4fe9-93f5-514e034ef16f` from run
-`c5b7aa40-544f-4e52-bbf7-f620f637815f`, also at that revision: 55,654/56,522
-lines, 7,964/8,174 branches, 3,112/3,208 functions, and 85,576/87,511
+`bc24d021-fefa-4457-805e-e40781a6198d` (1,445/1,445 passed in 584 ms), and
+the latest feature matrix is `794e585d-e7a8-4d14-bea2-46fc8ce70098` (passed in
+18,523 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `67dd5c90-a55d-4227-8171-5d7b4dec263e` from run
+`9e67827e-508a-4534-99a9-3acfd2b53f60`, also at that revision: 55,655/56,524
+lines, 7,964/8,174 branches, 3,112/3,208 functions, and 85,578/87,516
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,386/2,465 lines,
-511/540 branches, 89/89 functions, and 3,454/3,726 regions; its backward-
+functions. The WebP encoder projection records 2,387/2,467 lines,
+511/540 branches, 89/89 functions, and 3,456/3,731 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. These are Rust implementation/coverage metrics, not
 Pillow-oracle coverage or allocator/OOM accounting.
@@ -485,6 +485,13 @@ token-aware path retains its separate output buffer and chunk-copy checkpoints
 so caller-controlled work and sink behavior do not change. This is an internal
 allocation boundary: Pillow parity verifies the resulting bytes and errors,
 while Rust-only feature-gated evidence owns allocation and token semantics.
+
+Within each VP8L token-stream candidate trial, the ordinary no-token winner
+suffix is now appended directly to the parent writer after capacity is
+reserved, then its empty vector is returned to the reusable output scratch.
+The token-aware path still copies the suffix in checkpointed chunks so
+cancellation and caller-sink behavior remain unchanged. This removes an
+internal result-copy boundary; it does not add a Pillow-observable contract.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns
