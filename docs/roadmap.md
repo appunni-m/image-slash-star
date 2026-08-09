@@ -3,7 +3,7 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `4c76598e9bb71133e626f42bfb94bcf1544bfa84`, and benchmark-protocol revision
+revision `630baeace17edb64bdc3dc7c5f3e95ea1130baa4`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -11,15 +11,15 @@ The last accepted managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`cb42a1d3-2a09-4baa-a75e-3614bd30dfab` (1,445/1,445 passed in 619 ms) and
-feature matrix `465b92d3-87b1-4c70-8cd8-e71cd8d16568` (passed in 24,514 ms);
+`1e6b0e82-67b8-4955-b6a9-7c90f0e43c89` (1,445/1,445 passed in 1,228 ms) and
+feature matrix `6e884473-afe3-4603-97da-c5d423aadc86` (passed in 59,890 ms);
 both recorded checkout HEAD
-`4c76598e9bb71133e626f42bfb94bcf1544bfa84`.
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no Coverage MCP rerun has yet been
-recorded for `4c76598e9bb71133e626f42bfb94bcf1544bfa84`. The exact-head managed
+recorded for `630baeace17edb64bdc3dc7c5f3e95ea1130baa4`. The exact-head managed
 parity and feature-matrix records above are test-result evidence, not coverage
 metrics.
 
@@ -193,9 +193,11 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current shared PNG/TIFF zlib-ng output-buffer ownership optimization, WebP candidate-prefix and candidate-suffix allocation optimizations, entropy-analysis pixel implementation, Huffman-RLE fill, Huffman-RLE reverse-tail scan, and Huffman-RLE token-materialization checkpoints, VP8 analysis-buffer reuse, and Huffman-tree leaf census/materialization/depth checkpoint, plus WebP animation assembly ownership, WebP CostManager interval-state reuse, WebP CostManager interval-scratch reuse, WebP CostManager population-buffer reuse, WebP CostManager candidate-estimate scratch reuse, WebP CostManager cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse, WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman traversal fixed-stack storage, WebP VP8L hash-chain result storage, WebP VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, WebP VP8L backward-reference scratch reuse, GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly, GIF indexed frame-diff state, TIFF sequence length planning, TIFF repeated-row Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row Deflate planning, PNG source-pixel ownership, and TIFF conditional source ownership, at production and test/runtime revision `4c76598e9bb71133e626f42bfb94bcf1544bfa84` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the accepted snapshot `208b22e7-5a8c-4884-8fd5-856293c45d01` covers production revision `bb48d168f94bedd8c2f9caf873e5a42d54690c47` and preceding test/runtime revision `8e58c8eda484a90cb68b277c22b776e7e2c7cd74`: 54,883/55,691 lines, 7,855/8,042 branches, 3,112/3,203 functions, and 84,607/86,439 regions. The last accepted feature-matrix run `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9` passed all configured lanes in 34,306 ms with its native/WASI capability agreement marker and no `lock-wait` match; the last accepted Pillow parity run `0121c773-64b8-4c09-b46e-8df639b046a4` passed 1,445/1,445 checks in 739 ms; and nightly LLVM run `afa2a5ab-c5a2-4be8-80c6-bd535440eafd` passed 85/85 tests in 57,076 ms and ingested the accepted snapshot above. The current shared PNG/TIFF zlib-ng output-buffer ownership optimization, WebP candidate-prefix and candidate-suffix allocation optimizations, entropy-analysis pixel implementation, Huffman-RLE fill, Huffman-RLE reverse-tail scan, and Huffman-RLE token-materialization checkpoints, VP8 analysis-buffer reuse, and Huffman-tree leaf census/materialization/depth checkpoint, plus WebP animation assembly ownership, WebP CostManager interval-state reuse, WebP CostManager interval-scratch reuse, WebP CostManager population-buffer reuse, WebP CostManager candidate-estimate scratch reuse, WebP CostManager cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes buffer reuse, WebP VP8L Huffman-token scratch reuse, WebP VP8L optimized-frequency scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse, WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman traversal fixed-stack storage, WebP VP8L Huffman-tree arena reuse, WebP VP8L hash-chain result storage, WebP VP8L image-stream scratch reuse, WebP VP8L histogram scratch reuse, WebP VP8L backward-reference scratch reuse, GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly, GIF indexed frame-diff state, TIFF sequence length planning, TIFF repeated-row Deflate planning, TIFF sink page-base planning, PNG all-level repeated-row Deflate planning, PNG source-pixel ownership, and TIFF conditional source ownership, at production and test/runtime revision `630baeace17edb64bdc3dc7c5f3e95ea1130baa4` have not received a managed coverage rerun, so this older snapshot remains an implementation record separate from current local benchmark timing. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 808 lines, 187 branches, 91 functions, and 1,832 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
-Revision-bound note: the backward-reference scratch-reuse implementation at
+Revision-bound note: the Huffman-tree arena implementation at
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`, the preceding backward-reference
+scratch-reuse implementation at
 `4c76598e9bb71133e626f42bfb94bcf1544bfa84`, the preceding histogram-clustering
 scratch-reuse implementation at
 `36ce85ba244d7195baef8d5fea7adcdd3cbcc613`, the preceding image-stream
@@ -208,7 +210,7 @@ fixed-stack storage implementation at
 implementation at `da2b9489fc3ac1ffcf94de5f4a685705d80d8702`
 have no managed coverage snapshot. The current managed Pillow and
 feature-matrix runs are test-result evidence from exact-head checkout
-`4c76598e9bb71133e626f42bfb94bcf1544bfa84`, not
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`, not
 coverage metrics or a Coverage MCP claim. The accepted Coverage MCP snapshot and
 its line/branch/function/region totals remain historical implementation/Rust
 coverage evidence, separate from Pillow-oracle parity.
@@ -1269,9 +1271,9 @@ being repeated as unfinished work.
    cost-model population, candidate-estimate, cache-transform, trace-cache,
    trace path/output, trace CostManager state, trace CostModel histogram reuse,
    candidate-source token scratch reuse, box-chain storage reuse, Huffman
-   traversal fixed-stack storage, hash-chain result storage, image-stream
-   scratch reuse, histogram-clustering scratch reuse, and backward-reference
-   scratch reuse.
+   traversal fixed-stack storage, Huffman-tree arena reuse, hash-chain result
+   storage, image-stream scratch reuse, histogram-clustering scratch reuse, and
+   backward-reference scratch reuse.
    Preserve the no-token hot path, use the existing WebP fixture rows for
    byte/error regression, and keep caller-budget-only evidence in the existing
    feature-gated contract; do not add a unit-test hook or synthetic parity
@@ -6394,6 +6396,33 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current acceptance record: WebP VP8L Huffman-tree arena reuse
+
+The lossless WebP VP8L Huffman-tree arena slice is implemented at
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`, following the preceding
+`4c76598e9bb71133e626f42bfb94bcf1544bfa84` backward-reference scratch reuse.
+VP8L Huffman-tree construction now retains a compact index arena per token
+stream instead of allocating boxed child nodes for every merge. The
+cancellation-aware stable ordering path copies weighted node indices rather
+than deep-cloning subtrees; arena contents reset before each tree and capacity
+survives sequential trees and image streams. Tree ordering, code lengths,
+encoded bytes, errors, and sink output remain unchanged. This is a Rust-only
+Huffman-tree allocation boundary: existing WebP encode rows and the fixture
+matrix provide byte/error regression evidence, while Pillow exposes no
+allocator-ownership contract. The clean warm-2 `fixture-benchmark@3` observation
+at source checkout `630baeace17edb64bdc3dc7c5f3e95ea1130baa4` passed the
+Pillow-parity workload (0.999031 s wall) and the separate Rust-only feature-gate
+workload (1.666358 s wall). These are host/cache/toolchain observations, not a
+comparative or universal performance claim. The native release `rlib` was
+7,997,080 bytes and the `wasm32-unknown-unknown` determinism artifact was
+24,763,448 bytes. No parity row, fixture-manifest entry, diagnostic origin, new
+test function, or coverage-only hook was added. Exact-head managed Pillow
+parity run `1e6b0e82-67b8-4955-b6a9-7c90f0e43c89` passed 1,445/1,445 checks;
+exact-head feature-matrix run `6e884473-afe3-4603-97da-c5d423aadc86` passed all
+configured native/WASI lanes with the capability agreement marker and no
+`lock-wait` match. Both managed runs have no configured coverage ingestion, so
+no Coverage MCP metric is claimed.
+
 Current acceptance record: WebP VP8L backward-reference scratch reuse
 
 The production and Rust test/runtime slice is implemented at
@@ -7453,6 +7482,32 @@ preserving ordinary and token-aware output/checkpoint behavior. Existing
 Pillow parity and Rust-only feature-gate suites are regression evidence for
 this implementation-only change; no new parity fixture, feature-gate test
 function, diagnostic origin, or coverage-only hook was added.
+
+The latest lossless WebP VP8L Huffman-tree arena slice is implemented at
+production and Rust test/runtime revision
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`, following backward-reference
+scratch reuse at `4c76598e9bb71133e626f42bfb94bcf1544bfa84`. VP8L Huffman-tree
+construction now retains a compact index arena per token stream instead of
+allocating boxed child nodes for every merge. The cancellation-aware stable
+ordering path copies weighted node indices rather than deep-cloning subtrees;
+arena contents reset before each tree and capacity survives sequential trees
+and image streams. Tree ordering, code lengths, encoded bytes, errors, and sink
+output remain unchanged. This is a Rust-only Huffman-tree scratch allocation
+boundary: existing WebP encode rows and the fixture matrix provide byte/error
+regression evidence, while Pillow exposes no allocator-ownership contract. The
+clean warm-2 `fixture-benchmark@3` observation at source checkout
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4` passed the Pillow-parity workload
+(0.999031 s wall) and the separate Rust-only feature-gate workload (1.666358 s
+wall). These are host/cache/toolchain observations, not a comparative or
+universal performance claim. The native release `rlib` was 7,997,080 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,763,448 bytes. No
+parity row, fixture-manifest entry, diagnostic origin, new test function, or
+coverage-only hook was added. Exact-head managed Pillow parity run
+`1e6b0e82-67b8-4955-b6a9-7c90f0e43c89` passed 1,445/1,445 checks; exact-head
+feature-matrix run `6e884473-afe3-4603-97da-c5d423aadc86` passed all configured
+native/WASI lanes with the capability agreement marker and no `lock-wait` match.
+Both managed runs have no configured coverage ingestion, so no Coverage MCP
+metric is claimed.
 
 The latest lossless WebP VP8L backward-reference scratch-reuse slice is
 implemented at production and Rust test/runtime revision
@@ -8786,7 +8841,9 @@ boundary is closed at
 scratch-reuse boundary is closed at
 `36ce85ba244d7195baef8d5fea7adcdd3cbcc613`; the backward-reference
 scratch-reuse boundary is closed at
-`4c76598e9bb71133e626f42bfb94bcf1544bfa84`; finer Huffman/tree and other
+`4c76598e9bb71133e626f42bfb94bcf1544bfa84`; the Huffman-tree arena storage
+reuse boundary is closed at
+`630baeace17edb64bdc3dc7c5f3e95ea1130baa4`; finer Huffman/tree and other
 uncheckpointed work remain open, as do JPEG
 interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
