@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2`; the claim-ledger baseline remains
+`f5eacca47a32d9ad0208700b2656ffc6b4d79a8e`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -413,6 +413,8 @@ interval, after each 16,384-boolean first-partition bit interval, after each
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, and 1,048,576-bit logical coefficient intervals, after each 16,384-boolean coefficient-bit
 interval, and after each
 1,024-byte boolean-bitstream output interval before final container assembly.
+The token-aware native lossless VP8L writer also copies its complete RIFF
+frame payload in 1,024-byte chunks; the no-token path retains one bulk copy.
 Lossless WebP
 VP8L additionally charges around predictor image-width tile-row copies, tile
 scans/mode application and
@@ -954,6 +956,46 @@ current aggregate shortfall is 820 lines, 199 branches, 80 functions, and
 1,822 regions. In `src/codecs/webp/encode/mod.rs`, coverage is 617/740 lines,
 84/98 branches, 47/59 functions, and 1,008/1,272 regions. The parity,
 feature-matrix, and coverage records remain separate evidence systems.
+
+Current lossless WebP VP8L RIFF container-copy acceptance record
+
+Implementation revision `f5eacca47a32d9ad0208700b2656ffc6b4d79a8e` keeps the
+ordinary no-token native VP8L RIFF frame copy as one bulk append, while the
+token-aware path copies the complete frame payload in 1,024-byte chunks and
+polls after each complete chunk. The existing
+`encode_work_budget_is_a_non_parity_result_contract` uses its deterministic
+128×128 patterned RGB `output_lossless_image`, whose encoded output is exactly
+1,764 bytes. The pre-fix bulk-copy control completed at `maximum: 99,250`; the
+chunked path rejects the same whole-buffer call at `maximum: 99,250`,
+`observed: 99,251`. Its direct-sink witness rejects at `maximum: 99,249`,
+`observed: 99,250`, before delivery, with sentinel `[0xAB]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added.
+
+Local focused `encode_work_budget_is_a_non_parity_result_contract` passed 1/1
+in approximately 2.41 s; `cargo check --all-features --all-targets --locked`,
+strict Clippy, rustfmt check, and `git diff --check` passed.
+
+Exact-head managed feature-matrix run
+`8bacf2b5-1338-4b2d-bcd5-379e277e86da` passed all 33 configured lanes in
+52,811 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, and `verbose=0`; exact-head Pillow parity run
+`3212f4d1-5897-4b02-9843-5d04d2e347bb` passed 1,445/1,445 checks in 1,467 ms.
+
+Nightly LLVM run `f3edb17a-24ee-4a34-8565-f088ec36cc97` passed 85/85 tests
+in 62,723 ms and ingested snapshot
+`3527ccf6-8bbc-405c-9bef-421166b98599`, retaining 54,304/55,119 lines,
+7,711/7,906 branches, 3,082/3,162 functions, and 83,818/85,644 regions.
+Compared with the preceding accepted snapshot
+`a9f63171-3e46-4a28-a0cf-e46f3b983be8`, covered/source deltas are `+8/+6`
+lines, `+1/+0` branches, `+0/+0` functions, and `+5/+5` regions. The known
+LLVM JSON segment-normalization warning remains; current aggregate shortfall
+is 815 lines, 195 branches, 80 functions, and 1,826 regions. Parity,
+feature, coverage, and non-Pillow-origin records remain separate.
 
 Current WebP container/metadata assembly acceptance record
 
