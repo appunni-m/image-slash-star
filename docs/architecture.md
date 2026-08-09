@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `cc00fe4f4e67e40bb9570dedac8d4b185745202f`; the claim-ledger fixture tuple
+revision `b770e3c4238194fa0c65f1490c20d0e8e14380d2`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -14,7 +14,7 @@ GIF sequence frame ownership, WebP CostManager interval-state reuse, WebP
 CostManager interval-scratch reuse, WebP CostManager population-buffer reuse,
 WebP CostManager candidate-estimate scratch reuse, WebP CostManager
 cache-transform scratch reuse, WebP VP8L trace-cache reuse, WebP VP8L GroupCodes
-buffer reuse, GIF indexed
+buffer reuse, WebP VP8L Huffman-token scratch reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -659,6 +659,13 @@ remain live until all token references for that trial have been emitted. This
 removes repeated per-group buffer allocation without changing histogram
 ownership, token-reference lookup, checkpoint ordering, encoded bytes, errors,
 or sink output. It is a Rust-only allocation optimization, not allocator/OOM
+accounting, recoverable-OOM handling, or a streaming guarantee.
+
+WebP VP8L Huffman tree writing reuses one compressed code-length token buffer
+across the sequential channel and histogram-group trees. The buffer is cleared
+and refilled only after the prior tree has finished consuming it, preserving
+token-aware checkpoints, the no-token path, encoded bytes, errors, and sink
+output. This is a Rust-only allocation optimization, not allocator/OOM
 accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
