@@ -721,6 +721,15 @@ fn compressed_huffman_tokens_with_checkpoint(
         return Ok(compressed_huffman_tokens(lengths));
     }
     let mut tokens = Vec::new();
+    let mut emitted_tokens = 0_usize;
+    let mut emit = |huffman_token: HuffmanToken| -> Result<(), EncodingError> {
+        tokens.push(huffman_token);
+        emitted_tokens += 1;
+        if emitted_tokens.is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
+            check_token(token)?;
+        }
+        Ok(())
+    };
     let mut previous = 8;
     let mut next_checkpoint = VP8L_HUFFMAN_CHECKPOINT_SYMBOLS;
     let mut i = 0;
@@ -749,51 +758,55 @@ fn compressed_huffman_tokens_with_checkpoint(
             // every shorter case exits immediately.
             loop {
                 if repetitions < 3 {
-                    tokens.extend((0..repetitions).map(|_| HuffmanToken { code: 0, extra: 0 }));
+                    for _ in 0..repetitions {
+                        emit(HuffmanToken { code: 0, extra: 0 })?;
+                    }
                     break;
                 } else if repetitions < 11 {
-                    tokens.push(HuffmanToken {
+                    emit(HuffmanToken {
                         code: 17,
                         extra: (repetitions - 3) as u8,
-                    });
+                    })?;
                     break;
                 } else if repetitions < 139 {
-                    tokens.push(HuffmanToken {
+                    emit(HuffmanToken {
                         code: 18,
                         extra: (repetitions - 11) as u8,
-                    });
+                    })?;
                     break;
                 } else {
-                    tokens.push(HuffmanToken {
+                    emit(HuffmanToken {
                         code: 18,
                         extra: 0x7f,
-                    });
+                    })?;
                     repetitions -= 138;
                 }
             }
         } else {
             if value != previous {
-                tokens.push(HuffmanToken {
+                emit(HuffmanToken {
                     code: value,
                     extra: 0,
-                });
+                })?;
                 repetitions -= 1;
             }
             while repetitions != 0 {
                 if repetitions < 3 {
-                    tokens.extend((0..repetitions).map(|_| HuffmanToken {
-                        code: value,
-                        extra: 0,
-                    }));
+                    for _ in 0..repetitions {
+                        emit(HuffmanToken {
+                            code: value,
+                            extra: 0,
+                        })?;
+                    }
                     break;
                 } else if repetitions < 7 {
-                    tokens.push(HuffmanToken {
+                    emit(HuffmanToken {
                         code: 16,
                         extra: (repetitions - 3) as u8,
-                    });
+                    })?;
                     break;
                 } else {
-                    tokens.push(HuffmanToken { code: 16, extra: 3 });
+                    emit(HuffmanToken { code: 16, extra: 3 })?;
                     repetitions -= 6;
                 }
             }
