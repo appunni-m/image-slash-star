@@ -10161,6 +10161,57 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             vec![0xC9],
             "the cluster-row checkpoint preserves the sink sentinel"
         );
+        // Populated VP8L tile-histogram collection now polls after each 64
+        // histograms while filtering and cloning the cluster input. The
+        // existing 64x64 lossless probe has exactly 64 histogram tiles and
+        // reaches this first collection boundary at 15,198 work units. This
+        // is Rust-only work-control evidence: Pillow has no caller token,
+        // typed work-budget result, caller-owned sink, or rollback contract.
+        let histogram_collection_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(15_198);
+        let histogram_collection_error = match image_slash_star::encode_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_collection_policy,
+        ) {
+            Ok(_) => return Err("VP8L histogram collection budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_collection_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 15_198,
+                observed: 15_199,
+            }
+        ));
+        let mut histogram_collection_sink = vec![0xC8];
+        let histogram_collection_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &histogram_collection_policy,
+            &mut histogram_collection_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L histogram collection sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            histogram_collection_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 15_198,
+                observed: 15_199,
+            }
+        ));
+        assert_eq!(histogram_collection_sink, vec![0xC8]);
         // Lossless VP8L RGB/RGBA materialization now polls after each 1,024
         // source pixels before the later stages begin. Pillow cannot exercise
         // this caller-work-budget boundary: it has no caller token, typed
