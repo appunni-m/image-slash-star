@@ -10487,10 +10487,82 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let lossless_image = DecodedImage::new(64, 64, lossless_pixels, ColorType::Rgb8);
+        let mut candidate_probe_pixels = Vec::with_capacity(160 * 160 * 3);
+        for _ in 0..160 {
+            for x in 0..160_u32 {
+                let value = x.wrapping_mul(37).wrapping_add(11).to_le_bytes();
+                candidate_probe_pixels.extend_from_slice(&value[..3]);
+            }
+        }
+        let candidate_probe_image =
+            DecodedImage::new(160, 160, candidate_probe_pixels, ColorType::Rgb8);
         let mut lossless_options = EncodeOptions::for_format(ImageFormat::WebP);
         if let EncodeOptions::WebP(options) = &mut lossless_options {
             options.lossless = Some(true);
         }
+        // VP8L backward-reference hash-chain selection now polls after each
+        // 64 completed chain-candidate trials. Pillow has no caller token,
+        // typed work-budget result, or caller-owned sink, so this remains
+        // Rust-only work-control evidence with no parity row or fixture
+        // manifest entry. The repeated-row fixture reaches the first new
+        // candidate-trial poll at the exact whole-buffer and sink boundary
+        // below; the no-token encoder retains its original tight candidate
+        // loop and the ordinary bytes remain identical with ample budget.
+        let candidate_probe_expected =
+            image_slash_star::encode(&candidate_probe_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &candidate_probe_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &unlimited,
+            )?,
+            candidate_probe_expected,
+            "an ample VP8L candidate-trial budget preserves byte identity"
+        );
+        let candidate_probe_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(16_254);
+        let candidate_probe_error = match image_slash_star::encode_with_policy(
+            &candidate_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &candidate_probe_policy,
+        ) {
+            Ok(_) => return Err("VP8L candidate-trial budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            candidate_probe_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 16_254,
+                observed: 16_255,
+            }
+        ));
+        let mut candidate_probe_sink = vec![0xD6];
+        let candidate_probe_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &candidate_probe_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &candidate_probe_policy,
+            &mut candidate_probe_sink,
+        ) {
+            Ok(_) => return Err("VP8L candidate-trial sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            candidate_probe_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 16_254,
+                observed: 16_255,
+            }
+        ));
+        assert_eq!(candidate_probe_sink, vec![0xD6]);
         // WebP source-mode preparation now expands L8 pixels in token-aware
         // 1,024-pixel intervals before VP8L work begins. Pillow has no caller
         // token, typed work-budget result, or caller-owned sink, so this is

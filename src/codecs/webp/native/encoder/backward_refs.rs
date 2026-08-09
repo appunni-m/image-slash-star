@@ -41,6 +41,7 @@ const COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES: usize = 256;
 const CACHE_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RUN_CHECKPOINT_PIXELS: usize = 256;
 const HASH_CHAIN_RESULT_CHECKPOINT_PIXELS: usize = 256;
+const HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS: usize = 64;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -70,6 +71,18 @@ fn checkpoint_cost_manager_update_work(
     *work = work.saturating_add(1);
     if (*work).is_multiple_of(COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES) {
         checkpoint(token)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn checkpoint_hash_chain_candidate_work(
+    token: &crate::CancellationToken,
+    work: &mut usize,
+) -> CheckpointResult<()> {
+    *work = work.saturating_add(1);
+    if (*work).is_multiple_of(HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS) {
+        checkpoint(Some(token))?;
     }
     Ok(())
 }
@@ -190,6 +203,7 @@ fn fill_hash_chain(
     }
     .min(WINDOW_SIZE);
     let mut base = size - 2;
+    let mut candidate_work = 0_usize;
     while base > 0 {
         if base.is_multiple_of(1024) {
             checkpoint(token)?;
@@ -217,20 +231,42 @@ fn fill_hash_chain(
 
         let mut candidate = chain[base];
         let good_enough = max_length.min(256);
-        while candidate >= minimum as i32 && remaining > 1 && best_length < MAX_LENGTH {
-            remaining -= 1;
-            let candidate_index = candidate as usize;
-            if pixels[candidate_index + best_length] == pixels[base + best_length] {
-                let current = match_length(pixels, candidate_index, base, max_length, token)?;
-                if current > best_length {
-                    best_length = current;
-                    best_distance = base - candidate_index;
-                    if best_length >= good_enough {
-                        break;
+        if let Some(token) = token {
+            while candidate >= minimum as i32 && remaining > 1 && best_length < MAX_LENGTH {
+                remaining -= 1;
+                let candidate_index = candidate as usize;
+                let mut reached_good_enough = false;
+                if pixels[candidate_index + best_length] == pixels[base + best_length] {
+                    let current =
+                        match_length(pixels, candidate_index, base, max_length, Some(token))?;
+                    if current > best_length {
+                        best_length = current;
+                        best_distance = base - candidate_index;
+                        reached_good_enough = best_length >= good_enough;
                     }
                 }
+                checkpoint_hash_chain_candidate_work(token, &mut candidate_work)?;
+                if reached_good_enough {
+                    break;
+                }
+                candidate = chain[candidate_index];
             }
-            candidate = chain[candidate_index];
+        } else {
+            while candidate >= minimum as i32 && remaining > 1 && best_length < MAX_LENGTH {
+                remaining -= 1;
+                let candidate_index = candidate as usize;
+                if pixels[candidate_index + best_length] == pixels[base + best_length] {
+                    let current = match_length(pixels, candidate_index, base, max_length, None)?;
+                    if current > best_length {
+                        best_length = current;
+                        best_distance = base - candidate_index;
+                        if best_length >= good_enough {
+                            break;
+                        }
+                    }
+                }
+                candidate = chain[candidate_index];
+            }
         }
 
         let mut maximum_base = base;
