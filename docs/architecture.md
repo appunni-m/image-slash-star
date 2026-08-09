@@ -4,11 +4,11 @@ Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
 `8361ceb5c1b69c75ea6555a01c9908fe5b37ac78` and test/runtime revision
-`8361ceb5c1b69c75ea6555a01c9908fe5b37ac78`; the claim-ledger fixture tuple
+`25cee2bb82e43d56cbd6f0b0fd5238d6818f7ff0`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for the current test/runtime revision is
-`58a71bc8-925c-4589-9bc5-6b2a92b83f87` from run
-`12ff4489-ccb8-4b5a-9e5a-f04716ab535b`.
+`c1e2648d-61b8-4015-b110-173966ae6ac5` from run
+`3f6c0c42-b74e-409d-8699-503e286eae59`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
