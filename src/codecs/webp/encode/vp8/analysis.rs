@@ -142,8 +142,9 @@ fn predict_block<const SIZE: usize>(
     left: Option<&[u8]>,
     top_left: u8,
     mode: u8,
-) -> Vec<u8> {
-    let mut output = vec![0; SIZE.wrapping_mul(SIZE)];
+    output: &mut [u8],
+) {
+    debug_assert_eq!(output.len(), SIZE.wrapping_mul(SIZE));
     let size_u32 = u32::from(SIZE.to_le_bytes()[0]);
     let denominator = size_u32.wrapping_mul(2);
     match mode {
@@ -215,7 +216,6 @@ fn predict_block<const SIZE: usize>(
             }
         }
     }
-    output
 }
 
 fn collect_histogram<C: AnalysisCheckpointControl>(
@@ -270,70 +270,102 @@ fn histogram_alpha(histogram: Histogram) -> i32 {
         .unwrap_or_default()
 }
 
-fn extract_block(
-    plane: &[u8],
+#[derive(Clone, Copy)]
+struct BlockRegion {
     stride: usize,
     width: usize,
     height: usize,
     origin_x: usize,
     origin_y: usize,
     size: usize,
-) -> Vec<u8> {
-    let mut output = vec![0; size.wrapping_mul(size)];
-    for row in 0..size {
-        let source_y = origin_y.wrapping_add(row).min(height.saturating_sub(1));
-        for column in 0..size {
-            let source_x = origin_x.wrapping_add(column).min(width.saturating_sub(1));
-            output[row.wrapping_mul(size).wrapping_add(column)] =
-                plane[source_y.wrapping_mul(stride).wrapping_add(source_x)];
-        }
-    }
-    output
 }
 
-fn boundary(
+impl BlockRegion {
+    fn new(
+        stride: usize,
+        width: usize,
+        height: usize,
+        origin_x: usize,
+        origin_y: usize,
+        size: usize,
+    ) -> Self {
+        Self {
+            stride,
+            width,
+            height,
+            origin_x,
+            origin_y,
+            size,
+        }
+    }
+}
+
+fn extract_block_into(plane: &[u8], region: BlockRegion, output: &mut [u8]) {
+    debug_assert_eq!(output.len(), region.size.wrapping_mul(region.size));
+    for row in 0..region.size {
+        let source_y = region
+            .origin_y
+            .wrapping_add(row)
+            .min(region.height.saturating_sub(1));
+        for column in 0..region.size {
+            let source_x = region
+                .origin_x
+                .wrapping_add(column)
+                .min(region.width.saturating_sub(1));
+            output[row.wrapping_mul(region.size).wrapping_add(column)] =
+                plane[source_y.wrapping_mul(region.stride).wrapping_add(source_x)];
+        }
+    }
+}
+
+fn fill_boundary(
     plane: &[u8],
-    stride: usize,
-    width: usize,
-    height: usize,
-    origin_x: usize,
-    origin_y: usize,
-    size: usize,
-) -> (Option<Vec<u8>>, Option<Vec<u8>>, u8) {
-    let top = (origin_y > 0).then(|| {
-        (0..size)
-            .map(|column| {
-                plane[origin_y
-                    .wrapping_sub(1)
-                    .wrapping_mul(stride)
-                    .wrapping_add(origin_x.wrapping_add(column).min(width.saturating_sub(1)))]
-            })
-            .collect()
-    });
-    let left = (origin_x > 0).then(|| {
-        (0..size)
-            .map(|row| {
-                plane[origin_y
-                    .wrapping_add(row)
-                    .min(height.saturating_sub(1))
-                    .wrapping_mul(stride)
-                    .wrapping_add(origin_x)
-                    .wrapping_sub(1)]
-            })
-            .collect()
-    });
-    let top_left = if origin_x > 0 && origin_y > 0 {
-        plane[origin_y
+    region: BlockRegion,
+    top: &mut [u8],
+    left: &mut [u8],
+) -> (bool, bool, u8) {
+    debug_assert!(top.len() >= region.size);
+    debug_assert!(left.len() >= region.size);
+    let has_top = region.origin_y > 0;
+    if has_top {
+        for (column, value) in top.iter_mut().take(region.size).enumerate() {
+            *value = plane[region
+                .origin_y
+                .wrapping_sub(1)
+                .wrapping_mul(region.stride)
+                .wrapping_add(
+                    region
+                        .origin_x
+                        .wrapping_add(column)
+                        .min(region.width.saturating_sub(1)),
+                )];
+        }
+    }
+    let has_left = region.origin_x > 0;
+    if has_left {
+        for (row, value) in left.iter_mut().take(region.size).enumerate() {
+            *value = plane[region
+                .origin_y
+                .wrapping_add(row)
+                .min(region.height.saturating_sub(1))
+                .wrapping_mul(region.stride)
+                .wrapping_add(region.origin_x)
+                .wrapping_sub(1)];
+        }
+    }
+    let top_left = if region.origin_x > 0 && region.origin_y > 0 {
+        plane[region
+            .origin_y
             .wrapping_sub(1)
-            .wrapping_mul(stride)
-            .wrapping_add(origin_x)
+            .wrapping_mul(region.stride)
+            .wrapping_add(region.origin_x)
             .wrapping_sub(1)]
-    } else if origin_y > 0 {
+    } else if region.origin_y > 0 {
         129
     } else {
         127
     };
-    (top, left, top_left)
+    (has_top, has_left, top_left)
 }
 
 fn assign_segments<C: AnalysisCheckpointControl>(
@@ -482,12 +514,28 @@ fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
     let mut alpha_counts = [0i32; MAX_ALPHA + 1];
     let mut alpha_sum = 0_i32;
     let mut chroma_alpha_sum = 0_i32;
+    let mut luma_prediction = [0_u8; 16 * 16];
+    let mut u_prediction = [0_u8; 8 * 8];
+    let mut v_prediction = [0_u8; 8 * 8];
+    let mut y_block = [0_u8; 16 * 16];
+    let mut u_block = [0_u8; 8 * 8];
+    let mut v_block = [0_u8; 8 * 8];
+    let mut y_top_buffer = [0_u8; 16];
+    let mut y_left_buffer = [0_u8; 16];
+    let mut u_top_buffer = [0_u8; 8];
+    let mut u_left_buffer = [0_u8; 8];
+    let mut v_top_buffer = [0_u8; 8];
+    let mut v_left_buffer = [0_u8; 8];
     for macroblock_y in 0..macroblock_height {
         for macroblock_x in 0..macroblock_width {
             let y_x = macroblock_x.wrapping_mul(16);
             let y_y = macroblock_y.wrapping_mul(16);
-            let y_block = extract_block(y_plane, width, width, height, y_x, y_y, 16);
-            let (y_top, y_left, y_top_left) = boundary(y_plane, width, width, height, y_x, y_y, 16);
+            let y_region = BlockRegion::new(width, width, height, y_x, y_y, 16);
+            extract_block_into(y_plane, y_region, &mut y_block);
+            let (has_y_top, has_y_left, y_top_left) =
+                fill_boundary(y_plane, y_region, &mut y_top_buffer, &mut y_left_buffer);
+            let y_top = has_y_top.then_some(&y_top_buffer[..16]);
+            let y_left = has_y_left.then_some(&y_left_buffer[..16]);
 
             let (best_luma_alpha, luma_mode, use_intra4) = if method <= 1 {
                 let strip_sums = std::array::from_fn::<_, 16, _>(|strip| {
@@ -520,9 +568,9 @@ fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
                 let mut best_luma_alpha = -1;
                 let mut luma_mode = 0;
                 for mode in 0..2 {
-                    let prediction =
-                        predict_block::<16>(y_top.as_deref(), y_left.as_deref(), y_top_left, mode);
-                    let histogram = collect_histogram(&[(&y_block, &prediction, 16)], checkpoint)?;
+                    predict_block::<16>(y_top, y_left, y_top_left, mode, &mut luma_prediction);
+                    let histogram =
+                        collect_histogram(&[(&y_block, &luma_prediction, 16)], checkpoint)?;
                     let alpha = histogram_alpha(histogram);
                     if alpha > best_luma_alpha {
                         best_luma_alpha = alpha;
@@ -534,50 +582,24 @@ fn analyze_with_checkpoint<C: AnalysisCheckpointControl>(
 
             let uv_x = macroblock_x.wrapping_mul(8);
             let uv_y = macroblock_y.wrapping_mul(8);
-            let u_block = extract_block(
-                u_plane,
-                chroma_width,
-                chroma_width,
-                chroma_height,
-                uv_x,
-                uv_y,
-                8,
-            );
-            let v_block = extract_block(
-                v_plane,
-                chroma_width,
-                chroma_width,
-                chroma_height,
-                uv_x,
-                uv_y,
-                8,
-            );
-            let (u_top, u_left, u_top_left) = boundary(
-                u_plane,
-                chroma_width,
-                chroma_width,
-                chroma_height,
-                uv_x,
-                uv_y,
-                8,
-            );
-            let (v_top, v_left, v_top_left) = boundary(
-                v_plane,
-                chroma_width,
-                chroma_width,
-                chroma_height,
-                uv_x,
-                uv_y,
-                8,
-            );
+            let uv_region =
+                BlockRegion::new(chroma_width, chroma_width, chroma_height, uv_x, uv_y, 8);
+            extract_block_into(u_plane, uv_region, &mut u_block);
+            extract_block_into(v_plane, uv_region, &mut v_block);
+            let (has_u_top, has_u_left, u_top_left) =
+                fill_boundary(u_plane, uv_region, &mut u_top_buffer, &mut u_left_buffer);
+            let (has_v_top, has_v_left, v_top_left) =
+                fill_boundary(v_plane, uv_region, &mut v_top_buffer, &mut v_left_buffer);
+            let u_top = has_u_top.then_some(&u_top_buffer[..8]);
+            let u_left = has_u_left.then_some(&u_left_buffer[..8]);
+            let v_top = has_v_top.then_some(&v_top_buffer[..8]);
+            let v_left = has_v_left.then_some(&v_left_buffer[..8]);
             let mut best_chroma_alpha = -1;
             let mut smallest_chroma_alpha = 0;
             let mut chroma_mode = 0;
             for mode in 0..2 {
-                let u_prediction =
-                    predict_block::<8>(u_top.as_deref(), u_left.as_deref(), u_top_left, mode);
-                let v_prediction =
-                    predict_block::<8>(v_top.as_deref(), v_left.as_deref(), v_top_left, mode);
+                predict_block::<8>(u_top, u_left, u_top_left, mode, &mut u_prediction);
+                predict_block::<8>(v_top, v_left, v_top_left, mode, &mut v_prediction);
                 let histogram = collect_histogram(
                     &[(&u_block, &u_prediction, 8), (&v_block, &v_prediction, 8)],
                     checkpoint,
