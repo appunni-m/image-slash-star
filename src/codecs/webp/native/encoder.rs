@@ -95,6 +95,7 @@ const VP8L_1048576_BITSTREAM_CHECKPOINT_BITS: usize = 1_048_576;
 const VP8L_2097152_BITSTREAM_CHECKPOINT_BITS: usize = 2_097_152;
 const VP8L_HUFFMAN_CHECKPOINT_SYMBOLS: usize = 64;
 const VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS: usize = 1_024;
+const VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS: usize = 256;
 const WEBP_PALETTE_CHECKPOINT_VALUES: usize = 64;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES: usize = 64;
 
@@ -1240,6 +1241,69 @@ fn write_group<C: BitWriterCheckpoint>(
     Ok(GroupCodes { lengths, codes })
 }
 
+#[derive(Clone, Copy)]
+struct TokenStreamReferenceContext<'a> {
+    width: usize,
+    multiple_groups: bool,
+    symbols: &'a [u16],
+    encoded_histogram_bits: u8,
+    tile_width: usize,
+    groups: &'a [GroupCodes],
+}
+
+#[inline(always)]
+fn write_token_reference<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
+    reference: backward_refs::Token,
+    position: usize,
+    context: TokenStreamReferenceContext<'_>,
+) -> Result<usize, EncodingError> {
+    let group_index = if context.multiple_groups {
+        let x = position % context.width;
+        let y = position / context.width;
+        usize::from(
+            context.symbols[(y >> context.encoded_histogram_bits) * context.tile_width
+                + (x >> context.encoded_histogram_bits)],
+        )
+    } else {
+        0
+    };
+    let lengths = &context.groups[group_index].lengths;
+    let codes = &context.groups[group_index].codes;
+    match reference {
+        backward_refs::Token::Literal(pixel) => {
+            let [red, green, blue, alpha] = channels(pixel);
+            let green_length = lengths[0][green];
+            let red_length = lengths[1][red];
+            let blue_length = lengths[2][blue];
+            let alpha_length = lengths[3][alpha];
+            let code = u64::from(codes[0][green])
+                | (u64::from(codes[1][red]) << green_length)
+                | (u64::from(codes[2][blue]) << (green_length + red_length))
+                | (u64::from(codes[3][alpha]) << (green_length + red_length + blue_length));
+            w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
+            Ok(1)
+        }
+        backward_refs::Token::Copy { distance, length } => {
+            let (symbol, extra_bits) = length_to_symbol(length);
+            let symbol = 256 + symbol;
+            w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
+            w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
+            let distance = backward_refs::plane_code(context.width, distance);
+            let (symbol, extra_bits) = length_to_symbol(distance);
+            w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
+            let distance_extra_bits = ((distance - 1) & ((1 << extra_bits) - 1)) as u64;
+            w.write_bits(distance_extra_bits, extra_bits)?;
+            Ok(length)
+        }
+        backward_refs::Token::Cache(index) => {
+            let symbol = 280 + index;
+            w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
+            Ok(1)
+        }
+    }
+}
+
 fn write_token_stream<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &[u32],
@@ -1323,53 +1387,30 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
-    let mut position: usize = 0;
-    for &reference in tokens {
-        if position.is_multiple_of(1024) {
-            check_token(token)?;
+    let reference_context = TokenStreamReferenceContext {
+        width,
+        multiple_groups,
+        symbols: &symbols,
+        encoded_histogram_bits,
+        tile_width,
+        groups: &groups,
+    };
+    if let Some(token) = token {
+        let mut position = 0;
+        let mut next_checkpoint = VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS;
+        for &reference in tokens {
+            let consumed = write_token_reference(w, reference, position, reference_context)?;
+            position += consumed;
+            while position >= next_checkpoint {
+                check_token(Some(token))?;
+                next_checkpoint =
+                    next_checkpoint.saturating_add(VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS);
+            }
         }
-        let group_index = if multiple_groups {
-            let x = position % width;
-            let y = position / width;
-            usize::from(
-                symbols[(y >> encoded_histogram_bits) * tile_width + (x >> encoded_histogram_bits)],
-            )
-        } else {
-            0
-        };
-        let lengths = &groups[group_index].lengths;
-        let codes = &groups[group_index].codes;
-        match reference {
-            backward_refs::Token::Literal(pixel) => {
-                let [red, green, blue, alpha] = channels(pixel);
-                let green_length = lengths[0][green];
-                let red_length = lengths[1][red];
-                let blue_length = lengths[2][blue];
-                let alpha_length = lengths[3][alpha];
-                let code = u64::from(codes[0][green])
-                    | (u64::from(codes[1][red]) << green_length)
-                    | (u64::from(codes[2][blue]) << (green_length + red_length))
-                    | (u64::from(codes[3][alpha]) << (green_length + red_length + blue_length));
-                w.write_bits(code, green_length + red_length + blue_length + alpha_length)?;
-                position += 1;
-            }
-            backward_refs::Token::Copy { distance, length } => {
-                let (symbol, extra_bits) = length_to_symbol(length);
-                let symbol = 256 + symbol;
-                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
-                w.write_bits(((length - 1) & ((1 << extra_bits) - 1)) as u64, extra_bits)?;
-                let distance = backward_refs::plane_code(width, distance);
-                let (symbol, extra_bits) = length_to_symbol(distance);
-                w.write_bits(u64::from(codes[4][symbol]), lengths[4][symbol])?;
-                let distance_extra_bits = ((distance - 1) & ((1 << extra_bits) - 1)) as u64;
-                w.write_bits(distance_extra_bits, extra_bits)?;
-                position += length;
-            }
-            backward_refs::Token::Cache(index) => {
-                let symbol = 280 + index;
-                w.write_bits(u64::from(codes[0][symbol]), lengths[0][symbol])?;
-                position += 1;
-            }
+    } else {
+        let mut position = 0;
+        for &reference in tokens {
+            position += write_token_reference(w, reference, position, reference_context)?;
         }
     }
     Ok(())
