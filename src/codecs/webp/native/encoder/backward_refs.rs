@@ -2329,10 +2329,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 length: 5,
             },
         ];
-        let _ = trace_backwards(&pixels, 1, &chain, &source, 0, None);
+        let mut trace_scratch = TraceScratch::default();
+        let _ = trace_backwards(&pixels, 1, &chain, &source, 0, None, &mut trace_scratch);
     });
     let _ = std::panic::catch_unwind(|| {
-        let _ = with_cache(&[0xff00_0000], &[Token::Cache(0)], 1, None);
+        let mut cache_scratch = CacheTransformScratch::default();
+        let _ = with_cache(
+            &[0xff00_0000],
+            &[Token::Cache(0)],
+            1,
+            None,
+            &mut cache_scratch,
+        );
     });
 }
 
