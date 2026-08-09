@@ -423,7 +423,7 @@ impl<'a> LosslessDecoder<'a> {
                 Ok(HuffmanTree::build_two_node(zero_symbol, one_symbol))
             }
         } else {
-            let mut code_length_code_lengths = vec![0; CODE_LENGTH_CODES];
+            let mut code_length_code_lengths = [0u16; CODE_LENGTH_CODES];
 
             let num_code_lengths = 4 + self.bit_reader.read_bits::<usize>(4)?;
             for i in 0..num_code_lengths {
@@ -432,16 +432,16 @@ impl<'a> LosslessDecoder<'a> {
             }
 
             let new_code_lengths =
-                self.read_huffman_code_lengths(code_length_code_lengths, alphabet_size)?;
+                self.read_huffman_code_lengths(&code_length_code_lengths, alphabet_size)?;
 
-            HuffmanTree::build_implicit(new_code_lengths)
+            HuffmanTree::build_implicit(&new_code_lengths)
         }
     }
 
     /// Reads huffman code lengths
     fn read_huffman_code_lengths(
         &mut self,
-        code_length_code_lengths: Vec<u16>,
+        code_length_code_lengths: &[u16],
         num_symbols: u16,
     ) -> Result<Vec<u16>, DecodingError> {
         let table = HuffmanTree::build_implicit(code_length_code_lengths)?;
@@ -894,11 +894,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = copy_needs_overlap_expansion(4, 3);
     let _ = copy_needs_overlap_expansion(4, 4);
 
-    let mut code_length_code_lengths = vec![0; CODE_LENGTH_CODES];
+    let mut code_length_code_lengths = [0u16; CODE_LENGTH_CODES];
     code_length_code_lengths[0] = 1;
     code_length_code_lengths[1] = 1;
     let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
-    let _ = decoder.read_huffman_code_lengths(code_length_code_lengths, 4);
+    let _ = decoder.read_huffman_code_lengths(&code_length_code_lengths, 4);
 
     let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
     let _ = reader.fill();
