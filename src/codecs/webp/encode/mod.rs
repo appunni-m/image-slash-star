@@ -13,6 +13,25 @@ use std::borrow::Cow;
 pub mod vp8;
 
 const PREPARE_CHECKPOINT_PIXELS: usize = 1_024;
+const OUTPUT_COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+fn extend_with_output_checkpoint(
+    output: &mut Vec<u8>,
+    source: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let Some(token) = token else {
+        output.extend_from_slice(source);
+        return Ok(());
+    };
+    for chunk in source.chunks(OUTPUT_COPY_CHECKPOINT_BYTES) {
+        output.extend_from_slice(chunk);
+        if chunk.len() == OUTPUT_COPY_CHECKPOINT_BYTES {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+    Ok(())
+}
 
 fn checkpoint_after_prepare_pixel(
     pixels_until_checkpoint: &mut usize,
@@ -217,7 +236,8 @@ pub fn encode_sequence(
 }
 
 /// Encode WebP animation keyframes while polling an optional cancellation
-/// token at frame and container-assembly boundaries.
+/// token at frame boundaries and each 1,024-byte container-assembly copy
+/// interval.
 pub fn encode_sequence_with_token(
     sequence: &DecodedSequence,
     opts: &WebPEncodeOptions,
@@ -255,7 +275,9 @@ pub fn encode_sequence_with_token(
         } else {
             &encoded[12..]
         };
-        encoded_frames.push((duration, chunks.to_vec()));
+        let mut copied_chunks = Vec::with_capacity(chunks.len());
+        extend_with_output_checkpoint(&mut copied_chunks, chunks, token)?;
+        encoded_frames.push((duration, copied_chunks));
         crate::codecs::error::check_cancelled(token)?;
     }
 
@@ -267,11 +289,11 @@ pub fn encode_sequence_with_token(
     let mut vp8x = vec![0x02 | u8::from(has_alpha).wrapping_shl(4), 0, 0, 0];
     vp8x.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
     vp8x.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
-    write_chunk(&mut output, b"VP8X", &vp8x);
+    write_chunk(&mut output, b"VP8X", &vp8x, token)?;
 
     let mut animation = vec![background[2], background[1], background[0], background[3]];
     animation.extend_from_slice(&loop_count.to_le_bytes());
-    write_chunk(&mut output, b"ANIM", &animation);
+    write_chunk(&mut output, b"ANIM", &animation, token)?;
 
     for (duration, chunks) in encoded_frames {
         crate::codecs::error::check_cancelled(token)?;
@@ -280,8 +302,8 @@ pub fn encode_sequence_with_token(
         payload.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
         payload.extend_from_slice(&duration.to_le_bytes()[..3]);
         payload.push(0x02);
-        payload.extend_from_slice(&chunks);
-        write_chunk(&mut output, b"ANMF", &payload);
+        extend_with_output_checkpoint(&mut payload, &chunks, token)?;
+        write_chunk(&mut output, b"ANMF", &payload, token)?;
     }
 
     crate::codecs::error::check_cancelled(token)?;
@@ -663,13 +685,22 @@ fn expand_luminance_alpha(
     }
 }
 
-fn write_chunk(output: &mut Vec<u8>, name: &[u8; 4], payload: &[u8]) {
+fn write_chunk(
+    output: &mut Vec<u8>,
+    name: &[u8; 4],
+    payload: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    // Metadata and animation payloads are caller-sized. Keep the ordinary
+    // no-token path as one bulk copy, while token-aware assembly polls every
+    // complete 1,024-byte output interval.
     output.extend_from_slice(name);
     output.extend_from_slice(&low_u32(payload.len()).to_le_bytes());
-    output.extend_from_slice(payload);
+    extend_with_output_checkpoint(output, payload, token)?;
     if !payload.len().is_multiple_of(2) {
         output.push(0);
     }
+    Ok(())
 }
 
 fn finish_riff(mut output: Vec<u8>, output_len: usize) -> CodecResult<Vec<u8>> {
@@ -725,20 +756,20 @@ fn attach_metadata(
     let mut vp8x = vec![flags, 0, 0, 0];
     vp8x.extend_from_slice(&width.saturating_sub(1).to_le_bytes()[..3]);
     vp8x.extend_from_slice(&height.saturating_sub(1).to_le_bytes()[..3]);
-    write_chunk(&mut output, b"VP8X", &vp8x);
+    write_chunk(&mut output, b"VP8X", &vp8x, token)?;
     crate::codecs::error::check_cancelled(token)?;
     if let Some(payload) = icc {
-        write_chunk(&mut output, b"ICCP", payload);
+        write_chunk(&mut output, b"ICCP", payload, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
-    output.extend_from_slice(encoded_chunks);
+    extend_with_output_checkpoint(&mut output, encoded_chunks, token)?;
     if let Some(payload) = exif {
         let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(payload);
-        write_chunk(&mut output, b"EXIF", payload);
+        write_chunk(&mut output, b"EXIF", payload, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
     if let Some(payload) = xmp {
-        write_chunk(&mut output, b"XMP ", payload);
+        write_chunk(&mut output, b"XMP ", payload, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
     #[cfg(coverage)]

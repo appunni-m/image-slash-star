@@ -9946,6 +9946,83 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(alpha_copy_total_sink, vec![0xB5]);
 
+        // Token-aware WebP container assembly copies caller-sized metadata and
+        // encoded chunks in 1,024-byte intervals. This is Rust-only work
+        // control: Pillow has no caller token, typed work-budget result, or
+        // caller-owned sink, so it does not belong in the parity matrix.
+        let mut metadata_webp_options = image_slash_star::WebPEncodeOptions::default();
+        metadata_webp_options.icc = Some(vec![0xA5; 4_096]);
+        let metadata_options: EncodeOptions = metadata_webp_options.into();
+        let mut assembly_pixels = Vec::with_capacity(128 * 128 * 3);
+        for index in 0..128 * 128 {
+            let x = u8::try_from(index % 128)?;
+            let y = u8::try_from(index / 128)?;
+            assembly_pixels.extend_from_slice(&[
+                x.wrapping_mul(17) ^ y.wrapping_mul(31),
+                x.wrapping_mul(43).wrapping_add(y.wrapping_mul(7)),
+                x.wrapping_mul(11) ^ y.wrapping_mul(19),
+            ]);
+        }
+        let assembly_image = DecodedImage::new(128, 128, assembly_pixels, ColorType::Rgb8);
+        let assembly_expected =
+            image_slash_star::encode(&assembly_image, ImageFormat::WebP, &metadata_options)?;
+        assert_eq!(assembly_expected.len(), 14_748);
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &assembly_image,
+                ImageFormat::WebP,
+                &metadata_options,
+                &unlimited,
+            )?,
+            assembly_expected,
+            "an ample WebP container-copy budget preserves byte identity"
+        );
+        // The pre-fix bulk-copy control completed at 889,783. The chunked
+        // path rejects at the later exact complete-call boundary, proving the
+        // new output-copy polls are causal rather than a post-copy-only check.
+        let assembly_policy = image_slash_star::EncodePolicy::new().with_max_work_units(889_795);
+        let assembly_error = match image_slash_star::encode_with_policy(
+            &assembly_image,
+            ImageFormat::WebP,
+            &metadata_options,
+            &assembly_policy,
+        ) {
+            Ok(_) => return Err("WebP container-copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            assembly_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 889_795,
+                observed: 889_796,
+            }
+        ));
+        let mut assembly_sink = vec![0xB7];
+        let assembly_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &assembly_image,
+            ImageFormat::WebP,
+            &metadata_options,
+            &assembly_policy,
+            &mut assembly_sink,
+        ) {
+            Ok(_) => return Err("WebP container-copy sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            assembly_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 889_795,
+                observed: 889_796,
+            }
+        ));
+        assert_eq!(assembly_sink, vec![0xB7]);
+
         let bounded = image_slash_star::EncodePolicy::new().with_max_work_units(8);
         let error = match image_slash_star::encode_with_policy(
             &image,
