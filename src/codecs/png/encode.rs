@@ -6,6 +6,7 @@ use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::encode_policy::EncodePolicy;
 use crate::types::{ColorType, DecodedImage, ImageMode};
 use crate::{CodecOperation, ImageFormat};
+use std::borrow::Cow;
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 // Keep long adaptive-filter rows interruptible without charging every byte.
@@ -64,42 +65,44 @@ fn write_encoded(
 
     let width = bounded_usize(img.width);
     let height = bounded_usize(img.height);
-    let (png_color, depth, row_bytes, filter_bytes, pixels) = match img.mode {
-        ImageMode::L1 => {
-            let row_bytes = width.div_ceil(8);
-            (0, 1, row_bytes, 1, img.pixels.clone())
-        }
-        ImageMode::P8 => (3, 8, width, 1, img.pixels.clone()),
-        ImageMode::L16 => {
-            let mut big_endian = Vec::with_capacity(img.pixels.len());
-            for sample in img.pixels.chunks_exact(2) {
-                crate::codecs::error::check_cancelled(token)?;
-                big_endian
-                    .extend_from_slice(&u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes());
+    let (png_color, depth, row_bytes, filter_bytes, pixels): (u8, u8, usize, usize, Cow<'_, [u8]>) =
+        match img.mode {
+            ImageMode::L1 => {
+                let row_bytes = width.div_ceil(8);
+                (0, 1, row_bytes, 1, Cow::Borrowed(&img.pixels))
             }
-            (0, 16, width.saturating_mul(2), 2, big_endian)
-        }
-        _ => {
-            let (png_color, channels) = match img.color {
-                ColorType::L8 => (0, 1usize),
-                ColorType::La8 => (4, 2),
-                ColorType::Rgb8 => (2, 3),
-                ColorType::Rgba8 => (6, 4),
-                _ => {
-                    return Err(CodecError::Unsupported(
-                        "PNG cannot encode this image mode".to_owned(),
-                    ));
+            ImageMode::P8 => (3, 8, width, 1, Cow::Borrowed(&img.pixels)),
+            ImageMode::L16 => {
+                let mut big_endian = Vec::with_capacity(img.pixels.len());
+                for sample in img.pixels.chunks_exact(2) {
+                    crate::codecs::error::check_cancelled(token)?;
+                    big_endian.extend_from_slice(
+                        &u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes(),
+                    );
                 }
-            };
-            (
-                png_color,
-                8,
-                width.saturating_mul(channels),
-                channels,
-                img.pixels.clone(),
-            )
-        }
-    };
+                (0, 16, width.saturating_mul(2), 2, Cow::Owned(big_endian))
+            }
+            _ => {
+                let (png_color, channels) = match img.color {
+                    ColorType::L8 => (0, 1usize),
+                    ColorType::La8 => (4, 2),
+                    ColorType::Rgb8 => (2, 3),
+                    ColorType::Rgba8 => (6, 4),
+                    _ => {
+                        return Err(CodecError::Unsupported(
+                            "PNG cannot encode this image mode".to_owned(),
+                        ));
+                    }
+                };
+                (
+                    png_color,
+                    8,
+                    width.saturating_mul(channels),
+                    channels,
+                    Cow::Borrowed(&img.pixels),
+                )
+            }
+        };
 
     let filter = if img.mode == ImageMode::P8 {
         Filter::None
