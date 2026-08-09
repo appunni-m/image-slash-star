@@ -12384,6 +12384,55 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(trace_replay_sink, vec![0xD9]);
+        // VP8L token-stream reference emission now polls after each 256
+        // consumed pixels, including every boundary crossed by one Copy
+        // token. The ordinary no-token stream keeps its original tight loop.
+        // The first checkpoint on this existing patterned probe is
+        // 94,453/94,454 work units. Pillow has no caller token, typed budget
+        // result, caller-owned sink, or rollback equivalent, so this remains
+        // Rust-only evidence with no parity row or coverage-only hook.
+        let token_stream_policy = image_slash_star::EncodePolicy::new().with_max_work_units(94_453);
+        let token_stream_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &token_stream_policy,
+        ) {
+            Ok(_) => return Err("VP8L token-stream budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            token_stream_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 94_453,
+                observed: 94_454,
+            }
+        ));
+        let mut token_stream_sink = vec![0xDC];
+        let token_stream_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &token_stream_policy,
+            &mut token_stream_sink,
+        ) {
+            Ok(_) => return Err("VP8L token-stream sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            token_stream_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 94_453,
+                observed: 94_454,
+            }
+        ));
+        assert_eq!(token_stream_sink, vec![0xDC]);
         // Huffman-tree emission now checkpoints simple-tree symbol discovery
         // after each 64 code-length slots and the code-length-token frequency
         // scan after each 16 compressed token entries. A generated LCG probe
