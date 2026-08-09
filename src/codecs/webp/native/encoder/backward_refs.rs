@@ -728,6 +728,18 @@ struct CostModel {
     distance: [u32; 40],
 }
 
+impl Default for CostModel {
+    fn default() -> Self {
+        Self {
+            green: Vec::new(),
+            red: [0; 256],
+            blue: [0; 256],
+            alpha: [0; 256],
+            distance: [0; 40],
+        }
+    }
+}
+
 pub(super) fn fast_slog(value: u32) -> u64 {
     if value < 256 {
         (f64::from(value) * f64::from(value).log2() * f64::from(1_u32 << 23)).round_ties_even()
@@ -1117,105 +1129,99 @@ fn population_cost_in_place_with_checkpoint(
     Ok(())
 }
 
-fn cost_model(tokens: &[Token], cache_bits: u8, width: usize) -> CostModel {
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
-    let mut red = [0_u32; 256];
-    let mut blue = [0_u32; 256];
-    let mut alpha = [0_u32; 256];
-    let mut distance = [0_u32; 40];
-    for &token in tokens {
-        match token {
-            Token::Literal(pixel) => {
-                let [r, g, b, a] = super::channels(pixel);
-                green[g] += 1;
-                red[r] += 1;
-                blue[b] += 1;
-                alpha[a] += 1;
-            }
-            Token::Copy {
-                distance: d,
-                length,
-            } => {
-                let (length_code, length_extra) = prefix(length);
-                let (distance_code, distance_extra) = prefix(plane_code(width, d));
-                green[256 + length_code] += 1;
-                distance[distance_code] += 1;
-                let _ = (length_extra, distance_extra);
-            }
-            Token::Cache(index) => green[280 + index] += 1,
-        }
+impl CostModel {
+    fn reset(&mut self, cache_bits: u8) {
+        let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
+        self.green.resize(280 + cache_size, 0);
+        self.green.fill(0);
+        self.red.fill(0);
+        self.blue.fill(0);
+        self.alpha.fill(0);
+        self.distance.fill(0);
     }
-    // Each population cost is bounded by the VP8L alphabet and fixed-point
-    // scale, so the reference representation is guaranteed to fit `i32`.
-    population_cost_in_place(&mut green);
-    population_cost_in_place(&mut red);
-    population_cost_in_place(&mut blue);
-    population_cost_in_place(&mut alpha);
-    population_cost_in_place(&mut distance);
-    CostModel {
-        green,
-        red,
-        blue,
-        alpha,
-        distance,
-    }
-}
 
-fn cost_model_with_checkpoint(
-    tokens: &[Token],
-    cache_bits: u8,
-    width: usize,
-    token: CheckpointToken<'_>,
-) -> CheckpointResult<CostModel> {
-    if token.is_none() {
-        return Ok(cost_model(tokens, cache_bits, width));
-    }
-    let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
-    let mut green = vec![0_u32; 280 + cache_size];
-    let mut red = [0_u32; 256];
-    let mut blue = [0_u32; 256];
-    let mut alpha = [0_u32; 256];
-    let mut distance = [0_u32; 40];
-    for (index, &item) in tokens.iter().enumerate() {
-        match item {
-            Token::Literal(pixel) => {
-                let [r, g, b, a] = super::channels(pixel);
-                green[g] += 1;
-                red[r] += 1;
-                blue[b] += 1;
-                alpha[a] += 1;
+    fn prepare_without_checkpoint(&mut self, tokens: &[Token], cache_bits: u8, width: usize) {
+        self.reset(cache_bits);
+        for &token in tokens {
+            match token {
+                Token::Literal(pixel) => {
+                    let [r, g, b, a] = super::channels(pixel);
+                    self.green[g] += 1;
+                    self.red[r] += 1;
+                    self.blue[b] += 1;
+                    self.alpha[a] += 1;
+                }
+                Token::Copy {
+                    distance: d,
+                    length,
+                } => {
+                    let (length_code, length_extra) = prefix(length);
+                    let (distance_code, distance_extra) = prefix(plane_code(width, d));
+                    self.green[256 + length_code] += 1;
+                    self.distance[distance_code] += 1;
+                    let _ = (length_extra, distance_extra);
+                }
+                Token::Cache(index) => self.green[280 + index] += 1,
             }
-            Token::Copy {
-                distance: d,
-                length,
-            } => {
-                let (length_code, length_extra) = prefix(length);
-                let (distance_code, distance_extra) = prefix(plane_code(width, d));
-                green[256 + length_code] += 1;
-                distance[distance_code] += 1;
-                let _ = (length_extra, distance_extra);
-            }
-            Token::Cache(cache_index) => green[280 + cache_index] += 1,
         }
-        if (index + 1).is_multiple_of(COST_CHECKPOINT_TOKENS) {
-            checkpoint(token)?;
-        }
+        // Each population cost is bounded by the VP8L alphabet and fixed-point
+        // scale, so the reference representation is guaranteed to fit `i32`.
+        population_cost_in_place(&mut self.green);
+        population_cost_in_place(&mut self.red);
+        population_cost_in_place(&mut self.blue);
+        population_cost_in_place(&mut self.alpha);
+        population_cost_in_place(&mut self.distance);
     }
-    // Each population cost is bounded by the VP8L alphabet and fixed-point
-    // scale, so the reference representation is guaranteed to fit `i32`.
-    population_cost_in_place_with_checkpoint(&mut green, token)?;
-    population_cost_in_place_with_checkpoint(&mut red, token)?;
-    population_cost_in_place_with_checkpoint(&mut blue, token)?;
-    population_cost_in_place_with_checkpoint(&mut alpha, token)?;
-    population_cost_in_place_with_checkpoint(&mut distance, token)?;
-    Ok(CostModel {
-        green,
-        red,
-        blue,
-        alpha,
-        distance,
-    })
+
+    fn prepare_with_checkpoint(
+        &mut self,
+        tokens: &[Token],
+        cache_bits: u8,
+        width: usize,
+        token: CheckpointToken<'_>,
+    ) -> CheckpointResult<()> {
+        if token.is_none() {
+            self.prepare_without_checkpoint(tokens, cache_bits, width);
+            return Ok(());
+        }
+        let Some(token) = token else {
+            unreachable!("checked checkpoint token is present");
+        };
+        self.reset(cache_bits);
+        for (index, &item) in tokens.iter().enumerate() {
+            match item {
+                Token::Literal(pixel) => {
+                    let [r, g, b, a] = super::channels(pixel);
+                    self.green[g] += 1;
+                    self.red[r] += 1;
+                    self.blue[b] += 1;
+                    self.alpha[a] += 1;
+                }
+                Token::Copy {
+                    distance: d,
+                    length,
+                } => {
+                    let (length_code, length_extra) = prefix(length);
+                    let (distance_code, distance_extra) = prefix(plane_code(width, d));
+                    self.green[256 + length_code] += 1;
+                    self.distance[distance_code] += 1;
+                    let _ = (length_extra, distance_extra);
+                }
+                Token::Cache(cache_index) => self.green[280 + cache_index] += 1,
+            }
+            if (index + 1).is_multiple_of(COST_CHECKPOINT_TOKENS) {
+                checkpoint(Some(token))?;
+            }
+        }
+        // Each population cost is bounded by the VP8L alphabet and fixed-point
+        // scale, so the reference representation is guaranteed to fit `i32`.
+        population_cost_in_place_with_checkpoint(&mut self.green, Some(token))?;
+        population_cost_in_place_with_checkpoint(&mut self.red, Some(token))?;
+        population_cost_in_place_with_checkpoint(&mut self.blue, Some(token))?;
+        population_cost_in_place_with_checkpoint(&mut self.alpha, Some(token))?;
+        population_cost_in_place_with_checkpoint(&mut self.distance, Some(token))?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -1715,6 +1721,7 @@ struct TraceScratch {
     cache: Vec<u32>,
     path: Vec<usize>,
     output: Vec<Token>,
+    model: Option<CostModel>,
     manager: Option<CostManager>,
 }
 
@@ -1745,10 +1752,11 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     scratch: &mut TraceScratch,
 ) -> CheckpointResult<Vec<Token>> {
     let mut manager = scratch.manager.take().unwrap_or_default();
+    let mut model = scratch.model.take().unwrap_or_default();
     let result = (|| -> CheckpointResult<Vec<Token>> {
         checkpoint(token)?;
         const SCALE: i64 = 1 << 23;
-        let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
+        model.prepare_with_checkpoint(source, cache_bits, width, token)?;
         manager.prepare_with_checkpoint(pixels.len(), &model, token)?;
         checkpoint(token)?;
         scratch
@@ -1960,6 +1968,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         }
         Ok(core::mem::take(output))
     })();
+    scratch.model = Some(model);
     scratch.manager = Some(manager);
     result
 }
@@ -2116,7 +2125,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = prefix(300);
     let mut population = [70_000, 1];
     population_cost_in_place(&mut population);
-    let model = cost_model(&[Token::Literal(0xff00_0000)], 0, 1);
+    let mut model = CostModel::default();
+    model.prepare_without_checkpoint(&[Token::Literal(0xff00_0000)], 0, 1);
     let mut manager = CostManager::default();
     manager.prepare_without_checkpoint(8, &model);
     manager.insert_min_interval(CostInterval {
