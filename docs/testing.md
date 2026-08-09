@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`d459fc2d79234981b744da10c744b1fa9ab54b10c65169e1149a6ba0c93ae27b`, and
+`dfdfdb8ad1c88ee65ace9d7fb38ef4296df1ab7360512f04625f9ede413075f2`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6542,21 +6542,21 @@ generated-matrix SHA-256
 The map also pins the independent inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 72 named witnesses, 78 distinct active WebP rows, 40 successful
+properties, 71 named witnesses, 78 distinct active WebP rows, 41 successful
 structural witnesses, and 40 malformed parser witnesses.
 
 The color-indexing size-band, subtract-green, color-transform, meta-Huffman,
-and entropy-image
+entropy-image, and successful cache-boundary
 properties are
 `witnessed` only at their explicitly listed scopes: the color-indexing rows
 remain Pillow-origin outer-result fixtures while the independent inspector
 proves the transform and table-size fields, the subtract-green encode artifact
 is parsed independently, the color-transform rows prove the selected block
-sizes, the meta-Huffman rows prove the selected one- and two-group forms, and
-the entropy-image rows prove the selected 2×1 and 24×24 dimensions. The other
-9 properties remain deliberately
+sizes, the meta-Huffman rows prove the selected one- and two-group forms, the
+entropy-image rows prove the selected 2×1 and 24×24 dimensions, and the cache
+rows prove the selected 1- and 10-bit widths. The other 8 properties remain deliberately
 marked `candidate` at the full-category level; their named rows are
-Pillow-origin outer-result fixtures, while the 40 successful structural
+Pillow-origin outer-result fixtures, while the 41 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
 entropy-image facts. The 40 malformed witnesses independently check rejection
