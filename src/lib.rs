@@ -964,8 +964,8 @@ pub fn encode_with_policy(
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
 /// collection and index packing after each 1,024 source pixels, lossy WebP
-/// VP8/ALPH RIFF payload and compressed/raw alpha-stream buffer copies after
-/// each 1,024 output bytes, and
+/// VP8/ALPH RIFF payload and compressed/raw alpha-stream buffer copies, plus
+/// lossless VP8L candidate-trial suffix copies, after each 1,024 output bytes;
 /// nearest-delta candidate scans
 /// after each 64 candidates; lossless VP8L image-palette
 /// construction and palette-mode index packing after each 1,024 source pixels,
@@ -1009,8 +1009,8 @@ pub fn encode_with_policy(
 /// bitstream-output,
 /// and token-stream stages, codec-result, and
 /// metadata-assembly boundaries, including lossy WebP VP8/ALPH RIFF payload,
-/// lossless VP8L RIFF frame, and WebP container/metadata copies after each
-/// 1,024 output bytes; native
+/// lossless VP8L candidate-trial suffix and RIFF frame, and WebP
+/// container/metadata copies after each 1,024 output bytes; native
 /// AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence

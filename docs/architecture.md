@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`62ccc3800be8960af5c738e0fd5015f77ba92115`; the claim-ledger baseline remains
+`487348d01389eb8d100b8a668c9921d97634c022`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -359,6 +359,7 @@ translation cannot be bypassed.
 | Lossy WebP VP8 boolean-output flush checkpoints | Token-aware boolean flushes drain pending output runs through the existing 1,024-byte output accounting before returning; no-token encoding keeps the original flush helper |
 | Lossy WebP alpha-stream buffer-copy checkpoints | Token-aware compressed and raw alpha streams copy in 1,024-byte chunks and poll after each complete chunk; the existing final stage check covers a short tail, while the no-token path keeps one bulk copy |
 | Lossy WebP VP8/ALPH RIFF container-copy checkpoints | Token-aware native VP8 and extended ALPH/VP8 container payloads copy in 1,024-byte chunks; the no-token path retains one bulk copy |
+| Lossless WebP VP8L candidate-trial suffix-copy checkpoints | Token-aware VP8L candidate selection copies the winning suffix in 1,024-byte chunks; the no-token path retains one bulk suffix copy |
 | Lossless WebP VP8L RIFF frame-copy checkpoints | Token-aware native VP8L container assembly copies the complete frame payload in 1,024-byte chunks; the no-token path retains one bulk copy |
 | WebP container/metadata assembly checkpoints | Token-aware sequence and metadata assembly copies caller-sized chunk/payload bytes in 1,024-byte intervals; the no-token path retains one bulk copy and structural sink delivery still owns its prefix semantics |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
@@ -404,7 +405,8 @@ stable sort; the
 no-token paths retain their original tight loops. Candidate trials reuse the
 already-emitted prefix and retain only each trial's suffix, avoiding repeated
 prefix copies without changing the selected bitstream or adding a new public
-work-budget result.
+work-budget result; the token-aware winner suffix is copied in 1,024-byte
+intervals, while the no-token winner copy remains bulk.
 
 `detect_format` recognizes all eight container signatures even when a codec
 feature is disabled. An operation that requires a disabled codec returns

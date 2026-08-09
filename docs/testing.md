@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`62ccc3800be8960af5c738e0fd5015f77ba92115`; the claim-ledger baseline remains
+`487348d01389eb8d100b8a668c9921d97634c022`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -1040,6 +1040,43 @@ lines, `+4/+4` branches, `+1/+1` functions, and `+32/+38` regions. The known
 LLVM JSON segment-normalization warning remains; current aggregate shortfall
 is 815 lines, 195 branches, 80 functions, and 1,832 regions. Parity, feature,
 coverage, and non-Pillow-origin records remain separate.
+
+Current lossless WebP VP8L candidate-trial suffix-copy acceptance record
+
+Implementation revision `487348d01389eb8d100b8a668c9921d97634c022` adds the
+VP8L candidate-trial suffix copy. VP8L candidate trials already
+reuse the emitted prefix and retain only each candidate suffix. The token-aware
+winner-selection path now copies that suffix in 1,024-byte chunks, while the
+ordinary no-token path keeps one bulk suffix copy. The existing
+`encode_work_budget_is_a_non_parity_result_contract` reuses its deterministic
+128×128 LCG lossless probe, whose complete output is exactly 49,236 bytes.
+The pre-fix bulk-suffix control completes at `139,125`; the chunked path
+rejects at `maximum: 139,172`, `observed: 139,173`, proving 48 new complete
+copy intervals rather than a final-check artifact. The direct-sink witness
+rejects at `maximum: 139,171`, `observed: 139,172` before delivery, with
+sentinel `[0xDB]` untouched.
+
+This is Rust-only interruption evidence, not a Pillow parity fixture or row.
+Pillow has no caller token, typed work-budget result, caller-owned sink, or
+rollback contract, so no new parity row, fixture-manifest row, diagnostic
+origin, synthetic unit test, new test function, or coverage-only hook was
+added; the existing feature-gated contract remains the correct home.
+
+Focused `encode_work_budget_is_a_non_parity_result_contract` passed 1/1 in
+approximately 2.36 s after the change. Exact-head managed evidence on the
+committed revision is recorded by feature-matrix run
+`2d14425b-9a6a-4ff3-9577-6b65dc444bc3` (all 33 configured lanes passed in
+47,038 ms; `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`,
+`debug=0`, `verbose=0`, with no retained `lock-wait` match), Pillow parity
+run `c7e67804-f563-43a4-8814-8cf8b5e88319` (1,445/1,445 in 808 ms), and
+nightly LLVM run `96813ff1-b9e7-45ac-945c-2c0318bc8538` (85/85 in 59,866 ms).
+The latter ingested snapshot `026d33d8-47e7-4d36-99a1-08757710f186`, with
+54,334/55,146 lines, 7,716/7,910 branches, 3,083/3,163 functions, and
+83,854/85,684 regions. Compared with the preceding accepted snapshot
+`c2c0d660-6dc9-4b07-ae1e-2eda1b201d53`, covered/source deltas are `+3/+0`
+lines, `+1/+0` branches, `+0/+0` functions, and `+4/+2` regions; the
+aggregate shortfall is 812 lines, 194 branches, 80 functions, and 1,830
+regions. The known LLVM JSON segment-normalization warning remains.
 
 Current WebP container/metadata assembly acceptance record
 
