@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and test/runtime
-revision `26e39ed56ba25159bea3d35cd5cc8045ee3acd06`; the claim-ledger fixture tuple
+revision `8a5a1e5aef3fc44e7cb2a9d956e6395c4389d5a7`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -22,7 +22,8 @@ metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
 WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
 reuse, WebP VP8L trace CostModel histogram reuse, WebP VP8L candidate-source
 token scratch reuse, WebP VP8L box-chain storage reuse, WebP VP8L Huffman
-traversal fixed-stack storage, GIF indexed
+traversal fixed-stack storage, WebP VP8L hash-chain result storage reuse, GIF
+indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -785,6 +786,14 @@ tree. Tree shape, code lengths, checkpoint behavior, encoded bytes, errors, and
 sink output remain unchanged. This is a Rust-only Huffman traversal storage
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP VP8L hash-chain construction uses the final distance/length result table
+as temporary predecessor-link storage during descending best-match
+materialization. Each link points to an earlier position, so overwriting a
+finalized entry cannot affect later traversal; the result table, candidate
+ordering, checkpoint behavior, encoded bytes, errors, and sink output remain
+unchanged. This is a Rust-only hash-chain storage optimization, not
+allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
