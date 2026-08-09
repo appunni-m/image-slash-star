@@ -607,8 +607,23 @@ fn optimize_huffman_for_rle_with_checkpoint(
         optimize_huffman_for_rle(counts);
         return Ok(());
     }
-    let Some(length) = counts.iter().rposition(|&count| count != 0).map(|i| i + 1) else {
-        return Ok(());
+    let length = {
+        let mut scanned = 0_usize;
+        let mut last_nonzero = None;
+        for (index, &count) in counts.iter().enumerate().rev() {
+            scanned += 1;
+            if scanned.is_multiple_of(VP8L_HUFFMAN_CHECKPOINT_SYMBOLS) {
+                check_token(token)?;
+            }
+            if count != 0 {
+                last_nonzero = Some(index + 1);
+                break;
+            }
+        }
+        let Some(length) = last_nonzero else {
+            return Ok(());
+        };
+        length
     };
     let mut good = vec![false; length];
     let mut symbol = counts[0];
