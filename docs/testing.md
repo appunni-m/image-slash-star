@@ -2,14 +2,15 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-09 against production implementation and test/runtime revision
-`5aa0d77b37a5d81e1149e5169915ce21c59b6454`; the claim-ledger fixture tuple
+Reviewed: 2026-08-09 against production implementation revision
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`a4839050-7de4-4e3c-8a60-102c75d789f4`; the exact-head feature-matrix run is
-`f3c50fd6-d3ed-4cbd-8a09-9d405d5a88f8`; and the current Coverage MCP snapshot
-is `9427f8d2-a9e8-4698-92d1-b0c06f0f855e` from run
-`1ee268ab-2660-4094-b7d2-504846bec32f`.
+`d058105b-71d1-4fc5-9bc5-7ea473edbb7c`; the exact-head feature-matrix run is
+`4f8bbb4f-210a-4b34-91e8-33c1e7589d84`; and the current Coverage MCP snapshot
+is `d4a74b4d-3804-4224-b120-430af2cde3ec` from run
+`4b74e8de-14b9-4438-9a17-7471b12b3ad4`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2113,7 +2114,7 @@ compile workloads also passed. These are fixed-host/cache observations, not
 universal speed claims. The Rust-only contract and benchmark remain separate
 from Pillow-oracle evidence.
 
-Current acceptance record: WebP VP8L 2,097,152-bit work-budget boundary
+Historical acceptance record: WebP VP8L 2,097,152-bit work-budget boundary
 
 The next lossless WebP VP8L logical-bitstream checkpoint is implemented at
 `5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
@@ -2140,6 +2141,45 @@ regions. The known LLVM JSON segment-normalization warning remains. The
 schema-@2 local benchmark separately measured the Pillow parity fixture suite
 at 1.075 s wall time and the Rust-only feature-gate suite at 1.874 s; these
 are fixed-host observations, not universal performance claims.
+
+Current acceptance record: WebP work-budget witness runtime
+
+The test-only runtime slice is implemented at
+`35cf266552fa4cfaaef1e231bb01bead1c00d99b`; production behavior remains at
+`5aa0d77b37a5d81e1149e5169915ce21c59b6454`. The existing
+`encode_work_budget_is_a_non_parity_result_contract` keeps the exact VP8
+262,144-bit whole-buffer/direct-sink pairs `66,879/66,880` and
+`66,878/66,879`, but replaces its 1,024×1,024 high-entropy witness with an
+81×81 witness. It keeps the exact VP8 coefficient 524,288-bit pairs
+`187,405/187,406` and `187,404/187,405`, plus the 1,048,576-bit pairs
+`318,670/318,671` and `318,669/318,670`, while replacing the shared 832×832
+checkerboard with a 129×129 checkerboard. The 80×80 and 128×128 candidates
+were rejected because they no longer reached the respective downstream
+coefficient boundary; the accepted smaller witnesses preserve the prior
+counter and sentinel assertions.
+
+This is Rust-only test-runtime evidence: Pillow exposes no caller token,
+typed work-budget result, caller-owned sink, or rollback equivalent. No
+production codec behavior, Pillow parity row or fixture, diagnostic origin,
+new test function, or coverage-only hook changed. Local focused/all-feature
+tests, strict Clippy, and formatting passed. Exact-head managed Pillow parity
+run `d058105b-71d1-4fc5-9bc5-7ea473edbb7c` passed 1,445/1,445 checks in 860 ms.
+Feature-matrix run `4f8bbb4f-210a-4b34-91e8-33c1e7589d84` passed all 991/991
+checks in 35,692 ms with `cache=cold`, `lanes=6`, `test_threads=2`,
+`build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the
+native/WASI capability agreement marker and no `lock-wait` match. Nightly LLVM
+run `4b74e8de-14b9-4438-9a17-7471b12b3ad4` passed 85/85 tests in 58,885 ms and
+ingested snapshot `d4a74b4d-3804-4224-b120-430af2cde3ec`: 54,755/55,605
+lines, 7,796/8,000 branches, 3,110/3,201 functions, and 84,422/86,315
+regions. These coverage totals are Rust implementation evidence, not Pillow
+parity, and no coverage-only test was used.
+
+The clean schema-@2 all-workload observation reported 1.39 s parity and
+2.01 s Rust-only feature-gate wall time; a warm parity/non-parity repeat
+reported 1.08 s and 1.57 s. Native release and wasm32-unknown-unknown compile
+workloads also passed. These are fixed-host/cache observations, not universal
+speed claims; the Rust-only runtime measurement remains separate from the
+Pillow-oracle result.
 
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
