@@ -1113,6 +1113,7 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
     let initial_checkpoint = w.checkpoint.clone();
     let mut best: Option<(usize, Vec<u8>, u64, u8, C)> = None;
     let mut scratch = Vec::new();
+    let mut group_scratch = Vec::new();
     for (tokens, cache_bits) in candidates {
         scratch.clear();
         let (byte_length, buffer, nbits, checkpoint) = {
@@ -1126,13 +1127,14 @@ fn write_image_stream_configured<C: BitWriterCheckpoint>(
                 &mut trial,
                 pixels,
                 width,
-                write_meta_huffman_bit,
                 &tokens,
                 TokenStreamConfig {
+                    write_meta_huffman_bit,
                     cache_bits,
                     histogram_bits,
                     quality,
                 },
+                &mut group_scratch,
                 token,
             )?;
             let checkpoint = trial.checkpoint.clone();
@@ -1171,8 +1173,30 @@ struct GroupCodes {
     codes: [Vec<u16>; 5],
 }
 
+impl Default for GroupCodes {
+    fn default() -> Self {
+        Self {
+            lengths: core::array::from_fn(|_| Vec::new()),
+            codes: core::array::from_fn(|_| Vec::new()),
+        }
+    }
+}
+
+impl GroupCodes {
+    fn prepare(&mut self, populations: &[Vec<u32>; 5]) {
+        for (channel, population) in populations.iter().enumerate() {
+            let population_len = population.len();
+            self.lengths[channel].resize(population_len, 0);
+            self.lengths[channel].fill(0);
+            self.codes[channel].resize(population_len, 0);
+            self.codes[channel].fill(0);
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct TokenStreamConfig {
+    write_meta_huffman_bit: bool,
     cache_bits: u8,
     histogram_bits: u8,
     quality: u32,
@@ -1307,22 +1331,17 @@ fn optimize_sampling(
 fn write_group<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     populations: &[Vec<u32>; 5],
+    group: &mut GroupCodes,
     token: Option<&crate::CancellationToken>,
-) -> Result<GroupCodes, EncodingError> {
-    let mut lengths = populations
-        .each_ref()
-        .map(|frequency| vec![0; frequency.len()]);
-    let mut codes = populations
-        .each_ref()
-        .map(|frequency| vec![0; frequency.len()]);
-    for channel in 0..5 {
+) -> Result<(), EncodingError> {
+    group.prepare(populations);
+    for (channel, population) in populations.iter().enumerate() {
         check_token(token)?;
-        let population = &populations[channel];
-        let channel_lengths = &mut lengths[channel];
-        let channel_codes = &mut codes[channel];
+        let channel_lengths = &mut group.lengths[channel];
+        let channel_codes = &mut group.codes[channel];
         write_huffman_tree(w, population, channel_lengths, channel_codes, token)?;
     }
-    Ok(GroupCodes { lengths, codes })
+    Ok(())
 }
 
 #[derive(Clone, Copy)]
@@ -1392,13 +1411,14 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
-    write_meta_huffman_bit: bool,
     tokens: &[backward_refs::Token],
     config: TokenStreamConfig,
+    group_scratch: &mut Vec<GroupCodes>,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     check_token(token)?;
     let TokenStreamConfig {
+        write_meta_huffman_bit,
         cache_bits,
         histogram_bits,
         quality,
@@ -1464,10 +1484,13 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             )?;
         }
     }
-    let mut groups = Vec::with_capacity(histograms.len());
-    for histogram in &histograms {
+    let group_count = histograms.len();
+    if group_scratch.len() < group_count {
+        group_scratch.resize_with(group_count, GroupCodes::default);
+    }
+    for (group, histogram) in group_scratch.iter_mut().take(group_count).zip(&histograms) {
         check_token(token)?;
-        groups.push(write_group(w, &histogram.populations, token)?);
+        write_group(w, &histogram.populations, group, token)?;
     }
 
     let tile_width = width.div_ceil(1 << encoded_histogram_bits);
@@ -1477,7 +1500,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         symbols: &symbols,
         encoded_histogram_bits,
         tile_width,
-        groups: &groups,
+        groups: &group_scratch[..group_count],
     };
     if let Some(token) = token {
         let mut position = 0;
@@ -2712,7 +2735,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
-    let _ = write_group(&mut group_writer, &populations, None);
+    let mut group = GroupCodes::default();
+    let _ = write_group(&mut group_writer, &populations, &mut group, None);
     let _ = group_writer.flush();
 
     let mut token_bytes = Vec::new();
@@ -2722,11 +2746,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
+    let mut group_scratch = Vec::new();
     let _ = write_token_stream(
         &mut token_writer,
         &[0xff00_0000; 8],
         8,
-        false,
         &[
             backward_refs::Token::Literal(0xff00_0000),
             backward_refs::Token::Copy {
@@ -2738,10 +2762,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             backward_refs::Token::Literal(0xff00_0000),
         ],
         TokenStreamConfig {
+            write_meta_huffman_bit: false,
             cache_bits: 0,
             histogram_bits: 3,
             quality: 1,
         },
+        &mut group_scratch,
         None,
     );
     let _ = token_writer.flush();
