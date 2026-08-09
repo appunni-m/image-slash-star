@@ -3,15 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`; the claim-ledger fixture tuple
+revision `84a18ee1be94fcc4de1064f92c53303ea3950bcc`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-GIF sequence frame ownership, JPEG entropy output-buffer ownership, JPEG
-grayscale source ownership, BMP row-scratch reuse, ICO BMP payload assembly,
+GIF sequence frame ownership, GIF indexed frame-diff state, JPEG entropy
+output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse,
+ICO BMP payload assembly,
 PNG source pixel ownership, TIFF conditional source ownership, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
@@ -635,6 +636,14 @@ moves the first prepared frame into the emission loop, and moves later frames
 from the iterator, removing per-frame `PreparedImage` clones and the two full
 first-frame raster copies. Palette decisions, output bytes, and explicit token
 checkpoints remain unchanged. This is a bounded ownership optimization, not
+allocator/OOM accounting or a streaming guarantee.
+
+GIF output assembly retains the previous emitted frame's palette and indices
+for unchanged-pixel masking, comparing palette entries directly instead of
+materializing a full RGB comparison buffer for every frame. The indexed state
+is copied before the current frame's transparent substitutions, so the next
+comparison sees the same pre-mask colors as before. Frame decisions, bytes, and
+checkpoints remain unchanged; this is a bounded allocation optimization, not
 allocator/OOM accounting or a streaming guarantee.
 
 JPEG baseline and progressive entropy writers take the already-built JPEG

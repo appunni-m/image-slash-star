@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`, and benchmark-protocol revision
+revision `84a18ee1be94fcc4de1064f92c53303ea3950bcc`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`; the accepted managed records
+`84a18ee1be94fcc4de1064f92c53303ea3950bcc`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,20 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The GIF indexed frame-diff state slice is implemented at production revision
+`84a18ee1be94fcc4de1064f92c53303ea3950bcc`. GIF output assembly now retains
+the previous frame's palette and indices, compares palette entries directly,
+and masks unchanged current indices without materializing a full RGB copy for
+each frame. Frame coalescing, transparency decisions, encoded bytes, error
+behavior, and cancellation checkpoints are unchanged. All 41 GIF encode parity
+rows across 10 matrix functions, the complete 28-function fixture matrix, all
+45 feature-gated Rust contracts, full all-feature tests, strict Clippy, and
+the native/WASM feature matrix passed locally. Pillow remains the exact
+byte/error oracle; retained indexed diff state is a Rust implementation
+boundary with no Pillow allocation contract. No new fixture, test function,
+diagnostic origin, or coverage-only hook was added. No managed parity,
+feature-matrix, or Coverage MCP rerun is claimed for this revision.
 
 The ICO BMP-payload ownership slice is implemented at production revision
 `2347ae0ee31d9ab592d9eefbea8ed3f2e0b9b4b3`. BMP-backed ICO entries now append
