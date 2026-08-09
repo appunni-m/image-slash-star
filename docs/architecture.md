@@ -3,8 +3,8 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`1964d6752a140e24bb1af86a6342d5abbd1f72de` and test/runtime revision
-`1964d6752a140e24bb1af86a6342d5abbd1f72de`; the claim-ledger fixture tuple
+`30218c18932fb58cc4afc89da9aa81da2c5d4b0b` and test/runtime revision
+`30218c18932fb58cc4afc89da9aa81da2c5d4b0b`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -378,7 +378,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L predictor row-copy checkpoints | Token-aware predictor tile scans copy image-width rows in 1,024-pixel chunks and poll after each completed chunk; the no-token path retains its original bulk row copy |
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
-| Lossless WebP VP8L backward-reference trace checkpoints | Token-aware backward-reference dynamic-programming trace polls after each 256 processed pixels; the no-token path keeps its 1,024-pixel cadence through a const-specialized implementation |
+| Lossless WebP VP8L backward-reference trace checkpoints | Token-aware backward-reference dynamic-programming trace, path reconstruction, and token replay poll after each 256 consumed pixels; the no-token path keeps its 1,024-pixel cadence through a const-specialized implementation |
 | Lossless WebP VP8L hash-chain candidate-trial checkpoints | Token-aware backward-reference candidate selection polls after each 64 completed hash-chain trials across the pass; the no-token candidate loop retains its original tight path |
 | Lossless WebP VP8L palette-mode box-chain candidate-trial checkpoints | Token-aware palette-mode box-chain selection polls after each 64 completed low-distance candidate offsets across the pass; the no-token box-chain loop retains its original tight path |
 | Lossless WebP VP8L meta-histogram sampling checkpoints | Token-aware row/column comparisons and symbol compaction poll after each 1,024 symbols; no-token paths retain their original tight loops |
@@ -694,8 +694,9 @@ saturated cost-interval fallback scans after each 1,024 entries,
 repeated-run hash-chain insertion, long backward-reference result backfills
 after each 256 entries, hash-chain candidate selection after each 64 completed
 trials, palette-mode box-chain candidate offsets after each 64 completed
-offsets, search/match-length/cache, token-aware trace after each 256 processed
-pixels (the no-token trace retains its 1,024-pixel cadence), and copy-token
+offsets, search/match-length/cache, token-aware trace, path reconstruction, and
+token replay after each 256 consumed pixels (the no-token trace/replay retains
+its 1,024-pixel cadence), and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
@@ -760,9 +761,9 @@ cumulative interval entries,
 non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
 repeated-run hash-chain insertion, long backward-reference result backfills
-after each 256 entries, search/match-length/cache, token-aware trace after each
-256 processed pixels (the no-token trace retains its 1,024-pixel cadence), and
-copy-token
+after each 256 entries, search/match-length/cache, token-aware trace, path
+reconstruction, and token replay after each 256 consumed pixels (the no-token
+trace/replay retains its 1,024-pixel cadence), and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
@@ -796,8 +797,9 @@ checkpoints. A structural sink cancellation may leave the already-written
 prefix because no rollback contract exists. A sink flush/finalization failure
 is normalized to `ImageError::OutputWrite` after delivery and likewise does
 not roll the prefix back. The token-aware VP8L traced backward-reference
-dynamic-programming pass now polls after each 256 processed pixels; the
-const-specialized no-token path retains its 1,024-pixel cadence. Progress
+dynamic-programming pass, path reconstruction, and token replay now poll after
+each 256 consumed pixels; the const-specialized no-token path retains its
+1,024-pixel cadence. Progress
 callbacks, transient working-state
 reduction, short-write/rollback cleanup, and interruption beyond the
 documented checkpoints—including remaining finer WebP bitstream work beyond the
