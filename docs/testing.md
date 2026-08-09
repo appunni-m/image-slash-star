@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `56efb2215f9f37d412368f43109cd9ebab3bd87e`, and benchmark-protocol revision
+revision `ecc5ac4c95a608f3c709fb0de98a89c3f131df59`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`56efb2215f9f37d412368f43109cd9ebab3bd87e`; the accepted managed records
+`ecc5ac4c95a608f3c709fb0de98a89c3f131df59`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -633,6 +633,28 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The lossless WebP VP8L cache-transform scratch slice is implemented at
+production and Rust test/runtime revision
+`ecc5ac4c95a608f3c709fb0de98a89c3f131df59`, following candidate-estimate
+scratch reuse at `56efb2215f9f37d412368f43109cd9ebab3bd87e`. Sequential
+cache-bit candidate trials now reuse a bounded zeroed cache table through
+`CacheTransformScratch`; its capacity grows only when a larger cache-bit trial
+requires it, and each trial clears the existing storage instead of allocating a
+new table. Candidate token vectors remain independently owned because the
+winning trial must survive. Ordinary and token-aware cache transformation,
+checkpoint sites, cost decisions, encoded bytes, errors, and sink output remain
+unchanged. The existing WebP encode matrix (28/13/47 rows), full fixture
+matrix, all 45 feature-gated Rust contracts, full all-feature suite, strict
+Clippy, rustfmt, and all 33 native/WASI feature-matrix lanes passed locally.
+Clean `fixture-benchmark@3` observations at this revision passed the
+Pillow-parity workload (1.034803 s wall) and the separate Rust-only feature-gate
+workload (1.606970 s wall); these are host/cache/toolchain observations, not a
+comparative or universal performance claim. Pillow remains the byte/error
+oracle, while this scratch ownership is Rust-only evidence: no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook was added. No managed parity, feature-matrix, or Coverage MCP rerun is
+claimed at this revision.
 
 The lossless WebP VP8L candidate-estimate scratch slice is implemented at
 production and Rust test/runtime revision
@@ -2727,6 +2749,23 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L cache-transform scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`ecc5ac4c95a608f3c709fb0de98a89c3f131df59`, following the preceding
+`56efb2215f9f37d412368f43109cd9ebab3bd87e` candidate-estimate scratch reuse.
+Sequential cache-bit candidate trials now reuse a bounded zeroed cache table
+through `CacheTransformScratch` instead of allocating a new table per trial;
+candidate token vectors remain independently owned for the winning trial.
+Ordinary and token-aware cache transformation, checkpoint sites, cost decisions,
+encoded bytes, errors, and sink output remain unchanged. Existing WebP fixture
+rows (28/13/47), the full fixture matrix, all 45 feature-gated Rust contracts,
+strict Clippy, and the clean benchmark protocol provide the regression evidence.
+Pillow remains the byte/error oracle; scratch ownership is Rust-only evidence.
+No parity row, fixture-manifest entry, diagnostic origin, new test function, or
+coverage-only hook was added, and no managed parity, feature-matrix, or Coverage
+MCP rerun is claimed at this revision.
 
 Current acceptance record: WebP VP8L candidate-estimate scratch reuse
 
