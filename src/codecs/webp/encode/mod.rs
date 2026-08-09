@@ -289,14 +289,7 @@ pub fn encode_sequence_with_token(
         let duration = duration_milliseconds(frame.source.duration)?;
         let (encoded, alpha) = encode_pixels(&frame.image, opts, token)?;
         has_alpha |= alpha;
-        let chunks = if encoded.get(12..16) == Some(b"VP8X") {
-            &encoded[30..]
-        } else {
-            &encoded[12..]
-        };
-        let mut copied_chunks = Vec::with_capacity(chunks.len());
-        extend_with_output_checkpoint(&mut copied_chunks, chunks, token)?;
-        encoded_frames.push((duration, copied_chunks));
+        encoded_frames.push((duration, encoded));
         crate::codecs::error::check_cancelled(token)?;
     }
 
@@ -314,15 +307,19 @@ pub fn encode_sequence_with_token(
     animation.extend_from_slice(&loop_count.to_le_bytes());
     write_chunk(&mut output, b"ANIM", &animation, token)?;
 
-    for (duration, chunks) in encoded_frames {
+    for (duration, encoded) in encoded_frames {
         crate::codecs::error::check_cancelled(token)?;
-        let mut payload = vec![0; 6];
-        payload.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
-        payload.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
-        payload.extend_from_slice(&duration.to_le_bytes()[..3]);
-        payload.push(0x02);
-        extend_with_output_checkpoint(&mut payload, &chunks, token)?;
-        write_chunk(&mut output, b"ANMF", &payload, token)?;
+        let chunks = if encoded.get(12..16) == Some(b"VP8X") {
+            &encoded[30..]
+        } else {
+            &encoded[12..]
+        };
+        let mut frame_header = [0u8; 16];
+        frame_header[6..9].copy_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
+        frame_header[9..12].copy_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
+        frame_header[12..15].copy_from_slice(&duration.to_le_bytes()[..3]);
+        frame_header[15] = 0x02;
+        write_chunk_with_prefix(&mut output, b"ANMF", &frame_header, chunks, token)?;
     }
 
     crate::codecs::error::check_cancelled(token)?;
@@ -710,13 +707,27 @@ fn write_chunk(
     payload: &[u8],
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<()> {
+    write_chunk_with_prefix(output, name, &[], payload, token)
+}
+
+fn write_chunk_with_prefix(
+    output: &mut Vec<u8>,
+    name: &[u8; 4],
+    prefix: &[u8],
+    payload: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
     // Metadata and animation payloads are caller-sized. Keep the ordinary
     // no-token path as one bulk copy, while token-aware assembly polls every
     // complete 1,024-byte output interval.
+    let payload_len = prefix.len().checked_add(payload.len()).ok_or_else(|| {
+        CodecError::Dimensions("WebP chunk payload exceeds addressable size".to_owned())
+    })?;
     output.extend_from_slice(name);
-    output.extend_from_slice(&low_u32(payload.len()).to_le_bytes());
+    output.extend_from_slice(&low_u32(payload_len).to_le_bytes());
+    output.extend_from_slice(prefix);
     extend_with_output_checkpoint(output, payload, token)?;
-    if !payload.len().is_multiple_of(2) {
+    if !payload_len.is_multiple_of(2) {
         output.push(0);
     }
     Ok(())
