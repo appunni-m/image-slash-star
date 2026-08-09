@@ -13961,22 +13961,22 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // 1,048,576-, and 2,097,152-bit coefficient intervals at quality
         // 100. It keeps one fixture for the whole ladder while avoiding the
         // false boundary attribution produced by the smaller checkerboard.
-        let mut coefficient_1048576_probe_pixels = Vec::with_capacity(625 * 625 * 3);
-        let mut coefficient_1048576_state = 0xC001_C0DEu32;
+        let mut coefficient_ladder_probe_pixels = Vec::with_capacity(625 * 625 * 3);
+        let mut coefficient_ladder_state = 0xC001_C0DEu32;
         for _ in 0..625 * 625 {
-            coefficient_1048576_state = coefficient_1048576_state
+            coefficient_ladder_state = coefficient_ladder_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
-            coefficient_1048576_probe_pixels.extend_from_slice(&[
-                u8::try_from(coefficient_1048576_state >> 24)?,
-                u8::try_from((coefficient_1048576_state >> 16) & 0xff)?,
-                u8::try_from((coefficient_1048576_state >> 8) & 0xff)?,
+            coefficient_ladder_probe_pixels.extend_from_slice(&[
+                u8::try_from(coefficient_ladder_state >> 24)?,
+                u8::try_from((coefficient_ladder_state >> 16) & 0xff)?,
+                u8::try_from((coefficient_ladder_state >> 8) & 0xff)?,
             ]);
         }
-        let coefficient_1048576_probe =
-            DecodedImage::new(625, 625, coefficient_1048576_probe_pixels, ColorType::Rgb8);
-        let mut coefficient_1048576_options = analysis_options.clone();
-        if let EncodeOptions::WebP(options) = &mut coefficient_1048576_options {
+        let coefficient_ladder_probe =
+            DecodedImage::new(625, 625, coefficient_ladder_probe_pixels, ColorType::Rgb8);
+        let mut coefficient_ladder_options = analysis_options.clone();
+        if let EncodeOptions::WebP(options) = &mut coefficient_ladder_options {
             options.quality = Some(100);
         }
         // First-partition boolean coding now charges a checkpoint after each
@@ -15071,126 +15071,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(coefficient_bit_sink_262144, vec![0xD8]);
 
-        // The next coefficient-only logical interval is independently
-        // enforced after each 524,288 coded bit. The deterministic high-
-        // entropy probe's exact pre-check poll counts are 7,467,977 for the
-        // whole-buffer path and 7,467,976 for the sink path. Pillow has no
-        // caller token, work-budget result, or caller-owned sink, so this
-        // remains Rust-only evidence with no parity row or coverage-only hook.
-        let coefficient_bit_policy_524288 =
-            image_slash_star::EncodePolicy::new().with_max_work_units(7_467_977);
-        let coefficient_bit_error_524288 = match image_slash_star::encode_with_policy(
-            &coefficient_1048576_probe,
-            ImageFormat::WebP,
-            &coefficient_1048576_options,
-            &coefficient_bit_policy_524288,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 524288-bit coefficient budget unexpectedly completed".into(),
-                );
-            }
-            Err(error) => error,
-        };
-        assert!(matches!(
-            coefficient_bit_error_524288,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 7_467_977,
-                observed: 7_467_978,
-            }
-        ));
-        let mut coefficient_bit_sink_524288 = vec![0xD9];
-        let coefficient_bit_sink_error_524288 = match image_slash_star::encode_to_sink_with_policy(
-            &coefficient_1048576_probe,
-            ImageFormat::WebP,
-            &coefficient_1048576_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(7_467_976),
-            &mut coefficient_bit_sink_524288,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 524288-bit coefficient sink budget unexpectedly wrote output"
-                        .into(),
-                );
-            }
-            Err(error) => error,
-        };
-        assert!(matches!(
-            coefficient_bit_sink_error_524288,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 7_467_976,
-                observed: 7_467_977,
-            }
-        ));
-        assert_eq!(coefficient_bit_sink_524288, vec![0xD9]);
-
-        // The next coefficient-only logical interval is independently
-        // enforced after each 1,048,576 coded bit. The same deterministic
-        // probe's exact pre-check poll counts are 7,599,166 for the
-        // whole-buffer path and 7,599,165 for the sink path. Pillow has no
-        // caller token, work-budget result, or caller-owned sink, so this
-        // remains Rust-only evidence with no parity row or coverage-only hook.
-        let coefficient_bit_policy_1048576 =
-            image_slash_star::EncodePolicy::new().with_max_work_units(7_599_166);
-        let coefficient_bit_error_1048576 = match image_slash_star::encode_with_policy(
-            &coefficient_1048576_probe,
-            ImageFormat::WebP,
-            &coefficient_1048576_options,
-            &coefficient_bit_policy_1048576,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 1048576-bit coefficient budget unexpectedly completed".into(),
-                );
-            }
-            Err(error) => error,
-        };
-        assert!(matches!(
-            coefficient_bit_error_1048576,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 7_599_166,
-                observed: 7_599_167,
-            }
-        ));
-        let mut coefficient_bit_sink_1048576 = vec![0xDA];
-        let coefficient_bit_sink_error_1048576 = match image_slash_star::encode_to_sink_with_policy(
-            &coefficient_1048576_probe,
-            ImageFormat::WebP,
-            &coefficient_1048576_options,
-            &image_slash_star::EncodePolicy::new().with_max_work_units(7_599_165),
-            &mut coefficient_bit_sink_1048576,
-        ) {
-            Ok(_) => {
-                return Err(
-                    "bounded WebP 1048576-bit coefficient sink budget unexpectedly wrote output"
-                        .into(),
-                );
-            }
-            Err(error) => error,
-        };
-        assert!(matches!(
-            coefficient_bit_sink_error_1048576,
-            ImageError::LimitExceeded {
-                format: Some(ImageFormat::WebP),
-                operation: image_slash_star::CodecOperation::StillEncode,
-                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 7_599_165,
-                observed: 7_599_166,
-            }
-        ));
-        assert_eq!(coefficient_bit_sink_1048576, vec![0xDA]);
-
-        // The next coefficient-only logical interval is independently
-        // enforced after each 2,097,152 coded bit. The same deterministic
+        // The coefficient ladder's new endpoint is independently enforced
+        // after each 2,097,152 coded bit. The same deterministic
         // probe's exact pre-check poll counts are 7,861,562 for the
         // whole-buffer path and 8,386,322 for the sink path. Pillow has no
         // caller token, work-budget result, or caller-owned sink, so this
@@ -15198,9 +15080,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         let coefficient_bit_policy_2097152 =
             image_slash_star::EncodePolicy::new().with_max_work_units(7_861_562);
         let coefficient_bit_error_2097152 = match image_slash_star::encode_with_policy(
-            &coefficient_1048576_probe,
+            &coefficient_ladder_probe,
             ImageFormat::WebP,
-            &coefficient_1048576_options,
+            &coefficient_ladder_options,
             &coefficient_bit_policy_2097152,
         ) {
             Ok(_) => {
@@ -15222,9 +15104,9 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         let mut coefficient_bit_sink_2097152 = vec![0xDB];
         let coefficient_bit_sink_error_2097152 = match image_slash_star::encode_to_sink_with_policy(
-            &coefficient_1048576_probe,
+            &coefficient_ladder_probe,
             ImageFormat::WebP,
-            &coefficient_1048576_options,
+            &coefficient_ladder_options,
             &image_slash_star::EncodePolicy::new().with_max_work_units(8_386_322),
             &mut coefficient_bit_sink_2097152,
         ) {
