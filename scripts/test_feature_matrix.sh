@@ -33,15 +33,17 @@ matrix_source_signature() {
     if [ -z "$matrix_source_files" ]; then
         return 1
     fi
-    printf '%s\n' "$matrix_source_files" |
-        LC_ALL=C sort |
-        while IFS= read -r matrix_source_file; do
-            if [ -f "$matrix_source_file" ]; then
-                cksum "$matrix_source_file"
-            else
-                printf 'missing %s\n' "$matrix_source_file"
-            fi
-        done |
+    # `cksum` accepts many paths in one process. The previous per-file loop
+    # spawned one checksum process for every source file, which made the
+    # signature itself a measurable part of every warm matrix invocation.
+    # `git ls-files` emits paths in stable order; retain the path names in
+    # cksum's output so additions, removals, and content changes all alter the
+    # marker. Missing paths remain represented by the changed output even
+    # though cksum reports their read error.
+    git ls-files --cached --others --exclude-standard -z -- \
+        Cargo.lock Cargo.toml build.rs src tests \
+        scripts/test_feature_matrix.sh scripts/wasm_test_runner.js 2>/dev/null |
+        xargs -0 -n 200 cksum |
         cksum
 }
 
