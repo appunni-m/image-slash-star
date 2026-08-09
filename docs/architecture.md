@@ -3,11 +3,11 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`8562fe2b0672593000b7d0c1ea1370590efc2f18`; the claim-ledger fixture tuple
+`ab3af9e210b06c066d9ffb854138ba992239866a`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for this revision is
-`26731242-1c01-4bf5-bf37-635c21ff690c` from run
-`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5`.
+`f8d8347e-263d-4934-8aa5-77dabaa6ead8` from run
+`ebf5b466-55c3-4117-a434-2c1b9b8dfb2a`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -168,7 +168,12 @@ profile bytes without replacing `SourceColor`; other item color/property forms
 remain outside this typed boundary. Unknown associated properties are retained
 as `AvifItemProperty` records through `SourceDescriptor::avif_item_properties()`
 with source-local item ID, four-byte kind, and exact payload; they are not
-interpreted or applied to decoded samples.
+interpreted or applied to decoded samples. Known non-primary and auxiliary
+`ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records
+through `SourceDescriptor::avif_item_plane_properties()`, preserving source-local
+item ID, optional dimensions, and optional uniform channel depth; this is
+structural provenance only and does not expose planes, compose tiles, infer
+range/quality, or transform decoded samples.
 
 Decoded images and sequences carry `opaque_blocks` (`Vec<OpaqueBlock>`):
 payload-only records with a format kind, the raw encoded payload, and the

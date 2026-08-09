@@ -3,13 +3,13 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against current implementation revision
-`8562fe2b0672593000b7d0c1ea1370590efc2f18`; the claim-ledger fixture tuple
+`ab3af9e210b06c066d9ffb854138ba992239866a`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`10535481-2d0c-4483-92e1-f9982a9cce62`; the exact-head feature-matrix run is
-`4d43c84b-9633-4ef3-8867-837c0c99a34e`; and the current Coverage MCP snapshot
-is `26731242-1c01-4bf5-bf37-635c21ff690c` from run
-`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5`.
+`10566953-60e4-4063-b569-6e3e70a4ba6a`; the exact-head feature-matrix run is
+`a65c5cfa-08d8-46f3-9c94-aff44a7cad46`; and the current Coverage MCP snapshot
+is `f8d8347e-263d-4934-8aa5-77dabaa6ead8` from run
+`ebf5b466-55c3-4117-a434-2c1b9b8dfb2a`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2059,16 +2059,26 @@ Pillow has no item-level property result, so this is Rust
 source-provenance/specification evidence: no parity row, fixture file,
 diagnostic origin, new test function, or coverage-only hook was added.
 
+The current AVIF plane-declaration slice is also separate from Pillow parity.
+The existing `source_alpha_matches_the_container_contract` test asserts the
+real `alpha.avif` and `grid.avif` fixture declarations on inspection, still
+decode, and sequence-frame decode, then mutates `ispe` and `pixi` associations
+only in memory to prove duplicate declarations are malformed. Pillow has no
+item-level plane declaration field, so this is Rust source-provenance evidence:
+no parity row, fixture file, diagnostic origin, new test function, or
+coverage-only hook was added. Aggregate LLVM execution remains implementation
+coverage, not Pillow-parity coverage.
+
 Current acceptance for implementation revision
-`8562fe2b0672593000b7d0c1ea1370590efc2f18`: managed Pillow parity run
-`10535481-2d0c-4483-92e1-f9982a9cce62` passed 1,445/1,445 checks in 5,860 ms;
-feature-matrix run `4d43c84b-9633-4ef3-8867-837c0c99a34e` passed with
+`ab3af9e210b06c066d9ffb854138ba992239866a`: managed Pillow parity run
+`10566953-60e4-4063-b569-6e3e70a4ba6a` passed 1,445/1,445 checks in 577 ms;
+feature-matrix run `a65c5cfa-08d8-46f3-9c94-aff44a7cad46` passed with
 `cache=cold`, `lanes=6`, `test_threads=2`, and `build_jobs=2`, and its retained
 log ended with `capability tables OK: every native and wasm32-wasip1 lane
 agrees` with no `lock-wait` match. Nightly LLVM run
-`9d7ff5df-1140-4571-b4d3-04beb3cb4cc5` passed 85/85 tests in 67,939 ms and
-ingested snapshot `26731242-1c01-4bf5-bf37-635c21ff690c`: 54,459/55,280
-lines, 7,725/7,920 branches, 3,095/3,178 functions, and 83,987/85,828
+`ebf5b466-55c3-4117-a434-2c1b9b8dfb2a` passed 85/85 tests in 50,083 ms and
+ingested snapshot `f8d8347e-263d-4934-8aa5-77dabaa6ead8`: 54,610/55,446
+lines, 7,768/7,966 branches, 3,103/3,190 functions, and 84,224/86,089
 regions. The known LLVM JSON segment-normalization warning remains. These
 coverage numbers are Rust implementation evidence, not Pillow parity, and no
 coverage-only test was used.
@@ -2675,7 +2685,7 @@ because managed cache and runner state can differ.
 
 ## Historical acceptance record: superseded implementation slices
 
-Current acceptance record: WebP VP8L entropy-mode analysis, entropy-bin histogram
+Historical acceptance record: WebP VP8L entropy-mode analysis, entropy-bin histogram
 clustering pre-passes, histogram population, combined entropy-cost, merge,
 backward-reference cost-manager setup and
 interval-update/cleanup, non-saturated
