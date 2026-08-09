@@ -176,7 +176,7 @@ Pillow assertion schema.
 | Encode success | Explicit still/sequence operation applicability, exact complete encoded bytes, container checks, and exact re-decoded reference pixels when applicable | Systematic coverage of every Pillow input mode × target format; metadata not represented by the source model |
 | Encode/decode error | Explicit per-operation failure; exact Pillow exception type/message when an exception exists; separately asserted Rust kind, selected format, non-empty contextual diagnostic policy, and evidence origin | Pillow has no equivalent fields for operation stage, byte offset, chunk/marker/tag identity, typed limit reason, cancellation, or output-write cause; those are separate Rust contracts |
 | Lazy source | Inspection before decode, one shared successful or failed still decode, separate lazy sequence materialization, concurrency, clone-visible cache state, and explicit not-attempted/succeeded/failed state per cache | Cache eviction; repeated verification cost |
-| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted implementation snapshot `026d33d8-47e7-4d36-99a1-08757710f186` covers implementation revision `487348d01389eb8d100b8a668c9921d97634c022`: 54,334/55,146 lines, 7,716/7,910 branches, 3,083/3,163 functions, and 83,854/85,684 regions. Compared with the preceding accepted snapshot `c2c0d660-6dc9-4b07-ae1e-2eda1b201d53`, covered/source deltas are `+3/+0` lines, `+1/+0` branches, `+0/+0` functions, and `+4/+2` regions. The retained test/runtime harness is `8a549091c618c7282c43b8566da79d6f592d4bae`: `scripts/test_feature_matrix.sh` fingerprints build/test inputs and, for retained warm roots, admits up to two single-worker lanes per logical CPU, capped at 24; explicit overrides remain available. The exact-head feature-matrix run `2d14425b-9a6a-4ff3-9577-6b65dc444bc3` passed all 33 configured lanes in 47,038 ms with `cache=cold`, `lanes=6`, `test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; the exact-head Pillow parity run `c7e67804-f563-43a4-8814-8cf8b5e88319` passed 1,445/1,445 checks in 808 ms, and nightly LLVM run `96813ff1-b9e7-45ac-945c-2c0318bc8538` passed 85/85 tests in 59,866 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 812 lines, 194 branches, 80 functions, and 1,830 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
+| Coverage | Release target: 100% aggregate native all-feature line, branch, function, and region metrics across parity, defensive contracts, and permitted private coverage models; the current accepted implementation snapshot `026d33d8-47e7-4d36-99a1-08757710f186` covers implementation revision `487348d01389eb8d100b8a668c9921d97634c022`: 54,334/55,146 lines, 7,716/7,910 branches, 3,083/3,163 functions, and 83,854/85,684 regions. Compared with the preceding accepted snapshot `c2c0d660-6dc9-4b07-ae1e-2eda1b201d53`, covered/source deltas are `+3/+0` lines, `+1/+0` branches, `+0/+0` functions, and `+4/+2` regions. The retained test/runtime harness is `3519b21c2ac3dd0cbd70207cfa0a2669f31300b5`: `scripts/test_feature_matrix.sh` fingerprints build/test inputs with batched checksum calls and, for retained warm roots, admits up to two single-worker lanes per logical CPU, capped at 24; explicit overrides remain available. Exact-head managed feature-matrix run `01d0ff0d-c663-4a08-8882-06916f2f05e9` passed all 33 configured lanes in 6,072 ms with `cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`, `debug=0`, and `verbose=0`; its retained log contains the native/WASI capability agreement marker and no `lock-wait` match. The exact-head Pillow parity run `c7e67804-f563-43a4-8814-8cf8b5e88319` passed 1,445/1,445 checks in 808 ms, and nightly LLVM run `96813ff1-b9e7-45ac-945c-2c0318bc8538` passed 85/85 tests in 59,866 ms and ingested the accepted snapshot above. Current Rust-only work-control and sink evidence remain separate from the Pillow oracle. The known LLVM JSON segment-normalization warning remains; the aggregate shortfall is 812 lines, 194 branches, 80 functions, and 1,830 regions. Row assertion origins remain separate, and every exact `#[cfg(coverage)]` guard is accounted for by the static non-Pillow origin inventory. | Full semantic manifest execution in a WASM runtime |
 
 The suite does not claim Python and Rust error-type identity. Pillow's exact
 exception type/message are retained as oracle evidence, while callers should
@@ -4906,6 +4906,22 @@ the covered/source deltas are `+3/+0` lines, `+1/+0` branches, `+0/+0`
 functions, and `+4/+2` regions. The remaining aggregate shortfall is 812
 lines, 194 branches, 80 functions, and 1,830 regions; the known LLVM JSON
 segment-normalization warning remains.
+
+The harness-only follow-up is implemented at revision
+`3519b21c2ac3dd0cbd70207cfa0a2669f31300b5`. Its feature-matrix cache
+signature still includes every tracked and non-ignored source/test input, but
+now batches the checksum work instead of spawning one process per file. This
+changes only cache-classification overhead; the 33 lanes, 991 assertions,
+capability-table agreement, and all parity/Rust evidence origins remain
+unchanged. Exact-head managed feature-matrix run
+`01d0ff0d-c663-4a08-8882-06916f2f05e9` passed all 33 configured lanes in
+6,072 ms with `cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`,
+`debug=0`, and `verbose=0`; its retained log contains the native/WASI
+capability agreement marker and no `lock-wait` match. On the same local host,
+the warm repeat fell from 12.5 s before this change to 5.82 s after it. These
+are cache- and runner-sensitive observations, not universal benchmarks. No
+Rust source changed, so the accepted LLVM snapshot and Pillow-parity result
+remain the preceding records above.
 
 Current WebP container/metadata assembly acceptance record
 
