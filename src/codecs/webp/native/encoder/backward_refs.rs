@@ -145,7 +145,9 @@ fn fill_hash_chain(
     }
 
     let mut first = vec![-1_i32; HASH_SIZE];
-    let mut chain = vec![-1_i32; size];
+    // The best-result pass walks positions in descending order. A predecessor
+    // link is always an earlier position, so finalized result entries can
+    // reuse their link slot without affecting any later traversal.
     let mut position: usize = 0;
     let mut equal_pair = pixels[0] == pixels[1];
     while position < size - 2 {
@@ -173,7 +175,12 @@ fn fill_hash_chain(
                         .wrapping_mul(HASH_MULTIPLIER_HI)
                         .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
                     let hash = (key >> (32 - HASH_BITS)) as usize;
-                    chain[position] = first[hash];
+                    let previous = first[hash];
+                    result[position].0 = if previous < 0 {
+                        usize::MAX
+                    } else {
+                        previous as usize
+                    };
                     first[hash] = position as i32;
                     position += 1;
                     run -= 1;
@@ -188,7 +195,12 @@ fn fill_hash_chain(
                         .wrapping_mul(HASH_MULTIPLIER_HI)
                         .wrapping_add(pixels[position].wrapping_mul(HASH_MULTIPLIER_LO));
                     let hash = (key >> (32 - HASH_BITS)) as usize;
-                    chain[position] = first[hash];
+                    let previous = first[hash];
+                    result[position].0 = if previous < 0 {
+                        usize::MAX
+                    } else {
+                        previous as usize
+                    };
                     first[hash] = position as i32;
                     position += 1;
                     run -= 1;
@@ -197,13 +209,23 @@ fn fill_hash_chain(
             equal_pair = false;
         } else {
             let hash = pair_hash(pixels, position);
-            chain[position] = first[hash];
+            let previous = first[hash];
+            result[position].0 = if previous < 0 {
+                usize::MAX
+            } else {
+                previous as usize
+            };
             first[hash] = position as i32;
             position += 1;
             equal_pair = next_equal_pair;
         }
     }
-    chain[position] = first[pair_hash(pixels, position)];
+    let previous = first[pair_hash(pixels, position)];
+    result[position].0 = if previous < 0 {
+        usize::MAX
+    } else {
+        previous as usize
+    };
     let iterations = 8 + quality * quality / 128;
     let window_size = if quality > 75 {
         WINDOW_SIZE
@@ -242,12 +264,16 @@ fn fill_hash_chain(
         }
         remaining -= 1;
 
-        let mut candidate = chain[base];
+        let mut candidate = result[base].0;
         let good_enough = max_length.min(256);
         if let Some(token) = token {
-            while candidate >= minimum as i32 && remaining > 1 && best_length < MAX_LENGTH {
+            while candidate != usize::MAX
+                && candidate >= minimum
+                && remaining > 1
+                && best_length < MAX_LENGTH
+            {
                 remaining -= 1;
-                let candidate_index = candidate as usize;
+                let candidate_index = candidate;
                 let mut reached_good_enough = false;
                 if pixels[candidate_index + best_length] == pixels[base + best_length] {
                     let current =
@@ -262,12 +288,16 @@ fn fill_hash_chain(
                 if reached_good_enough {
                     break;
                 }
-                candidate = chain[candidate_index];
+                candidate = result[candidate_index].0;
             }
         } else {
-            while candidate >= minimum as i32 && remaining > 1 && best_length < MAX_LENGTH {
+            while candidate != usize::MAX
+                && candidate >= minimum
+                && remaining > 1
+                && best_length < MAX_LENGTH
+            {
                 remaining -= 1;
-                let candidate_index = candidate as usize;
+                let candidate_index = candidate;
                 if pixels[candidate_index + best_length] == pixels[base + best_length] {
                     let current = match_length(pixels, candidate_index, base, max_length, None)?;
                     if current > best_length {
@@ -278,7 +308,7 @@ fn fill_hash_chain(
                         }
                     }
                 }
-                candidate = chain[candidate_index];
+                candidate = result[candidate_index].0;
             }
         }
 
