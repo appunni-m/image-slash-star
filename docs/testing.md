@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`30218c18932fb58cc4afc89da9aa81da2c5d4b0b`, Rust test/runtime revision
-`30218c18932fb58cc4afc89da9aa81da2c5d4b0b`, and benchmark-protocol revision
+`572ce06c5d16411959339ac3592d9c041f0f2b32`, Rust test/runtime revision
+`019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `30218c18932fb58cc4afc89da9aa81da2c5d4b0b`.
+Coverage MCP rerun has yet been recorded for `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -1617,6 +1617,14 @@ the replay boundaries `52,500/52,501` whole-buffer and `52,499/52,500`
 caller-sink with `[0xD9]` untouched. Pillow exposes none of the caller token,
 typed work-budget result, caller-owned sink, or rollback semantics, so this adds
 no parity row, fixture, diagnostic origin, or coverage-only hook.
+The token-aware VP8L token-stream reference walk now polls after each 256
+consumed pixels, including every boundary crossed by one Copy token; its no-token
+reference loop retains the original tight path. The existing 1×512 constant RGB
+probe rejects whole-buffer and caller-owned-sink paths at `maximum: 2,457`,
+`observed: 2,458`, with `[0xDC]` untouched. This is Rust-only work-budget
+evidence: Pillow has no caller token, typed result, caller-owned sink, or
+rollback equivalent, so it adds no parity row, fixture, diagnostic origin, or
+coverage-only hook.
 The token-aware lossless VP8L backward-reference hash-chain candidate scan now
 charges after each 64 completed candidate trials across the pass; its no-token
 candidate loop retains the original tight path. The existing Rust-only
@@ -2337,11 +2345,11 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L traced backward-reference replay checkpoint
+Current acceptance record: VP8L traced replay and token-stream checkpoints
 
 The production trace slice is implemented at
-`30218c18932fb58cc4afc89da9aa81da2c5d4b0b`, with the verified Rust witness in
-the same test/runtime revision. Token-aware VP8L backward-reference dynamic
+`572ce06c5d16411959339ac3592d9c041f0f2b32`, with the verified Rust witness in
+test/runtime revision `019f0dcdce5a1f55d4d8e2242a0bc7200c4877ab`. Token-aware VP8L backward-reference dynamic
 program tracing, path reconstruction, and token replay now checkpoint every
 256 consumed pixels, while the const-specialized no-token path retains its
 1,024-pixel cadence. The existing
@@ -2355,19 +2363,26 @@ rustfmt passed, and the clean schema-`@3` benchmark passed both suites at this
 revision. This is Rust-only work-control evidence: Pillow has no caller token,
 typed work-budget result, caller-owned sink, or rollback equivalent, so the
 slice adds no parity row, fixture, diagnostic origin, new test function, or
-coverage-only hook.
+coverage-only hook. The same existing 1x512 constant RGB probe proves the new
+token-stream boundary at `maximum: 2,457`, `observed: 2,458` in both
+whole-buffer and caller-owned-sink paths, with `[0xDC]` untouched; a single copy
+token crosses both 256-pixel boundaries and the no-token reference loop remains
+tight.
 
-The clean schema-`@3` benchmark at this revision reported 1.124760 s wall /
-2.891277 user s / 0.276687 sys s / 251,428,864-byte peak RSS for the Pillow
-parity fixture suite, and 1.519754 s wall / 2.169713 user s / 0.147452 sys s /
-182,435,840-byte peak RSS for the separate Rust-only feature-gate suite. The
-native release `rlib` was 7,983,552 bytes and the `wasm32-unknown-unknown`
-determinism artifact was 25,180,248 bytes. These are direct-child POSIX
-observations from the schema-`@3` protocol, not universal process-tree or
-allocator claims. The current local feature matrix also passed all configured
-native/WASI lanes with `cache=cold`, `lanes=6`, `test_threads=2`,
+The first clean schema-`@3` benchmark at this revision reported 2.169517 s wall /
+3.301343 user s / 0.664454 sys s / 265,551,872-byte peak RSS for the Pillow
+parity fixture suite, and 1.614349 s wall / 2.243231 user s / 0.178343 sys s /
+199,688,192-byte peak RSS for the separate Rust-only feature-gate suite. Its
+warm repeat reported 1.483468 s / 3.727710 user s / 0.295221 sys s for Pillow
+parity and 2.109708 s / 2.936649 user s / 0.175846 sys s for the Rust-only
+suite. The native release `rlib` was 7,990,184 bytes and the
+`wasm32-unknown-unknown` determinism artifact was 25,083,545 bytes. These are
+direct-child POSIX observations from schema `@3`, not universal process-tree or
+allocator claims. The current cold and warm local feature-matrix runs both
+passed all configured native/WASI lanes with `lanes=6`, `test_threads=2`,
 `build_jobs=2`, `debug=0`, and `verbose=0`, ending with the capability-table
-agreement marker and no `lock-wait` match; its warm repeat completed in 6.14 s.
+agreement marker and no `lock-wait` match; the warm repeat completed in 6.42 s
+wall time (`real 6.42`, `user 24.09`, `sys 3.05`).
 
 Previous acceptance record: compact VP8 work-budget witnesses
 
