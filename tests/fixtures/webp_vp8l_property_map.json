@@ -14,12 +14,13 @@
     "matrix_path": "tests/fixtures/coverage_matrix.json",
     "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
-    "inspector_sha256": "d5d9084927ff6be40c70ec790cb4bbd7cab9623e1ed026d23449bde7897f952f"
+    "inspector_sha256": "833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541"
   },
   "evidence_policy": {
     "pillow_outer_result": "The named row proves only the Pillow-observable pixels, bytes, metadata, or error result asserted by the matrix.",
     "candidate": "The fixture is a deliberate structural candidate or minimized error boundary, but its VP8L internal state is not proven by Pillow.",
-    "structural_witness_needed": "An independently checked VP8L parser or retained source provenance is required for any property not covered by structural_witnesses; Pillow outer rows alone never prove internal state."
+    "structural_witness_needed": "An independently checked VP8L parser or retained source provenance is required for any property not covered by structural_witnesses; Pillow outer rows alone never prove internal state.",
+    "malformed_parser": "Malformed witnesses record independent-parser rejection codes, phases, and bit offsets; these are specification evidence and never alter the Pillow error oracle."
   },
   "structural_witnesses": [
     {
@@ -217,6 +218,73 @@
           "mapped_distances_contains": [1]
         }
       }
+    }
+  ],
+  "malformed_witnesses": [
+    {
+      "property_id": "vp8l.frame.header_and_outer_result",
+      "witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_bad_vp8l_signature", "expect": {"status": "error", "error_code": "missing_vp8l_signature", "error_phase": null, "bit_offset": null}},
+        {"operation": "decode", "row_id": "error_malformed_container_bad_vp8l_version", "expect": {"status": "error", "error_code": "invalid_vp8l_version", "error_phase": "frame_header", "bit_offset": 40}},
+        {"operation": "decode", "row_id": "error_malformed_container_extended_vp8l_alpha_header_only", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "frame_header", "bit_offset": 40}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_alpha_header_only", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "frame_header", "bit_offset": 40}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_header_only", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "frame_header", "bit_offset": 40}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_short_header", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "frame_header", "bit_offset": 8}}
+      ]
+    },
+    {
+      "property_id": "vp8l.transform.malformed_forms",
+      "witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_size_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "transform_header", "bit_offset": 43}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_index_stream_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 53}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_color_transform_stream_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 48}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_duplicate_transform", "expect": {"status": "error", "error_code": "duplicate_transform", "error_phase": "transform_header", "bit_offset": 46}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_predictor_transform_stream_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 48}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_128", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "color_transform_stream_image_data", "bit_offset": 1024}}
+      ]
+    },
+    {
+      "property_id": "vp8l.huffman.malformed_forms",
+      "witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_length_alphabet_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 63}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 64}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 72}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_code_lengths_max_value_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 64}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_empty_code_length_tree", "expect": {"status": "error", "error_code": "empty_huffman_tree", "error_phase": "huffman_tree", "bit_offset": 60}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_incomplete_huffman_tree", "expect": {"status": "error", "error_code": "incomplete_huffman_tree", "error_phase": "huffman_code_lengths", "bit_offset": 69}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_max_symbol", "expect": {"status": "error", "error_code": "huffman_max_symbol_exceeds_alphabet", "error_phase": "huffman_code_lengths", "bit_offset": 80}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_huffman_stream_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 48}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_repeat_code17_extra_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 62}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_repeat_code18_extra_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 62}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_repeat_overflow", "expect": {"status": "error", "error_code": "huffman_repeat_exceeds_alphabet", "error_phase": "huffman_code_lengths", "bit_offset": 85}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_two_symbol_truncated_one_symbol", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 47}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_6", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 48}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_8", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 64}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_12", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 96}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_16", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 128}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_24", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 192}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_32", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 256}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_truncated_64", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 512}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_zero_symbol_truncated", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 46}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_zero_symbol", "expect": {"status": "ok", "structure": {"stream_index": 0, "stream": {"tree_forms_at_least": {"simple_single": 5}}}}},
+        {"operation": "decode", "row_id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol", "expect": {"status": "ok", "structure": {"stream_index": 0, "stream": {"tree_forms_at_least": {"full": 1, "simple_single": 4}}}}}
+      ]
+    },
+    {
+      "property_id": "vp8l.cache.malformed_forms",
+      "witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_color_cache", "expect": {"status": "error", "error_code": "invalid_color_cache_width", "error_phase": "main_image_stream_header", "bit_offset": 46}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_cache_truncated_10", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 74}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_single_cache_truncated_18", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_code_lengths", "bit_offset": 142}}
+      ]
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "witnesses": [
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_plane_distance_truncated_12", "expect": {"status": "error", "error_code": "truncated_bitstream", "error_phase": "huffman_tree", "bit_offset": 96}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_single_backref", "expect": {"status": "error", "error_code": "back_reference_out_of_bounds", "error_phase": "main_image_stream_image_data", "bit_offset": 102}},
+        {"operation": "decode", "row_id": "error_malformed_container_vp8l_backref_before_output", "expect": {"status": "error", "error_code": "back_reference_out_of_bounds", "error_phase": "main_image_stream_image_data", "bit_offset": 105}}
+      ]
     }
   ],
   "properties": [

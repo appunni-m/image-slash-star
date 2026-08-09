@@ -115,7 +115,12 @@ def verify_inputs(document: dict) -> None:
     policy = document.get("evidence_policy")
     if not isinstance(policy, dict):
         fail("evidence_policy must be an object")
-    for key in ("pillow_outer_result", "candidate", "structural_witness_needed"):
+    for key in (
+        "pillow_outer_result",
+        "candidate",
+        "structural_witness_needed",
+        "malformed_parser",
+    ):
         if not isinstance(policy.get(key), str) or not policy[key].strip():
             fail(f"evidence_policy.{key} must be a non-empty explanation")
 
@@ -336,6 +341,105 @@ def verify_structural_witnesses(
     return count
 
 
+def verify_malformed_witnesses(
+    document: dict,
+    rows: dict[tuple[str, str], dict],
+    seen: set[tuple[str, str]],
+) -> int:
+    groups = document.get("malformed_witnesses")
+    if not isinstance(groups, list) or not groups:
+        fail("malformed_witnesses must be a non-empty array")
+    property_ids = {
+        entry.get("id")
+        for entry in document.get("properties", [])
+        if isinstance(entry, dict)
+    }
+    accounted: set[tuple[str, str]] = set()
+    count = 0
+    for group in groups:
+        if not isinstance(group, dict):
+            fail("malformed witness groups must be objects")
+        property_id = group.get("property_id")
+        if property_id not in property_ids:
+            fail(f"malformed witness references unknown property {property_id!r}")
+        witnesses = group.get("witnesses")
+        if not isinstance(witnesses, list) or not witnesses:
+            fail(f"{property_id}: malformed witnesses must be a non-empty array")
+        for witness in witnesses:
+            if not isinstance(witness, dict):
+                fail(f"{property_id}: malformed witness must be an object")
+            operation = witness.get("operation")
+            row_id = witness.get("row_id")
+            if operation != "decode" or not isinstance(row_id, str) or not row_id:
+                fail(f"{property_id}: malformed witnesses must reference decode rows")
+            key = (operation, row_id)
+            if key in accounted:
+                fail(f"malformed witness row is listed more than once: {operation}:{row_id}")
+            verify_witness(witness, str(property_id), rows, seen)
+            accounted.add(key)
+            row = rows[key]
+            path, _, _ = fixture_path(operation, row)
+            expect = witness.get("expect")
+            if not isinstance(expect, dict):
+                fail(f"{property_id}:{row_id}: malformed expect must be an object")
+            expected_status = expect.get("status")
+            if expected_status == "error":
+                expected_code = expect.get("error_code")
+                if not isinstance(expected_code, str) or not expected_code:
+                    fail(f"{property_id}:{row_id}: error_code is required")
+                try:
+                    inspect_path(path)
+                except ParseError as error:
+                    if error.code != expected_code:
+                        fail(
+                            f"{property_id}:{row_id}: parser code {error.code!r} "
+                            f"differs from {expected_code!r}"
+                        )
+                    if "error_phase" in expect and error.phase != expect["error_phase"]:
+                        fail(
+                            f"{property_id}:{row_id}: parser phase {error.phase!r} "
+                            f"differs from {expect['error_phase']!r}"
+                        )
+                    if "bit_offset" in expect and error.bit_offset != expect["bit_offset"]:
+                        fail(
+                            f"{property_id}:{row_id}: parser bit offset {error.bit_offset!r} "
+                            f"differs from {expect['bit_offset']!r}"
+                        )
+                except (OSError, ValueError) as error:
+                    fail(f"{property_id}:{row_id}: independent parser could not classify error: {error}")
+                else:
+                    fail(f"{property_id}:{row_id}: malformed parser unexpectedly accepted fixture")
+            elif expected_status == "ok":
+                try:
+                    structure = inspect_path(path)
+                except (OSError, ParseError) as error:
+                    fail(f"{property_id}:{row_id}: tolerated fixture did not parse: {error}")
+                verify_structure(
+                    expect.get("structure", {}),
+                    structure,
+                    f"{property_id}:{row_id}",
+                )
+            else:
+                fail(f"{property_id}:{row_id}: malformed expect.status must be error or ok")
+            count += 1
+
+    expected_rows = {
+        key
+        for key, row in rows.items()
+        if key[0] == "decode"
+        and "vp8l" in key[1]
+        and (
+            key[1].startswith("error_malformed_container_")
+            or key[1].startswith("pillow_tolerated_malformed_")
+        )
+    }
+    if accounted != expected_rows:
+        missing = sorted(expected_rows - accounted)
+        extra = sorted(accounted - expected_rows)
+        fail(f"VP8L malformed witness coverage differs: missing={missing}, extra={extra}")
+    return count
+
+
 def verify_lossless_success_corpus(rows: dict[tuple[str, str], dict]) -> int:
     parsed = 0
     for (operation, row_id), row in rows.items():
@@ -410,6 +514,7 @@ def main() -> int:
         rows = matrix_rows(matrix)
         property_count, witness_count, status_counts, seen = verify_properties(document, rows)
         structural_count = verify_structural_witnesses(document, rows, seen)
+        malformed_count = verify_malformed_witnesses(document, rows, seen)
         corpus_count = verify_lossless_success_corpus(rows)
     except RuntimeError as error:
         print(f"error: {error}", file=sys.stderr)
@@ -419,6 +524,7 @@ def main() -> int:
         "webp VP8L property map OK: "
         f"{property_count} properties, {witness_count} named witnesses, "
         f"{len(seen)} distinct active WebP rows, {structural_count} structural witnesses checked; "
+        f"{malformed_count} malformed parser witnesses checked; "
         f"parsed all {corpus_count} active lossless success rows; "
         f"statuses={dict(sorted(status_counts.items()))}; "
         "row claims remain Pillow outer-result evidence; structural facts are independently parsed"

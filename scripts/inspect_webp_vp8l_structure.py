@@ -20,17 +20,41 @@ from pathlib import Path
 class ParseError(Exception):
     """The fixture is not a structurally readable VP8L stream."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "invalid_structure",
+        phase: str | None = None,
+        bit_offset: int | None = None,
+    ):
+        super().__init__(message)
+        self.code = code
+        self.phase = phase
+        self.bit_offset = bit_offset
+
 
 class BitReader:
     def __init__(self, data: bytes):
         self.data = data
         self.position = 0
+        self.phase = "unknown"
 
     def read(self, count: int) -> int:
         if count < 0 or count > 32:
-            raise ParseError(f"invalid bit count {count}")
+            raise ParseError(
+                f"invalid bit count {count}",
+                code="invalid_bit_count",
+                phase=self.phase,
+                bit_offset=self.position,
+            )
         if self.position + count > len(self.data) * 8:
-            raise ParseError("truncated bitstream")
+            raise ParseError(
+                "truncated bitstream",
+                code="truncated_bitstream",
+                phase=self.phase,
+                bit_offset=self.position,
+            )
         value = 0
         for offset in range(count):
             bit_position = self.position + offset
@@ -64,12 +88,12 @@ class HuffmanTree:
     def from_lengths(cls, lengths: list[int]) -> "HuffmanTree":
         counts = Counter(length for length in lengths if length)
         if not counts:
-            raise ParseError("empty Huffman tree")
+            raise ParseError("empty Huffman tree", code="empty_huffman_tree")
         if sum(counts.values()) == 1:
             return cls.single_node(next(index for index, length in enumerate(lengths) if length))
         max_length = max(counts)
         if max_length > 15:
-            raise ParseError("Huffman code length exceeds 15")
+            raise ParseError("Huffman code length exceeds 15", code="huffman_code_length_too_large")
 
         next_codes = [0] * (max_length + 1)
         current = 0
@@ -77,7 +101,7 @@ class HuffmanTree:
             next_codes[length] = current
             current = (current + counts.get(length, 0)) << 1
         if current != 2 << max_length:
-            raise ParseError("incomplete Huffman tree")
+            raise ParseError("incomplete Huffman tree", code="incomplete_huffman_tree")
 
         symbols: dict[tuple[int, int], int] = {}
         for symbol, length in enumerate(lengths):
@@ -87,7 +111,7 @@ class HuffmanTree:
             next_codes[length] += 1
             key = (length, reverse_bits(code, length))
             if key in symbols:
-                raise ParseError("duplicate Huffman code")
+                raise ParseError("duplicate Huffman code", code="duplicate_huffman_code")
             symbols[key] = symbol
         if len(symbols) == 1:
             return cls.single_node(next(iter(symbols.values())))
@@ -102,7 +126,12 @@ class HuffmanTree:
             symbol = self.symbols.get((length, code))
             if symbol is not None:
                 return symbol
-        raise ParseError("Huffman symbol is not in the tree")
+        raise ParseError(
+            "Huffman symbol is not in the tree",
+            code="huffman_symbol_missing",
+            phase=reader.phase,
+            bit_offset=reader.position,
+        )
 
     def form(self) -> str:
         return "simple_single" if self.single is not None else "full"
@@ -133,11 +162,17 @@ def ceil_div(value: int, divisor: int) -> int:
 
 
 def read_huffman_code_lengths(reader: BitReader, code_length_tree: HuffmanTree, count: int) -> list[int]:
+    reader.phase = "huffman_code_lengths"
     if reader.read(1):
         length_nbits = 2 + 2 * reader.read(3)
         max_symbol = 2 + reader.read(length_nbits)
         if max_symbol > count:
-            raise ParseError("Huffman max symbol exceeds alphabet")
+            raise ParseError(
+                "Huffman max symbol exceeds alphabet",
+                code="huffman_max_symbol_exceeds_alphabet",
+                phase=reader.phase,
+                bit_offset=reader.position,
+            )
     else:
         max_symbol = count
 
@@ -155,12 +190,22 @@ def read_huffman_code_lengths(reader: BitReader, code_length_tree: HuffmanTree, 
             continue
         slot = code_length - 16
         if slot not in (0, 1, 2):
-            raise ParseError("invalid Huffman repeat code")
+            raise ParseError(
+                "invalid Huffman repeat code",
+                code="invalid_huffman_repeat_code",
+                phase=reader.phase,
+                bit_offset=reader.position,
+            )
         extra_bits = (2, 3, 7)[slot]
         repeat_offset = (3, 3, 11)[slot]
         repeat = reader.read(extra_bits) + repeat_offset
         if symbol + repeat > count:
-            raise ParseError("Huffman repeat exceeds alphabet")
+            raise ParseError(
+                "Huffman repeat exceeds alphabet",
+                code="huffman_repeat_exceeds_alphabet",
+                phase=reader.phase,
+                bit_offset=reader.position,
+            )
         value = previous if slot == 0 else 0
         for _ in range(repeat):
             lengths[symbol] = value
@@ -169,21 +214,29 @@ def read_huffman_code_lengths(reader: BitReader, code_length_tree: HuffmanTree, 
 
 
 def read_huffman_tree(reader: BitReader, alphabet_size: int) -> HuffmanTree:
-    if reader.read(1):
-        num_symbols = reader.read(1) + 1
-        first_8bits = reader.read(1)
-        zero = reader.read(1 + 7 * first_8bits)
-        if num_symbols == 1:
-            return HuffmanTree.single_node(zero)
-        return HuffmanTree.two_node(zero, reader.read(8))
+    reader.phase = "huffman_tree"
+    try:
+        if reader.read(1):
+            num_symbols = reader.read(1) + 1
+            first_8bits = reader.read(1)
+            zero = reader.read(1 + 7 * first_8bits)
+            if num_symbols == 1:
+                return HuffmanTree.single_node(zero)
+            return HuffmanTree.two_node(zero, reader.read(8))
 
-    code_length_count = 4 + reader.read(4)
-    code_length_lengths = [0] * 19
-    for index in range(code_length_count):
-        code_length_lengths[CODE_LENGTH_CODE_ORDER[index]] = reader.read(3)
-    code_length_tree = HuffmanTree.from_lengths(code_length_lengths)
-    lengths = read_huffman_code_lengths(reader, code_length_tree, alphabet_size)
-    return HuffmanTree.from_lengths(lengths)
+        code_length_count = 4 + reader.read(4)
+        code_length_lengths = [0] * 19
+        for index in range(code_length_count):
+            code_length_lengths[CODE_LENGTH_CODE_ORDER[index]] = reader.read(3)
+        code_length_tree = HuffmanTree.from_lengths(code_length_lengths)
+        lengths = read_huffman_code_lengths(reader, code_length_tree, alphabet_size)
+        return HuffmanTree.from_lengths(lengths)
+    except ParseError as error:
+        if error.phase is None:
+            error.phase = reader.phase
+        if error.bit_offset is None:
+            error.bit_offset = reader.position
+        raise
 
 
 class StreamStats:
@@ -245,6 +298,7 @@ class VP8LParser:
         self.transforms: list[dict] = []
 
     def read_distance(self, prefix: int) -> int:
+        self.reader.phase = "distance_code"
         if prefix < 4:
             return prefix + 1
         extra_bits = (prefix - 2) >> 1
@@ -258,14 +312,26 @@ class VP8LParser:
         x_offset, y_offset = DISTANCE_MAP[plane_code - 1]
         return max(1, x_offset + y_offset * width)
 
-    def read_image_stream(self, width: int, height: int, is_argb: bool) -> list[tuple[int, int, int, int]]:
+    def read_image_stream(
+        self,
+        width: int,
+        height: int,
+        is_argb: bool,
+        phase: str,
+    ) -> list[tuple[int, int, int, int]]:
         stats = StreamStats(width, height, is_argb)
         self.streams.append(stats)
+        self.reader.phase = f"{phase}_header"
         cache_bits = self.reader.read(1)
         color_cache = ColorCache(self.reader.read(4)) if cache_bits else None
         if color_cache is not None:
             if not 1 <= color_cache.bits <= 11:
-                raise ParseError("invalid color-cache width")
+                raise ParseError(
+                    "invalid color-cache width",
+                    code="invalid_color_cache_width",
+                    phase=self.reader.phase,
+                    bit_offset=self.reader.position,
+                )
             stats.color_cache_bits = color_cache.bits
 
         entropy_image: list[tuple[int, int, int, int]] = []
@@ -276,7 +342,12 @@ class VP8LParser:
             huffman_bits = self.reader.read(3) + 2
             huffman_width = ceil_div(width, 1 << huffman_bits)
             huffman_height = ceil_div(height, 1 << huffman_bits)
-            entropy_image = self.read_image_stream(huffman_width, huffman_height, False)
+            entropy_image = self.read_image_stream(
+                huffman_width,
+                huffman_height,
+                False,
+                "meta_huffman_stream",
+            )
             stats.meta_huffman_bits = huffman_bits
             stats.entropy_image_size = (huffman_width, huffman_height)
 
@@ -284,6 +355,7 @@ class VP8LParser:
         if entropy_image:
             groups = max(1, max((pixel[0] << 8) | pixel[1] for pixel in entropy_image) + 1)
         stats.huffman_groups = groups
+        self.reader.phase = "huffman_tree"
         trees: list[list[HuffmanTree]] = []
         alphabet_sizes = [280 + (1 << color_cache.bits) if color_cache else 280, 256, 256, 256, 40]
         for _ in range(groups):
@@ -304,7 +376,12 @@ class VP8LParser:
                 next_block_start = min(x | mask, width - 1) + y * width + 1
                 group_index = 0 if huffman_bits == 0 else entropy_image[(y >> huffman_bits) * huffman_width + (x >> huffman_bits)][0] * 256 + entropy_image[(y >> huffman_bits) * huffman_width + (x >> huffman_bits)][1]
                 if group_index >= len(trees):
-                    raise ParseError("entropy image selects an absent Huffman group")
+                    raise ParseError(
+                        "entropy image selects an absent Huffman group",
+                        code="entropy_group_missing",
+                        phase="image_data",
+                        bit_offset=self.reader.position,
+                    )
                 active_trees = trees[group_index]
                 if all(tree.single is not None for tree in active_trees) and active_trees[0].single < 256:
                     count = values if huffman_bits == 0 else next_block_start - index
@@ -315,6 +392,7 @@ class VP8LParser:
                     index += count
                     continue
 
+            self.reader.phase = f"{phase}_image_data"
             green = active_trees[0].read(self.reader)
             if green < 256:
                 red = active_trees[1].read(self.reader) & 255
@@ -336,7 +414,12 @@ class VP8LParser:
                 distance = self.plane_distance(width, plane_code)
                 stats.mapped_distances.add(distance)
                 if distance > len(output) or index + length > values:
-                    raise ParseError("back-reference is outside the image")
+                    raise ParseError(
+                        "back-reference is outside the image",
+                        code="back_reference_out_of_bounds",
+                        phase=f"{phase}_image_data",
+                        bit_offset=self.reader.position,
+                    )
                 if distance == 1:
                     for _ in range(length):
                         output.append(output[-distance])
@@ -346,10 +429,20 @@ class VP8LParser:
                 index += length
             else:
                 if color_cache is None:
-                    raise ParseError("color-cache symbol without a cache")
+                    raise ParseError(
+                        "color-cache symbol without a cache",
+                        code="color_cache_missing",
+                        phase=f"{phase}_image_data",
+                        bit_offset=self.reader.position,
+                    )
                 cache_index = green - 280
                 if cache_index >= len(color_cache.values):
-                    raise ParseError("color-cache symbol is outside the cache")
+                    raise ParseError(
+                        "color-cache symbol is outside the cache",
+                        code="color_cache_index_out_of_bounds",
+                        phase=f"{phase}_image_data",
+                        bit_offset=self.reader.position,
+                    )
                 output.append(color_cache.lookup(cache_index))
                 stats.cache_lookups += 1
                 index += 1
@@ -358,33 +451,55 @@ class VP8LParser:
         return output
 
     def parse(self) -> dict:
+        self.reader.phase = "frame_header"
         if self.reader.read(8) != 0x2F:
-            raise ParseError("VP8L signature is invalid")
+            raise ParseError(
+                "VP8L signature is invalid",
+                code="invalid_vp8l_signature",
+                phase="frame_header",
+                bit_offset=self.reader.position,
+            )
         width = self.reader.read(14) + 1
         height = self.reader.read(14) + 1
         alpha_used = self.reader.read(1)
         version = self.reader.read(3)
         if version != 0:
-            raise ParseError("VP8L version is not zero")
+            raise ParseError(
+                "VP8L version is not zero",
+                code="invalid_vp8l_version",
+                phase="frame_header",
+                bit_offset=self.reader.position,
+            )
 
         xsize = width
         seen: set[int] = set()
         while self.reader.read(1):
+            self.reader.phase = "transform_header"
             transform_type = self.reader.read(2)
             if transform_type in seen:
-                raise ParseError("duplicate transform")
+                raise ParseError(
+                    "duplicate transform",
+                    code="duplicate_transform",
+                    phase="transform_header",
+                    bit_offset=self.reader.position,
+                )
             seen.add(transform_type)
             if transform_type in (0, 1):
                 size_bits = self.reader.read(3) + 2
                 block_width = ceil_div(xsize, 1 << size_bits)
                 block_height = ceil_div(height, 1 << size_bits)
-                self.read_image_stream(block_width, block_height, False)
+                self.read_image_stream(
+                    block_width,
+                    block_height,
+                    False,
+                    "predictor_transform_stream" if transform_type == 0 else "color_transform_stream",
+                )
                 self.transforms.append({"type": "predictor" if transform_type == 0 else "color", "size_bits": size_bits})
             elif transform_type == 2:
                 self.transforms.append({"type": "subtract_green"})
             elif transform_type == 3:
                 table_size = self.reader.read(8) + 1
-                self.read_image_stream(table_size, 1, False)
+                self.read_image_stream(table_size, 1, False, "color_index_stream")
                 if table_size <= 2:
                     index_bits = 3
                 elif table_size <= 4:
@@ -396,9 +511,14 @@ class VP8LParser:
                 xsize = ceil_div(xsize, 1 << index_bits)
                 self.transforms.append({"type": "color_indexing", "table_size": table_size, "index_bits": index_bits})
             else:
-                raise ParseError("invalid transform type")
+                raise ParseError(
+                    "invalid transform type",
+                    code="invalid_transform_type",
+                    phase="transform_header",
+                    bit_offset=self.reader.position,
+                )
 
-        self.read_image_stream(xsize, height, True)
+        self.read_image_stream(xsize, height, True, "main_image_stream")
         return {
             "width": width,
             "height": height,
@@ -412,7 +532,7 @@ class VP8LParser:
 
 def vp8l_payload(data: bytes) -> bytes:
     if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
-        raise ParseError("not a WebP RIFF file")
+        raise ParseError("not a WebP RIFF file", code="invalid_webp_riff")
     offset = 12
     while offset + 8 <= len(data):
         tag = data[offset : offset + 4]
@@ -420,17 +540,17 @@ def vp8l_payload(data: bytes) -> bytes:
         start = offset + 8
         end = start + size
         if end > len(data):
-            raise ParseError("truncated RIFF chunk")
+            raise ParseError("truncated RIFF chunk", code="truncated_riff_chunk")
         if tag == b"VP8L":
             return data[start:end]
         offset = end + (size & 1)
-    raise ParseError("WebP has no VP8L chunk")
+    raise ParseError("WebP has no VP8L chunk", code="missing_vp8l_chunk")
 
 
 def inspect_path(path: Path) -> dict:
     payload = vp8l_payload(path.read_bytes())
     if not payload or payload[0] != 0x2F:
-        raise ParseError("VP8L signature is missing")
+        raise ParseError("VP8L signature is missing", code="missing_vp8l_signature")
     return VP8LParser(payload).parse()
 
 
@@ -442,8 +562,16 @@ def main() -> int:
     for path in args.paths:
         try:
             result[str(path)] = {"status": "ok", "structure": inspect_path(path)}
-        except (OSError, ParseError) as error:
-            result[str(path)] = {"status": "error", "error": str(error)}
+        except OSError as error:
+            result[str(path)] = {"status": "error", "error": str(error), "error_code": "io"}
+        except ParseError as error:
+            result[str(path)] = {
+                "status": "error",
+                "error": str(error),
+                "error_code": error.code,
+                "error_phase": error.phase,
+                "bit_offset": error.bit_offset,
+            }
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if all(value["status"] == "ok" for value in result.values()) else 1
 

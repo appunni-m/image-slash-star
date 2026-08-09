@@ -1894,9 +1894,9 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`5a0a87ffb1d4ef291c88d0bf5cde9814ae56d1f3ea3ba7ca9f7fb8a5d319182a`, and
+`b5724e532c28d63bf74fe62b492e82529b8bf58af2540d650f0c32c79418ae75`, and
 the inspector SHA-256
-`d5d9084927ff6be40c70ec790cb4bbd7cab9623e1ed026d23449bde7897f952f`.
+`833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
 and identifiers, and requires the four maintained documents to name the same
 revision; CI runs the verifier so the tuple cannot drift.
@@ -6122,7 +6122,7 @@ report answers "which implementation paths executed?"; it does not answer
 | Aggregate coverage | CI/Coverage MCP `cargo llvm-cov --all-features --branch --json` over the complete test suite | Execution coverage across parity tests, defensive contracts, and permitted private `cfg(coverage)` state models | Parity completeness, semantic correctness, security, or production readiness |
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
-| VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
+| VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts and malformed parser code/phase/bit-offset witnesses, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
 
 The aggregate line, branch, function, and region totals must therefore never
 be described as "Pillow parity coverage". A defensive contract may contribute
@@ -6139,19 +6139,22 @@ the active lossless WebP corpus. It is pinned to implementation revision
 generated-matrix SHA-256
 `b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
 The map also pins the independent inspector SHA-256
-`d5d9084927ff6be40c70ec790cb4bbd7cab9623e1ed026d23449bde7897f952f`.
+`833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 70 named witnesses, 56 distinct active WebP rows, and 29
-independently parsed structural witnesses.
+properties, 70 named witnesses, 78 distinct active WebP rows, 29 successful
+structural witnesses, and 40 malformed parser witnesses.
 
 All 14 properties remain deliberately marked `candidate` at the full-category
 level: their named rows are Pillow-origin outer-result fixtures, while the
-29 structural witnesses independently establish only selected transform,
-meta-Huffman, color-cache, Huffman-tree, distance, and entropy-image facts.
-The map adds no synthetic parity row, `cfg(coverage)` hook, or Rust unit test.
-The remaining WEP-022 work is to expand those structural witnesses to every
-claimed combination and malformed phase without changing the Pillow parity
-claim.
+29 successful structural witnesses independently establish only selected
+transform, meta-Huffman, color-cache, Huffman-tree, distance, and entropy-image
+facts. The 40 malformed witnesses independently check rejection code, parser
+phase, and bit offset (including Pillow-tolerated malformed streams that the
+inspector accepts); those fields are specification evidence, never Pillow
+diagnostics. The map adds no synthetic parity row, `cfg(coverage)` hook, or
+Rust unit test. The remaining WEP-022 work is to expand the successful
+structural witnesses to every claimed combination without changing the Pillow
+parity claim.
 
 ### Feature and target matrix
 
