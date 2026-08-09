@@ -2598,6 +2598,27 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     )?;
     writer.flush()?;
 
+    // The ordinary path already knows which ALPH representation is shorter.
+    // Avoid materializing both candidates: reuse the encoded VP8L allocation
+    // when compressed output wins, and copy the raw plane only when it wins.
+    // Keep the token-aware path below unchanged because its per-candidate copy
+    // checkpoints are part of the existing Rust-only work-budget contract.
+    if token.is_none() {
+        if alpha.len() <= encoded.len() {
+            let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
+            uncompressed.push(0); // no compression, no filtering, no preprocessing
+            uncompressed.extend_from_slice(alpha);
+            return Ok(uncompressed);
+        }
+
+        let encoded_length = encoded.len();
+        encoded.reserve(1);
+        encoded.push(0);
+        encoded.copy_within(..encoded_length, 1);
+        encoded[0] = 1; // lossless compression, no filtering, no preprocessing
+        return Ok(encoded);
+    }
+
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
     compressed.push(1); // lossless compression, no filtering, no preprocessing
     extend_bytes_with_checkpoint(&mut compressed, &encoded, token)?;
