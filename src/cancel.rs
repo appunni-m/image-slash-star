@@ -13,8 +13,8 @@
 //! padding is required, filter-edge adjustment, RGBA transparent-area cleanup
 //! after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
 //! collection and index packing after each 1,024 source pixels, lossy WebP
-//! alpha-stream compressed/raw buffer copies and lossless VP8L RIFF frame
-//! copies after each 1,024 output bytes,
+//! VP8/ALPH RIFF payload and alpha-stream compressed/raw buffer copies plus
+//! lossless VP8L RIFF frame copies after each 1,024 output bytes,
 //! analysis
 //! histogram construction after each 64 completed 4×4 blocks, analysis after
 //! each 1,024 macroblocks, segment-clustering alpha-domain chunks after each

@@ -964,7 +964,8 @@ pub fn encode_with_policy(
 /// lossy VP8 RGB/RGBA-to-YUV conversion items, RGBA transparent-area cleanup
 /// after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
 /// collection and index packing after each 1,024 source pixels, lossy WebP
-/// compressed/raw alpha-stream buffer copies after each 1,024 output bytes, and
+/// VP8/ALPH RIFF payload and compressed/raw alpha-stream buffer copies after
+/// each 1,024 output bytes, and
 /// nearest-delta candidate scans
 /// after each 64 candidates; lossless VP8L image-palette
 /// construction and palette-mode index packing after each 1,024 source pixels,
@@ -1007,8 +1008,9 @@ pub fn encode_with_policy(
 /// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical bitstream intervals, 1,024-byte
 /// bitstream-output,
 /// and token-stream stages, codec-result, and
-/// metadata-assembly boundaries, including lossless WebP VP8L RIFF frame copies
-/// and WebP container/metadata copies after each 1,024 output bytes; native
+/// metadata-assembly boundaries, including lossy WebP VP8/ALPH RIFF payload,
+/// lossless VP8L RIFF frame, and WebP container/metadata copies after each
+/// 1,024 output bytes; native
 /// AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
@@ -1108,8 +1110,9 @@ pub fn encode_sequence_with_policy(
 
 /// Encode a still image or animation with cooperative cancellation.
 ///
-/// Sequence-capable codecs poll at retained-frame, finalization, WebP
-/// lossless VP8L frame-copy, and container-copy boundaries. One-frame sequence encodes reuse their still encoder's
+/// Sequence-capable codecs poll at retained-frame, finalization, WebP lossy
+/// VP8/ALPH and lossless VP8L frame-copy, and container-copy boundaries.
+/// One-frame sequence encodes reuse their still encoder's
 /// checkpoints, while their sink paths reuse the corresponding validated
 /// structural writers; multi-frame GIF, TIFF, WebP, and native AVIF encodes
 /// poll their sequence/container boundaries.
