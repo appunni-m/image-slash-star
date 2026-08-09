@@ -3,15 +3,15 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`5aa0d77b37a5d81e1149e5169915ce21c59b6454`, Rust test/runtime revision
-`163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`, and benchmark-protocol revision
+`e3e39ff687aba7b589b74188f2592b1bf3839306`, Rust test/runtime revision
+`e3e39ff687aba7b589b74188f2592b1bf3839306`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`72051344-2014-4a9d-9fb8-e5e5a56a1f73`; the exact-head feature-matrix run is
-`18bb761a-7ade-4a78-8680-1b55562053ac`; and the current Coverage MCP snapshot
-is `1c76bb32-2fcf-4b82-a50c-1cf3409e9a0c` from run
-`ed54deb4-2f1f-45fb-9e45-204cb7ba8621`.
+`4ade50dc-898b-4171-bdb1-251ec41aa0d9`; the exact-head feature-matrix run is
+`b12125c4-d185-41c4-b952-53828f6448a7`; and the current Coverage MCP snapshot
+is `a225b727-7b8d-4783-b03b-1a109d831b2d` from run
+`a33150ab-c337-4325-be49-687741d091b3`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -1598,6 +1598,12 @@ loops. Token-aware repeated-run hash-chain insertion and long backward-reference
 result backfills also charge after each 256 entries; their no-token paths remain
 tight. Lossless VP8L entropy-mode analysis
 now charges after each 64 symbols while scanning fixed-alphabet histogram costs.
+The token-aware lossless VP8L backward-reference hash-chain candidate scan now
+charges after each 64 completed candidate trials across the pass; its no-token
+candidate loop retains the original tight path. The existing Rust-only
+work-budget contract proves `maximum: 16,254`, `observed: 16,255` in both
+whole-buffer and caller-owned-sink paths for the deterministic 160×160
+repeated-row RGB probe, with `[0xD6]` untouched.
 Histogram clustering now charges in both its min/max and bin-assignment
 pre-passes after each 64 tile histograms; its ordinary no-token path keeps the
 existing algorithm and data.
@@ -2209,7 +2215,40 @@ hook changed. Allocation counts, retained encoded/decoded cache bytes,
 caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
 QA-010/QA-030.
 
-Current acceptance record: cross-codec flush rejection
+Current acceptance record: WebP VP8L hash-chain candidate trials
+
+The token-aware lossless WebP VP8L backward-reference hash-chain scan is
+implemented at production and test/runtime revision
+`e3e39ff687aba7b589b74188f2592b1bf3839306`. The existing
+`encode_work_budget_is_a_non_parity_result_contract` now counts completed
+chain-candidate trials across the pass and polls after each 64 trials in the
+token path; the no-token candidate loop remains a separate tight path. Its
+deterministic 160×160 repeated-row RGB probe preserves ordinary bytes under an
+ample budget and rejects at `maximum: 16,254`, `observed: 16,255` in both the
+whole-buffer and caller-owned-sink paths, with sink sentinel `[0xD6]` untouched.
+The boundary is a real interior hash-chain work dimension, not a synthetic
+coverage hook or a Pillow-parity claim.
+
+Pillow exposes no caller token, typed work-budget result, caller-owned sink, or
+rollback equivalent, so this is Rust-only resource-contract evidence. It adds
+no Pillow parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook. Local focused/full all-feature tests, strict
+all-target Clippy, and rustfmt passed. Exact-head managed Pillow parity run
+`4ade50dc-898b-4171-bdb1-251ec41aa0d9` passed 1,445/1,445 checks in 9,831 ms.
+Feature-matrix run `b12125c4-d185-41c4-b952-53828f6448a7` passed all
+configured native/WASI lanes in 60,951 ms with `cache=cold`, `lanes=6`,
+`test_threads=2`, `build_jobs=2`, `debug=0`, and `verbose=0`; its retained log
+contains the native/WASI capability agreement marker and no `lock-wait` match.
+Nightly LLVM run `a33150ab-c337-4325-be49-687741d091b3` passed 85/85 tests in
+70,946 ms and ingested snapshot `a225b727-7b8d-4783-b03b-1a109d831b2d`:
+54,785/55,635 lines, 7,812/8,016 branches, 3,111/3,202 functions, and
+84,476/86,361 regions. These are Rust implementation/coverage records, not
+Pillow-parity coverage; the known LLVM JSON segment-normalization warning
+remains. Remaining progress semantics, interruption inside one candidate or
+other codec unit, transient allocation accounting, and short-write/rollback
+cleanup remain open.
+
+Historical acceptance record: cross-codec flush rejection
 
 The Rust-only sink contract is implemented at test/runtime revision
 `163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39`; production behavior remains at
