@@ -1159,6 +1159,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
         write_meta_huffman_bit,
         quality,
         max_cache_bits,
+        &mut token_scratch.candidates,
         token,
     )?;
 
@@ -1254,6 +1255,7 @@ impl GroupCodes {
 #[derive(Default)]
 struct TokenStreamScratch {
     groups: Vec<GroupCodes>,
+    candidates: backward_refs::CandidateScratch,
     histogram: histogram::HistogramScratch,
     huffman_tokens: Vec<HuffmanToken>,
     optimized_frequencies: Vec<u32>,
