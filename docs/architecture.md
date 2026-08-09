@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `a7538a957a04efed5950b7ea16ff98b42ebff7da`; the claim-ledger fixture tuple
+revision `fc56627eb07deb931da462c077ec81dab9c6e702`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -19,7 +19,8 @@ scratch reuse, WebP VP8L Huffman symbol-array reuse, WebP VP8L Huffman-RLE mask
 scratch reuse, WebP VP8L meta-pixel scratch reuse, WebP VP8L Huffman node/merge
 scratch reuse, WebP VP8L nested metadata-stream scratch reuse, WebP VP8L nested
 metadata output-scratch reuse, WebP VP8L cache-transform output-scratch reuse,
-WebP VP8L trace path/output scratch reuse, GIF indexed
+WebP VP8L trace path/output scratch reuse, WebP VP8L trace CostManager buffer
+reuse, GIF indexed
 frame-diff state, TIFF sequence
 length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
@@ -742,6 +743,15 @@ to scratch. Trace ordering, checkpoint behavior, encoded bytes, errors, and sink
 output remain unchanged. This is a Rust-only trace-scratch allocation
 optimization, not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP VP8L trace setup retains the CostManager pixel-cost and path-length tables,
+match-length cost and equal-cost interval tables, active interval state, and
+interval split/rebuild scratch across sequential trace attempts. Each attempt
+resets candidate-specific values and preserves the token-aware initialization
+checkpoints; the no-token path remains tight. Trace ordering, checkpoint
+behavior, encoded bytes, errors, and sink output remain unchanged. This is a
+Rust-only CostManager allocation optimization, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 GIF sequence encoding consumes prepared frame ownership after the complete
 transparency scan. It keeps a small global-palette copy for table comparisons,
