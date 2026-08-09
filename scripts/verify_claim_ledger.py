@@ -37,6 +37,7 @@ HASHED_FILES = {
     "diagnostic": "tests/fixtures/diagnostic_manifest.json",
     "coverage_origins": "tests/fixtures/coverage_origin_manifest.json",
     "webp_property_map": "tests/fixtures/webp_vp8l_property_map.json",
+    "webp_property_inspector": "scripts/inspect_webp_vp8l_structure.py",
 }
 
 DOCS = [

@@ -12,13 +12,213 @@
     "manifest_path": "manifest.yaml",
     "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510"
+    "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
+    "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
+    "inspector_sha256": "d5d9084927ff6be40c70ec790cb4bbd7cab9623e1ed026d23449bde7897f952f"
   },
   "evidence_policy": {
     "pillow_outer_result": "The named row proves only the Pillow-observable pixels, bytes, metadata, or error result asserted by the matrix.",
     "candidate": "The fixture is a deliberate structural candidate or minimized error boundary, but its VP8L internal state is not proven by Pillow.",
-    "structural_witness_needed": "A future independent VP8L parser or retained source provenance must establish the exact transform, cache, Huffman, distance, or entropy-image state."
+    "structural_witness_needed": "An independently checked VP8L parser or retained source provenance is required for any property not covered by structural_witnesses; Pillow outer rows alone never prove internal state."
   },
+  "structural_witnesses": [
+    {
+      "property_id": "vp8l.frame.header_and_outer_result",
+      "operation": "decode",
+      "row_id": "lossless_vp8l",
+      "expect": {
+        "width": 128,
+        "height": 128,
+        "transforms": [
+          {"type": "predictor", "size_bits": 9},
+          {"type": "color", "size_bits": 3}
+        ]
+      }
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode5",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [5]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode6",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [6]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode7",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [7]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode8",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [8]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode9",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [9]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode10",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [10]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode13",
+      "expect": {"stream_index": 0, "stream": {"green_values_contains": [13]}}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 1, "index_bits": 3}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_checker2",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 2, "index_bits": 3}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette4",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 4, "index_bits": 2}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette16",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 16, "index_bits": 1}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette17",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 17, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette32",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 32, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette64",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 64, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.color_indexing_size_bands",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette256",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 256, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.color",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_horizontal",
+      "expect": {"transforms_contains": [{"type": "color", "size_bits": 9}]}
+    },
+    {
+      "property_id": "vp8l.transform.color",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_vertical",
+      "expect": {"transforms_contains": [{"type": "color", "size_bits": 3}]}
+    },
+    {
+      "property_id": "vp8l.transform.color",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_diagonal",
+      "expect": {"transforms_contains": [{"type": "color", "size_bits": 9}]}
+    },
+    {
+      "property_id": "vp8l.transform.subtract_green",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_product",
+      "expect": {"transforms_contains": [{"type": "subtract_green"}]}
+    },
+    {
+      "property_id": "vp8l.transform.subtract_green",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_radial",
+      "expect": {"transforms_contains": [{"type": "subtract_green"}]}
+    },
+    {
+      "property_id": "vp8l.meta_huffman.prefix_groups",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+      "expect": {
+        "stream_index": 0,
+        "stream": {
+          "color_cache_bits": 1,
+          "meta_huffman_bits": 2,
+          "entropy_image_size": [2, 1],
+          "huffman_groups": 1
+        }
+      }
+    },
+    {
+      "property_id": "vp8l.meta_huffman.prefix_groups",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_single_cache_peek",
+      "expect": {"stream_index": 0, "stream": {"huffman_groups": 2}}
+    },
+    {
+      "property_id": "vp8l.entropy_image_dimensions",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+      "expect": {"stream_index": 0, "stream": {"entropy_image_size": [2, 1]}}
+    },
+    {
+      "property_id": "vp8l.entropy_image_dimensions",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_single_cache_peek",
+      "expect": {"stream_index": 0, "stream": {"entropy_image_size": [2, 1], "huffman_groups": 2}}
+    },
+    {
+      "property_id": "vp8l.color_cache.boundaries",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_single_cache_peek",
+      "expect": {"stream_index": 0, "stream": {"color_cache_bits": 1, "cache_lookups_at_least": 2}}
+    },
+    {
+      "property_id": "vp8l.huffman.simple_tree_form",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants",
+      "expect": {"any_stream": {"tree_forms_at_least": {"simple_single": 5}}}
+    },
+    {
+      "property_id": "vp8l.huffman.full_tree_form",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_noise",
+      "expect": {"any_stream": {"tree_forms_at_least": {"full": 4}}}
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_plane_distance_clamp",
+      "expect": {
+        "stream_index": 0,
+        "stream": {
+          "distance_prefixes_contains": [6],
+          "plane_codes_contains": [10],
+          "mapped_distances_contains": [1]
+        }
+      }
+    }
+  ],
   "properties": [
     {
       "id": "vp8l.frame.header_and_outer_result",
