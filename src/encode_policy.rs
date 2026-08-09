@@ -43,6 +43,7 @@ use crate::{CodecOperation, ImageError, ImageFormat, ImageResult, ResourceLimit}
 /// source pixels, plus lossless WebP VP8L RGB/RGBA source-pixel
 /// materialization, image-palette construction, and palette-mode index packing
 /// after each 1,024 source pixels, plus RGBA
+/// alpha-stream and container/metadata output copies after each 1,024 bytes,
 /// hidden-RGB cleanup after each 1,024 scanned pixels,
 /// predictor source-snapshot copying, predictor/cross-color/entropy/transform,
 /// VP8L meta-histogram sampling row/column comparisons and symbol compaction
@@ -141,7 +142,9 @@ impl EncodePolicy {
     /// pixels, plus RGB/RGBA source-pixel materialization, image-palette
     /// construction, and palette-mode index packing after each 1,024 source
     /// pixels, plus RGBA hidden-RGB cleanup
-    /// after each 1,024 scanned pixels, predictor image-width tile-row copies,
+    /// after each 1,024 scanned pixels, lossy WebP alpha-stream and
+    /// container/metadata output copies after each 1,024 bytes, predictor
+    /// image-width tile-row copies,
     /// predictor tile scans, cross-color, entropy,
     /// transform, bounded backward-reference cost/length-table initialization
     /// and setup after each 1,024 entries, token-aware cost-manager interval-

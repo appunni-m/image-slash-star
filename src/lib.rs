@@ -1007,7 +1007,8 @@ pub fn encode_with_policy(
 /// histogram/Huffman, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical bitstream intervals, 1,024-byte
 /// bitstream-output,
 /// and token-stream stages, codec-result, and
-/// metadata-assembly boundaries; native AVIF still encoding polls preparation,
+/// metadata-assembly boundaries, including WebP container/metadata copies after
+/// each 1,024 output bytes; native AVIF still encoding polls preparation,
 /// frame, and finalization checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
 /// API additionally checks at retained-frame boundaries and codec-specific
@@ -1106,8 +1107,8 @@ pub fn encode_sequence_with_policy(
 
 /// Encode a still image or animation with cooperative cancellation.
 ///
-/// Sequence-capable codecs poll at retained-frame and finalization
-/// boundaries. One-frame sequence encodes reuse their still encoder's
+/// Sequence-capable codecs poll at retained-frame, finalization, and WebP
+/// container-copy boundaries. One-frame sequence encodes reuse their still encoder's
 /// checkpoints, while their sink paths reuse the corresponding validated
 /// structural writers; multi-frame GIF, TIFF, WebP, and native AVIF encodes
 /// poll their sequence/container boundaries.
