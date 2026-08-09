@@ -3,12 +3,13 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`; the claim-ledger fixture tuple
+revision `ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
-`afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current WebP candidate-prefix
+`afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
+Deflate output-buffer ownership optimization and WebP candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
 census/materialization/depth slices have not received a managed coverage rerun.
@@ -601,6 +602,13 @@ payload, BMP prepares bounded palette/row segments, and every codec may retain
 complete working state until a validated segment is ready. These are
 structural-delivery boundaries, not transient-allocation or recoverable-OOM
 guarantees.
+
+The shared PNG/TIFF zlib-ng compressor seeds its bit writer with the zlib
+header and returns that owned buffer directly, then appends the Adler-32
+trailer. This removes the separate full bitstream-to-output copy in both
+ordinary and token-aware paths without changing encoded bytes or checkpoint
+counts. It is a bounded transient-allocation optimization, not complete
+allocator accounting, recoverable-OOM handling, or a streaming guarantee.
 
 `EncodePolicy::max_work_units` is an independent inclusive bound on the
 documented cooperative encode checkpoints. A checkpoint charges one unit

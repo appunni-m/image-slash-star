@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`, and benchmark-protocol revision
+revision `ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`; the accepted managed records
+`ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,24 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The shared PNG/TIFF zlib-ng output-buffer ownership slice is implemented at
+production and Rust test/runtime revision
+`ea95e30e9a1538aaf316fd65b4c30e7a2f2c1e33`. Every no-token and token-aware
+zlib level now starts its bit writer with the two-byte zlib header and returns
+that writer-owned buffer directly before appending Adler-32, eliminating the
+intermediate bitstream-to-output copy. This changes transient allocation and
+copy behavior only; encoded bytes and checkpoint counts remain unchanged. The
+existing `encode_work_budget_is_a_non_parity_result_contract` proves ample
+byte identity for the PNG levels and retains the existing Rust-only policy
+boundaries. The 28-function Pillow fixture matrix, all 45 feature-gated Rust
+contracts, full all-feature tests, strict Clippy, and native/WASM feature
+matrix passed locally; no parity row, fixture-manifest row, diagnostic origin,
+new test function, or coverage-only hook was added. These are separate
+implementation and Rust-only evidence: Pillow parity remains the regression
+oracle for observable bytes/errors, while Pillow has no caller budget, sink,
+or allocation contract. No managed parity, feature-matrix, or Coverage MCP
+rerun is claimed for this revision.
 
 The latest lossless WebP VP8L Huffman-tree leaf-census/materialization/depth slice is
 implemented at production and Rust test/runtime revision
