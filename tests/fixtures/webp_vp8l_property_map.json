@@ -257,6 +257,12 @@
     {
       "property_id": "vp8l.color_cache.boundaries",
       "operation": "decode",
+      "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
+      "expect": {"stream_index": 0, "stream": {"color_cache_bits": 1}}
+    },
+    {
+      "property_id": "vp8l.color_cache.boundaries",
+      "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_product",
       "expect": {"stream_index": 2, "stream": {"color_cache_bits": 10, "cache_lookups_at_least": 2}}
     },
@@ -461,16 +467,15 @@
     },
     {
       "id": "vp8l.color_cache.boundaries",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
-        {"operation": "decode", "row_id": "error_malformed_container_vp8l_invalid_color_cache"},
-        {"operation": "decode", "row_id": "error_malformed_container_vp8l_meta_cache_truncated_10"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_product"}
       ],
-      "gap": "The success/error outcomes are retained, but cache enablement, cache-bit width, and lookup boundaries are not oracle fields."
+      "gap": "The independent parser now proves successful cache widths 1 and 10 plus lookup activity for the listed rows; malformed cache forms remain a separate candidate property and other widths are not claimed."
     },
     {
       "id": "vp8l.huffman.simple_tree_form",
