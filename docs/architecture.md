@@ -3,15 +3,15 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `e86a3f8575ba3b6911ee122b9911ddc1d13b61b4`; the claim-ledger fixture
+revision `34006c8768b69866dde9dad37d2cd0f3e8623f67`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`bc24d021-fefa-4457-805e-e40781a6198d` (1,445/1,445 passed in 584 ms), and
-the latest feature matrix is `794e585d-e7a8-4d14-bea2-46fc8ce70098` (passed in
-18,523 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `67dd5c90-a55d-4227-8171-5d7b4dec263e` from run
-`9e67827e-508a-4534-99a9-3acfd2b53f60`, also at that revision: 55,655/56,524
+`1d20dd7a-197d-4ec5-babc-e0fef93fa5b4` (1,445/1,445 passed in 779 ms), and
+the latest feature matrix is `af84d5be-3a52-4d87-baf1-6e363fcf2af6` (passed in
+28,971 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `23975329-0598-40eb-85e6-092d7265d944` from run
+`b3a3d4cc-d096-4377-bffd-0db2941d81a4`, also at that revision: 55,655/56,524
 lines, 7,964/8,174 branches, 3,112/3,208 functions, and 85,578/87,516
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
@@ -874,11 +874,13 @@ checkpoint behavior, encoded bytes, errors, and sink output remain unchanged.
 This is a Rust-only box-chain workspace optimization, not allocator/OOM
 accounting, recoverable-OOM handling, or a streaming guarantee.
 
-VP8L entropy-mode analysis now stores its fixed 13-entry cost table in a stack
-array instead of collecting the per-histogram costs into a temporary heap
-vector. Cost traversal order, cancellation/error propagation, mode selection,
-encoded bytes, and sink output remain unchanged. This is a Rust-only
-entropy-analysis workspace optimization, not allocator/OOM accounting,
+VP8L entropy-mode analysis stores both its fixed 13-entry cost table and its
+fixed 13-by-256-value histogram accumulation table in stack arrays instead of
+allocating temporary heap vectors. The histogram and cost traversal order,
+cancellation/error propagation, mode selection, encoded bytes, and sink output
+remain unchanged. The bounded table lifetime is local to `analyze_entropy`, so
+no state crosses an image-stream boundary. These are Rust-only
+entropy-analysis workspace optimizations, not allocator/OOM accounting,
 recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L alpha encoding now builds the delta table directly from the retained
