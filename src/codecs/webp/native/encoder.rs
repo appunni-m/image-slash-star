@@ -1995,10 +1995,10 @@ fn analyze_entropy(
     // A caller work budget must also cover this fixed-alphabet entropy pass.
     // Pillow has no equivalent caller token or work-budget result, so this is
     // Rust-only work-control evidence rather than a parity surface.
-    let costs = histograms
-        .iter()
-        .map(|histogram| histogram::bits_entropy_with_checkpoint(histogram, token))
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut costs = [0_u64; 13];
+    for (histogram, cost) in histograms.iter().zip(costs.iter_mut()) {
+        *cost = histogram::bits_entropy_with_checkpoint(histogram, token)?;
+    }
     check_token(token)?;
     let transform_width = width.div_ceil(1 << transform_bits);
     let transform_height = height.div_ceil(1 << transform_bits);
