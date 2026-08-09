@@ -193,6 +193,12 @@
       "expect": {"transforms_contains": [{"type": "subtract_green"}]}
     },
     {
+      "property_id": "vp8l.transform.subtract_green",
+      "operation": "encode",
+      "row_id": "enc_lossless_subtract_green",
+      "expect": {"transforms_contains": [{"type": "subtract_green"}]}
+    },
+    {
       "property_id": "vp8l.meta_huffman.prefix_groups",
       "operation": "decode",
       "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -415,13 +421,13 @@
     },
     {
       "id": "vp8l.transform.subtract_green",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "encode", "row_id": "enc_lossless_subtract_green"}
       ],
-      "gap": "The encoded bytes are Pillow parity for this save operation, but the matrix does not decode or label the selected VP8L transform."
+      "gap": "The independent parser now proves the subtract-green transform in the pinned Pillow encode artifact; the property remains limited to this witnessed encoded-output form and does not claim every encoder option or image shape."
     },
     {
       "id": "vp8l.meta_huffman.prefix_groups",
