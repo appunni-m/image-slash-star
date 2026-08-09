@@ -3,15 +3,15 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`e3e39ff687aba7b589b74188f2592b1bf3839306`, Rust test/runtime revision
-`e3e39ff687aba7b589b74188f2592b1bf3839306`, and benchmark-protocol revision
+`b29a8f3ef9c34063d1311aaebced5f61423d1818`, Rust test/runtime revision
+`b29a8f3ef9c34063d1311aaebced5f61423d1818`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current Pillow parity run is
-`4ade50dc-898b-4171-bdb1-251ec41aa0d9`; the exact-head feature-matrix run is
-`b12125c4-d185-41c4-b952-53828f6448a7`; and the current Coverage MCP snapshot
-is `a225b727-7b8d-4783-b03b-1a109d831b2d` from run
-`a33150ab-c337-4325-be49-687741d091b3`.
+`527419c8-2963-4436-902c-e00e89d740c0`; the exact-head feature-matrix run is
+`29aac451-8657-4382-b82e-8899a602c4eb`; and the current Coverage MCP snapshot
+is `003d69d6-820f-4bcc-a28f-af6be3327207` from run
+`a73364f0-0f4c-47ed-9fa8-beb218ebb88a`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -1604,6 +1604,11 @@ candidate loop retains the original tight path. The existing Rust-only
 work-budget contract proves `maximum: 16,254`, `observed: 16,255` in both
 whole-buffer and caller-owned-sink paths for the deterministic 160×160
 repeated-row RGB probe, with `[0xD6]` untouched.
+The token-aware palette-mode VP8L box-chain candidate scan now charges after
+each 64 completed low-distance candidate offsets across the pass; its no-token
+box-chain loop retains the original tight path. The existing Rust-only
+work-budget contract proves `maximum: 600`, `observed: 601` in both paths for
+the deterministic 64×64 sixteen-color RGB probe, with `[0xD7]` untouched.
 Histogram clustering now charges in both its min/max and bin-assignment
 pre-passes after each 64 tile histograms; its ordinary no-token path keeps the
 existing algorithm and data.
@@ -2215,7 +2220,39 @@ hook changed. Allocation counts, retained encoded/decoded cache bytes,
 caller-buffer reuse, peak stack, and WASM runtime time/memory remain open under
 QA-010/QA-030.
 
-Current acceptance record: WebP VP8L hash-chain candidate trials
+Current acceptance record: WebP VP8L palette-mode box-chain candidate offsets
+
+The token-aware lossless WebP VP8L palette-mode box-chain scan is implemented
+at production and test/runtime revision
+`b29a8f3ef9c34063d1311aaebced5f61423d1818`. The existing
+`encode_work_budget_is_a_non_parity_result_contract` now counts completed
+low-distance candidate offsets across the box-chain pass and polls after each
+64 offsets in the token path; the no-token box-chain loop remains a separate
+tight path. Its deterministic 64×64 sixteen-color RGB probe preserves ordinary
+bytes under an ample budget and rejects at `maximum: 600`, `observed: 601` in
+both the whole-buffer and caller-owned-sink paths, with sink sentinel `[0xD7]`
+untouched. The boundary is a real palette-mode box-chain work dimension, not a
+synthetic coverage hook or a Pillow-parity claim.
+
+Pillow exposes no caller token, typed work-budget result, caller-owned sink, or
+rollback equivalent, so this is Rust-only resource-contract evidence. It adds
+no Pillow parity row, fixture-manifest row, diagnostic origin, new test
+function, or coverage-only hook. Local focused/full all-feature tests, strict
+all-target Clippy, and rustfmt passed. Exact-head managed Pillow parity run
+`527419c8-2963-4436-902c-e00e89d740c0` passed 1,445/1,445 checks in 1,020 ms.
+Feature-matrix run `29aac451-8657-4382-b82e-8899a602c4eb` passed all configured
+native/WASI lanes in 58,639 ms with `cache=cold`, `lanes=6`, `test_threads=2`,
+`build_jobs=2`, `debug=0`, and `verbose=0`; its retained log contains the
+native/WASI capability agreement marker and no `lock-wait` match. Nightly LLVM
+run `a73364f0-0f4c-47ed-9fa8-beb218ebb88a` passed 85/85 tests in 69,182 ms and
+ingested snapshot `003d69d6-820f-4bcc-a28f-af6be3327207`: 54,838/55,682 lines,
+7,832/8,038 branches, 3,112/3,203 functions, and 84,546/86,427 regions. These
+are Rust implementation/coverage records, not Pillow-parity coverage; the
+known LLVM JSON segment-normalization warning remains. Remaining progress
+semantics, interruption inside one candidate or other codec unit, transient
+allocation accounting, and short-write/rollback cleanup remain open.
+
+Historical acceptance record: WebP VP8L hash-chain candidate trials
 
 The token-aware lossless WebP VP8L backward-reference hash-chain scan is
 implemented at production and test/runtime revision

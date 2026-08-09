@@ -3,12 +3,12 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`e3e39ff687aba7b589b74188f2592b1bf3839306` and test/runtime revision
-`e3e39ff687aba7b589b74188f2592b1bf3839306`; the claim-ledger fixture tuple
+`b29a8f3ef9c34063d1311aaebced5f61423d1818` and test/runtime revision
+`b29a8f3ef9c34063d1311aaebced5f61423d1818`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot for the current test/runtime revision is
-`a225b727-7b8d-4783-b03b-1a109d831b2d` from run
-`a33150ab-c337-4325-be49-687741d091b3`.
+`003d69d6-820f-4bcc-a28f-af6be3327207` from run
+`a73364f0-0f4c-47ed-9fa8-beb218ebb88a`.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the
@@ -376,6 +376,7 @@ translation cannot be bypassed.
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
 | Lossless WebP VP8L hash-chain candidate-trial checkpoints | Token-aware backward-reference candidate selection polls after each 64 completed hash-chain trials across the pass; the no-token candidate loop retains its original tight path |
+| Lossless WebP VP8L palette-mode box-chain candidate-trial checkpoints | Token-aware palette-mode box-chain selection polls after each 64 completed low-distance candidate offsets across the pass; the no-token box-chain loop retains its original tight path |
 | Lossless WebP VP8L meta-histogram sampling checkpoints | Token-aware row/column comparisons and symbol compaction poll after each 1,024 symbols; no-token paths retain their original tight loops |
 | Lossless WebP VP8L Huffman-node ordering checkpoints | Token-aware stable bottom-up ordering polls after each 64 comparisons; the no-token path retains the original stable sort |
 | Lossless WebP VP8L Huffman run-scan checkpoints | Token-aware code-length run scans poll whenever each 64-symbol boundary is crossed, including before a long equal-length run finishes; the no-token path retains the original tight helper |
@@ -411,7 +412,8 @@ The WebP VP8L token-aware list includes entropy-mode histogram-cost scans after
 each 64 symbols, cost-manager interval-update and cleanup scans after each 256
 cumulative interval entries, repeated-run hash-chain insertion and long
 backward-reference result backfills after each 256 entries, hash-chain
-candidate selection after each 64 completed trials, and copy-token
+candidate selection after each 64 completed trials, palette-mode box-chain
+candidate offsets after each 64 completed offsets, and copy-token
 cache-population checkpoints after each 256 pixels, Huffman
 code-length emission after each 16 compressed token entries, Huffman-tree
 simple-tree symbol-discovery checkpoints
@@ -681,7 +683,8 @@ non-saturated interval split/merge after each 1,024 interval-work entries, and
 saturated cost-interval fallback scans after each 1,024 entries,
 repeated-run hash-chain insertion, long backward-reference result backfills
 after each 256 entries, hash-chain candidate selection after each 64 completed
-trials, search/match-length/cache/trace, and copy-token
+trials, palette-mode box-chain candidate offsets after each 64 completed
+offsets, search/match-length/cache/trace, and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
