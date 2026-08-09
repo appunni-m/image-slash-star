@@ -332,16 +332,12 @@ fn decompress_zlib_with_limit(
 #[cfg(feature = "tiff")]
 pub(crate) fn compress_zlib_tiff(
     data: &[u8],
-    input_chunks: &[usize],
+    row_len: usize,
+    height: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CompressionResult<Vec<u8>> {
-    debug_assert_eq!(
-        input_chunks
-            .iter()
-            .fold(0usize, |total, &length| total.wrapping_add(length)),
-        data.len()
-    );
-    super::zlib_ng::compress_level6_tiff(data, input_chunks, token)
+    debug_assert_eq!(row_len.saturating_mul(height), data.len());
+    super::zlib_ng::compress_level6_tiff(data, row_len, height, token)
 }
 
 /// Compress a PNG stream with token-aware interior checkpoints. Stored-block
