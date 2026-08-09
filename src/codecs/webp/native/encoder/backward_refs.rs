@@ -1699,6 +1699,13 @@ impl CostManager {
     }
 }
 
+#[derive(Default)]
+struct TraceScratch {
+    cache: Vec<u32>,
+    path: Vec<usize>,
+    output: Vec<Token>,
+}
+
 fn trace_backwards(
     pixels: &[u32],
     width: usize,
@@ -1706,11 +1713,14 @@ fn trace_backwards(
     source: &[Token],
     cache_bits: u8,
     token: CheckpointToken<'_>,
+    scratch: &mut TraceScratch,
 ) -> CheckpointResult<Vec<Token>> {
     if token.is_none() {
-        return trace_backwards_impl::<false>(pixels, width, chain, source, cache_bits, token);
+        return trace_backwards_impl::<false>(
+            pixels, width, chain, source, cache_bits, token, scratch,
+        );
     }
-    trace_backwards_impl::<true>(pixels, width, chain, source, cache_bits, token)
+    trace_backwards_impl::<true>(pixels, width, chain, source, cache_bits, token, scratch)
 }
 
 fn trace_backwards_impl<const FINE_TRACE: bool>(
@@ -1720,13 +1730,20 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     source: &[Token],
     cache_bits: u8,
     token: CheckpointToken<'_>,
+    scratch: &mut TraceScratch,
 ) -> CheckpointResult<Vec<Token>> {
     checkpoint(token)?;
     const SCALE: i64 = 1 << 23;
     let model = cost_model_with_checkpoint(source, cache_bits, width, token)?;
     let mut manager = CostManager::new_with_checkpoint(pixels.len(), &model, token)?;
     checkpoint(token)?;
-    let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
+    scratch
+        .cache
+        .resize(if cache_bits == 0 { 0 } else { 1 << cache_bits }, 0);
+    scratch.cache.fill(0);
+    let cache = &mut scratch.cache;
+    let path = &mut scratch.path;
+    let output = &mut scratch.output;
     let mut update_work = 0usize;
 
     let mut add_literal = |position: usize, previous_cost: i64, manager: &mut CostManager| {
@@ -1830,7 +1847,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         previous_length = maximum_length;
     }
 
-    let mut path = Vec::new();
+    path.clear();
     let mut end = pixels.len();
     if FINE_TRACE {
         let mut processed = 0_usize;
@@ -1857,7 +1874,8 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     }
     path.reverse();
 
-    let mut output = Vec::with_capacity(path.len());
+    output.clear();
+    output.reserve(path.len());
     // The dynamic-programming cache is dead after path reconstruction. Reset
     // and reuse it for token replay instead of allocating a second table.
     cache.fill(0);
@@ -1865,7 +1883,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     if FINE_TRACE {
         checkpoint(token)?;
         let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
-        for length in path {
+        for length in path.drain(..) {
             if length == 1 {
                 let pixel = pixels[position];
                 if cache_bits != 0 {
@@ -1884,7 +1902,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
                     distance: chain[position].0,
                     length,
                 });
-                populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
+                populate_cache(pixels, position, length, cache_bits, cache, token)?;
             }
             position += length;
             while position >= next_checkpoint {
@@ -1893,7 +1911,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
             }
         }
     } else {
-        for length in path {
+        for length in path.drain(..) {
             if position.is_multiple_of(1024) {
                 checkpoint(token)?;
             }
@@ -1915,12 +1933,12 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
                     distance: chain[position].0,
                     length,
                 });
-                populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
+                populate_cache(pixels, position, length, cache_bits, cache, token)?;
             }
             position += length;
         }
     }
-    Ok(output)
+    Ok(core::mem::take(output))
 }
 
 pub(super) fn candidates(
@@ -1937,6 +1955,7 @@ pub(super) fn candidates(
     let chain = fill_hash_chain(pixels, width, quality, token)?;
     let mut estimate_scratch = CostEstimateScratch::default();
     let mut cache_scratch = CacheTransformScratch::default();
+    let mut trace_scratch = TraceScratch::default();
     let choose_cache = |source: Vec<Token>,
                         scratch: &mut CostEstimateScratch,
                         cache_scratch: &mut CacheTransformScratch|
@@ -1968,7 +1987,8 @@ pub(super) fn candidates(
     };
     let improve = |mut candidate: (Vec<Token>, u8, u64),
                    source_chain: &[(usize, usize)],
-                   scratch: &mut CostEstimateScratch|
+                   scratch: &mut CostEstimateScratch,
+                   trace_scratch: &mut TraceScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
         if quality >= 25 {
             checkpoint(token)?;
@@ -1979,10 +1999,15 @@ pub(super) fn candidates(
                 &candidate.0,
                 candidate.1,
                 token,
+                trace_scratch,
             )?;
             let cost = estimated_bits_with_checkpoint(&traced, candidate.1, token, scratch)?;
             if cost < candidate.2 {
-                candidate = (traced, candidate.1, cost);
+                let previous = core::mem::replace(&mut candidate.0, traced);
+                trace_scratch.output = previous;
+                candidate.2 = cost;
+            } else {
+                trace_scratch.output = traced;
             }
         }
         Ok(candidate)
@@ -1999,7 +2024,7 @@ pub(super) fn candidates(
         &mut cache_scratch,
     )?;
     let mut primary = if standard.2 <= rle.2 {
-        improve(standard, &chain, &mut estimate_scratch)?
+        improve(standard, &chain, &mut estimate_scratch, &mut trace_scratch)?
     } else {
         rle
     };
@@ -2017,6 +2042,7 @@ pub(super) fn candidates(
             )?,
             &chain,
             &mut estimate_scratch,
+            &mut trace_scratch,
         )?;
         result.push((std::mem::take(&mut box_candidate.0), box_candidate.1));
     }
