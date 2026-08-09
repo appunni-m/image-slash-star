@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `cc00fe4f4e67e40bb9570dedac8d4b185745202f`, and benchmark-protocol revision
+revision `b770e3c4238194fa0c65f1490c20d0e8e14380d2`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted exact-head managed Pillow parity run is
@@ -11,16 +11,16 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest managed checkout validation runs are Pillow parity
-`3c240d18-2cf7-4a21-9918-d7b87e877766` (1,445/1,445 passed) and feature matrix
-`0dae6dcc-fef9-4d12-a583-ab1e45228243` (passed in 50,908 ms); the ledger records
-checkout HEAD `3a31d87be7a8a0d03ef0179db0cea2805a413a4b` before the current source
-commit, so neither is exact-head evidence for `cc00fe4f4e67e40bb9570dedac8d4b185745202f`.
+`299bfbff-2784-4b62-8d7a-e2974d6082b2` (1,445/1,445 passed) and feature matrix
+`074d3e14-4899-4b6c-9e2f-f4c3f4b00318` (passed in 27,638 ms); the ledger records
+checkout HEAD `c48b3bcbf49937314b5f23e93b4326c64a3d3105` before the current source
+commit, so neither is exact-head evidence for `b770e3c4238194fa0c65f1490c20d0e8e14380d2`.
 The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`cc00fe4f4e67e40bb9570dedac8d4b185745202f`; the accepted managed records
+`b770e3c4238194fa0c65f1490c20d0e8e14380d2`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -639,7 +639,30 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-The lossless WebP VP8L `GroupCodes` buffer-reuse slice is implemented at
+The lossless WebP VP8L Huffman-token scratch-reuse slice is implemented at
+production and Rust test/runtime revision
+`b770e3c4238194fa0c65f1490c20d0e8e14380d2`, following `GroupCodes` buffer reuse
+at `cc00fe4f4e67e40bb9570dedac8d4b185745202f`. Huffman tree writing reuses one
+compressed code-length token buffer across sequential channel and
+histogram-group trees; each tree consumes it before the next tree clears and
+refills it. Ordinary and token-aware tree construction, checkpoint sites,
+encoded bytes, errors, and sink output remain unchanged. The existing WebP
+encode matrix (28/13/47 rows), full fixture matrix, all 45 feature-gated Rust
+contracts, full all-feature suite, strict Clippy, rustfmt, and all 33 native/WASI
+feature-matrix lanes passed locally. Clean `fixture-benchmark@3` observations
+at this revision passed the Pillow-parity workload (0.940096 s wall,
+257,966,080-byte peak RSS) and the separate Rust-only feature-gate workload
+(1.610291 s wall, 177,471,488-byte peak RSS); these are host/cache/toolchain
+observations, not a comparative or universal performance claim. Pillow remains
+the byte/error oracle, while token-buffer ownership is Rust-only evidence: no
+parity row, fixture-manifest row, diagnostic origin, new test function, or
+coverage-only hook was added. Managed checkout validation passed Pillow parity
+run `299bfbff-2784-4b62-8d7a-e2974d6082b2` and feature-matrix run
+`074d3e14-4899-4b6c-9e2f-f4c3f4b00318`, but both recorded pre-commit HEAD
+`c48b3bcbf49937314b5f23e93b4326c64a3d3105`; no exact-head managed parity,
+feature-matrix, or Coverage MCP coverage rerun is claimed for this revision.
+
+The preceding lossless WebP VP8L `GroupCodes` buffer-reuse slice is implemented at
 production and Rust test/runtime revision
 `cc00fe4f4e67e40bb9570dedac8d4b185745202f`, following trace-cache reuse at
 `5d386f0e8d0c4f8780cc59cf3080f9107c0d66c2`. Candidate trials retain their
@@ -2797,6 +2820,27 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8L Huffman-token scratch reuse
+
+The production and Rust test/runtime slice is implemented at
+`b770e3c4238194fa0c65f1490c20d0e8e14380d2`, following the preceding
+`cc00fe4f4e67e40bb9570dedac8d4b185745202f` `GroupCodes` buffer reuse. Huffman
+tree writing reuses one compressed code-length token buffer across sequential
+channel and histogram-group trees; each tree consumes the buffer before the
+next tree clears and refills it. Ordinary and token-aware tree construction,
+checkpoint sites, encoded bytes, errors, and sink output remain unchanged.
+Existing WebP fixture rows (28/13/47), the full fixture matrix, all 45
+feature-gated Rust contracts, strict Clippy, and the clean benchmark protocol
+provide the regression evidence. The clean benchmark passed the Pillow-parity
+workload in 0.940096 s wall and the separate Rust-only feature-gate workload in
+1.610291 s wall; these are host/cache/toolchain observations, not a comparative
+or universal performance claim. Pillow remains the byte/error oracle; token
+buffer ownership is Rust-only evidence. No parity row, fixture-manifest entry,
+diagnostic origin, new test function, or coverage-only hook was added. Managed
+checkout validation passed, but its ledger HEAD predates this commit; no
+exact-head managed parity, feature-matrix, or Coverage MCP rerun is claimed at
+this revision.
 
 Current acceptance record: WebP VP8L `GroupCodes` buffer reuse
 
