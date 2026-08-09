@@ -13182,6 +13182,58 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         ));
         assert_eq!(output_checkpoint_sink, vec![0xAA]);
 
+        // Lossless VP8L RIFF assembly now copies the complete frame payload
+        // in 1,024-byte intervals. Pillow has no caller token, typed
+        // work-budget result, or caller-owned sink, so this is Rust-only
+        // work-control evidence and adds no parity row or fixture. The
+        // pre-fix bulk-copy control completed at 99,250; the new checkpoint
+        // rejects the same complete call at the first copied interval.
+        let lossless_container_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(99_250);
+        let lossless_container_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &lossless_container_policy,
+        ) {
+            Ok(_) => return Err("VP8L RIFF container-copy budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            lossless_container_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 99_250,
+                observed: 99_251,
+            }
+        ));
+        let mut lossless_container_sink = vec![0xAB];
+        let lossless_container_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &image_slash_star::EncodePolicy::new().with_max_work_units(99_249),
+            &mut lossless_container_sink,
+        ) {
+            Ok(_) => {
+                return Err("VP8L RIFF container-copy sink budget unexpectedly completed".into());
+            }
+            Err(error) => error,
+        };
+        assert!(matches!(
+            lossless_container_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 99_249,
+                observed: 99_250,
+            }
+        ));
+        assert_eq!(lossless_container_sink, vec![0xAB]);
+
         // Lossy VP8 RGB-to-YUV conversion now charges an interior checkpoint
         // after each 1,024 conversion items. Pillow has no caller token or
         // work-budget result, so this remains Rust-only evidence and adds no

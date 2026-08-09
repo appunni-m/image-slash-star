@@ -2175,10 +2175,11 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
 }
 
 // Alpha output may be copied from either the compressed VP8L stream or the
-// raw alpha plane. Keep the ordinary path's single bulk copy, but bound the
-// caller-controlled path at the same 1,024-byte output interval used by the
-// bit writer. Pillow has no caller token or typed work-budget result for this
-// copy, so this is Rust-only work-control evidence.
+// raw alpha plane. The lossless VP8L RIFF container uses the same helper for
+// its complete frame payload. Keep ordinary paths as single bulk copies, but
+// bound caller-controlled copies at the same 1,024-byte output interval used
+// by the bit writer. Pillow has no caller token or typed work-budget result for
+// these copies, so this is Rust-only work-control evidence.
 fn extend_bytes_with_checkpoint(
     output: &mut Vec<u8>,
     source: &[u8],
@@ -2395,15 +2396,21 @@ const fn chunk_size(inner_bytes: usize) -> u32 {
     }
 }
 
-fn write_chunk(output: &mut Vec<u8>, name: &[u8], data: &[u8]) {
+fn write_chunk(
+    output: &mut Vec<u8>,
+    name: &[u8],
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
     debug_assert!(name.len() == 4);
 
     output.extend_from_slice(name);
     output.extend_from_slice(&(data.len() as u32).to_le_bytes());
-    output.extend_from_slice(data);
+    extend_bytes_with_checkpoint(output, data, token)?;
     if data.len() % 2 == 1 {
         output.push(0);
     }
+    Ok(())
 }
 
 /// WebP Encoder.
@@ -2433,7 +2440,7 @@ impl WebPEncoder {
         output.extend_from_slice(b"RIFF");
         output.extend_from_slice(&(chunk_size(frame.len()) + 4).to_le_bytes());
         output.extend_from_slice(b"WEBP");
-        write_chunk(&mut output, b"VP8L", &frame);
+        write_chunk(&mut output, b"VP8L", &frame, token)?;
         check_token(token)?;
         Ok(output)
     }
@@ -2454,9 +2461,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = chunk_size(4);
     let _ = compressed_huffman_tokens(&[0; 300]);
     let mut odd_chunk = Vec::new();
-    write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3]);
+    let _ = write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3], None);
     let mut even_chunk = Vec::new();
-    write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4]);
+    let _ = write_chunk(&mut even_chunk, b"EVEN", &[1, 2, 3, 4], None);
 
     let mut tree_bytes = Vec::new();
     let mut tree_writer = BitWriter {
