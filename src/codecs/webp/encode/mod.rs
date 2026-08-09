@@ -57,6 +57,8 @@ fn checkpoint_after_prepare_pixel(
 /// also initializes its pixel-sized cost/length tables in 1,024-entry intervals;
 /// its capacity reservations retain the existing no-recoverable-OOM policy.
 /// Long backward-reference result backfills also poll after each 256 entries.
+/// Token-aware lossless VP8L assembly copies the complete RIFF frame payload
+/// after each 1,024 bytes; the no-token path retains one bulk copy.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
 /// VP8 encoding polls required padded Y/U/V edge-replication items after each
@@ -68,8 +70,9 @@ fn checkpoint_after_prepare_pixel(
 /// first-partition segment-probability prepass after each 1,024 selected
 /// macroblocks, transparent-area cleanup after each 1,024 scanned or flattened
 /// pixels, and alpha-palette source collection and index packing after each
-/// 1,024 source pixels, plus compressed/raw alpha-stream buffer copies after
-/// each 1,024 output bytes, when a caller supplies a cancellation token. Aligned
+/// 1,024 source pixels, plus compressed/raw alpha-stream buffer copies and
+/// lossless VP8L RIFF frame payload copies after each 1,024 output bytes, when a
+/// caller supplies a cancellation token. Aligned
 /// planes are cloned directly because no edge replication is needed. The
 /// no-token helpers retain their original tight paths; token-aware selection
 /// checks after candidate-trial stages, each forward- and inverse-transform
