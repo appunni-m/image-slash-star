@@ -12,17 +12,31 @@ use std::borrow::Cow;
 
 pub mod vp8;
 
+const PREPARE_CHECKPOINT_PIXELS: usize = 1_024;
+
+fn checkpoint_after_prepare_pixel(
+    pixels_until_checkpoint: &mut usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<()> {
+    *pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+    if *pixels_until_checkpoint == 0 {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        *pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+    }
+    Ok(())
+}
+
 /// Encode a DecodedImage to WebP format.
 ///
-/// Lossless uses the internal VP8L encoder, which polls RGB/RGBA source-pixel
-/// materialization, image-palette construction, and palette-mode index packing
-/// after each 1,024 source pixels, plus transparent-pixel hidden-RGB cleanup
-/// after each 1,024 scanned pixels. Predictor mode application also polls its
-/// pre-transform source snapshot copy after each 1,024 pixels when a caller
-/// supplies a cancellation token. The token-aware lossless backward-reference
-/// cost manager also initializes its pixel-sized cost/length tables in 1,024-
-/// entry intervals; its capacity reservations retain the existing
-/// no-recoverable-OOM policy.
+/// Lossless uses the internal VP8L encoder, which polls WebP source-mode
+/// preparation, RGBA alpha/RGB extraction, RGB/RGBA source-pixel materialization,
+/// image-palette construction, and palette-mode index packing after each 1,024
+/// source pixels, plus transparent-pixel hidden-RGB cleanup after each 1,024
+/// scanned pixels. Predictor mode application also polls its pre-transform
+/// source snapshot copy after each 1,024 pixels when a caller supplies a
+/// cancellation token. The token-aware lossless backward-reference cost manager
+/// also initializes its pixel-sized cost/length tables in 1,024-entry intervals;
+/// its capacity reservations retain the existing no-recoverable-OOM policy.
 /// Long backward-reference result backfills also poll after each 256 entries.
 /// The no-token path retains its tight source materialization maps.
 /// Lossy: uses our own pure-Rust VP8 intra-frame encoder. Token-aware lossy
@@ -180,7 +194,7 @@ fn encode_pixels(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<u8>, bool)> {
     crate::codecs::error::check_cancelled(token)?;
-    let prepared = prepare_pixels(img)?;
+    let prepared = prepare_pixels(img, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(&prepared, img.width, img.height, token)
@@ -188,7 +202,7 @@ fn encode_pixels(
         encode_lossy(&prepared, img.width, img.height, opts, token)
     }?;
     crate::codecs::error::check_cancelled(token)?;
-    let alpha = prepared.has_nonopaque_alpha();
+    let alpha = prepared.has_nonopaque_alpha_with_token(token)?;
     crate::codecs::error::check_cancelled(token)?;
     Ok((encoded, alpha))
 }
@@ -357,9 +371,64 @@ struct PreparedPixels<'a> {
 }
 
 impl PreparedPixels<'_> {
-    fn has_nonopaque_alpha(&self) -> bool {
-        self.color == super::native::ColorType::Rgba8
-            && self.bytes.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX)
+    fn has_nonopaque_alpha_with_token(
+        &self,
+        token: Option<&crate::CancellationToken>,
+    ) -> CodecResult<bool> {
+        if self.color != super::native::ColorType::Rgba8 {
+            return Ok(false);
+        }
+        if let Some(token) = token {
+            let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+            for pixel in self.bytes.chunks_exact(4) {
+                let has_alpha = pixel[3] != u8::MAX;
+                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+                if has_alpha {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        } else {
+            Ok(self.bytes.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX))
+        }
+    }
+
+    fn alpha_channel_with_token(
+        &self,
+        token: Option<&crate::CancellationToken>,
+    ) -> CodecResult<Vec<u8>> {
+        if let Some(token) = token {
+            let mut alpha = Vec::with_capacity(self.bytes.len() / 4);
+            let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+            for pixel in self.bytes.chunks_exact(4) {
+                alpha.push(pixel[3]);
+                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+            }
+            Ok(alpha)
+        } else {
+            Ok(self.bytes.chunks_exact(4).map(|pixel| pixel[3]).collect())
+        }
+    }
+
+    fn rgb_without_alpha_with_token(
+        &self,
+        token: Option<&crate::CancellationToken>,
+    ) -> CodecResult<Vec<u8>> {
+        if let Some(token) = token {
+            let mut rgb = Vec::with_capacity(self.bytes.len().saturating_div(4).saturating_mul(3));
+            let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+            for pixel in self.bytes.chunks_exact(4) {
+                rgb.extend_from_slice(&pixel[..3]);
+                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+            }
+            Ok(rgb)
+        } else {
+            Ok(self
+                .bytes
+                .chunks_exact(4)
+                .flat_map(|pixel| pixel[..3].iter().copied())
+                .collect())
+        }
     }
 }
 
@@ -377,42 +446,71 @@ fn validate_options(opts: &WebPEncodeOptions) -> CodecResult<()> {
     Ok(())
 }
 
-fn prepare_pixels(img: &DecodedImage) -> CodecResult<PreparedPixels<'_>> {
-    let prepared = match img.mode {
-        ImageMode::L1 => PreparedPixels {
-            bytes: Cow::Owned(expand_bilevel_to_rgb(img)),
+fn prepare_pixels<'a>(
+    img: &'a DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'a>> {
+    match img.mode {
+        ImageMode::L1 => Ok(PreparedPixels {
+            bytes: Cow::Owned(expand_bilevel_to_rgb(img, token)?),
             color: super::native::ColorType::Rgb8,
-        },
-        ImageMode::P8 => expand_indexed(img),
-        ImageMode::L8 => PreparedPixels {
-            bytes: Cow::Owned(img.pixels.iter().flat_map(|&value| [value; 3]).collect()),
-            color: super::native::ColorType::Rgb8,
-        },
-        ImageMode::La8 => expand_luminance_alpha(img),
-        ImageMode::Rgb8 => PreparedPixels {
+        }),
+        ImageMode::P8 => expand_indexed(img, token),
+        ImageMode::L8 => {
+            let bytes = if let Some(token) = token {
+                let mut rgb = Vec::with_capacity(img.pixels.len().saturating_mul(3));
+                let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+                for &value in &img.pixels {
+                    rgb.extend_from_slice(&[value; 3]);
+                    checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+                }
+                rgb
+            } else {
+                img.pixels.iter().flat_map(|&value| [value; 3]).collect()
+            };
+            Ok(PreparedPixels {
+                bytes: Cow::Owned(bytes),
+                color: super::native::ColorType::Rgb8,
+            })
+        }
+        ImageMode::La8 => expand_luminance_alpha(img, token),
+        ImageMode::Rgb8 => Ok(PreparedPixels {
             bytes: Cow::Borrowed(&img.pixels),
             color: super::native::ColorType::Rgb8,
-        },
-        ImageMode::Rgba8 => PreparedPixels {
+        }),
+        ImageMode::Rgba8 => Ok(PreparedPixels {
             bytes: Cow::Borrowed(&img.pixels),
             color: super::native::ColorType::Rgba8,
-        },
-        ImageMode::Cmyk8 => PreparedPixels {
-            bytes: Cow::Owned(cmyk_to_rgb(&img.pixels)),
+        }),
+        ImageMode::Cmyk8 => Ok(PreparedPixels {
+            bytes: Cow::Owned(cmyk_to_rgb(&img.pixels, token)?),
             color: super::native::ColorType::Rgb8,
-        },
-        _ => {
-            return Err(CodecError::Unsupported(
-                "WebP encoder does not support this image mode".to_owned(),
-            ));
-        }
-    };
-    Ok(prepared)
+        }),
+        _ => Err(CodecError::Unsupported(
+            "WebP encoder does not support this image mode".to_owned(),
+        )),
+    }
 }
 
-fn expand_bilevel_to_rgb(img: &DecodedImage) -> Vec<u8> {
+fn expand_bilevel_to_rgb(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     let width = img.width as usize;
     let row_bytes = width.div_ceil(8);
+    if let Some(token) = token {
+        let mut rgb =
+            Vec::with_capacity(width.saturating_mul(img.height as usize).saturating_mul(3));
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for row in img.pixels.chunks_exact(row_bytes) {
+            for x in 0..width {
+                let bit = (row[x / 8] >> 7usize.wrapping_sub(x % 8)) & 1;
+                rgb.extend_from_slice(&[0u8.wrapping_sub(bit); 3]);
+                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+            }
+        }
+        return Ok(rgb);
+    }
     let mut rgb = Vec::with_capacity(width.saturating_mul(img.height as usize).saturating_mul(3));
     for row in img.pixels.chunks_exact(row_bytes) {
         for x in 0..width {
@@ -420,10 +518,54 @@ fn expand_bilevel_to_rgb(img: &DecodedImage) -> Vec<u8> {
             rgb.extend_from_slice(&[0u8.wrapping_sub(bit); 3]);
         }
     }
-    rgb
+    Ok(rgb)
 }
 
-fn expand_indexed(img: &DecodedImage) -> PreparedPixels<'static> {
+fn expand_indexed(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'static>> {
+    if let Some(token) = token {
+        let mut rgba = Vec::with_capacity(img.pixels.len().saturating_mul(4));
+        let mut has_alpha = false;
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for &index in &img.pixels {
+            let index = usize::from(index);
+            let rgb_start = index.saturating_mul(3);
+            let color = img
+                .palette
+                .as_ref()
+                .and_then(|palette| palette.rgb.get(rgb_start..rgb_start.saturating_add(3)))
+                .unwrap_or(&[0, 0, 0]);
+            let alpha = img
+                .palette
+                .as_ref()
+                .and_then(|palette| palette.alpha.get(index))
+                .copied()
+                .unwrap_or(u8::MAX);
+            has_alpha |= alpha != u8::MAX;
+            rgba.extend_from_slice(color);
+            rgba.push(alpha);
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+        if has_alpha {
+            return Ok(PreparedPixels {
+                bytes: Cow::Owned(rgba),
+                color: super::native::ColorType::Rgba8,
+            });
+        }
+        let mut rgb = Vec::with_capacity(rgba.len().saturating_div(4).saturating_mul(3));
+        pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for pixel in rgba.chunks_exact(4) {
+            rgb.extend_from_slice(&pixel[..3]);
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+        return Ok(PreparedPixels {
+            bytes: Cow::Owned(rgb),
+            color: super::native::ColorType::Rgb8,
+        });
+    }
+
     let mut rgba = Vec::with_capacity(img.pixels.len().saturating_mul(4));
     let mut has_alpha = false;
     for &index in &img.pixels {
@@ -445,26 +587,60 @@ fn expand_indexed(img: &DecodedImage) -> PreparedPixels<'static> {
         rgba.push(alpha);
     }
     if has_alpha {
-        PreparedPixels {
+        Ok(PreparedPixels {
             bytes: Cow::Owned(rgba),
             color: super::native::ColorType::Rgba8,
-        }
+        })
     } else {
-        PreparedPixels {
+        Ok(PreparedPixels {
             bytes: Cow::Owned(
                 rgba.chunks_exact(4)
                     .flat_map(|pixel| pixel[..3].iter().copied())
                     .collect(),
             ),
             color: super::native::ColorType::Rgb8,
-        }
+        })
     }
 }
 
-fn expand_luminance_alpha(img: &DecodedImage) -> PreparedPixels<'static> {
+fn expand_luminance_alpha(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'static>> {
+    if let Some(token) = token {
+        let mut has_alpha = false;
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for pixel in img.pixels.chunks_exact(2) {
+            has_alpha |= pixel[1] != u8::MAX;
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+        if has_alpha {
+            let mut rgba = Vec::with_capacity(img.pixels.len().saturating_div(2).saturating_mul(4));
+            pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+            for pixel in img.pixels.chunks_exact(2) {
+                rgba.extend_from_slice(&[pixel[0], pixel[0], pixel[0], pixel[1]]);
+                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+            }
+            return Ok(PreparedPixels {
+                bytes: Cow::Owned(rgba),
+                color: super::native::ColorType::Rgba8,
+            });
+        }
+        let mut rgb = Vec::with_capacity(img.pixels.len().saturating_div(2).saturating_mul(3));
+        pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for pixel in img.pixels.chunks_exact(2) {
+            rgb.extend_from_slice(&[pixel[0]; 3]);
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+        return Ok(PreparedPixels {
+            bytes: Cow::Owned(rgb),
+            color: super::native::ColorType::Rgb8,
+        });
+    }
+
     let has_alpha = img.pixels.chunks_exact(2).any(|pixel| pixel[1] != u8::MAX);
     if has_alpha {
-        PreparedPixels {
+        Ok(PreparedPixels {
             bytes: Cow::Owned(
                 img.pixels
                     .chunks_exact(2)
@@ -472,9 +648,9 @@ fn expand_luminance_alpha(img: &DecodedImage) -> PreparedPixels<'static> {
                     .collect(),
             ),
             color: super::native::ColorType::Rgba8,
-        }
+        })
     } else {
-        PreparedPixels {
+        Ok(PreparedPixels {
             bytes: Cow::Owned(
                 img.pixels
                     .chunks_exact(2)
@@ -482,7 +658,7 @@ fn expand_luminance_alpha(img: &DecodedImage) -> PreparedPixels<'static> {
                     .collect(),
             ),
             color: super::native::ColorType::Rgb8,
-        }
+        })
     }
 }
 
@@ -605,14 +781,10 @@ fn encode_lossy(
             vp8::encoder::encode_vp8_lossy(&pixels.bytes, width, height, quality, method, token)?
         }
         super::native::ColorType::Rgba8 => {
-            let has_alpha = pixels.has_nonopaque_alpha();
+            let has_alpha = pixels.has_nonopaque_alpha_with_token(token)?;
             if has_alpha {
                 crate::codecs::error::check_cancelled(token)?;
-                let alpha = pixels
-                    .bytes
-                    .chunks_exact(4)
-                    .map(|pixel| pixel[3])
-                    .collect::<Vec<_>>();
+                let alpha = pixels.alpha_channel_with_token(token)?;
                 let alpha_chunk = super::native::encode_alpha(&alpha, width, height, token)
                     .map_err(encode_error)?;
                 crate::codecs::error::check_cancelled(token)?;
@@ -626,11 +798,7 @@ fn encode_lossy(
                     token,
                 )?
             } else {
-                let rgb = pixels
-                    .bytes
-                    .chunks_exact(4)
-                    .flat_map(|pixel| pixel[..3].iter().copied())
-                    .collect::<Vec<_>>();
+                let rgb = pixels.rgb_without_alpha_with_token(token)?;
                 crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy(&rgb, width, height, quality, method, token)?
             }
@@ -651,8 +819,26 @@ fn encode_error(error: super::native::EncodingError) -> CodecError {
     }
 }
 
-fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
-    pixels
+fn cmyk_to_rgb(pixels: &[u8], token: Option<&crate::CancellationToken>) -> CodecResult<Vec<u8>> {
+    if let Some(token) = token {
+        let mut rgb = Vec::with_capacity(pixels.len().saturating_div(4).saturating_mul(3));
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for pixel in pixels.chunks_exact(4) {
+            let black = u16::from(255u8.saturating_sub(pixel[3]));
+            for &channel in pixel.iter().take(3) {
+                let ink = u16::from(255u8.saturating_sub(channel));
+                rgb.push(
+                    ink.saturating_mul(black)
+                        .saturating_add(127)
+                        .div_euclid(255)
+                        .to_le_bytes()[0],
+                );
+            }
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+        return Ok(rgb);
+    }
+    Ok(pixels
         .chunks_exact(4)
         .flat_map(|pixel| {
             let black = u16::from(255u8.saturating_sub(pixel[3]));
@@ -664,7 +850,7 @@ fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
                     .to_le_bytes()[0]
             })
         })
-        .collect()
+        .collect())
 }
 
 fn low_u32(value: usize) -> u32 {
