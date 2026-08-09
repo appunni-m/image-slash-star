@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `7a75acb33cbce80984dcf1dadd63d498b5f551e3`, and benchmark-protocol revision
+revision `b14aa2d89d5e24c87f1f2693a8b0886f3440e206`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`7a75acb33cbce80984dcf1dadd63d498b5f551e3`; the accepted managed records
+`b14aa2d89d5e24c87f1f2693a8b0886f3440e206`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -631,6 +631,20 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The TIFF conditional source-ownership slice is implemented at production
+revision `b14aa2d89d5e24c87f1f2693a8b0886f3440e206`. TIFF now borrows the
+immutable source raster for raw, PackBits, and non-predictive LZW/Deflate
+paths. It creates the mutable owned working copy only when horizontal
+prediction is selected with LZW or Deflate, the combinations that actually
+rewrite samples before compression. Compressed outputs remain owned result
+buffers, and encoded bytes plus explicit token checkpoints are unchanged. All
+57 TIFF encode parity rows, the complete 28-function fixture matrix, all 45
+feature-gated Rust contracts, and full all-feature tests passed locally. Pillow
+remains the exact byte/error oracle; conditional ownership is a Rust
+implementation boundary with no Pillow allocation contract. No new fixture,
+test function, diagnostic origin, or coverage-only hook was added. No managed
+parity, feature-matrix, or Coverage MCP rerun is claimed for this revision.
 
 The PNG source-pixel ownership slice is implemented at production revision
 `7a75acb33cbce80984dcf1dadd63d498b5f551e3`. L1, P8, L8, La8, RGB8, and RGBA8
