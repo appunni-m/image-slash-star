@@ -8736,6 +8736,92 @@ fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
         }
     }
 
+    struct FlushFailingSink {
+        bytes: Vec<u8>,
+        flushes: usize,
+    }
+
+    impl image_slash_star::OutputSink for FlushFailingSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            Err(image_slash_star::ImageError::Unsupported {
+                format: None,
+                message: "sink rejected finalization after complete delivery".to_owned(),
+                stage: None,
+                reason: None,
+                offset: None,
+                identity: None,
+            })
+        }
+    }
+
+    let assert_still_flush_failure = |image: &image_slash_star::DecodedImage,
+                                      format: ImageFormat,
+                                      options: &EncodeOptions,
+                                      expected: &[u8]|
+     -> Result<(), Box<dyn std::error::Error>> {
+        let mut sink = FlushFailingSink {
+            bytes: Vec::new(),
+            flushes: 0,
+        };
+        let error = match image_slash_star::encode_to_sink(image, format, options, &mut sink) {
+            Ok(length) => {
+                return Err(format!(
+                    "{format:?} flush rejection unexpectedly accepted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+        assert_eq!(sink.flushes, 1, "{format:?} must finalize exactly once");
+        assert_eq!(
+            sink.bytes, expected,
+            "{format:?} flush failure preserves bytes"
+        );
+        Ok(())
+    };
+
+    let assert_sequence_flush_failure = |sequence: &image_slash_star::DecodedSequence,
+                                         format: ImageFormat,
+                                         options: &EncodeOptions,
+                                         expected: &[u8]|
+     -> Result<(), Box<dyn std::error::Error>> {
+        let mut sink = FlushFailingSink {
+            bytes: Vec::new(),
+            flushes: 0,
+        };
+        let error =
+            match image_slash_star::encode_sequence_to_sink(sequence, format, options, &mut sink) {
+                Ok(length) => {
+                    return Err(format!(
+                        "{format:?} sequence flush rejection unexpectedly accepted {length} bytes"
+                    )
+                    .into());
+                }
+                Err(error) => error,
+            };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::OutputWrite);
+        assert_eq!(error.format(), Some(format));
+        assert_eq!(error.stage(), Some(ImageErrorStage::SequenceEncode));
+        assert_eq!(
+            sink.flushes, 1,
+            "{format:?} sequence must finalize exactly once"
+        );
+        assert_eq!(
+            sink.bytes, expected,
+            "{format:?} sequence flush failure preserves bytes"
+        );
+        Ok(())
+    };
+
     let image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
     let formats = [
         ImageFormat::Jpeg,
@@ -8790,6 +8876,7 @@ fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
         assert!(!sink.bytes.is_empty(), "{format:?} must deliver a prefix");
         assert!(sink.bytes.len() < expected.len());
         assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
+        assert_still_flush_failure(&image, format, &options, &expected)?;
     }
 
     let sequence_formats = [
@@ -8856,6 +8943,7 @@ fn partial_structural_sink_write_preserves_prefix_across_available_encoders()
         );
         assert!(sink.bytes.len() < expected.len());
         assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
+        assert_sequence_flush_failure(&sequence, format, &options, &expected)?;
     }
 
     // Feature-matrix lanes with no encoder are compile/capability lanes; the
