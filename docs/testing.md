@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `34006c8768b69866dde9dad37d2cd0f3e8623f67`, and benchmark-protocol
+revision `efc5491e1806741e796b8e74118c2db66bee382e`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
@@ -12,14 +12,14 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`1d20dd7a-197d-4ec5-babc-e0fef93fa5b4` (1,445/1,445 passed in 779 ms) and
-feature matrix `af84d5be-3a52-4d87-baf1-6e363fcf2af6` (passed in 28,971 ms);
+`a8c83ffb-379a-4556-8e69-2c02c33a9962` (1,445/1,445 passed in 809 ms) and
+feature matrix `7be7cb89-2795-42ef-a74a-086636379971` (passed in 40,436 ms);
 both recorded checkout HEAD
-`34006c8768b69866dde9dad37d2cd0f3e8623f67`.
+`efc5491e1806741e796b8e74118c2db66bee382e`.
 The accepted Coverage MCP snapshot is
-`23975329-0598-40eb-85e6-092d7265d944` from run
-`b3a3d4cc-d096-4377-bffd-0db2941d81a4`; it records 55,655/56,524 lines,
-7,964/8,174 branches, 3,112/3,208 functions, and 85,578/87,516 regions at
+`8421d772-0f33-4398-90fa-938da1b595fa` from run
+`5e6bdbee-7bec-4013-ab2f-72a3233f8b9d`; it records 55,659/56,528 lines,
+7,964/8,174 branches, 3,112/3,208 functions, and 85,580/87,518 regions at
 the same source revision. The histogram file records 872/873 lines, 184/184
 branches, and 43/43 functions; predictor records 366/366 lines, 68/68
 branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
@@ -642,6 +642,52 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP VP8L entropy-analysis mode workspace
+
+The production and Rust test/runtime slice is implemented at
+`efc5491e1806741e796b8e74118c2db66bee382e`, following the separate
+entropy-analysis histogram workspace at
+`34006c8768b69866dde9dad37d2cd0f3e8623f67`. VP8L `analyze_entropy` now keeps
+its four mandatory and one optional palette entropy-mode candidates in a
+function-local fixed array, using a four- or five-entry view instead of a
+temporary heap vector. Candidate ordering, palette selection, mode selection,
+encoded bytes, cancellation/error behavior, and sink output remain unchanged.
+
+This is Rust implementation and Rust-only workspace-allocation evidence.
+Pillow exposes only the existing byte/error fixture matrix, not candidate
+storage, stack footprint, caller buffers, or OOM behavior. The fixture matrix
+is therefore regression evidence, not proof of the internal workspace
+contract; no parity row, fixture-manifest row, diagnostic origin, new test
+function, coverage-only hook, or unit test was added. The clean schema-`@3`
+benchmark at this revision passed the Pillow-parity workload in 1.150759 s
+wall / 3.199841 user s / 0.244846 sys s / 298,680,320-byte peak RSS and the
+separate Rust-only feature-gate workload in 1.633563 s wall / 2.309190 user s
+/ 0.117427 sys s / 164,167,680-byte peak RSS. The native release build
+measured 7.087748 s wall / 32.935389 user s / 0.356649 sys s /
+859,308,032-byte peak RSS and produced a 7,960,592-byte `rlib`; the
+`wasm32-unknown-unknown` determinism compile measured 4.215155 s wall /
+22.041927 user s / 1.139986 sys s / 898,236,416-byte peak RSS and produced a
+24,148,829-byte artifact. These are single-host/cache/toolchain observations,
+not comparative or universal performance claims; allocation counts, stack
+depth, and WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`a8c83ffb-379a-4556-8e69-2c02c33a9962` passed 1,445/1,445 checks in 809 ms.
+Exact-head feature-matrix run
+`7be7cb89-2795-42ef-a74a-086636379971` passed all configured native/WASI lanes
+in 40,436 ms; its retained log includes
+`capability tables OK: every native and wasm32-wasip1 lane agrees` and has no
+`lock-wait` match. Nightly LLVM run
+`5e6bdbee-7bec-4013-ab2f-72a3233f8b9d` passed 85/85 tests in 62,810 ms and
+ingested snapshot `8421d772-0f33-4398-90fa-938da1b595fa`: 55,659/56,528
+lines, 7,964/8,174 branches, 3,112/3,208 functions, and 85,580/87,518
+regions. The changed WebP encoder projection is 2,391/2,471 lines, 511/540
+branches, 89/89 functions, and 3,458/3,733 regions; the selected mode-array
+lines were covered, including both the palette and non-palette paths. These
+are implementation/Rust coverage metrics, not Pillow-parity coverage; the
+known LLVM JSON segment-normalization warning and aggregate shortfall remain
+visible.
 
 Current acceptance record: WebP VP8L entropy-analysis histogram workspace
 
