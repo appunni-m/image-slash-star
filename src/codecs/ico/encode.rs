@@ -320,31 +320,15 @@ fn encode_bmp_payload(
     crate::codecs::error::check_cancelled(token)?;
     let width = bounded_usize_u32(img.width);
     let height = bounded_usize_u32(img.height);
-    let (bits, row_bytes, pixels) = match img.color {
+    let (bits, row_bytes) = match img.color {
         ColorType::Rgb8 => {
             let source_row_bytes = width.saturating_mul(3);
             let row_bytes = source_row_bytes.next_multiple_of(4);
-            let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
-            for row in img.pixels.chunks_exact(source_row_bytes).rev() {
-                crate::codecs::error::check_cancelled(token)?;
-                for pixel in row.chunks_exact(3) {
-                    pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
-                }
-                let padding = row_bytes.saturating_sub(source_row_bytes);
-                pixels.resize(pixels.len().saturating_add(padding), 0);
-            }
-            (24u16, row_bytes, pixels)
+            (24u16, row_bytes)
         }
         ColorType::Rgba8 => {
             let row_bytes = width.saturating_mul(4);
-            let mut pixels = Vec::with_capacity(row_bytes.saturating_mul(height));
-            for row in img.pixels.chunks_exact(row_bytes).rev() {
-                crate::codecs::error::check_cancelled(token)?;
-                for pixel in row.chunks_exact(4) {
-                    pixels.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
-                }
-            }
-            (32u16, row_bytes, pixels)
+            (32u16, row_bytes)
         }
         _ => {
             return Err(CodecError::Unsupported(format!(
@@ -354,8 +338,6 @@ fn encode_bmp_payload(
         }
     };
     let pixel_bytes = row_bytes.saturating_mul(height);
-    // Each color arm emits exactly one validated source row at `row_bytes`.
-    debug_assert_eq!(pixels.len(), pixel_bytes);
 
     let mask_row_bytes = width.div_ceil(8);
     let mask_bytes = if bits == 32 {
@@ -381,7 +363,29 @@ fn encode_bmp_payload(
     output.extend_from_slice(&3_780i32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
-    output.extend_from_slice(&pixels);
+    match img.color {
+        ColorType::Rgb8 => {
+            let source_row_bytes = width.saturating_mul(3);
+            for row in img.pixels.chunks_exact(source_row_bytes).rev() {
+                crate::codecs::error::check_cancelled(token)?;
+                for pixel in row.chunks_exact(3) {
+                    output.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
+                }
+                let padding = row_bytes.saturating_sub(source_row_bytes);
+                output.resize(output.len().saturating_add(padding), 0);
+            }
+        }
+        ColorType::Rgba8 => {
+            for row in img.pixels.chunks_exact(row_bytes).rev() {
+                crate::codecs::error::check_cancelled(token)?;
+                for pixel in row.chunks_exact(4) {
+                    output.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
+                }
+            }
+        }
+        _ => unreachable!("ICO BMP payload mode was validated before materialization"),
+    }
+    debug_assert_eq!(output.len(), 40usize.saturating_add(pixel_bytes));
     output.resize(output.len().saturating_add(mask_bytes), 0);
     crate::codecs::error::check_cancelled(token)?;
     Ok((bits, output))
