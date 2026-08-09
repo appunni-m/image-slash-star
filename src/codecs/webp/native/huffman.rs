@@ -33,10 +33,44 @@ const MAX_ALLOWED_CODE_LENGTH: usize = 15;
 const MAX_TABLE_BITS: u8 = 10;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum HuffmanTreeNode {
-    Branch(u32), //offset in vector to children
-    Leaf(u16),   //symbol stored in leaf
+struct HuffmanTreeNode(u32);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HuffmanTreeNodeKind {
+    Branch(u32), // offset in vector to children
+    Leaf(u16),   // symbol stored in leaf
     Empty,
+}
+
+impl HuffmanTreeNode {
+    const BRANCH_TAG: u32 = 1 << 31;
+    const EMPTY: Self = Self(0);
+
+    #[inline]
+    fn branch(offset: u32) -> Self {
+        debug_assert!(offset < Self::BRANCH_TAG);
+        Self(Self::BRANCH_TAG | offset)
+    }
+
+    #[inline]
+    fn leaf(symbol: u16) -> Self {
+        Self(u32::from(symbol) + 1)
+    }
+
+    #[inline]
+    #[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+    fn kind(self) -> HuffmanTreeNodeKind {
+        match self.0 {
+            0 => HuffmanTreeNodeKind::Empty,
+            value if value & Self::BRANCH_TAG != 0 => {
+                HuffmanTreeNodeKind::Branch(value & !Self::BRANCH_TAG)
+            }
+            value => {
+                debug_assert!(value <= u32::from(u16::MAX) + 1);
+                HuffmanTreeNodeKind::Leaf((value - 1) as u16)
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -246,7 +280,7 @@ impl HuffmanTree {
                 let mut node_index = if table_value == 0 {
                     let node_index = tree.len();
                     table[table_index] = (node_index + 1) as u32;
-                    tree.push(HuffmanTreeNode::Empty);
+                    tree.push(HuffmanTreeNode::EMPTY);
                     node_index
                 } else {
                     (table_value - 1) as usize
@@ -254,21 +288,24 @@ impl HuffmanTree {
 
                 let code = usize::from(code);
                 for depth in (0..length - table_bits).rev() {
-                    let node = tree[node_index];
+                    let node = tree[node_index].kind();
 
-                    let offset = if let HuffmanTreeNode::Branch(offset) = node {
+                    let offset = if let HuffmanTreeNodeKind::Branch(offset) = node {
                         usize::try_from(offset).map_err(|_| DecodingError::HuffmanError)?
                     } else {
                         // The complete canonical-code validation above prevents
                         // descending through an already assigned leaf; every
                         // non-branch node reached here is a new empty branch.
-                        debug_assert_eq!(node, HuffmanTreeNode::Empty);
+                        debug_assert_eq!(node, HuffmanTreeNodeKind::Empty);
                         let offset = tree.len() - node_index;
                         let stored_offset =
                             u32::try_from(offset).map_err(|_| DecodingError::HuffmanError)?;
-                        tree[node_index] = HuffmanTreeNode::Branch(stored_offset);
-                        tree.push(HuffmanTreeNode::Empty);
-                        tree.push(HuffmanTreeNode::Empty);
+                        if stored_offset >= HuffmanTreeNode::BRANCH_TAG {
+                            return Err(DecodingError::HuffmanError);
+                        }
+                        tree[node_index] = HuffmanTreeNode::branch(stored_offset);
+                        tree.push(HuffmanTreeNode::EMPTY);
+                        tree.push(HuffmanTreeNode::EMPTY);
                         offset
                     };
 
@@ -277,8 +314,8 @@ impl HuffmanTree {
 
                 // The same canonical-code invariant guarantees that the final
                 // slot is unassigned before this symbol is inserted.
-                debug_assert_eq!(tree[node_index], HuffmanTreeNode::Empty);
-                tree[node_index] = HuffmanTreeNode::Leaf(symbol as u16);
+                debug_assert_eq!(tree[node_index], HuffmanTreeNode::EMPTY);
+                tree[node_index] = HuffmanTreeNode::leaf(symbol as u16);
             }
         }
 
@@ -326,19 +363,19 @@ impl HuffmanTree {
         let mut depth = MAX_TABLE_BITS;
         let mut index = start_index;
         loop {
-            match &tree[index] {
-                HuffmanTreeNode::Branch(children_offset) => {
-                    index += usize::try_from(*children_offset)
+            match tree[index].kind() {
+                HuffmanTreeNodeKind::Branch(children_offset) => {
+                    index += usize::try_from(children_offset)
                         .map_err(|_| DecodingError::HuffmanError)?
                         + (v & 1);
                     depth += 1;
                     v >>= 1;
                 }
-                HuffmanTreeNode::Leaf(symbol) => {
+                HuffmanTreeNodeKind::Leaf(symbol) => {
                     bit_reader.consume(depth)?;
-                    return Ok(*symbol);
+                    return Ok(symbol);
                 }
-                HuffmanTreeNode::Empty => return Err(DecodingError::HuffmanError),
+                HuffmanTreeNodeKind::Empty => return Err(DecodingError::HuffmanError),
             }
         }
     }
@@ -461,27 +498,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(HuffmanTree::build_implicit(&[1, 1, 1]).is_err());
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
     assert!(
-        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Empty], 0, 0, &mut reader).is_err()
+        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::EMPTY], 0, 0, &mut reader).is_err()
     );
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
     reader.fill().expect("coverage reader should fill");
     let _ = HuffmanTree::read_symbol_slowpath(
         &[
-            HuffmanTreeNode::Branch(1),
-            HuffmanTreeNode::Leaf(3),
-            HuffmanTreeNode::Empty,
+            HuffmanTreeNode::branch(1),
+            HuffmanTreeNode::leaf(3),
+            HuffmanTreeNode::EMPTY,
         ],
         0,
         0,
         &mut reader,
     );
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::Leaf(9)], 0, 0, &mut reader);
+    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::leaf(9)], 0, 0, &mut reader);
     let tree = HuffmanTree(HuffmanTreeInner::Tree {
         tree: vec![
-            HuffmanTreeNode::Branch(1),
-            HuffmanTreeNode::Leaf(5),
-            HuffmanTreeNode::Empty,
+            HuffmanTreeNode::branch(1),
+            HuffmanTreeNode::leaf(5),
+            HuffmanTreeNode::EMPTY,
         ],
         table: vec![1],
         table_mask: 0,
@@ -508,9 +545,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     reader.fill().expect("coverage reader should fill");
     let _ = HuffmanTree::read_symbol_slowpath(
         &[
-            HuffmanTreeNode::Branch(1),
-            HuffmanTreeNode::Leaf(7),
-            HuffmanTreeNode::Empty,
+            HuffmanTreeNode::branch(1),
+            HuffmanTreeNode::leaf(7),
+            HuffmanTreeNode::EMPTY,
         ],
         0,
         0,
