@@ -1078,6 +1078,22 @@ lines, `+1/+0` branches, `+0/+0` functions, and `+4/+2` regions; the
 aggregate shortfall is 812 lines, 194 branches, 80 functions, and 1,830
 regions. The known LLVM JSON segment-normalization warning remains.
 
+The harness-only follow-up is implemented at revision
+`3519b21c2ac3dd0cbd70207cfa0a2669f31300b5`. Its feature-matrix cache
+signature still includes every tracked and non-ignored source/test input, but
+now batches the checksum work instead of spawning one process per file. This
+changes only cache-classification overhead; the 33 lanes, 991 assertions,
+capability-table agreement, and all parity/Rust evidence origins remain
+unchanged. Exact-head managed feature-matrix run
+`01d0ff0d-c663-4a08-8882-06916f2f05e9` passed all 33 configured lanes in
+6,072 ms with `cache=warm`, `lanes=24`, `test_threads=1`, `build_jobs=1`,
+`debug=0`, and `verbose=0`; its retained log contains the native/WASI
+capability agreement marker and no `lock-wait` match. On the same local host,
+the warm repeat fell from 12.5 s before this change to 5.82 s after it. These
+are cache- and runner-sensitive observations, not universal benchmarks. No
+Rust source changed, so the accepted LLVM snapshot and Pillow-parity result
+remain the preceding records above.
+
 Current WebP container/metadata assembly acceptance record
 
 Implementation revision `51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2` keeps the
