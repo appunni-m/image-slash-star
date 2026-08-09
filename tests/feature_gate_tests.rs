@@ -12275,6 +12275,18 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         }
         let output_lossless_image =
             DecodedImage::new(128, 128, output_lossless_pixels, ColorType::Rgb8);
+        let trace_expected =
+            image_slash_star::encode(&output_lossless_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &output_lossless_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            trace_expected,
+            "ample VP8L trace replay preserves ordinary bytes"
+        );
         // The VP8L traced backward-reference DP now polls after each 256
         // processed pixels. This patterned 128x128 probe reaches the first
         // fine trace boundary after the existing setup work; the exact
@@ -12324,6 +12336,54 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(trace_sink, vec![0xDA]);
+        // The VP8L trace path reconstruction and token replay now poll after
+        // each 256 consumed pixels as well. This is a distinct interior work
+        // boundary after the DP pass; Pillow has no caller token, typed budget
+        // result, caller-owned sink, or rollback equivalent.
+        let trace_replay_policy = image_slash_star::EncodePolicy::new().with_max_work_units(52_500);
+        let trace_replay_error = match image_slash_star::encode_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &trace_replay_policy,
+        ) {
+            Ok(_) => return Err("VP8L trace replay budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trace_replay_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 52_500,
+                observed: 52_501,
+            }
+        ));
+        let trace_replay_sink_policy =
+            image_slash_star::EncodePolicy::new().with_max_work_units(52_499);
+        let mut trace_replay_sink = vec![0xD9];
+        let trace_replay_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &output_lossless_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &trace_replay_sink_policy,
+            &mut trace_replay_sink,
+        ) {
+            Ok(_) => return Err("VP8L trace replay sink budget unexpectedly completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            trace_replay_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 52_499,
+                observed: 52_500,
+            }
+        ));
+        assert_eq!(trace_replay_sink, vec![0xD9]);
         // Huffman-tree emission now checkpoints simple-tree symbol discovery
         // after each 64 code-length slots and the code-length-token frequency
         // scan after each 16 compressed token entries. A generated LCG probe

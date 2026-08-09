@@ -1742,44 +1742,91 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
 
     let mut path = Vec::new();
     let mut end = pixels.len();
-    while end != 0 {
-        if end.is_multiple_of(1024) {
-            checkpoint(token)?;
+    if FINE_TRACE {
+        let mut processed = 0_usize;
+        let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
+        while end != 0 {
+            let length = manager.lengths[end - 1];
+            path.push(length);
+            end -= length;
+            processed = processed.saturating_add(length);
+            while processed >= next_checkpoint {
+                checkpoint(token)?;
+                next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
+            }
         }
-        let length = manager.lengths[end - 1];
-        path.push(length);
-        end -= length;
+    } else {
+        while end != 0 {
+            if end.is_multiple_of(1024) {
+                checkpoint(token)?;
+            }
+            let length = manager.lengths[end - 1];
+            path.push(length);
+            end -= length;
+        }
     }
     path.reverse();
 
     let mut output = Vec::with_capacity(path.len());
     let mut cache = vec![0_u32; if cache_bits == 0 { 0 } else { 1 << cache_bits }];
     let mut position: usize = 0;
-    for length in path {
-        if position.is_multiple_of(1024) {
-            checkpoint(token)?;
-        }
-        if length == 1 {
-            let pixel = pixels[position];
-            if cache_bits != 0 {
-                let index = color_hash(pixel, cache_bits);
-                if cache[index] == pixel {
-                    output.push(Token::Cache(index));
+    if FINE_TRACE {
+        checkpoint(token)?;
+        let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
+        for length in path {
+            if length == 1 {
+                let pixel = pixels[position];
+                if cache_bits != 0 {
+                    let index = color_hash(pixel, cache_bits);
+                    if cache[index] == pixel {
+                        output.push(Token::Cache(index));
+                    } else {
+                        cache[index] = pixel;
+                        output.push(Token::Literal(pixel));
+                    }
                 } else {
-                    cache[index] = pixel;
                     output.push(Token::Literal(pixel));
                 }
             } else {
-                output.push(Token::Literal(pixel));
+                output.push(Token::Copy {
+                    distance: chain[position].0,
+                    length,
+                });
+                populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
             }
-        } else {
-            output.push(Token::Copy {
-                distance: chain[position].0,
-                length,
-            });
-            populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
+            position += length;
+            while position >= next_checkpoint {
+                checkpoint(token)?;
+                next_checkpoint = next_checkpoint.saturating_add(TRACE_CHECKPOINT_PIXELS);
+            }
         }
-        position += length;
+    } else {
+        for length in path {
+            if position.is_multiple_of(1024) {
+                checkpoint(token)?;
+            }
+            if length == 1 {
+                let pixel = pixels[position];
+                if cache_bits != 0 {
+                    let index = color_hash(pixel, cache_bits);
+                    if cache[index] == pixel {
+                        output.push(Token::Cache(index));
+                    } else {
+                        cache[index] = pixel;
+                        output.push(Token::Literal(pixel));
+                    }
+                } else {
+                    output.push(Token::Literal(pixel));
+                }
+            } else {
+                output.push(Token::Copy {
+                    distance: chain[position].0,
+                    length,
+                });
+                populate_cache(pixels, position, length, cache_bits, &mut cache, token)?;
+            }
+            position += length;
+        }
     }
     Ok(output)
 }
