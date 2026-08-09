@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `59e4c4fa7c33e047fbb802d7722058e71a6263f1`; the claim-ledger fixture tuple
+revision `8b52b7180df0118ed9e427b5df01b906bbe32eaf`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -15,7 +15,8 @@ length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
 ownership, BMP row-scratch reuse, ICO BMP payload assembly,
 PNG source pixel ownership, TIFF conditional source ownership, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
-Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
+Huffman-RLE fill, Huffman-RLE reverse-tail scan, Huffman-RLE
+token-materialization, and Huffman-tree leaf
 census/materialization/depth slices have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
@@ -384,6 +385,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L predictor row-copy checkpoints | Token-aware predictor mode application copies each wide source row in completed 1,024-pixel chunks and polls after each completed chunk; the no-token path retains its original bulk row copy |
 | Lossless WebP VP8L entropy-analysis pixel checkpoints | Token-aware entropy-mode pixel histogram analysis polls after each completed 1,024-pixel chunk on rows wider than 1,024 pixels; narrower rows remain bounded by existing row-start polls and the no-token traversal is direct |
 | Lossless WebP VP8L Huffman-RLE fill checkpoints | Token-aware long-run marking and normalized-count fills poll after each 64 code-length values; the no-token helper retains its bulk fills, and the exact Rust-only boundary is covered by the existing feature-gate contract |
+| Lossless WebP VP8L Huffman-RLE reverse-tail scan checkpoints | Token-aware Huffman-RLE preparation scans the fixed code-length alphabet backward toward its last nonzero slot and polls after each 64 scanned entries; the no-token path retains its original `rposition` fast path, and the exact Rust-only boundary is covered by the existing feature-gate contract |
 | Lossless WebP VP8L Huffman-RLE token-materialization checkpoints | Token-aware code-length RLE expansion polls after each 16 emitted compressed tokens; the no-token helper retains its original bulk/token construction path, and the exact Rust-only boundary is covered by the existing feature-gate contract |
 | WebP source-mode preparation checkpoints | Token-aware L1/P8/L8/La8/CMYK expansion and RGBA alpha/RGB extraction poll after each 1,024 source pixels; no-token maps and iterators retain their original tight paths and byte behavior |
 | Lossless WebP VP8L backward-reference result-backfill checkpoints | Token-aware long result backfills poll after each 256 entries; the no-token path keeps its original tight loop |
@@ -791,7 +793,8 @@ its 1,024-pixel cadence), and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE preparation, including reverse-tail fixed-alphabet scans, and
+in-run code-length scans after each 64 symbols,
 canonical-code assignment scans after each 64 symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
@@ -859,7 +862,8 @@ trace/replay retains its 1,024-pixel cadence), and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE preparation, including reverse-tail fixed-alphabet scans, and
+in-run code-length scans after each 64 symbols,
 canonical-code assignment scans after each 64 symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
