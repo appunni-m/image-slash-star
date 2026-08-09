@@ -13168,6 +13168,74 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             }
         ));
         assert_eq!(huffman_rle_sink, vec![0xB1]);
+        let mut reverse_scan_pixels = Vec::with_capacity(256 * 3 * 3);
+        for y in 0..3_u32 {
+            for x in 0..256_u32 {
+                let blue = x.wrapping_add(y.wrapping_mul(73)) & 0xff;
+                reverse_scan_pixels.extend_from_slice(&[u8::try_from(x)?, 0, u8::try_from(blue)?]);
+            }
+        }
+        let reverse_scan_image = DecodedImage::new(256, 3, reverse_scan_pixels, ColorType::Rgb8);
+        // The token-aware Huffman-RLE preparation also polls its reverse
+        // search for the last nonzero code-length slot after each 64 scanned
+        // alphabet entries. This is Rust-only work-control evidence: Pillow
+        // has no caller token, work budget, or caller-owned sink. The probe
+        // deliberately keeps the fixed alphabet's tail sparse, while its
+        // ample-budget bytes remain the same as the ordinary encoder.
+        let reverse_scan_expected =
+            image_slash_star::encode(&reverse_scan_image, ImageFormat::WebP, &lossless_options)?;
+        assert_eq!(
+            image_slash_star::encode_with_policy(
+                &reverse_scan_image,
+                ImageFormat::WebP,
+                &lossless_options,
+                &image_slash_star::EncodePolicy::new().with_max_work_units(u64::MAX),
+            )?,
+            reverse_scan_expected,
+            "an ample Huffman-RLE reverse-scan budget preserves bytes"
+        );
+        let reverse_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6_710);
+        let reverse_scan_error = match image_slash_star::encode_with_policy(
+            &reverse_scan_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &reverse_scan_policy,
+        ) {
+            Ok(_) => return Err("VP8L Huffman-RLE reverse-scan budget completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            reverse_scan_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6_710,
+                observed: 6_711,
+            }
+        ));
+        let mut reverse_scan_sink = vec![0xB2];
+        let reverse_scan_sink_error = match image_slash_star::encode_to_sink_with_policy(
+            &reverse_scan_image,
+            ImageFormat::WebP,
+            &lossless_options,
+            &reverse_scan_policy,
+            &mut reverse_scan_sink,
+        ) {
+            Ok(_) => return Err("VP8L Huffman-RLE reverse-scan sink budget completed".into()),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            reverse_scan_sink_error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::WebP),
+                operation: image_slash_star::CodecOperation::StillEncode,
+                resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
+                maximum: 6_710,
+                observed: 6_711,
+            }
+        ));
+        assert_eq!(reverse_scan_sink, vec![0xB2]);
         // The smaller lossless probe above already proves byte identity for
         // the ordinary and ample-budget VP8L paths. This larger patterned
         // fixture is reserved for the late logical/output boundaries so the
