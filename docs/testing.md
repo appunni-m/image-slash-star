@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`, Rust test/runtime revision
-`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`, and benchmark-protocol revision
+`fe77d46c239da119e36942d5523255c47b8e06c8`, Rust test/runtime revision
+`fe77d46c239da119e36942d5523255c47b8e06c8`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`.
+Coverage MCP rerun has yet been recorded for `fe77d46c239da119e36942d5523255c47b8e06c8`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2356,7 +2356,7 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: VP8L candidate-prefix retention, predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
+Current acceptance record: VP8L candidate-prefix retention and suffix allocation recycling, predictor row-copy, entropy-analysis pixel, traced replay, and token-stream checkpoints
 
 The production trace slice is implemented at
 `9275f4e6caa394c88fda815543a29411c737f96d`, with the verified Rust witness in
@@ -2404,31 +2404,27 @@ result, caller-owned sink, or rollback equivalent, so no parity row, fixture,
 diagnostic origin, new test function, or coverage-only hook was added.
 
 The current VP8L candidate-trial assembly optimization is implemented at
-`fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`. Candidate trials leave the
-already-emitted prefix in the parent writer and append only the winning suffix,
-removing a redundant prefix clone/re-copy while preserving ordinary and
-token-aware output bytes. The existing 28-row Pillow parity suite and 45-test
-Rust-only feature-gate suite pass; this is an implementation optimization, not
-a Pillow-visible result or new work-budget boundary, so no new parity fixture,
+`fe77d46c239da119e36942d5523255c47b8e06c8`, following the prefix-retention
+change at `fa7b86abdc0ff91c870516d7a51ad986ff4d64bf`. Candidate trials leave
+the already-emitted prefix in the parent writer, retain only each trial's
+suffix, and recycle losing or replaced winning suffix allocations as scratch.
+This removes redundant prefix clone/re-copy work and fresh per-trial suffix
+allocations while preserving ordinary and token-aware output/checkpoint
+behavior. The existing 28-row Pillow parity suite and 45-test Rust-only
+feature-gate suite pass; this is an implementation optimization, not a
+Pillow-visible result or new work-budget boundary, so no new parity fixture,
 feature-gate test function, diagnostic origin, or coverage-only hook was added.
 
-The first clean schema-`@3` benchmark at this revision reported 1.185715 s wall /
-2.957358 user s / 0.278433 sys s / 259,489,792-byte peak RSS for the Pillow
-parity fixture suite, and 2.008233 s wall / 2.445845 user s / 0.199363 sys s /
-183,812,096-byte peak RSS for the separate Rust-only feature-gate suite. Its
-warm repeat reported 1.279297 s / 3.115831 user s / 0.320139 sys s for Pillow
-parity and 1.799382 s / 2.438749 user s / 0.206024 sys s for the Rust-only
-suite. The native release `rlib` was 7,990,960 bytes and the
-`wasm32-unknown-unknown` determinism artifact was 25,077,972 bytes. These are
-direct-child POSIX observations from schema `@3`, not universal process-tree or
-allocator claims. The current cold and warm local feature-matrix runs both
-passed all configured native/WASI lanes with `lanes=6`, `test_threads=2`,
-`build_jobs=2`, `debug=0`, and `verbose=0`, ending with the capability-table
-agreement marker and no `lock-wait` match; the timed warm repeat completed in
-6.421 s wall time (`real 6.421`, `user 23.11`, `sys 2.32`).
-These paired benchmark observations do not establish a universal wall-time
-improvement for the isolated prefix-retention change; they record the reduced
-prefix clone/re-copy path and its host/cache-dependent resource observations.
+A clean schema-`@3` benchmark at this revision reported 0.964519 s wall /
+2.852155 user s / 0.200098 sys s / 257,671,168-byte peak RSS for the Pillow
+parity fixture suite, 1.692189 s wall / 2.314349 user s / 0.161861 sys s /
+182,583,296-byte peak RSS for the separate Rust-only feature-gate suite,
+6.757744 s wall for the native release build with a 7,990,872-byte `rlib`,
+and 3.400473 s wall for the `wasm32-unknown-unknown` determinism compile with
+a 25,078,450-byte artifact. These are direct-child POSIX observations from
+schema `@3`, not universal process-tree, allocator, or speed claims; repeated
+allowed-dirty local observations are not release evidence. No managed parity,
+feature-matrix, or Coverage MCP rerun is recorded for this revision.
 
 Previous acceptance record: compact VP8 work-budget witnesses
 
