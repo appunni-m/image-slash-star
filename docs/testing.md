@@ -3,8 +3,8 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation revision
-`646ed73413a574368bfd01172fcd46c60622046f`, Rust test/runtime revision
-`646ed73413a574368bfd01172fcd46c60622046f`, and benchmark-protocol revision
+`9266e4f26749870c1dd680b08598ed6d378ef1c3`, Rust test/runtime revision
+`9266e4f26749870c1dd680b08598ed6d378ef1c3`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,8 @@ The accepted Coverage MCP snapshot likewise remains anchored to that preceding
 revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
-Coverage MCP rerun has yet been recorded for `646ed73413a574368bfd01172fcd46c60622046f`.
+Coverage MCP rerun has yet been recorded for
+`9266e4f26749870c1dd680b08598ed6d378ef1c3`.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -2367,6 +2368,31 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current acceptance record: WebP VP8 analysis-buffer reuse and budget-pair runtime tuning
+
+The production/test/runtime slice is implemented at
+`9266e4f26749870c1dd680b08598ed6d378ef1c3`. Lossy VP8 analysis now reuses
+fixed 16x16 and 8x8 block, prediction, and edge buffers across macroblocks
+instead of allocating vectors for each bounded analysis block; the block
+geometry and checkpoint semantics are unchanged. The existing
+`run_work_budget_pair` helper now keeps compact witnesses sequential, avoiding
+thread setup overhead, while retaining native overlap for the large whole-
+buffer/direct-sink comparisons; WASM remains sequential. The no-token path
+still uses the same analysis algorithm without cancellation checks, and
+ordinary and ample-policy encoded bytes remain unchanged.
+
+This is Rust implementation and Rust-only test-runtime evidence. Pillow has no
+caller token, typed work-budget result, caller-owned sink, or rollback
+equivalent, so the slice adds no Pillow parity row, fixture-manifest row,
+diagnostic origin, new test function, or coverage-only hook. The focused and
+full 45-test feature-gate suite, 28-function Pillow parity matrix,
+all-feature tests/doctests, strict all-target Clippy, and rustfmt passed. The
+clean schema-`@3` Rust-only feature-gate workload at this revision measured
+1.746872 s wall / 2.315945 user s / 0.188449 sys s / 147,226,624-byte
+direct-child peak RSS. This is a host/cache/toolchain observation, not a
+universal speed or memory claim; allocator counts, retained-cache size,
+caller-buffer reuse, stack depth, and WASM runtime measurements remain open.
 
 Current acceptance record: VP8L candidate-prefix retention and suffix allocation recycling, predictor row-copy, entropy-analysis pixel, traced replay, token-stream, and Huffman-RLE fill checkpoints
 
