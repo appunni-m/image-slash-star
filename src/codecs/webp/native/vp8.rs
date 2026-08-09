@@ -1069,10 +1069,13 @@ impl<R: Read> Vp8Decoder<R> {
     #[allow(clippy::expect_used, clippy::unwrap_in_result)]
     fn init_partitions(&mut self, n: usize) -> Result<(), DecodingError> {
         if n > 1 {
-            let mut sizes = vec![0; 3 * n - 3];
-            self.r.read_exact(sizes.as_mut_slice())?;
+            // The two-bit partition count in the frame header limits `n` to
+            // eight, so the complete size table fits in 21 stack bytes.
+            let mut sizes = [0; 3 * 8 - 3];
+            let sizes_len = 3 * n - 3;
+            self.r.read_exact(&mut sizes[..sizes_len])?;
 
-            for (i, s) in sizes.chunks(3).enumerate() {
+            for (i, s) in sizes[..sizes_len].chunks(3).enumerate() {
                 let size = { s }
                     .read_u24::<LittleEndian>()
                     .expect("Reading from &[u8] can't fail and the chunk is complete");
