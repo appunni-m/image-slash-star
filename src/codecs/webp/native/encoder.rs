@@ -1935,7 +1935,10 @@ fn analyze_entropy(
     const BLUE_SUB_GREEN: usize = 10;
     const BLUE_PREDICTED_SUB_GREEN: usize = 11;
     const PALETTE: usize = 12;
-    let mut histograms = vec![[0_u32; 256]; 13];
+    // Entropy analysis always uses the fixed 13-channel, 8-bit alphabet. Keep
+    // this function-local table on the stack instead of allocating a heap
+    // vector whose shape cannot vary and whose contents never escape.
+    let mut histograms = [[0_u32; 256]; 13];
     let mut previous_pixel = pixels[0];
     if let Some(token) = token {
         if width > VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS {
