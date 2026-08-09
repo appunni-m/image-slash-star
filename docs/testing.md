@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `59e4c4fa7c33e047fbb802d7722058e71a6263f1`, and benchmark-protocol revision
+ revision `8b52b7180df0118ed9e427b5df01b906bbe32eaf`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`59e4c4fa7c33e047fbb802d7722058e71a6263f1`; the accepted managed records
+`8b52b7180df0118ed9e427b5df01b906bbe32eaf`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -449,7 +449,8 @@ cache-population scans after each 256 pixels, and histogram-cluster token-to-row
 transitions after each 256 rows, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE preparation, including reverse-tail fixed-alphabet scans, and
+in-run code-length scans after each 64 symbols,
 Huffman RLE token materialization after each 16 emitted compressed code-length
 tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
@@ -553,7 +554,8 @@ backward-reference result backfills after each 256 entries, and copy-token
 cache-population scans after each 256 pixels, plus token/Huffman cost
 scans after each 1,024 tokens or 64 symbols,
 Huffman-tree simple-tree symbol-discovery scans after each 64 code-length slots,
-Huffman RLE preparation and in-run code-length scans after each 64 symbols,
+Huffman RLE preparation, including reverse-tail fixed-alphabet scans, and
+in-run code-length scans after each 64 symbols,
 Huffman RLE token materialization after each 16 emitted compressed code-length
 tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after
@@ -631,6 +633,23 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+The latest lossless WebP VP8L Huffman-RLE reverse-tail scan slice is implemented
+at production and Rust test/runtime revision
+`8b52b7180df0118ed9e427b5df01b906bbe32eaf` through the existing
+`encode_work_budget_is_a_non_parity_result_contract`. Token-aware Huffman-RLE
+preparation now scans the fixed code-length alphabet from its tail toward the
+last nonzero slot and polls after each 64 scanned entries; the no-token path
+retains the original tight `rposition` search. The deterministic 256×3 RGB
+sparse-tail probe remains byte-identical under the ordinary and `u64::MAX`
+policies, while the finite policy rejects both whole-buffer and caller-owned
+sink paths at `maximum: 6,710`, `observed: 6,711`; the sink sentinel
+`[0xB2]` remains untouched. This is Rust-only work-control and sink evidence:
+Pillow has no caller token, work budget, or caller-owned sink, so no parity row,
+fixture-manifest row, diagnostic origin, new test function, or coverage-only
+hook was added. The focused and full all-feature suites, strict Clippy,
+rustfmt, and all 24 native/WASI feature-matrix lanes passed locally. No managed
+parity, feature-matrix, or Coverage MCP rerun is claimed at this revision.
 
 The TIFF sequence length-planning slice is implemented at production revision
 `59e4c4fa7c33e047fbb802d7722058e71a6263f1`. Still and sink sequence encoders
@@ -2572,6 +2591,22 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current acceptance record: WebP VP8L Huffman-RLE reverse-tail scan
+
+The production and Rust test/runtime slice is implemented at
+`8b52b7180df0118ed9e427b5df01b906bbe32eaf`. Token-aware Huffman-RLE
+preparation scans the fixed code-length alphabet backward to find its last
+nonzero slot and charges each 64 scanned entries; the no-token path keeps its
+original `rposition` fast path. The existing
+`encode_work_budget_is_a_non_parity_result_contract` proves ordinary/ample
+byte identity and exact whole-buffer and caller-owned-sink rejection at
+`6,710/6,711` on the deterministic sparse-tail probe, with `[0xB2]` untouched
+in the sink. Pillow cannot observe the caller token, typed work-budget result,
+or caller-owned sink, so this is Rust-only evidence with no parity row,
+fixture-manifest entry, diagnostic origin, new test function, or coverage-only
+hook. No managed parity, feature-matrix, or Coverage MCP rerun is claimed at
+this revision.
+
 Current acceptance record: WebP VP8L Huffman-tree leaf census, materialization, and depth scan
 
 The production and Rust test/runtime slice is implemented at
@@ -3553,8 +3588,9 @@ Rust-only evidence with no parity row, fixture-manifest row, diagnostic origin,
 new test function, or coverage-only hook. The implementation is committed at
 `589186a6e3f0a1f8fd47ca84dcc73133620ed9fa`. Candidate
 scoring and fixed-alphabet Huffman cost paths now charge after each 1,024 tokens
-and each 64-symbol population scan. Huffman RLE preparation and in-run
-code-length scans charge after each 64 source symbols, while compressed
+and each 64-symbol population scan. Huffman RLE preparation, including the
+reverse-tail fixed-alphabet scan, and in-run code-length scans charge after
+each 64 source symbols, while compressed
 Huffman-token materialization charges after each 16 emitted tokens.
 Canonical-code assignment and compressed Huffman-token generation charge after
 each 64 code-length symbols. Huffman-tree simple-tree symbol discovery now charges after
