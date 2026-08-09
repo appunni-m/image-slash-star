@@ -1912,7 +1912,7 @@ revision-bound tuple: implementation revision
 `487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
 generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
 fixture-manifest SHA-256, the VP8L property-map SHA-256
-`6760835419c717006f66d66e8c2f037112187aee983f41744b2665eb5090a284`, and
+`d49876ef5221e0561c384c27196dce6ebdda963381670315a46ef0987c2baf36`, and
 the inspector SHA-256
 `833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
@@ -6547,8 +6547,8 @@ structural witnesses, and 40 malformed parser witnesses.
 
 The frame-header, color-indexing size-band, subtract-green, color-transform,
 meta-Huffman, entropy-image, successful cache-boundary, simple-Huffman-tree,
-full-Huffman-tree, and distance-mapping
-properties are
+full-Huffman-tree, distance-mapping, and three malformed-form properties
+are
 `witnessed` only at their explicitly listed scopes: the color-indexing rows
 remain Pillow-origin outer-result fixtures while the independent inspector
 proves the transform and table-size fields, the subtract-green encode artifact
@@ -6557,10 +6557,10 @@ sizes, the meta-Huffman rows prove the selected one- and two-group forms, the
 entropy-image rows prove the selected 2×1 and 24×24 dimensions, and the cache
 rows prove the selected 1- and 10-bit widths, and the full-tree rows prove the
 two listed high-entropy forms, the simple-tree rows prove the two listed
-successful forms, and the distance rows prove the two listed mappings. The
-other 4 properties remain deliberately
-marked `candidate` at the full-category level; their named rows are
-Pillow-origin outer-result fixtures, while the 45 successful structural
+successful forms, the distance rows prove the two listed mappings, and the
+malformed groups prove their rejection code/phase/offset records. The predictor-
+mode property remains the one broad `candidate` at the full-category level. Its
+named rows are Pillow-origin outer-result fixtures, while the 45 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
 entropy-image facts. The 40 malformed witnesses independently check rejection
@@ -6570,8 +6570,8 @@ never Pillow diagnostics. The map adds no synthetic parity row,
 `cfg(coverage)` hook, or Rust unit test. The remaining WEP-022 work is to expand the successful
 structural witnesses to every claimed combination without changing the Pillow
 parity claim. The verifier requires every minimal witness named by a
-`witnessed` property to have a matching structural witness before that status
-can be promoted.
+`witnessed` property to have a matching successful structural or malformed-parser
+witness before that status can be promoted.
 
 ### Revision-bound fixture benchmark protocol
 
