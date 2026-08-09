@@ -13684,13 +13684,13 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         if let EncodeOptions::WebP(options) = &mut partition_131072_options {
             options.quality = Some(100);
         }
-        // A 1,024×1,024 high-entropy probe reaches the next 262,144-bit
-        // interval in both VP8 paths at quality 100. It is kept separate from
-        // the compact 131,072-bit probe so the boundary remains deterministic
+        // An 81×81 high-entropy probe reaches the next 262,144-bit interval
+        // in both VP8 paths at quality 100. It is kept separate from the
+        // compact 131,072-bit probe so the boundary remains deterministic
         // without reintroducing the discarded 2,048×1,024 allocation.
-        let mut partition_262144_probe_pixels = Vec::with_capacity(1024 * 1024 * 3);
+        let mut partition_262144_probe_pixels = Vec::with_capacity(81 * 81 * 3);
         let mut partition_262144_state = 0xA5A5_5A5Au32;
-        for _ in 0..1024 * 1024 {
+        for _ in 0..81 * 81 {
             partition_262144_state = partition_262144_state
                 .wrapping_mul(1_664_525)
                 .wrapping_add(1_013_904_223);
@@ -13701,25 +13701,25 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             ]);
         }
         let partition_262144_probe =
-            DecodedImage::new(1024, 1024, partition_262144_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(81, 81, partition_262144_probe_pixels, ColorType::Rgb8);
         let mut partition_262144_options = analysis_options.clone();
         if let EncodeOptions::WebP(options) = &mut partition_262144_options {
             options.quality = Some(100);
         }
-        // A deterministic 832x832 checkerboard reaches both remaining
+        // A deterministic 129x129 checkerboard reaches both remaining
         // coefficient-only logical intervals at quality 100 while keeping the
         // boundary probe compact. Its strong alternating chroma/luma signal
         // generates the required coefficient work without a second
         // multi-megapixel high-entropy allocation.
-        let mut coefficient_1048576_probe_pixels = Vec::with_capacity(832 * 832 * 3);
-        for y in 0..832 {
-            for x in 0..832 {
+        let mut coefficient_1048576_probe_pixels = Vec::with_capacity(129 * 129 * 3);
+        for y in 0..129 {
+            for x in 0..129 {
                 let value = if (x + y) % 2 == 0 { 0 } else { 255 };
                 coefficient_1048576_probe_pixels.extend_from_slice(&[value, 255 - value, value]);
             }
         }
         let coefficient_1048576_probe =
-            DecodedImage::new(832, 832, coefficient_1048576_probe_pixels, ColorType::Rgb8);
+            DecodedImage::new(129, 129, coefficient_1048576_probe_pixels, ColorType::Rgb8);
         let mut coefficient_1048576_options = analysis_options.clone();
         if let EncodeOptions::WebP(options) = &mut coefficient_1048576_options {
             options.quality = Some(100);
@@ -14705,8 +14705,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         assert_eq!(coefficient_bit_sink_131072, vec![0xD6]);
 
         // The next logical interval is independently enforced after each
-        // 262,144 coded bits in both VP8 partitions. The 1,024×1,024
-        // high-entropy probe reaches whole-buffer and sink cumulative poll
+        // 262,144 coded bits in both VP8 partitions. The 81×81 high-entropy
+        // probe reaches whole-buffer and sink cumulative poll
         // counts of 66,880 and 66,879 at that checkpoint. Pillow has no
         // caller token, work-budget result, or caller-owned sink, so this
         // remains Rust-only evidence with no parity row or coverage-only hook.
