@@ -573,47 +573,34 @@ fn apply_color_indexing_transform_small_table<const W_BITS: u8, const EXP_ENTRY_
     let input_stride_bytes_packed = packed_image_width_in_blocks * 4;
     let output_stride_bytes_expanded = width as usize * 4;
 
-    let mut packed_indices_for_row: Vec<u8> = vec![0; packed_image_width_in_blocks];
-
     for y_rev_idx in 0..height as usize {
         let y = height as usize - 1 - y_rev_idx;
 
         let packed_row_input_global_offset = y * input_stride_bytes_packed;
-        let packed_argb_row_slice =
-            &image_data[packed_row_input_global_offset..][..input_stride_bytes_packed];
-
-        for (packed_argb_chunk, packed_idx) in packed_argb_row_slice
-            .chunks_exact(4)
-            .zip(packed_indices_for_row.iter_mut())
-        {
-            *packed_idx = packed_argb_chunk[1];
-        }
-
         let output_row_global_offset = y * output_stride_bytes_expanded;
-        let output_row_slice_mut =
-            &mut image_data[output_row_global_offset..][..output_stride_bytes_expanded];
-
         let num_full_blocks = packed_image_width_in_blocks.saturating_sub(1);
 
-        let (full_blocks_part, final_block_part) =
-            output_row_slice_mut.split_at_mut(num_full_blocks * EXP_ENTRY_SIZE);
+        // Expand from right to left so each packed index is read before its
+        // output overwrites higher offsets in the same in-place row.
+        let final_packed_index_offset = packed_row_input_global_offset + num_full_blocks * 4 + 1;
+        let final_packed_index_byte = image_data[final_packed_index_offset];
+        let colors_data_full_array = &expanded_lookup_table_array[final_packed_index_byte as usize];
+        let final_block_offset = output_row_global_offset + num_full_blocks * EXP_ENTRY_SIZE;
+        image_data[final_block_offset..final_block_offset + final_block_expanded_size_bytes]
+            .copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]);
 
-        for (output_chunk_slice, &packed_index_byte) in full_blocks_part
-            .chunks_exact_mut(EXP_ENTRY_SIZE) // Uses const generic to avoid expensive memmove call
-            .zip(packed_indices_for_row.iter())
-        {
-            let output_chunk_array: &mut [u8; EXP_ENTRY_SIZE] =
-                output_chunk_slice.try_into().unwrap();
-
+        for block_index in (0..num_full_blocks).rev() {
+            let packed_index_offset = packed_row_input_global_offset + block_index * 4 + 1;
+            let packed_index_byte = image_data[packed_index_offset];
             let colors_data_array = &expanded_lookup_table_array[packed_index_byte as usize];
+            let output_chunk_offset = output_row_global_offset + block_index * EXP_ENTRY_SIZE;
+            let output_chunk_array: &mut [u8; EXP_ENTRY_SIZE] = (&mut image_data
+                [output_chunk_offset..output_chunk_offset + EXP_ENTRY_SIZE])
+                .try_into()
+                .unwrap();
 
             *output_chunk_array = *colors_data_array;
         }
-
-        let final_packed_index_byte = packed_indices_for_row[packed_image_width_in_blocks - 1];
-        let colors_data_full_array = &expanded_lookup_table_array[final_packed_index_byte as usize];
-        final_block_part
-            .copy_from_slice(&colors_data_full_array[..final_block_expanded_size_bytes]);
     }
 }
 
