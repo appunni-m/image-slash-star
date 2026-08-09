@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`8d07256f934bf7cf8c09962ace3b29cdbd9b9215`; the claim-ledger baseline remains
+`51bc2cc5ef5fc2d2329e6d6f7ccac41b088fe5c2`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -358,6 +358,7 @@ translation cannot be bypassed.
 | Lossless WebP VP8L Huffman run-scan checkpoints | Token-aware code-length run scans poll whenever each 64-symbol boundary is crossed, including before a long equal-length run finishes; the no-token path retains the original tight helper |
 | Lossy WebP VP8 boolean-output flush checkpoints | Token-aware boolean flushes drain pending output runs through the existing 1,024-byte output accounting before returning; no-token encoding keeps the original flush helper |
 | Lossy WebP alpha-stream buffer-copy checkpoints | Token-aware compressed and raw alpha streams copy in 1,024-byte chunks and poll after each complete chunk; the existing final stage check covers a short tail, while the no-token path keeps one bulk copy |
+| WebP container/metadata assembly checkpoints | Token-aware sequence and metadata assembly copies caller-sized chunk/payload bytes in 1,024-byte intervals; the no-token path retains one bulk copy and structural sink delivery still owns its prefix semantics |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token branch avoids token polling and retains its existing byte-preserving loop |
 | Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
