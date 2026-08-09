@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `e965689f4a3e7b620cc9393d16e1b158a267cda0`, and benchmark-protocol
+revision `ea5f77781d0ca530bf23fd3b3fc12fc84da3dada`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
@@ -12,14 +12,14 @@ The last accepted exact-head managed Pillow parity run is
 run is `2d1f5d78-dd74-4fe1-882d-ae4aa946b6a9`; both remain anchored to the
 preceding test/runtime revision `841ecbdba75a96f68ec23cdf6e0f7d4599786a9f`.
 The latest exact-head managed validation runs are Pillow parity
-`e9f0ea46-29ad-4f5c-b9e8-5eb6ba0fbd82` (1,445/1,445 passed in 834 ms) and
-feature matrix `35d008b4-4017-493e-9561-c2db59d2e044` (passed in 27,436 ms);
+`fa25b44b-8e5b-4502-a497-2279769a46fd` (1,445/1,445 passed in 1,105 ms) and
+feature matrix `296847d9-8302-4da0-b87d-c055fa547255` (passed in 21,358 ms);
 both recorded checkout HEAD
-`e965689f4a3e7b620cc9393d16e1b158a267cda0`.
+`ea5f77781d0ca530bf23fd3b3fc12fc84da3dada`.
 The accepted Coverage MCP snapshot is
-`86aa5ea2-7ea7-4846-afa0-7791ddb297fc` from run
-`062495cd-0c59-46e9-bc37-dd14b8f8f08e`; it records 55,631/56,488 lines,
-7,955/8,162 branches, 3,112/3,208 functions, and 85,524/87,435 regions at
+`ea481c1a-dd44-4f5d-bdd8-a72d1291ee47` from run
+`f0c767b4-e9ce-4a8d-9ee9-21558f73403e`; it records 55,631/56,488 lines,
+7,955/8,162 branches, 3,112/3,208 functions, and 85,522/87,433 regions at
 the same source revision. The histogram file records 872/873 lines, 184/184
 branches, and 43/43 functions; predictor records 366/366 lines, 68/68
 branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
@@ -642,6 +642,57 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP RGBA alpha-palette delta stack workspace
+
+The production and Rust test/runtime slice is implemented at
+`ea5f77781d0ca530bf23fd3b3fc12fc84da3dada`, following the VP8L palette-delta
+stack workspace at `e965689f4a3e7b620cc9393d16e1b158a267cda0`. WebP RGBA alpha
+encoding now computes the at-most-256 palette deltas into a fixed stack array
+instead of collecting a second heap vector. The sorted alpha palette remains
+intact for index lookup; palette order, delta arithmetic, encoded bytes,
+errors, and sink output remain unchanged.
+
+This is Rust implementation and Rust-only bounded-workspace evidence. Pillow
+exposes only the existing byte/error fixture matrix, not the alpha-palette
+delta storage location, stack footprint, caller buffers, or OOM behavior. The
+fixture matrix is therefore regression evidence, not proof of the internal
+workspace contract; no parity row, fixture-manifest row, diagnostic origin,
+new test function, or coverage-only hook was added. The current changed-file
+projection is `src/codecs/webp/native/encoder.rs`: 2,363/2,431 lines,
+502/528 branches, 89/89 functions, and 3,400/3,648 regions. Existing
+uncovered and partial branches remain visible; no synthetic unit or parity
+input was used to alter them.
+
+The clean schema-`@3` benchmark at this revision passed the Pillow-parity
+workload in 0.948695 s wall / 2.844942 user s / 0.241720 sys s /
+266,600,448-byte peak RSS and the separate Rust-only feature-gate workload in
+1.584676 s wall / 2.280832 user s / 0.120655 sys s /
+183,975,936-byte peak RSS. The native release `rlib` was 7,988,936 bytes and
+the `wasm32-unknown-unknown` determinism artifact was 24,649,436 bytes;
+native release compilation measured 6.707265 s wall with 888,242,176-byte
+peak RSS, and the WASM determinism compile measured 3.130467 s wall with
+810,467,328-byte peak RSS. These are host/cache/toolchain observations, not
+comparative or universal performance claims; allocation counts, retained
+encoded/decoded cache bytes, caller-buffer reuse, stack depth, and WASM runtime
+resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`fa25b44b-8e5b-4502-a497-2279769a46fd` passed 1,445/1,445 checks in 1,105 ms.
+Exact-head feature-matrix run
+`296847d9-8302-4da0-b87d-c055fa547255` passed all configured native/WASI lanes
+in 21,358 ms; its retained log includes
+`capability tables OK: every native and wasm32-wasip1 lane agrees` and has no
+`lock-wait` match. Nightly LLVM run
+`f0c767b4-e9ce-4a8d-9ee9-21558f73403e` passed 85/85 tests in 57,493 ms and
+ingested snapshot `ea481c1a-dd44-4f5d-bdd8-a72d1291ee47`: 55,631/56,488
+lines, 7,955/8,162 branches, 3,112/3,208 functions, and 85,522/87,433
+regions. Compared with the preceding accepted snapshot, line, branch, and
+function totals were unchanged; source and covered region totals fell by 2
+because the temporary alpha-palette delta collection was removed. The
+aggregate shortfall remains 857 lines, 207 branches, 96 functions, and 1,911
+regions. These are Rust implementation/coverage records, not Pillow-parity
+coverage; the known LLVM JSON segment-normalization warning remains.
 
 Current acceptance record: WebP VP8L palette-delta stack workspace
 
