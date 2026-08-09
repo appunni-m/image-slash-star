@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `ed216e895cb07222f872175af4fdfb151cf2f68c`; the claim-ledger fixture tuple
+revision `a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
@@ -11,7 +11,7 @@ test/runtime revision and is
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current WebP candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
-census/materialization slices have not received a managed coverage rerun.
+census/materialization/depth slices have not received a managed coverage rerun.
 
 This document explains the stable mental model and ownership boundaries of
 `image-slash-star`. The generated Rust API documentation remains the

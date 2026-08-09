@@ -3,7 +3,7 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-09 against production implementation and Rust test/runtime
-revision `ed216e895cb07222f872175af4fdfb151cf2f68c`, and benchmark-protocol revision
+revision `a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`, and benchmark-protocol revision
 `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The last accepted managed Pillow parity run is
@@ -15,7 +15,7 @@ revision:
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; no managed parity, feature-matrix, or
 Coverage MCP rerun has yet been recorded for
-`ed216e895cb07222f872175af4fdfb151cf2f68c`; the accepted managed records
+`a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`; the accepted managed records
 remain anchored to the preceding revision.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
@@ -454,8 +454,8 @@ Huffman RLE token materialization after each 16 emitted compressed code-length
 tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after each 64 comparisons,
 Huffman-tree insertion scans after each 64 candidate nodes,
-Huffman-tree active-symbol census and leaf-materialization scans after each
-64 code-length slots,
+Huffman-tree active-symbol census, leaf-materialization, and maximum-depth
+scans after each 64 code-length slots,
 Huffman-tree code-length-token frequency, trailing zero-repeat token trim, and
 code-length-emission scans after each 16 compressed token entries, entropy-mode histogram-cost
 analysis after each 64 symbols,
@@ -558,8 +558,8 @@ Huffman RLE token materialization after each 16 emitted compressed code-length
 tokens,
 canonical-code assignment scans after each 64 code-length symbols, Huffman-tree ordering comparisons after
 each 64 comparisons, Huffman-tree insertion scans after each 64 candidate nodes,
-and Huffman-tree active-symbol census and leaf-materialization scans after each
-64 code-length slots,
+and Huffman-tree active-symbol census, leaf-materialization, and maximum-depth
+scans after each 64 code-length slots,
 Huffman-tree code-length-token frequency, trailing
 zero-repeat-token trim, and code-length-emission scans after each 16 compressed token entries, histogram
 population, combined entropy-cost, and
@@ -632,19 +632,19 @@ defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
 
-The latest lossless WebP VP8L Huffman-tree leaf-census/materialization slice is
+The latest lossless WebP VP8L Huffman-tree leaf-census/materialization/depth slice is
 implemented at production and Rust test/runtime revision
-`ed216e895cb07222f872175af4fdfb151cf2f68c` through the existing
+`a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1` through the existing
 `encode_work_budget_is_a_non_parity_result_contract`. Token-aware fixed-
 alphabet scans now poll after each 64 code-length slots while counting active
-symbols and materializing leaf nodes; the no-token path retains the original
-iterator construction. The generated 128×128 RGB probe rejects at
+symbols, materializing leaf nodes, and checking the resulting maximum depth;
+the no-token path retains the original iterator construction. The generated
+128×128 RGB probe rejects at
 `maximum: 145,330`, `observed: 145,331` for the whole-buffer API and at
-`maximum: 145,335`, `observed: 145,336` for the caller-owned sink. The sink
-retains the exact delivered prefix `[0xF1, 0x52, 0x49, 0x46, 0x46, 0x58,
-0xC0, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4C, 0x4C,
-0xC0, 0x00, 0x00]`; this is a post-delivery work-budget observation, not
-short-write/rollback evidence. The slice changes no encoded bytes under the
+`maximum: 145,335`, `observed: 145,336` for the caller-owned sink. The
+depth-scan endpoint rejects before structural delivery and retains sentinel
+`[0xF1]`; this is work-budget evidence, not short-write/rollback evidence. The
+slice changes no encoded bytes under the
 ordinary or ample policy and adds no Pillow parity row, fixture-manifest row,
 diagnostic origin, new test function, or coverage-only hook. No managed parity,
 feature-matrix, or Coverage MCP rerun is claimed at this revision.
@@ -2411,17 +2411,18 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
-Current acceptance record: WebP VP8L Huffman-tree leaf census and materialization
+Current acceptance record: WebP VP8L Huffman-tree leaf census, materialization, and depth scan
 
 The production and Rust test/runtime slice is implemented at
-`ed216e895cb07222f872175af4fdfb151cf2f68c`. Token-aware fixed-alphabet
+`a5ac1a14d7ad8f88c9ac60a0da73a94474708cb1`. Token-aware fixed-alphabet
 Huffman-tree scans now charge each 64 code-length slots while counting active
-symbols and constructing leaf nodes; the ordinary no-token path retains the
-original iterator construction and byte behavior. The existing
+symbols, constructing leaf nodes, and checking the resulting maximum depth;
+the ordinary no-token path retains the original iterator construction and byte
+behavior. The existing
 `encode_work_budget_is_a_non_parity_result_contract` proves whole-buffer
 `145,330/145,331` and caller-owned-sink `145,335/145,336` rejection on the
-generated 128×128 RGB probe. The sink retains its exact already-delivered
-RIFF/WEBP/VP8L prefix, so this endpoint is not a rollback claim. Pillow has no
+generated 128×128 RGB probe. The depth-scan endpoint retains the sentinel
+before structural delivery, so this endpoint is not a rollback claim. Pillow has no
 caller token, typed work-budget result, or caller-owned sink, so this remains
 Rust-only evidence with no parity row, fixture-manifest entry, diagnostic
 origin, new test function, or coverage-only hook. No managed parity,
