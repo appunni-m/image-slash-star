@@ -101,6 +101,19 @@ impl HuffmanTree {
                 }
             }
             return Ok(Self::build_single_node(root_symbol));
+        } else if num_symbols == 2 && code_length_hist[1] == 2 {
+            // A complete canonical tree with two symbols has one bit per
+            // symbol. Reuse the inline representation used by the simple
+            // bitstream form instead of allocating the general table/tree.
+            let mut symbols = [0u16; 2];
+            let mut symbol_index = 0;
+            for (index, &length) in code_lengths.iter().enumerate() {
+                if length == 1 {
+                    symbols[symbol_index] = index as u16;
+                    symbol_index += 1;
+                }
+            }
+            return Ok(Self::build_two_node(symbols[0], symbols[1]));
         };
 
         // Assign codes
