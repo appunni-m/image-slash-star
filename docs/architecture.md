@@ -3,7 +3,7 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against the committed tree based on
-`3dc95ea179b4be2c664ec2402ca0c8635e463e7f`; the claim-ledger baseline remains
+`c9acf5d219e82c9c1077c3ec3e0c5df345ee28c5`; the claim-ledger baseline remains
 `f1048bc0399fad9801559ca7fcfd3163427b5832`.
 
 This document explains the stable mental model and ownership boundaries of
@@ -632,7 +632,9 @@ each 1,024 emitted entropy bytes; its no-token path remains on the
 ordinary byte producer.
 Lossless WebP VP8L RGB/RGBA source-pixel materialization, image-palette
 source scans, ordered unique-color palette drains, and palette-mode index
-packing additionally charge after each 1,024 source pixels or colors; it also charges around RGBA
+packing additionally charge after each 1,024 source pixels or colors; sampled
+meta-pixel materialization additionally charges after each 1,024 retained
+histogram symbols; it also charges around RGBA
 hidden-RGB cleanup after each
 1,024 scanned pixels, RGB-equal grayscale preparation after each 1,024 pixels,
 predictor source-snapshot copying, tile scans, mode application, and
@@ -696,7 +698,8 @@ selected macroblocks, 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 
 1,024-byte boolean-bitstream output intervals, and bitstream stages, lossless
 VP8L RGB/RGBA source-pixel materialization, image-palette source scans,
 ordered unique-color palette drains, and palette-mode index packing after each
-1,024 source pixels or colors and hidden-RGB cleanup
+1,024 source pixels or colors, sampled meta-pixel materialization after each
+1,024 retained histogram symbols, and hidden-RGB cleanup
 after each 1,024 scanned pixels, plus
 palette-index lookup candidate scans after each 64 palette entries, palette sign
 and nearest-delta candidate scans after each 64 palette entries
