@@ -2013,7 +2013,7 @@ fn analyze_entropy(
     let transform_width = width.div_ceil(1 << transform_bits);
     let transform_height = height.div_ceil(1 << transform_bits);
     let fast_log = |value: u32| (f64::from(value).log2() * f64::from(1_u32 << 23)).round() as u64;
-    let mut modes = vec![
+    let mut modes = [
         (
             EntropyMode::Direct,
             costs[ALPHA] + costs[RED] + costs[GREEN] + costs[BLUE],
@@ -2038,17 +2038,22 @@ fn analyze_entropy(
                 + costs[BLUE_PREDICTED_SUB_GREEN]
                 + (transform_width * transform_height) as u64 * fast_log(24),
         ),
+        (EntropyMode::Palette, 0),
     ];
-    if let Some(size) = palette_size {
-        modes.push((
+    let mode_count = if let Some(size) = palette_size {
+        modes[4] = (
             EntropyMode::Palette,
             costs[PALETTE] + ((size as u64 * 8) << 23),
-        ));
-    }
+        );
+        5
+    } else {
+        4
+    };
     let mode = modes
-        .into_iter()
+        .iter()
+        .take(mode_count)
         .min_by_key(|&(_, cost)| cost)
-        .map(|(mode, _)| mode)
+        .map(|&(mode, _)| mode)
         .unwrap();
     let (red_histogram, blue_histogram) = match mode {
         EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE),
