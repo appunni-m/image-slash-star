@@ -1231,6 +1231,7 @@ struct TokenStreamScratch {
     huffman_tokens: Vec<HuffmanToken>,
     optimized_frequencies: Vec<u32>,
     huffman_rle_good: Vec<bool>,
+    meta_pixels: Vec<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -1500,8 +1501,10 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             // Meta-pixel materialization scales with the retained histogram
             // tile map after sampling. Keep the ordinary no-token map
             // unchanged and poll only the caller-controlled path.
-            let meta_pixels = if let Some(token) = token {
-                let mut meta_pixels = Vec::with_capacity(symbols.len());
+            let meta_pixels = &mut scratch.meta_pixels;
+            meta_pixels.clear();
+            meta_pixels.reserve(symbols.len());
+            if let Some(token) = token {
                 let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
                 for &symbol in &symbols {
                     meta_pixels.push(u32::from(symbol) << 8);
@@ -1511,24 +1514,11 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                         symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
                     }
                 }
-                meta_pixels
             } else {
-                symbols
-                    .iter()
-                    .map(|&symbol| u32::from(symbol) << 8)
-                    .collect::<Vec<_>>()
-            };
+                meta_pixels.extend(symbols.iter().map(|&symbol| u32::from(symbol) << 8));
+            }
             let meta_width = width.div_ceil(1 << encoded_histogram_bits);
-            write_image_stream_configured(
-                w,
-                &meta_pixels,
-                meta_width,
-                false,
-                3,
-                quality,
-                0,
-                token,
-            )?;
+            write_image_stream_configured(w, meta_pixels, meta_width, false, 3, quality, 0, token)?;
         }
     }
     let group_count = histograms.len();
