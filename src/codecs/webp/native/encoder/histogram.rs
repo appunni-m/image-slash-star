@@ -47,7 +47,6 @@ fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
 }
 
-#[derive(Clone)]
 pub(super) struct Histogram {
     pub(super) populations: [Vec<u32>; 5],
     costs: [u64; 5],
@@ -55,6 +54,12 @@ pub(super) struct Histogram {
     used: [bool; 5],
     bit_cost: u64,
     bin_id: usize,
+}
+
+impl Default for Histogram {
+    fn default() -> Self {
+        Self::new(0)
+    }
 }
 
 impl Histogram {
@@ -431,24 +436,6 @@ fn combined_costs(
     Ok(Some((total, costs)))
 }
 
-fn add_eval(
-    a: &Histogram,
-    b: &Histogram,
-    threshold: i64,
-    token: CheckpointToken<'_>,
-) -> CheckpointResult<Option<Histogram>> {
-    let sum = a.bit_cost + b.bit_cost;
-    let limit = threshold.saturating_add_unsigned(sum);
-    let Some((cost, costs)) = combined_costs(a, b, limit, token)? else {
-        return Ok(None);
-    };
-    let mut result = b.clone();
-    result.add_assign_with_checkpoint(a, token)?;
-    result.costs = costs;
-    result.bit_cost = cost;
-    Ok(Some(result))
-}
-
 fn add_threshold(
     a: &Histogram,
     b: &Histogram,
@@ -477,6 +464,7 @@ pub(super) struct HistogramScratch {
     clusters: Vec<Histogram>,
     symbols: Vec<u16>,
     remapped: Vec<Histogram>,
+    merge: Histogram,
 }
 
 fn prepare_histograms(histograms: &mut Vec<Histogram>, length: usize, cache_bits: u8) {
@@ -564,6 +552,7 @@ fn fix_pair(pair: &mut Pair, bad: usize, good: usize) {
 
 fn entropy_bin_combine(
     histograms: &mut Vec<Histogram>,
+    merge: &mut Histogram,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     checkpoint(token)?;
@@ -610,23 +599,26 @@ fn entropy_bin_combine(
             continue;
         };
         let threshold = -(((histograms[index].bit_cost * 16 + 50) / 100) as i64);
-        let Some(combo) = add_eval(
-            &histograms[first_index],
-            &histograms[index],
-            threshold,
-            token,
-        )?
+        let sum = histograms[first_index].bit_cost + histograms[index].bit_cost;
+        let limit = threshold.saturating_add_unsigned(sum);
+        let Some((cost, costs)) =
+            combined_costs(&histograms[first_index], &histograms[index], limit, token)?
         else {
             index += 1;
             continue;
         };
-        let trivial_combo = combo.trivial[1..4]
-            .iter()
-            .all(|&symbol| symbol != NON_TRIVIAL);
+        let trivial_combo = (1..4).all(|channel| {
+            let first = histograms[first_index].trivial[channel];
+            first != NON_TRIVIAL && first == histograms[index].trivial[channel]
+        });
         let nontrivial_pair = histograms[index].trivial[1..4].contains(&NON_TRIVIAL)
             && histograms[first_index].trivial[1..4].contains(&NON_TRIVIAL);
         if trivial_combo || nontrivial_pair || failures[bin] >= 32 {
-            histograms[first_index] = combo;
+            merge.copy_from(&histograms[index]);
+            merge.add_assign_with_checkpoint(&histograms[first_index], token)?;
+            merge.costs = costs;
+            merge.bit_cost = cost;
+            std::mem::swap(&mut histograms[first_index], merge);
             histograms.swap_remove(index);
         } else {
             failures[bin] += 1;
@@ -639,6 +631,7 @@ fn entropy_bin_combine(
 fn stochastic_combine(
     histograms: &mut Vec<Histogram>,
     minimum: usize,
+    merge: &mut Histogram,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<bool> {
     if histograms.len() < minimum {
@@ -680,10 +673,11 @@ fn stochastic_combine(
         let chosen = queue[0].clone();
         let first = chosen.first;
         let second = chosen.second;
-        let other = histograms[second].clone();
-        histograms[first].add_assign_with_checkpoint(&other, token)?;
-        histograms[first].bit_cost = chosen.cost_combo;
-        histograms[first].costs = chosen.costs;
+        merge.copy_from(&histograms[second]);
+        merge.add_assign_with_checkpoint(&histograms[first], token)?;
+        merge.bit_cost = chosen.cost_combo;
+        merge.costs = chosen.costs;
+        std::mem::swap(&mut histograms[first], merge);
         histograms.swap_remove(second);
         let moved_from = histograms.len();
         let mut index = 0;
@@ -717,6 +711,7 @@ fn stochastic_combine(
 
 fn greedy_combine(
     histograms: &mut Vec<Histogram>,
+    merge: &mut Histogram,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     let maximum = histograms.len() * histograms.len();
@@ -736,10 +731,11 @@ fn greedy_combine(
         checkpoint(token)?;
         let first = chosen.first;
         let second = chosen.second;
-        let other = histograms[second].clone();
-        histograms[first].add_assign_with_checkpoint(&other, token)?;
-        histograms[first].bit_cost = chosen.cost_combo;
-        histograms[first].costs = chosen.costs;
+        merge.copy_from(&histograms[second]);
+        merge.add_assign_with_checkpoint(&histograms[first], token)?;
+        merge.bit_cost = chosen.cost_combo;
+        merge.costs = chosen.costs;
+        std::mem::swap(&mut histograms[first], merge);
         histograms.swap_remove(second);
         let moved_from = histograms.len();
         let mut index = 0;
@@ -860,15 +856,16 @@ pub(super) fn cluster<'a>(
         }
     }
     scratch.clusters.truncate(cluster_count);
+    scratch.merge.reset(cache_bits);
     if scratch.clusters.len() > 2 * BIN_SIZE && quality < 100 {
-        entropy_bin_combine(&mut scratch.clusters, token)?;
+        entropy_bin_combine(&mut scratch.clusters, &mut scratch.merge, token)?;
     }
     let threshold = 1 + div_round(
         u64::from(quality).pow(3) * (MAX_HISTO_GREEDY - 1),
         1_000_000,
     ) as usize;
-    if stochastic_combine(&mut scratch.clusters, threshold, token)? {
-        greedy_combine(&mut scratch.clusters, token)?;
+    if stochastic_combine(&mut scratch.clusters, threshold, &mut scratch.merge, token)? {
+        greedy_combine(&mut scratch.clusters, &mut scratch.merge, token)?;
     }
 
     scratch.symbols.resize(scratch.originals.len(), 0);
@@ -905,6 +902,7 @@ pub(super) fn cluster<'a>(
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut a = Histogram::new(0);
     let mut b = Histogram::new(0);
+    let mut merge = Histogram::default();
     a.add_token(Token::Literal(0xff00_0000), 1);
     b.add_token(Token::Literal(0xff00_00ff), 1);
     a.analyze();
@@ -925,7 +923,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for histogram in &mut equal_bins {
         histogram.analyze();
     }
-    let _ = entropy_bin_combine(&mut equal_bins, None);
+    let _ = entropy_bin_combine(&mut equal_bins, &mut merge, None);
     let mut rejected_same_bin = vec![Histogram::new(0), Histogram::new(0)];
     for histogram in &mut rejected_same_bin {
         histogram.costs = [0; 5];
@@ -933,7 +931,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.used = [false; 5];
         histogram.bit_cost = 0;
     }
-    let _ = entropy_bin_combine(&mut rejected_same_bin, None);
+    let _ = entropy_bin_combine(&mut rejected_same_bin, &mut merge, None);
 
     let mut no_pairs = vec![
         Histogram::new(0),
@@ -944,7 +942,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for histogram in &mut no_pairs {
         histogram.analyze();
     }
-    let _ = stochastic_combine(&mut no_pairs, 4, None);
+    let _ = stochastic_combine(&mut no_pairs, 4, &mut merge, None);
 
     let mut mergeable = Vec::new();
     for _ in 0..24 {
@@ -953,7 +951,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         mergeable.push(histogram);
     }
-    let _ = stochastic_combine(&mut mergeable, 1, None);
+    let _ = stochastic_combine(&mut mergeable, 1, &mut merge, None);
     let mut large_mergeable = Vec::new();
     for _ in 0..64 {
         let mut histogram = Histogram::new(0);
@@ -961,7 +959,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         large_mergeable.push(histogram);
     }
-    let _ = stochastic_combine(&mut large_mergeable, 1, None);
+    let _ = stochastic_combine(&mut large_mergeable, 1, &mut merge, None);
 
     let mut distinct = Vec::new();
     for index in 0..8 {
@@ -970,7 +968,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         histogram.analyze();
         distinct.push(histogram);
     }
-    let _ = stochastic_combine(&mut distinct, 1, None);
+    let _ = stochastic_combine(&mut distinct, 1, &mut merge, None);
 
     let mut high_entropy = Vec::new();
     let mut high_entropy_tokens = Vec::new();
@@ -990,7 +988,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         high_entropy.push(histogram);
     }
     assert!(matches!(
-        stochastic_combine(&mut high_entropy, 1, None),
+        stochastic_combine(&mut high_entropy, 1, &mut merge, None),
         Ok(false)
     ));
     let mut scratch = HistogramScratch::default();
