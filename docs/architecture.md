@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-09 against production implementation and test/runtime
-revision `84a18ee1be94fcc4de1064f92c53303ea3950bcc`; the claim-ledger fixture tuple
+revision `59e4c4fa7c33e047fbb802d7722058e71a6263f1`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The accepted Coverage MCP snapshot remains anchored to the preceding managed
 test/runtime revision and is
 `208b22e7-5a8c-4884-8fd5-856293c45d01` from run
 `afa2a5ab-c5a2-4be8-80c6-bd535440eafd`; the current shared PNG/TIFF zlib-ng
 Deflate output-buffer ownership optimization, WebP animation assembly ownership,
-GIF sequence frame ownership, GIF indexed frame-diff state, JPEG entropy
-output-buffer ownership, JPEG grayscale source ownership, BMP row-scratch reuse,
-ICO BMP payload assembly,
+GIF sequence frame ownership, GIF indexed frame-diff state, TIFF sequence
+length planning, JPEG entropy output-buffer ownership, JPEG grayscale source
+ownership, BMP row-scratch reuse, ICO BMP payload assembly,
 PNG source pixel ownership, TIFF conditional source ownership, candidate-prefix
 optimization, candidate-suffix allocation recycling, entropy-analysis pixel,
 Huffman-RLE fill, Huffman-RLE token-materialization, and Huffman-tree leaf
@@ -670,6 +670,12 @@ with LZW or Deflate. Those two combinations alone receive a mutable owned
 working copy; raw, PackBits, and non-predictive compressed paths do not. The
 resulting compressed payload and page layout remain owned buffers, and this
 conditional reuse does not claim allocator/OOM accounting or streaming.
+
+TIFF sequence length planning iterates the already-owned encoded page buffers
+directly instead of allocating a second vector containing only page lengths.
+The same alignment and classic-TIFF overflow checks still run before output
+admission or relocation, so this is a bounded bookkeeping optimization rather
+than a streaming, rollback, or complete allocator guarantee.
 
 BMP row conversion reuses one scratch buffer for one-bit, indexed, RGB, and
 RGBA rows within each encoder invocation. The synchronous writer consumes the
