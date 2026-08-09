@@ -8,6 +8,7 @@ use crate::encode_policy::EncodePolicy;
 use crate::types::ColorType;
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
 use crate::{CodecOperation, ImageFormat};
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 const COMPRESSION_NONE: u16 = 1;
@@ -177,11 +178,16 @@ fn encode_page_with_token(
         ));
     }
 
-    let mut raw = img.pixels.clone();
+    let mut raw: Cow<'_, [u8]> =
+        if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
+            Cow::Owned(img.pixels.clone())
+        } else {
+            Cow::Borrowed(&img.pixels)
+        };
     crate::codecs::error::check_cancelled(token)?;
     if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
         apply_horizontal_predictor(
-            &mut raw,
+            raw.to_mut(),
             row_len,
             usize::from(channels),
             bits_per_sample,
@@ -192,12 +198,16 @@ fn encode_page_with_token(
         crate::codecs::error::check_cancelled(token)?;
         raw
     } else if compression == COMPRESSION_LZW {
-        encode_lzw(&raw, token)?
+        Cow::Owned(encode_lzw(raw.as_ref(), token)?)
     } else if compression == COMPRESSION_DEFLATE {
         crate::codecs::error::check_cancelled(token)?;
-        compress_zlib_tiff(&raw, &vec![row_len; height], token)?
+        Cow::Owned(compress_zlib_tiff(
+            raw.as_ref(),
+            &vec![row_len; height],
+            token,
+        )?)
     } else {
-        encode_packbits(&raw, row_len, token)?
+        Cow::Owned(encode_packbits(raw.as_ref(), row_len, token)?)
     };
     crate::codecs::error::check_cancelled(token)?;
 
