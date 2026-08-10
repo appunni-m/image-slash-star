@@ -2923,23 +2923,37 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             known_inspected.source_color,
             baseline_decoded.content.source_color
         );
-        let known_decoded = image_slash_star::decode(&known_bytes)?;
+        // The native libavif oracle accepts the HDR declarations on the
+        // auxiliary item, but rejects auxiliary-item presentation properties
+        // such as `irot` and `imir` during container parsing. Keep the full
+        // six-property mutation as inspection-only source-provenance evidence
+        // and use the accepted HDR subset for still/sequence propagation.
+        let mut decodable_known_bytes = alpha.clone();
+        for (kind, payload) in [(b"clli", &clli_payload[..]), (b"mdcv", &mdcv_payload[..])] {
+            decodable_known_bytes =
+                append_item_property_association(&decodable_known_bytes, kind, payload, false)?;
+        }
+        let expected_decodable_known = [
+            AvifItemProperty::new(2, *b"clli", clli_payload.to_vec()),
+            AvifItemProperty::new(2, *b"mdcv", mdcv_payload.to_vec()),
+        ];
+        let known_decoded = image_slash_star::decode(&decodable_known_bytes)?;
         assert_eq!(
             known_decoded.content.source.avif_item_properties(),
-            expected_known.as_slice(),
+            expected_decodable_known.as_slice(),
             "known item property decode declarations"
         );
         assert_eq!(
             known_decoded.content.pixels, baseline_decoded.content.pixels,
             "known item properties preserve decoded pixels"
         );
-        let known_sequence = image_slash_star::decode_sequence(&known_bytes)?;
+        let known_sequence = image_slash_star::decode_sequence(&decodable_known_bytes)?;
         assert_eq!(
             known_sequence.content.frames[0]
                 .image
                 .source
                 .avif_item_properties(),
-            expected_known.as_slice(),
+            expected_decodable_known.as_slice(),
             "known item property sequence declarations"
         );
 
