@@ -8669,7 +8669,8 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         // extensions, image blocks, and trailer while retaining the complete
         // encoder working buffer. This is a Rust-only sink contract: Pillow
         // has no caller-owned sink, so the parity matrix remains unchanged.
-        let gif_image = image_slash_star::DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+        let gif_data = fs::read(root.join("tests/fixtures/input/images/gif/static.gif"))?;
+        let gif_image = image_slash_star::decode(&gif_data)?.content;
         let gif_options = EncodeOptions::for_format(ImageFormat::Gif);
         let gif_expected = image_slash_star::encode(&gif_image, ImageFormat::Gif, &gif_options)?;
         assert_partial_second_write(&gif_image, ImageFormat::Gif, &gif_options, &gif_expected)?;
@@ -8756,6 +8757,36 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         ));
         assert_eq!(limited_gif.writes, 0);
         assert!(limited_gif.bytes.is_empty());
+
+        let mismatched_gif_options = EncodeOptions::for_format(ImageFormat::Png);
+        let mut mismatched_gif_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let mismatched_gif_error = match image_slash_star::encode_to_sink(
+            &gif_image,
+            ImageFormat::Gif,
+            &mismatched_gif_options,
+            &mut mismatched_gif_sink,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("GIF accepted mismatched options and wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            mismatched_gif_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(mismatched_gif_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            mismatched_gif_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(mismatched_gif_sink.writes, 0);
+        assert!(mismatched_gif_sink.bytes.is_empty());
 
         let mut failing_gif = FailingAfterWrites {
             fail_at: 2,
