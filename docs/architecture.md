@@ -3,15 +3,15 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `ccf9c32bb9746629263d3028c430448223df64e7`; the claim-ledger fixture
+revision `1d1b36100925f830408f5d41f0026e71fd220d6e`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`2dae75fa-5011-4d42-9777-c6beadbf65e9` (1,445/1,445 passed in 7,628 ms), and
-the latest feature matrix is `eac7905f-ec64-4deb-a6da-137ad7f75d3b` (passed in
-27,088 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `68fda68a-4889-4d44-b57d-f2a7ab388677` from run
-`81d3eb83-1dcb-419f-adc6-445a4ea1c6ff`, also at that revision: 55,926/56,803
+`bbd0f95f-d55d-4c90-b097-eacfdb96c372` (1,445/1,445 passed in 3,779 ms), and
+the latest feature matrix is `34791756-b280-4de5-9428-accc71974d13` (passed in
+18,536 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
+`beda2230-4d77-446c-8ce4-91700552cdc4`, also at that revision: 55,926/56,803
 lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,972/87,930
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
@@ -737,26 +737,17 @@ accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L Huffman code-length decoding keeps its fixed 19-entry code-length
 alphabet on the stack and borrows it through the Huffman builder instead of
-allocating a temporary heap vector. Ordinary decoded code-length buffers now
-use a fixed 280-entry stack array as well; only the green alphabet enlarged by
-an optional color cache remains dynamically sized, because it can reach 2,328
-symbols. The buffer is borrowed only while `build_implicit` copies its values
-into the owned tree, so code ordering, encoded bytes, errors, and sink output
-remain unchanged. This is a Rust-only fixed-workspace optimization: Pillow
-parity verifies final bytes and errors, while storage ownership belongs to the
-separate Rust coverage and feature-gate evidence; it is not allocator/OOM
-accounting, recoverable-OOM handling, or a streaming guarantee.
-
-WebP VP8L Huffman decoding reuses one dynamically sized code-length scratch
-vector across the sequential non-simple trees in an image stream when the
-optional color cache enlarges the green alphabet to as many as 2,328 symbols.
-The scratch is zeroed before each parse, and `HuffmanTree::build_implicit`
-copies its values into the owned tree before the next tree reuses the buffer.
-This removes repeated transient allocations without changing code ordering,
-decoded bytes, errors, or sink output. The allocation/ownership boundary is
-Rust-only evidence; Pillow parity covers only final bytes and errors, and this
-is not allocator/OOM accounting, recoverable-OOM handling, or a streaming
-guarantee.
+allocating a temporary heap vector. Ordinary and color-cache-enlarged decoded
+code-length buffers now share one fixed `[u16; 2_328]` stack workspace: the
+format bounds this to 280 ordinary green symbols plus the 2,048 symbols from
+the 11-bit color-cache field. The active slice is borrowed only while
+`build_implicit` copies its values into the owned tree, and the workspace is
+zeroed before each sequential non-simple tree. Code ordering, bit consumption,
+encoded bytes, errors, and sink output remain unchanged. This is a Rust-only
+fixed-workspace optimization: Pillow parity verifies final bytes and errors,
+while storage ownership belongs to the separate Rust coverage and feature-gate
+evidence; it is not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 WebP still VP8L decode now writes directly into a caller-owned RGB buffer for
 opaque, untransformed frames, avoiding a full RGBA staging vector and the
