@@ -1714,7 +1714,9 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
             let expected_file_type = AvifFileTypeProperties::new(
                 *b"avis",
                 0,
-                vec![*b"avif", *b"avis", *b"msf1", *b"iso8"],
+                vec![
+                    *b"avif", *b"avis", *b"msf1", *b"iso8", *b"mif1", *b"miaf", *b"MA1B",
+                ],
             );
             assert_eq!(
                 sequence.content.frames[0].image.source.avif_file_type(),
