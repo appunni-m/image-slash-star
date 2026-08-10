@@ -3,17 +3,17 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `c1afe7eb1f01ebb9309a2f530da795f856852721`, and benchmark-protocol
+revision `27a90e61bd367e1e44888269371bdd433aa893eb`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`507686aa-024f-49de-9748-3828f8a5ac0a` (1,445/1,445 passed in 611 ms) at
+`6520b3c8-3311-4ea5-9772-c928077e0ed4` (1,445/1,445 passed in 692 ms) at
 this revision. Feature matrix run
-`fe2bf6a3-9a17-4af8-97e4-f0aba80e9ab5` terminated with 44 passed and 1 failed;
+`fbb070b6-7776-4b3a-8704-85dc0bb2045e` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`3962c151-e307-4072-985b-a6841a6fb63a` likewise terminated 84/85 with that
+`974e4905-09bf-4a59-8373-33db1324d1f4` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -7115,6 +7115,32 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current implementation record: WebP ALPH transient final-output scratch reuse
+
+The production slice is implemented at
+`27a90e61bd367e1e44888269371bdd433aa893eb`, following the ALPH packed-image
+workspace boundary at `bae8b06e5907f0ccedc86c6c5f850ee81e61761a`. The nested
+ALPH/VP8L candidate writer now recycles its retained suffix allocation into the
+final ALPH bitstream writer for the next sequential frame; nested candidate
+trials refill the scratch vector after it is taken. Encoded bytes, errors,
+token-aware candidate ownership, copy checkpoints, and sink output remain
+unchanged.
+
+Pillow exposes final bytes and errors, not transient allocation ownership or
+retained capacity. Existing WebP alpha and animation fixture rows therefore
+provide the byte/error regression gate, while the existing feature-gated Rust
+contract remains separate evidence for caller-token and sink behavior. No
+parity row, fixture-manifest row, diagnostic origin, new test function,
+coverage-only hook, or unit test was added because Pillow cannot observe this
+boundary. Exact-head managed Pillow parity run
+`6520b3c8-3311-4ea5-9772-c928077e0ed4` passed 1,445/1,445 checks in 692 ms.
+Feature matrix run `fbb070b6-7776-4b3a-8704-85dc0bb2045e` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`974e4905-09bf-4a59-8373-33db1324d1f4` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
+
 Current implementation record: WebP lossy VP8 aligned-plane ownership reuse
 
 The production slice is implemented at
@@ -11793,7 +11819,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    alpha-channel staging-reuse, lossy VP8 RIFF output-buffer-reuse, lossy
    RGBA VP8X/ALPH output-buffer-reuse, still metadata output-buffer-reuse, and
    no-token animation frame output-buffer-release, ALPH raw-winner
-   output-buffer-reuse, and aligned VP8 plane-ownership slices
+   output-buffer-reuse, aligned VP8 plane-ownership, and ALPH transient
+   final-output-scratch-reuse slices
    are closed in the
    revision-bound
    history; the next audit target is
