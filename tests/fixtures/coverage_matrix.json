@@ -51358,7 +51358,6 @@
           "description": "Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking",
           "params": {
             "rust_unsupported_modes": [
-              "1",
               "P",
               "La8",
               "Rgba8",
@@ -51376,7 +51375,7 @@
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "JPEG directly accepts only L8 and Rgb8",
+          "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",

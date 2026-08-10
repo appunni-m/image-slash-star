@@ -133,7 +133,6 @@
       },
       "params": {
         "rust_unsupported_modes": [
-          "1",
           "P",
           "La8",
           "Rgba8",
@@ -151,7 +150,7 @@
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "JPEG directly accepts only L8 and Rgb8",
+      "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",

@@ -336,11 +336,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['1', 'P', 'La8', 'Rgba8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['P', 'La8', 'Rgba8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: JPEG directly accepts only L8 and Rgb8
+      rust_error_reason: JPEG directly accepts L1, L8, and Rgb8
     - id: enc_q100
       description: 
       params: {'quality': 100}
