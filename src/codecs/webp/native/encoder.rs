@@ -507,22 +507,20 @@ fn build_huffman_tree(
         }
 
         lengths.fill(0);
-        let mut stack = [None; VP8L_HUFFMAN_STACK_ENTRIES];
+        let mut stack = [(0usize, 0_u8); VP8L_HUFFMAN_STACK_ENTRIES];
         let mut stack_len = 1;
-        stack[0] = Some((nodes[0].node, 0_u8));
+        stack[0] = (nodes[0].node, 0_u8);
         while stack_len != 0 {
             stack_len -= 1;
-            let Some((node, depth)) = stack[stack_len].take() else {
-                unreachable!("Huffman traversal stack entry was empty");
-            };
+            let (node, depth) = stack[stack_len];
             check_token(token)?;
             match node_arena[node] {
                 HuffmanEncodingNode::Leaf(value) => lengths[value] = depth,
                 HuffmanEncodingNode::Branch(left, right) => {
                     debug_assert!(stack_len + 2 <= VP8L_HUFFMAN_STACK_ENTRIES);
-                    stack[stack_len] = Some((right, depth + 1));
+                    stack[stack_len] = (right, depth + 1);
                     stack_len += 1;
-                    stack[stack_len] = Some((left, depth + 1));
+                    stack[stack_len] = (left, depth + 1);
                     stack_len += 1;
                 }
             }
@@ -3090,6 +3088,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = chunk_size(4);
     let mut compressed_tokens = Vec::new();
     compressed_huffman_tokens_into(&[0; 300], &mut compressed_tokens);
+    let coverage_token = crate::CancellationToken::new();
+    let mut checkpoint = TokenBitWriterCheckpoint {
+        token: &coverage_token,
+        written_bits: 0,
+        output_bytes: 0,
+    };
+    let _ = checkpoint.checkpoint_bits(VP8L_2097152_BITSTREAM_CHECKPOINT_BITS);
+    let _ = checkpoint.checkpoint_output_bytes(VP8L_OUTPUT_CHECKPOINT_BYTES);
+    let mut token_rle_lengths = Vec::new();
+    for &(value, count) in &[
+        (0_u8, 2_usize),
+        (1, 1),
+        (0, 5),
+        (2, 4),
+        (0, 20),
+        (3, 8),
+        (0, 150),
+        (4, 2),
+        (5, 8),
+    ] {
+        for _ in 0..count {
+            token_rle_lengths.push(value);
+        }
+    }
+    let mut token_rle_tokens = Vec::new();
+    let _ = compressed_huffman_tokens_with_checkpoint(
+        &token_rle_lengths,
+        &mut token_rle_tokens,
+        Some(&coverage_token),
+    );
     let mut odd_chunk = Vec::new();
     let _ = write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3], None);
     let mut even_chunk = Vec::new();
@@ -3127,6 +3155,32 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
     );
     let _ = tree_writer.flush();
+
+    let mut token_tree_bytes = Vec::new();
+    let mut token_tree_writer = BitWriter {
+        writer: &mut token_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut token_tree_lengths = vec![0; 256];
+    let mut token_tree_codes = vec![0; 256];
+    let mut token_tree_frequencies = vec![1; 256];
+    token_tree_frequencies[0] = 3;
+    token_tree_frequencies[255] = 7;
+    let _ = write_huffman_tree(
+        &mut token_tree_writer,
+        &token_tree_frequencies,
+        &mut token_tree_lengths,
+        &mut token_tree_codes,
+        &mut huffman_scratch,
+        Some(&coverage_token),
+    );
+    let _ = token_tree_writer.flush();
 
     let mut trimmed_tree_bytes = Vec::new();
     let mut trimmed_tree_writer = BitWriter {
@@ -3173,6 +3227,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = group_writer.flush();
 
+    let mut row_mismatch = vec![0_u16; 2 * 2_048];
+    row_mismatch[2_048 + 1_024] = 1;
+    let _ = optimize_sampling(&mut row_mismatch, 2_048, 2, 0, 1, Some(&coverage_token));
+
+    let mut column_mismatch = vec![0_u16; 2 * 32_768];
+    column_mismatch[1_367] = 1;
+    column_mismatch[32_768 + 1_367] = 1;
+    let _ = optimize_sampling(&mut column_mismatch, 32_768, 2, 0, 2, Some(&coverage_token));
+
+    let mut sampled_copy = vec![0_u16; 128 * 128];
+    for y in 0..128 {
+        for x in 0..128 {
+            sampled_copy[y * 128 + x] = ((x / 2) % 16) as u16;
+        }
+    }
+    let _ = optimize_sampling(&mut sampled_copy, 128, 128, 0, 1, Some(&coverage_token));
+
     let mut token_bytes = Vec::new();
     let mut token_writer = BitWriter {
         writer: &mut token_bytes,
@@ -3206,6 +3277,50 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = token_writer.flush();
 
+    let meta_width = 128_usize;
+    let meta_height = 128_usize;
+    let mut meta_pixels = Vec::with_capacity(meta_width * meta_height);
+    let mut meta_tokens = Vec::with_capacity(meta_width * meta_height);
+    for index in 0..meta_width * meta_height {
+        let x = index % meta_width;
+        let y = index / meta_width;
+        let tile = (x / 8) + (y / 8) * 16;
+        let local = (x % 8) + (y % 8) * 8;
+        let pixel = 0xff00_0000
+            | (((tile * 17 + local) & 0xff) as u32) << 16
+            | (((tile * 29 + local * 3) & 0xff) as u32) << 8
+            | ((tile * 43 + local * 5) & 0xff) as u32;
+        meta_pixels.push(pixel);
+        meta_tokens.push(backward_refs::Token::Literal(pixel));
+    }
+    let mut meta_bytes = Vec::new();
+    let mut meta_writer = BitWriter {
+        writer: &mut meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut meta_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut meta_writer,
+        &meta_pixels,
+        meta_width,
+        &meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 1,
+            histogram_bits: 3,
+            quality: 0,
+        },
+        &mut meta_scratch,
+        Some(&coverage_token),
+    );
+    let _ = meta_writer.flush();
+
     let mut palette = (0..20)
         .map(|index| {
             let value = ((index * 37) & 0xff) as u32;
@@ -3226,6 +3341,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     minimize_palette_deltas(&mut nonzero_first_palette);
     let entropy_pixels = [0xff10_2010, 0xff20_4020, 0xff30_6030, 0xff40_8040];
     let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1, None);
+    let wide_entropy_pixels = (0..(2 * 1_025))
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value * 7 & 0xff
+        })
+        .collect::<Vec<_>>();
+    let _ = analyze_entropy(
+        &wide_entropy_pixels,
+        1_025,
+        2,
+        None,
+        1,
+        Some(&coverage_token),
+    );
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {
         writer: &mut palette_bytes,
@@ -3310,6 +3439,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = palette16_writer.flush();
 
+    let missing_palette = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = palette_index_with_checkpoint(&[0], 1, &coverage_token);
+    }));
+    let _ = missing_palette;
+
+    let token_palette = (0..20)
+        .map(|index| {
+            let value = (index * 11) as u32;
+            0xff00_0000 | (value << 16) | ((value ^ 0x55) << 8) | (value ^ 0xaa)
+        })
+        .collect::<Vec<_>>();
+    let mut token_palette_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut token_palette_bytes = Vec::new();
+    let mut token_palette_writer = BitWriter {
+        writer: &mut token_palette_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let _ = apply_palette(
+        &mut token_palette_writer,
+        &mut token_palette_pixels,
+        64,
+        32,
+        token_palette,
+        &mut palette_scratch,
+        Some(&coverage_token),
+    );
+    let _ = token_palette_writer.flush();
+
     let alpha = [
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
     ];
@@ -3324,6 +3489,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_alpha(&nonzero_alpha, nonzero_alpha.len() as u32, 1, None);
     let two_value_alpha = [0, 255, 0, 255];
     let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1, None);
+    let alpha_values = [
+        0_u8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 255,
+    ];
+    let token_alpha = (0..2_048)
+        .map(|index| alpha_values[index % alpha_values.len()])
+        .collect::<Vec<_>>();
+    let _ = encode_alpha(
+        &token_alpha,
+        token_alpha.len() as u32,
+        1,
+        Some(&coverage_token),
+    );
 
     let mut encoder = WebPEncoder::new();
     encoder
