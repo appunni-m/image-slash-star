@@ -2231,9 +2231,9 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     palette: Vec<u32>,
     token: Option<&crate::CancellationToken>,
     checkpoint: C,
+    scratch: &mut ImageStreamScratch,
 ) -> Result<Vec<u8>, EncodingError> {
     let mut frame = Vec::new();
-    let mut stream_scratch = ImageStreamScratch::default();
     {
         let w = &mut BitWriter {
             writer: &mut frame,
@@ -2255,7 +2255,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 width as usize,
                 height as usize,
                 palette,
-                &mut stream_scratch,
+                scratch,
                 token,
             )?;
         } else {
@@ -2287,7 +2287,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         height as usize,
                         transform_bits,
                         12,
-                        &mut stream_scratch.predictor,
+                        &mut scratch.predictor,
                         token,
                     )?
                 } else {
@@ -2296,7 +2296,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         width as usize,
                         height as usize,
                         transform_bits,
-                        &mut stream_scratch.predictor,
+                        &mut scratch.predictor,
                         token,
                     )?
                 };
@@ -2307,11 +2307,11 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     (width as usize + (1 << predictor_bits) - 1) >> predictor_bits;
                 write_image_stream(
                     w,
-                    stream_scratch.predictor.modes(),
+                    scratch.predictor.modes(),
                     predictor_width,
                     false,
-                    &mut stream_scratch.output,
-                    &mut stream_scratch.tokens,
+                    &mut scratch.output,
+                    &mut scratch.tokens,
                     token,
                 )?;
             }
@@ -2323,7 +2323,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     height as usize,
                     transform_bits,
                     80,
-                    &mut stream_scratch.cross_color,
+                    &mut scratch.cross_color,
                     token,
                 )?;
                 w.write_bits(1, 1)?;
@@ -2332,11 +2332,11 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
                 write_image_stream(
                     w,
-                    stream_scratch.cross_color.image(),
+                    scratch.cross_color.image(),
                     color_width,
                     false,
-                    &mut stream_scratch.output,
-                    &mut stream_scratch.tokens,
+                    &mut scratch.output,
+                    &mut scratch.tokens,
                     token,
                 )?;
             }
@@ -2347,8 +2347,8 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 pixels,
                 width as usize,
                 true,
-                &mut stream_scratch.output,
-                &mut stream_scratch.tokens,
+                &mut scratch.output,
+                &mut scratch.tokens,
                 token,
             )?;
         }
@@ -2491,6 +2491,7 @@ fn encode_frame(
     height: u32,
     color: ColorType,
     token: Option<&crate::CancellationToken>,
+    scratch: &mut ImageStreamScratch,
 ) -> Result<Vec<u8>, EncodingError> {
     check_token(token)?;
     let (is_alpha, bytes_per_pixel) = match color {
@@ -2565,6 +2566,7 @@ fn encode_frame(
                 written_bits: 0,
                 output_bytes: 0,
             },
+            scratch,
         ),
         None => encode_frame_stream(
             &mut pixels,
@@ -2577,6 +2579,7 @@ fn encode_frame(
             palette,
             None,
             NoopBitWriterCheckpoint,
+            scratch,
         ),
     }
 }
@@ -2920,26 +2923,35 @@ fn write_chunk(
 }
 
 /// WebP Encoder.
-pub struct WebPEncoder;
+pub struct WebPEncoder {
+    // Lossless animation frames are encoded sequentially. Retain the bounded
+    // VP8L transform, histogram, token, and bitstream scratch between frames;
+    // each returned frame owns its output bytes independently.
+    scratch: Option<ImageStreamScratch>,
+}
 
 impl WebPEncoder {
     /// Create a new in-memory lossless encoder.
     ///
     /// Only supports "VP8L" lossless encoding.
     pub const fn new() -> Self {
-        Self
+        Self { scratch: None }
     }
 
     /// Encode image data while polling an optional cooperative work token.
+    ///
+    /// The encoder retains bounded scratch so sequential animation frames can
+    /// reuse its VP8L working storage without sharing their output buffers.
     pub(crate) fn encode_with_token(
-        self,
+        &mut self,
         data: &[u8],
         width: u32,
         height: u32,
         color: ColorType,
         token: Option<&crate::CancellationToken>,
     ) -> Result<Vec<u8>, EncodingError> {
-        let mut frame = encode_frame(data, width, height, color, token)?;
+        let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
+        let mut frame = encode_frame(data, width, height, color, token, scratch)?;
         check_token(token)?;
 
         // The ordinary path has no caller-visible checkpoint during the final
@@ -3224,21 +3236,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let two_value_alpha = [0, 255, 0, 255];
     let _ = encode_alpha(&two_value_alpha, two_value_alpha.len() as u32, 1, None);
 
-    WebPEncoder::new()
+    let mut encoder = WebPEncoder::new();
+    encoder
         .encode_with_token(&[], 0, 1, ColorType::Rgb8, None)
         .expect_err("zero-width WebP must be rejected");
-    WebPEncoder::new()
+    let mut encoder = WebPEncoder::new();
+    encoder
         .encode_with_token(&[], 1, 0, ColorType::Rgb8, None)
         .expect_err("zero-height WebP must be rejected");
-    WebPEncoder::new()
+    let mut encoder = WebPEncoder::new();
+    encoder
         .encode_with_token(&vec![0; 16_385 * 3], 16_385, 1, ColorType::Rgb8, None)
         .expect_err("too-wide WebP must be rejected");
-    WebPEncoder::new()
+    let mut encoder = WebPEncoder::new();
+    encoder
         .encode_with_token(&vec![0; 16_385 * 3], 1, 16_385, ColorType::Rgb8, None)
         .expect_err("too-tall WebP must be rejected");
 
     let rgb = [0, 0, 0];
-    WebPEncoder::new()
+    let mut encoder = WebPEncoder::new();
+    encoder
         .encode_with_token(&rgb, 1, 1, ColorType::Rgb8, None)
         .expect("one-pixel in-memory WebP must encode");
 }

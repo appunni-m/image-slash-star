@@ -109,7 +109,8 @@ pub fn encode_with_token(
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     validate_options(opts)?;
-    let (encoded, alpha) = encode_pixels(img, opts, token)?;
+    let mut lossless_encoder = super::native::WebPEncoder::new();
+    let (encoded, alpha) = encode_pixels(img, opts, &mut lossless_encoder, token)?;
     crate::codecs::error::check_cancelled(token)?;
     attach_metadata(encoded, img.width, img.height, alpha, opts, token)
 }
@@ -230,13 +231,14 @@ fn write_sink_segment(
 fn encode_pixels(
     img: &DecodedImage,
     opts: &WebPEncodeOptions,
+    lossless_encoder: &mut super::native::WebPEncoder,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<u8>, bool)> {
     crate::codecs::error::check_cancelled(token)?;
     let prepared = prepare_pixels(img, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let encoded = if opts.lossless == Some(true) {
-        encode_lossless(&prepared, img.width, img.height, token)
+        encode_lossless(&prepared, img.width, img.height, lossless_encoder, token)
     } else {
         encode_lossy(&prepared, img.width, img.height, opts, token)
     }?;
@@ -282,12 +284,13 @@ pub fn encode_sequence_with_token(
     };
 
     let mut encoded_frames = Vec::with_capacity(sequence.frames.len());
+    let mut lossless_encoder = super::native::WebPEncoder::new();
     let mut has_alpha = false;
     for frame in &sequence.frames {
         crate::codecs::error::check_cancelled(token)?;
         validate_keyframe(sequence, frame)?;
         let duration = duration_milliseconds(frame.source.duration)?;
-        let (encoded, alpha) = encode_pixels(&frame.image, opts, token)?;
+        let (encoded, alpha) = encode_pixels(&frame.image, opts, &mut lossless_encoder, token)?;
         has_alpha |= alpha;
         encoded_frames.push((duration, encoded));
         crate::codecs::error::check_cancelled(token)?;
@@ -819,9 +822,10 @@ fn encode_lossless(
     pixels: &PreparedPixels<'_>,
     width: u32,
     height: u32,
+    encoder: &mut super::native::WebPEncoder,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
-    super::native::WebPEncoder::new()
+    encoder
         .encode_with_token(&pixels.bytes, width, height, pixels.color, token)
         .map_err(encode_error)
 }
