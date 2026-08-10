@@ -1912,7 +1912,8 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     };
     let append_item_property_association = |input: &[u8],
                                             kind: &[u8; 4],
-                                            payload: &[u8]|
+                                            payload: &[u8],
+                                            essential: bool|
      -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let ipco_type = input
             .windows(4)
@@ -2013,7 +2014,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         let insertion = insertion.ok_or("AVIF alpha fixture has no auxiliary item")?;
         let association_count_offset = association_count_offset
             .ok_or("AVIF alpha fixture auxiliary association count is missing")?;
-        output.insert(insertion, property_index);
+        let association = if essential {
+            property_index
+                .checked_add(0x80)
+                .ok_or("AVIF essential association index overflowed")?
+        } else {
+            property_index
+        };
+        output.insert(insertion, association);
         output[association_count_offset] = output[association_count_offset]
             .checked_add(1)
             .ok_or("AVIF ipma association count overflowed")?;
@@ -2514,8 +2522,13 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         ]
         .concat();
         let non_alpha_auxc_bytes =
-            append_item_property_association(&alpha, b"auxC", &non_alpha_auxc_payload)?;
-        let expected_non_alpha_auxc = [AvifItemProperty::new(2, *b"auxC", non_alpha_auxc_payload)];
+            append_item_property_association(&alpha, b"auxC", &non_alpha_auxc_payload, true)?;
+        let expected_non_alpha_auxc = [AvifItemProperty::new_with_essential(
+            2,
+            *b"auxC",
+            non_alpha_auxc_payload,
+            true,
+        )];
         let non_alpha_auxc_inspected = image_slash_star::inspect(&non_alpha_auxc_bytes)?;
         assert_eq!(
             non_alpha_auxc_inspected.source.alpha(),
@@ -2628,7 +2641,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // a parity row; decoded samples and the primary color declaration stay
         // unchanged.
         let item_icc_bytes =
-            append_item_property_association(&item_color_bytes, b"colr", b"profitem-icc")?;
+            append_item_property_association(&item_color_bytes, b"colr", b"profitem-icc", false)?;
         let expected_item_icc = [AvifItemIccProfile::new(
             2,
             RawIccProfile {
@@ -2667,7 +2680,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // primary color result or decoded samples.
         let unknown_payload = b"opaque-item-property";
         let unknown_bytes =
-            append_item_property_association(&item_icc_bytes, b"zzzz", unknown_payload)?;
+            append_item_property_association(&item_icc_bytes, b"zzzz", unknown_payload, false)?;
         let expected_unknown = [AvifItemProperty::new(2, *b"zzzz", unknown_payload.to_vec())];
         let unknown_inspected = image_slash_star::inspect(&unknown_bytes)?;
         assert_eq!(
@@ -2733,7 +2746,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             (b"pasp", &pasp_payload[..]),
             (b"clap", &clap_payload[..]),
         ] {
-            known_bytes = append_item_property_association(&known_bytes, kind, payload)?;
+            known_bytes = append_item_property_association(&known_bytes, kind, payload, false)?;
         }
         let expected_known = [
             AvifItemProperty::new(2, *b"clli", clli_payload.to_vec()),
@@ -2802,7 +2815,8 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             0, 0, 0, 64, // width
             0, 0, 0, 64, // height
         ];
-        let duplicate_ispe = append_item_property_association(&alpha, b"ispe", &ispe_payload)?;
+        let duplicate_ispe =
+            append_item_property_association(&alpha, b"ispe", &ispe_payload, false)?;
         assert!(matches!(
             image_slash_star::inspect(&duplicate_ispe),
             Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
@@ -2817,7 +2831,8 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         ));
 
         let pixi_payload = [0, 0, 0, 0, 1, 8];
-        let duplicate_pixi = append_item_property_association(&alpha, b"pixi", &pixi_payload)?;
+        let duplicate_pixi =
+            append_item_property_association(&alpha, b"pixi", &pixi_payload, false)?;
         assert!(matches!(
             image_slash_star::inspect(&duplicate_pixi),
             Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
@@ -2832,7 +2847,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         ));
 
         let duplicate_av1c =
-            append_item_property_association(&alpha, b"av1C", &[0x81, 0x00, 0x1c, 0x00])?;
+            append_item_property_association(&alpha, b"av1C", &[0x81, 0x00, 0x1c, 0x00], false)?;
         assert!(matches!(
             image_slash_star::inspect(&duplicate_av1c),
             Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed

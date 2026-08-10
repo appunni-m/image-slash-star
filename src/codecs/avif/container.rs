@@ -243,6 +243,7 @@ struct Item {
 struct Association {
     item_id: u32,
     property_index: usize,
+    essential: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -942,6 +943,7 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             meta.associations.push(Association {
                 item_id,
                 property_index,
+                essential,
             });
         }
     }
@@ -1273,48 +1275,72 @@ impl Meta {
             .filter_map(|association| {
                 self.properties.get(association.property_index).and_then(
                     |property| match property {
-                        Property::ContentLightLevel { data, .. } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *b"clli",
-                            data.clone(),
-                        )),
-                        Property::MasteringDisplayColorVolume { data, .. } => Some(
-                            AvifItemProperty::new(association.item_id, *b"mdcv", data.clone()),
-                        ),
-                        Property::Rotation { data, .. } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *b"irot",
-                            data.clone(),
-                        )),
-                        Property::Mirror { data, .. } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *b"imir",
-                            data.clone(),
-                        )),
-                        Property::PixelAspectRatio { data, .. } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *b"pasp",
-                            data.clone(),
-                        )),
-                        Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *b"clap",
-                            data.clone(),
-                        )),
+                        Property::ContentLightLevel { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"clli",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
+                        Property::MasteringDisplayColorVolume { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"mdcv",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
+                        Property::Rotation { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"irot",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
+                        Property::Mirror { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"imir",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
+                        Property::PixelAspectRatio { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"pasp",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
+                        Property::CleanAperture { data, .. } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *b"clap",
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
                         Property::AuxC {
                             is_alpha: false,
                             kind,
                             data,
-                        } => Some(AvifItemProperty::new(
+                        } => Some(AvifItemProperty::new_with_essential(
                             association.item_id,
                             *kind,
                             data.clone(),
+                            association.essential,
                         )),
-                        Property::Other { kind, data } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *kind,
-                            data.clone(),
-                        )),
+                        Property::Other { kind, data } => {
+                            Some(AvifItemProperty::new_with_essential(
+                                association.item_id,
+                                *kind,
+                                data.clone(),
+                                association.essential,
+                            ))
+                        }
                         _ => None,
                     },
                 )
@@ -2347,10 +2373,12 @@ fn coverage_nested_parser_prefixes() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         references: Vec::new(),
@@ -2704,10 +2732,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2728,10 +2758,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2752,10 +2784,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2785,14 +2819,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 2,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2813,10 +2850,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2918,14 +2957,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 2,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -2962,14 +3004,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Association {
             item_id: 1,
             property_index: usize::MAX,
+            essential: false,
         },
         Association {
             item_id: 1,
             property_index: 0,
+            essential: false,
         },
         Association {
             item_id: 1,
             property_index: 1,
+            essential: false,
         },
     ]);
     let _ = details_meta.details();
@@ -3012,11 +3057,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     details_meta.associations.push(Association {
         item_id: 3,
         property_index: 2,
+        essential: false,
     });
     let _ = details_meta.has_alpha(1);
     details_meta.associations.push(Association {
         item_id: 3,
         property_index: 3,
+        essential: false,
     });
     let _ = details_meta.has_alpha(1);
 

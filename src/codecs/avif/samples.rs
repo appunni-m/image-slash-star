@@ -374,6 +374,7 @@ enum Property {
 struct Association {
     item_id: u32,
     property_index: usize,
+    essential: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -909,9 +910,10 @@ fn parse_ipma(
             };
             let essential_mask = if wide { 0x8000 } else { 0x80 };
             let index_mask = if wide { 0x7fff } else { 0x7f };
+            let essential = raw & essential_mask != 0;
             let property_index = raw & index_mask;
             if property_index == 0 {
-                if raw & essential_mask != 0 {
+                if essential {
                     return Err(parse_failure!());
                 }
                 continue;
@@ -923,6 +925,7 @@ fn parse_ipma(
             meta.associations.push(Association {
                 item_id,
                 property_index,
+                essential,
             });
         }
     }
@@ -1371,49 +1374,63 @@ impl Meta {
                 continue;
             };
             let record = match property {
-                Property::ContentLightLevel { data, .. } => Some(AvifItemProperty::new(
-                    association.item_id,
-                    *b"clli",
-                    data.bytes(input)?.to_vec(),
-                )),
-                Property::MasteringDisplayColorVolume { data, .. } => Some(AvifItemProperty::new(
-                    association.item_id,
-                    *b"mdcv",
-                    data.bytes(input)?.to_vec(),
-                )),
-                Property::Rotation { data, .. } => Some(AvifItemProperty::new(
+                Property::ContentLightLevel { data, .. } => {
+                    Some(AvifItemProperty::new_with_essential(
+                        association.item_id,
+                        *b"clli",
+                        data.bytes(input)?.to_vec(),
+                        association.essential,
+                    ))
+                }
+                Property::MasteringDisplayColorVolume { data, .. } => {
+                    Some(AvifItemProperty::new_with_essential(
+                        association.item_id,
+                        *b"mdcv",
+                        data.bytes(input)?.to_vec(),
+                        association.essential,
+                    ))
+                }
+                Property::Rotation { data, .. } => Some(AvifItemProperty::new_with_essential(
                     association.item_id,
                     *b"irot",
                     data.bytes(input)?.to_vec(),
+                    association.essential,
                 )),
-                Property::Mirror { data, .. } => Some(AvifItemProperty::new(
+                Property::Mirror { data, .. } => Some(AvifItemProperty::new_with_essential(
                     association.item_id,
                     *b"imir",
                     data.bytes(input)?.to_vec(),
+                    association.essential,
                 )),
-                Property::PixelAspectRatio { data, .. } => Some(AvifItemProperty::new(
-                    association.item_id,
-                    *b"pasp",
-                    data.bytes(input)?.to_vec(),
-                )),
-                Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
+                Property::PixelAspectRatio { data, .. } => {
+                    Some(AvifItemProperty::new_with_essential(
+                        association.item_id,
+                        *b"pasp",
+                        data.bytes(input)?.to_vec(),
+                        association.essential,
+                    ))
+                }
+                Property::CleanAperture { data, .. } => Some(AvifItemProperty::new_with_essential(
                     association.item_id,
                     *b"clap",
                     data.bytes(input)?.to_vec(),
+                    association.essential,
                 )),
                 Property::AuxC {
                     is_alpha: false,
                     kind,
                     data,
-                } => Some(AvifItemProperty::new(
+                } => Some(AvifItemProperty::new_with_essential(
                     association.item_id,
                     *kind,
                     data.bytes(input)?.to_vec(),
+                    association.essential,
                 )),
-                Property::Other { kind, data } => Some(AvifItemProperty::new(
+                Property::Other { kind, data } => Some(AvifItemProperty::new_with_essential(
                     association.item_id,
                     *kind,
                     data.clone(),
+                    association.essential,
                 )),
                 _ => None,
             };
@@ -3943,10 +3960,12 @@ fn coverage_structural_states() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -4098,10 +4117,12 @@ fn coverage_structural_states() {
             Association {
                 item_id: 2,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 3,
                 property_index: 1,
+                essential: false,
             },
         ],
         references: vec![
@@ -4156,14 +4177,17 @@ fn coverage_structural_states() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 2,
                 property_index: 1,
+                essential: false,
             },
             Association {
                 item_id: 3,
                 property_index: 2,
+                essential: false,
             },
         ],
         references: vec![
@@ -4226,14 +4250,17 @@ fn coverage_structural_states() {
             Association {
                 item_id: 2,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 3,
                 property_index: 1,
+                essential: false,
             },
             Association {
                 item_id: 4,
                 property_index: 2,
+                essential: false,
             },
         ],
         references: vec![
@@ -4702,10 +4729,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -4727,10 +4756,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -4752,10 +4783,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
@@ -4777,10 +4810,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Association {
                 item_id: 1,
                 property_index: 0,
+                essential: false,
             },
             Association {
                 item_id: 1,
                 property_index: 1,
+                essential: false,
             },
         ],
         ..Meta::default()
