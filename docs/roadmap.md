@@ -235,6 +235,15 @@ lines and eight partial-branch lines remain existing implementation gaps.
 The known LLVM JSON segment-normalization warning remains. These are
 implementation/Rust coverage metrics, not Pillow-parity coverage.
 
+Audit decision: the separate VP8L color-cache table remains dynamically sized
+to the actual `1 << color_cache_bits` entries. Its 2,048-entry/8 KiB format
+bound alone does not justify an always-inline replacement: that representation
+enlarges every cache-bearing `HuffmanInfo`. A dirty local probe did not
+establish a benefit, and its direct-child peak includes build/cache effects,
+so it is not accepted as a performance claim. This transient-allocation
+boundary remains open; no parity row, unit test, or coverage-only hook was
+added to make it appear closed.
+
 Revision-bound note: the WebP alpha-palette materialization boundary is
 implemented at
 `ccf9c32bb9746629263d3028c430448223df64e7`, following the WebP VP8L

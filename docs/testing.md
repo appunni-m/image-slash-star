@@ -687,6 +687,15 @@ lines and eight partial-branch lines remain existing implementation gaps. The
 known LLVM JSON segment-normalization warning remains. These are
 implementation/Rust coverage metrics, not Pillow-parity coverage.
 
+The separate VP8L color-cache table remains dynamically sized to the actual
+`1 << color_cache_bits` entries. Its 2,048-entry/8 KiB format bound does not
+justify an always-inline replacement: that representation enlarges every
+cache-bearing `HuffmanInfo`. A dirty local probe did not establish a benefit,
+and its direct-child peak includes build/cache effects, so it is not accepted
+as a performance claim. It remains an open transient-allocation boundary; no
+parity row, unit test, or coverage-only hook was added to make the boundary
+appear closed.
+
 Current acceptance record: WebP alpha-palette fixed storage
 
 The production and Rust test/runtime slice is implemented at
