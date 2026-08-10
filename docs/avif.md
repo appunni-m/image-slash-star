@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`97539a505923004cbff9ea48d9e7a99c2fde83d6`; the claim-ledger fixture tuple
+`569df3fa9c58024b1473f263682785ad8473ec9d`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`67dc1f7b-d962-41e6-89fc-3d49699a86e6` passed 1,445/1,445 checks. The feature
-matrix run `bcc78c63-bf27-4df2-8279-e38eb3ea75b2` and nightly Coverage MCP
-run `f90a3bb4-59a3-4d2a-bbb0-df72c11b3410` both hit the pre-existing native
+`08e739fd-6976-4fe0-bde3-a1119f0795a2` passed 1,445/1,445 checks. The feature
+matrix run `41328c00-f127-4348-a4fb-15b9bd43bd17` and nightly Coverage MCP
+run `e1fa61d1-0691-4130-8654-4f35e78b45bd` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
@@ -176,6 +176,13 @@ mutates `alpha.avif` only in memory and checks all six declarations across
 inspection, still decode, and sequence-frame decode; Pillow exposes no
 equivalent item-property result, so this is Rust source-provenance evidence
 with no parity row.
+Non-alpha `auxC`/`auxi` declarations are retained through the same
+`SourceDescriptor::avif_item_properties()` records with their original
+source-local kind and exact full-box payload. This is auxiliary-type
+provenance only; it does not select or decode auxiliary payloads or change
+normalized samples. The existing contract reaches the inspection assertion
+before the known native AVIF status-5 failure; its still and sequence
+assertions remain the Rust contract when that native lane is available.
 Known non-primary and auxiliary `ispe`/`pixi` declarations are retained
 separately through `SourceDescriptor::avif_item_plane_properties()` as
 source-local item ID, optional width/height, and optional uniform channel depth.
@@ -201,8 +208,9 @@ Recognized `Exif` items and `mime` items with content type exactly
 `application/rdf+xml` now follow the same raw-retention boundary as the decoded
 metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Other non-primary profiles beyond raw ICC, track-only and non-alpha auxiliary
-item semantics, item color/property forms beyond typed CICP, raw ICC, raw
+Other non-primary profiles beyond raw ICC, track-only auxiliary payload
+selection/decoded content, non-alpha auxiliary semantics beyond exact
+`auxC`/`auxi` declaration retention, item color/property forms beyond typed CICP, raw ICC, raw
 unknown properties, the six known raw declarations, plane declarations, and
 codec declarations, plus plane
 range/quality semantics, remain future slices. Direct and
@@ -221,8 +229,10 @@ and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
 pixels are never rotated, mirrored, rescaled, or cropped. Other non-primary
-item-level color/properties beyond the six known raw declarations, non-alpha auxiliary relationships, grid tile
-placement/composition, plane range/quality, and other item metadata remain open;
+item-level color/properties beyond the six known raw declarations, non-alpha
+auxiliary payload selection/decoded content and relationships beyond exact
+`auxC`/`auxi` declaration retention, grid tile placement/composition, plane
+range/quality, and other item metadata remain open;
 bounded direct/grid item,
 auxiliary-alpha, and
 premultiplication provenance is represented through `SourceAlpha::Auxiliary`

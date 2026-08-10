@@ -3,19 +3,20 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `24af4fe2378e9cf087615a542c537065eee94f05`; the claim-ledger fixture
+revision `569df3fa9c58024b1473f263682785ad8473ec9d`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`5b3c81f1-8323-4664-b7b3-5eb59ee2d4a3` (1,445/1,445 passed in 658 ms) at
+`08e739fd-6976-4fe0-bde3-a1119f0795a2` (1,445/1,445 passed in 1,047 ms) at
 this revision. Feature matrix run
-`441c9ab4-94a3-4fe3-990c-9a8da9ba9dab` terminated with 44 passed and 1 failed;
+`41328c00-f127-4348-a4fb-15b9bd43bd17` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`6e21fe2c-8217-4882-b448-34dadcd5598c` likewise terminated 84/85 and ingested
+`e1fa61d1-0691-4130-8654-4f35e78b45bd` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
-failure was reproduced from a clean copy of the preceding `879ddc6` source;
-the current WebP change does not touch that path. The accepted Coverage MCP
+native failure was reproduced from a clean copy of the preceding `879ddc6`
+source, so it is not evidence against the current source-property retention
+slice. The accepted Coverage MCP
 snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
@@ -201,6 +202,10 @@ remain outside this typed boundary. Unknown and known non-primary
 `AvifItemProperty` records through `SourceDescriptor::avif_item_properties()`
 with source-local item ID, four-byte kind, and exact payload; they are not
 interpreted or applied to decoded samples. Known non-primary and auxiliary
+`auxC`/`auxi` declarations are included in those records with their
+original kind and exact full-box payload. This records auxiliary-type
+provenance only; it does not select or decode auxiliary payloads or change
+normalized samples. Known non-primary and auxiliary
 `ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records
 through `SourceDescriptor::avif_item_plane_properties()`, preserving source-local
 item ID, optional dimensions, and optional uniform channel depth; this is
