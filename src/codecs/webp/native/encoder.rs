@@ -105,6 +105,11 @@ const VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS: usize = 256;
 const WEBP_PALETTE_CHECKPOINT_VALUES: usize = 64;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_VALUES: usize = 64;
 
+struct AlphaPalette {
+    values: [u8; VP8L_MAX_PALETTE_ENTRIES],
+    len: usize,
+}
+
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError>;
@@ -2688,11 +2693,11 @@ fn extend_bytes_with_checkpoint(
 fn collect_alpha_palette(
     alpha: &[u8],
     token: Option<&crate::CancellationToken>,
-) -> Result<Vec<u8>, EncodingError> {
+) -> Result<AlphaPalette, EncodingError> {
     // Alpha values have a fixed 8-bit alphabet. A presence table preserves
     // BTreeSet's sorted, unique result while keeping the bounded membership
-    // workspace on the stack; the returned Vec remains the single owned
-    // palette representation required by the later delta/index passes.
+    // workspace on the stack; the returned fixed palette remains the single
+    // owned representation required by the later delta/index passes.
     let mut present = [false; 256];
     let mut palette_len = 0;
     let mut samples_until_checkpoint = WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS;
@@ -2709,10 +2714,15 @@ fn collect_alpha_palette(
         }
     }
 
-    let mut palette = Vec::with_capacity(palette_len);
+    let mut palette = AlphaPalette {
+        values: [0; VP8L_MAX_PALETTE_ENTRIES],
+        len: palette_len,
+    };
+    let mut palette_index = 0;
     for (value, &is_present) in present.iter().enumerate() {
         if is_present {
-            palette.push(value as u8);
+            palette.values[palette_index] = value as u8;
+            palette_index += 1;
         }
     }
     Ok(palette)
@@ -2730,6 +2740,8 @@ pub(crate) fn encode_alpha(
     assert_eq!(alpha.len(), width as usize * height as usize);
 
     let mut palette_values = collect_alpha_palette(alpha, token)?;
+    let palette_len = palette_values.len;
+    let palette_values = &mut palette_values.values[..palette_len];
     let mut signs = 0u8;
     let mut predicted = 0u8;
     for (index, &value) in palette_values.iter().enumerate() {
@@ -2789,7 +2801,6 @@ pub(crate) fn encode_alpha(
             }
         }
     }
-    let palette_len = palette_values.len();
     let mut palette_indices = [0u8; 256];
     for (index, &value) in palette_values.iter().enumerate() {
         if index.is_multiple_of(64) {
