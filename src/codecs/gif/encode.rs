@@ -945,7 +945,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut missing_lzw_header = minimal_gif.clone();
     missing_lzw_header.extend_from_slice(&descriptor);
     let mut missing_sub_block_payload = missing_lzw_header.clone();
-    missing_sub_block_payload.push(2);
+    missing_sub_block_payload.extend_from_slice(&[2, 2]);
     let mut missing_sub_block_terminator = missing_lzw_header.clone();
     missing_sub_block_terminator.extend_from_slice(&[2, 1, 0]);
     let mut short_gce = minimal_gif.clone();
@@ -980,6 +980,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     short_generic_extension.push(EXTENSION_INTRODUCER);
     let mut unterminated_generic_extension = minimal_gif.clone();
     unterminated_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 1, 0]);
+    let mut valid_plain_text_extension = minimal_gif.clone();
+    valid_plain_text_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0x01, 12]);
+    valid_plain_text_extension.extend_from_slice(&[0; 12]);
+    valid_plain_text_extension.extend_from_slice(&[0, GIF_TRAILER]);
+    let mut valid_generic_extension = minimal_gif.clone();
+    valid_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, GIF_TRAILER]);
     let sink_cases = vec![
         b"bad".to_vec(),
         b"GIF89a".to_vec(),
@@ -1000,6 +1006,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         truncated_fixed_extension,
         short_generic_extension,
         unterminated_generic_extension,
+        valid_plain_text_extension,
+        valid_generic_extension,
     ];
     let mut sink = Vec::new();
     for encoded in sink_cases {
@@ -1039,7 +1047,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut token_rgba = Vec::with_capacity(1025 * 4);
     for value in 0u32..1025 {
-        let [red, green, blue, _] = value.to_le_bytes();
+        let [red, _, _, _] = value.wrapping_mul(37).to_le_bytes();
+        let [green, _, _, _] = value.wrapping_mul(73).to_le_bytes();
+        let [blue, _, _, _] = value.wrapping_mul(109).to_le_bytes();
         let alpha = if value.is_multiple_of(2) { 0 } else { 255 };
         token_rgba.extend_from_slice(&[red, green, blue, alpha]);
     }
