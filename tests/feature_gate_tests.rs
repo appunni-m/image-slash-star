@@ -2093,6 +2093,45 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         }
         Ok(output)
     };
+
+    if cfg!(feature = "avif") {
+        // The property-table ceiling is a parser resource contract, not a
+        // Pillow-observable result. Keep the witness in this existing
+        // feature-gated source/container test and do not add a parity row or
+        // a unit test. The committed alpha fixture has enough unrelated
+        // boxes and records left below their limits for this 2,049th
+        // `ipco` entry to exercise the independent 2,048-property guard.
+        let alpha = fs::read(root.join("tests/fixtures/input/images/avif/alpha.avif"))?;
+        let too_many_properties = append_unassociated_avif_properties(&alpha, 2_049)?;
+        let inspect_error = match image_slash_star::inspect(&too_many_properties) {
+            Ok(_) => return Err("AVIF property-table overflow passed inspect".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            inspect_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF property-table overflow inspect"
+        );
+        let decode_error = match image_slash_star::decode(&too_many_properties) {
+            Ok(_) => return Err("AVIF property-table overflow passed decode".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            decode_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF property-table overflow decode"
+        );
+        let sequence_error = match image_slash_star::decode_sequence(&too_many_properties) {
+            Ok(_) => return Err("AVIF property-table overflow passed sequence".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF property-table overflow sequence"
+        );
+    }
+
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
         (
             "gif binary mask",
@@ -4498,6 +4537,88 @@ fn avif_box_offset(data: &[u8], kind: &[u8; 4]) -> Result<usize, Box<dyn std::er
         };
     }
     Err(format!("AVIF box {kind:?} not found").into())
+}
+
+fn avif_nested_box_offset(
+    data: &[u8],
+    kind: &[u8; 4],
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let type_offset = data
+        .windows(4)
+        .position(|window| window == kind)
+        .ok_or_else(|| format!("AVIF nested box {kind:?} not found"))?;
+    type_offset
+        .checked_sub(4)
+        .ok_or_else(|| format!("AVIF nested box {kind:?} has no size field").into())
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "the committed AVIF witness uses version-zero iloc with 32-bit extents"
+)]
+fn append_unassociated_avif_properties(
+    input: &[u8],
+    count: usize,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let ipco = avif_nested_box_offset(input, b"ipco")?;
+    let ipco_size = usize::try_from(u32::from_be_bytes(input[ipco..ipco + 4].try_into()?))?;
+    let ipco_end = ipco
+        .checked_add(ipco_size)
+        .ok_or("AVIF ipco end overflowed")?;
+    let property = avif_box(b"free", &[]);
+    let property_delta = property
+        .len()
+        .checked_mul(count)
+        .ok_or("AVIF property-table witness size overflowed")?;
+    let property_delta_u32 = u32::try_from(property_delta)?;
+    let mut output = Vec::with_capacity(
+        input
+            .len()
+            .checked_add(property_delta)
+            .ok_or("AVIF property-table witness output overflowed")?,
+    );
+    output.extend_from_slice(&input[..ipco_end]);
+    for _ in 0..count {
+        output.extend_from_slice(&property);
+    }
+    output.extend_from_slice(&input[ipco_end..]);
+
+    for kind in [b"ipco", b"iprp", b"meta"] {
+        let start = avif_nested_box_offset(&output, kind)?;
+        let size = u32::from_be_bytes(output[start..start + 4].try_into()?)
+            .checked_add(property_delta_u32)
+            .ok_or("AVIF metadata box size overflowed")?;
+        output[start..start + 4].copy_from_slice(&size.to_be_bytes());
+    }
+
+    // This committed source fixture uses iloc version zero, four-byte extent
+    // offsets and lengths, and mdat immediately after meta. The inserted
+    // property table shifts every referenced extent by the metadata delta.
+    let iloc = avif_nested_box_offset(&output, b"iloc")?;
+    if output.get(iloc + 12) != Some(&0x44) || output.get(iloc + 13) != Some(&0) {
+        return Err("AVIF property-table witness iloc layout changed".into());
+    }
+    let item_count = u16::from_be_bytes(output[iloc + 14..iloc + 16].try_into()?);
+    let mut cursor = iloc + 16;
+    for _ in 0..item_count {
+        cursor = cursor
+            .checked_add(4)
+            .ok_or("AVIF iloc item offset overflowed")?;
+        let extent_count = u16::from_be_bytes(output[cursor..cursor + 2].try_into()?);
+        cursor = cursor
+            .checked_add(2)
+            .ok_or("AVIF iloc extent count overflowed")?;
+        for _ in 0..extent_count {
+            let offset_end = cursor.checked_add(4).ok_or("AVIF iloc offset overflowed")?;
+            let old_offset = u32::from_be_bytes(output[cursor..offset_end].try_into()?)
+                .checked_add(property_delta_u32)
+                .ok_or("AVIF iloc extent offset overflowed")?;
+            output[cursor..offset_end].copy_from_slice(&old_offset.to_be_bytes());
+            cursor = cursor.checked_add(8).ok_or("AVIF iloc extent overflowed")?;
+        }
+    }
+    Ok(output)
 }
 
 #[test]

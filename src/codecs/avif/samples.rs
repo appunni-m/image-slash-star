@@ -13,6 +13,10 @@ use crate::types::{
 
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
+// Item-property entries are retained as owned records. Keep their table
+// bounded independently from the enclosing-box and association budgets so a
+// validly-shaped `ipco` box cannot consume the entire parser budget first.
+const MAX_PROPERTIES: usize = 2_048;
 const VISUAL_SAMPLE_ENTRY_SIZE: usize = 78;
 const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
@@ -606,6 +610,9 @@ fn parse_ipco(
 ) -> ParseResult<()> {
     let mut reader = Reader::new(input, payload);
     while let Some(child) = next_box(&mut reader, false, budget)? {
+        if meta.properties.len() >= MAX_PROPERTIES {
+            return Err(parse_failure!());
+        }
         budget.records_seen(1)?;
         meta.properties.push(parse_property(input, child)?);
     }
