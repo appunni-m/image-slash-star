@@ -107,6 +107,180 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(AvifTransformProperties::new().is_empty());
     assert!(SourceDescriptor::new().is_empty());
 
+    // Exercise the public AVIF provenance value objects directly.  These are
+    // source facts rather than Pillow-visible pixels, so the existing Rust
+    // coverage model is the appropriate evidence for their accessors.
+    let auxiliary = AvifAuxiliaryRelationship::new(7, 1);
+    assert_eq!(auxiliary.auxiliary_item_id(), 7);
+    assert_eq!(auxiliary.target_item_id(), 1);
+    let relationship = AvifItemRelationship::new(*b"dimg", 1, 2);
+    assert_eq!(relationship.kind(), *b"dimg");
+    assert_eq!(relationship.from_item_id(), 1);
+    assert_eq!(relationship.to_item_id(), 2);
+    let item_color = AvifItemColorProperties::new(
+        2,
+        AvifColorProperties {
+            color_primaries: 9,
+            transfer_characteristics: 16,
+            matrix_coefficients: 9,
+            full_range: true,
+        },
+    );
+    assert_eq!(item_color.item_id(), 2);
+    assert_eq!(item_color.color().color_primaries, 9);
+    let item_icc = AvifItemIccProfile::new(
+        3,
+        RawIccProfile {
+            keyword: b"ICC".to_vec(),
+            data: vec![1, 2, 3],
+        },
+    );
+    assert_eq!(item_icc.item_id(), 3);
+    assert_eq!(item_icc.profile().data, [1, 2, 3]);
+    let item_property = AvifItemProperty::new_with_essential(4, *b"clli", vec![4, 5], true);
+    assert_eq!(item_property.item_id(), 4);
+    assert_eq!(item_property.kind(), *b"clli");
+    assert_eq!(item_property.data(), [4, 5]);
+    assert!(item_property.is_essential());
+    let item_plane = AvifItemPlaneProperties::new(5, Some(80), Some(40), Some(10));
+    assert_eq!(item_plane.item_id(), 5);
+    assert_eq!(item_plane.width(), Some(80));
+    assert_eq!(item_plane.height(), Some(40));
+    assert_eq!(item_plane.bit_depth(), Some(10));
+    let item_codec = AvifItemCodecProperties::new(
+        6,
+        vec![0x81, 0x00, 0x00],
+        10,
+        AvifChromaSamplePosition::Colocated,
+    );
+    assert_eq!(item_codec.item_id(), 6);
+    assert_eq!(item_codec.data(), [0x81, 0x00, 0x00]);
+    assert_eq!(item_codec.bit_depth(), 10);
+    assert_eq!(
+        item_codec.chroma_sample_position(),
+        AvifChromaSamplePosition::Colocated
+    );
+    let grid = AvifGridProperties::new(0, 1, 2, 3, 80, 120);
+    assert_eq!(grid.version(), 0);
+    assert_eq!(grid.flags(), 1);
+    assert_eq!(grid.rows(), 2);
+    assert_eq!(grid.columns(), 3);
+    assert_eq!(grid.output_width(), 80);
+    assert_eq!(grid.output_height(), 120);
+    let file_type = AvifFileTypeProperties::new(*b"avif", 1, vec![*b"mif1", *b"miaf"]);
+    assert_eq!(file_type.major_brand(), *b"avif");
+    assert_eq!(file_type.minor_version(), 1);
+    assert_eq!(file_type.compatible_brands(), &[*b"mif1", *b"miaf"]);
+
+    // Set every descriptor field once so every short-circuit arm of
+    // `SourceDescriptor::is_empty` is reached by a real public value.
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_auxiliary_relationship(auxiliary)
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_auxiliary_relationships(vec![auxiliary])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_relationships(vec![relationship])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_premultiplied_relationships(vec![relationship])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_color_properties(vec![item_color])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_icc_profiles(vec![item_icc.clone()])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_properties(vec![item_property.clone()])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_plane_properties(vec![item_plane])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_item_codec_properties(vec![item_codec.clone()])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_grid_item_ids(vec![1, 2])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_grid_properties(grid)
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
+            .with_avif_file_type(file_type.clone())
+            .is_empty()
+    );
+    let provenance = SourceDescriptor::new()
+        .with_avif_auxiliary_relationship(auxiliary)
+        .with_avif_auxiliary_relationships(vec![auxiliary])
+        .with_avif_item_relationships(vec![relationship])
+        .with_avif_premultiplied_relationships(vec![relationship])
+        .with_avif_item_color_properties(vec![item_color])
+        .with_avif_item_icc_profiles(vec![item_icc.clone()])
+        .with_avif_item_properties(vec![item_property.clone()])
+        .with_avif_item_plane_properties(vec![item_plane])
+        .with_avif_item_codec_properties(vec![item_codec.clone()])
+        .with_avif_grid_item_ids(vec![1, 2])
+        .with_avif_grid_properties(grid)
+        .with_avif_file_type(file_type);
+    assert_eq!(provenance.avif_auxiliary_relationship(), Some(auxiliary));
+    assert_eq!(provenance.avif_auxiliary_relationships(), &[auxiliary]);
+    assert_eq!(provenance.avif_item_relationships(), &[relationship]);
+    assert_eq!(
+        provenance.avif_premultiplied_relationships(),
+        &[relationship]
+    );
+    assert_eq!(provenance.avif_item_color_properties(), &[item_color]);
+    assert_eq!(provenance.avif_item_icc_profiles(), &[item_icc]);
+    assert_eq!(provenance.avif_item_properties(), &[item_property]);
+    assert_eq!(provenance.avif_item_plane_properties(), &[item_plane]);
+    assert_eq!(provenance.avif_item_codec_properties(), &[item_codec]);
+    assert_eq!(provenance.avif_grid_item_ids(), &[1, 2]);
+    assert_eq!(provenance.avif_grid_properties(), Some(grid));
+    assert_eq!(provenance.avif_file_type().unwrap().major_brand(), *b"avif");
+
+    let duplicate_transform = AvifTransformProperties::default()
+        .with_rotation(AvifRotation::Zero)
+        .with_rotation(AvifRotation::CounterClockwise180)
+        .with_mirror(AvifMirrorAxis::TopBottom)
+        .with_mirror(AvifMirrorAxis::LeftRight);
+    assert_eq!(
+        duplicate_transform.rotation(),
+        Some(AvifRotation::CounterClockwise180)
+    );
+    assert_eq!(
+        duplicate_transform.mirror(),
+        Some(AvifMirrorAxis::LeftRight)
+    );
+    assert!(duplicate_transform.pixel_aspect_ratio().is_none());
+    assert!(duplicate_transform.clean_aperture().is_none());
+    assert_eq!(duplicate_transform.order().len(), 2);
+    assert!(!duplicate_transform.is_empty());
+
     for position in [
         AvifChromaSamplePosition::Unknown,
         AvifChromaSamplePosition::Vertical,
