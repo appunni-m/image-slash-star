@@ -2667,6 +2667,84 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             "unknown item property sequence declaration"
         );
 
+        // Known presentation and HDR properties are typed when associated
+        // with the primary item, but their non-primary declarations still
+        // need exact source provenance. Pillow exposes neither the item
+        // identity nor these item-level fields, so this remains one bounded
+        // feature-gated witness rather than a parity row. Keep all six known
+        // property forms together so inspect, still decode, and sequence
+        // decode prove the same ordered item-local payload contract.
+        let clli_payload = [0x01, 0xf4, 0x00, 0x64];
+        let mdcv_payload = [
+            0x11, 0x11, 0x22, 0x22, // green x/y
+            0x33, 0x33, 0x44, 0x44, // blue x/y
+            0x55, 0x55, 0x66, 0x66, // red x/y
+            0x77, 0x77, 0x88, 0x88, // white point x/y
+            0x00, 0x0f, 0x42, 0x40, // maximum luminance
+            0x00, 0x00, 0x00, 0x32, // minimum luminance
+        ];
+        let irot_payload = [1];
+        let imir_payload = [1];
+        let pasp_payload = [0, 0, 0, 4, 0, 0, 0, 3];
+        let clap_payload = [
+            0, 0, 0, 1, // width numerator
+            0, 0, 0, 1, // width denominator
+            0, 0, 0, 1, // height numerator
+            0, 0, 0, 1, // height denominator
+            0, 0, 0, 0, // horizontal offset numerator
+            0, 0, 0, 1, // horizontal offset denominator
+            0, 0, 0, 0, // vertical offset numerator
+            0, 0, 0, 1, // vertical offset denominator
+        ];
+        let mut known_bytes = alpha.clone();
+        for (kind, payload) in [
+            (b"clli", &clli_payload[..]),
+            (b"mdcv", &mdcv_payload[..]),
+            (b"irot", &irot_payload[..]),
+            (b"imir", &imir_payload[..]),
+            (b"pasp", &pasp_payload[..]),
+            (b"clap", &clap_payload[..]),
+        ] {
+            known_bytes = append_item_property_association(&known_bytes, kind, payload)?;
+        }
+        let expected_known = [
+            AvifItemProperty::new(2, *b"clli", clli_payload.to_vec()),
+            AvifItemProperty::new(2, *b"mdcv", mdcv_payload.to_vec()),
+            AvifItemProperty::new(2, *b"irot", irot_payload.to_vec()),
+            AvifItemProperty::new(2, *b"imir", imir_payload.to_vec()),
+            AvifItemProperty::new(2, *b"pasp", pasp_payload.to_vec()),
+            AvifItemProperty::new(2, *b"clap", clap_payload.to_vec()),
+        ];
+        let known_inspected = image_slash_star::inspect(&known_bytes)?;
+        assert_eq!(
+            known_inspected.source.avif_item_properties(),
+            expected_known.as_slice(),
+            "known item property inspect declarations"
+        );
+        assert_eq!(
+            known_inspected.source_color,
+            baseline_decoded.content.source_color
+        );
+        let known_decoded = image_slash_star::decode(&known_bytes)?;
+        assert_eq!(
+            known_decoded.content.source.avif_item_properties(),
+            expected_known.as_slice(),
+            "known item property decode declarations"
+        );
+        assert_eq!(
+            known_decoded.content.pixels, baseline_decoded.content.pixels,
+            "known item properties preserve decoded pixels"
+        );
+        let known_sequence = image_slash_star::decode_sequence(&known_bytes)?;
+        assert_eq!(
+            known_sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_properties(),
+            expected_known.as_slice(),
+            "known item property sequence declarations"
+        );
+
         // `ispe` and `pixi` are known plane declarations rather than unknown
         // opaque properties. The committed alpha fixture already associates
         // both with item 2; a second declaration is a conflicting source

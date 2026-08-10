@@ -201,12 +201,30 @@ enum Property {
     },
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
-    ContentLightLevel(AvifContentLightLevel),
-    MasteringDisplayColorVolume(AvifMasteringDisplayColorVolume),
-    Rotation(AvifRotation),
-    Mirror(AvifMirrorAxis),
-    PixelAspectRatio(AvifPixelAspectRatio),
-    CleanAperture(AvifCleanAperture),
+    ContentLightLevel {
+        value: AvifContentLightLevel,
+        data: Vec<u8>,
+    },
+    MasteringDisplayColorVolume {
+        value: AvifMasteringDisplayColorVolume,
+        data: Vec<u8>,
+    },
+    Rotation {
+        value: AvifRotation,
+        data: Vec<u8>,
+    },
+    Mirror {
+        value: AvifMirrorAxis,
+        data: Vec<u8>,
+    },
+    PixelAspectRatio {
+        value: AvifPixelAspectRatio,
+        data: Vec<u8>,
+    },
+    CleanAperture {
+        value: AvifCleanAperture,
+        data: Vec<u8>,
+    },
     Other {
         kind: FourCc,
         data: Vec<u8>,
@@ -716,7 +734,10 @@ fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::ContentLightLevel(content_light_level))
+    Ok(Property::ContentLightLevel {
+        value: content_light_level,
+        data: payload.to_vec(),
+    })
 }
 
 fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
@@ -740,8 +761,8 @@ fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
         u32::from_be_bytes([payload[16], payload[17], payload[18], payload[19]]);
     let min_display_mastering_luminance =
         u32::from_be_bytes([payload[20], payload[21], payload[22], payload[23]]);
-    Ok(Property::MasteringDisplayColorVolume(
-        AvifMasteringDisplayColorVolume::new(
+    Ok(Property::MasteringDisplayColorVolume {
+        value: AvifMasteringDisplayColorVolume::new(
             red_x,
             red_y,
             green_x,
@@ -753,7 +774,8 @@ fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
             max_display_mastering_luminance,
             min_display_mastering_luminance,
         ),
-    ))
+        data: payload.to_vec(),
+    })
 }
 
 fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
@@ -768,7 +790,10 @@ fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::Rotation(rotation))
+    Ok(Property::Rotation {
+        value: rotation,
+        data: payload.to_vec(),
+    })
 }
 
 fn parse_imir(payload: &[u8]) -> ParseResult<Property> {
@@ -781,7 +806,10 @@ fn parse_imir(payload: &[u8]) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::Mirror(mirror))
+    Ok(Property::Mirror {
+        value: mirror,
+        data: payload.to_vec(),
+    })
 }
 
 fn parse_pasp(payload: &[u8]) -> ParseResult<Property> {
@@ -791,9 +819,10 @@ fn parse_pasp(payload: &[u8]) -> ParseResult<Property> {
     if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::PixelAspectRatio(AvifPixelAspectRatio::new(
-        h_spacing, v_spacing,
-    )))
+    Ok(Property::PixelAspectRatio {
+        value: AvifPixelAspectRatio::new(h_spacing, v_spacing),
+        data: payload.to_vec(),
+    })
 }
 
 fn parse_clap(payload: &[u8]) -> ParseResult<Property> {
@@ -816,16 +845,19 @@ fn parse_clap(payload: &[u8]) -> ParseResult<Property> {
     {
         return Err(parse_failure!());
     }
-    Ok(Property::CleanAperture(AvifCleanAperture::new(
-        width_numerator,
-        width_denominator,
-        height_numerator,
-        height_denominator,
-        horizontal_offset_numerator,
-        horizontal_offset_denominator,
-        vertical_offset_numerator,
-        vertical_offset_denominator,
-    )))
+    Ok(Property::CleanAperture {
+        value: AvifCleanAperture::new(
+            width_numerator,
+            width_denominator,
+            height_numerator,
+            height_denominator,
+            horizontal_offset_numerator,
+            horizontal_offset_denominator,
+            vertical_offset_numerator,
+            vertical_offset_denominator,
+        ),
+        data: payload.to_vec(),
+    })
 }
 
 // libavif 1.4.1 src/read.c:2648-2693.
@@ -1036,7 +1068,7 @@ impl Meta {
         if let Some(content_light_level) =
             self.associated(primary)
                 .find_map(|property| match property {
-                    Property::ContentLightLevel(content_light_level) => Some(*content_light_level),
+                    Property::ContentLightLevel { value, .. } => Some(*value),
                     _ => None,
                 })
         {
@@ -1047,7 +1079,7 @@ impl Meta {
         if let Some(mastering_display_color_volume) =
             self.associated(primary)
                 .find_map(|property| match property {
-                    Property::MasteringDisplayColorVolume(value) => Some(*value),
+                    Property::MasteringDisplayColorVolume { value, .. } => Some(*value),
                     _ => None,
                 })
         {
@@ -1132,25 +1164,30 @@ impl Meta {
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(primary) {
             match property {
-                Property::Rotation(rotation) => {
+                Property::Rotation {
+                    value: rotation, ..
+                } => {
                     if transform.rotation().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_rotation(*rotation);
                 }
-                Property::Mirror(mirror) => {
+                Property::Mirror { value: mirror, .. } => {
                     if transform.mirror().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_mirror(*mirror);
                 }
-                Property::PixelAspectRatio(ratio) => {
+                Property::PixelAspectRatio { value: ratio, .. } => {
                     if transform.pixel_aspect_ratio().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
-                Property::CleanAperture(clean_aperture) => {
+                Property::CleanAperture {
+                    value: clean_aperture,
+                    ..
+                } => {
                     if transform.clean_aperture().is_some() {
                         return Err(parse_failure!());
                     }
@@ -1232,6 +1269,34 @@ impl Meta {
             .filter_map(|association| {
                 self.properties.get(association.property_index).and_then(
                     |property| match property {
+                        Property::ContentLightLevel { data, .. } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *b"clli",
+                            data.clone(),
+                        )),
+                        Property::MasteringDisplayColorVolume { data, .. } => Some(
+                            AvifItemProperty::new(association.item_id, *b"mdcv", data.clone()),
+                        ),
+                        Property::Rotation { data, .. } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *b"irot",
+                            data.clone(),
+                        )),
+                        Property::Mirror { data, .. } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *b"imir",
+                            data.clone(),
+                        )),
+                        Property::PixelAspectRatio { data, .. } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *b"pasp",
+                            data.clone(),
+                        )),
+                        Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *b"clap",
+                            data.clone(),
+                        )),
                         Property::Other { kind, data } => Some(AvifItemProperty::new(
                             association.item_id,
                             *kind,
@@ -2613,8 +2678,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = parse_clap(&overlong_clap);
     let duplicate_rotation = Meta {
         properties: vec![
-            Property::Rotation(AvifRotation::Zero),
-            Property::Rotation(AvifRotation::CounterClockwise90),
+            Property::Rotation {
+                value: AvifRotation::Zero,
+                data: Vec::new(),
+            },
+            Property::Rotation {
+                value: AvifRotation::CounterClockwise90,
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
@@ -2631,8 +2702,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = duplicate_rotation.source_descriptor(1);
     let duplicate_pixel_aspect_ratio = Meta {
         properties: vec![
-            Property::PixelAspectRatio(AvifPixelAspectRatio::new(4, 3)),
-            Property::PixelAspectRatio(AvifPixelAspectRatio::new(16, 9)),
+            Property::PixelAspectRatio {
+                value: AvifPixelAspectRatio::new(4, 3),
+                data: Vec::new(),
+            },
+            Property::PixelAspectRatio {
+                value: AvifPixelAspectRatio::new(16, 9),
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
@@ -2649,8 +2726,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = duplicate_pixel_aspect_ratio.source_descriptor(1);
     let duplicate_clean_aperture = Meta {
         properties: vec![
-            Property::CleanAperture(AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1)),
-            Property::CleanAperture(AvifCleanAperture::new(4, 1, 3, 1, 0, 1, 0, 1)),
+            Property::CleanAperture {
+                value: AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1),
+                data: Vec::new(),
+            },
+            Property::CleanAperture {
+                value: AvifCleanAperture::new(4, 1, 3, 1, 0, 1, 0, 1),
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
@@ -2676,8 +2759,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 width: 1,
                 height: 1,
             },
-            Property::Rotation(AvifRotation::Zero),
-            Property::Rotation(AvifRotation::CounterClockwise90),
+            Property::Rotation {
+                value: AvifRotation::Zero,
+                data: Vec::new(),
+            },
+            Property::Rotation {
+                value: AvifRotation::CounterClockwise90,
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
@@ -2698,8 +2787,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::hint::black_box(duplicate_details.details());
     let duplicate_mirror = Meta {
         properties: vec![
-            Property::Mirror(AvifMirrorAxis::TopBottom),
-            Property::Mirror(AvifMirrorAxis::LeftRight),
+            Property::Mirror {
+                value: AvifMirrorAxis::TopBottom,
+                data: Vec::new(),
+            },
+            Property::Mirror {
+                value: AvifMirrorAxis::LeftRight,
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
@@ -2797,8 +2892,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 width: 2,
                 height: 3,
             },
-            Property::Rotation(AvifRotation::Zero),
-            Property::Rotation(AvifRotation::CounterClockwise90),
+            Property::Rotation {
+                value: AvifRotation::Zero,
+                data: Vec::new(),
+            },
+            Property::Rotation {
+                value: AvifRotation::CounterClockwise90,
+                data: Vec::new(),
+            },
         ],
         associations: vec![
             Association {
