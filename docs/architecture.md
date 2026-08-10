@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `aea0c723a07e4ae3a8ac43fe76824197c5016427`; the claim-ledger fixture
+revision `c8b3cbe6815de601795c5f5482ce0a3738c31b9d`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`bda2f29b-f49b-44bc-abd9-1a866c20a493` (1,445/1,445 passed in 8,024 ms), and
-the latest feature matrix is `e7e77c73-e0cf-4111-a554-c2db85dd7a57` (passed in
-29,627 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `453dca6d-6dcd-44c4-819e-34978e048685` from run
-`12093cdf-3471-47f6-a451-201e20000124`, also at that revision: 55,901/56,778
-lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,951/87,909
+`21bd0d97-6209-415f-8568-7713b3be1f62` (1,445/1,445 passed in 7,902 ms), and
+the latest feature matrix is `109d0d03-8498-4b94-9f2c-15ddbedc9ddd` (passed in
+33,368 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `46bdf0fa-d59a-40ab-9a1c-f0e85f28e02b` from run
+`fdb26765-f319-434c-a273-a74b6456c052`, also at that revision: 55,920/56,797
+lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,968/87,926
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
@@ -23,8 +23,8 @@ reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. The lossless-transform projection records 452/452
 lines, 30/30 branches, 25/25 functions, and 883/883 regions. The Huffman
 decoder projection records 351/353 lines, 56/58 branches, 13/13 functions,
-and 504/511 regions. The lossless-decoder projection records 1,236/1,238
-lines, 130/134 branches, 53/53 functions, and 1,603/1,607 regions. The WebP
+and 504/511 regions. The lossless-decoder projection records 1,255/1,257
+lines, 130/134 branches, 53/53 functions, and 1,620/1,624 regions. The WebP
 container-decoder projection records 805/805 lines, 90/90 branches, 36/36
 functions, and 1,405/1,406 regions. The VP8 decoder projection records
 1,615/1,615 lines, 165/166 branches, 58/58
@@ -787,6 +787,18 @@ packing, checkpoint cadence, encoded bytes, errors, and sink output remain
 unchanged. This is Rust-only transient-storage evidence: Pillow parity checks
 final bytes and errors, not allocation ownership or counts, and it is not
 allocator/OOM or streaming evidence.
+
+WebP VP8L color-indexing transform tables are bounded to 256 RGBA entries and
+are retained in decoder-owned `[u8; 1024]` storage. The transform record keeps
+only the table size; inverse application slices the fixed table after the main
+image stream is decoded. The table must survive until reverse transform order
+runs, so it cannot be reused from the decoded image buffer. This removes the
+color-map heap allocation while preserving map adjustment, lookup order,
+decoded bytes, errors, and sink output. Pillow parity verifies only final bytes
+and errors, not this ownership boundary or allocation counts, so the result is
+Rust-only feature-gate and coverage evidence rather than a Pillow-parity
+claim; it is not allocator/OOM accounting, recoverable-OOM handling, or a
+streaming guarantee.
 
 WebP VP8L transform-order decoding stores the at-most-four transform IDs in
 `[u8; 4]` plus a length instead of a heap `Vec`. The bitstream permits at most
