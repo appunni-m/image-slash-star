@@ -3,21 +3,21 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`, and benchmark-protocol
+revision `8b3461aca67c5213383ec968327bd92ebb5153d8`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`379fcc5f-6c26-43a3-81de-1db327fe5003` (1,445/1,445 passed in 569 ms) at
+`ab960255-2391-43df-a04d-1d4d863e868a` (1,445/1,445 passed in 635 ms) at
 this revision. Feature matrix run
-`add95e04-59f7-4c06-baee-ed16024feb41` terminated with 44 passed and 1 failed;
+`69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`e197ddbd-4f90-42b8-9025-0a0b74d49411` likewise terminated 84/85 with that
+`698d13f5-78a6-4083-85db-1ff1839f1dc9` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same native failure was reproduced from a clean copy of the
 preceding `879ddc6` source, so it is not evidence against the current
-essential-association retention slice. The accepted Coverage MCP snapshot therefore remains
+transform-order retention slice. The accepted Coverage MCP snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -1544,9 +1544,11 @@ exclude that declaration-retention subcategory and remain open.
 
 The AVF-028 essential-association subcategory is now also closed for raw
 non-primary `AvifItemProperty` records: association order and the `ipma`
-essential bit are retained. This supersedes the essential-bit portion of the
-AVF-028 finding; transform order, unique-property ceilings, and encoder
-collision rules remain open.
+essential bit are retained. Primary typed `irot`/`imir`/`pasp`/`clap`
+declarations also retain their source association order through
+`AvifTransformProperties::order()`. This supersedes the association-order,
+essential-bit, and transform-order portions of the AVF-028 finding; unique
+property ceilings and encoder collision rules remain open.
 
 ### Cargo features, targets, artifacts, and downstream use
 
@@ -7127,6 +7129,28 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current implementation record: AVIF transform association order
+
+The production and Rust test/runtime slice is implemented at
+`8b3461aca67c5213383ec968327bd92ebb5153d8`. Primary AVIF `irot`, `imir`,
+`pasp`, and `clap` declarations now retain their source `ipma` association
+order through `AvifTransformProperties::order()` and `AvifTransformKind`.
+The existing feature-gated `avif_item_properties_match_the_non_parity_contract`
+contract asserts combined `irot`/`pasp` and `irot`/`clap` order; it adds no
+Pillow parity row, fixture-manifest row, diagnostic origin, coverage-only
+hook, or unit test because Pillow exposes no item-property association order
+or typed transform provenance result. Decoded pixels remain untransformed.
+
+Exact-head managed Pillow parity run
+`ab960255-2391-43df-a04d-1d4d863e868a` passed 1,445/1,445 checks in 635 ms.
+Feature-matrix run `69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated 44/45
+on the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`698d13f5-78a6-4083-85db-1ff1839f1dc9` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice. This is Rust source-provenance evidence,
+not Pillow item-property parity.
 
 Current implementation record: AVIF essential item-property associations
 
