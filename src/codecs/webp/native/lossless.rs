@@ -457,7 +457,10 @@ impl<'a> LosslessDecoder<'a> {
             entropy_image.truncate(pixel_count);
         }
 
-        let mut hufftree_groups = Vec::new();
+        // The metadata image has already established the exact group count;
+        // reserve the bounded group workspace once instead of growing it as
+        // each Huffman group is parsed.
+        let mut hufftree_groups = Vec::with_capacity(num_huff_groups as usize);
         // The enlarged green alphabet is the only Huffman code-length case
         // that remains heap-backed. Reuse its temporary storage across the
         // sequential trees instead of allocating once per non-simple tree.
