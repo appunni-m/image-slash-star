@@ -1635,6 +1635,8 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
 
 #[test]
 fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::AvifFileTypeProperties;
+
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut cases: Vec<(&str, bool, &str, SequenceKind)> = vec![
         (
@@ -1708,6 +1710,18 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
         let bytes = fs::read(root.join(path))?;
         let sequence = image_slash_star::decode_sequence(&bytes)?;
         assert_eq!(sequence.content.kind, expected, "{name}");
+        if name == "avif animation" {
+            let expected_file_type = AvifFileTypeProperties::new(
+                *b"avis",
+                0,
+                vec![*b"avif", *b"avis", *b"msf1", *b"iso8"],
+            );
+            assert_eq!(
+                sequence.content.frames[0].image.source.avif_file_type(),
+                Some(&expected_file_type),
+                "{name} FileTypeBox sequence decode"
+            );
+        }
         if expected == SequenceKind::UntimedPages {
             for frame in &sequence.content.frames {
                 assert_eq!(
@@ -1725,9 +1739,9 @@ fn sequence_kind_matches_the_container_contract() -> Result<(), Box<dyn std::err
 fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifColorProperties,
-        AvifGridProperties, AvifItemCodecProperties, AvifItemColorProperties, AvifItemIccProfile,
-        AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship, RawIccProfile,
-        SourceAlpha,
+        AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
+        AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
+        AvifItemRelationship, RawIccProfile, SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -2102,6 +2116,45 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // boxes and records left below their limits for this 2,049th
         // `ipco` entry to exercise the independent 2,048-property guard.
         let alpha = fs::read(root.join("tests/fixtures/input/images/avif/alpha.avif"))?;
+        // FileTypeBox declarations are Rust source provenance, not a
+        // Pillow-observable result. The feature-gated fixture contract keeps
+        // the exact major/minor/ordered-compatible-brand assertion here; it
+        // deliberately adds no parity row, fixture-manifest row, diagnostic
+        // origin, coverage-only hook, or unit test.
+        let expected_file_type =
+            AvifFileTypeProperties::new(*b"avif", 0, vec![*b"avif", *b"mif1", *b"miaf", *b"MA1A"]);
+        let inspected = image_slash_star::inspect(&alpha)?;
+        assert_eq!(
+            inspected.source.avif_file_type(),
+            Some(&expected_file_type),
+            "AVIF FileTypeBox inspection"
+        );
+        assert_eq!(expected_file_type.major_brand(), *b"avif");
+        assert_eq!(expected_file_type.minor_version(), 0);
+        assert_eq!(
+            expected_file_type.compatible_brands(),
+            [*b"avif", *b"mif1", *b"miaf", *b"MA1A"].as_slice()
+        );
+        if cfg!(target_arch = "wasm32") {
+            // `alpha.avif` is intentionally an inspection-only witness on
+            // WASI because its auxiliary-alpha payload is outside the
+            // portable sample subset. Use a committed portable RGB fixture
+            // to verify still-decode propagation on that target.
+            let portable = fs::read(
+                root.join("tests/fixtures/input/images/avif/partitioned_16x4_green.avif"),
+            )?;
+            let portable_file_type = AvifFileTypeProperties::new(
+                *b"avif",
+                0,
+                vec![*b"avif", *b"mif1", *b"miaf", *b"MA1A"],
+            );
+            let decoded = image_slash_star::decode(&portable)?;
+            assert_eq!(
+                decoded.content.source.avif_file_type(),
+                Some(&portable_file_type),
+                "AVIF FileTypeBox portable still decode"
+            );
+        }
         let too_many_properties = append_unassociated_avif_properties(&alpha, 2_049)?;
         let inspect_error = match image_slash_star::inspect(&too_many_properties) {
             Ok(_) => return Err("AVIF property-table overflow passed inspect".into()),
@@ -2256,6 +2309,23 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         assert_eq!(info.source.alpha(), expected, "{name} inspect");
         let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(decoded.content.source.alpha(), expected, "{name} decode");
+        if name == "avif opaque" {
+            let expected_file_type = AvifFileTypeProperties::new(
+                *b"avif",
+                0,
+                vec![*b"avif", *b"mif1", *b"miaf", *b"MA1B"],
+            );
+            assert_eq!(
+                info.source.avif_file_type(),
+                Some(&expected_file_type),
+                "{name} FileTypeBox inspect"
+            );
+            assert_eq!(
+                decoded.content.source.avif_file_type(),
+                Some(&expected_file_type),
+                "{name} FileTypeBox decode"
+            );
+        }
         if name == "avif auxiliary alpha" {
             let relationship = AvifAuxiliaryRelationship::new(2, 1);
             assert_eq!(
@@ -2422,6 +2492,13 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             ),
         ];
         let inspected = image_slash_star::inspect(&bytes)?;
+        let expected_file_type =
+            AvifFileTypeProperties::new(*b"avif", 0, vec![*b"avif", *b"mif1", *b"miaf", *b"MA1A"]);
+        assert_eq!(
+            inspected.source.avif_file_type(),
+            Some(&expected_file_type),
+            "grid FileTypeBox inspect"
+        );
         assert_eq!(
             inspected.source.alpha(),
             Some(SourceAlpha::Auxiliary),
@@ -2495,6 +2572,11 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             "grid decode codec declarations"
         );
         let sequence = image_slash_star::decode_sequence(&bytes)?;
+        assert_eq!(
+            sequence.content.frames[0].image.source.avif_file_type(),
+            Some(&expected_file_type),
+            "grid FileTypeBox sequence decode"
+        );
         assert_eq!(
             sequence.content.frames[0]
                 .image
@@ -4824,9 +4906,9 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
 fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
         AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
-        AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-        AvifTransformKind, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
-        SourceDescriptor,
+        AvifFileTypeProperties, AvifMasteringDisplayColorVolume, AvifMirrorAxis,
+        AvifPixelAspectRatio, AvifRotation, AvifTransformKind, AvifTransformProperties,
+        OpaqueMetadata, RawIccProfile, SourceColor, SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -4966,6 +5048,10 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         .ok_or("orientation AVIF has no irot property")?;
     let baseline = image_slash_star::decode(&bytes)?;
     let expected_pixels = baseline.content.pixels;
+    let expected_file_type =
+        AvifFileTypeProperties::new(*b"avif", 0, vec![*b"avif", *b"mif1", *b"miaf", *b"MA1B"]);
+    let source_with_file_type =
+        |source: SourceDescriptor| source.with_avif_file_type(expected_file_type.clone());
 
     // ICC in AVIF is a `colr` item property, not a Pillow-observable decoded
     // field. Use the committed Pillow-generated metadata output as the source
@@ -5184,8 +5270,10 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     ] {
         let mut variant = bytes.clone();
         variant[irot + 4] = value;
-        let expected = SourceDescriptor::new()
-            .with_avif_transform(AvifTransformProperties::new().with_rotation(rotation));
+        let expected = source_with_file_type(
+            SourceDescriptor::new()
+                .with_avif_transform(AvifTransformProperties::new().with_rotation(rotation)),
+        );
         assert_eq!(
             expected.avif_transform().and_then(|value| value.rotation()),
             Some(rotation)
@@ -5218,8 +5306,10 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         (1, AvifMirrorAxis::LeftRight),
     ] {
         mirrored[irot + 4] = value;
-        let expected_mirror = SourceDescriptor::new()
-            .with_avif_transform(AvifTransformProperties::new().with_mirror(mirror));
+        let expected_mirror = source_with_file_type(
+            SourceDescriptor::new()
+                .with_avif_transform(AvifTransformProperties::new().with_mirror(mirror)),
+        );
         assert_eq!(
             expected_mirror
                 .avif_transform()
@@ -5249,10 +5339,12 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
 
     let pasp_payload = [0, 0, 0, 4, 0, 0, 0, 3];
     let pasp = append_associated_property(&bytes, b"pasp", &pasp_payload, 6)?;
-    let expected_pasp = SourceDescriptor::new().with_avif_transform(
-        AvifTransformProperties::new()
-            .with_rotation(AvifRotation::CounterClockwise270)
-            .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3)),
+    let expected_pasp = source_with_file_type(
+        SourceDescriptor::new().with_avif_transform(
+            AvifTransformProperties::new()
+                .with_rotation(AvifRotation::CounterClockwise270)
+                .with_pixel_aspect_ratio(AvifPixelAspectRatio::new(4, 3)),
+        ),
     );
     assert_eq!(
         expected_pasp
@@ -5293,19 +5385,21 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     clap_payload.extend_from_slice(&0_i32.to_be_bytes());
     clap_payload.extend_from_slice(&1_u32.to_be_bytes());
     let clap = append_associated_property(&bytes, b"clap", &clap_payload, 0x86)?;
-    let expected_clap = SourceDescriptor::new().with_avif_transform(
-        AvifTransformProperties::new()
-            .with_rotation(AvifRotation::CounterClockwise270)
-            .with_clean_aperture(AvifCleanAperture::new(
-                baseline.content.width,
-                1,
-                baseline.content.height,
-                1,
-                0,
-                1,
-                0,
-                1,
-            )),
+    let expected_clap = source_with_file_type(
+        SourceDescriptor::new().with_avif_transform(
+            AvifTransformProperties::new()
+                .with_rotation(AvifRotation::CounterClockwise270)
+                .with_clean_aperture(AvifCleanAperture::new(
+                    baseline.content.width,
+                    1,
+                    baseline.content.height,
+                    1,
+                    0,
+                    1,
+                    0,
+                    1,
+                )),
+        ),
     );
     assert_eq!(
         expected_clap
@@ -5350,10 +5444,12 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         0, 1, 0, 0, 0, 2,
     ];
     let signed_clap = append_associated_property(&bytes, b"clap", &signed_clap_payload, 0x86)?;
-    let expected_signed_clap = SourceDescriptor::new().with_avif_transform(
-        AvifTransformProperties::new()
-            .with_rotation(AvifRotation::CounterClockwise270)
-            .with_clean_aperture(AvifCleanAperture::new(2, 1, 3, 1, -1, 2, 1, 2)),
+    let expected_signed_clap = source_with_file_type(
+        SourceDescriptor::new().with_avif_transform(
+            AvifTransformProperties::new()
+                .with_rotation(AvifRotation::CounterClockwise270)
+                .with_clean_aperture(AvifCleanAperture::new(2, 1, 3, 1, -1, 2, 1, 2)),
+        ),
     );
     assert_eq!(
         image_slash_star::inspect(&signed_clap)?.source,

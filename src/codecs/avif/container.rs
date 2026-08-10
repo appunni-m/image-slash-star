@@ -7,11 +7,11 @@
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifGridProperties, AvifItemCodecProperties, AvifItemColorProperties,
-    AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
-    SourceColor, SourceDescriptor,
+    AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
+    AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
+    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
+    SourceAlpha, SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -20,6 +20,7 @@ const MAX_RECORDS: usize = 4_096;
 // bounded independently from the enclosing-box and association budgets so a
 // validly-shaped `ipco` box cannot consume the entire parser budget first.
 const MAX_PROPERTIES: usize = 2_048;
+const MAX_COMPATIBLE_BRANDS: usize = 1_024;
 const VISUAL_SAMPLE_ENTRY_SIZE: usize = 78;
 const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
@@ -180,9 +181,11 @@ impl<'a> Reader<'a> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Brands {
     major: FourCc,
+    minor_version: u32,
+    compatible_brands: Vec<FourCc>,
     has_avis: bool,
 }
 
@@ -381,7 +384,13 @@ fn inspect_inner_with_grid(
     let Some(details) = details else {
         return Err(parse_failure!());
     };
-    image_info(details)
+    let mut info = image_info(details)?;
+    info.source = info.source.with_avif_file_type(AvifFileTypeProperties::new(
+        brands.major,
+        brands.minor_version,
+        brands.compatible_brands,
+    ));
+    Ok(info)
 }
 
 fn image_info(details: Details) -> ParseResult<ImageInfo> {
@@ -452,21 +461,31 @@ fn next_box<'a>(
 fn parse_ftyp(payload: &[u8]) -> ParseResult<Brands> {
     let mut reader = Reader::new(payload);
     let major = reader.four_cc()?;
-    reader.skip(4)?;
+    let minor_version = reader.u32()?;
     if !reader.remaining().is_multiple_of(4) {
         return Err(parse_failure!());
     }
     let mut has_avif = major == *b"avif";
     let mut has_avis = major == *b"avis";
+    let mut compatible_brands = Vec::new();
     for bytes in reader.data[reader.offset..].chunks_exact(4) {
+        if compatible_brands.len() >= MAX_COMPATIBLE_BRANDS {
+            return Err(parse_failure!());
+        }
         let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
         has_avif |= brand == *b"avif";
         has_avis |= brand == *b"avis";
+        compatible_brands.push(brand);
     }
     if !has_avif && !has_avis {
         return Err(parse_failure!());
     }
-    Ok(Brands { major, has_avis })
+    Ok(Brands {
+        major,
+        minor_version,
+        compatible_brands,
+        has_avis,
+    })
 }
 
 fn parse_full_box(reader: &mut Reader<'_>) -> ParseResult<(u8, u32)> {

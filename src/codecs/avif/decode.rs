@@ -16,6 +16,8 @@ pub fn decode(
 ) -> CodecResult<(DecodedImage, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let mut extracted = extract_av1(data)?;
+    let file_type = super::samples::file_type(data)
+        .map_err(|error| error.context("AVIF container validation failed"))?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
@@ -40,6 +42,10 @@ pub fn decode(
             crate::codecs::error::check_cancelled(token)?;
             decode_native(data)?
         }
+    };
+    let image = {
+        let source = image.source.clone().with_avif_file_type(file_type);
+        image.with_source_descriptor(source)
     };
     let image = match transform {
         Some(transform) => {
@@ -161,6 +167,8 @@ pub fn decode_sequence(
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let mut extracted = extract_av1(data)?;
+    let file_type = super::samples::file_type(data)
+        .map_err(|error| error.context("AVIF container validation failed"))?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
@@ -181,6 +189,14 @@ pub fn decode_sequence(
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let (mut sequence, consumed) =
         decode_sequence_native(data, &validated, budget, consumed, token)?;
+    for frame in &mut sequence.frames {
+        let source = frame
+            .image
+            .source
+            .clone()
+            .with_avif_file_type(file_type.clone());
+        frame.image.source = source;
+    }
     if let Some(transform) = transform {
         for frame in &mut sequence.frames {
             let source = frame.image.source.clone().with_avif_transform(transform);
