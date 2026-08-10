@@ -3,19 +3,19 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `0f5fe1841ee9bc78a25a28f146ea8b12c41111db`, and benchmark-protocol
+revision `003df53b49ad0638412147756f39f81b2995fbae`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`9248b89a-ab1e-4615-bf4b-f584e6e7c4e8` (1,445/1,445 passed in 725 ms) and
-feature matrix `a9b9e7d6-f867-46b9-b98f-b4c5ba361f04` (passed in 17,583 ms);
+`0e60c846-0131-4302-b5ef-48e69fbb4b1f` (1,445/1,445 passed in 661 ms) and
+feature matrix `498a3f9f-3ed2-43e6-82ab-de65732e0bda` (passed in 14,421 ms);
 both recorded checkout HEAD
-`0f5fe1841ee9bc78a25a28f146ea8b12c41111db`.
+`003df53b49ad0638412147756f39f81b2995fbae`.
 The accepted Coverage MCP snapshot is
-`4497a38a-aad6-41fc-a5de-7df8bad30f08` from run
-`ecbb1ab4-84bc-4c2b-97a8-3c846788dd86`; it records 55,792/56,663 lines,
-8,001/8,214 branches, 3,112/3,208 functions, and 85,781/87,729 regions at
+`a7e5a4f6-3a2d-4dae-bb76-02775dffdd98` from run
+`5ac1169d-79ef-4a32-869f-c3e57bb0c684`; it records 55,793/56,664 lines,
+8,001/8,214 branches, 3,112/3,208 functions, and 85,783/87,731 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -8440,6 +8440,51 @@ functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
 
+Current acceptance record: WebP VP8 bounded partition-size table
+
+The production and Rust test/runtime slice is implemented at
+`003df53b49ad0638412147756f39f81b2995fbae`, following final-partition
+byte-staging removal at `0f5fe1841ee9bc78a25a28f146ea8b12c41111db`.
+`init_partitions` now keeps its three-byte partition-size table in a fixed
+21-byte stack array. The VP8 frame header derives the partition count from two
+bits, so the maximum of eight partitions requires only `3 * 8 - 3` size bytes;
+valid partition data, arithmetic-decoder word storage, decoded bytes, errors,
+and sink output remain unchanged.
+
+This is Rust implementation and Rust-only bounded-workspace evidence. Pillow
+exposes only final decoded bytes and errors, so the existing WebP fixture rows
+are byte/error regression evidence rather than proof of this stack boundary.
+Existing feature-gated Rust contracts and the feature matrix remain the
+non-Pillow evidence; no parity row, fixture-manifest row, diagnostic origin,
+new test function, coverage-only hook, or unit test was added. The clean
+schema-`@3` benchmark passed Pillow parity in 0.923416 s wall / 2.747843 user
+s / 0.173908 sys s / 261,259,264-byte peak RSS and the separate Rust-only
+feature-gate suite in 1.576009 s wall / 2.244138 user s / 0.098319 sys s /
+192,118,784-byte peak RSS. The native release build measured 7.300954 s wall
+with a 7,946,712-byte `rlib`; the WASM compile measured 2.098203 s wall with
+a 24,025,694-byte artifact. These are single-host/cache/toolchain
+observations, not comparative or universal performance claims; allocation
+counts, retained cache bytes, caller-buffer reuse, peak stack depth, and WASM
+runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`0e60c846-0131-4302-b5ef-48e69fbb4b1f` passed 1,445/1,445 checks in 661 ms.
+Exact-head feature-matrix run
+`498a3f9f-3ed2-43e6-82ab-de65732e0bda` passed all configured native/WASI lanes
+in 14,421 ms. Nightly LLVM run
+`5ac1169d-79ef-4a32-869f-c3e57bb0c684` passed 85/85 tests in 51,073 ms and
+ingested snapshot `a7e5a4f6-3a2d-4dae-bb76-02775dffdd98`: 55,793/56,664
+lines, 8,001/8,214 branches, 3,112/3,208 functions, and 85,783/87,731
+regions. The changed `src/codecs/webp/native/vp8.rs` projection is
+1,615/1,615 lines, 165/166 branches, 58/58 functions, and 2,917/2,920
+regions. Compared with the preceding final-partition snapshot, covered and
+total lines rose by 1/1, branch and function counts were unchanged, and
+covered and total regions rose by 2/2; no prior uncovered implementation path
+was suppressed. The aggregate shortfall is 871 lines, 213 branches, 96
+functions, and 1,948 regions. These are implementation/Rust coverage metrics,
+not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
+remains.
+
 Current acceptance record: WebP VP8 final-partition byte-staging removal
 
 The production and Rust test/runtime slice is implemented at
@@ -10851,7 +10896,9 @@ output-buffer reuse boundary is closed at
 allocation-reuse boundary is closed at
 `940c9d82124fe0f2fc9b597fa2d7fb80e94fc4ea`; the VP8 final-partition
 byte-staging boundary is closed at
-`0f5fe1841ee9bc78a25a28f146ea8b12c41111db`; finer
+`0f5fe1841ee9bc78a25a28f146ea8b12c41111db`; the VP8 partition-size table
+boundary is closed at
+`003df53b49ad0638412147756f39f81b2995fbae`; finer
 Huffman/tree and other
 uncheckpointed work remain open, as do JPEG
 interior work beyond
