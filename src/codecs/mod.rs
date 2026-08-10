@@ -1258,55 +1258,55 @@ pub(crate) fn encode_format_to_sink_with_token(
         }
     }
 
-    if format == ImageFormat::Ico {
-        #[cfg(not(feature = "ico"))]
-        {
-            return Err(ImageError::FeatureDisabled {
-                format,
-                feature: "ico",
-            });
-        }
-        #[cfg(feature = "ico")]
-        {
-            #[cfg(any(
-                not(all(
-                    feature = "jpeg",
-                    feature = "png",
-                    feature = "gif",
-                    feature = "bmp",
-                    feature = "tiff",
-                    feature = "webp",
-                    feature = "ico",
-                    feature = "avif"
-                )),
-                target_arch = "wasm32"
-            ))]
-            ensure_available(format)?;
-            let EncodeOptions::Ico(options) = options else {
-                return Err(option_format_mismatch(
-                    format,
-                    options,
-                    ImageErrorStage::StillEncode,
-                ));
-            };
-            let encoded = ico::encode::encode_to_sink(
-                image,
-                options,
-                policy,
-                CodecOperation::StillEncode,
-                token,
-                sink,
-            );
-            return into_image_result(
-                encoded.map_err(|error| error.context("encode")),
-                format,
-                ImageErrorStage::StillEncode,
-            )
-            .map(Some);
-        }
+    // Every supported still format above returns, so reaching this tail means
+    // the only remaining enum variant is ICO.  Document that invariant;
+    // the old final `if` created an impossible false branch in all-features
+    // coverage runs.
+    #[cfg(not(feature = "ico"))]
+    {
+        return Err(ImageError::FeatureDisabled {
+            format,
+            feature: "ico",
+        });
     }
-
-    Ok(None)
+    #[cfg(feature = "ico")]
+    {
+        #[cfg(any(
+            not(all(
+                feature = "jpeg",
+                feature = "png",
+                feature = "gif",
+                feature = "bmp",
+                feature = "tiff",
+                feature = "webp",
+                feature = "ico",
+                feature = "avif"
+            )),
+            target_arch = "wasm32"
+        ))]
+        ensure_available(format)?;
+        let EncodeOptions::Ico(options) = options else {
+            return Err(option_format_mismatch(
+                format,
+                options,
+                ImageErrorStage::StillEncode,
+            ));
+        };
+        let encoded = ico::encode::encode_to_sink(
+            image,
+            options,
+            policy,
+            CodecOperation::StillEncode,
+            token,
+            sink,
+        );
+        return into_image_result(
+            encoded.map_err(|error| error.context("encode")),
+            format,
+            ImageErrorStage::StillEncode,
+        )
+        .map(Some);
+    }
 }
 
 /// Try the structural writer for supported JPEG, PNG, BMP, GIF, WebP, TIFF,
@@ -1675,57 +1675,33 @@ pub(crate) fn encode_sequence_to_sink_with_token(
         }
     }
 
-    if format == ImageFormat::WebP {
-        #[cfg(not(feature = "webp"))]
-        {
-            return Err(ImageError::FeatureDisabled {
-                format,
-                feature: "webp",
-            });
-        }
-        #[cfg(feature = "webp")]
-        {
-            #[cfg(any(
-                not(all(
-                    feature = "jpeg",
-                    feature = "png",
-                    feature = "gif",
-                    feature = "bmp",
-                    feature = "tiff",
-                    feature = "webp",
-                    feature = "ico",
-                    feature = "avif"
-                )),
-                target_arch = "wasm32"
-            ))]
-            ensure_available(format)?;
-            if sequence.frames.len() > 1 {
-                let EncodeOptions::WebP(options) = options else {
-                    return Err(option_format_mismatch(
-                        format,
-                        options,
-                        ImageErrorStage::SequenceEncode,
-                    ));
-                };
-                let encoded = webp::encode::encode_sequence_to_sink(
-                    sequence,
-                    options,
-                    policy,
-                    CodecOperation::SequenceEncode,
-                    token,
-                    sink,
-                );
-                return into_image_result(
-                    encoded.map_err(|error| error.context("encode sequence")),
-                    format,
-                    ImageErrorStage::SequenceEncode,
-                )
-                .map(Some);
-            }
-            if sequence.frames.len() != 1 {
-                return Ok(None);
-            }
-            let frame = single_frame_for_sink(sequence, format)?;
+    // All earlier sequence formats return, so this tail is the WebP variant.
+    // The frame-count split remains real API behavior; only the old outer
+    // format check was an impossible false branch in the all-features build.
+    #[cfg(not(feature = "webp"))]
+    {
+        return Err(ImageError::FeatureDisabled {
+            format,
+            feature: "webp",
+        });
+    }
+    #[cfg(feature = "webp")]
+    {
+        #[cfg(any(
+            not(all(
+                feature = "jpeg",
+                feature = "png",
+                feature = "gif",
+                feature = "bmp",
+                feature = "tiff",
+                feature = "webp",
+                feature = "ico",
+                feature = "avif"
+            )),
+            target_arch = "wasm32"
+        ))]
+        ensure_available(format)?;
+        if sequence.frames.len() > 1 {
             let EncodeOptions::WebP(options) = options else {
                 return Err(option_format_mismatch(
                     format,
@@ -1733,8 +1709,8 @@ pub(crate) fn encode_sequence_to_sink_with_token(
                     ImageErrorStage::SequenceEncode,
                 ));
             };
-            let encoded = webp::encode::encode_to_sink(
-                &frame.image,
+            let encoded = webp::encode::encode_sequence_to_sink(
+                sequence,
                 options,
                 policy,
                 CodecOperation::SequenceEncode,
@@ -1748,9 +1724,32 @@ pub(crate) fn encode_sequence_to_sink_with_token(
             )
             .map(Some);
         }
+        if sequence.frames.len() != 1 {
+            return Ok(None);
+        }
+        let frame = single_frame_for_sink(sequence, format)?;
+        let EncodeOptions::WebP(options) = options else {
+            return Err(option_format_mismatch(
+                format,
+                options,
+                ImageErrorStage::SequenceEncode,
+            ));
+        };
+        let encoded = webp::encode::encode_to_sink(
+            &frame.image,
+            options,
+            policy,
+            CodecOperation::SequenceEncode,
+            token,
+            sink,
+        );
+        return into_image_result(
+            encoded.map_err(|error| error.context("encode sequence")),
+            format,
+            ImageErrorStage::SequenceEncode,
+        )
+        .map(Some);
     }
-
-    Ok(None)
 }
 
 #[cfg(any(
