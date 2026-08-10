@@ -1042,27 +1042,36 @@ impl AvifItemIccProfile {
 
 /// A raw property associated with a non-primary AVIF item.
 ///
-/// The property kind and payload are retained exactly as stored in the
-/// `ipco` property box, while the item identifier remains source-local. This
-/// includes known declarations that have a typed primary-item projection,
-/// non-alpha `auxC`/`auxi` auxiliary-type declarations, and properties that
-/// remain opaque. This is container provenance only: the property is not
-/// replayed, interpreted, or applied to decoded samples.
+/// The property kind, payload, and `ipma` essential-association bit are
+/// retained exactly as stored in the source, while the item identifier remains
+/// source-local. This includes known declarations that have a typed
+/// primary-item projection, non-alpha `auxC`/`auxi` auxiliary-type
+/// declarations, and properties that remain opaque. This is container
+/// provenance only: the property is not replayed, interpreted, or applied to
+/// decoded samples.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvifItemProperty {
     item_id: u32,
     kind: [u8; 4],
     data: Vec<u8>,
+    essential: bool,
 }
 
 impl AvifItemProperty {
-    /// Create a source-local raw AVIF item property.
+    /// Create a non-essential source-local raw AVIF item property.
     #[must_use]
     pub fn new(item_id: u32, kind: [u8; 4], data: Vec<u8>) -> Self {
+        Self::new_with_essential(item_id, kind, data, false)
+    }
+
+    /// Create a source-local raw AVIF item property with its association bit.
+    #[must_use]
+    pub fn new_with_essential(item_id: u32, kind: [u8; 4], data: Vec<u8>, essential: bool) -> Self {
         Self {
             item_id,
             kind,
             data,
+            essential,
         }
     }
 
@@ -1082,6 +1091,12 @@ impl AvifItemProperty {
     #[must_use]
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    /// Return whether the source marked this property association essential.
+    #[must_use]
+    pub const fn is_essential(&self) -> bool {
+        self.essential
     }
 }
 
