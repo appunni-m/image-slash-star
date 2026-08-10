@@ -2744,6 +2744,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     overlong_clap[..clap_payload.len()].copy_from_slice(&clap_payload);
     let _ = parse_clap(&overlong_clap);
     let duplicate_rotation = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
         properties: vec![
             Property::Rotation {
                 value: AvifRotation::Zero,
@@ -2770,6 +2774,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = duplicate_rotation.source_descriptor(1);
     let duplicate_pixel_aspect_ratio = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
         properties: vec![
             Property::PixelAspectRatio {
                 value: AvifPixelAspectRatio::new(4, 3),
@@ -2796,6 +2804,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = duplicate_pixel_aspect_ratio.source_descriptor(1);
     let duplicate_clean_aperture = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
         properties: vec![
             Property::CleanAperture {
                 value: AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1),
@@ -2862,6 +2874,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = std::hint::black_box(duplicate_details.details());
     let duplicate_mirror = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"av01",
+        }],
         properties: vec![
             Property::Mirror {
                 value: AvifMirrorAxis::TopBottom,
@@ -2887,6 +2903,173 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_mirror.source_descriptor(1);
+
+    // These duplicate-property and duplicate-relationship states are valid
+    // parser witnesses, but a Pillow-generated file will not expose the
+    // native source projection's intermediate rejection. Keep them beside the
+    // existing transform witnesses so each defensive rule has a direct
+    // construction rather than relying on a malformed byte mutation to find
+    // it accidentally.
+    let duplicate_ispe = Meta {
+        items: vec![
+            Item {
+                id: 1,
+                kind: *b"av01",
+            },
+            Item {
+                id: 2,
+                kind: *b"av01",
+            },
+        ],
+        properties: vec![
+            Property::Ispe {
+                width: 1,
+                height: 1,
+            },
+            Property::Ispe {
+                width: 2,
+                height: 2,
+            },
+        ],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 2,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_ispe.non_primary_item_plane_properties(1);
+    let duplicate_pixi = Meta {
+        items: vec![
+            Item {
+                id: 1,
+                kind: *b"av01",
+            },
+            Item {
+                id: 2,
+                kind: *b"av01",
+            },
+        ],
+        properties: vec![Property::Pixi { depth: 8 }, Property::Pixi { depth: 10 }],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 2,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_pixi.non_primary_item_plane_properties(1);
+    let duplicate_av1c = Meta {
+        items: vec![
+            Item {
+                id: 1,
+                kind: *b"av01",
+            },
+            Item {
+                id: 2,
+                kind: *b"av01",
+            },
+        ],
+        properties: vec![
+            Property::Av1C {
+                depth: 8,
+                chroma_sample_position: AvifChromaSamplePosition::Unknown,
+                data: vec![0x81, 0, 0, 0],
+            },
+            Property::Av1C {
+                depth: 10,
+                chroma_sample_position: AvifChromaSamplePosition::Unknown,
+                data: vec![0x81, 0, 0, 0],
+            },
+        ],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 2,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_av1c.non_primary_item_codec_properties(1);
+    let duplicate_alpha_targets = Meta {
+        properties: vec![
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: Vec::new(),
+            },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: Vec::new(),
+            },
+        ],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 3,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        references: vec![
+            Reference {
+                kind: *b"auxl",
+                from_id: 2,
+                to_id: 1,
+            },
+            Reference {
+                kind: *b"auxl",
+                from_id: 3,
+                to_id: 1,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_alpha_targets.alpha_targeting(1);
+
+    let mut too_many_brands = Vec::new();
+    too_many_brands.extend_from_slice(b"avif");
+    too_many_brands.extend_from_slice(&0_u32.to_be_bytes());
+    for _ in 0..=MAX_COMPATIBLE_BRANDS {
+        too_many_brands.extend_from_slice(b"mif1");
+    }
+    let _ = parse_ftyp(&too_many_brands);
+    let mut full_properties = Meta {
+        properties: (0..MAX_PROPERTIES)
+            .map(|_| Property::Other {
+                kind: *b"free",
+                data: Vec::new(),
+            })
+            .collect(),
+        ..Meta::default()
+    };
+    let one_property = coverage_box(*b"free", &[]);
+    let _ = parse_ipco(&one_property, &mut full_properties, &mut Budget::default());
     for (kind, urn) in [
         (*b"auxi", ALPHA_URN_HEVC),
         (*b"auxC", b"not-alpha".as_slice()),
