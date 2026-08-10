@@ -73,10 +73,13 @@ type HuffmanCodeGroup = [HuffmanTree; HUFFMAN_CODES_PER_META_CODE];
 
 const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 256, 40];
 // The ordinary VP8L alphabets fit in 280 symbols. The green alphabet grows
-// beyond this only when the optional color cache is enabled, so retain that
-// enlarged case on the heap while keeping the common temporary workspace on
-// the stack.
+// beyond this only when the optional color cache is enabled. Its maximum is
+// still format-bounded by the 11-bit color-cache field, so one fixed temporary
+// workspace covers both the ordinary and enlarged cases.
 const MAX_STACK_HUFFMAN_SYMBOLS: usize = 256 + 24;
+const MAX_COLOR_CACHE_BITS: u8 = 11;
+const MAX_HUFFMAN_SYMBOLS_WITH_COLOR_CACHE: usize =
+    MAX_STACK_HUFFMAN_SYMBOLS + (1usize << MAX_COLOR_CACHE_BITS);
 
 const NUM_TRANSFORM_TYPES: usize = 4;
 const MAX_COLOR_INDEXING_TABLE_BYTES: usize = 256 * 4;
@@ -478,10 +481,9 @@ impl<'a> LosslessDecoder<'a> {
         // reserve the bounded group workspace once instead of growing it as
         // each Huffman group is parsed.
         let mut hufftree_groups = Vec::with_capacity(num_huff_groups as usize);
-        // The enlarged green alphabet is the only Huffman code-length case
-        // that remains heap-backed. Reuse its temporary storage across the
-        // sequential trees instead of allocating once per non-simple tree.
-        let mut dynamic_code_lengths = Vec::new();
+        // Reuse the format-bounded code-length workspace across the sequential
+        // trees instead of allocating once per non-simple tree.
+        let mut dynamic_code_lengths = [0u16; MAX_HUFFMAN_SYMBOLS_WITH_COLOR_CACHE];
 
         for _i in 0..num_huff_groups {
             let mut group: HuffmanCodeGroup = Default::default();
@@ -522,7 +524,7 @@ impl<'a> LosslessDecoder<'a> {
     fn read_huffman_code(
         &mut self,
         alphabet_size: u16,
-        dynamic_code_lengths: &mut Vec<u16>,
+        dynamic_code_lengths: &mut [u16; MAX_HUFFMAN_SYMBOLS_WITH_COLOR_CACHE],
     ) -> Result<HuffmanTree, DecodingError> {
         let simple = self.bit_reader.read_bits::<u8>(1)? == 1;
 
@@ -562,13 +564,12 @@ impl<'a> LosslessDecoder<'a> {
                 )?;
                 HuffmanTree::build_implicit(&code_lengths[..usize::from(alphabet_size)])
             } else {
-                // A color-cache green alphabet can reach 2,328 symbols. It
-                // remains dynamically sized because that representation is
-                // not bounded by the ordinary 280-symbol stack workspace.
-                // Reuse the allocation across the sequential trees in this
-                // image stream; the Huffman builder copies the lengths into
-                // its owned tree before the scratch is used again.
-                dynamic_code_lengths.resize(usize::from(alphabet_size), 0);
+                // A color-cache green alphabet can reach 2,328 symbols, which
+                // is bounded by the format's 11-bit color-cache field. Reuse
+                // this fixed workspace across the sequential trees; the
+                // Huffman builder copies the lengths into its owned tree before
+                // the scratch is used again.
+                let dynamic_code_lengths = &mut dynamic_code_lengths[..usize::from(alphabet_size)];
                 dynamic_code_lengths.fill(0);
                 self.read_huffman_code_lengths(
                     &code_length_code_lengths,
@@ -828,7 +829,7 @@ impl<'a> LosslessDecoder<'a> {
         if self.bit_reader.read_bits::<u8>(1)? == 1 {
             let code_bits = self.bit_reader.read_bits::<u8>(4)?;
 
-            if !(1..=11).contains(&code_bits) {
+            if !(1..=MAX_COLOR_CACHE_BITS).contains(&code_bits) {
                 return Err(DecodingError::InvalidColorCacheBits);
             }
 
