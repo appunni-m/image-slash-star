@@ -276,10 +276,7 @@ def validate(table: dict) -> None:
         if lanes is None or set(lanes) != set(LANES):
             raise RuntimeError(f"{target} lanes must be exactly {LANES}")
         for lane, row in lanes.items():
-            expected_target = {
-                "native": "native",
-                "wasm32-wasip1": "wasm32-wasip1",
-            }[target]
+            expected_target = "native" if target == "native" else "wasm32"
             if row.get("lane") != lane or row.get("target") != expected_target:
                 raise RuntimeError(f"{target}/{lane} row identity mismatch")
             formats = {entry.get("format") for entry in row.get("formats", [])}
