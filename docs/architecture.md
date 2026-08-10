@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `c09adc987d6bd723121907b808e643002d2126f0`; the claim-ledger fixture
+revision `24af4fe2378e9cf087615a542c537065eee94f05`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`30ae5925-005d-4c78-a874-3ed2c30a0592` (1,445/1,445 passed in 597 ms) at
+`5b3c81f1-8323-4664-b7b3-5eb59ee2d4a3` (1,445/1,445 passed in 658 ms) at
 this revision. Feature matrix run
-`15088e48-3f62-4212-ad5c-ce27235a28e2` terminated with 44 passed and 1 failed;
+`441c9ab4-94a3-4fe3-990c-9a8da9ba9dab` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`47881a25-9151-4f92-ad82-035615d5235e` likewise terminated 84/85 and ingested
+`6e21fe2c-8217-4882-b448-34dadcd5598c` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1103,6 +1103,14 @@ avoid an additional transient final-output allocation. Encoded bytes, errors,
 token-aware bit checkpoints, and sink output remain unchanged. Pillow parity
 sees only final bytes/errors; output ownership and retained capacity are
 Rust-only evidence.
+
+Ordinary no-token lossy VP8 frame assembly pre-sizes its final bitstream from
+the fixed frame header and the already encoded first-partition and coefficient
+lengths, avoiding growth reallocations while those partitions are appended.
+The token-aware path retains its prior header allocation and checkpoint
+behavior. Encoded bytes, errors, cancellation checkpoints, and sink output
+remain unchanged. Pillow parity sees only final bytes/errors; allocation
+capacity and reallocation counts are Rust-only evidence.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
