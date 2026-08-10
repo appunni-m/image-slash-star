@@ -1268,15 +1268,28 @@ fn encode_to_sink_with_policy_impl(
         budget_token.as_ref(),
         sink,
     )? {
-        return finish_sink(sink, format, ImageErrorStage::StillEncode, written);
+        return finish_sink(
+            sink,
+            format,
+            ImageErrorStage::StillEncode,
+            written,
+            budget_token.as_ref(),
+        );
     }
     let encoded = encode_with_policy(img, format, opts, policy)?;
-    write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
+    write_sink_all(
+        sink,
+        &encoded,
+        format,
+        ImageErrorStage::StillEncode,
+        budget_token.as_ref(),
+    )
 }
 
 /// Encode a still image with cooperative cancellation and deliver it to a
 /// caller-owned sink. Structural writers may stop after an already-written
-/// prefix when the token fires between writes.
+/// prefix when the token fires between writes or immediately after the final
+/// segment, before sink finalization.
 pub fn encode_to_sink_with_token(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1320,10 +1333,22 @@ fn encode_to_sink_with_token_and_policy_impl(
         Some(effective_token),
         sink,
     )? {
-        return finish_sink(sink, format, ImageErrorStage::StillEncode, written);
+        return finish_sink(
+            sink,
+            format,
+            ImageErrorStage::StillEncode,
+            written,
+            Some(effective_token),
+        );
     }
     let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
-    write_sink_all(sink, &encoded, format, ImageErrorStage::StillEncode)
+    write_sink_all(
+        sink,
+        &encoded,
+        format,
+        ImageErrorStage::StillEncode,
+        Some(effective_token),
+    )
 }
 
 /// Encode a still image or animation into a caller-owned output sink.
@@ -1379,15 +1404,28 @@ fn encode_sequence_to_sink_with_policy_impl(
         budget_token.as_ref(),
         sink,
     )? {
-        return finish_sink(sink, format, ImageErrorStage::SequenceEncode, written);
+        return finish_sink(
+            sink,
+            format,
+            ImageErrorStage::SequenceEncode,
+            written,
+            budget_token.as_ref(),
+        );
     }
     let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
-    write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
+    write_sink_all(
+        sink,
+        &encoded,
+        format,
+        ImageErrorStage::SequenceEncode,
+        budget_token.as_ref(),
+    )
 }
 
 /// Encode a still image or animation with cooperative cancellation and
 /// deliver it to a caller-owned sink. Structural writers may stop after an
-/// already-written prefix when the token fires between writes.
+/// already-written prefix when the token fires between writes or immediately
+/// after the final segment, before sink finalization.
 pub fn encode_sequence_to_sink_with_token(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1438,10 +1476,22 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
         Some(effective_token),
         sink,
     )? {
-        return finish_sink(sink, format, ImageErrorStage::SequenceEncode, written);
+        return finish_sink(
+            sink,
+            format,
+            ImageErrorStage::SequenceEncode,
+            written,
+            Some(effective_token),
+        );
     }
     let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
-    write_sink_all(sink, &encoded, format, ImageErrorStage::SequenceEncode)
+    write_sink_all(
+        sink,
+        &encoded,
+        format,
+        ImageErrorStage::SequenceEncode,
+        Some(effective_token),
+    )
 }
 
 /// Write complete encoded bytes through a trait object so the sink error path
@@ -1451,6 +1501,7 @@ fn write_sink_all(
     bytes: &[u8],
     format: ImageFormat,
     stage: ImageErrorStage,
+    token: Option<&CancellationToken>,
 ) -> ImageResult<usize> {
     sink.write_all(bytes)
         .map_err(|error| ImageError::OutputWrite {
@@ -1458,7 +1509,7 @@ fn write_sink_all(
             message: error.to_string(),
             stage: Some(stage),
         })?;
-    finish_sink(sink, format, stage, bytes.len())
+    finish_sink(sink, format, stage, bytes.len(), token)
 }
 
 fn finish_sink(
@@ -1466,7 +1517,14 @@ fn finish_sink(
     format: ImageFormat,
     stage: ImageErrorStage,
     written: usize,
+    token: Option<&CancellationToken>,
 ) -> ImageResult<usize> {
+    if token.is_some_and(CancellationToken::is_cancelled) {
+        return Err(ImageError::Cancelled {
+            format: Some(format),
+            stage: Some(stage),
+        });
+    }
     sink.flush().map_err(|error| ImageError::OutputWrite {
         format: Some(format),
         message: error.to_string(),

@@ -6394,6 +6394,30 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         }
     }
 
+    struct FinalCancellingSink {
+        bytes: Vec<u8>,
+        token: image_slash_star::CancellationToken,
+        writes: usize,
+        cancel_at: usize,
+        flushes: usize,
+    }
+
+    impl OutputSink for FinalCancellingSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            self.bytes.extend_from_slice(bytes);
+            if self.writes == self.cancel_at {
+                self.token.cancel();
+            }
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            Ok(())
+        }
+    }
+
     struct FlushSink {
         bytes: Vec<u8>,
         flushes: usize,
@@ -6575,6 +6599,45 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(&structural.bytes[..8], b"\x89PNG\r\n\x1a\n");
         assert_eq!(&structural.bytes[8..12], &13u32.to_be_bytes());
         assert_eq!(&structural.bytes[12..16], b"IHDR");
+
+        // Cancellation during the final accepted segment must be observed
+        // before flush. This fixture-backed sink boundary is Rust-only:
+        // Pillow has no caller token, sink prefix, or flush result.
+        let final_cancel_token = image_slash_star::CancellationToken::new();
+        let mut final_cancelling = FinalCancellingSink {
+            bytes: Vec::new(),
+            token: final_cancel_token.clone(),
+            writes: 0,
+            cancel_at: structural.writes,
+            flushes: 0,
+        };
+        let final_cancel_error = match image_slash_star::encode_to_sink_with_token(
+            &decoded.content,
+            ImageFormat::Png,
+            &options,
+            &final_cancel_token,
+            &mut final_cancelling,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "final-segment cancellation unexpectedly wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            final_cancel_error.kind(),
+            image_slash_star::ImageErrorKind::Cancelled
+        );
+        assert_eq!(final_cancel_error.format(), Some(ImageFormat::Png));
+        assert_eq!(
+            final_cancel_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(final_cancelling.writes, structural.writes);
+        assert_eq!(final_cancelling.bytes, expected);
+        assert_eq!(final_cancelling.flushes, 0);
 
         // A sink can cancel between structural writes. The already-delivered
         // prefix is intentionally observable; cleanup/rollback remains a
