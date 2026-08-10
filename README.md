@@ -296,6 +296,10 @@ only and do not alter decoded pixels. For a primary grid,
 IDs, and `SourceDescriptor::avif_grid_properties()` returns the validated
 version, raw flags, row/column counts, and declared output canvas. Tile
 placement and composition remain private to decoding.
+Non-primary non-alpha `auxC`/`auxi` declarations retain their exact
+source-local kind and payload through
+`SourceDescriptor::avif_item_properties()`; this is provenance only and does
+not select or decode auxiliary payloads.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
@@ -391,7 +395,10 @@ relationship list also retains the committed grid fixture's alpha links
 Bounded `iref` edges, including `prem`, are retained as source provenance;
 the committed grid fixture also retains its `2 × 1`, `80 × 80`, version-`0`
 payload topology through `SourceDescriptor::avif_grid_properties()`;
-track-only, richer item graphs, and grid tile placement/composition remain open.
+non-alpha `auxC`/`auxi` declarations retain exact source-local kind/payload
+through `SourceDescriptor::avif_item_properties()`, while track-only
+auxiliary payload selection/decoded content, richer item graphs, and grid tile
+placement/composition remain open.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it

@@ -3,21 +3,21 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `24af4fe2378e9cf087615a542c537065eee94f05`, and benchmark-protocol
+revision `569df3fa9c58024b1473f263682785ad8473ec9d`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`5b3c81f1-8323-4664-b7b3-5eb59ee2d4a3` (1,445/1,445 passed in 658 ms) at
+`08e739fd-6976-4fe0-bde3-a1119f0795a2` (1,445/1,445 passed in 1,047 ms) at
 this revision. Feature matrix run
-`441c9ab4-94a3-4fe3-990c-9a8da9ba9dab` terminated with 44 passed and 1 failed;
+`41328c00-f127-4348-a4fb-15b9bd43bd17` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`6e21fe2c-8217-4882-b448-34dadcd5598c` likewise terminated 84/85 with that
+`e1fa61d1-0691-4130-8654-4f35e78b45bd` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
-ingested. The same failure was reproduced from a clean copy of the preceding
-`879ddc6` source; the current WebP change does not touch that path. The
-accepted Coverage MCP snapshot therefore remains
+ingested. The same native failure was reproduced from a clean copy of the
+preceding `879ddc6` source, so it is not evidence against the current
+source-property retention slice. The accepted Coverage MCP snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -1534,6 +1534,13 @@ Minute gaps:
 | AVF-033 | Grid-derived images and gain maps may use different grids/dimensions from the primary image. The current grid fixture proves and retains the ordered derived-item list, validated grid version/flags/row/column/output-canvas topology, and alpha-to-derived-item relationships, but flattening the grid into one canvas still loses tile placement/composition and partial-failure context. | Retain per-tile placement and validate every tile independently; composition stays private to decode until a composable public model is justified. |
 | AVF-034 | Fragmented sequence files, edit lists, sample groups, sample-description changes, sync-sample tables, and timestamp offsets have no capability statement. | Classify each BMFF track feature before claiming general animated AVIF support. |
 | AVF-035 | Compatible brands, major brand, minor version, still/sequence brands, and the complete whole-file/item AV1 codec-capability view are not exposed together, so detection, inspection, and actual decoder capability can disagree even though bounded non-primary `av1C` declarations are now retained. | Return a bounded FileTypeBox/source descriptor and generate the capability decision from it. |
+
+Roadmap precision: the exact non-alpha `auxC`/`auxi` type declaration
+subcategory is now closed through `SourceDescriptor::avif_item_properties()`,
+which retains source-local item ID, original four-byte kind, and exact payload.
+References above to non-alpha or auxiliary payload semantics, selection,
+decoded content, composition, plane range/quality, or richer item graphs
+exclude that declaration-retention subcategory and remain open.
 
 ### Cargo features, targets, artifacts, and downstream use
 
@@ -7115,6 +7122,35 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current implementation record: AVIF non-alpha auxiliary-property retention
+
+The production and Rust test/runtime slice is implemented at
+`569df3fa9c58024b1473f263682785ad8473ec9d`. The portable sample extractor and
+inspect-side AVIF parser now retain the exact non-alpha `auxC`/`auxi` property
+kind and full-box payload as ordered `AvifItemProperty` records for
+non-primary items. Alpha declarations retain the established
+`SourceAlpha::Auxiliary` and auxiliary-relationship behavior. This is
+source-provenance evidence only: Pillow exposes no item-level auxiliary
+property result, so the existing feature-gated
+`source_alpha_matches_the_container_contract` contract mutates the committed
+`alpha.avif` bytes only in memory and adds no Pillow parity row,
+fixture-manifest row, diagnostic origin, coverage-only hook, or unit test. The
+inspect assertion is reached before the known native decode failure; still and
+sequence retention assertions remain part of the same contract when that
+native lane is available.
+
+Exact-head managed Pillow parity run
+`08e739fd-6976-4fe0-bde3-a1119f0795a2` passed 1,445/1,445 checks in 1,047 ms.
+Feature matrix run `41328c00-f127-4348-a4fb-15b9bd43bd17` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`e1fa61d1-0691-4130-8654-4f35e78b45bd` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice. The accepted snapshot remains the
+revision-bound record above. These are Rust source-provenance, feature-gated,
+and managed test records, not Pillow item-property parity or proof that
+auxiliary payloads were selected, decoded, or composed.
+
 Current implementation record: WebP lossy VP8 no-token frame capacity planning
 
 The production slice is implemented at
@@ -11900,12 +11936,15 @@ short-write/rollback semantics, and the other roadmap categories below.
    relationship getters, bounded `iref` edges are now retained through
    `SourceDescriptor::avif_item_relationships()`, and filtered `prem` edges
    through `SourceDescriptor::avif_premultiplied_relationships()`;
-   track-only and non-alpha payload semantics, known non-primary/auxiliary color
-   forms beyond typed CICP/ICC and raw `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap`, grid tile placement/composition, plane
-   range/quality semantics, and richer graph semantics remain open; unknown
-   associated item properties, including those six known declarations, are now
-   retained as raw source-local records through `avif_item_properties()`, and
-   known `ispe`/`pixi` declarations are
+   track-only auxiliary payload selection/decoded content and non-alpha
+   auxiliary semantics beyond exact `auxC`/`auxi` declaration retention,
+   known non-primary/auxiliary color forms beyond typed CICP/ICC and raw
+   `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap`, grid tile
+   placement/composition, plane range/quality semantics, and richer graph
+   semantics remain open; unknown associated item properties, including those
+   six known declarations, and non-alpha `auxC`/`auxi` type declarations are
+   now retained as raw source-local records through
+   `avif_item_properties()`, and known `ispe`/`pixi` declarations are
    retained as typed source-local records through `avif_item_plane_properties()`;
    non-primary/auxiliary `av1C` declarations are retained through
    `avif_item_codec_properties()` with exact payload, depth, and chroma-position

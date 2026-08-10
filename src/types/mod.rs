@@ -1044,9 +1044,10 @@ impl AvifItemIccProfile {
 ///
 /// The property kind and payload are retained exactly as stored in the
 /// `ipco` property box, while the item identifier remains source-local. This
-/// includes known declarations that have a typed primary-item projection and
-/// properties that remain opaque. This is container provenance only: the
-/// property is not replayed, interpreted, or applied to decoded samples.
+/// includes known declarations that have a typed primary-item projection,
+/// non-alpha `auxC`/`auxi` auxiliary-type declarations, and properties that
+/// remain opaque. This is container provenance only: the property is not
+/// replayed, interpreted, or applied to decoded samples.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvifItemProperty {
     item_id: u32,
