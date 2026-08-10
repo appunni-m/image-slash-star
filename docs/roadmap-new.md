@@ -81,6 +81,25 @@ Rolling rules:
 6. Worktrees are disposable execution spaces. Only reviewed commits are
    integrated into `main`; agents do not push directly.
 
+## Current v1 execution status
+
+All five v1 slices were executed in separate local clones from the same
+roadmap revision. These rows describe what is on `main` now; they do not claim
+that an entire workstream is finished because one slice passed.
+
+| Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
+| --- | --- | --- | --- |
+| W1 | Pillow-visible packed JPEG `L1` input expands to luminance output | Held in review checkout; not integrated | Isolated JPEG parity passed 1/1 and local checks passed. Its manifest/projection changes need a fresh same-revision parity and Coverage MCP acceptance before their hashes can enter the claim ledger. Native AVIF remains the current all-feature blocker. |
+| W2 | Cancellation during the final output-sink segment is observed before `flush` | Integrated as `28bd91d` | Existing fixture-backed feature-gate contract passes 45/45. This is Rust-only, so it has no Pillow row. A fresh accepted coverage snapshot is still required. |
+| W3 | GIF dispatch rejects PNG options with a typed parameter error and zero writes | Integrated as `3c48f2d` | Existing `static.gif` fixture and feature-gate contract pass 45/45; origin verifier passes. A fresh accepted coverage snapshot is still required. |
+| W4 | Native/WASI/unknown-target capability distinction | Held in review checkout; not integrated | Native and WASI feature-gate checks plus unknown-target compile checks passed. Capability-table changes need a fresh same-revision acceptance snapshot; native AVIF remains the blocker. |
+| W5 | Machine-checked catalog of contracts Pillow cannot prove | Integrated as `f8a372a` | Nine categories are mapped: 8 covered by existing Rust-only evidence and 1 explicitly planned. The verifier, claim ledger, docs audit, and CI wiring pass. |
+
+The held W1 and W4 commits remain recoverable in their isolated review
+checkouts. They are intentionally not counted as accepted `main` behavior
+until the evidence ledger and coverage snapshot can refer to the same code
+revision.
+
 ## Contract catalog: behavior Pillow cannot prove
 
 This is the separate Rust-only list. “Cannot prove” means Pillow may have a
@@ -132,7 +151,7 @@ were the same unit.
 | Baseline implementation state | clean at `f8e57d6` | The implementation state being measured was already pushed to `origin/main` before this roadmap rewrite. |
 
 The separate feature-gated contract has 45 non-Pillow assertions per native
-and `wasm32-wasip1` lane. Its last managed run was 44/45 because the native
+and `wasm32-wasip1` lane. The current managed run is 44/45 because the native
 AVIF alpha decoder still returns status 5. That failure is real test evidence,
 not a reason to relabel the source-descriptor work as Pillow parity.
 
@@ -164,6 +183,14 @@ That snapshot is `44cec31e-7345-4673-a9a4-e9f8fa21cc08`, measured at
 100% claim. The next valid coverage result must be generated at the current
 code revision and ingested by Coverage MCP; a stale or skipped artifact means
 “not measured,” never “unchanged.”
+
+The latest current-revision runtime matrix is Coverage MCP run
+`9484b9ce-5aa2-4185-a114-a0c20762bec5` at `f05d2771b1799b842c9579ad73f78bb415708a33`:
+44/45 assertions passed. The only failure is
+`source_alpha_matches_the_container_contract` in native AVIF, where the
+decoder returns status 5; the WASI WebP and WASI AVIF lanes passed. This
+command does not emit a coverage artifact, so the aggregate coverage numbers
+above remain the accepted baseline rather than fresh coverage for `main`.
 
 The largest measured weak areas are:
 
