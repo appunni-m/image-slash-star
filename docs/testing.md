@@ -3,19 +3,19 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `aea0c723a07e4ae3a8ac43fe76824197c5016427`, and benchmark-protocol
+revision `c8b3cbe6815de601795c5f5482ce0a3738c31b9d`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`bda2f29b-f49b-44bc-abd9-1a866c20a493` (1,445/1,445 passed in 8,024 ms) and
-feature matrix `e7e77c73-e0cf-4111-a554-c2db85dd7a57` (passed in 29,627 ms);
+`21bd0d97-6209-415f-8568-7713b3be1f62` (1,445/1,445 passed in 7,902 ms) and
+feature matrix `109d0d03-8498-4b94-9f2c-15ddbedc9ddd` (passed in 33,368 ms);
 both recorded checkout HEAD
-`aea0c723a07e4ae3a8ac43fe76824197c5016427`.
+`c8b3cbe6815de601795c5f5482ce0a3738c31b9d`.
 The accepted Coverage MCP snapshot is
-`453dca6d-6dcd-44c4-819e-34978e048685` from run
-`12093cdf-3471-47f6-a451-201e20000124`; it records 55,901/56,778 lines,
-8,011/8,228 branches, 3,122/3,218 functions, and 85,951/87,909 regions at
+`46bdf0fa-d59a-40ab-9a1c-f0e85f28e02b` from run
+`fdb26765-f319-434c-a273-a74b6456c052`; it records 55,920/56,797 lines,
+8,011/8,228 branches, 3,122/3,218 functions, and 85,968/87,926 regions at
 the same source revision. The histogram file records 872/873 lines, 184/184
 branches, and 43/43 functions; predictor records 366/366 lines, 68/68
 branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
@@ -638,6 +638,55 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP VP8L color-indexing transform table storage
+
+The production and Rust test/runtime slice is implemented at
+`c8b3cbe6815de601795c5f5482ce0a3738c31b9d`, following in-place VP8L palette
+packing at `aea0c723a07e4ae3a8ac43fe76824197c5016427`. VP8L color-indexing
+transforms are bounded to 256 RGBA entries, so `LosslessDecoder` now retains
+the decoded table in decoder-owned `[u8; 1024]` storage and
+`ColorIndexingTransform` keeps only the table size. The table remains alive
+until inverse transforms run in reverse order; reusing the main decoded image
+buffer would lose it before that point. The change removes the color-map heap
+allocation while preserving map adjustment, lookup order, decoded bytes,
+errors, and sink output.
+
+This is Rust implementation and Rust-only retained-storage evidence. The
+existing WebP color-index fixture rows provide Pillow byte/error regression,
+not proof of storage ownership or allocation counts; the feature-gated Rust
+contracts and feature matrix are the separate non-Pillow evidence. No parity
+row, fixture-manifest row, diagnostic origin, new test function,
+coverage-only hook, or unit test was added.
+
+The clean schema-`@3` benchmark measured Pillow parity at 1.290621 s wall /
+3.399657 user s / 0.272636 sys s / 291,880,960-byte peak RSS and the separate
+Rust-only feature-gate workload at 3.661911 s wall / 3.652647 user s /
+0.378899 sys s / 270,696,448-byte peak RSS. The native release build measured
+8.533493 s wall / 34.118605 user s / 0.386520 sys s / 894,255,104-byte peak
+RSS and produced a 7,968,632-byte `rlib`; the WASM compile measured 3.779423 s
+wall / 19.476761 user s / 1.134973 sys s / 930,447,360-byte peak RSS and
+produced a 24,076,058-byte artifact. These are host/cache/toolchain
+observations, not comparative or universal performance claims; allocation
+counts, retained cache bytes, caller-buffer reuse, peak stack/recursion, and
+WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`21bd0d97-6209-415f-8568-7713b3be1f62` passed 1,445/1,445 checks in 7,902 ms.
+Exact-head feature-matrix run
+`109d0d03-8498-4b94-9f2c-15ddbedc9ddd` passed all configured native/WASM lanes
+in 33,368 ms. Nightly LLVM run
+`fdb26765-f319-434c-a273-a74b6456c052` passed 85/85 tests in 67,046 ms and
+ingested snapshot `46bdf0fa-d59a-40ab-9a1c-f0e85f28e02b`: 55,920/56,797
+lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,968/87,926
+regions. Compared with preceding accepted snapshot
+`453dca6d-6dcd-44c4-819e-34978e048685`, covered/total lines rose 19/19,
+branches 0/0, functions 0/0, and regions 17/17. The changed lossless decoder
+projection is 1,255/1,257 lines, 130/134 branches, 53/53 functions, and
+1,620/1,624 regions; the transform projection is 452/452 lines, 30/30
+branches, 25/25 functions, and 883/883 regions. The known LLVM JSON
+segment-normalization warning remains. These are implementation/Rust coverage
+metrics, not Pillow-parity coverage.
 
 Current acceptance record: WebP VP8L in-place palette packing
 
