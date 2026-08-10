@@ -129,7 +129,7 @@ fn encode_vp8_planes(
     let padded_chroma_height = padded_height / 2;
     let mut padding_items = 0_usize;
     let y_plane = pad_plane_with_token(
-        &y_plane,
+        y_plane,
         width as usize,
         height as usize,
         padded_width as usize,
@@ -138,7 +138,7 @@ fn encode_vp8_planes(
         &mut padding_items,
     )?;
     let u_plane = pad_plane_with_token(
-        &u_plane,
+        u_plane,
         chroma_width as usize,
         chroma_height as usize,
         padded_chroma_width as usize,
@@ -147,7 +147,7 @@ fn encode_vp8_planes(
         &mut padding_items,
     )?;
     let v_plane = pad_plane_with_token(
-        &v_plane,
+        v_plane,
         chroma_width as usize,
         chroma_height as usize,
         padded_chroma_width as usize,
@@ -317,7 +317,7 @@ fn pad_plane(
 // surrounding WebP preparation stages. The allocation itself remains covered
 // by the existing no-recoverable-OOM policy.
 fn pad_plane_with_token(
-    input: &[u8],
+    input: Vec<u8>,
     width: usize,
     height: usize,
     padded_width: usize,
@@ -326,8 +326,11 @@ fn pad_plane_with_token(
     padding_items: &mut usize,
 ) -> CodecResult<Vec<u8>> {
     if width == padded_width && height == padded_height {
-        return Ok(input.to_vec());
+        // The caller already owns an exactly sized plane. Moving it through
+        // the aligned path avoids a full plane allocation and copy.
+        return Ok(input);
     }
+    let input = input.as_slice();
     let Some(token) = token else {
         return Ok(pad_plane(input, width, height, padded_width, padded_height));
     };
