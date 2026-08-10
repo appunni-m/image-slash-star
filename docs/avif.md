@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`8b3461aca67c5213383ec968327bd92ebb5153d8`; the claim-ledger fixture tuple
+`531d00657a22034fb88ed249df9d20c33b5d2fc3`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`ab960255-2391-43df-a04d-1d4d863e868a` passed 1,445/1,445 checks. The feature
-matrix run `69dbb786-0aea-442a-a4e1-7a10f4ad1e95` and nightly Coverage MCP
-run `698d13f5-78a6-4083-85db-1ff1839f1dc9` both hit the pre-existing native
+`75f2370c-95aa-449c-9172-0c8e8ad41940` passed 1,445/1,445 checks. The feature
+matrix run `74024c09-0e49-4854-8856-2d0cd3cf0b6c` and nightly Coverage MCP
+run `123912a2-4ee0-4ace-be39-45737ce0d919` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision

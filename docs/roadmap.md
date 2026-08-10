@@ -3,17 +3,17 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `8b3461aca67c5213383ec968327bd92ebb5153d8`, and benchmark-protocol
+revision `531d00657a22034fb88ed249df9d20c33b5d2fc3`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`ab960255-2391-43df-a04d-1d4d863e868a` (1,445/1,445 passed in 635 ms) at
+`75f2370c-95aa-449c-9172-0c8e8ad41940` (1,445/1,445 passed in 7,351 ms) at
 this revision. Feature matrix run
-`69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated with 44 passed and 1 failed;
+`74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`698d13f5-78a6-4083-85db-1ff1839f1dc9` likewise terminated 84/85 with that
+`123912a2-4ee0-4ace-be39-45737ce0d919` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same native failure was reproduced from a clean copy of the
 preceding `879ddc6` source, so it is not evidence against the current
@@ -7133,7 +7133,7 @@ is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 Current implementation record: AVIF transform association order
 
 The production and Rust test/runtime slice is implemented at
-`8b3461aca67c5213383ec968327bd92ebb5153d8`. Primary AVIF `irot`, `imir`,
+`531d00657a22034fb88ed249df9d20c33b5d2fc3`. Primary AVIF `irot`, `imir`,
 `pasp`, and `clap` declarations now retain their source `ipma` association
 order through `AvifTransformProperties::order()` and `AvifTransformKind`.
 The existing feature-gated `avif_item_properties_match_the_non_parity_contract`
@@ -7143,11 +7143,11 @@ hook, or unit test because Pillow exposes no item-property association order
 or typed transform provenance result. Decoded pixels remain untransformed.
 
 Exact-head managed Pillow parity run
-`ab960255-2391-43df-a04d-1d4d863e868a` passed 1,445/1,445 checks in 635 ms.
-Feature-matrix run `69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated 44/45
+`75f2370c-95aa-449c-9172-0c8e8ad41940` passed 1,445/1,445 checks in 7,351 ms.
+Feature-matrix run `74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated 44/45
 on the pre-existing native AVIF `source_alpha_matches_the_container_contract`
 status-5 lane. Nightly run
-`698d13f5-78a6-4083-85db-1ff1839f1dc9` terminated 84/85 on the same failure;
+`123912a2-4ee0-4ace-be39-45737ce0d919` terminated 84/85 on the same failure;
 its required coverage artifact was `skipped_stale`, so no new snapshot or
 coverage claim exists for this slice. This is Rust source-provenance evidence,
 not Pillow item-property parity.
