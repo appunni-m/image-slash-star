@@ -3,19 +3,19 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `13624949dbe405fd636ba7d4a765d3706039b173`, and benchmark-protocol
+revision `9c51f9004198123e00e1737c75cd2c7d720b611c`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`e7debdc6-3fac-4970-bce4-0c53c0faa3f9` (1,445/1,445 passed in 676 ms) and
-feature matrix `cabf6e64-e632-47ee-a4c2-08fa8fc4db23` (passed in 13,793 ms);
+`76c046ab-7494-46ff-95d1-4363e5af3b02` (1,445/1,445 passed in 926 ms) and
+feature matrix `9212d1eb-e4b2-406f-affa-216639b4416f` (passed in 44,433 ms);
 both recorded checkout HEAD
-`13624949dbe405fd636ba7d4a765d3706039b173`.
+`9c51f9004198123e00e1737c75cd2c7d720b611c`.
 The accepted Coverage MCP snapshot is
-`325b653e-2ab1-4380-bb92-1ea32c4b9a16` from run
-`f0b0a6e8-9070-45e7-9468-f3744649e71c`; it records 55,878/56,751 lines,
-8,009/8,226 branches, 3,122/3,218 functions, and 85,921/87,873 regions at
+`915db5ec-3cdc-4a2f-beec-6e09b68d902a` from run
+`0b92a3eb-e455-430a-9f93-5f0af996322a`; it records 55,889/56,762 lines,
+8,009/8,226 branches, 3,122/3,218 functions, and 85,931/87,883 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -8440,6 +8440,55 @@ functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
 
+Current acceptance record: WebP VP8L Huffman table/tree storage coalescing
+
+The production and Rust test/runtime slice is implemented at
+`9c51f9004198123e00e1737c75cd2c7d720b611c`, following opaque VP8L RGB direct
+decode at `13624949dbe405fd636ba7d4a765d3706039b173`. General VP8L Huffman
+trees now keep the primary lookup table and packed secondary nodes in one
+`Vec<u32>` allocation. Primary entries still address secondary nodes relative
+to the table boundary, and the single-node, two-node, and inline primary-table
+representations are unchanged. Huffman symbol ordering, bit consumption,
+decoded bytes, errors, and sink output remain unchanged.
+
+This is Rust implementation and Rust-only retained-workspace/ownership
+evidence. Pillow exposes only final decoded bytes and errors, so the existing
+WebP fixture rows are byte/error regression evidence rather than proof that one
+heap allocation replaces two. The feature-gated Rust contracts and feature
+matrix are the non-Pillow evidence; no parity row, fixture-manifest row,
+diagnostic origin, new test function, coverage-only hook, or unit test was
+added. The changed Huffman projection's remaining branch/error gaps stay
+visible; no synthetic test was added merely to improve coverage.
+
+The clean schema-`@3` benchmark measured Pillow parity at 1.091468 s wall /
+2.919180 user s / 0.253003 sys s / 255,983,616-byte peak RSS and the separate
+Rust-only feature-gate workload at 1.669266 s wall / 2.377772 user s /
+0.156222 sys s / 197,099,520-byte peak RSS. The native release build measured
+8.758619 s wall / 38.879859 user s / 0.796985 sys s /
+934,068,224-byte peak RSS and produced a 7,965,016-byte `rlib`; the WASM
+compile measured 5.746370 s wall / 24.149650 user s / 1.518327 sys s /
+876,593,152-byte peak RSS and produced a 24,084,066-byte artifact. These are
+single-host/cache/toolchain observations, not comparative or universal
+performance claims; allocation counts, retained cache bytes, caller-buffer
+reuse, peak stack depth, and WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`76c046ab-7494-46ff-95d1-4363e5af3b02` passed 1,445/1,445 checks in 926 ms.
+Exact-head feature-matrix run
+`9212d1eb-e4b2-406f-affa-216639b4416f` passed all configured native/WASM lanes
+in 44,433 ms. Nightly LLVM run
+`0b92a3eb-e455-430a-9f93-5f0af996322a` passed 85/85 tests in 65,268 ms and
+ingested snapshot `915db5ec-3cdc-4a2f-beec-6e09b68d902a`: 55,889/56,762
+lines, 8,009/8,226 branches, 3,122/3,218 functions, and 85,931/87,883
+regions. The changed `src/codecs/webp/native/huffman.rs` projection is
+351/353 lines, 56/58 branches, 13/13 functions, and 514/521 regions. Compared
+with the preceding accepted snapshot `325b653e-2ab1-4380-bb92-1ea32c4b9a16`,
+covered and total lines rose by 11/11, while branch and function totals were
+unchanged and covered and total regions rose by 10/10. The aggregate shortfall
+remains 873 lines, 217 branches, 96 functions, and 1,952 regions. The known
+LLVM JSON segment-normalization warning remains. These are implementation/Rust
+coverage metrics, not Pillow-parity coverage.
+
 Current acceptance record: WebP VP8L opaque RGB direct decode
 
 The production and Rust test/runtime slice is implemented at
@@ -11009,7 +11058,9 @@ boundary is closed at
 Huffman code-length scratch-reuse boundary is closed at
 `b2056a98c95c2d8224149a5ce58759b095509590`; the WebP VP8L opaque RGB
 direct-decode staging boundary is closed at
-`13624949dbe405fd636ba7d4a765d3706039b173`; finer Huffman/tree and other
+`13624949dbe405fd636ba7d4a765d3706039b173`; the WebP VP8L Huffman
+table/tree storage-coalescing boundary is closed at
+`9c51f9004198123e00e1737c75cd2c7d720b611c`; other finer Huffman/tree and
 uncheckpointed work remain open, as do JPEG
 interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
@@ -11036,7 +11087,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    traversal fixed-stack storage, hash-chain result-storage, image-stream
    scratch-reuse, histogram-clustering scratch-reuse, predictor-transform
    scratch-reuse, cross-color-transform scratch-reuse, color-cache Huffman
-   code-length scratch-reuse, and opaque VP8L RGB direct-decode staging slices
+   code-length scratch-reuse, opaque VP8L RGB direct-decode staging, and
+   Huffman table/tree storage-coalescing slices
    are closed in the
    revision-bound
    history; the next audit target is
