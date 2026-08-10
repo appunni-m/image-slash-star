@@ -2042,6 +2042,7 @@ impl AvifPixelAspectRatio {
 /// The order returned by [`AvifTransformProperties::order`] follows the
 /// source association order. It is provenance only; the crate does not apply
 /// these transforms to decoded pixels.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AvifTransformKind {
     /// An `irot` rotation declaration.
