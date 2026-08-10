@@ -1,0 +1,223 @@
+{
+  "format_version": 1,
+  "scope": "pillow_unreachable_contract_v1",
+  "pillow_parity": {
+    "status": "excluded",
+    "matrix": "tests/fixtures/coverage_matrix.json",
+    "reason": "Pillow does not return the Rust-only fields, tokens, targets, sinks, or typed results asserted by these contracts."
+  },
+  "categories": [
+    {
+      "id": "decode-encode-policy-limits",
+      "label": "DecodePolicy and EncodePolicy limits",
+      "status": "covered",
+      "scope": "Encoded-byte, canvas, metadata, decoded-byte, sequence, and encoded-output limits in the existing policy fixtures.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/decode_policy_tests.rs",
+          "fixture": null,
+          "tests": [
+            "encoded_input_limit_manifest_matches_the_public_contract",
+            "sequence_frame_limit_manifest_matches_the_public_contract",
+            "sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_frames"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "decode_policy_tests"]
+        },
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "encoded_output_policy_is_a_non_parity_result_contract",
+            "incremental_decode_policy_variants_apply_limits"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "cancellation-work-budgets",
+      "label": "Cancellation and work budgets",
+      "status": "covered",
+      "scope": "Caller-owned cancellation and encode-work-unit boundaries, including retry and no-partial-state assertions.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "cancellation_token_stops_decode_without_partial_state",
+            "encode_cancellation_is_a_non_parity_contract",
+            "encode_work_budget_is_a_non_parity_result_contract"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "output-sink-delivery",
+      "label": "OutputSink delivery",
+      "status": "covered",
+      "scope": "Exact caller-sink delivery, flush failures, partial prefixes, and structural-output recovery.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "output_sinks_receive_the_exact_encoded_bytes",
+            "partial_structural_sink_write_preserves_prefix_without_flush",
+            "partial_structural_sink_write_preserves_prefix_across_available_encoders"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "caller-owned-destination-buffers",
+      "label": "Caller-owned destination buffers",
+      "status": "covered",
+      "scope": "Exact decode_into capacity, short and oversized destination rejection, no-partial-write behavior, and the policy-preflight boundary.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "destination_buffers_match_the_output_size_contract",
+            "tiff_capability_and_destination_failures_are_structured"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "source-provenance",
+      "label": "Source provenance",
+      "status": "covered",
+      "scope": "Rust source descriptors, AVIF FileTypeBox and item/property relationships, source color, and propagation through inspection and decode contracts.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "sequence_kind_matches_the_container_contract",
+            "avif_boxes_match_the_container_contract",
+            "avif_item_properties_match_the_non_parity_contract",
+            "source_color_matches_the_container_contract"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "structured-diagnostics",
+      "label": "Structured diagnostics",
+      "status": "covered",
+      "scope": "Rust diagnostic kind, stage, offset, consumed extent, recovery identity, and the distinction between committed baselines and runtime mutations.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": "tests/fixtures/diagnostic_manifest.json",
+          "tests": [
+            "diagnostic_manifest_matches_the_non_parity_contract"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        },
+        {
+          "kind": "fixture_verifier",
+          "path": "scripts/verify_diagnostic_provenance.py",
+          "fixture": "tests/fixtures/diagnostic_manifest.json",
+          "tests": [],
+          "command": ["python3", "scripts/verify_diagnostic_provenance.py"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "feature-target-capability",
+      "label": "Feature and target capability",
+      "status": "covered",
+      "scope": "Feature-disabled and target-restricted public capability results plus the runtime capability table emitted by the feature matrix.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": "tests/fixtures/capability_tables.json",
+          "tests": [
+            "manifest_inputs_obey_the_exact_feature_and_target_contract",
+            "unsupported_reasons_are_non_parity_capability_contracts"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        },
+        {
+          "kind": "integration_contract",
+          "path": "tests/capability_table.rs",
+          "fixture": "tests/fixtures/capability_tables.json",
+          "tests": [
+            "emit_runtime_capability_table"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests", "emit_runtime_capability_table"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "cache-concurrency-api-lifecycle",
+      "label": "Cache/concurrency/API lifecycle",
+      "status": "covered",
+      "scope": "EncodedImage lazy-cache state, clone sharing, borrowed versus owned lifecycle, and frame/page selection; thread-safety beyond the single-threaded public model is not claimed.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "integration_contract",
+          "path": "tests/feature_gate_tests.rs",
+          "fixture": null,
+          "tests": [
+            "borrowed_view_matches_the_owned_snapshot_contract",
+            "source_bound_frame_decode_matches_sequence_ordering"
+          ],
+          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
+      "id": "allocation-stack-coverage-models",
+      "label": "Allocation/stack/coverage models",
+      "status": "planned",
+      "scope": "Allocator checkpoints, stack measurements, and category-specific private coverage models.",
+      "pillow_parity": "excluded",
+      "evidence": [],
+      "planned_reason": "No existing fixture-backed integration contract proves allocator checkpoints, stack measurements, or per-model coverage. Aggregate benchmark artifacts and the static origin inventory are not category-specific proof.",
+      "planned_context": [
+        "scripts/benchmark_fixture_workloads.py",
+        "scripts/verify_coverage_origins.py",
+        "tests/fixtures/coverage_origin_manifest.json"
+      ]
+    }
+  ]
+}
