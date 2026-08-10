@@ -3,19 +3,19 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `9c388c63c4acd3af2699fdcfa0c46339da2ddd18`, and benchmark-protocol
+revision `aea0c723a07e4ae3a8ac43fe76824197c5016427`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`acacb1bb-cab7-4618-bc5a-19236f46ed4f` (1,445/1,445 passed in 831 ms) and
-feature matrix `3ce18e19-2bd1-42a6-98fa-162b10d88164` (passed in 20,873 ms);
+`bda2f29b-f49b-44bc-abd9-1a866c20a493` (1,445/1,445 passed in 8,024 ms) and
+feature matrix `e7e77c73-e0cf-4111-a554-c2db85dd7a57` (passed in 29,627 ms);
 both recorded checkout HEAD
-`9c388c63c4acd3af2699fdcfa0c46339da2ddd18`.
+`aea0c723a07e4ae3a8ac43fe76824197c5016427`.
 The accepted Coverage MCP snapshot is
-`f6604b1c-1821-41d7-9706-b8b0ad077ddc` from run
-`3e4cbd04-12fa-4cbd-8934-c51090e82cca`; it records 55,893/56,766 lines,
-8,011/8,228 branches, 3,122/3,218 functions, and 85,942/87,895 regions at
+`453dca6d-6dcd-44c4-819e-34978e048685` from run
+`12093cdf-3471-47f6-a451-201e20000124`; it records 55,901/56,778 lines,
+8,011/8,228 branches, 3,122/3,218 functions, and 85,951/87,909 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -8440,6 +8440,55 @@ functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
 
+Current acceptance record: WebP VP8L in-place palette packing
+
+The production and Rust test/runtime slice is implemented at
+`aea0c723a07e4ae3a8ac43fe76824197c5016427`, following opaque animated VP8L RGB
+staging at `9c388c63c4acd3af2699fdcfa0c46339da2ddd18`. Lossless VP8L palette
+mode now writes each packed pixel into the prefix of the existing mutable
+source-pixel buffer instead of allocating a second image-scaled `Vec<u32>`.
+`encode_frame_stream` does not reuse the source pixels after this branch, and
+the left-to-right overlap is safe because each destination index is at or
+before the source group being read; single-pixel groups read before replacing
+their same slot. Palette lookup order, partial-group packing, checkpoint
+cadence, encoded bytes, errors, and sink output remain unchanged.
+
+This is Rust implementation and Rust-only transient-storage evidence. The
+existing WebP palette fixture rows provide Pillow byte/error regression, not
+proof of allocation ownership or allocation counts; the feature-gated Rust
+contracts and feature matrix are the separate non-Pillow evidence. No parity
+row, fixture-manifest row, diagnostic origin, new test function, coverage-only
+hook, or unit test was added.
+
+The clean schema-`@3` benchmark measured Pillow parity at 1.114840 s wall /
+3.070315 user s / 0.281348 sys s / 263,028,736-byte peak RSS and the separate
+Rust-only feature-gate workload at 2.795992 s wall / 2.727358 user s /
+0.351815 sys s / 253,886,464-byte peak RSS. The native release build measured
+7.285978 s wall / 33.597351 user s / 0.413870 sys s /
+905,494,528-byte peak RSS and produced a 7,967,312-byte `rlib`; the WASM
+compile measured 3.215426 s wall / 11.564499 user s / 0.877052 sys s /
+841,728,000-byte peak RSS and produced a 24,076,697-byte artifact. These are
+host/cache/toolchain observations, not comparative or universal performance
+claims; allocation counts, retained cache bytes, caller-buffer reuse, peak
+stack/recursion, and WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`bda2f29b-f49b-44bc-abd9-1a866c20a493` passed 1,445/1,445 checks in 8,024 ms.
+Exact-head feature-matrix run
+`e7e77c73-e0cf-4111-a554-c2db85dd7a57` passed all configured native/WASM lanes
+in 29,627 ms. Nightly LLVM run
+`12093cdf-3471-47f6-a451-201e20000124` passed 85/85 tests in 63,823 ms and
+ingested snapshot `453dca6d-6dcd-44c4-819e-34978e048685`: 55,901/56,778
+lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,951/87,909
+regions. The changed `src/codecs/webp/native/encoder.rs` projection is
+2,399/2,483 lines, 511/540 branches, 89/89 functions, and 3,467/3,747
+regions; its 34 uncovered-line and 34 partial-branch-line counts are unchanged
+from the preceding accepted snapshot. Compared with snapshot
+`f6604b1c-1821-41d7-9706-b8b0ad077ddc`, covered/total lines rose 8/12,
+branches 0/0, functions 0/0, and regions 9/14. The known LLVM JSON
+segment-normalization warning remains. These are implementation/Rust coverage
+metrics, not Pillow-parity coverage.
+
 Current acceptance record: WebP opaque animated VP8L RGB staging
 
 The production and Rust test/runtime slice is implemented at
@@ -11160,7 +11209,9 @@ direct-decode staging boundary is closed at
 table/tree storage-coalescing boundary is closed at
 `9c51f9004198123e00e1737c75cd2c7d720b611c`; the WebP opaque animated VP8L
 RGB staging boundary is closed at
-`9c388c63c4acd3af2699fdcfa0c46339da2ddd18`; the WebP VP8L Huffman
+`9c388c63c4acd3af2699fdcfa0c46339da2ddd18`; the WebP VP8L in-place
+palette-packing boundary is closed at
+`aea0c723a07e4ae3a8ac43fe76824197c5016427`; the WebP VP8L Huffman
 group-vector capacity-planning boundary is closed at
 `6fe013745b2773fdb7da7efad9e7a0a28ce21d96`; other
 finer Huffman/tree and uncheckpointed work remain open, as do JPEG
@@ -11190,8 +11241,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    scratch-reuse, histogram-clustering scratch-reuse, predictor-transform
    scratch-reuse, cross-color-transform scratch-reuse, color-cache Huffman
    code-length scratch-reuse, opaque VP8L RGB direct-decode staging, opaque
-   animated VP8L RGB staging, Huffman table/tree storage-coalescing, and
-   Huffman group-vector capacity-planning
+   animated VP8L RGB staging, in-place VP8L palette packing, Huffman
+   table/tree storage-coalescing, and Huffman group-vector capacity-planning
    slices
    are closed in the
    revision-bound
