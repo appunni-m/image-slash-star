@@ -4855,4 +4855,120 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_mirror.transform();
+
+    // These direct states cover structural branches that are observable only
+    // through the AVIF sample model. Pillow can exercise the resulting pixels,
+    // but it cannot construct the intermediate metadata objects directly.
+    let wrong_file_type = coverage_box(*b"free", &[]);
+    let _ = file_type(&wrong_file_type);
+    let _ = parse_av1c_declaration(&[0x81, 0, 0x20, 0]);
+
+    let missing_non_primary_property = Meta {
+        associations: vec![Association {
+            item_id: 2,
+            property_index: 0,
+            essential: false,
+        }],
+        ..Meta::default()
+    };
+    let _ = missing_non_primary_property.non_primary_item_properties(&[], 1);
+
+    let duplicate_plane = Meta {
+        items: vec![Item {
+            id: 2,
+            kind: *b"av01",
+            metadata_kind: None,
+        }],
+        properties: vec![
+            Property::Ispe {
+                width: 1,
+                height: 1,
+            },
+            Property::Ispe {
+                width: 2,
+                height: 2,
+            },
+        ],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 2,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_plane.non_primary_item_plane_properties(1);
+
+    let duplicate_codec = Meta {
+        items: vec![Item {
+            id: 2,
+            kind: *b"av01",
+            metadata_kind: None,
+        }],
+        properties: vec![
+            Property::Av1C(ByteSpan { start: 0, end: 4 }),
+            Property::Av1C(ByteSpan { start: 0, end: 4 }),
+        ],
+        associations: vec![
+            Association {
+                item_id: 2,
+                property_index: 0,
+                essential: false,
+            },
+            Association {
+                item_id: 2,
+                property_index: 1,
+                essential: false,
+            },
+        ],
+        ..Meta::default()
+    };
+    let _ = duplicate_codec.non_primary_item_codec_properties(&[0x81, 0, 0, 0], 1);
+
+    let grid_without_children = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"grid",
+            metadata_kind: None,
+        }],
+        ..Meta::default()
+    };
+    let _ = grid_without_children.grid_item_ids(1);
+
+    let grid_payload = [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1];
+    let grid_with_32_bit_dimensions = Meta {
+        items: vec![Item {
+            id: 1,
+            kind: *b"grid",
+            metadata_kind: None,
+        }],
+        locations: vec![ItemLocation {
+            item_id: 1,
+            source: ExtentSource::File,
+            extents: vec![ByteSpan {
+                start: 0,
+                end: grid_payload.len(),
+            }],
+        }],
+        ..Meta::default()
+    };
+    let _ = grid_with_32_bit_dimensions.grid_properties(&grid_payload, 1);
+
+    let ispe = coverage_box(*b"ispe", &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]);
+    let pixi = coverage_box(*b"pixi", &[0, 0, 0, 0, 1, 8]);
+    let sample_properties = coverage_join(&[&ispe, &pixi]);
+    let _ = parse_sample_description(
+        &sample_properties,
+        ByteSpan {
+            start: 0,
+            end: sample_properties.len(),
+        },
+        &mut Budget::default(),
+    );
 }
