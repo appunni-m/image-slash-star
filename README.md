@@ -299,7 +299,8 @@ placement and composition remain private to decoding.
 Non-primary non-alpha `auxC`/`auxi` declarations retain their exact
 source-local kind and payload through
 `SourceDescriptor::avif_item_properties()`; this is provenance only and does
-not select or decode auxiliary payloads.
+not select or decode auxiliary payloads. Those raw records also retain the
+source `ipma` essential-association bit in source order.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
