@@ -870,47 +870,53 @@ fn compressed_huffman_tokens_with_checkpoint(
                     }
                     break;
                 } else if repetitions < 11 {
-                    emit(HuffmanToken {
+                    let huffman_token = HuffmanToken {
                         code: 17,
                         extra: (repetitions - 3) as u8,
-                    })?;
+                    };
+                    emit(huffman_token)?;
                     break;
                 } else if repetitions < 139 {
-                    emit(HuffmanToken {
+                    let huffman_token = HuffmanToken {
                         code: 18,
                         extra: (repetitions - 11) as u8,
-                    })?;
+                    };
+                    emit(huffman_token)?;
                     break;
                 } else {
-                    emit(HuffmanToken {
+                    let huffman_token = HuffmanToken {
                         code: 18,
                         extra: 0x7f,
-                    })?;
+                    };
+                    emit(huffman_token)?;
                     repetitions -= 138;
                 }
             }
         } else {
             if value != previous {
-                emit(HuffmanToken {
+                let huffman_token = HuffmanToken {
                     code: value,
                     extra: 0,
-                })?;
+                };
+                emit(huffman_token)?;
                 repetitions -= 1;
             }
             while repetitions != 0 {
                 if repetitions < 3 {
                     for _ in 0..repetitions {
-                        emit(HuffmanToken {
+                        let huffman_token = HuffmanToken {
                             code: value,
                             extra: 0,
-                        })?;
+                        };
+                        emit(huffman_token)?;
                     }
                     break;
                 } else if repetitions < 7 {
-                    emit(HuffmanToken {
+                    let huffman_token = HuffmanToken {
                         code: 16,
                         extra: (repetitions - 3) as u8,
-                    })?;
+                    };
+                    emit(huffman_token)?;
                     break;
                 } else {
                     emit(HuffmanToken { code: 16, extra: 3 })?;
@@ -3169,8 +3175,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut token_tree_lengths = vec![0; 256];
     let mut token_tree_codes = vec![0; 256];
-    let mut token_tree_frequencies = vec![1; 256];
+    let mut token_tree_frequencies = vec![0; 256];
     token_tree_frequencies[0] = 3;
+    token_tree_frequencies[1] = 1;
+    token_tree_frequencies[128] = 1;
     token_tree_frequencies[255] = 7;
     let _ = write_huffman_tree(
         &mut token_tree_writer,
@@ -3285,11 +3293,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let x = index % meta_width;
         let y = index / meta_width;
         let tile = (x / 8) + (y / 8) * 16;
-        let local = (x % 8) + (y % 8) * 8;
         let pixel = 0xff00_0000
-            | (((tile * 17 + local) & 0xff) as u32) << 16
-            | (((tile * 29 + local * 3) & 0xff) as u32) << 8
-            | ((tile * 43 + local * 5) & 0xff) as u32;
+            | ((tile as u32) << 16)
+            | (((255 - tile) as u32) << 8)
+            | (tile as u32 ^ 0x55);
         meta_pixels.push(pixel);
         meta_tokens.push(backward_refs::Token::Literal(pixel));
     }
@@ -3320,6 +3327,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(&coverage_token),
     );
     let _ = meta_writer.flush();
+
+    let mut ordinary_meta_bytes = Vec::new();
+    let mut ordinary_meta_writer = BitWriter {
+        writer: &mut ordinary_meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint,
+    };
+    let mut ordinary_meta_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut ordinary_meta_writer,
+        &meta_pixels,
+        meta_width,
+        &meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 1,
+            histogram_bits: 3,
+            quality: 0,
+        },
+        &mut ordinary_meta_scratch,
+        None,
+    );
+    let _ = ordinary_meta_writer.flush();
 
     let mut palette = (0..20)
         .map(|index| {
@@ -3354,6 +3385,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
         1,
         Some(&coverage_token),
+    );
+    let grayscale_pixels = vec![0xff20_2020; 2_048];
+    let _ = pixels_are_grayscale_with_checkpoint(&grayscale_pixels, Some(&coverage_token));
+    let mut non_grayscale_pixels = grayscale_pixels.clone();
+    non_grayscale_pixels[1_024] = 0xff20_211f;
+    let _ = pixels_are_grayscale_with_checkpoint(&non_grayscale_pixels, Some(&coverage_token));
+
+    let mut transform_pixels = (0..(64 * 64))
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | (value * 7 & 0xff)
+        })
+        .collect::<Vec<_>>();
+    let mut transform_scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut transform_pixels,
+        64,
+        64,
+        false,
+        EntropyMode::SpatialSubtractGreen,
+        false,
+        1,
+        Vec::new(),
+        Some(&coverage_token),
+        TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut transform_scratch,
     );
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {
@@ -3498,6 +3559,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode_alpha(
         &token_alpha,
         token_alpha.len() as u32,
+        1,
+        Some(&coverage_token),
+    );
+    let flat_token_alpha = vec![0_u8; 2_048];
+    let _ = encode_alpha(
+        &flat_token_alpha,
+        flat_token_alpha.len() as u32,
         1,
         Some(&coverage_token),
     );

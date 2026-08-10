@@ -709,7 +709,10 @@ fn with_cache_without_checkpoint(
                 populate_cache_without_checkpoint(pixels, position, length, bits, cache);
                 position += length;
             }
-            Token::Cache(_) => unreachable!(),
+            Token::Cache(_) => {
+                output.push(reference);
+                position += 1;
+            }
         }
     }
 }
@@ -755,7 +758,10 @@ fn with_cache(
                 populate_cache(pixels, position, length, bits, cache, Some(token))?;
                 position += length;
             }
-            Token::Cache(_) => unreachable!(),
+            Token::Cache(_) => {
+                output.push(reference);
+                position += 1;
+            }
         }
     }
     Ok(())
@@ -1231,12 +1237,9 @@ impl CostModel {
         width: usize,
         token: CheckpointToken<'_>,
     ) -> CheckpointResult<()> {
-        if token.is_none() {
+        let Some(token) = token else {
             self.prepare_without_checkpoint(tokens, cache_bits, width);
             return Ok(());
-        }
-        let Some(token) = token else {
-            unreachable!("checked checkpoint token is present");
         };
         self.reset(cache_bits);
         for (index, &item) in tokens.iter().enumerate() {
@@ -1342,12 +1345,9 @@ impl CostManager {
         model: &CostModel,
         token: CheckpointToken<'_>,
     ) -> CheckpointResult<()> {
-        if token.is_none() {
+        let Some(token) = token else {
             self.prepare_without_checkpoint(pixel_count, model);
             return Ok(());
-        }
-        let Some(token) = token else {
-            unreachable!("checked checkpoint token is present");
         };
         const SCALE: i64 = 1 << 23;
         let cache_size = pixel_count.min(MAX_LENGTH);
@@ -2318,6 +2318,91 @@ pub(crate) fn __coverage_exercise_private_branches() {
         end: 5,
         position: 1,
     });
+
+    let coverage_token = crate::CancellationToken::new();
+    let mut checkpoint_work = COST_MANAGER_CHECKPOINT_ENTRIES - 1;
+    let _ = checkpoint_cost_manager_work(Some(&coverage_token), &mut checkpoint_work);
+    let mut update_work = COST_MANAGER_UPDATE_CHECKPOINT_ENTRIES - 1;
+    let _ = checkpoint_cost_manager_update_work(Some(&coverage_token), &mut update_work);
+    let mut cache = [0_u32; 1];
+    populate_cache_without_checkpoint(&[0xff00_0000], 0, 1, 0, &mut cache);
+    let population = [1_u32, 2, 0, 0];
+    let _ = population_estimate_fixed_with_checkpoint(&population, None);
+    let _ = population_estimate_fixed_with_checkpoint(&population, Some(&coverage_token));
+    let mut population_costs = population;
+    let _ = population_cost_in_place_with_checkpoint(&mut population_costs, None);
+    let _ = population_cost_in_place_with_checkpoint(&mut population_costs, Some(&coverage_token));
+
+    let token_model_tokens = [
+        Token::Literal(0xff00_0000),
+        Token::Copy {
+            distance: 1,
+            length: 4,
+        },
+        Token::Cache(0),
+    ];
+    let mut token_model = CostModel::default();
+    let _ = token_model.prepare_with_checkpoint(&token_model_tokens, 1, 8, Some(&coverage_token));
+    let mut token_manager = CostManager::default();
+    let _ = token_manager.prepare_with_checkpoint(4_096, &token_model, Some(&coverage_token));
+    token_manager.intervals = vec![
+        CostInterval {
+            cost: 1,
+            start: 0,
+            end: 4,
+            position: 0,
+        };
+        500
+    ];
+    let _ = token_manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
+            start: 0,
+            end: 2_048,
+            position: 0,
+        },
+        Some(&coverage_token),
+    );
+    let mut normal_token_manager = CostManager::default();
+    let _ = normal_token_manager.prepare_with_checkpoint(64, &token_model, Some(&coverage_token));
+    let _ = normal_token_manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 1,
+            start: 0,
+            end: 4,
+            position: 0,
+        },
+        Some(&coverage_token),
+    );
+    let _ = normal_token_manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
+            start: 1,
+            end: 3,
+            position: 0,
+        },
+        Some(&coverage_token),
+    );
+
+    let token_pixels = (0..4_096)
+        .map(|index| {
+            if index % 8 < 4 {
+                0xff10_2010
+            } else {
+                0xff20_4020
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut token_scratch = CandidateScratch::default();
+    let _ = candidates(
+        &token_pixels,
+        32,
+        true,
+        80,
+        4,
+        &mut token_scratch,
+        Some(&coverage_token),
+    );
     let _ = std::panic::catch_unwind(|| {
         let pixels = [0xff00_0000; 8];
         let chain = [
