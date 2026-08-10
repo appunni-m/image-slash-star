@@ -158,10 +158,17 @@ fn write_riff_to_sink(
     token: Option<&crate::CancellationToken>,
     sink: &mut dyn OutputSink,
 ) -> CodecResult<usize> {
-    if encoded.len() < 12
-        || encoded.get(..4) != Some(b"RIFF")
-        || encoded.get(8..12) != Some(b"WEBP")
-    {
+    if encoded.len() < 12 {
+        return Err(CodecError::Malformed(
+            "WebP encoder produced an invalid RIFF header".to_owned(),
+        ));
+    }
+    if encoded.get(..4) != Some(b"RIFF") {
+        return Err(CodecError::Malformed(
+            "WebP encoder produced an invalid RIFF header".to_owned(),
+        ));
+    }
+    if encoded.get(8..12) != Some(b"WEBP") {
         return Err(CodecError::Malformed(
             "WebP encoder produced an invalid RIFF header".to_owned(),
         ));
@@ -190,11 +197,10 @@ fn write_riff_to_sink(
         let header = encoded.get(offset..header_end).ok_or_else(|| {
             CodecError::Malformed("WebP chunk header extends beyond the RIFF output".to_owned())
         })?;
-        let payload_len =
-            usize::try_from(u32::from_le_bytes(header[4..8].try_into().map_err(
-                |_| CodecError::Malformed("WebP chunk size is unavailable".to_owned()),
-            )?))
-            .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))?;
+        let payload_len = usize::try_from(u32::from_le_bytes([
+            header[4], header[5], header[6], header[7],
+        ]))
+        .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))?;
         let payload_end = header_end
             .checked_add(payload_len)
             .ok_or_else(|| CodecError::Dimensions("WebP chunk payload overflows".to_owned()))?;
@@ -1109,6 +1115,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for malformed in [
         Vec::new(),
         b"not a RIFF".to_vec(),
+        b"NOPE\0\0\0\0WEBP".to_vec(),
         b"RIFF\0\0\0\0WEBP".to_vec(),
         b"RIFF\0\0\0\0NOPE".to_vec(),
         b"RIFF\x0c\0\0\0WEBPVP8 ".to_vec(),
@@ -1220,7 +1227,41 @@ pub(crate) fn __coverage_exercise_private_branches() {
     existing_vp8x.extend_from_slice(&18u32.to_le_bytes());
     existing_vp8x.extend_from_slice(&[0; 10]);
     let _ = attach_metadata(existing_vp8x, 1, 1, false, &metadata, None);
+    let _ = attach_metadata(
+        b"RIFF\0\0\0\0WEBPVP8X".to_vec(),
+        1,
+        1,
+        false,
+        &metadata,
+        None,
+    );
     let _ = attach_metadata(b"short".to_vec(), 1, 1, false, &metadata, None);
+
+    // Exercise each independently optional token-aware metadata chunk and
+    // the short existing-VP8X defensive shape. These are caller-owned Rust
+    // metadata controls, not synthetic Pillow parity rows.
+    let metadata_input = b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec();
+    let metadata_cases = [
+        {
+            let mut options = WebPEncodeOptions::default();
+            options.icc = Some(vec![1]);
+            options
+        },
+        {
+            let mut options = WebPEncodeOptions::default();
+            options.exif = Some(b"Exif\0\0x".to_vec());
+            options
+        },
+        {
+            let mut options = WebPEncodeOptions::default();
+            options.xmp = Some(vec![2]);
+            options
+        },
+    ];
+    for options in &metadata_cases {
+        let token = crate::CancellationToken::new();
+        let _ = attach_metadata(metadata_input.clone(), 1, 1, true, options, Some(&token));
+    }
 
     let mut animation = DecodedSequence::from_image(rgba.clone());
     animation.frames.push(animation.frames[0].clone());
