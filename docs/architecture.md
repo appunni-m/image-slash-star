@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `b8ed4881c3055136a070226bedc5d91f0e859a4d`; the claim-ledger fixture
+revision `c1afe7eb1f01ebb9309a2f530da795f856852721`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`c9cd1f69-341e-428f-903d-a7fe0e5f0f8f` (1,445/1,445 passed in 629 ms) at
+`507686aa-024f-49de-9748-3828f8a5ac0a` (1,445/1,445 passed in 611 ms) at
 this revision. Feature matrix run
-`34a09218-662f-4049-8451-709f7aea1b82` terminated with 44 passed and 1 failed;
+`fe2bf6a3-9a17-4af8-97e4-f0aba80e9ab5` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`17a3bc7f-30bd-49f3-a468-7867d6001cf7` likewise terminated 84/85 and ingested
+`3962c151-e307-4072-985b-a6841a6fb63a` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -426,7 +426,7 @@ translation cannot be bypassed.
 | WebP container/metadata assembly checkpoints | Token-aware sequence and metadata assembly copies caller-sized chunk/payload bytes in 1,024-byte intervals; the no-token path retains one bulk copy and structural sink delivery still owns its prefix semantics |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with format defaults |
 | Lossy WebP RGBA alpha-palette checkpoints | Token-aware source collection and index packing poll after each 1,024 source pixels; the no-token branch avoids token polling and retains its existing byte-preserving loop |
-| Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take a direct clone, while the no-token path retains the original tight helper and byte behavior |
+| Lossy WebP VP8 padded-plane checkpoints | Token-aware shared Y/U/V edge-replication polls after each 1,024 padded items when dimensions require padding; aligned planes take ownership without a clone, while the no-token path retains the original tight helper and byte behavior |
 | Lossy WebP VP8 analysis histogram checkpoints | Token-aware histogram construction polls after each 64 completed 4×4 blocks; the no-token path retains the original tight transform loop |
 | Lossy WebP VP8 segment-assignment checkpoints | Token-aware analysis segment assignment polls after each 1,024 macroblocks; the no-token path retains the original tight rewrite pass |
 | Lossy WebP VP8 mode-selection checkpoints | Token-aware intra4 selection polls after each candidate-trial stage, each forward- and inverse-transform row/column subpass, each non-trellis quantization coefficient, each method-6 trellis-quantization coefficient candidate and path-reconstruction node, each squared-error pixel, each spectral-distortion weighted-transform row/column pass, each residual-cost coefficient, each candidate, and each completed luma 4×4 block, while the outer checkpoint remains after each 64 completed macroblocks for intra16/chroma and completed-decision work; the no-token path retains the original tight loop and each other individual stage remains one uninterruptible unit |
@@ -1080,6 +1080,13 @@ buffer and 1,024-byte copy checkpoints. This is a Rust-only output-buffer
 ownership optimization; Pillow supplies final byte/error regression, not
 allocation-lifetime evidence.
 
+Lossy WebP VP8 plane preparation now moves the owned Y/U/V vectors through the
+shared padding helper. Aligned dimensions return those vectors directly; only
+dimensions requiring edge replication allocate padded planes. The replication
+order, token-aware padding checkpoints, encoded bytes, errors, and sink output
+remain unchanged. Pillow parity sees only final bytes/errors; plane ownership
+is Rust-only evidence.
+
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
 symbol map, and remapped group histograms reset their logical contents and are
@@ -1326,7 +1333,7 @@ coefficient, candidate, and completed luma 4×4 block, then
 after color conversion, padding, analysis, segment parameters, mode selection,
 coefficient-probability
 adaptation, required padded Y/U/V edge-replication after each 1,024 padded
-items (aligned planes take a direct clone), analysis histogram construction
+items (aligned planes take ownership without a clone), analysis histogram construction
 after each 64 completed 4×4 blocks, analysis and segment assignment after each
 1,024 macroblocks, mode selection after each 64 completed
 macroblocks (roughly 1,024 luma blocks), filter-edge adjustment,
