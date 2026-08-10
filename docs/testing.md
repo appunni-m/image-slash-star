@@ -3,17 +3,17 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `035deacb5ca797e5f583203d46f57ea99f82fcc0`, and benchmark-protocol
+revision `89c30270f9c069488f1802921f7e25b8e5520e43`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`7fb0be7b-d1e7-4fc1-b9f1-17382c7b0e06` (1,445/1,445 passed in 4,324 ms) at
+`014871bb-a693-4ab4-bff4-88b7dc074394` (1,445/1,445 passed in 1,585 ms) at
 this revision. Feature matrix run
-`349b018d-7a7f-4e0e-a479-46071f854571` terminated with 44 passed and 1 failed;
+`6e9ec153-9661-4d62-b655-206cf124d92c` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`0a806ed7-4cec-4a94-b0d5-56ca4605ccfc` likewise terminated 84/85 with that
+`031d51a9-a069-41bd-8c5a-5be3f0e27fa3` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -644,6 +644,35 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP no-token animation frame output-buffer release
+
+The production slice is implemented at
+`89c30270f9c069488f1802921f7e25b8e5520e43`, following the WebP animation
+assembly ownership boundary at `228e419a0168ab083770c1fa009cf5c83d1711f3`.
+The ordinary no-token sequence path now writes RIFF/VP8X/ANIM first, encodes
+each frame, copies its nested VP8/VP8L chunks directly into the final RIFF
+buffer, and releases that frame buffer before encoding the next one. It patches
+the VP8X alpha flag after the final frame. The token-aware path retains its
+previous encode-all-before-assembly schedule and cancellation checkpoints.
+This removes the retained `encoded_frames` collection and simultaneous
+completed-frame buffers from the ordinary path; the complete returned
+animation Vec remains. It is a bounded allocation/lifetime optimization, not a
+streaming, allocator/OOM, or universal runtime/peak-memory guarantee.
+
+Pillow exposes final bytes and errors, not frame-buffer lifetime or allocator
+ownership. The existing WebP animation fixture row and feature-gated Rust
+animation/sink contracts therefore provide the separate observable and
+Rust-only evidence. No parity row, fixture-manifest row, diagnostic origin,
+new test function, coverage-only hook, or unit test was added because Pillow
+cannot observe this boundary. Exact-head managed Pillow parity run
+`014871bb-a693-4ab4-bff4-88b7dc074394` passed 1,445/1,445 checks in 1,585 ms.
+Feature matrix run `6e9ec153-9661-4d62-b655-206cf124d92c` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`031d51a9-a069-41bd-8c5a-5be3f0e27fa3` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
 
 Current acceptance record: WebP still metadata output-buffer reuse
 
@@ -3700,16 +3729,16 @@ diagnostic origin, or coverage-only hook was added. No managed parity,
 feature-matrix, or Coverage MCP rerun is claimed for this revision.
 
 The WebP animation assembly ownership slice is implemented at production
-revision `228e419a0168ab083770c1fa009cf5c83d1711f3`. Each completed frame now
-remains in its existing encoded buffer until the canvas alpha state is known;
-the final ANMF prefix is stack-backed and its nested VP8/VP8L chunks are
-written directly into the final RIFF buffer. This removes the temporary copied
-chunk buffer and temporary ANMF payload, along with their staging copies. The
-existing `test_encode_matrix_webp_animation` Pillow row and the complete
-28-function fixture matrix preserve exact encoded bytes; the ample-token
-sequence path is byte-identical as well. Token-aware animation assembly now
-polls the remaining final-output chunk copy, while the removed staging copies
-no longer create intermediate cancellation checkpoints. This is a
+revision `228e419a0168ab083770c1fa009cf5c83d1711f3`. The token-aware path
+retains each completed frame in its existing encoded buffer until the canvas
+alpha state is known; the final ANMF prefix is stack-backed and its nested
+VP8/VP8L chunks are written directly into the final RIFF buffer. This removes
+the temporary copied chunk buffer and temporary ANMF payload, along with their
+staging copies. The later no-token frame-release slice above supersedes the
+ordinary path's frame retention while preserving this token-aware checkpoint
+contract. The existing `test_encode_matrix_webp_animation` Pillow row and the
+complete 28-function fixture matrix preserve exact encoded bytes; the
+ample-token sequence path is byte-identical as well. This is a
 Pillow-observable byte regression gate plus a Rust-only ownership/cancellation
 implementation boundary; Pillow has no allocation or caller-token contract.
 No new fixture, test function, diagnostic origin, or coverage-only hook was

@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `035deacb5ca797e5f583203d46f57ea99f82fcc0`; the claim-ledger fixture
+revision `89c30270f9c069488f1802921f7e25b8e5520e43`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`7fb0be7b-d1e7-4fc1-b9f1-17382c7b0e06` (1,445/1,445 passed in 4,324 ms) at
+`014871bb-a693-4ab4-bff4-88b7dc074394` (1,445/1,445 passed in 1,585 ms) at
 this revision. Feature matrix run
-`349b018d-7a7f-4e0e-a479-46071f854571` terminated with 44 passed and 1 failed;
+`6e9ec153-9661-4d62-b655-206cf124d92c` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`0a806ed7-4cec-4a94-b0d5-56ca4605ccfc` likewise terminated 84/85 and ingested
+`031d51a9-a069-41bd-8c5a-5be3f0e27fa3` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -681,14 +681,16 @@ ordinary and token-aware paths without changing encoded bytes or checkpoint
 counts. It is a bounded transient-allocation optimization, not complete
 allocator accounting, recoverable-OOM handling, or a streaming guarantee.
 
-WebP animation retains each completed frame's encoded RIFF buffer until the
-canvas alpha flag is known, then writes the fixed ANMF prefix and nested
-VP8/VP8L chunks directly into the final RIFF buffer. This removes the temporary
-chunk and ANMF-payload staging allocations. Ordinary and ample-token output
-bytes remain unchanged; token-aware animation assembly polls only the final
-chunk copy, because the removed staging copies are no longer checkpoints. The
-ownership improvement does not claim allocator/OOM accounting or universal
-streaming.
+WebP animation has separate ownership paths. The ordinary no-token path writes
+RIFF/VP8X/ANIM first, appends each completed frame's nested VP8/VP8L chunks
+directly into the final RIFF buffer, releases that frame buffer, and patches
+the VP8X alpha flag after the last frame. The token-aware path retains
+completed frame buffers until the canvas alpha flag is known, then writes the
+fixed ANMF prefix and nested chunks directly into the final RIFF buffer while
+preserving its existing cancellation checkpoints. Both paths remove the
+temporary copied chunk and ANMF-payload staging allocations and preserve
+encoded bytes. This is a bounded ownership optimization, not allocator/OOM
+accounting or universal streaming.
 
 Lossless WebP VP8L backward-reference cost management reuses its interval state
 in place. Interval updates no longer allocate an applicable-interval scratch
