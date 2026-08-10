@@ -1288,6 +1288,49 @@ impl AvifGridProperties {
     }
 }
 
+/// The bounded AVIF `FileTypeBox` declarations retained from an encoded source.
+///
+/// The major brand, minor version, and ordered compatible-brand list are source
+/// provenance only. They describe what the container declares; they do not by
+/// themselves promise that every item, codec configuration, or decoder path is
+/// supported by this crate.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AvifFileTypeProperties {
+    major_brand: [u8; 4],
+    minor_version: u32,
+    compatible_brands: Vec<[u8; 4]>,
+}
+
+impl AvifFileTypeProperties {
+    /// Create source-local AVIF `FileTypeBox` declarations.
+    #[must_use]
+    pub fn new(major_brand: [u8; 4], minor_version: u32, compatible_brands: Vec<[u8; 4]>) -> Self {
+        Self {
+            major_brand,
+            minor_version,
+            compatible_brands,
+        }
+    }
+
+    /// Return the four-byte major brand.
+    #[must_use]
+    pub const fn major_brand(&self) -> [u8; 4] {
+        self.major_brand
+    }
+
+    /// Return the `FileTypeBox` minor version.
+    #[must_use]
+    pub const fn minor_version(&self) -> u32 {
+        self.minor_version
+    }
+
+    /// Return the ordered compatible-brand list, excluding the major brand.
+    #[must_use]
+    pub fn compatible_brands(&self) -> &[[u8; 4]] {
+        &self.compatible_brands
+    }
+}
+
 /// Extensible structural facts retained from an encoded source.
 ///
 /// The descriptor is separate from opaque ICC, EXIF, XMP, text, or
@@ -1309,6 +1352,7 @@ pub struct SourceDescriptor {
     avif_item_codec_properties: Option<Vec<AvifItemCodecProperties>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_grid_properties: Option<AvifGridProperties>,
+    avif_file_type: Option<AvifFileTypeProperties>,
     avif_transform: Option<AvifTransformProperties>,
 }
 
@@ -1331,6 +1375,7 @@ impl SourceDescriptor {
             avif_item_codec_properties: None,
             avif_grid_item_ids: None,
             avif_grid_properties: None,
+            avif_file_type: None,
             avif_transform: None,
         }
     }
@@ -1555,6 +1600,19 @@ impl SourceDescriptor {
         self.avif_grid_properties
     }
 
+    /// Record the bounded AVIF `FileTypeBox` declarations from the source.
+    #[must_use]
+    pub fn with_avif_file_type(mut self, file_type: AvifFileTypeProperties) -> Self {
+        self.avif_file_type = Some(file_type);
+        self
+    }
+
+    /// Return the retained AVIF `FileTypeBox` declarations, when available.
+    #[must_use]
+    pub fn avif_file_type(&self) -> Option<&AvifFileTypeProperties> {
+        self.avif_file_type.as_ref()
+    }
+
     /// Record the AVIF item transforms declared by the encoded source.
     ///
     /// These properties describe source presentation metadata only. Decoded
@@ -1587,6 +1645,7 @@ impl SourceDescriptor {
             && self.avif_item_codec_properties.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_grid_properties.is_none()
+            && self.avif_file_type.is_none()
             && self.avif_transform.is_none()
     }
 }
