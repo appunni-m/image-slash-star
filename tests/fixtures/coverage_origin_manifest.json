@@ -69,7 +69,7 @@
     {"path": "src/codecs/webp/native/encoder/cross_color.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/webp/native/encoder/histogram.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/webp/native/encoder/predictor.rs", "guard_count": 1, "origin": "defensive_model"},
-    {"path": "src/codecs/webp/native/encoder.rs", "guard_count": 1, "origin": "defensive_model"},
+    {"path": "src/codecs/webp/native/encoder.rs", "guard_count": 2, "origin": "defensive_model"},
     {"path": "src/codecs/webp/native/extended.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/webp/native/huffman.rs", "guard_count": 2, "origin": "defensive_model"},
     {"path": "src/codecs/webp/native/lossless.rs", "guard_count": 2, "origin": "defensive_model"},
