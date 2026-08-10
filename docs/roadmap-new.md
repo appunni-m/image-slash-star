@@ -50,6 +50,60 @@ Do not create a unit test merely to turn a red coverage number green. If a path
 cannot be reached by a real public behavior or a justified private defensive
 model, remove it, simplify it, or document why it is intentionally unreachable.
 
+## Five rolling workstreams
+
+The old ten-package order is now executed through five independent rolling
+workstreams. Each workstream takes one small v1 slice, proves it, and only then
+chooses its next slice. A workstream is not allowed to claim that its whole
+category is finished because one slice passed.
+
+| Workstream | What it owns | v1 starting slice | Primary proof |
+| --- | --- | --- | --- |
+| W1 — Pillow-visible compatibility | Ordinary decoded pixels, dimensions, modes, observable metadata, frames, errors, and encoded bytes | Select one real open JPEG/PNG/GIF/BMP/ICO/TIFF/WebP row with a Pillow witness; implement it end-to-end | Existing fixture manifest plus `coverage_matrix_tests` and managed Pillow parity |
+| W2 — Rust-only caller controls | Limits, cancellation, work budgets, caller-owned sinks, destination buffers, rollback, and typed Rust errors | Select one missing inclusive work/sink/limit boundary from `API-023`/`API-036`/`QA-026` | Existing `feature_gate_tests` fixture contract in native and relevant WASM lanes; no Pillow row |
+| W3 — Coverage and defensive paths | Uncovered real branches, functions, regions, dead code decisions, and justified private defensive models | Start with one measured gap in a weak file; reach it through public behavior or register an allowed non-Pillow origin | Fresh Coverage MCP snapshot plus origin verifier; never a coverage-only unit test |
+| W4 — AVIF and portable targets | Portable AVIF capability, native/WASM differences, target restrictions, sequence/encode gaps, and independent output compatibility | Select one bounded portable AVIF target capability or source-property contract | Feature-gated target fixture, native/WASI execution, and independent decoder evidence when bytes are emitted |
+| W5 — Assurance, packaging, and documentation | Regeneration, determinism, fuzz/mutation, API/package checks, release evidence, and this roadmap | Build the Pillow-unreachable contract catalog and attach each category to an existing separate Rust-only test lane | Reproducible command/artifact, docs audit, claim ledger, and lane-specific test result |
+
+Rolling rules:
+
+1. Every v1 slice names its caller problem, exact source IDs, files changed,
+   evidence origin, and next dependency.
+2. W1 uses Pillow only for fields Pillow can actually observe. W2–W4 use the
+   existing feature-gated integration contract for Rust-only fields.
+3. W3 may add a private coverage model only when a valid public input cannot
+   reach the state and the origin is recorded as `defensive_model`,
+   `independent_implementation`, or `specification_reference`.
+4. No workstream adds a unit test whose only purpose is to improve coverage.
+5. A slice is mergeable only when its behavioral test, native/WASM evidence,
+   verifiers, and same-revision Coverage MCP result are recorded. A failed or
+   stale coverage artifact remains “not measured.”
+6. Worktrees are disposable execution spaces. Only reviewed commits are
+   integrated into `main`; agents do not push directly.
+
+## Contract catalog: behavior Pillow cannot prove
+
+This is the separate Rust-only list. “Cannot prove” means Pillow may have a
+similar idea internally, but it cannot return this crate's exact field, token,
+target, sink, or typed result for comparison.
+
+| Rust-only contract | Why Pillow cannot prove it | Separate evidence |
+| --- | --- | --- |
+| `DecodePolicy` and `EncodePolicy` limits | Pillow does not expose this crate's pre-detection, canvas, metadata, decoded-byte, encoded-output, or work-budget result with the same boundary/error fields | Existing feature-gated policy fixtures and limit assertions |
+| Cancellation and work budgets | Pillow has no caller-owned `CancellationToken`, checkpoint budget, or `EncodeWorkUnits` result | Existing `feature_gate_tests` token/budget contract |
+| `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | Existing sink/flush/partial-delivery contract |
+| Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | Existing destination-buffer feature-gated contract |
+| Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | Existing source-descriptor and AVIF feature-gated fixtures |
+| Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | Diagnostic/provenance fixtures and verifier |
+| Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | Feature-matrix and WASM runtime lanes |
+| Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, or this crate's frame/page lifecycle | Existing Rust integration contract; add no fake Pillow field |
+| Allocation/stack/coverage models | Pillow cannot witness Rust allocator checkpoints, stack measurements, or private defensive branches | Benchmark/coverage artifacts and declared coverage origins |
+
+These cases must stay out of `coverage_matrix.json` unless a row also has a
+separate Pillow-observable assertion. A Rust-only test may still use a
+Pillow-generated image as input; that makes the picture reproducible, but it
+does not turn the Rust-only result into Pillow parity.
+
 ## What is already done
 
 These are separate kinds of “done”; they must not be added together as if they
