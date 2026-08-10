@@ -590,6 +590,34 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ColorType, DecodedFrame, FrameBlend, FrameDisposal, FrameDuration, ImagePalette,
     };
 
+    // BMFF delivery is a Rust-owned sink boundary. Pillow does not expose
+    // malformed encoder output, extended-size boxes, or caller-owned sinks,
+    // so keep those defensive states in the existing private-origin drill.
+    let mut bmff_sink = Vec::new();
+    for malformed in [
+        vec![0; 4],
+        vec![0, 0, 0, 4, b'f', b'r', b'e', b'e'],
+        vec![0, 0, 0, 20, b'f', b'r', b'e', b'e'],
+        vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'],
+        vec![0, 0, 0, 1, b'f', b'r', b'e', b'e', 0, 0, 0, 0, 0, 0, 0, 8],
+    ] {
+        let _ = write_bmff_to_sink(&malformed, None, &mut bmff_sink);
+        bmff_sink.clear();
+    }
+    let small_box = vec![0, 0, 0, 8, b'f', b'r', b'e', b'e'];
+    let _ = write_bmff_to_sink(&small_box, None, &mut bmff_sink);
+    bmff_sink.clear();
+    let zero_box = vec![0, 0, 0, 0, b'f', b'r', b'e', b'e'];
+    let _ = write_bmff_to_sink(&zero_box, None, &mut bmff_sink);
+    bmff_sink.clear();
+    let mut extended_box = vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'];
+    extended_box.extend_from_slice(&16u64.to_be_bytes());
+    let _ = write_bmff_to_sink(&extended_box, None, &mut bmff_sink);
+    bmff_sink.clear();
+    let mut overflowing_box = vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'];
+    overflowing_box.extend_from_slice(&u64::MAX.to_be_bytes());
+    let _ = write_bmff_to_sink(&overflowing_box, None, &mut bmff_sink);
+
     let one = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let two = DecodedImage::new(2, 1, vec![0, 0], ColorType::L8);
     let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
