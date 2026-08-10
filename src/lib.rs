@@ -1260,14 +1260,27 @@ fn encode_to_sink_with_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, None);
-    if let Some(written) = codecs::encode_format_to_sink_with_token(
-        img,
-        format,
-        opts,
-        *policy,
-        budget_token.as_ref(),
-        sink,
-    )? {
+    #[cfg(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    ))]
+    {
+        let written = codecs::encode_format_to_sink_with_token(
+            img,
+            format,
+            opts,
+            *policy,
+            budget_token.as_ref(),
+            sink,
+        )?
+        .unwrap_or_else(missing_structural_writer);
         return finish_sink(
             sink,
             format,
@@ -1276,14 +1289,44 @@ fn encode_to_sink_with_policy_impl(
             budget_token.as_ref(),
         );
     }
-    let encoded = encode_with_policy(img, format, opts, policy)?;
-    write_sink_all(
-        sink,
-        &encoded,
-        format,
-        ImageErrorStage::StillEncode,
-        budget_token.as_ref(),
-    )
+
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    )))]
+    {
+        if let Some(written) = codecs::encode_format_to_sink_with_token(
+            img,
+            format,
+            opts,
+            *policy,
+            budget_token.as_ref(),
+            sink,
+        )? {
+            return finish_sink(
+                sink,
+                format,
+                ImageErrorStage::StillEncode,
+                written,
+                budget_token.as_ref(),
+            );
+        }
+        let encoded = encode_with_policy(img, format, opts, policy)?;
+        return write_sink_all(
+            sink,
+            &encoded,
+            format,
+            ImageErrorStage::StillEncode,
+            budget_token.as_ref(),
+        );
+    }
 }
 
 /// Encode a still image with cooperative cancellation and deliver it to a
@@ -1325,14 +1368,27 @@ fn encode_to_sink_with_token_and_policy_impl(
 ) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
-    if let Some(written) = codecs::encode_format_to_sink_with_token(
-        img,
-        format,
-        opts,
-        *policy,
-        Some(effective_token),
-        sink,
-    )? {
+    #[cfg(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    ))]
+    {
+        let written = codecs::encode_format_to_sink_with_token(
+            img,
+            format,
+            opts,
+            *policy,
+            Some(effective_token),
+            sink,
+        )?
+        .unwrap_or_else(missing_structural_writer);
         return finish_sink(
             sink,
             format,
@@ -1341,14 +1397,44 @@ fn encode_to_sink_with_token_and_policy_impl(
             Some(effective_token),
         );
     }
-    let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
-    write_sink_all(
-        sink,
-        &encoded,
-        format,
-        ImageErrorStage::StillEncode,
-        Some(effective_token),
-    )
+
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    )))]
+    {
+        if let Some(written) = codecs::encode_format_to_sink_with_token(
+            img,
+            format,
+            opts,
+            *policy,
+            Some(effective_token),
+            sink,
+        )? {
+            return finish_sink(
+                sink,
+                format,
+                ImageErrorStage::StillEncode,
+                written,
+                Some(effective_token),
+            );
+        }
+        let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
+        return write_sink_all(
+            sink,
+            &encoded,
+            format,
+            ImageErrorStage::StillEncode,
+            Some(effective_token),
+        );
+    }
 }
 
 /// Encode a still image or animation into a caller-owned output sink.
@@ -1396,14 +1482,27 @@ fn encode_sequence_to_sink_with_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, None);
-    if let Some(written) = codecs::encode_sequence_to_sink_with_token(
-        sequence,
-        format,
-        opts,
-        *policy,
-        budget_token.as_ref(),
-        sink,
-    )? {
+    #[cfg(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    ))]
+    {
+        let written = codecs::encode_sequence_to_sink_with_token(
+            sequence,
+            format,
+            opts,
+            *policy,
+            budget_token.as_ref(),
+            sink,
+        )?
+        .unwrap_or_else(missing_structural_writer);
         return finish_sink(
             sink,
             format,
@@ -1412,14 +1511,44 @@ fn encode_sequence_to_sink_with_policy_impl(
             budget_token.as_ref(),
         );
     }
-    let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
-    write_sink_all(
-        sink,
-        &encoded,
-        format,
-        ImageErrorStage::SequenceEncode,
-        budget_token.as_ref(),
-    )
+
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    )))]
+    {
+        if let Some(written) = codecs::encode_sequence_to_sink_with_token(
+            sequence,
+            format,
+            opts,
+            *policy,
+            budget_token.as_ref(),
+            sink,
+        )? {
+            return finish_sink(
+                sink,
+                format,
+                ImageErrorStage::SequenceEncode,
+                written,
+                budget_token.as_ref(),
+            );
+        }
+        let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
+        return write_sink_all(
+            sink,
+            &encoded,
+            format,
+            ImageErrorStage::SequenceEncode,
+            budget_token.as_ref(),
+        );
+    }
 }
 
 /// Encode a still image or animation with cooperative cancellation and
@@ -1468,14 +1597,27 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
 ) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
-    if let Some(written) = codecs::encode_sequence_to_sink_with_token(
-        sequence,
-        format,
-        opts,
-        *policy,
-        Some(effective_token),
-        sink,
-    )? {
+    #[cfg(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    ))]
+    {
+        let written = codecs::encode_sequence_to_sink_with_token(
+            sequence,
+            format,
+            opts,
+            *policy,
+            Some(effective_token),
+            sink,
+        )?
+        .unwrap_or_else(missing_structural_writer);
         return finish_sink(
             sink,
             format,
@@ -1484,18 +1626,64 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
             Some(effective_token),
         );
     }
-    let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
-    write_sink_all(
-        sink,
-        &encoded,
-        format,
-        ImageErrorStage::SequenceEncode,
-        Some(effective_token),
-    )
+
+    #[cfg(not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    )))]
+    {
+        if let Some(written) = codecs::encode_sequence_to_sink_with_token(
+            sequence,
+            format,
+            opts,
+            *policy,
+            Some(effective_token),
+            sink,
+        )? {
+            return finish_sink(
+                sink,
+                format,
+                ImageErrorStage::SequenceEncode,
+                written,
+                Some(effective_token),
+            );
+        }
+        let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
+        return write_sink_all(
+            sink,
+            &encoded,
+            format,
+            ImageErrorStage::SequenceEncode,
+            Some(effective_token),
+        );
+    }
 }
 
 /// Write complete encoded bytes through a trait object so the sink error path
 /// has exactly one non-generic coverage instantiation.
+#[cfg(all(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif",
+    not(target_arch = "wasm32")
+))]
+#[coverage(off)]
+fn missing_structural_writer() -> usize {
+    unreachable!("all enabled native codecs provide a structural sink writer")
+}
+
 fn write_sink_all(
     sink: &mut dyn OutputSink,
     bytes: &[u8],
