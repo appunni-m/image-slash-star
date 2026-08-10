@@ -2202,6 +2202,93 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
 
     let luma = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
+    let rgb = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
+
+    // Exercise the public dispatch matrix for every enabled target.  Each
+    // format gets its successful structural writer, its typed option-mismatch
+    // error, and both still and one-frame sequence delivery.  These are real
+    // caller routes; Pillow parity cannot observe the Rust sink boundary or
+    // the format-qualified options error.
+    let dispatch_formats = [
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Gif,
+        ImageFormat::Bmp,
+        ImageFormat::Tiff,
+        ImageFormat::WebP,
+        ImageFormat::Ico,
+        ImageFormat::Avif,
+    ];
+    let one_frame_sequence = DecodedSequence::from_image(rgb.clone());
+    for format in dispatch_formats {
+        let options = EncodeOptions::for_format(format);
+        let wrong_format = if format == ImageFormat::Png {
+            ImageFormat::Jpeg
+        } else {
+            ImageFormat::Png
+        };
+        let wrong_options = EncodeOptions::for_format(wrong_format);
+        let token = crate::CancellationToken::new();
+        let mut still_sink = Vec::new();
+        let _ = encode_format_to_sink_with_token(
+            &rgb,
+            format,
+            &options,
+            EncodePolicy::default(),
+            Some(&token),
+            &mut still_sink,
+        );
+        let mut still_mismatch_sink = Vec::new();
+        let _ = encode_format_to_sink_with_token(
+            &rgb,
+            format,
+            &wrong_options,
+            EncodePolicy::default(),
+            None,
+            &mut still_mismatch_sink,
+        );
+        let mut sequence_sink = Vec::new();
+        let _ = encode_sequence_to_sink_with_token(
+            &one_frame_sequence,
+            format,
+            &options,
+            EncodePolicy::default(),
+            Some(&token),
+            &mut sequence_sink,
+        );
+        let mut sequence_mismatch_sink = Vec::new();
+        let _ = encode_sequence_to_sink_with_token(
+            &one_frame_sequence,
+            format,
+            &wrong_options,
+            EncodePolicy::default(),
+            None,
+            &mut sequence_mismatch_sink,
+        );
+        let _ = encode_sequence_format_with_token(&one_frame_sequence, format, &options, None);
+        let _ = encode_sequence_format_with_token(
+            &one_frame_sequence,
+            format,
+            &options,
+            Some(&crate::CancellationToken::new()),
+        );
+    }
+
+    // A single retained frame can still carry sequence-only presentation
+    // metadata.  Still-image sink formats must reject that rather than
+    // silently discarding it.
+    let mut metadata_sequence = DecodedSequence::from_image(rgb.clone());
+    metadata_sequence.background = Some(crate::types::AnimationBackground::Rgba([0, 0, 0, 0]));
+    let mut metadata_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token(
+        &metadata_sequence,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        EncodePolicy::default(),
+        None,
+        &mut metadata_sink,
+    );
+
     // Still codecs are currently whole-buffer operations.  The coverage-only
     // hook makes the post-codec public-boundary cancellation checkpoint
     // deterministic; Pillow has no equivalent caller token to exercise this
@@ -2262,6 +2349,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ImageFormat::Png,
         &EncodeOptions::for_format(ImageFormat::Png),
     );
+    for format in [
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Bmp,
+        ImageFormat::Ico,
+    ] {
+        let mut sink = Vec::new();
+        let _ = encode_sequence_to_sink_with_token(
+            &two_frame_sequence,
+            format,
+            &EncodeOptions::for_format(format),
+            EncodePolicy::default(),
+            None,
+            &mut sink,
+        );
+    }
 
     // These are Rust-only token-dispatch checks.  CancellationToken and the
     // caller-owned output contract are not represented by Pillow parity rows.
