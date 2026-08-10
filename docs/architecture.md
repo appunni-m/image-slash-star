@@ -3,17 +3,23 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `1d1b36100925f830408f5d41f0026e71fd220d6e`; the claim-ledger fixture
+revision `97539a505923004cbff9ea48d9e7a99c2fde83d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`bbd0f95f-d55d-4c90-b097-eacfdb96c372` (1,445/1,445 passed in 3,779 ms), and
-the latest feature matrix is `34791756-b280-4de5-9428-accc71974d13` (passed in
-18,536 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
-`beda2230-4d77-446c-8ce4-91700552cdc4`, also at that revision: 55,926/56,803
-lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,972/87,930
-regions. The snapshot retains the known LLVM JSON segment-normalization
+`67dc1f7b-d962-41e6-89fc-3d49699a86e6` (1,445/1,445 passed in 11,055 ms) at
+this revision. Feature matrix run
+`bcc78c63-bf27-4df2-8279-e38eb3ea75b2` terminated with 44 passed and 1 failed;
+the failing `source_alpha_matches_the_container_contract` lane reports the
+pre-existing native AVIF decoder status-5 failure, reproduced from a clean
+copy of the preceding `879ddc6` source. Nightly Coverage MCP run
+`f90a3bb4-59a3-4d2a-bbb0-df72c11b3410` likewise terminated 84/85 and ingested
+no snapshot. The accepted Coverage MCP snapshot therefore remains
+`44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
+`beda2230-4d77-446c-8ce4-91700552cdc4` at revision
+`1d1b36100925f830408f5d41f0026e71fd220d6e`: 55,926/56,803 lines, 8,011/8,228
+branches, 3,122/3,218 functions, and 85,972/87,930 regions. The snapshot
+retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
@@ -188,8 +194,9 @@ the source-local item ID and CICP values without replacing the primary
 profiles are retained as bounded `AvifItemIccProfile` records through
 `SourceDescriptor::avif_item_icc_profiles()`, preserving exact item IDs and
 profile bytes without replacing `SourceColor`; other item color/property forms
-remain outside this typed boundary. Unknown associated properties are retained
-as `AvifItemProperty` records through `SourceDescriptor::avif_item_properties()`
+remain outside this typed boundary. Unknown and known non-primary
+`clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties are retained as
+`AvifItemProperty` records through `SourceDescriptor::avif_item_properties()`
 with source-local item ID, four-byte kind, and exact payload; they are not
 interpreted or applied to decoded samples. Known non-primary and auxiliary
 `ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records
@@ -318,8 +325,8 @@ supported grid-derived alpha `auxl` relationships, the bounded grid-derived
 item list, bounded `iref` edges, and filtered `prem` relationships are retained in
 `SourceDescriptor`; validated primary-grid payload topology is retained through
 `SourceDescriptor::avif_grid_properties()`, while tile placement/composition,
-track-only content, interpretation/replay of unknown item properties, and
-auxiliary-item decoding remain outside this model.
+track-only content, interpretation/replay of unknown or known raw item
+properties, and auxiliary-item decoding remain outside this model.
 The primary AVIF item's `colr`/`nclx` CICP declaration, `av1C` chroma sample
 position, `clli` content-light-level property, `mdcv` mastering-display color
 volume, and `colr`/`prof` or `rICC` ICC profile are retained in `SourceColor` on
@@ -339,14 +346,14 @@ declaration is retained in the same descriptor as positive horizontal and
 vertical spacing values, and `clap` retains its positive width/height
 fractions plus signed offsets. No pixel rescaling or cropping is applied.
 Other non-primary/auxiliary profiles beyond raw ICC, track-only item semantics,
-item color/property forms beyond typed CICP, raw ICC, raw unknown, plane, and
-codec declarations, grid tile
+item color/property forms beyond typed CICP, raw ICC, raw unknown, the six known
+raw declarations, plane, and codec declarations, grid tile
 placement/composition, and broader derived/grid graph semantics remain outside
 the current model; bounded direct,
 supported grid-derived alpha
-`auxl`, ordinary `iref`, `prem`, and typed non-primary `colr`/`nclx`
-declarations plus non-primary `prof`/`rICC` profiles are the explicitly
-retained exceptions.
+`auxl`, ordinary `iref`, `prem`, typed non-primary `colr`/`nclx` declarations,
+the six known raw properties, plus non-primary `prof`/`rICC` profiles are the
+explicitly retained exceptions.
 
 Public enums whose vocabularies can grow with codec support are non-exhaustive.
 This includes formats, verification strengths, transfer modes, disposal,

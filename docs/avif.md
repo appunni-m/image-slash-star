@@ -2,13 +2,17 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-09 on production implementation revision
-`5aa0d77b37a5d81e1149e5169915ce21c59b6454` and test/runtime revision
-`35cf266552fa4cfaaef1e231bb01bead1c00d99b`; the claim-ledger fixture tuple
+Reviewed: 2026-08-10 on production implementation and test/runtime revision
+`97539a505923004cbff9ea48d9e7a99c2fde83d6`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
-The accepted Coverage MCP snapshot for the current test/runtime revision is
-`d4a74b4d-3804-4224-b120-430af2cde3ec` from run
-`4b74e8de-14b9-4438-9a17-7471b12b3ad4`.
+The current exact-head Pillow parity run
+`67dc1f7b-d962-41e6-89fc-3d49699a86e6` passed 1,445/1,445 checks. The feature
+matrix run `bcc78c63-bf27-4df2-8279-e38eb3ea75b2` and nightly Coverage MCP
+run `f90a3bb4-59a3-4d2a-bbb0-df72c11b3410` both hit the pre-existing native
+`source_alpha_matches_the_container_contract` AVIF status-5 failure; the
+nightly run ingested no snapshot. The accepted coverage snapshot remains
+`44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
+`1d1b36100925f830408f5d41f0026e71fd220d6e`.
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -162,14 +166,16 @@ item-level field, so it remains Rust source-provenance evidence with no parity
 row. Raw non-primary `prof`/`rICC` profiles are retained through
 `SourceDescriptor::avif_item_icc_profiles()` as source-local item ID and exact
 profile-kind/bytes records, without replacing primary `SourceColor` or changing
-decoded pixels. Other known item color/property forms remain open.
-Unknown associated item properties are retained separately through
+decoded pixels. Other known item color/property forms beyond these six raw
+declarations remain open. Unknown and known associated non-primary
+`clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties are retained separately through
 `SourceDescriptor::avif_item_properties()` as source-local item ID, four-byte
 property kind, and exact raw payload records. They are not interpreted,
 replayed, or applied to decoded samples. The existing feature-gated contract
-mutates `alpha.avif` only in memory and checks inspection, still decode, and
-sequence-frame decode; Pillow exposes no equivalent item-property result, so
-this is Rust source-provenance evidence with no parity row.
+mutates `alpha.avif` only in memory and checks all six declarations across
+inspection, still decode, and sequence-frame decode; Pillow exposes no
+equivalent item-property result, so this is Rust source-provenance evidence
+with no parity row.
 Known non-primary and auxiliary `ispe`/`pixi` declarations are retained
 separately through `SourceDescriptor::avif_item_plane_properties()` as
 source-local item ID, optional width/height, and optional uniform channel depth.
@@ -197,7 +203,8 @@ metadata records. The EXIF record preserves the item payload exactly, including
 the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
 Other non-primary profiles beyond raw ICC, track-only and non-alpha auxiliary
 item semantics, item color/property forms beyond typed CICP, raw ICC, raw
-unknown properties, plane declarations, and codec declarations, plus plane
+unknown properties, the six known raw declarations, plane declarations, and
+codec declarations, plus plane
 range/quality semantics, remain future slices. Direct and
 supported grid-derived item and auxiliary-alpha provenance is represented
 through `SourceAlpha::Auxiliary`, the scalar
@@ -214,7 +221,7 @@ and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
 positive width/height fractions and signed horizontal/vertical offsets through
 `AvifCleanAperture`. These declarations are source provenance only: decoded
 pixels are never rotated, mirrored, rescaled, or cropped. Other non-primary
-item-level color/properties, non-alpha auxiliary relationships, grid tile
+item-level color/properties beyond the six known raw declarations, non-alpha auxiliary relationships, grid tile
 placement/composition, plane range/quality, and other item metadata remain open;
 bounded direct/grid item,
 auxiliary-alpha, and
