@@ -39,7 +39,6 @@ pub(crate) enum TransformType {
     SubtractGreen,
     ColorIndexingTransform {
         table_size: u16,
-        table_data: Vec<u8>,
     },
 }
 

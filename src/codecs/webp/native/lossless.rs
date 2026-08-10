@@ -79,6 +79,7 @@ const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 2
 const MAX_STACK_HUFFMAN_SYMBOLS: usize = 256 + 24;
 
 const NUM_TRANSFORM_TYPES: usize = 4;
+const MAX_COLOR_INDEXING_TABLE_BYTES: usize = 256 * 4;
 
 //Decodes lossless WebP images
 pub(crate) struct LosslessDecoder<'a> {
@@ -87,6 +88,10 @@ pub(crate) struct LosslessDecoder<'a> {
     // The bitstream permits at most one instance of each transform type.
     transform_order: [u8; NUM_TRANSFORM_TYPES],
     transform_order_len: usize,
+    // VP8L permits one color-indexing transform with at most 256 RGBA entries.
+    // Keep its retained table in decoder-owned fixed storage instead of making
+    // a short-lived heap allocation while the main image stream is decoded.
+    color_indexing_table: [u8; MAX_COLOR_INDEXING_TABLE_BYTES],
     width: u16,
     height: u16,
 }
@@ -99,6 +104,7 @@ impl<'a> LosslessDecoder<'a> {
             transforms: [None, None, None, None],
             transform_order: [0; NUM_TRANSFORM_TYPES],
             transform_order_len: 0,
+            color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
             width: 0,
             height: 0,
         }
@@ -243,10 +249,7 @@ impl<'a> LosslessDecoder<'a> {
                 TransformType::SubtractGreen => {
                     apply_subtract_green_transform(&mut buf[..image_size]);
                 }
-                TransformType::ColorIndexingTransform {
-                    table_size,
-                    table_data,
-                } => {
+                TransformType::ColorIndexingTransform { table_size } => {
                     width = self.width;
                     image_size = usize::from(width) * usize::from(self.height) * 4;
                     apply_color_indexing_transform(
@@ -254,7 +257,7 @@ impl<'a> LosslessDecoder<'a> {
                         width,
                         self.height,
                         *table_size,
-                        table_data,
+                        &self.color_indexing_table[..usize::from(*table_size) * 4],
                     );
                 }
             }
@@ -372,9 +375,23 @@ impl<'a> LosslessDecoder<'a> {
                 _ => {
                     debug_assert_eq!(transform_type_val, 3);
                     let color_table_size = self.bit_reader.read_bits::<u16>(8)? + 1;
-
-                    let mut color_map = vec![0; usize::from(color_table_size) * 4];
-                    self.decode_image_stream(color_table_size, 1, false, &mut color_map)?;
+                    let table_bytes = usize::from(color_table_size) * 4;
+                    let mut color_map = std::mem::replace(
+                        &mut self.color_indexing_table,
+                        [0; MAX_COLOR_INDEXING_TABLE_BYTES],
+                    );
+                    match self.decode_image_stream(
+                        color_table_size,
+                        1,
+                        false,
+                        &mut color_map[..table_bytes],
+                    ) {
+                        Ok(()) => {}
+                        Err(error) => {
+                            self.color_indexing_table = color_map;
+                            return Err(error);
+                        }
+                    }
 
                     let bits = if color_table_size <= 2 {
                         3
@@ -387,11 +404,11 @@ impl<'a> LosslessDecoder<'a> {
                     };
                     xsize = ((u32::from(xsize) + (1u32 << bits) - 1) >> bits) as u16;
 
-                    Self::adjust_color_map(&mut color_map);
+                    Self::adjust_color_map(&mut color_map[..table_bytes]);
+                    self.color_indexing_table = color_map;
 
                     TransformType::ColorIndexingTransform {
                         table_size: color_table_size,
-                        table_data: color_map,
                     }
                 }
             };
@@ -1005,6 +1022,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transforms: [None, None, None, None],
             transform_order: [0; NUM_TRANSFORM_TYPES],
             transform_order_len: 0,
+            color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
             width,
             height,
         }
@@ -1099,6 +1117,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
@@ -1112,6 +1131,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
@@ -1246,6 +1266,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
@@ -1276,6 +1297,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
@@ -1306,6 +1328,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
@@ -1507,6 +1530,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 2,
         height: 1,
     };
@@ -1537,6 +1561,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         transforms: [None, None, None, None],
         transform_order: [0; NUM_TRANSFORM_TYPES],
         transform_order_len: 0,
+        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
         width: 1,
         height: 1,
     };
