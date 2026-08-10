@@ -387,6 +387,10 @@ impl<'a> LosslessDecoder<'a> {
         }
 
         let mut hufftree_groups = Vec::new();
+        // The enlarged green alphabet is the only Huffman code-length case
+        // that remains heap-backed. Reuse its temporary storage across the
+        // sequential trees instead of allocating once per non-simple tree.
+        let mut dynamic_code_lengths = Vec::new();
 
         for _i in 0..num_huff_groups {
             let mut group: HuffmanCodeGroup = Default::default();
@@ -398,7 +402,7 @@ impl<'a> LosslessDecoder<'a> {
                     alphabet_size += 1 << color_cache.color_cache_bits;
                 }
 
-                let tree = self.read_huffman_code(alphabet_size)?;
+                let tree = self.read_huffman_code(alphabet_size, &mut dynamic_code_lengths)?;
                 group[j] = tree;
             }
             hufftree_groups.push(group);
@@ -424,7 +428,11 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     /// Decodes and returns a single huffman tree
-    fn read_huffman_code(&mut self, alphabet_size: u16) -> Result<HuffmanTree, DecodingError> {
+    fn read_huffman_code(
+        &mut self,
+        alphabet_size: u16,
+        dynamic_code_lengths: &mut Vec<u16>,
+    ) -> Result<HuffmanTree, DecodingError> {
         let simple = self.bit_reader.read_bits::<u8>(1)? == 1;
 
         if simple {
@@ -466,13 +474,17 @@ impl<'a> LosslessDecoder<'a> {
                 // A color-cache green alphabet can reach 2,328 symbols. It
                 // remains dynamically sized because that representation is
                 // not bounded by the ordinary 280-symbol stack workspace.
-                let mut code_lengths = vec![0; usize::from(alphabet_size)];
+                // Reuse the allocation across the sequential trees in this
+                // image stream; the Huffman builder copies the lengths into
+                // its owned tree before the scratch is used again.
+                dynamic_code_lengths.resize(usize::from(alphabet_size), 0);
+                dynamic_code_lengths.fill(0);
                 self.read_huffman_code_lengths(
                     &code_length_code_lengths,
                     alphabet_size,
-                    &mut code_lengths,
+                    dynamic_code_lengths,
                 )?;
-                HuffmanTree::build_implicit(&code_lengths)
+                HuffmanTree::build_implicit(dynamic_code_lengths)
             }
         }
     }
