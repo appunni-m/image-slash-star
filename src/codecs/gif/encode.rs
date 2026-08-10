@@ -923,6 +923,146 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(AnimationBackground::PaletteIndex(0)),
     );
 
+    // GIF sink delivery is a Rust-owned boundary. Pillow does not expose the
+    // encoded stream before its file writer consumes it, nor can it provide a
+    // cancellation token, so exercise malformed block shapes and token
+    // checkpoints in this existing defensive-model hook.
+    let minimal_gif = b"GIF89a\x01\0\x01\0\0\0\0".to_vec();
+    let mut global_table_truncated = minimal_gif.clone();
+    global_table_truncated[10] = 0x80;
+    let mut valid_trailer = minimal_gif.clone();
+    valid_trailer.push(GIF_TRAILER);
+    let mut trailing_after_trailer = valid_trailer.clone();
+    trailing_after_trailer.push(0);
+    let no_trailer = minimal_gif.clone();
+    let mut unknown_marker = minimal_gif.clone();
+    unknown_marker.push(0);
+    let mut short_descriptor = minimal_gif.clone();
+    short_descriptor.push(IMAGE_SEPARATOR);
+    let descriptor = [IMAGE_SEPARATOR, 0, 0, 0, 0, 1, 0, 1, 0, 0];
+    let mut local_table_truncated = minimal_gif.clone();
+    local_table_truncated.extend_from_slice(&[IMAGE_SEPARATOR, 0, 0, 0, 0, 1, 0, 1, 0, 0x80]);
+    let mut missing_lzw_header = minimal_gif.clone();
+    missing_lzw_header.extend_from_slice(&descriptor);
+    let mut missing_sub_block_payload = missing_lzw_header.clone();
+    missing_sub_block_payload.push(2);
+    let mut missing_sub_block_terminator = missing_lzw_header.clone();
+    missing_sub_block_terminator.extend_from_slice(&[2, 1, 0]);
+    let mut short_gce = minimal_gif.clone();
+    short_gce.extend_from_slice(&[EXTENSION_INTRODUCER, GRAPHIC_CONTROL_LABEL]);
+    let mut invalid_gce_size = minimal_gif.clone();
+    invalid_gce_size.extend_from_slice(&[
+        EXTENSION_INTRODUCER,
+        GRAPHIC_CONTROL_LABEL,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]);
+    let mut invalid_gce_terminator = minimal_gif.clone();
+    invalid_gce_terminator.extend_from_slice(&[
+        EXTENSION_INTRODUCER,
+        GRAPHIC_CONTROL_LABEL,
+        4,
+        0,
+        0,
+        0,
+        0,
+        1,
+    ]);
+    let mut invalid_fixed_extension_size = minimal_gif.clone();
+    invalid_fixed_extension_size.extend_from_slice(&[EXTENSION_INTRODUCER, 0xff, 0]);
+    let mut truncated_fixed_extension = minimal_gif.clone();
+    truncated_fixed_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xff, 11]);
+    let mut short_generic_extension = minimal_gif.clone();
+    short_generic_extension.push(EXTENSION_INTRODUCER);
+    let mut unterminated_generic_extension = minimal_gif.clone();
+    unterminated_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 1, 0]);
+    let sink_cases = vec![
+        b"bad".to_vec(),
+        b"GIF89a".to_vec(),
+        global_table_truncated,
+        valid_trailer,
+        trailing_after_trailer,
+        no_trailer,
+        unknown_marker,
+        short_descriptor,
+        local_table_truncated,
+        missing_lzw_header,
+        missing_sub_block_payload,
+        missing_sub_block_terminator,
+        short_gce,
+        invalid_gce_size,
+        invalid_gce_terminator,
+        invalid_fixed_extension_size,
+        truncated_fixed_extension,
+        short_generic_extension,
+        unterminated_generic_extension,
+    ];
+    let mut sink = Vec::new();
+    for encoded in sink_cases {
+        let _ = write_gif_to_sink(&encoded, None, &mut sink);
+        sink.clear();
+    }
+    let valid_with_extensions = write_gif(
+        &sequence,
+        &coalesced,
+        GifSettings {
+            interlaced: Some(true),
+            local_color_table: true,
+            disposal_override: None,
+            loop_count: Some(1),
+            transparency_override: None,
+        },
+    )
+    .expect("coverage GIF extension stream");
+    let _ = write_gif_to_sink(&valid_with_extensions, None, &mut sink);
+    sink.clear();
+    let cancelled_sink_token = crate::CancellationToken::new();
+    cancelled_sink_token.cancel_after(1);
+    let _ = write_gif_to_sink(
+        &valid_with_extensions,
+        Some(&cancelled_sink_token),
+        &mut sink,
+    );
+    sink.clear();
+
+    let mut nearest_rgb = Vec::with_capacity(1025 * 3);
+    for value in 0u32..1025 {
+        let [red, green, blue, _] = value.to_le_bytes();
+        nearest_rgb.extend_from_slice(&[red, green, blue]);
+    }
+    let nearest_token = crate::CancellationToken::new();
+    let _ = quantize_rgb_nearest(&nearest_rgb, Some(&nearest_token));
+
+    let mut token_rgba = Vec::with_capacity(1025 * 4);
+    for value in 0u32..1025 {
+        let [red, green, blue, _] = value.to_le_bytes();
+        let alpha = if value.is_multiple_of(2) { 0 } else { 255 };
+        token_rgba.extend_from_slice(&[red, green, blue, alpha]);
+    }
+    let rgba_token = crate::CancellationToken::new();
+    let _ = quantize_rgba(&token_rgba, Some(&rgba_token));
+
+    let mut token_palette = vec![
+        [255u8, 0, 0, 255],
+        [0, 255, 0, 255],
+        [0, 0, 255, 0],
+        [255, 255, 0, 255],
+    ];
+    let mut token_indices = (0usize..1025)
+        .map(|index| if index.is_multiple_of(2) { 0 } else { 2 })
+        .collect::<Vec<_>>();
+    let mut token_transparent = Some(2u8);
+    let _ = compact_rgba_palette(
+        &mut token_palette,
+        &mut token_indices,
+        &mut token_transparent,
+        Some(&rgba_token),
+    );
+
     let _ = OctreeCube::new([3, 4, 3, 3]);
 }
 
