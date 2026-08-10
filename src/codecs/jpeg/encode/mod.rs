@@ -6,9 +6,10 @@
 // jcmaster.c, jcmarker.c, jccolor.c, jcsample.c).
 //
 // Supports baseline (SOF0) and progressive (SOF2) encoding for YCbCr 4:4:4,
-// 4:2:2, 4:2:0 and grayscale.  Entropy coding uses the standard IJG Huffman
-// tables; quantization uses ISLOW divisors (quantval<<3) with round-to-nearest
-// division matching jcdctmgr.c's reciprocal quantize path.
+// 4:2:2, 4:2:0 and grayscale, including Pillow's packed bilevel-to-luminance
+// conversion. Entropy coding uses the standard IJG Huffman tables; quantization
+// uses ISLOW divisors (quantval<<3) with round-to-nearest division matching
+// jcdctmgr.c's reciprocal quantize path.
 
 #![allow(dead_code)] // encoder wired up incrementally; tables/markers used by encode_*
 
@@ -424,7 +425,7 @@ pub(crate) fn encode_with_token(
     let pixels = img.as_bytes();
 
     let num_components: u8 = match img.mode {
-        ImageMode::L8 => 1,
+        ImageMode::L1 | ImageMode::L8 => 1,
         ImageMode::Rgb8 => 3,
         _ => {
             return Err(CodecError::Unsupported(format!(
@@ -450,13 +451,28 @@ pub(crate) fn encode_with_token(
 
     // RGB → YCbCr (jccolor.c) or grayscale pass-through.
     let (y_plane, cb_plane, cr_plane): (Cow<'_, [u8]>, Vec<u8>, Vec<u8>) = if num_components == 1 {
-        let pixel_count = w.saturating_mul(h);
-        let copied = pixel_count.min(pixels.len());
-        let row_width = w.max(1);
-        for _row_start in (0..copied).step_by(row_width) {
-            crate::codecs::error::check_cancelled(token)?;
+        if img.mode == ImageMode::L1 {
+            let row_bytes = w.div_ceil(8);
+            let mut expanded = Vec::with_capacity(w.saturating_mul(h));
+            for y in 0..h {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.saturating_mul(row_bytes);
+                for x in 0..w {
+                    let packed = pixels[row_start.saturating_add(x / 8)];
+                    let bit = 0x80u8 >> (x % 8);
+                    expanded.push(if packed & bit != 0 { 255 } else { 0 });
+                }
+            }
+            (Cow::Owned(expanded), Vec::new(), Vec::new())
+        } else {
+            let pixel_count = w.saturating_mul(h);
+            let copied = pixel_count.min(pixels.len());
+            let row_width = w.max(1);
+            for _row_start in (0..copied).step_by(row_width) {
+                crate::codecs::error::check_cancelled(token)?;
+            }
+            (Cow::Borrowed(pixels), Vec::new(), Vec::new())
         }
-        (Cow::Borrowed(pixels), Vec::new(), Vec::new())
     } else {
         let (y, cb, cr) = rgb_to_ycbcr(pixels, w, h, token)?;
         (Cow::Owned(y), cb, cr)

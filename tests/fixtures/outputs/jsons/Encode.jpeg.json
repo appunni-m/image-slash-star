@@ -912,27 +912,14 @@
       "assertion_origins": {
         "source": "pillow_fixture",
         "encode": "pillow_fixture",
-        "operations": "pillow_fixture",
-        "rust_contract": "defensive_model"
+        "operations": "pillow_fixture"
       },
       "operations": {
-        "encode": "not_applicable",
-        "encode_sequence": "error"
+        "encode": "ok",
+        "encode_sequence": "ok"
       },
-      "error_contracts": {
-        "encode_sequence": {
-          "pillow_type": null,
-          "pillow_message": null,
-          "rust_kind": "unsupported",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "defensive_model"
-        }
-      },
-      "oracle_status": "ok",
-      "rust_expect_error": true,
-      "rust_error_kind": "unsupported",
-      "rust_error_reason": "Private source-mode conversion belongs to a future fixture-proven encoder normalization slice"
+      "error_contracts": {},
+      "oracle_status": "ok"
     },
     {
       "id": "enc_1x1",
