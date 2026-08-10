@@ -3,17 +3,17 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `564603a9ecf245c8633d3b4e00db0064db55af31`, and benchmark-protocol
+revision `a58fd93049dae84aebd1827ed765784a0cc8028d`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`a888d134-fe9e-4f07-bdfd-8d65865e053e` (1,445/1,445 passed in 5,133 ms) at
+`3fb75758-0150-43b5-bcff-af4952cbb18a` (1,445/1,445 passed in 3,503 ms) at
 this revision. Feature matrix run
-`b9527417-0805-404c-acc8-110ce53a98b3` terminated with 44 passed and 1 failed;
+`0b7e4821-33e8-4752-b1ae-336964e21952` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`2fa42d2e-461c-43fc-a211-3677afba35de` likewise terminated 84/85 with that
+`d881ed6e-a73f-4193-aef3-42aece5b921b` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -7115,6 +7115,34 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current implementation record: WebP lossy VP8 RIFF output-buffer reuse
+
+The production and Rust test/runtime slice is implemented at
+`a58fd93049dae84aebd1827ed765784a0cc8028d`, following the RGBA alpha-channel
+staging boundary at
+`7f5d47fb9b2806a4166fd2c1d053be6157375900`. Opaque/lossy VP8 encoding now
+passes ownership of its completed VP8 payload into the ordinary RIFF builder;
+when no caller token is present, the builder shifts that payload in place,
+writes the 20-byte RIFF/VP8 header, and appends only the required pad byte.
+Token-aware assembly retains its separate output buffer and existing
+1,024-byte copy checkpoints. This slice does not change the extended RGBA
+VP8X/ALPH container path. Encoded bytes, errors, cancellation checkpoints,
+and sink output remain unchanged.
+
+Pillow exposes final bytes and errors, but no allocation or output-buffer
+ownership result. Existing WebP still and sequence fixture rows therefore
+provide byte/error regression only; existing feature-gated Rust contracts
+remain the non-Pillow evidence for caller-token behavior. No parity row,
+fixture-manifest entry, diagnostic origin, new test function, coverage-only
+hook, or unit test was added because Pillow cannot observe this ownership
+boundary. Exact-head managed Pillow parity run
+`3fb75758-0150-43b5-bcff-af4952cbb18a` passed 1,445/1,445 checks in 3,503 ms.
+Feature matrix run `0b7e4821-33e8-4752-b1ae-336964e21952` terminated 44/45 on
+the pre-existing native AVIF status-5 lane. Nightly run
+`d881ed6e-a73f-4193-aef3-42aece5b921b` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
+
 Current implementation record: WebP RGBA alpha-channel staging reuse
 
 The production and Rust test/runtime slice is implemented across
@@ -11626,8 +11654,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    transform table storage, alpha-palette fixed storage, Huffman
    table/tree storage-coalescing, Huffman group-vector capacity-planning,
    cross-frame VP8L image-stream scratch-reuse, cross-frame ALPH image-stream
-   scratch-reuse, ALPH packed-image transform workspace-reuse, and RGBA
-   alpha-channel staging-reuse slices
+   scratch-reuse, ALPH packed-image transform workspace-reuse, RGBA
+   alpha-channel staging-reuse, and lossy VP8 RIFF output-buffer-reuse slices
    are closed in the
    revision-bound
    history; the next audit target is

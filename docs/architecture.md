@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `564603a9ecf245c8633d3b4e00db0064db55af31`; the claim-ledger fixture
+revision `a58fd93049dae84aebd1827ed765784a0cc8028d`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`a888d134-fe9e-4f07-bdfd-8d65865e053e` (1,445/1,445 passed in 5,133 ms) at
+`3fb75758-0150-43b5-bcff-af4952cbb18a` (1,445/1,445 passed in 3,503 ms) at
 this revision. Feature matrix run
-`b9527417-0805-404c-acc8-110ce53a98b3` terminated with 44 passed and 1 failed;
+`0b7e4821-33e8-4752-b1ae-336964e21952` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`2fa42d2e-461c-43fc-a211-3677afba35de` likewise terminated 84/85 and ingested
+`d881ed6e-a73f-4193-aef3-42aece5b921b` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1053,6 +1053,14 @@ encoder across sequential frames, clearing its logical contents after each
 ALPH attempt. The extraction cadence and encoded bytes, errors, checkpoints,
 and sink output remain unchanged. This is a Rust-only staging optimization;
 Pillow has no allocation-lifetime or caller-budget result to compare.
+
+Opaque/lossy VP8 RIFF assembly reuses the completed VP8 payload allocation on
+the ordinary no-token path by shifting it behind the RIFF and VP8 chunk headers.
+The token-aware path keeps its separate output buffer and 1,024-byte copy
+checkpoints, and the extended RGBA VP8X/ALPH path remains separate. Encoded
+bytes, errors, cancellation checkpoints, and sink output remain unchanged.
+This is a Rust-only output-buffer ownership optimization; Pillow supplies only
+the final byte/error regression oracle.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
