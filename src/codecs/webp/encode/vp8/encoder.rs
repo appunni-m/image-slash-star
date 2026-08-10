@@ -77,7 +77,7 @@ pub(crate) fn encode_vp8_lossy(
         },
     )?;
     crate::codecs::error::check_cancelled(token)?;
-    build_webp_container(&vp8_data, width, height, token)
+    build_webp_container(vp8_data, width, height, token)
 }
 
 pub(crate) fn encode_vp8_lossy_rgba(
@@ -913,13 +913,34 @@ fn build_frame_header(width: u32, height: u32, partition0_size: u32) -> Vec<u8> 
 
 /// Build RIFF/WEBP/VP8 container.
 fn build_webp_container(
-    vp8_data: &[u8],
+    mut vp8_data: Vec<u8>,
     _width: u32,
     _height: u32,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
-    let vp8_chunk_size = low_u32(vp8_data.len().wrapping_add(vp8_data.len() & 1));
+    let data_len = vp8_data.len();
+    let padding = data_len & 1;
+    let vp8_chunk_size = low_u32(data_len.wrapping_add(padding));
     let riff_size = 12_u32.wrapping_add(vp8_chunk_size);
+
+    // The ordinary path has no caller-visible copy checkpoint. Reuse the
+    // completed VP8 allocation by shifting its payload behind the RIFF and
+    // chunk headers; keep the token-aware path's chunked copy and cancellation
+    // behavior unchanged.
+    if token.is_none() {
+        vp8_data.reserve(20usize.saturating_add(padding));
+        vp8_data.resize(data_len.saturating_add(20), 0);
+        vp8_data.copy_within(..data_len, 20);
+        vp8_data[..4].copy_from_slice(b"RIFF");
+        vp8_data[4..8].copy_from_slice(&riff_size.to_le_bytes());
+        vp8_data[8..12].copy_from_slice(b"WEBP");
+        vp8_data[12..16].copy_from_slice(b"VP8 ");
+        vp8_data[16..20].copy_from_slice(&vp8_chunk_size.to_le_bytes());
+        if padding != 0 {
+            vp8_data.push(0);
+        }
+        return Ok(vp8_data);
+    }
 
     let mut out = Vec::with_capacity(21_usize.saturating_add(vp8_data.len()));
 
@@ -933,10 +954,10 @@ fn build_webp_container(
     out.extend_from_slice(&vp8_chunk_size.to_le_bytes());
 
     // VP8 data (includes frame header + bool-encoded data)
-    extend_with_output_checkpoint(&mut out, vp8_data, token)?;
+    extend_with_output_checkpoint(&mut out, &vp8_data, token)?;
 
     // Pad to even length (RIFF requirement)
-    if vp8_data.len() & 1 != 0 {
+    if padding != 0 {
         out.push(0);
     }
 
