@@ -149,7 +149,7 @@ def run_wasi_probe(lane: str, triple: str) -> dict:
         "--exact",
         "--nocapture",
     ]
-    return run_probe(args, env, lane, "wasm32")
+    return run_probe(args, env, lane, "wasm32-wasip1")
 
 
 def run_probe(args: list[str], env: dict, lane: str, target: str) -> dict:
@@ -254,7 +254,7 @@ def generate_from_matrix_logs(log_dir: Path) -> dict:
     table: dict = {"format_version": 1, "native": {}, "wasm32-wasip1": {}}
     for group, target, table_target in (
         ("native", "native", "native"),
-        ("wasm-wasi", "wasm32", "wasm32-wasip1"),
+        ("wasm-wasi", "wasm32-wasip1", "wasm32-wasip1"),
     ):
         for lane in LANES:
             path = log_dir / f"{group}-{lane}.log"
