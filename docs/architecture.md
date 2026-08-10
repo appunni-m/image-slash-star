@@ -749,6 +749,15 @@ while storage ownership belongs to the separate Rust coverage and feature-gate
 evidence; it is not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
 
+The VP8L color-cache table remains dynamically sized to the actual
+`1 << color_cache_bits` entries. Although the format bounds it at 2,048
+entries (8 KiB), forcing the maximum table inline would enlarge every
+cache-bearing `HuffmanInfo`. A dirty local probe did not establish a benefit,
+and its direct-child peak includes build/cache effects, so it is not accepted
+as a performance claim. Peak-stack and allocator measurements are not yet part
+of the release contract; that boundary therefore remains open and is not
+represented as a completed optimization.
+
 WebP still VP8L decode now writes directly into a caller-owned RGB buffer for
 opaque, untransformed frames, avoiding a full RGBA staging vector and the
 follow-up RGB copy. The header's alpha-used bit and transform list gate this
