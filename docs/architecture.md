@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `8b3461aca67c5213383ec968327bd92ebb5153d8`; the claim-ledger fixture
+revision `531d00657a22034fb88ed249df9d20c33b5d2fc3`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`ab960255-2391-43df-a04d-1d4d863e868a` (1,445/1,445 passed in 635 ms) at
+`75f2370c-95aa-449c-9172-0c8e8ad41940` (1,445/1,445 passed in 7,351 ms) at
 this revision. Feature matrix run
-`69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated with 44 passed and 1 failed;
+`74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`698d13f5-78a6-4083-85db-1ff1839f1dc9` likewise terminated 84/85 and ingested
+`123912a2-4ee0-4ace-be39-45737ce0d919` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 native failure was reproduced from a clean copy of the preceding `879ddc6`
 source, so it is not evidence against the current transform-order retention
