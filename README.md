@@ -302,6 +302,10 @@ source-local kind and payload through
 `SourceDescriptor::avif_item_properties()`; this is provenance only and does
 not select or decode auxiliary payloads. Those raw records also retain the
 source `ipma` essential-association bit in source order.
+The bounded AVIF inspection and sample parsers reject an `ipco` table after
+2,048 property entries; the existing feature-gated contract exercises that
+resource boundary, which is Rust container evidence rather than Pillow parity
+because Pillow exposes no item-property table budget.
 
 `DecodedSequence::first()` returns the complete `DecodedFrame`, including its
 source and presentation metadata. `first_image()` is available when a caller
