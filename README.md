@@ -284,8 +284,9 @@ without changing the transfer bytes. TIFF currently records its exact
 `SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
 modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`,
 `pasp`, and `clap` properties are retained through
-`SourceDescriptor::avif_transform()` as source provenance; decoded pixels are
-never rotated, mirrored, rescaled, or cropped. Codecs without a retained
+`SourceDescriptor::avif_transform()` as source provenance; its
+`AvifTransformProperties::order()` accessor retains the source association
+order. Decoded pixels are never rotated, mirrored, rescaled, or cropped. Codecs without a retained
 structural fact currently return an empty descriptor. For the committed AVIF
 alpha fixtures, `SourceDescriptor::avif_auxiliary_relationship()` retains the
 direct source-local auxiliary-item relationship, while

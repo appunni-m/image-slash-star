@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`; the claim-ledger fixture tuple
+`8b3461aca67c5213383ec968327bd92ebb5153d8`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`379fcc5f-6c26-43a3-81de-1db327fe5003` passed 1,445/1,445 checks. The feature
-matrix run `add95e04-59f7-4c06-baee-ed16024feb41` and nightly Coverage MCP
-run `e197ddbd-4f90-42b8-9025-0a0b74d49411` both hit the pre-existing native
+`ab960255-2391-43df-a04d-1d4d863e868a` passed 1,445/1,445 checks. The feature
+matrix run `69dbb786-0aea-442a-a4e1-7a10f4ad1e95` and nightly Coverage MCP
+run `698d13f5-78a6-4083-85db-1ff1839f1dc9` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
@@ -226,7 +226,9 @@ through `SourceAlpha::Auxiliary`, the scalar
 `SourceDescriptor::avif_grid_item_ids()` lists.
 
 The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
-in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`. `irot`
+in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`;
+`AvifTransformProperties::order()` returns their source association order
+using `AvifTransformKind`. `irot`
 accepts the four legal counter-clockwise quarter-turn values, `imir` accepts
 the top/bottom or left/right axis, and `pasp` retains its positive horizontal
 and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its

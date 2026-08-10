@@ -3,19 +3,19 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`; the claim-ledger fixture
+revision `8b3461aca67c5213383ec968327bd92ebb5153d8`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`379fcc5f-6c26-43a3-81de-1db327fe5003` (1,445/1,445 passed in 569 ms) at
+`ab960255-2391-43df-a04d-1d4d863e868a` (1,445/1,445 passed in 635 ms) at
 this revision. Feature matrix run
-`add95e04-59f7-4c06-baee-ed16024feb41` terminated with 44 passed and 1 failed;
+`69dbb786-0aea-442a-a4e1-7a10f4ad1e95` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`e197ddbd-4f90-42b8-9025-0a0b74d49411` likewise terminated 84/85 and ingested
+`698d13f5-78a6-4083-85db-1ff1839f1dc9` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 native failure was reproduced from a clean copy of the preceding `879ddc6`
-source, so it is not evidence against the current essential-association retention
+source, so it is not evidence against the current transform-order retention
 slice. The accepted Coverage MCP
 snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
@@ -134,8 +134,9 @@ activation point; ordinary ICO uses `None`.
 `SourceDescriptor`. TIFF records the exact `II`/`MM` container declaration as
 `SourceByteOrder::Little` or `SourceByteOrder::Big` on inspection and on every
 decoded page. AVIF item `irot`/`imir`/`pasp`/`clap` properties are retained as
-`AvifTransformProperties` on the primary item without rotating, mirroring,
-rescaling, or cropping decoded samples. Other codecs currently return an empty
+`AvifTransformProperties` on the primary item; `AvifTransformProperties::order()`
+retains the source association order of the typed declarations without
+rotating, mirroring, rescaling, or cropping decoded samples. Other codecs currently return an empty
 descriptor. AVIF direct alpha `auxl` relationships are retained as
 source-local item IDs through `SourceDescriptor::avif_auxiliary_relationship()`
 when present, and the bounded
@@ -208,7 +209,9 @@ provenance only; it does not select or decode auxiliary payloads or change
 normalized samples. The raw `AvifItemProperty` records also retain the source
 `ipma` essential bit in
 association order through `AvifItemProperty::is_essential()`; this records
-container intent only and does not make an unknown property executable.
+container intent only and does not make an unknown property executable. The
+primary typed transform descriptor retains its corresponding declaration order
+through `AvifTransformProperties::order()` and `AvifTransformKind`.
 
 Known non-primary and auxiliary
 `ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records
