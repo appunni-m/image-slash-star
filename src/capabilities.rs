@@ -97,32 +97,44 @@ impl Capability {
     }
 }
 
-/// Target family used by the crate's current codec dispatch.
+/// Target class used by the crate's current codec dispatch and capability
+/// contract.
 ///
-/// All `wasm32` targets currently share one AVIF dispatch branch. Full target
-/// triple distinctions remain a future compatibility contract.
+/// The two supported `wasm32` classes intentionally remain distinct even
+/// though they currently share the portable AVIF decoder branch. A target
+/// identity is a capability fact; it is not inferred from an AVIF
+/// `FileTypeBox` declaration.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CapabilityTarget {
     /// A non-`wasm32` compilation target.
     Native,
-    /// A target whose Rust architecture is `wasm32`.
-    Wasm32,
+    /// The `wasm32-wasip1` target with a WASI runtime contract.
+    Wasm32Wasi,
+    /// A non-WASI `wasm32` target, including `wasm32-unknown-unknown`.
+    Wasm32Unknown,
 }
 
 impl CapabilityTarget {
-    /// Return the target family of the current compilation.
+    /// Return the target class of the current compilation.
     #[must_use]
     #[cfg(not(target_arch = "wasm32"))]
     pub const fn current() -> Self {
         Self::Native
     }
 
-    /// Return the target family of the current compilation.
+    /// Return the target class of the current compilation.
     #[must_use]
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
     pub const fn current() -> Self {
-        Self::Wasm32
+        Self::Wasm32Wasi
+    }
+
+    /// Return the target class of the current compilation.
+    #[must_use]
+    #[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
+    pub const fn current() -> Self {
+        Self::Wasm32Unknown
     }
 }
 
@@ -293,7 +305,10 @@ const fn capabilities_for(
 
     if matches!(
         (format, target),
-        (ImageFormat::Avif, CapabilityTarget::Wasm32)
+        (
+            ImageFormat::Avif,
+            CapabilityTarget::Wasm32Wasi | CapabilityTarget::Wasm32Unknown
+        )
     ) {
         return FormatCapabilities {
             format,
@@ -343,7 +358,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ImageFormat::Avif,
     ];
     for format in formats {
-        for target in [CapabilityTarget::Native, CapabilityTarget::Wasm32] {
+        for target in [
+            CapabilityTarget::Native,
+            CapabilityTarget::Wasm32Wasi,
+            CapabilityTarget::Wasm32Unknown,
+        ] {
             for enabled in [false, true] {
                 let capabilities = capabilities_for(format, enabled, target);
                 let _ = capabilities.format();
