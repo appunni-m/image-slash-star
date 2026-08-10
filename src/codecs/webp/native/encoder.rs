@@ -2590,11 +2590,11 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     packed: &[u32],
     packed_width: usize,
     alpha: &[u8],
+    scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
     checkpoint: C,
 ) -> Result<Vec<u8>, EncodingError> {
     let mut encoded = Vec::new();
-    let mut stream_scratch = ImageStreamScratch::default();
     let mut writer = BitWriter {
         writer: &mut encoded,
         buffer: 0,
@@ -2612,8 +2612,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         3,
         20,
         0,
-        &mut stream_scratch.output,
-        &mut stream_scratch.tokens,
+        &mut scratch.output,
+        &mut scratch.tokens,
         token,
     )?;
 
@@ -2626,8 +2626,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         5,
         32,
         2,
-        &mut stream_scratch.output,
-        &mut stream_scratch.tokens,
+        &mut scratch.output,
+        &mut scratch.tokens,
         token,
     )?;
     writer.flush()?;
@@ -2732,11 +2732,23 @@ fn collect_alpha_palette(
 }
 
 // Every sorted palette suffix is non-empty by construction.
+#[cfg(coverage)]
 #[allow(clippy::unwrap_used)]
 pub(crate) fn encode_alpha(
     alpha: &[u8],
     width: u32,
     height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u8>, EncodingError> {
+    let mut encoder = WebPEncoder::new();
+    encoder.encode_alpha_with_token(alpha, width, height, token)
+}
+
+fn encode_alpha_with_scratch(
+    alpha: &[u8],
+    width: u32,
+    height: u32,
+    scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
     check_token(token)?;
@@ -2878,6 +2890,7 @@ pub(crate) fn encode_alpha(
             &packed,
             packed_width,
             alpha,
+            scratch,
             Some(token),
             TokenBitWriterCheckpoint {
                 token,
@@ -2891,6 +2904,7 @@ pub(crate) fn encode_alpha(
             &packed,
             packed_width,
             alpha,
+            scratch,
             None,
             NoopBitWriterCheckpoint,
         ),
@@ -2936,6 +2950,19 @@ impl WebPEncoder {
     /// Only supports "VP8L" lossless encoding.
     pub const fn new() -> Self {
         Self { scratch: None }
+    }
+
+    /// Encode a lossy WebP alpha substream while retaining bounded VP8L
+    /// scratch for the next sequential frame.
+    pub(crate) fn encode_alpha_with_token(
+        &mut self,
+        alpha: &[u8],
+        width: u32,
+        height: u32,
+        token: Option<&crate::CancellationToken>,
+    ) -> Result<Vec<u8>, EncodingError> {
+        let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
+        encode_alpha_with_scratch(alpha, width, height, scratch, token)
     }
 
     /// Encode image data while polling an optional cooperative work token.
