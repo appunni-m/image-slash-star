@@ -3,17 +3,17 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `058ab449f8375a18a11ece898a69adf6486c3218`, and benchmark-protocol
+revision `bae8b06e5907f0ccedc86c6c5f850ee81e61761a`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`7193e63b-3b95-4721-b306-a99d9827c687` (1,445/1,445 passed in 6,551 ms) at
+`d086426b-079f-4854-8175-8fabf46a606e` (1,445/1,445 passed in 5,507 ms) at
 this revision. Feature matrix run
-`8483924a-b723-4f2f-a36c-fac56ff722bc` terminated with 44 passed and 1 failed;
+`9aed6f7f-893f-4855-938e-783cda623c7a` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`041d3119-95ea-455d-850a-bd628d7b4ce3` likewise terminated 84/85 with that
+`935ca104-57d2-47fb-a118-30fe1e0a26d1` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -644,6 +644,31 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP ALPH packed-image transform workspace reuse
+
+The production and Rust test/runtime slice is implemented at
+`bae8b06e5907f0ccedc86c6c5f850ee81e61761a`, following the ALPH cross-frame
+image-stream scratch boundary at
+`058ab449f8375a18a11ece898a69adf6486c3218`. `ImageStreamScratch` retains the
+capacity of the packed `Vec<u32>` ALPH transform image across sequential
+animation frames. Each frame rebuilds the logical packed image before encoding;
+only workspace capacity survives, while returned frame bytes remain
+independently owned. Encoded bytes, errors, cancellation checkpoints, and sink
+output remain unchanged.
+
+Pillow exposes final bytes and errors, not allocator ownership or scratch
+lifetime. Existing WebP still/sequence fixture rows therefore provide
+byte/error regression evidence, while existing feature-gated Rust contracts
+remain the non-Pillow evidence. No parity row, fixture-manifest row, diagnostic
+origin, new test function, coverage-only hook, or unit test was added because
+Pillow cannot observe this ownership boundary. Exact-head managed Pillow parity
+run `d086426b-079f-4854-8175-8fabf46a606e` passed 1,445/1,445 checks in 5,507
+ms. Feature matrix run `9aed6f7f-893f-4855-938e-783cda623c7a` terminated 44/45
+on the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run `935ca104-57d2-47fb-a118-30fe1e0a26d1` terminated
+84/85 on the same failure; its required coverage artifact was `skipped_stale`,
+so no new snapshot or coverage claim exists for this slice.
 
 Current acceptance record: WebP VP8L/ALPH cross-frame image-stream scratch reuse
 
