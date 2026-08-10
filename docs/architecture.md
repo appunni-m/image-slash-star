@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `c1afe7eb1f01ebb9309a2f530da795f856852721`; the claim-ledger fixture
+revision `27a90e61bd367e1e44888269371bdd433aa893eb`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`507686aa-024f-49de-9748-3828f8a5ac0a` (1,445/1,445 passed in 611 ms) at
+`6520b3c8-3311-4ea5-9772-c928077e0ed4` (1,445/1,445 passed in 692 ms) at
 this revision. Feature matrix run
-`fe2bf6a3-9a17-4af8-97e4-f0aba80e9ab5` terminated with 44 passed and 1 failed;
+`fbb070b6-7776-4b3a-8704-85dc0bb2045e` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`3962c151-e307-4072-985b-a6841a6fb63a` likewise terminated 84/85 and ingested
+`974e4905-09bf-4a59-8373-33db1324d1f4` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1086,6 +1086,14 @@ dimensions requiring edge replication allocate padded planes. The replication
 order, token-aware padding checkpoints, encoded bytes, errors, and sink output
 remain unchanged. Pillow parity sees only final bytes/errors; plane ownership
 is Rust-only evidence.
+
+ALPH final-output preparation now recycles the retained nested candidate suffix
+allocation into the next final ALPH bitstream writer. The nested candidate
+trials refill the scratch vector after it is taken, so sequential frames avoid
+another transient final-output allocation while candidate ordering, encoded
+bytes, errors, token-aware copy checkpoints, and sink output remain unchanged.
+Pillow parity sees only final bytes/errors; transient allocation ownership and
+retained capacity are Rust-only evidence.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
