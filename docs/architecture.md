@@ -3,19 +3,18 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `6c870e47fd28ddbc2a320dd64792ef0b7507e096`; the claim-ledger fixture
+revision `371354b0a92d83f4384b7a9129ddc63bcbb326d3`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` (1,445/1,445 passed in 678 ms) at
+`49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 this revision. Feature matrix run
-`d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated with 44 passed and 1 failed;
+`2f75bfbc-866c-44de-b118-e00e2cd0936b` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` likewise terminated 84/85 and ingested
+`f37739ea-a252-4112-8234-268e86be2798` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
-native failure was reproduced from a clean copy of the preceding `879ddc6`
-source, so it is not evidence against the current property-table ceiling
+native failure is not evidence against the current FileTypeBox/source-descriptor
 slice. The accepted Coverage MCP
 snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
@@ -148,7 +147,12 @@ validated version, raw flags, row/column counts, and declared output canvas;
 `SourceDescriptor::avif_item_relationships()` retains
 bounded `iref` edges such as the grid's ordered `dimg` references, and
 `SourceDescriptor::avif_premultiplied_relationships()` filters source-local
-`prem` edges. A source descriptor is structural provenance, not opaque
+`prem` edges. AVIF `FileTypeBox` declarations are retained through
+`SourceDescriptor::avif_file_type()` as `AvifFileTypeProperties`: major brand,
+minor version, and ordered compatible brands bounded at 1,024 entries. The
+record is propagated on inspection, still decode, and each sequence frame; it
+is declaration provenance, not a complete decoder-capability decision. A
+source descriptor is structural provenance, not opaque
 ICC/EXIF/XMP metadata and not an instruction to reinterpret every normalized
 pixel buffer.
 
