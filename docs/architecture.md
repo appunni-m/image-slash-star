@@ -3,16 +3,17 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `97539a505923004cbff9ea48d9e7a99c2fde83d6`; the claim-ledger fixture
+revision `aea84ec6ffa76df497b2521ffdf871a2ec997809`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`67dc1f7b-d962-41e6-89fc-3d49699a86e6` (1,445/1,445 passed in 11,055 ms) at
+`e3d99800-e6b2-4f29-8149-a1cd816176e7` (1,445/1,445 passed in 5,990 ms) at
 this revision. Feature matrix run
-`bcc78c63-bf27-4df2-8279-e38eb3ea75b2` terminated with 44 passed and 1 failed;
+`102ab382-b57d-4686-8742-7f8f2f6c593f` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
-pre-existing native AVIF decoder status-5 failure, reproduced from a clean
-copy of the preceding `879ddc6` source. Nightly Coverage MCP run
+pre-existing native AVIF decoder status-5 failure. The same failure was
+reproduced from a clean copy of the preceding `879ddc6` source; the current
+WebP change does not touch that path. Nightly Coverage MCP run
 `f90a3bb4-59a3-4d2a-bbb0-df72c11b3410` likewise terminated 84/85 and ingested
 no snapshot. The accepted Coverage MCP snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
@@ -1031,8 +1032,12 @@ WebP VP8L frame, palette, and alpha substreams share one bounded image-stream
 scratch object per encoder invocation. Its trial-output and token-stream
 buffers retain capacity across sequential streams, including nested metadata
 streams, while each stream still resets its logical contents before writing.
-Stream boundaries, candidate ordering, encoded bytes, errors, and sink output
-remain unchanged. This is a Rust-only image-stream scratch optimization, not
+For lossless WebP animation, one encoder invocation spans the sequential
+frames, so transform, histogram, token, predictor, cross-color, and bitstream
+scratch capacity also survives frame boundaries; every returned frame retains
+an independent encoded buffer. Stream and frame boundaries, candidate ordering,
+encoded bytes, errors, cancellation checkpoints, and sink output remain
+unchanged. This is a Rust-only image-stream scratch optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
