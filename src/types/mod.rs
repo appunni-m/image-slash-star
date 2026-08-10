@@ -2037,19 +2037,57 @@ impl AvifPixelAspectRatio {
     }
 }
 
+/// The kind of an AVIF item presentation property.
+///
+/// The order returned by [`AvifTransformProperties::order`] follows the
+/// source association order. It is provenance only; the crate does not apply
+/// these transforms to decoded pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AvifTransformKind {
+    /// An `irot` rotation declaration.
+    Rotation,
+    /// An `imir` mirror declaration.
+    Mirror,
+    /// A `pasp` pixel-aspect-ratio declaration.
+    PixelAspectRatio,
+    /// A `clap` clean-aperture declaration.
+    CleanAperture,
+}
+
+impl AvifTransformKind {
+    const fn same(self, other: Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::Rotation, Self::Rotation)
+                | (Self::Mirror, Self::Mirror)
+                | (Self::PixelAspectRatio, Self::PixelAspectRatio)
+                | (Self::CleanAperture, Self::CleanAperture)
+        )
+    }
+}
+
 /// AVIF item presentation properties retained without applying them to decoded pixels.
 ///
 /// The current model covers the `irot`, `imir`, `pasp`, and `clap` properties.
 /// All four are source declarations: no rotation, mirroring, rescaling, or
 /// cropping is applied to decoded pixels. An absent field means that property
 /// was not associated with the primary image item; a present zero rotation
-/// remains distinguishable from an absent `irot` property.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+/// remains distinguishable from an absent `irot` property. The order accessor
+/// retains the source association order of the declarations that are present.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AvifTransformProperties {
     rotation: Option<AvifRotation>,
     mirror: Option<AvifMirrorAxis>,
     pixel_aspect_ratio: Option<AvifPixelAspectRatio>,
     clean_aperture: Option<AvifCleanAperture>,
+    order: [AvifTransformKind; 4],
+    order_len: u8,
+}
+
+impl Default for AvifTransformProperties {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AvifTransformProperties {
@@ -2061,14 +2099,31 @@ impl AvifTransformProperties {
             mirror: None,
             pixel_aspect_ratio: None,
             clean_aperture: None,
+            order: [AvifTransformKind::Rotation; 4],
+            order_len: 0,
         }
+    }
+
+    const fn record_kind(mut self, kind: AvifTransformKind) -> Self {
+        let mut index = 0;
+        while index < self.order_len as usize {
+            if self.order[index].same(kind) {
+                return self;
+            }
+            index = index.saturating_add(1);
+        }
+        if index < self.order.len() {
+            self.order[index] = kind;
+            self.order_len = self.order_len.saturating_add(1);
+        }
+        self
     }
 
     /// Record an AVIF `irot` rotation property.
     #[must_use]
     pub const fn with_rotation(mut self, rotation: AvifRotation) -> Self {
         self.rotation = Some(rotation);
-        self
+        self.record_kind(AvifTransformKind::Rotation)
     }
 
     /// Return the retained AVIF `irot` property, when present.
@@ -2081,7 +2136,7 @@ impl AvifTransformProperties {
     #[must_use]
     pub const fn with_mirror(mut self, mirror: AvifMirrorAxis) -> Self {
         self.mirror = Some(mirror);
-        self
+        self.record_kind(AvifTransformKind::Mirror)
     }
 
     /// Return the retained AVIF `imir` property, when present.
@@ -2094,7 +2149,7 @@ impl AvifTransformProperties {
     #[must_use]
     pub const fn with_pixel_aspect_ratio(mut self, ratio: AvifPixelAspectRatio) -> Self {
         self.pixel_aspect_ratio = Some(ratio);
-        self
+        self.record_kind(AvifTransformKind::PixelAspectRatio)
     }
 
     /// Return the retained AVIF `pasp` property, when present.
@@ -2107,13 +2162,19 @@ impl AvifTransformProperties {
     #[must_use]
     pub const fn with_clean_aperture(mut self, clean_aperture: AvifCleanAperture) -> Self {
         self.clean_aperture = Some(clean_aperture);
-        self
+        self.record_kind(AvifTransformKind::CleanAperture)
     }
 
     /// Return the retained AVIF `clap` property, when present.
     #[must_use]
     pub const fn clean_aperture(&self) -> Option<AvifCleanAperture> {
         self.clean_aperture
+    }
+
+    /// Return the retained transform kinds in source association order.
+    #[must_use]
+    pub fn order(&self) -> &[AvifTransformKind] {
+        &self.order[..self.order_len as usize]
     }
 
     /// Whether no AVIF transform property was retained.

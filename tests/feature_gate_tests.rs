@@ -4704,7 +4704,8 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     use image_slash_star::{
         AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties, AvifContentLightLevel,
         AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-        AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor, SourceDescriptor,
+        AvifTransformKind, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
+        SourceDescriptor,
     };
 
     // These helpers construct malformed/duplicate item-property witnesses
@@ -5140,6 +5141,14 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     );
     let pasp_inspected = image_slash_star::inspect(&pasp)?;
     assert_eq!(pasp_inspected.source, expected_pasp, "pasp inspect");
+    let pasp_transform = pasp_inspected.source.avif_transform().unwrap_or_default();
+    assert_eq!(
+        pasp_transform.order(),
+        &[
+            AvifTransformKind::Rotation,
+            AvifTransformKind::PixelAspectRatio
+        ]
+    );
     let pasp_decoded = image_slash_star::decode(&pasp)?;
     assert_eq!(pasp_decoded.content.source, expected_pasp, "pasp decode");
     assert_eq!(pasp_decoded.content.pixels, expected_pixels);
@@ -5194,6 +5203,14 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
     );
     let clap_inspected = image_slash_star::inspect(&clap)?;
     assert_eq!(clap_inspected.source, expected_clap, "clap inspect");
+    let clap_transform = clap_inspected.source.avif_transform().unwrap_or_default();
+    assert_eq!(
+        clap_transform.order(),
+        &[
+            AvifTransformKind::Rotation,
+            AvifTransformKind::CleanAperture
+        ]
+    );
     let clap_decoded = image_slash_star::decode(&clap)?;
     assert_eq!(clap_decoded.content.source, expected_clap, "clap decode");
     assert_eq!(clap_decoded.content.pixels, expected_pixels);
