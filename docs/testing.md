@@ -3,17 +3,17 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `c09adc987d6bd723121907b808e643002d2126f0`, and benchmark-protocol
+revision `24af4fe2378e9cf087615a542c537065eee94f05`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`30ae5925-005d-4c78-a874-3ed2c30a0592` (1,445/1,445 passed in 597 ms) at
+`5b3c81f1-8323-4664-b7b3-5eb59ee2d4a3` (1,445/1,445 passed in 658 ms) at
 this revision. Feature matrix run
-`15088e48-3f62-4212-ad5c-ce27235a28e2` terminated with 44 passed and 1 failed;
+`441c9ab4-94a3-4fe3-990c-9a8da9ba9dab` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`47881a25-9151-4f92-ad82-035615d5235e` likewise terminated 84/85 with that
+`6e21fe2c-8217-4882-b448-34dadcd5598c` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -644,6 +644,32 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP lossy VP8 no-token frame capacity planning
+
+The production slice is implemented at
+`24af4fe2378e9cf087615a542c537065eee94f05`, following the lossy VP8 final
+partition assembly boundary at `0f5fe1841ee9bc78a25a28f146ea8b12c41111db`.
+The ordinary no-token VP8 frame builder now pre-sizes the final bitstream from
+the fixed 10-byte frame header plus the already encoded first-partition and
+coefficient lengths, avoiding growth reallocations while those partitions are
+appended. The token-aware path retains its prior header allocation and
+checkpoint behavior. Encoded bytes, errors, cancellation checkpoints, and
+sink output remain unchanged.
+
+Pillow exposes final bytes and errors, not allocation capacity or reallocation
+counts. Existing WebP still/sequence fixture rows therefore provide the
+byte/error regression gate, while the existing feature-gated Rust contract
+remains separate evidence for caller-token and sink behavior. No parity row,
+fixture-manifest row, diagnostic origin, new test function, coverage-only hook,
+or unit test was added because Pillow cannot observe this boundary. Exact-head
+managed Pillow parity run `5b3c81f1-8323-4664-b7b3-5eb59ee2d4a3` passed
+1,445/1,445 checks in 658 ms. Feature matrix run
+`441c9ab4-94a3-4fe3-990c-9a8da9ba9dab` terminated 44/45 on the pre-existing
+native AVIF `source_alpha_matches_the_container_contract` status-5 lane.
+Nightly run `6e21fe2c-8217-4882-b448-34dadcd5598c` terminated 84/85 on the
+same failure; its required coverage artifact was `skipped_stale`, so no new
+snapshot or coverage claim exists for this slice.
 
 Current acceptance record: WebP VP8L transient final-frame scratch reuse
 
