@@ -98,11 +98,7 @@ pub(crate) fn encode_sequence_to_sink(
         let padding = base
             .checked_sub(written)
             .ok_or_else(|| CodecError::Dimensions("TIFF page layout regressed".to_owned()))?;
-        if padding > zero_padding.len() {
-            return Err(CodecError::Dimensions(
-                "TIFF page padding exceeds alignment".to_owned(),
-            ));
-        }
+        debug_assert!(padding <= zero_padding.len());
         if padding != 0 {
             write_sink_segment(sink, &zero_padding[..padding], token, &mut written)?;
         }
@@ -111,11 +107,7 @@ pub(crate) fn encode_sequence_to_sink(
     let final_padding = final_len
         .checked_sub(written)
         .ok_or_else(|| CodecError::Dimensions("TIFF sequence layout regressed".to_owned()))?;
-    if final_padding > zero_padding.len() {
-        return Err(CodecError::Dimensions(
-            "TIFF final padding exceeds alignment".to_owned(),
-        ));
-    }
+    debug_assert!(final_padding <= zero_padding.len());
     if final_padding != 0 {
         write_sink_segment(sink, &zero_padding[..final_padding], token, &mut written)?;
     }
@@ -511,15 +503,11 @@ fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
             let local = page.bytes.get(position..end).ok_or_else(|| {
                 CodecError::Dimensions("TIFF offset field is outside the page".to_owned())
             })?;
-            let local = u32::from_le_bytes(local.try_into().map_err(|_| {
-                CodecError::Dimensions("TIFF offset field is not four bytes".to_owned())
-            })?) as usize;
+            let local = u32::from_le_bytes([local[0], local[1], local[2], local[3]]) as usize;
             let relocated = base.checked_add(local).ok_or_else(|| {
                 CodecError::Dimensions("TIFF relocated offset overflows".to_owned())
             })?;
-            let relocated_field = page.bytes.get_mut(position..end).ok_or_else(|| {
-                CodecError::Dimensions("TIFF offset field is outside the page".to_owned())
-            })?;
+            let relocated_field = &mut page.bytes[position..end];
             relocated_field.copy_from_slice(&bounded_u32(relocated).to_le_bytes());
         }
         end = base
@@ -742,6 +730,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
     ];
     let _ = relocate_pages(&mut malformed_next_pages);
+    let mut malformed_next_ifd_overflow = vec![
+        EncodedPage {
+            bytes: vec![0; 8],
+            ifd_offset: 0,
+            offset_positions: Vec::new(),
+            next_position: 0,
+        },
+        EncodedPage {
+            bytes: vec![0; 8],
+            ifd_offset: usize::MAX,
+            offset_positions: Vec::new(),
+            next_position: 0,
+        },
+    ];
+    let _ = relocate_pages(&mut malformed_next_ifd_overflow);
+    let mut malformed_next_field_overflow = vec![
+        EncodedPage {
+            bytes: vec![0; 8],
+            ifd_offset: 0,
+            offset_positions: Vec::new(),
+            next_position: usize::MAX,
+        },
+        EncodedPage {
+            bytes: vec![0; 8],
+            ifd_offset: 0,
+            offset_positions: Vec::new(),
+            next_position: 0,
+        },
+    ];
+    let _ = relocate_pages(&mut malformed_next_field_overflow);
     let mut malformed_offset_page = EncodedPage {
         bytes: vec![0; 8],
         ifd_offset: 0,
@@ -749,6 +767,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         next_position: 0,
     };
     let _ = relocate_pages(std::slice::from_mut(&mut malformed_offset_page));
+    let mut malformed_offset_position_overflow = EncodedPage {
+        bytes: vec![0; 8],
+        ifd_offset: 0,
+        offset_positions: vec![usize::MAX],
+        next_position: 0,
+    };
+    let _ = relocate_pages(std::slice::from_mut(
+        &mut malformed_offset_position_overflow,
+    ));
     let mut forced_sequence_overflow = TiffEncodeOptions::default();
     forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);

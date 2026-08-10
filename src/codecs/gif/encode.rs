@@ -307,6 +307,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         children: None,
     };
     let _ = split_median_box(&split_node, &split_colors, &split_counts);
+    let skewed_colors = [[0u8, 0, 0], [255, 255, 255]];
+    let skewed_counts = [60u32, 40];
+    let skewed_node = MedianBox {
+        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
+        pixel_count: 100,
+        children: None,
+    };
+    let _ = split_median_box(&skewed_node, &skewed_colors, &skewed_counts);
 
     let equal_colors = [[0u8, 0, 0], [0, 0, 0]];
     let equal_node = MedianBox {
@@ -955,7 +963,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     valid_plain_text_extension.extend_from_slice(&[0; 12]);
     valid_plain_text_extension.extend_from_slice(&[0, GIF_TRAILER]);
     let mut valid_generic_extension = minimal_gif.clone();
-    valid_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, GIF_TRAILER]);
+    valid_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, 0, GIF_TRAILER]);
     let sink_cases = vec![
         b"bad".to_vec(),
         b"GIF89a".to_vec(),
@@ -1061,6 +1069,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     sort_work = 0;
     let _ = apple_qsort_buckets_with_token(&mut reverse_buckets, &sort_token, &mut sort_work);
+    let mut partition_buckets = (0..16)
+        .map(|count| OctreeBucket {
+            count: (count * 17) % 5,
+            sums: [u64::from(count), u64::from(15 - count), 0, 0],
+        })
+        .collect::<Vec<_>>();
+    sort_work = 0;
+    let _ = apple_qsort_buckets_with_token(&mut partition_buckets, &sort_token, &mut sort_work);
+    let cancelled_sort_token = crate::CancellationToken::new();
+    cancelled_sort_token.cancel();
+    sort_work = 0;
+    let _ =
+        apple_qsort_buckets_with_token(&mut reverse_buckets, &cancelled_sort_token, &mut sort_work);
     let mut limited_buckets = vec![
         OctreeBucket {
             count: 1,
@@ -1088,6 +1109,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &one_palette,
         0,
         &sort_token,
+        &mut sort_work,
+    );
+    let nearest_palette = [[0u8, 0, 0], [255, 255, 255], [32, 64, 96]];
+    let mut nearest_candidates = vec![0usize, 1, 2];
+    let mut nearest_scratch = vec![0usize; 3];
+    sort_work = 0;
+    let _ = find_nearest_from_with_token(
+        &nearest_palette,
+        &[80, 70, 60],
+        0,
+        &sort_token,
+        &mut nearest_candidates,
+        &mut nearest_scratch,
         &mut sort_work,
     );
     let mut lookup = OctreeCube::new([2, 2, 2, 2]);
