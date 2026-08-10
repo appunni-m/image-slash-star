@@ -2746,8 +2746,8 @@ pub(crate) fn encode_alpha(
     height: u32,
     token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
-    let mut encoder = WebPEncoder::new();
-    encoder.encode_alpha_with_token(alpha, width, height, token)
+    let mut scratch = ImageStreamScratch::default();
+    encode_alpha_with_scratch(alpha, width, height, &mut scratch, token)
 }
 
 #[allow(clippy::unwrap_used)]
@@ -3010,20 +3010,6 @@ impl WebPEncoder {
         });
         self.alpha_scratch.clear();
         result
-    }
-
-    /// Encode a lossy WebP alpha substream while retaining bounded VP8L
-    /// scratch for the next sequential frame.
-    #[cfg(coverage)]
-    pub(crate) fn encode_alpha_with_token(
-        &mut self,
-        alpha: &[u8],
-        width: u32,
-        height: u32,
-        token: Option<&crate::CancellationToken>,
-    ) -> Result<Vec<u8>, EncodingError> {
-        let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
-        encode_alpha_with_scratch(alpha, width, height, scratch, token)
     }
 
     /// Encode image data while polling an optional cooperative work token.
