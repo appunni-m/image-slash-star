@@ -2600,7 +2600,12 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     token: Option<&crate::CancellationToken>,
     checkpoint: C,
 ) -> Result<Vec<u8>, EncodingError> {
-    let mut encoded = Vec::new();
+    // The nested candidate writer leaves one bounded suffix buffer in
+    // `output_scratch`. Recycle that allocation for the final ALPH bitstream
+    // instead of allocating a fresh output vector for every sequential frame;
+    // nested trials refill the scratch buffer after this vector is taken.
+    let mut encoded = core::mem::take(output_scratch);
+    encoded.clear();
     let mut writer = BitWriter {
         writer: &mut encoded,
         buffer: 0,
