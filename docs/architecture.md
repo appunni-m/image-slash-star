@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `a58fd93049dae84aebd1827ed765784a0cc8028d`; the claim-ledger fixture
+revision `59664c1f1612c0c09aef9e4a57ef8eff45d5baab`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`3fb75758-0150-43b5-bcff-af4952cbb18a` (1,445/1,445 passed in 3,503 ms) at
+`da8cd412-8c8a-431b-9862-d8ce05154aaf` (1,445/1,445 passed in 3,807 ms) at
 this revision. Feature matrix run
-`0b7e4821-33e8-4752-b1ae-336964e21952` terminated with 44 passed and 1 failed;
+`dd34266f-7975-4026-9255-c24370efea79` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`d881ed6e-a73f-4193-aef3-42aece5b921b` likewise terminated 84/85 and ingested
+`48168b80-e782-4514-a44e-06495fcf0a9b` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1061,6 +1061,13 @@ checkpoints, and the extended RGBA VP8X/ALPH path remains separate. Encoded
 bytes, errors, cancellation checkpoints, and sink output remain unchanged.
 This is a Rust-only output-buffer ownership optimization; Pillow supplies only
 the final byte/error regression oracle.
+
+The extended RGBA VP8X/ALPH path likewise reuses the completed VP8 payload
+allocation on the ordinary no-token path, shifting it behind the fixed VP8X and
+ALPH chunks and copying only the alpha payload before writing the VP8 chunk.
+Token-aware assembly retains its separate output buffer and checkpoints. This
+is a Rust-only output-buffer ownership optimization; Pillow still supplies the
+final byte/error regression oracle rather than allocation evidence.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
