@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`569df3fa9c58024b1473f263682785ad8473ec9d`; the claim-ledger fixture tuple
+`0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`08e739fd-6976-4fe0-bde3-a1119f0795a2` passed 1,445/1,445 checks. The feature
-matrix run `41328c00-f127-4348-a4fb-15b9bd43bd17` and nightly Coverage MCP
-run `e1fa61d1-0691-4130-8654-4f35e78b45bd` both hit the pre-existing native
+`379fcc5f-6c26-43a3-81de-1db327fe5003` passed 1,445/1,445 checks. The feature
+matrix run `add95e04-59f7-4c06-baee-ed16024feb41` and nightly Coverage MCP
+run `e197ddbd-4f90-42b8-9025-0a0b74d49411` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
@@ -183,6 +183,10 @@ provenance only; it does not select or decode auxiliary payloads or change
 normalized samples. The existing contract reaches the inspection assertion
 before the known native AVIF status-5 failure; its still and sequence
 assertions remain the Rust contract when that native lane is available.
+The raw non-primary records also retain the source `ipma` essential bit
+through `AvifItemProperty::is_essential()` in association order. This is
+container intent provenance only; it does not make an unknown property
+executable, select auxiliary content, or change decoded pixels.
 Known non-primary and auxiliary `ispe`/`pixi` declarations are retained
 separately through `SourceDescriptor::avif_item_plane_properties()` as
 source-local item ID, optional width/height, and optional uniform channel depth.

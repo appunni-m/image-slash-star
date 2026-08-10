@@ -3,19 +3,19 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `569df3fa9c58024b1473f263682785ad8473ec9d`; the claim-ledger fixture
+revision `0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`08e739fd-6976-4fe0-bde3-a1119f0795a2` (1,445/1,445 passed in 1,047 ms) at
+`379fcc5f-6c26-43a3-81de-1db327fe5003` (1,445/1,445 passed in 569 ms) at
 this revision. Feature matrix run
-`41328c00-f127-4348-a4fb-15b9bd43bd17` terminated with 44 passed and 1 failed;
+`add95e04-59f7-4c06-baee-ed16024feb41` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`e1fa61d1-0691-4130-8654-4f35e78b45bd` likewise terminated 84/85 and ingested
+`e197ddbd-4f90-42b8-9025-0a0b74d49411` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 native failure was reproduced from a clean copy of the preceding `879ddc6`
-source, so it is not evidence against the current source-property retention
+source, so it is not evidence against the current essential-association retention
 slice. The accepted Coverage MCP
 snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
@@ -205,7 +205,12 @@ interpreted or applied to decoded samples. Known non-primary and auxiliary
 `auxC`/`auxi` declarations are included in those records with their
 original kind and exact full-box payload. This records auxiliary-type
 provenance only; it does not select or decode auxiliary payloads or change
-normalized samples. Known non-primary and auxiliary
+normalized samples. The raw `AvifItemProperty` records also retain the source
+`ipma` essential bit in
+association order through `AvifItemProperty::is_essential()`; this records
+container intent only and does not make an unknown property executable.
+
+Known non-primary and auxiliary
 `ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records
 through `SourceDescriptor::avif_item_plane_properties()`, preserving source-local
 item ID, optional dimensions, and optional uniform channel depth; this is

@@ -3,20 +3,20 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `569df3fa9c58024b1473f263682785ad8473ec9d`, and benchmark-protocol
+revision `0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`08e739fd-6976-4fe0-bde3-a1119f0795a2` (1,445/1,445 passed in 1,047 ms) at
+`379fcc5f-6c26-43a3-81de-1db327fe5003` (1,445/1,445 passed in 569 ms) at
 this revision. Feature matrix run
-`41328c00-f127-4348-a4fb-15b9bd43bd17` terminated with 44 passed and 1 failed;
+`add95e04-59f7-4c06-baee-ed16024feb41` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`e1fa61d1-0691-4130-8654-4f35e78b45bd` likewise terminated 84/85 with that
+`e197ddbd-4f90-42b8-9025-0a0b74d49411` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same native failure was reproduced from a clean copy of the
-preceding `879ddc6` source, so it is not evidence against this source-property
+preceding `879ddc6` source, so it is not evidence against this essential-association
 retention slice. The accepted Coverage MCP snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
@@ -644,6 +644,30 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: AVIF essential item-property associations
+
+The production and Rust test/runtime slice is implemented at
+`0f94bf8e8101b2c29e110c9d1a170cd0a95fbadb`. The AVIF `ipma` parser now
+retains each associated raw non-primary item property's essential bit through
+`AvifItemProperty::is_essential()`, while preserving the existing source
+order, item ID, kind, and exact payload. The existing feature-gated
+`source_alpha_matches_the_container_contract` contract marks the in-memory
+non-alpha `auxC` association essential and asserts the resulting source
+record; it adds no Pillow parity row, fixture-manifest row, diagnostic origin,
+coverage-only hook, or unit test because Pillow exposes no item-association
+result. Still/sequence pixel and native-decoder behavior are unchanged.
+
+Exact-head managed Pillow parity run
+`379fcc5f-6c26-43a3-81de-1db327fe5003` passed 1,445/1,445 checks in 569 ms.
+Feature matrix run `add95e04-59f7-4c06-baee-ed16024feb41` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`e197ddbd-4f90-42b8-9025-0a0b74d49411` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice. Essential-bit retention is Rust
+source-provenance evidence, not Pillow item-property parity or proof of
+auxiliary payload selection.
 
 Current acceptance record: AVIF non-alpha auxiliary-property retention
 
