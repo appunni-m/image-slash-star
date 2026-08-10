@@ -798,16 +798,8 @@ fn attach_metadata(
         write_chunk(&mut output, b"XMP ", payload, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
-    #[cfg(coverage)]
-    let output_len = if opts.force_riff_size_overflow() {
-        usize::MAX
-    } else {
-        output.len()
-    };
-    #[cfg(not(coverage))]
-    let output_len = output.len();
     crate::codecs::error::check_cancelled(token)?;
-    finish_riff(output, output_len)
+    finish_riff_with_options(output, opts)
 }
 
 // Metadata is inserted after the VP8X header, so an ordinary still encode can
@@ -886,15 +878,19 @@ fn attach_metadata_reusing_output(
     }
     debug_assert_eq!(offset, output_len);
 
+    finish_riff_with_options(encoded, opts)
+}
+
+fn finish_riff_with_options(output: Vec<u8>, _opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
     #[cfg(coverage)]
-    let output_len = if opts.force_riff_size_overflow() {
+    let output_len = if _opts.force_riff_size_overflow() {
         usize::MAX
     } else {
-        encoded.len()
+        output.len()
     };
     #[cfg(not(coverage))]
-    let output_len = encoded.len();
-    finish_riff(encoded, output_len)
+    let output_len = output.len();
+    finish_riff(output, output_len)
 }
 
 fn chunk_storage_len(payload: &[u8]) -> CodecResult<usize> {
