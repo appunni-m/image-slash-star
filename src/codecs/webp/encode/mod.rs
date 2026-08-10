@@ -1110,7 +1110,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Vec::new(),
         b"not a RIFF".to_vec(),
         b"RIFF\0\0\0\0WEBP".to_vec(),
+        b"RIFF\0\0\0\0NOPE".to_vec(),
         b"RIFF\x0c\0\0\0WEBPVP8 ".to_vec(),
+        b"RIFF\x08\0\0\0WEBPVP8 ".to_vec(),
         b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x01".to_vec(),
         b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x04\0\0\0\0".to_vec(),
     ] {
@@ -1206,6 +1208,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &metadata,
         None,
     );
+    let _ = attach_metadata(
+        b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec(),
+        1,
+        1,
+        false,
+        &metadata,
+        Some(&metadata_token),
+    );
+    let mut existing_vp8x = b"RIFF\0\0\0\0WEBPVP8X".to_vec();
+    existing_vp8x.extend_from_slice(&18u32.to_le_bytes());
+    existing_vp8x.extend_from_slice(&[0; 10]);
+    let _ = attach_metadata(existing_vp8x, 1, 1, false, &metadata, None);
+    let _ = attach_metadata(b"short".to_vec(), 1, 1, false, &metadata, None);
 
     let mut animation = DecodedSequence::from_image(rgba.clone());
     animation.frames.push(animation.frames[0].clone());
