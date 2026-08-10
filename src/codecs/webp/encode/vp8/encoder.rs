@@ -227,7 +227,13 @@ fn encode_vp8_planes(
     crate::codecs::error::check_cancelled(token)?;
     let coeff_data = encode_coefficients(&decisions, macroblock_width, &probabilities, token)?;
     crate::codecs::error::check_cancelled(token)?;
-    let frame_header = build_frame_header(width, height, low_u32(header_data.len()));
+    let frame_capacity = token.is_none().then_some(
+        10usize
+            .saturating_add(header_data.len())
+            .saturating_add(coeff_data.len()),
+    );
+    let frame_header =
+        build_frame_header(width, height, low_u32(header_data.len()), frame_capacity);
 
     let mut vp8_data = frame_header;
     vp8_data.extend_from_slice(&header_data);
@@ -882,8 +888,13 @@ fn rgba_to_yuv_planes_internal(
 }
 
 /// Build the uncompressed VP8 keyframe header (NOT bool-encoded).
-fn build_frame_header(width: u32, height: u32, partition0_size: u32) -> Vec<u8> {
-    let mut hdr = Vec::new();
+fn build_frame_header(
+    width: u32,
+    height: u32,
+    partition0_size: u32,
+    capacity: Option<usize>,
+) -> Vec<u8> {
+    let mut hdr = capacity.map_or_else(Vec::new, Vec::with_capacity);
 
     // Frame tag: 3 bytes
     //   Bit 0: frame type (0 = KEYFRAME)
