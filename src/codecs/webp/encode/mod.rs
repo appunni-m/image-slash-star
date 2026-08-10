@@ -884,7 +884,7 @@ fn attach_metadata_reusing_output(
     if let Some(payload) = xmp {
         write_chunk_in_place(&mut encoded, &mut offset, b"XMP ", payload)?;
     }
-    debug_assert_eq!(offset, existing_chunks_start);
+    debug_assert_eq!(offset, output_len);
 
     #[cfg(coverage)]
     let output_len = if opts.force_riff_size_overflow() {
