@@ -85,7 +85,8 @@ fn capability_name(capability: Capability) -> &'static str {
 fn target_name(target: CapabilityTarget) -> &'static str {
     match target {
         CapabilityTarget::Native => "native",
-        CapabilityTarget::Wasm32 => "wasm32",
+        CapabilityTarget::Wasm32Wasi => "wasm32-wasip1",
+        CapabilityTarget::Wasm32Unknown => "wasm32-unknown-unknown",
         _ => "unknown",
     }
 }
