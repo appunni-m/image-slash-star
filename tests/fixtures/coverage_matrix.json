@@ -52389,8 +52389,11 @@
           "type": "encode",
           "format": "jpeg",
           "category": "bilevel",
-          "description": "Pillow expands packed bilevel input to byte-per-sample luminance before JPEG encoding",
+          "description": "Pillow privately expands bilevel input, while the strict Rust JPEG encoder requires byte-per-sample luminance or RGB",
           "params": {},
+          "rust_expect_error": true,
+          "rust_error_kind": "unsupported",
+          "rust_error_reason": "Private source-mode conversion belongs to a future fixture-proven encoder normalization slice",
           "status": "active",
           "source_format": "png",
           "source_asset": "1bit.png",
@@ -52413,14 +52416,24 @@
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model"
           },
           "source_frame_count": 1,
           "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
+            "encode": "not_applicable",
+            "encode_sequence": "error"
           },
-          "error_contracts": {},
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "unsupported",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
           "oracle_status": "ok",
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
           "encoded_ref_bytes": 10238,
