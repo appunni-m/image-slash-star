@@ -839,19 +839,16 @@ fn attach_metadata_reusing_output(
         CodecError::Dimensions("WebP encoded chunks exceed addressable size".to_owned())
     })?;
 
-    let mut metadata_len = 0usize;
-    for payload in [icc, exif, xmp].into_iter().flatten() {
-        metadata_len = metadata_len
-            .checked_add(chunk_storage_len(payload)?)
-            .ok_or_else(|| {
-                CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned())
-            })?;
-    }
-    let existing_chunks_start = 30usize.checked_add(metadata_len).ok_or_else(|| {
+    let icc_len = icc.map_or(Ok(0), chunk_storage_len)?;
+    let exif_len = exif.map_or(Ok(0), chunk_storage_len)?;
+    let xmp_len = xmp.map_or(Ok(0), chunk_storage_len)?;
+    let existing_chunks_start = 30usize.checked_add(icc_len).ok_or_else(|| {
         CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned())
     })?;
     let output_len = existing_chunks_start
         .checked_add(existing_len)
+        .and_then(|length| length.checked_add(exif_len))
+        .and_then(|length| length.checked_add(xmp_len))
         .ok_or_else(|| CodecError::Dimensions("WebP output exceeds addressable size".to_owned()))?;
     encoded.reserve(output_len.saturating_sub(encoded.len()));
     encoded.resize(output_len, 0);
@@ -878,6 +875,9 @@ fn attach_metadata_reusing_output(
     if let Some(payload) = icc {
         write_chunk_in_place(&mut encoded, &mut offset, b"ICCP", payload)?;
     }
+    offset = existing_chunks_start
+        .checked_add(existing_len)
+        .ok_or_else(|| CodecError::Dimensions("WebP output exceeds addressable size".to_owned()))?;
     if let Some(payload) = exif {
         write_chunk_in_place(&mut encoded, &mut offset, b"EXIF", payload)?;
     }
