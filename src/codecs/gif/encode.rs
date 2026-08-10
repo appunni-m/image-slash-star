@@ -122,9 +122,7 @@ fn write_gif_to_sink(
     let global_packed = encoded[10];
     if global_packed & 0x80 != 0 {
         let table_len = gif_color_table_len(global_packed)?;
-        let end = offset
-            .checked_add(table_len)
-            .ok_or_else(|| CodecError::Dimensions("GIF global color table overflows".to_owned()))?;
+        let end = offset.saturating_add(table_len);
         let table = encoded.get(offset..end).ok_or_else(|| {
             CodecError::Malformed("GIF global color table extends beyond output".to_owned())
         })?;
@@ -138,9 +136,7 @@ fn write_gif_to_sink(
             .ok_or_else(|| CodecError::Malformed("GIF output has no trailer".to_owned()))?;
         match marker {
             GIF_TRAILER => {
-                let end = offset.checked_add(1).ok_or_else(|| {
-                    CodecError::Dimensions("GIF trailer offset overflows".to_owned())
-                })?;
+                let end = offset.saturating_add(1);
                 if end != encoded.len() {
                     return Err(CodecError::Malformed(
                         "GIF output has trailing bytes after its trailer".to_owned(),
@@ -150,9 +146,7 @@ fn write_gif_to_sink(
                 return Ok(written);
             }
             IMAGE_SEPARATOR => {
-                let descriptor_end = offset.checked_add(10).ok_or_else(|| {
-                    CodecError::Dimensions("GIF image descriptor overflows".to_owned())
-                })?;
+                let descriptor_end = offset.saturating_add(10);
                 let descriptor = encoded.get(offset..descriptor_end).ok_or_else(|| {
                     CodecError::Malformed("GIF image descriptor extends beyond output".to_owned())
                 })?;
@@ -161,9 +155,7 @@ fn write_gif_to_sink(
                 offset = descriptor_end;
                 if local_packed & 0x80 != 0 {
                     let table_len = gif_color_table_len(local_packed)?;
-                    let end = offset.checked_add(table_len).ok_or_else(|| {
-                        CodecError::Dimensions("GIF local color table overflows".to_owned())
-                    })?;
+                    let end = offset.saturating_add(table_len);
                     let table = encoded.get(offset..end).ok_or_else(|| {
                         CodecError::Malformed(
                             "GIF local color table extends beyond output".to_owned(),
@@ -172,9 +164,7 @@ fn write_gif_to_sink(
                     write_gif_sink_segment(sink, table, token, &mut written)?;
                     offset = end;
                 }
-                let lzw_end = offset
-                    .checked_add(1)
-                    .ok_or_else(|| CodecError::Dimensions("GIF LZW header overflows".to_owned()))?;
+                let lzw_end = offset.saturating_add(1);
                 let lzw_header = encoded.get(offset..lzw_end).ok_or_else(|| {
                     CodecError::Malformed("GIF image has no LZW code-size byte".to_owned())
                 })?;
@@ -182,20 +172,12 @@ fn write_gif_to_sink(
                 offset = write_gif_sub_blocks(encoded, lzw_end, token, sink, &mut written)?;
             }
             EXTENSION_INTRODUCER => {
-                let label = *encoded
-                    .get(offset.checked_add(1).ok_or_else(|| {
-                        CodecError::Dimensions("GIF extension label offset overflows".to_owned())
-                    })?)
-                    .ok_or_else(|| {
-                        CodecError::Malformed("GIF extension has no label".to_owned())
-                    })?;
+                let label = *encoded.get(offset.saturating_add(1)).ok_or_else(|| {
+                    CodecError::Malformed("GIF extension has no label".to_owned())
+                })?;
                 match label {
                     GRAPHIC_CONTROL_LABEL => {
-                        let end = offset.checked_add(8).ok_or_else(|| {
-                            CodecError::Dimensions(
-                                "GIF graphic-control extension overflows".to_owned(),
-                            )
-                        })?;
+                        let end = offset.saturating_add(8);
                         let block = encoded.get(offset..end).ok_or_else(|| {
                             CodecError::Malformed(
                                 "GIF graphic-control extension extends beyond output".to_owned(),
@@ -211,20 +193,15 @@ fn write_gif_to_sink(
                     }
                     0xff | 0x01 => {
                         let expected_size = if label == 0xff { 11 } else { 12 };
-                        let size_offset = offset.checked_add(2).ok_or_else(|| {
-                            CodecError::Dimensions("GIF extension-size offset overflows".to_owned())
-                        })?;
+                        let size_offset = offset.saturating_add(2);
                         if encoded.get(size_offset).copied() != Some(expected_size) {
                             return Err(CodecError::Malformed(
                                 "GIF fixed-layout extension has an invalid block size".to_owned(),
                             ));
                         }
                         let prefix_end = size_offset
-                            .checked_add(1)
-                            .and_then(|value| value.checked_add(usize::from(expected_size)))
-                            .ok_or_else(|| {
-                                CodecError::Dimensions("GIF extension prefix overflows".to_owned())
-                            })?;
+                            .saturating_add(1)
+                            .saturating_add(usize::from(expected_size));
                         let prefix = encoded.get(offset..prefix_end).ok_or_else(|| {
                             CodecError::Malformed(
                                 "GIF extension prefix extends beyond output".to_owned(),
@@ -235,9 +212,7 @@ fn write_gif_to_sink(
                             write_gif_sub_blocks(encoded, prefix_end, token, sink, &mut written)?;
                     }
                     _ => {
-                        let prefix_end = offset.checked_add(2).ok_or_else(|| {
-                            CodecError::Dimensions("GIF extension prefix overflows".to_owned())
-                        })?;
+                        let prefix_end = offset.saturating_add(2);
                         let prefix = encoded.get(offset..prefix_end).ok_or_else(|| {
                             CodecError::Malformed(
                                 "GIF extension prefix extends beyond output".to_owned(),
@@ -278,10 +253,7 @@ fn write_gif_sub_blocks(
         let size = *encoded.get(offset).ok_or_else(|| {
             CodecError::Malformed("GIF sub-block list has no terminator".to_owned())
         })?;
-        let end = offset
-            .checked_add(1)
-            .and_then(|value| value.checked_add(usize::from(size)))
-            .ok_or_else(|| CodecError::Dimensions("GIF sub-block length overflows".to_owned()))?;
+        let end = offset.saturating_add(1).saturating_add(usize::from(size));
         let block = encoded.get(offset..end).ok_or_else(|| {
             CodecError::Malformed("GIF sub-block extends beyond output".to_owned())
         })?;
@@ -302,9 +274,7 @@ fn write_gif_sink_segment(
     crate::codecs::error::check_cancelled(token)?;
     sink.write_all(bytes)
         .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
-    *written = written
-        .checked_add(bytes.len())
-        .ok_or_else(|| CodecError::Dimensions("GIF sink output length overflows".to_owned()))?;
+    *written = written.saturating_add(bytes.len());
     Ok(())
 }
 
@@ -1073,7 +1043,70 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(&rgba_token),
     );
 
-    let _ = OctreeCube::new([3, 4, 3, 3]);
+    let sort_token = crate::CancellationToken::new();
+    let mut tiny_buckets = (0..4)
+        .map(|count| OctreeBucket {
+            count,
+            sums: [u64::from(count), 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    let mut sort_work = 0usize;
+    let _ = apple_qsort_buckets_with_token(&mut tiny_buckets, &sort_token, &mut sort_work);
+    let mut reverse_buckets = (0..64)
+        .rev()
+        .map(|count| OctreeBucket {
+            count,
+            sums: [u64::from(count), 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    sort_work = 0;
+    let _ = apple_qsort_buckets_with_token(&mut reverse_buckets, &sort_token, &mut sort_work);
+    let mut limited_buckets = vec![
+        OctreeBucket {
+            count: 1,
+            sums: [1, 0, 0, 0],
+        },
+        OctreeBucket {
+            count: 2,
+            sums: [2, 0, 0, 0],
+        },
+    ];
+    sort_work = 0;
+    let _ = insertion_sort_buckets_with_token(
+        &mut limited_buckets,
+        Some(0),
+        &sort_token,
+        &mut sort_work,
+    );
+    let mut one_candidate = [0usize];
+    let mut one_scratch = [0usize];
+    let one_palette = [[0u8, 0, 0]];
+    sort_work = 0;
+    let _ = stable_sort_nearest_candidates(
+        &mut one_candidate,
+        &mut one_scratch,
+        &one_palette,
+        0,
+        &sort_token,
+        &mut sort_work,
+    );
+    let mut lookup = OctreeCube::new([2, 2, 2, 2]);
+    let lookup_palette = vec![OctreeBucket {
+        count: 1,
+        sums: [1, 2, 3, 4],
+    }];
+    let _ = add_octree_lookup(&mut lookup, &lookup_palette, 0, Some(&sort_token));
+    let octree_colors = (0u32..1025)
+        .map(|value| {
+            [
+                value as u8,
+                value.wrapping_mul(37) as u8,
+                value.wrapping_mul(73) as u8,
+                value.wrapping_mul(109) as u8,
+            ]
+        })
+        .collect::<Vec<_>>();
+    let _ = pillow_fast_octree(&octree_colors, 256, Some(&sort_token));
 }
 
 /// Encode a still image or animation without discarding source frames.
