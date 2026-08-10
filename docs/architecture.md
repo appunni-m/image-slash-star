@@ -1908,7 +1908,7 @@ return or the first sink write. The current crate should still not be
 described as hardened for arbitrary hostile inputs: whole-buffer encoders and
 PNG's filtered/compressed working state remain infallible allocations, and no
 recoverable out-of-memory contract is promised. Resource limits and this
-remaining gap are tracked in the [roadmap](roadmap.md).
+remaining gap are tracked in the [canonical roadmap](roadmap-new.md).
 
 ## Retained and removed scope
 

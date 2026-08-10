@@ -660,7 +660,7 @@ This is Rust source-provenance and defensive-parser evidence, not Pillow
 parity: Pillow has no equivalent result, so no parity row, fixture-manifest
 row, diagnostic origin, coverage-only hook, new test function, or unit test was
 added. The descriptor does not promise item-level decoder capability; that
-decision remains an open roadmap slice.
+decision remains an open slice in the [canonical roadmap](roadmap-new.md).
 
 Exact-head managed Pillow parity run
 `49d95968-7a17-4a9d-9002-c6504922610b` passed 1,445/1,445 checks in 584 ms.

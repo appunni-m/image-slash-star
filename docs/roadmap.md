@@ -27,6 +27,10 @@ current WebP scratch slices have passing Pillow parity; their full managed
 feature/coverage acceptance cannot refresh while that unrelated native AVIF
 alpha lane fails.
 
+> Canonical source of truth: [roadmap-new.md](roadmap-new.md).
+> This file is retained as the historical audit and detailed finding record;
+> its active rows do not control current status or execution order.
+
 This roadmap contains future product work only. Current behavior belongs in the
 [README](../README.md), [architecture](architecture.md), generated rustdoc, and
 [testing contract](testing.md).
@@ -79,10 +83,11 @@ The following decisions are already implemented and are not roadmap work:
 
 ## Revision-bound implementation audit
 
-This section is the single follow-up ledger requested after the public API and
-ecosystem comparison. It is intentionally kept in the roadmap instead of
-creating another active document. Delete resolved rows as their behavior moves
-into the README, architecture reference, rustdoc, or testing contract.
+This section is the historical follow-up ledger produced after the public API
+and ecosystem comparison. The canonical status and execution order now live
+in [roadmap-new.md](roadmap-new.md). Delete or annotate resolved rows here as
+their behavior moves into the README, architecture reference, rustdoc, or
+testing contract.
 
 The original correction evidence below is the committed state based on
 `f1048bc0399fad9801559ca7fcfd3163427b5832`, identified by manifest SHA-256
@@ -12280,14 +12285,18 @@ The roadmap does not include:
 
 ## Documentation maintenance
 
-Maintain only four files under `docs/`:
+Maintain the canonical roadmap plus the current-contract documents under
+`docs/`:
 
 - `architecture.md` for current contracts and boundaries;
 - `testing.md` for oracle and verification workflow;
 - `avif.md` for the one target-dependent codec boundary; and
-- `roadmap.md` for planned work.
+- `roadmap-new.md` for current planned work and status;
+- `roadmap.md` for historical audit detail and source finding text.
 
-When an item ships, remove it from the roadmap and update the current contract.
-Do not create per-sweep, per-branch, completion-audit, or downstream-project
-documents here. Git history, commits, Coverage MCP artifacts, and the owning
-downstream repository retain that evidence.
+When an item ships, remove it from `roadmap-new.md`, update the current
+contract, and preserve the corresponding historical finding text in
+`roadmap.md` when it is useful for provenance. Do not create per-sweep,
+per-branch, completion-audit, or downstream-project documents here. Git
+history, commits, Coverage MCP artifacts, and the owning downstream repository
+retain that evidence.

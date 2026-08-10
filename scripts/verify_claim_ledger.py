@@ -5,9 +5,9 @@ The claim tuple (base revision, Pillow manifest SHA-256, generated-matrix
 SHA-256, Coverage MCP run/snapshot, and every fixture-manifest SHA-256) is
 committed as ``tests/fixtures/claim_ledger.json``. This script checks that
 every hash matches the working tree, that the revision is a real commit, that
-the run/snapshot identifiers are well-formed, and that the four maintained
-documents reference the same base revision. CI runs it so the tuple cannot
-drift.
+the run/snapshot identifiers are well-formed, and that the maintained roadmap
+and current-contract documents reference the same base revision. CI runs it so
+the tuple cannot drift.
 """
 
 from __future__ import annotations
@@ -42,6 +42,7 @@ HASHED_FILES = {
 
 DOCS = [
     "docs/roadmap.md",
+    "docs/roadmap-new.md",
     "docs/testing.md",
     "docs/architecture.md",
     "docs/avif.md",
