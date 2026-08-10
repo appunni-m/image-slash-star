@@ -408,10 +408,13 @@ formats:
       params: {}
       expect_error: true
     - id: enc_bilevel_png_rust_unsupported
-      description: Pillow expands packed bilevel input to byte-per-sample luminance before JPEG encoding
+      description: Pillow privately expands bilevel input, while the strict Rust JPEG encoder requires byte-per-sample luminance or RGB
       source_format: png
       source_asset: 1bit.png
       params: {}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: Private source-mode conversion belongs to a future fixture-proven encoder normalization slice
     - id: enc_1x1
       description: 
       params: {'size': [1, 1]}

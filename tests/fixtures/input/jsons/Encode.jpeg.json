@@ -1059,14 +1059,27 @@
       "assertion_origins": {
         "source": "pillow_fixture",
         "encode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
       },
       "operations": {
-        "encode": "ok",
-        "encode_sequence": "ok"
+        "encode": "not_applicable",
+        "encode_sequence": "error"
       },
-      "error_contracts": {},
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
       "params": {},
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "Private source-mode conversion belongs to a future fixture-proven encoder normalization slice",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1bit.png",
         "method": "PIL.Image.Image.save",
