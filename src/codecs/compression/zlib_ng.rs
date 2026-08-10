@@ -554,6 +554,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = short_level3.quick_insert(0);
     short_level3.position = 1;
     let _ = short_level3.candidate_can_improve(0, 2);
+
+    // Exercise the cancellation-aware dispatch used by PNG's public
+    // compression entry point.  A repeated multi-row input reaches the
+    // matcher, token emission, block, and checksum checkpoints for every
+    // supported compression level without manufacturing private state.
+    #[cfg(feature = "png")]
+    {
+        let repeated = vec![b'a'; 64 * 1024];
+        let token = crate::CancellationToken::new();
+        for level in 1..=9 {
+            let _ = compress_repeated(&repeated, 64, repeated.len() / 64, level, Some(&token));
+        }
+        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 0, Some(&token));
+        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 10, Some(&token));
+        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 0, None);
+    }
 }
 
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usize {

@@ -1012,6 +1012,46 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&gray, &JpegEncodeOptions::default());
     let _ = encode(&rgb, &JpegEncodeOptions::default());
 
+    let encoded_rgb =
+        encode(&rgb, &JpegEncodeOptions::default()).expect("coverage JPEG image should encode");
+    let mut rgb_sink = Vec::new();
+    let _ = write_jpeg_to_sink(&encoded_rgb, None, &mut rgb_sink);
+    let mut no_scan_sink = Vec::new();
+    let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0xd9], None, &mut no_scan_sink);
+    for malformed in [&[0_u8][..], &[0xff][..], &[0xff, 0][..], &[0xff, 0xff][..]] {
+        let mut malformed_sink = Vec::new();
+        let _ = write_jpeg_to_sink(&malformed, None, &mut malformed_sink);
+    }
+    let _ = jpeg_length_segment_end(&[0, 0], 0);
+    let _ = find_scan_marker(&[1, 2], 0);
+    let _ = find_scan_marker(&[0xff, 0], 0);
+    let mut second_soi = vec![0xff, 0xd8];
+    second_soi.extend_from_slice(&encoded_rgb[2..]);
+    let mut second_soi_sink = Vec::new();
+    let _ = write_jpeg_to_sink(&second_soi, None, &mut second_soi_sink);
+    let mut progressive_sink = Vec::new();
+    let progressive_sink_options = JpegEncodeOptions {
+        progressive: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let progressive_bytes = encode(&rgb, &progressive_sink_options)
+        .expect("coverage progressive JPEG image should encode");
+    let _ = write_jpeg_to_sink(&progressive_bytes, None, &mut progressive_sink);
+    let mut restart_sink = Vec::new();
+    let restart_sink_options = JpegEncodeOptions {
+        optimize: Some(true),
+        subsampling: Some(JpegSubsampling::Cs422),
+        restart_interval: Some(1),
+        ..JpegEncodeOptions::default()
+    };
+    let restart_bytes =
+        encode(&rgb, &restart_sink_options).expect("coverage restart JPEG image should encode");
+    let _ = write_jpeg_to_sink(&restart_bytes, None, &mut restart_sink);
+    let checkpoint_token = crate::CancellationToken::new();
+    let mut output_checkpoint = TokenEntropyOutputCheckpoint::new(&checkpoint_token);
+    let _ = output_checkpoint.observe(4_096);
+    let _ = output_checkpoint.observe(8_192);
+
     // Pillow has no caller-controlled cancellation token. These deterministic
     // coverage-only drills exercise the Rust cancellation checkpoints across
     // color conversion, sampling, quantization, and entropy preparation; they
