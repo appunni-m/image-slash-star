@@ -2237,7 +2237,12 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     checkpoint: C,
     scratch: &mut ImageStreamScratch,
 ) -> Result<Vec<u8>, EncodingError> {
-    let mut frame = Vec::new();
+    // Nested image-stream trials leave one bounded suffix buffer in the
+    // stream scratch. Recycle that allocation for the final VP8L frame so
+    // sequential frames do not allocate a second transient output vector;
+    // nested trials refill the scratch buffer after it is taken.
+    let mut frame = core::mem::take(&mut scratch.output);
+    frame.clear();
     {
         let w = &mut BitWriter {
             writer: &mut frame,
