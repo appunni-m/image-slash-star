@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `27a90e61bd367e1e44888269371bdd433aa893eb`; the claim-ledger fixture
+revision `c09adc987d6bd723121907b808e643002d2126f0`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`6520b3c8-3311-4ea5-9772-c928077e0ed4` (1,445/1,445 passed in 692 ms) at
+`30ae5925-005d-4c78-a874-3ed2c30a0592` (1,445/1,445 passed in 597 ms) at
 this revision. Feature matrix run
-`fbb070b6-7776-4b3a-8704-85dc0bb2045e` terminated with 44 passed and 1 failed;
+`15088e48-3f62-4212-ad5c-ce27235a28e2` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`974e4905-09bf-4a59-8373-33db1324d1f4` likewise terminated 84/85 and ingested
+`47881a25-9151-4f92-ad82-035615d5235e` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1094,6 +1094,15 @@ another transient final-output allocation while candidate ordering, encoded
 bytes, errors, token-aware copy checkpoints, and sink output remain unchanged.
 Pillow parity sees only final bytes/errors; transient allocation ownership and
 retained capacity are Rust-only evidence.
+
+Lossless VP8L final-frame preparation uses the same ownership boundary: the
+retained nested output-scratch allocation is moved into the next final frame
+writer, and nested candidate trials refill the scratch vector after it is
+taken. The returned frame remains independently owned, while sequential frames
+avoid an additional transient final-output allocation. Encoded bytes, errors,
+token-aware bit checkpoints, and sink output remain unchanged. Pillow parity
+sees only final bytes/errors; output ownership and retained capacity are
+Rust-only evidence.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,

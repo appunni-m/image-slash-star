@@ -3,17 +3,17 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `27a90e61bd367e1e44888269371bdd433aa893eb`, and benchmark-protocol
+revision `c09adc987d6bd723121907b808e643002d2126f0`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`6520b3c8-3311-4ea5-9772-c928077e0ed4` (1,445/1,445 passed in 692 ms) at
+`30ae5925-005d-4c78-a874-3ed2c30a0592` (1,445/1,445 passed in 597 ms) at
 this revision. Feature matrix run
-`fbb070b6-7776-4b3a-8704-85dc0bb2045e` terminated with 44 passed and 1 failed;
+`15088e48-3f62-4212-ad5c-ce27235a28e2` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`974e4905-09bf-4a59-8373-33db1324d1f4` likewise terminated 84/85 with that
+`47881a25-9151-4f92-ad82-035615d5235e` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -644,6 +644,33 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP VP8L transient final-frame scratch reuse
+
+The production slice is implemented at
+`c09adc987d6bd723121907b808e643002d2126f0`, following the lossless cross-frame
+image-stream scratch boundary at `87a42863ca46c2539aff75d18b85a669f7dac88b`.
+`encode_frame_stream` now recycles the retained nested output-scratch
+allocation into the final VP8L frame writer for the next sequential frame;
+nested candidate trials refill the scratch vector after it is taken. The
+returned frame still owns its output bytes, while sequential frames avoid an
+additional transient final-output allocation. Encoded bytes, errors,
+token-aware bit checkpoints, and sink output remain unchanged.
+
+Pillow exposes final bytes and errors, not transient allocation ownership or
+retained capacity. Existing WebP still and animation fixture rows therefore
+provide the byte/error regression gate, while the existing feature-gated Rust
+contract remains separate evidence for caller-token and sink behavior. No
+parity row, fixture-manifest row, diagnostic origin, new test function,
+coverage-only hook, or unit test was added because Pillow cannot observe this
+boundary. Exact-head managed Pillow parity run
+`30ae5925-005d-4c78-a874-3ed2c30a0592` passed 1,445/1,445 checks in 597 ms.
+Feature matrix run `15088e48-3f62-4212-ad5c-ce27235a28e2` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`47881a25-9151-4f92-ad82-035615d5235e` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
 
 Current acceptance record: WebP ALPH transient final-output scratch reuse
 
