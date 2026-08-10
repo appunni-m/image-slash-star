@@ -2099,7 +2099,7 @@ fn subtract_green_with_checkpoint(
 #[allow(clippy::unwrap_used)]
 fn apply_palette<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
-    pixels: &[u32],
+    pixels: &mut [u32],
     width: usize,
     height: usize,
     mut palette: Vec<u32>,
@@ -2152,22 +2152,30 @@ fn apply_palette<C: BitWriterCheckpoint>(
     let pixels_per_group = 1 << packing_bits;
     let bits_per_pixel = 8 >> packing_bits;
     let packed_width = width.div_ceil(pixels_per_group);
-    let mut packed = Vec::with_capacity(packed_width * height);
+    let packed_len = packed_width * height;
+    // The source buffer is no longer needed after palette packing. Packing
+    // left-to-right into its prefix is safe because each destination index is
+    // at or before the source group being read; for one-pixel groups the
+    // source value is read before the same slot is overwritten.
     if let Some(token) = token {
         let mut source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
-        for (row_index, row) in pixels.chunks_exact(width).enumerate() {
+        for row_index in 0..height {
             if row_index.is_multiple_of(64) {
                 check_token(Some(token))?;
             }
-            for group in row.chunks(pixels_per_group) {
+            let row_start = row_index * width;
+            let packed_row_start = row_index * packed_width;
+            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
                 let mut packed_pixel = 0xff00_0000_u32;
-                for (index, &color) in group.iter().enumerate() {
+                let group_len = (width - group_start).min(pixels_per_group);
+                for index in 0..group_len {
+                    let color = pixels[row_start + group_start + index];
                     let palette_index = palette_index_with_checkpoint(&palette, color, token)?;
                     packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
                 }
-                packed.push(packed_pixel);
+                pixels[packed_row_start + group_index] = packed_pixel;
                 source_pixels_until_checkpoint =
-                    source_pixels_until_checkpoint.saturating_sub(group.len());
+                    source_pixels_until_checkpoint.saturating_sub(group_len);
                 if source_pixels_until_checkpoint == 0 {
                     check_token(Some(token))?;
                     source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
@@ -2175,14 +2183,18 @@ fn apply_palette<C: BitWriterCheckpoint>(
             }
         }
     } else {
-        for row in pixels.chunks_exact(width) {
-            for group in row.chunks(pixels_per_group) {
+        for row_index in 0..height {
+            let row_start = row_index * width;
+            let packed_row_start = row_index * packed_width;
+            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
                 let mut packed_pixel = 0xff00_0000_u32;
-                for (index, &color) in group.iter().enumerate() {
+                let group_len = (width - group_start).min(pixels_per_group);
+                for index in 0..group_len {
+                    let color = pixels[row_start + group_start + index];
                     let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
                     packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
                 }
-                packed.push(packed_pixel);
+                pixels[packed_row_start + group_index] = packed_pixel;
             }
         }
     }
@@ -2190,7 +2202,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
     let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
     write_image_stream_configured_with_scratch(
         w,
-        &packed,
+        &pixels[..packed_len],
         packed_width,
         true,
         5,
@@ -3113,10 +3125,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
         .collect::<Vec<_>>();
     palette.push(0);
+    let mut palette_pixels = [0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000];
     let mut palette_scratch = ImageStreamScratch::default();
     let _ = apply_palette(
         &mut palette_writer,
-        &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        &mut palette_pixels,
         2,
         2,
         palette,
@@ -3132,9 +3145,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
+    let mut palette_trim_pixels = [0; 4];
     let _ = apply_palette(
         &mut palette_trim_writer,
-        &[0; 4],
+        &mut palette_trim_pixels,
         2,
         2,
         vec![0; 18],
@@ -3150,9 +3164,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint,
     };
+    let mut palette4_pixels = [0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000];
     let _ = apply_palette(
         &mut palette4_writer,
-        &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        &mut palette4_pixels,
         2,
         2,
         vec![0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
@@ -3171,9 +3186,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let palette16 = (0..16)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
         .collect::<Vec<_>>();
+    let mut palette16_pixels = [0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000];
     let _ = apply_palette(
         &mut palette16_writer,
-        &[0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+        &mut palette16_pixels,
         2,
         2,
         palette16,
