@@ -3,22 +3,22 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `c8b3cbe6815de601795c5f5482ce0a3738c31b9d`; the claim-ledger fixture
+revision `ccf9c32bb9746629263d3028c430448223df64e7`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`21bd0d97-6209-415f-8568-7713b3be1f62` (1,445/1,445 passed in 7,902 ms), and
-the latest feature matrix is `109d0d03-8498-4b94-9f2c-15ddbedc9ddd` (passed in
-33,368 ms), both at the same source revision. The accepted Coverage MCP
-snapshot is `46bdf0fa-d59a-40ab-9a1c-f0e85f28e02b` from run
-`fdb26765-f319-434c-a273-a74b6456c052`, also at that revision: 55,920/56,797
-lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,968/87,926
+`2dae75fa-5011-4d42-9777-c6beadbf65e9` (1,445/1,445 passed in 7,628 ms), and
+the latest feature matrix is `eac7905f-ec64-4deb-a6da-137ad7f75d3b` (passed in
+27,088 ms), both at the same source revision. The accepted Coverage MCP
+snapshot is `68fda68a-4889-4d44-b57d-f2a7ab388677` from run
+`81d3eb83-1dcb-419f-adc6-445a4ea1c6ff`, also at that revision: 55,926/56,803
+lines, 8,011/8,228 branches, 3,122/3,218 functions, and 85,972/87,930
 regions. The snapshot retains the known LLVM JSON segment-normalization
 warning. Histogram coverage is 872/873 lines, 184/184 branches, and 43/43
 functions; predictor coverage is 366/366 lines, 68/68 branches, and 24/24
 functions; cross-color coverage is 517/530 lines, 83/86 branches, and 27/27
-functions. The WebP encoder projection records 2,399/2,483 lines,
-511/540 branches, 89/89 functions, and 3,467/3,747 regions; its backward-
+functions. The WebP encoder projection records 2,405/2,489 lines,
+511/540 branches, 89/89 functions, and 3,471/3,751 regions; its backward-
 reference file records 1,881/1,935 lines, 497/530 branches, 72/72 functions,
 and 2,813/2,973 regions. The lossless-transform projection records 452/452
 lines, 30/30 branches, 25/25 functions, and 883/883 regions. The Huffman
@@ -799,6 +799,16 @@ and errors, not this ownership boundary or allocation counts, so the result is
 Rust-only feature-gate and coverage evidence rather than a Pillow-parity
 claim; it is not allocator/OOM accounting, recoverable-OOM handling, or a
 streaming guarantee.
+
+WebP ALPH palette collection uses the same fixed 256-value alphabet as the
+palette-index and delta workspaces. `collect_alpha_palette` therefore returns a
+fixed `[u8; 256]` plus length instead of allocating a palette `Vec<u8>`. The
+raw alpha plane remains borrowed for the compressed-versus-uncompressed choice,
+and the image-scaled packed `Vec<u32>` remains necessary because the entropy
+writer needs random-access packed pixels while the raw candidate stays
+available. Pillow parity verifies final bytes and errors only; this bounded
+workspace boundary is Rust-only feature-gate and coverage evidence, not
+allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L transform-order decoding stores the at-most-four transform IDs in
 `[u8; 4]` plus a length instead of a heap `Vec`. The bitstream permits at most
