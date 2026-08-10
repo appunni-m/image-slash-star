@@ -2365,6 +2365,33 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut sink,
         );
     }
+    let mut webp_sequence_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token(
+        &two_frame_sequence,
+        ImageFormat::WebP,
+        &EncodeOptions::for_format(ImageFormat::WebP),
+        EncodePolicy::default(),
+        None,
+        &mut webp_sequence_sink,
+    );
+    let mut webp_sequence_mismatch_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token(
+        &two_frame_sequence,
+        ImageFormat::WebP,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        EncodePolicy::default(),
+        None,
+        &mut webp_sequence_mismatch_sink,
+    );
+    let mut empty_webp_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token(
+        &invalid_sequence,
+        ImageFormat::WebP,
+        &EncodeOptions::for_format(ImageFormat::WebP),
+        EncodePolicy::default(),
+        None,
+        &mut empty_webp_sink,
+    );
 
     // These are Rust-only token-dispatch checks.  CancellationToken and the
     // caller-owned output contract are not represented by Pillow parity rows.
