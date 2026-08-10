@@ -1286,7 +1286,7 @@
           }
         ],
         "lane": "all",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "avif": {
         "features": [
@@ -1391,7 +1391,7 @@
           }
         ],
         "lane": "avif",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "bmp": {
         "features": [
@@ -1496,7 +1496,7 @@
           }
         ],
         "lane": "bmp",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "default": {
         "features": [
@@ -1607,7 +1607,7 @@
           }
         ],
         "lane": "default",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "gif": {
         "features": [
@@ -1712,7 +1712,7 @@
           }
         ],
         "lane": "gif",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "ico": {
         "features": [
@@ -1819,7 +1819,7 @@
           }
         ],
         "lane": "ico",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "jpeg": {
         "features": [
@@ -1924,7 +1924,7 @@
           }
         ],
         "lane": "jpeg",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "none": {
         "features": [],
@@ -2027,7 +2027,7 @@
           }
         ],
         "lane": "none",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "png": {
         "features": [
@@ -2132,7 +2132,7 @@
           }
         ],
         "lane": "png",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "tiff": {
         "features": [
@@ -2237,7 +2237,7 @@
           }
         ],
         "lane": "tiff",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       },
       "webp": {
         "features": [
@@ -2342,7 +2342,7 @@
           }
         ],
         "lane": "webp",
-        "target": "wasm32"
+        "target": "wasm32-wasip1"
       }
     }
   }
