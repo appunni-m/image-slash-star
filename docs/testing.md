@@ -3,17 +3,17 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `59664c1f1612c0c09aef9e4a57ef8eff45d5baab`, and benchmark-protocol
+revision `035deacb5ca797e5f583203d46f57ea99f82fcc0`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`da8cd412-8c8a-431b-9862-d8ce05154aaf` (1,445/1,445 passed in 3,807 ms) at
+`7fb0be7b-d1e7-4fc1-b9f1-17382c7b0e06` (1,445/1,445 passed in 4,324 ms) at
 this revision. Feature matrix run
-`dd34266f-7975-4026-9255-c24370efea79` terminated with 44 passed and 1 failed;
+`349b018d-7a7f-4e0e-a479-46071f854571` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`48168b80-e782-4514-a44e-06495fcf0a9b` likewise terminated 84/85 with that
+`0a806ed7-4cec-4a94-b0d5-56ca4605ccfc` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -644,6 +644,35 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: WebP still metadata output-buffer reuse
+
+The production slice is implemented at
+`035deacb5ca797e5f583203d46f57ea99f82fcc0`, following the lossy RGBA
+VP8X/ALPH output-buffer boundary at
+`59664c1f1612c0c09aef9e4a57ef8eff45d5baab`. On the ordinary no-token still
+path, metadata attachment retains the completed RIFF allocation, shifts the
+existing image chunks behind the VP8X header and optional ICCP chunk, and
+writes EXIF/XMP after those image chunks in the established order. This
+removes the second complete output allocation and full encoded-chunk copy.
+Token-aware attachment retains its separate output buffer and existing
+1,024-byte copy checkpoints. Encoded bytes, errors, cancellation checkpoints,
+and sink output remain unchanged.
+
+Pillow exposes final bytes and errors, not allocator ownership or output-buffer
+lifetime. Existing WebP metadata and still/sequence fixture rows therefore
+provide byte/error regression evidence, while existing feature-gated Rust
+contracts remain the non-Pillow evidence for caller-token behavior. No parity
+row, fixture-manifest row, diagnostic origin, new test function, coverage-only
+hook, or unit test was added because Pillow cannot observe this ownership
+boundary. Exact-head managed Pillow parity run
+`7fb0be7b-d1e7-4fc1-b9f1-17382c7b0e06` passed 1,445/1,445 checks in 4,324 ms.
+Feature matrix run `349b018d-7a7f-4e0e-a479-46071f854571` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`0a806ed7-4cec-4a94-b0d5-56ca4605ccfc` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
 
 Current acceptance record: WebP lossy RGBA VP8X/ALPH output-buffer reuse
 
