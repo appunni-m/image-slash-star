@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`531d00657a22034fb88ed249df9d20c33b5d2fc3`; the claim-ledger fixture tuple
+`6c870e47fd28ddbc2a320dd64792ef0b7507e096`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`75f2370c-95aa-449c-9172-0c8e8ad41940` passed 1,445/1,445 checks. The feature
-matrix run `74024c09-0e49-4854-8856-2d0cd3cf0b6c` and nightly Coverage MCP
-run `123912a2-4ee0-4ace-be39-45737ce0d919` both hit the pre-existing native
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` passed 1,445/1,445 checks. The feature
+matrix run `d485d49b-af1d-4a55-8eff-38b7a2136a5d` and nightly Coverage MCP
+run `26d21516-2f0d-4f17-b1b9-a9959a3aad2e` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
@@ -187,6 +187,12 @@ The raw non-primary records also retain the source `ipma` essential bit
 through `AvifItemProperty::is_essential()` in association order. This is
 container intent provenance only; it does not make an unknown property
 executable, select auxiliary content, or change decoded pixels.
+Both bounded AVIF parsers independently cap the `ipco` property table at
+2,048 entries. The existing feature-gated source/container contract rejects
+the 2,049th unassociated property during inspection, still decode, and
+sequence parsing. Pillow has no item-property table-budget result, so this is
+Rust parser-resource evidence with no parity row, fixture-manifest row,
+diagnostic origin, coverage-only hook, new test function, or unit test.
 Known non-primary and auxiliary `ispe`/`pixi` declarations are retained
 separately through `SourceDescriptor::avif_item_plane_properties()` as
 source-local item ID, optional width/height, and optional uniform channel depth.

@@ -3,19 +3,19 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `531d00657a22034fb88ed249df9d20c33b5d2fc3`; the claim-ledger fixture
+revision `6c870e47fd28ddbc2a320dd64792ef0b7507e096`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`75f2370c-95aa-449c-9172-0c8e8ad41940` (1,445/1,445 passed in 7,351 ms) at
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` (1,445/1,445 passed in 678 ms) at
 this revision. Feature matrix run
-`74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated with 44 passed and 1 failed;
+`d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`123912a2-4ee0-4ace-be39-45737ce0d919` likewise terminated 84/85 and ingested
+`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 native failure was reproduced from a clean copy of the preceding `879ddc6`
-source, so it is not evidence against the current transform-order retention
+source, so it is not evidence against the current property-table ceiling
 slice. The accepted Coverage MCP
 snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
@@ -212,6 +212,12 @@ association order through `AvifItemProperty::is_essential()`; this records
 container intent only and does not make an unknown property executable. The
 primary typed transform descriptor retains its corresponding declaration order
 through `AvifTransformProperties::order()` and `AvifTransformKind`.
+Both bounded AVIF parsers reject an `ipco` property table after 2,048 entries,
+independently of their enclosing-box and association budgets. The existing
+feature-gated source/container contract exercises the 2,049-entry boundary in
+inspection, still decode, and sequence parsing; this is Rust parser-resource
+evidence, not Pillow parity, because Pillow exposes no item-property table
+budget or result field.
 
 Known non-primary and auxiliary
 `ispe`/`pixi` declarations are retained as `AvifItemPlaneProperties` records

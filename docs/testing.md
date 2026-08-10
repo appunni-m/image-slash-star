@@ -3,21 +3,21 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `531d00657a22034fb88ed249df9d20c33b5d2fc3`, and benchmark-protocol
+revision `6c870e47fd28ddbc2a320dd64792ef0b7507e096`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`75f2370c-95aa-449c-9172-0c8e8ad41940` (1,445/1,445 passed in 7,351 ms) at
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` (1,445/1,445 passed in 678 ms) at
 this revision. Feature matrix run
-`74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated with 44 passed and 1 failed;
+`d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`123912a2-4ee0-4ace-be39-45737ce0d919` likewise terminated 84/85 with that
+`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same native failure was reproduced from a clean copy of the
-preceding `879ddc6` source, so it is not evidence against this transform-order
-retention slice. The accepted Coverage MCP snapshot remains
+preceding `879ddc6` source, so it is not evidence against this property-table
+ceiling slice. The accepted Coverage MCP snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -644,6 +644,33 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: AVIF unique item-property ceiling
+
+The production and Rust test/runtime slice is implemented at
+`6c870e47fd28ddbc2a320dd64792ef0b7507e096`. Both bounded AVIF parsers now
+enforce an independent 2,048-entry ceiling on the `ipco` item-property table,
+separate from the enclosing-box and association budgets. The existing
+feature-gated `source_alpha_matches_the_container_contract` contract builds
+2,049 unassociated `free` property boxes in memory and asserts that inspection,
+still decode, and sequence parsing all return structured `Malformed` errors;
+the WASI `avif` lane passes this witness. This is a Rust parser-resource and
+defensive-container contract, not Pillow parity: Pillow exposes no item-property
+table size or parser-budget result, so no parity row, fixture-manifest row,
+diagnostic origin, coverage-only hook, new test function, or unit test was
+added. Encoder collision rules and broader item/property graph limits remain
+open.
+
+Exact-head managed Pillow parity run
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` passed 1,445/1,445 checks in 678 ms.
+Feature matrix run `d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice. These records keep Pillow-observable
+parity, WASI/native feature-gated behavior, and parser-resource evidence
+separate.
 
 Current acceptance record: AVIF transform association order
 

@@ -3,21 +3,21 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `531d00657a22034fb88ed249df9d20c33b5d2fc3`, and benchmark-protocol
+revision `6c870e47fd28ddbc2a320dd64792ef0b7507e096`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`75f2370c-95aa-449c-9172-0c8e8ad41940` (1,445/1,445 passed in 7,351 ms) at
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` (1,445/1,445 passed in 678 ms) at
 this revision. Feature matrix run
-`74024c09-0e49-4854-8856-2d0cd3cf0b6c` terminated with 44 passed and 1 failed;
+`d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`123912a2-4ee0-4ace-be39-45737ce0d919` likewise terminated 84/85 with that
+`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same native failure was reproduced from a clean copy of the
 preceding `879ddc6` source, so it is not evidence against the current
-transform-order retention slice. The accepted Coverage MCP snapshot therefore remains
+property-table ceiling slice. The accepted Coverage MCP snapshot therefore remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -1515,7 +1515,7 @@ Minute gaps:
 | AVF-013 | Sequence timing uses integer milliseconds and cannot retain exact timescale/duration, repetition, edit lists, or sample timing. | Replace timing through API-009 before claiming exact animated AVIF container parity. |
 | AVF-014 | Item/property/reference counts, box depth/size, grid dimensions, sample count, cumulative decoded bytes, and AV1 work have no caller limits. | Add BMFF and AV1 sublimits with independently identified failure context. |
 | AVF-015 | Portable encode lacks typed codec, speed, thread, tile, quantizer, chroma, range, tune, and lossless controls matching the native oracle bridge. | Freeze required Pillow/libavif behaviors, then implement only dependency-free, deterministic controls. |
-| AVF-016 | Unknown top-level boxes and free/skip padding are retained raw in scan order, recognized EXIF/XMP item payloads are retained in item order, unknown and known associated non-primary `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties retain exact source-local kind/payload records through `SourceDescriptor::avif_item_properties()`, known non-primary/auxiliary `ispe`/`pixi` declarations retain typed source-local dimensions/depth through `SourceDescriptor::avif_item_plane_properties()`, and non-primary/auxiliary `av1C` declarations retain exact source-local payloads plus typed depth/chroma fields through `SourceDescriptor::avif_item_codec_properties()`. Compatible brands, remaining known item properties, and item/property graph limits are not yet governed by the common model. | Use ordered opaque preservation under API-040 for remaining item-level boxes/properties, with box-size and graph limits. |
+| AVF-016 | Unknown top-level boxes and free/skip padding are retained raw in scan order, recognized EXIF/XMP item payloads are retained in item order, unknown and known associated non-primary `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties retain exact source-local kind/payload records through `SourceDescriptor::avif_item_properties()`, known non-primary/auxiliary `ispe`/`pixi` declarations retain typed source-local dimensions/depth through `SourceDescriptor::avif_item_plane_properties()`, and non-primary/auxiliary `av1C` declarations retain exact source-local payloads plus typed depth/chroma fields through `SourceDescriptor::avif_item_codec_properties()`. The portable and inspection parsers independently reject an `ipco` table after 2,048 property entries. Compatible brands, remaining known item properties, and broader item/property graph limits are not yet governed by the common model. | Keep the explicit property-table cap separate from box, association, and graph budgets; use ordered opaque preservation under API-040 for remaining item-level boxes/properties and add the other graph limits independently. |
 | AVF-017 | Native and portable decoders have no common strictness/diagnostic contract, making graceful fallback and parity differences hard to classify. | Normalize error stage, offset/box/OBU identity, unsupported feature, warning, and limit states. |
 | AVF-018 | AV1 film grain, operating points, spatial layers, scalability, and still-picture/profile constraints have no capability statement. | Inventory the portable syntax subset against the pinned AOM/libavif corpus before adding syntax. |
 | AVF-019 | AVIF input/output cannot use caller-owned YUV/alpha planes or report precise plane allocation requirements. | Add checked plane preflight and ownership only after API-024/025. |
@@ -1526,7 +1526,7 @@ Minute gaps:
 | AVF-025 | Repetition can be finite additional repeats, infinite, or unknown; libavif defines finite `n` as `n + 1` total plays. The common loop field cannot preserve all states. | Implement API-050 with exact native/Pillow sequence fixtures. |
 | AVF-026 | libavif metadata is valid after parse, but outer container properties may change after inner AV1 headers are decoded. The current inspect/decode contract has no “declared versus confirmed” distinction. | Retain both observations when they differ and fail only according to an explicit strictness rule. |
 | AVF-027 | Main color, alpha, and gain-map content can be selected independently. A single normalized RGBA result cannot state which auxiliary content was decoded, ignored, or unavailable. | Add content-selection capability flags and auxiliary relationships before gain-map support; applying a gain map remains image processing and out of scope. |
-| AVF-028 | Opaque and UUID item properties have association order, essential bits, transform order, a finite unique-property ceiling, and collision rules with properties generated by the encoder. | Preserve ordered raw properties and reject unsafe collisions; never replay unknown essential properties as if understood. |
+| AVF-028 | Opaque and UUID item properties now have association order, essential bits, transform order, and an independent 2,048-entry `ipco` unique-property ceiling. Collision rules with properties generated by the encoder remain open. | Preserve ordered raw properties, enforce the finite property-table ceiling, and reject unsafe encoder collisions; never replay unknown essential properties as if understood. |
 | AVF-029 | EXIF storage carries a TIFF-header offset, and libavif may derive `irot`/`imir` from EXIF orientation. The model now retains raw EXIF and independent container transform provenance, but does not parse orientation or detect contradictions. | Preserve the independent fields and define contradiction/auxiliary-item policy; document that neither is applied to pixels. |
 | AVF-030 | Decoder strict flags, diagnostic text, I/O byte statistics, ignored EXIF/XMP policy, image count/dimension/pixel limits, and waiting-on-I/O state are available in the native reference but have no portable/common mapping. | Define stable stage/limit/progress fields and use the same fixtures against native and portable implementations. |
 | AVF-031 | AVIF auxiliary alpha now has `SourceAlpha::Auxiliary` plus bounded source-local auxiliary-item relationships on inspection, still decode, and sequence-frame decode, backed by both direct `alpha.avif` and grid-derived `grid.avif` fixtures. The primary grid retains its ordered derived item IDs, validated version/flags/row/column/output-canvas topology through `SourceDescriptor::avif_grid_properties()`, and bounded `dimg` references through `SourceDescriptor::avif_item_relationships()`. Source-local `prem` edges are retained through `SourceDescriptor::avif_premultiplied_relationships()`, typed non-primary `colr`/`nclx` CICP declarations through `SourceDescriptor::avif_item_color_properties()`, non-primary `prof`/`rICC` profiles through `SourceDescriptor::avif_item_icc_profiles()`, unknown and known `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties through `SourceDescriptor::avif_item_properties()`, non-primary/auxiliary `ispe`/`pixi` declarations through `SourceDescriptor::avif_item_plane_properties()`, and non-primary/auxiliary `av1C` declarations through `SourceDescriptor::avif_item_codec_properties()`; the existing alpha and grid fixtures assert the typed records, while duplicate declarations are mutated only in memory and decoded normalized bytes remain identical. Tile placement/composition, plane range/quality, non-alpha auxiliary payloads, other known forms beyond typed CICP/ICC/codec, and exact invisible RGB remain unrepresented. | Add exact plane/relationship fixtures for the remaining auxiliary classes before high-depth alpha; keep source provenance separate from decoded transfer bytes. |
@@ -1547,8 +1547,9 @@ non-primary `AvifItemProperty` records: association order and the `ipma`
 essential bit are retained. Primary typed `irot`/`imir`/`pasp`/`clap`
 declarations also retain their source association order through
 `AvifTransformProperties::order()`. This supersedes the association-order,
-essential-bit, and transform-order portions of the AVF-028 finding; unique
-property ceilings and encoder collision rules remain open.
+essential-bit, and transform-order portions of the AVF-028 finding. The
+independent 2,048-entry `ipco` unique-property ceiling is now also closed;
+encoder collision rules remain open.
 
 ### Cargo features, targets, artifacts, and downstream use
 
@@ -7129,6 +7130,32 @@ ingested snapshot `c1e2648d-61b8-4015-b110-173966ae6ac5`: 54,842/55,686 lines,
 are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
+
+Current implementation record: AVIF unique item-property ceiling
+
+The production and Rust test/runtime slice is implemented at
+`6c870e47fd28ddbc2a320dd64792ef0b7507e096`. Both bounded AVIF parsers now
+enforce an independent 2,048-entry ceiling on the `ipco` item-property table,
+separate from the enclosing-box and association budgets. The existing
+feature-gated `source_alpha_matches_the_container_contract` contract builds
+2,049 unassociated `free` property boxes in memory and asserts structured
+`Malformed` results from inspection, still decode, and sequence parsing; the
+WASI `avif` lane passes this witness. Pillow exposes no item-property table
+size or parser-budget result, so this is Rust parser-resource evidence rather
+than Pillow parity and adds no parity row, fixture-manifest row, diagnostic
+origin, coverage-only hook, new test function, or unit test. Encoder collision
+rules and broader item/property graph limits remain open.
+
+Exact-head managed Pillow parity run
+`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` passed 1,445/1,445 checks in 678 ms.
+Feature matrix run `d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice. This closes only the finite unique
+property-ceiling subcategory of AVF-028; encoder collision behavior remains
+open.
 
 Current implementation record: AVIF transform association order
 
