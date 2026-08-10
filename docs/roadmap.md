@@ -3,19 +3,19 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `b2056a98c95c2d8224149a5ce58759b095509590`, and benchmark-protocol
+revision `13624949dbe405fd636ba7d4a765d3706039b173`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed validation runs are Pillow parity
-`a1e85638-8329-4956-a535-df8a46dce70b` (1,445/1,445 passed in 629 ms) and
-feature matrix `edddada5-ec35-47aa-aa47-435df1a00861` (passed in 15,138 ms);
+`e7debdc6-3fac-4970-bce4-0c53c0faa3f9` (1,445/1,445 passed in 676 ms) and
+feature matrix `cabf6e64-e632-47ee-a4c2-08fa8fc4db23` (passed in 13,793 ms);
 both recorded checkout HEAD
-`b2056a98c95c2d8224149a5ce58759b095509590`.
+`13624949dbe405fd636ba7d4a765d3706039b173`.
 The accepted Coverage MCP snapshot is
-`50893a3c-090f-4c8d-8fff-e8dfa1caf8da` from run
-`fa6cc74a-9e0c-4ee9-a826-81f8c23515c1`; it records 55,799/56,670 lines,
-8,001/8,214 branches, 3,112/3,208 functions, and 85,787/87,735 regions at
+`325b653e-2ab1-4380-bb92-1ea32c4b9a16` from run
+`f0b0a6e8-9070-45e7-9468-f3744649e71c`; it records 55,878/56,751 lines,
+8,009/8,226 branches, 3,122/3,218 functions, and 85,921/87,873 regions at
 the same source revision. These are Rust coverage records, not Pillow-oracle
 coverage or allocator/OOM accounting; the known LLVM JSON
 segment-normalization warning remains.
@@ -8440,6 +8440,63 @@ functions, and 1,911 regions. These are Rust implementation/coverage records,
 not Pillow-parity coverage; the known LLVM JSON segment-normalization warning
 remains.
 
+Current acceptance record: WebP VP8L opaque RGB direct decode
+
+The production and Rust test/runtime slice is implemented at
+`13624949dbe405fd636ba7d4a765d3706039b173`, following color-cache Huffman
+code-length scratch reuse at
+`b2056a98c95c2d8224149a5ce58759b095509590`. Still, non-alpha VP8L decode now
+asks `LosslessDecoder::decode_frame_rgb` to write directly into the caller's
+three-byte RGB buffer. The direct path is selected only when the VP8L header
+reports no alpha and no transforms; alpha-bearing or transformed streams keep
+the prior four-byte RGBA workspace and RGB copy. The generic decoder preserves
+four-byte color-cache semantics, while the direct RGB helper represents the
+known-opaque alpha as 255. Decoded bytes, errors, and sink output remain
+unchanged.
+
+This is Rust implementation and Rust-only transient-storage/ownership
+evidence. Pillow exposes only final decoded bytes and errors, so the existing
+lossless WebP fixture rows are byte/error regression evidence rather than proof
+of the staging boundary. No parity row, fixture-manifest row, diagnostic
+origin, new test function, coverage-only hook, or unit test was added. Existing
+feature-gated Rust contracts and the feature matrix remain the non-Pillow
+evidence. Coverage deliberately leaves unselected alpha/transform fallback and
+RGB-copy alternatives visible; no synthetic tests were added merely to fill
+those branches.
+
+The clean schema-`@3` benchmark measured Pillow parity at 0.929518 s wall /
+2.785749 user s / 0.177436 sys s / 257,490,944-byte peak RSS and the separate
+Rust-only feature-gate workload at 1.549529 s wall / 2.231820 user s /
+0.085314 sys s / 142,000,128-byte peak RSS. The native release build measured
+6.383624 s wall / 31.416379 user s / 0.342882 sys s /
+893,632,512-byte peak RSS and produced a 7,963,072-byte `rlib`; the WASM
+compile measured 1.644607 s wall / 1.965322 user s / 0.593520 sys s /
+553,484,288-byte peak RSS and produced a 24,083,457-byte artifact. These are
+single-host/cache/toolchain observations, not comparative or universal
+performance claims; allocation counts, retained cache bytes, caller-buffer
+reuse, peak stack depth, and WASM runtime resources remain unmeasured.
+
+Exact-head managed Pillow parity run
+`e7debdc6-3fac-4970-bce4-0c53c0faa3f9` passed 1,445/1,445 checks in 676 ms.
+Exact-head feature-matrix run
+`cabf6e64-e632-47ee-a4c2-08fa8fc4db23` passed all configured native/WASM lanes
+in 13,793 ms. Nightly LLVM run
+`f0b0a6e8-9070-45e7-9468-f3744649e71c` passed 85/85 tests in 51,202 ms and
+ingested snapshot `325b653e-2ab1-4380-bb92-1ea32c4b9a16`: 55,878/56,751
+lines, 8,009/8,226 branches, 3,122/3,218 functions, and 85,921/87,873
+regions. The changed `src/codecs/webp/native/lossless.rs` projection is
+1,236/1,238 lines, 130/134 branches, 53/53 functions, and 1,602/1,606
+regions; `src/codecs/webp/native/decoder.rs` is fully covered at 801/801
+lines, 88/88 branches, 36/36 functions, and 1,395/1,395 regions. Compared
+with the preceding accepted snapshot `50893a3c-090f-4c8d-8fff-e8dfa1caf8da`,
+covered and total lines rose by 79/81, branches by 8/12, functions by 10/10,
+and regions by 134/138. The aggregate shortfall is 873 lines, 217 branches,
+96 functions, and 1,952 regions. The lossless projection's remaining gaps are
+the alpha/transform alternative, fallback decode stream, normalized existing
+path line, and RGB-copy branch alternatives; the known LLVM JSON
+segment-normalization warning remains. These are implementation/Rust coverage
+metrics, not Pillow-parity coverage.
+
 Current acceptance record: WebP VP8L color-cache Huffman code-length scratch reuse
 
 The production and Rust test/runtime slice is implemented at
@@ -10950,7 +11007,9 @@ byte-staging boundary is closed at
 boundary is closed at
 `003df53b49ad0638412147756f39f81b2995fbae`; the WebP VP8L color-cache
 Huffman code-length scratch-reuse boundary is closed at
-`b2056a98c95c2d8224149a5ce58759b095509590`; finer Huffman/tree and other
+`b2056a98c95c2d8224149a5ce58759b095509590`; the WebP VP8L opaque RGB
+direct-decode staging boundary is closed at
+`13624949dbe405fd636ba7d4a765d3706039b173`; finer Huffman/tree and other
 uncheckpointed work remain open, as do JPEG
 interior work beyond
 the current 1,024-pixel RGB-to-YCbCr and chroma-downsample output, completed 8x8 JPEG
@@ -10976,8 +11035,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    no-token result allocation reuse, Huffman
    traversal fixed-stack storage, hash-chain result-storage, image-stream
    scratch-reuse, histogram-clustering scratch-reuse, predictor-transform
-   scratch-reuse, cross-color-transform scratch-reuse, and color-cache
-   Huffman code-length scratch-reuse slices
+   scratch-reuse, cross-color-transform scratch-reuse, color-cache Huffman
+   code-length scratch-reuse, and opaque VP8L RGB direct-decode staging slices
    are closed in the
    revision-bound
    history; the next audit target is
