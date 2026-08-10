@@ -2584,6 +2584,7 @@ fn encode_frame(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn encode_alpha_stream<C: BitWriterCheckpoint>(
     palette_delta: &[u32],
     palette_len: usize,
@@ -2744,6 +2745,7 @@ pub(crate) fn encode_alpha(
     encoder.encode_alpha_with_token(alpha, width, height, token)
 }
 
+#[allow(clippy::unwrap_used)]
 fn encode_alpha_with_scratch(
     alpha: &[u8],
     width: u32,
