@@ -87,22 +87,35 @@ This is the separate Rust-only list. “Cannot prove” means Pillow may have a
 similar idea internally, but it cannot return this crate's exact field, token,
 target, sink, or typed result for comparison.
 
-| Rust-only contract | Why Pillow cannot prove it | Separate evidence |
-| --- | --- | --- |
-| `DecodePolicy` and `EncodePolicy` limits | Pillow does not expose this crate's pre-detection, canvas, metadata, decoded-byte, encoded-output, or work-budget result with the same boundary/error fields | Existing feature-gated policy fixtures and limit assertions |
-| Cancellation and work budgets | Pillow has no caller-owned `CancellationToken`, checkpoint budget, or `EncodeWorkUnits` result | Existing `feature_gate_tests` token/budget contract |
-| `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | Existing sink/flush/partial-delivery contract |
-| Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | Existing destination-buffer feature-gated contract |
-| Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | Existing source-descriptor and AVIF feature-gated fixtures |
-| Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | Diagnostic/provenance fixtures and verifier |
-| Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | Feature-matrix and WASM runtime lanes |
-| Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, or this crate's frame/page lifecycle | Existing Rust integration contract; add no fake Pillow field |
-| Allocation/stack/coverage models | Pillow cannot witness Rust allocator checkpoints, stack measurements, or private defensive branches | Benchmark/coverage artifacts and declared coverage origins |
+The bounded v1 map is machine-checked by
+`python3 scripts/verify_unreachable_contracts.py` from
+`tests/fixtures/unreachable_contract_manifest.json`. `covered` means that the
+manifest names an existing fixture-backed integration contract; `planned`
+means that no such contract is claimed yet. The map is an evidence index, not
+a claim that every legal format state is implemented.
+
+| Map ID | Rust-only contract | Why Pillow cannot prove it | v1 status | Separate evidence | Pillow parity |
+| --- | --- | --- | --- | --- | --- |
+| `decode-encode-policy-limits` | `DecodePolicy` and `EncodePolicy` limits | Pillow does not expose this crate's pre-detection, canvas, metadata, decoded-byte, encoded-output, or work-budget result with the same boundary/error fields | `covered` | Existing policy fixtures and limit assertions named in the v1 manifest | `excluded` |
+| `cancellation-work-budgets` | Cancellation and work budgets | Pillow has no caller-owned `CancellationToken`, checkpoint budget, or `EncodeWorkUnits` result | `covered` | Existing `feature_gate_tests` token/budget contract | `excluded` |
+| `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Existing sink/flush/partial-delivery contract | `excluded` |
+| `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Existing destination-buffer feature-gated contract | `excluded` |
+| `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Existing source-descriptor and AVIF feature-gated fixtures | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Diagnostic/provenance fixture contract and verifier | `excluded` |
+| `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Feature-matrix and runtime capability-table contracts | `excluded` |
+| `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, or this crate's frame/page lifecycle | `covered` | Existing owned/view/cache/frame integration contract | `excluded` |
+| `allocation-stack-coverage-models` | Allocation/stack/coverage models | Pillow cannot witness Rust allocator checkpoints, stack measurements, or private defensive branches | `planned` | No category-specific integration contract yet; existing benchmark/origin machinery is retained as planned context | `excluded` |
 
 These cases must stay out of `coverage_matrix.json` unless a row also has a
 separate Pillow-observable assertion. A Rust-only test may still use a
 Pillow-generated image as input; that makes the picture reproducible, but it
 does not turn the Rust-only result into Pillow parity.
+
+The diagnostic provenance audit also maintains this canonical page. It checks
+61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row,
+and 23 cases construct runtime mutations. Those counts describe separate
+Rust-only diagnostic evidence; the unchanged bytes prove only the shared outer
+result, and the runtime mutations are not Pillow matrix rows.
 
 ## What is already done
 
@@ -459,6 +472,7 @@ cargo test --doc --all-features --locked
 python3 scripts/verify_claim_ledger.py
 python3 scripts/verify_coverage_origins.py
 python3 scripts/verify_diagnostic_provenance.py
+python3 scripts/verify_unreachable_contracts.py
 python3 scripts/verify_third_party_licenses.py
 git diff --check
 ```

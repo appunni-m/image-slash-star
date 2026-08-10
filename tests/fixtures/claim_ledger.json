@@ -20,6 +20,7 @@
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "coverage_origins": "1f72dc4918ba7597a447ce2bd0c708823316ea0dea664d2dfea6e736817503dc",
+    "unreachable_contract": "fb89e09a5442ec3a5a016a98be860daabbfe4502db97ebfb6627b4a07ab16090",
     "webp_property_map": "78a0410d2c7e050e9a5746c3c423d0e70d3f7871735897221765c920cb2096d5",
     "webp_property_inspector": "833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541"
   }
