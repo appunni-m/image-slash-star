@@ -3180,14 +3180,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     token_tree_frequencies[1] = 1;
     token_tree_frequencies[128] = 1;
     token_tree_frequencies[255] = 7;
-    let _ = write_huffman_tree(
+    write_huffman_tree(
         &mut token_tree_writer,
         &token_tree_frequencies,
         &mut token_tree_lengths,
         &mut token_tree_codes,
         &mut huffman_scratch,
         Some(&coverage_token),
-    );
+    )
+    .expect("token-aware huffman tree coverage input must encode");
     let _ = token_tree_writer.flush();
 
     let mut trimmed_tree_bytes = Vec::new();

@@ -2383,6 +2383,41 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
         Some(&coverage_token),
     );
+    let mut cache_transform_scratch = CacheTransformScratch::default();
+    let cache_refs = [Token::Cache(0)];
+    with_cache_without_checkpoint(&[0xff00_0000], &cache_refs, 1, &mut cache_transform_scratch);
+    let _ = with_cache(
+        &[0xff00_0000],
+        &cache_refs,
+        1,
+        Some(&coverage_token),
+        &mut cache_transform_scratch,
+    );
+    let _ = token_manager.push_with_checkpoint(0, 0, 64, Some(&coverage_token));
+
+    let trace_pixels = vec![0xff00_0000; 2_048];
+    let trace_chain = vec![(0, 0); trace_pixels.len()];
+    let trace_source = vec![Token::Literal(0xff00_0000); trace_pixels.len()];
+    let mut fine_trace_scratch = TraceScratch::default();
+    let _ = trace_backwards_impl::<true>(
+        &trace_pixels,
+        32,
+        &trace_chain,
+        &trace_source,
+        1,
+        Some(&coverage_token),
+        &mut fine_trace_scratch,
+    );
+    let mut ordinary_trace_scratch = TraceScratch::default();
+    let _ = trace_backwards_impl::<false>(
+        &trace_pixels,
+        32,
+        &trace_chain,
+        &trace_source,
+        0,
+        None,
+        &mut ordinary_trace_scratch,
+    );
 
     let token_pixels = (0..4_096)
         .map(|index| {
