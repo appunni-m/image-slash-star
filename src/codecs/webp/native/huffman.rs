@@ -96,8 +96,10 @@ enum HuffmanTreeInner {
     // inline instead of allocating the general table vector.
     InlineTable16([u32; 16]),
     Tree {
-        tree: Vec<HuffmanTreeNode>,
-        table: Vec<u32>,
+        // The primary table and secondary nodes are both packed u32 values
+        // with one decode lifetime. Keep them in one allocation; table
+        // entries address nodes relative to the secondary region.
+        storage: Vec<u32>,
         table_mask: u16,
     },
 }
@@ -252,9 +254,13 @@ impl HuffmanTree {
             return Ok(Self(HuffmanTreeInner::InlineTable16(table)));
         }
 
-        // Populate decoding table
-        let mut tree = Vec::with_capacity(2 * tree_size);
-        let mut table = vec![0; table_size];
+        // Populate the primary table followed by the secondary tree in one
+        // allocation. The existing capacity bound covers every secondary
+        // node created by the complete canonical tree.
+        let mut storage = Vec::with_capacity(table_size + 2 * tree_size);
+        storage.resize(table_size, 0);
+        let tree_start = table_size;
+        let mut tree_len = 0;
         for (symbol, &length) in code_lengths.iter().enumerate() {
             if length == 0 {
                 continue;
@@ -267,20 +273,21 @@ impl HuffmanTree {
                 let mut j = (u16::reverse_bits(code) >> (16 - length)) as usize;
                 let entry = (u32::from(length) << 16) | symbol as u32;
                 while j < table_size {
-                    table[j] = entry;
+                    storage[j] = entry;
                     j += 1 << length as usize;
                 }
             } else {
                 let table_index =
                     ((u16::reverse_bits(code) >> (16 - length)) & table_mask) as usize;
-                let table_value = table[table_index];
+                let table_value = storage[table_index];
 
                 debug_assert_eq!(table_value >> 16, 0);
 
                 let mut node_index = if table_value == 0 {
-                    let node_index = tree.len();
-                    table[table_index] = (node_index + 1) as u32;
-                    tree.push(HuffmanTreeNode::EMPTY);
+                    let node_index = tree_len;
+                    storage[table_index] = (node_index + 1) as u32;
+                    storage.push(HuffmanTreeNode::EMPTY.0);
+                    tree_len += 1;
                     node_index
                 } else {
                     (table_value - 1) as usize
@@ -288,7 +295,7 @@ impl HuffmanTree {
 
                 let code = usize::from(code);
                 for depth in (0..length - table_bits).rev() {
-                    let node = tree[node_index].kind();
+                    let node = HuffmanTreeNode(storage[tree_start + node_index]).kind();
 
                     let offset = if let HuffmanTreeNodeKind::Branch(offset) = node {
                         usize::try_from(offset).map_err(|_| DecodingError::HuffmanError)?
@@ -297,15 +304,18 @@ impl HuffmanTree {
                         // descending through an already assigned leaf; every
                         // non-branch node reached here is a new empty branch.
                         debug_assert_eq!(node, HuffmanTreeNodeKind::Empty);
-                        let offset = tree.len() - node_index;
+                        let offset = tree_len - node_index;
                         let stored_offset =
                             u32::try_from(offset).map_err(|_| DecodingError::HuffmanError)?;
                         if stored_offset >= HuffmanTreeNode::BRANCH_TAG {
                             return Err(DecodingError::HuffmanError);
                         }
-                        tree[node_index] = HuffmanTreeNode::branch(stored_offset);
-                        tree.push(HuffmanTreeNode::EMPTY);
-                        tree.push(HuffmanTreeNode::EMPTY);
+                        storage[tree_start + node_index] = HuffmanTreeNode::branch(stored_offset).0;
+                        storage.extend_from_slice(&[
+                            HuffmanTreeNode::EMPTY.0,
+                            HuffmanTreeNode::EMPTY.0,
+                        ]);
+                        tree_len += 2;
                         offset
                     };
 
@@ -314,14 +324,16 @@ impl HuffmanTree {
 
                 // The same canonical-code invariant guarantees that the final
                 // slot is unassigned before this symbol is inserted.
-                debug_assert_eq!(tree[node_index], HuffmanTreeNode::EMPTY);
-                tree[node_index] = HuffmanTreeNode::leaf(symbol as u16);
+                debug_assert_eq!(
+                    HuffmanTreeNode(storage[tree_start + node_index]),
+                    HuffmanTreeNode::EMPTY
+                );
+                storage[tree_start + node_index] = HuffmanTreeNode::leaf(symbol as u16).0;
             }
         }
 
         Ok(Self(HuffmanTreeInner::Tree {
-            tree,
-            table,
+            storage,
             table_mask,
         }))
     }
@@ -355,7 +367,8 @@ impl HuffmanTree {
     // and cannot escape their backing table.
     #[allow(clippy::arithmetic_side_effects)]
     fn read_symbol_slowpath<R: BufRead>(
-        tree: &[HuffmanTreeNode],
+        storage: &[u32],
+        tree_start: usize,
         mut v: usize,
         start_index: usize,
         bit_reader: &mut BitReader<R>,
@@ -363,7 +376,7 @@ impl HuffmanTree {
         let mut depth = MAX_TABLE_BITS;
         let mut index = start_index;
         loop {
-            match tree[index].kind() {
+            match HuffmanTreeNode(storage[tree_start + index]).kind() {
                 HuffmanTreeNodeKind::Branch(children_offset) => {
                     index += usize::try_from(children_offset)
                         .map_err(|_| DecodingError::HuffmanError)?
@@ -393,19 +406,20 @@ impl HuffmanTree {
     ) -> Result<u16, DecodingError> {
         match &self.0 {
             HuffmanTreeInner::Tree {
-                tree,
-                table,
+                storage,
                 table_mask,
             } => {
                 let v = bit_reader.peek_full() as u16;
-                let entry = table[(v & table_mask) as usize];
+                let table_size = usize::from(*table_mask) + 1;
+                let entry = storage[(v & *table_mask) as usize];
                 if entry >> 16 != 0 {
                     bit_reader.consume((entry >> 16) as u8)?;
                     return Ok(entry as u16);
                 }
 
                 Self::read_symbol_slowpath(
-                    tree,
+                    storage,
+                    table_size,
                     (v >> MAX_TABLE_BITS) as usize,
                     ((entry & 0xffff) - 1) as usize,
                     bit_reader,
@@ -448,10 +462,12 @@ impl HuffmanTree {
     pub(crate) fn peek_symbol<R: BufRead>(&self, bit_reader: &BitReader<R>) -> Option<(u8, u16)> {
         match &self.0 {
             HuffmanTreeInner::Tree {
-                table, table_mask, ..
+                storage,
+                table_mask,
+                ..
             } => {
                 let v = bit_reader.peek_full() as u16;
-                let entry = table[(v & table_mask) as usize];
+                let entry = storage[(v & *table_mask) as usize];
                 if entry >> 16 != 0 {
                     return Some(((entry >> 16) as u8, entry as u16));
                 }
@@ -498,29 +514,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(HuffmanTree::build_implicit(&[1, 1, 1]).is_err());
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
     assert!(
-        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::EMPTY], 0, 0, &mut reader).is_err()
+        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::EMPTY.0], 0, 0, 0, &mut reader)
+            .is_err()
     );
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
     reader.fill().expect("coverage reader should fill");
     let _ = HuffmanTree::read_symbol_slowpath(
         &[
-            HuffmanTreeNode::branch(1),
-            HuffmanTreeNode::leaf(3),
-            HuffmanTreeNode::EMPTY,
+            HuffmanTreeNode::branch(1).0,
+            HuffmanTreeNode::leaf(3).0,
+            HuffmanTreeNode::EMPTY.0,
         ],
+        0,
         0,
         0,
         &mut reader,
     );
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::leaf(9)], 0, 0, &mut reader);
+    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::leaf(9).0], 0, 0, 0, &mut reader);
     let tree = HuffmanTree(HuffmanTreeInner::Tree {
-        tree: vec![
-            HuffmanTreeNode::branch(1),
-            HuffmanTreeNode::leaf(5),
-            HuffmanTreeNode::EMPTY,
+        storage: vec![
+            1,
+            HuffmanTreeNode::branch(1).0,
+            HuffmanTreeNode::leaf(5).0,
+            HuffmanTreeNode::EMPTY.0,
         ],
-        table: vec![1],
         table_mask: 0,
     });
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
@@ -529,8 +547,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
     let _ = tree.peek_symbol(&reader);
     let fast_consume_error = HuffmanTree(HuffmanTreeInner::Tree {
-        tree: Vec::new(),
-        table: vec![(1 << 16) | 4],
+        storage: vec![(1 << 16) | 4],
         table_mask: 0,
     });
     let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
@@ -545,10 +562,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     reader.fill().expect("coverage reader should fill");
     let _ = HuffmanTree::read_symbol_slowpath(
         &[
-            HuffmanTreeNode::branch(1),
-            HuffmanTreeNode::leaf(7),
-            HuffmanTreeNode::EMPTY,
+            HuffmanTreeNode::branch(1).0,
+            HuffmanTreeNode::leaf(7).0,
+            HuffmanTreeNode::EMPTY.0,
         ],
+        0,
         0,
         0,
         &mut reader,
