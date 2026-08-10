@@ -105,7 +105,7 @@ pub(crate) fn encode_vp8_lossy_rgba(
         },
     )?;
     crate::codecs::error::check_cancelled(token)?;
-    build_extended_webp_container(&vp8_data, alpha_chunk, width, height, token)
+    build_extended_webp_container(vp8_data, alpha_chunk, width, height, token)
 }
 
 fn encode_vp8_planes(
@@ -995,12 +995,69 @@ fn append_vp8_chunk(
 }
 
 fn build_extended_webp_container(
-    vp8_data: &[u8],
+    mut vp8_data: Vec<u8>,
     alpha_chunk: &[u8],
     width: u32,
     height: u32,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    let vp8_data_len = vp8_data.len();
+    let alpha_chunk_len = alpha_chunk.len();
+    let alpha_padding = alpha_chunk_len & 1;
+    let vp8_padding = vp8_data_len & 1;
+    let alpha_chunk_size = 8usize
+        .saturating_add(alpha_chunk_len)
+        .saturating_add(alpha_padding);
+    let vp8_header_offset = 12usize
+        .saturating_add(8 + 10)
+        .saturating_add(alpha_chunk_size);
+    let vp8_data_offset = vp8_header_offset.saturating_add(8);
+    let output_len = vp8_data_offset
+        .saturating_add(vp8_data_len)
+        .saturating_add(vp8_padding);
+
+    // The ordinary path has no caller-visible copy checkpoint. Reuse the
+    // completed VP8 allocation by moving its payload behind the fixed VP8X
+    // and ALPH chunks; keep the token-aware path's chunked copies and
+    // cancellation behavior unchanged.
+    if token.is_none() {
+        vp8_data.reserve(output_len.saturating_sub(vp8_data_len));
+        vp8_data.resize(output_len, 0);
+        vp8_data.copy_within(..vp8_data_len, vp8_data_offset);
+        vp8_data[..4].copy_from_slice(b"RIFF");
+        vp8_data[8..12].copy_from_slice(b"WEBP");
+        let riff_size = low_u32(output_len.saturating_sub(8));
+        vp8_data[4..8].copy_from_slice(&riff_size.to_le_bytes());
+
+        vp8_data[12..16].copy_from_slice(b"VP8X");
+        vp8_data[16..20].copy_from_slice(&10_u32.to_le_bytes());
+        vp8_data[20..24].copy_from_slice(&[0x10, 0, 0, 0]);
+        vp8_data[24..27].copy_from_slice(&width.wrapping_sub(1).to_le_bytes()[..3]);
+        vp8_data[27..30].copy_from_slice(&height.wrapping_sub(1).to_le_bytes()[..3]);
+
+        let alpha_header_offset: usize = 30;
+        let alpha_data_offset = alpha_header_offset.saturating_add(8);
+        let alpha_length_offset = alpha_header_offset.saturating_add(4);
+        let alpha_data_end = alpha_data_offset.saturating_add(alpha_chunk_len);
+        vp8_data[alpha_header_offset..alpha_length_offset].copy_from_slice(b"ALPH");
+        vp8_data[alpha_length_offset..alpha_data_offset]
+            .copy_from_slice(&low_u32(alpha_chunk_len).to_le_bytes());
+        vp8_data[alpha_data_offset..alpha_data_end].copy_from_slice(alpha_chunk);
+        if alpha_padding != 0 {
+            vp8_data[alpha_data_end] = 0;
+        }
+
+        let vp8_length_offset = vp8_header_offset.saturating_add(4);
+        vp8_data[vp8_header_offset..vp8_length_offset].copy_from_slice(b"VP8 ");
+        vp8_data[vp8_length_offset..vp8_data_offset]
+            .copy_from_slice(&low_u32(vp8_data_len.wrapping_add(vp8_padding)).to_le_bytes());
+        if vp8_padding != 0 {
+            let vp8_padding_offset = vp8_data_offset.saturating_add(vp8_data_len);
+            vp8_data[vp8_padding_offset] = 0;
+        }
+        return Ok(vp8_data);
+    }
+
     let mut output = Vec::new();
     output.extend_from_slice(b"RIFF");
     output.extend_from_slice(&[0; 4]);
@@ -1012,7 +1069,7 @@ fn build_extended_webp_container(
     vp8x.extend_from_slice(&height.wrapping_sub(1).to_le_bytes()[..3]);
     append_chunk(&mut output, b"VP8X", &vp8x, token)?;
     append_chunk(&mut output, b"ALPH", alpha_chunk, token)?;
-    append_vp8_chunk(&mut output, vp8_data, token)?;
+    append_vp8_chunk(&mut output, &vp8_data, token)?;
 
     let riff_size = low_u32(output.len().saturating_sub(8));
     output[4..8].copy_from_slice(&riff_size.to_le_bytes());
