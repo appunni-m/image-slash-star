@@ -1102,6 +1102,116 @@ fn low_u32(value: usize) -> u32 {
 pub(crate) fn __coverage_exercise_private_branches() {
     vp8::__coverage_exercise_private_branches();
 
+    // These are defensive container and source-normalization states. They are
+    // real Rust contracts, but Pillow cannot manufacture malformed RIFF
+    // output, caller tokens, or an owned output sink for them.
+    let mut sink = Vec::new();
+    for malformed in [
+        Vec::new(),
+        b"not a RIFF".to_vec(),
+        b"RIFF\0\0\0\0WEBP".to_vec(),
+        b"RIFF\x0c\0\0\0WEBPVP8 ".to_vec(),
+        b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x01".to_vec(),
+        b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x04\0\0\0\0".to_vec(),
+    ] {
+        let _ = write_riff_to_sink(&malformed, None, &mut sink);
+        sink.clear();
+    }
+    let mut zero_chunk = b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\0".to_vec();
+    let _ = write_riff_to_sink(&zero_chunk, None, &mut sink);
+    sink.clear();
+    zero_chunk[4..8].copy_from_slice(&20u32.to_le_bytes());
+    let _ = write_riff_to_sink(&zero_chunk, None, &mut sink);
+    sink.clear();
+    let mut extended = b"RIFF\x14\0\0\0WEBP".to_vec();
+    extended.extend_from_slice(&1u32.to_be_bytes());
+    extended.extend_from_slice(b"VP8 ");
+    extended.extend_from_slice(&16u64.to_be_bytes());
+    let _ = write_riff_to_sink(&extended, None, &mut sink);
+    sink.clear();
+    let mut extended_short = b"RIFF\x0c\0\0\0WEBP".to_vec();
+    extended_short.extend_from_slice(&1u32.to_be_bytes());
+    extended_short.extend_from_slice(b"VP8 ");
+    let _ = write_riff_to_sink(&extended_short, None, &mut sink);
+    sink.clear();
+    let mut extended_overflow = b"RIFF\x14\0\0\0WEBP".to_vec();
+    extended_overflow.extend_from_slice(&1u32.to_be_bytes());
+    extended_overflow.extend_from_slice(b"VP8 ");
+    extended_overflow.extend_from_slice(&u64::MAX.to_be_bytes());
+    let _ = write_riff_to_sink(&extended_overflow, None, &mut sink);
+    let mut too_short = [0u8; 12];
+    let mut offset = too_short.len();
+    let _ = write_chunk_in_place(&mut too_short, &mut offset, b"TEST", &[1]);
+    let mut copied = Vec::new();
+    let _ = extend_with_output_checkpoint(&mut copied, &[0; OUTPUT_COPY_CHECKPOINT_BYTES], None);
+    let cancelled_copy = crate::CancellationToken::new();
+    cancelled_copy.cancel();
+    let _ = extend_with_output_checkpoint(
+        &mut copied,
+        &[0; OUTPUT_COPY_CHECKPOINT_BYTES],
+        Some(&cancelled_copy),
+    );
+
+    let opaque_rgba = PreparedPixels {
+        bytes: Cow::Owned(vec![0, 0, 0, u8::MAX]),
+        color: super::native::ColorType::Rgba8,
+    };
+    let transparent_rgba = PreparedPixels {
+        bytes: Cow::Owned(vec![0, 0, 0, 0]),
+        color: super::native::ColorType::Rgba8,
+    };
+    let token = crate::CancellationToken::new();
+    let _ = opaque_rgba.has_nonopaque_alpha_with_token(Some(&token));
+    let _ = transparent_rgba.has_nonopaque_alpha_with_token(Some(&token));
+    let _ = opaque_rgba.rgb_without_alpha_with_token(Some(&token));
+
+    let bilevel = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
+    let indexed_opaque = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(
+        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX])
+            .expect("coverage palette should be valid"),
+    );
+    let indexed_alpha = indexed_opaque.clone().with_palette(
+        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, 0])
+            .expect("coverage alpha palette should be valid"),
+    );
+    let la_opaque = DecodedImage::new(1, 1, vec![7, u8::MAX], crate::types::ColorType::La8);
+    let la_alpha = DecodedImage::new(1, 1, vec![7, 0], crate::types::ColorType::La8);
+    let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], crate::types::ColorType::Cmyk8);
+    for image in [
+        &bilevel,
+        &indexed_opaque,
+        &indexed_alpha,
+        &la_opaque,
+        &la_alpha,
+        &cmyk,
+    ] {
+        let token = crate::CancellationToken::new();
+        let _ = prepare_pixels(image, Some(&token));
+    }
+    let _ = cmyk_to_rgb(&cmyk.pixels, Some(&crate::CancellationToken::new()));
+    let _ = encode_error(super::native::EncodingError::Cancelled);
+
+    let mut metadata = WebPEncodeOptions::default();
+    metadata.icc = Some(vec![0]);
+    metadata.exif = Some(b"Exif\0\0metadata".to_vec());
+    metadata.xmp = Some(vec![1, 2, 3]);
+    let rgba = DecodedImage::new(1, 1, vec![1, 2, 3, 0], crate::types::ColorType::Rgba8);
+    let metadata_token = crate::CancellationToken::new();
+    let _ = encode_with_token(&rgba, &metadata, Some(&metadata_token));
+    let _ = attach_metadata(
+        b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec(),
+        1,
+        1,
+        false,
+        &metadata,
+        None,
+    );
+
+    let mut animation = DecodedSequence::from_image(rgba.clone());
+    animation.frames.push(animation.frames[0].clone());
+    animation.kind = crate::types::SequenceKind::TimedAnimation;
+    let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
+
     let mut opts = WebPEncodeOptions::default();
     opts.icc = Some(vec![0]);
     opts.set_force_riff_size_overflow();
