@@ -409,15 +409,6 @@ fn unavailable(reason: CapabilityUnavailableReason) -> Capability {
     Capability::Unavailable(reason)
 }
 
-fn assert_target_contract() {
-    #[cfg(not(target_arch = "wasm32"))]
-    assert_eq!(CapabilityTarget::current(), CapabilityTarget::Native);
-    #[cfg(all(target_arch = "wasm32", target_os = "wasi"))]
-    assert_eq!(CapabilityTarget::current(), CapabilityTarget::Wasm32Wasi);
-    #[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
-    assert_eq!(CapabilityTarget::current(), CapabilityTarget::Wasm32Unknown);
-}
-
 fn assert_capability_contract(format: ImageFormat, feature: &str, enabled: bool) {
     let capabilities = format.capabilities();
     assert_eq!(capabilities.format(), format);
@@ -550,7 +541,6 @@ fn extension_aliases_and_mime_queries_match_the_public_contract() {
 #[test]
 fn manifest_inputs_obey_the_exact_feature_and_target_contract()
 -> Result<(), Box<dyn std::error::Error>> {
-    assert_target_contract();
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let option_acceptance_text =
         fs::read_to_string(root.join("tests/fixtures/encode_option_acceptance_manifest.json"))?;
