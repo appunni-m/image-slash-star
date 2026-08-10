@@ -750,6 +750,9 @@ fn attach_metadata(
         crate::codecs::error::check_cancelled(token)?;
         return Ok(encoded);
     }
+    if token.is_none() {
+        return attach_metadata_reusing_output(encoded, width, height, alpha, opts);
+    }
     // Both internal encoders return a complete RIFF header. Lossy alpha output
     // additionally begins with the fixed 18-byte VP8X chunk constructed by
     // `encode_vp8_lossy_rgba`; replace that chunk instead of reparsing bytes
@@ -805,6 +808,126 @@ fn attach_metadata(
     let output_len = output.len();
     crate::codecs::error::check_cancelled(token)?;
     finish_riff(output, output_len)
+}
+
+// Metadata is inserted after the VP8X header, so an ordinary still encode can
+// retain the completed codec buffer and shift only the existing RIFF chunks.
+// Keep the token-aware path above separate: its output copies are observable
+// through the established cancellation/work-budget checkpoints.
+fn attach_metadata_reusing_output(
+    mut encoded: Vec<u8>,
+    width: u32,
+    height: u32,
+    alpha: bool,
+    opts: &WebPEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    let icc = opts.icc.as_deref();
+    let exif = opts
+        .exif
+        .as_deref()
+        .map(|payload| payload.strip_prefix(b"Exif\0\0").unwrap_or(payload));
+    let xmp = opts.xmp.as_deref();
+    let existing_start = if encoded.get(12..16) == Some(b"VP8X") && encoded.len() >= 30 {
+        30
+    } else {
+        12
+    };
+    let existing_len = encoded.len().checked_sub(existing_start).ok_or_else(|| {
+        CodecError::Malformed("WebP encoded chunks are missing their RIFF header".to_owned())
+    })?;
+    let existing_end = existing_start.checked_add(existing_len).ok_or_else(|| {
+        CodecError::Dimensions("WebP encoded chunks exceed addressable size".to_owned())
+    })?;
+
+    let mut metadata_len = 0usize;
+    for payload in [icc, exif, xmp].into_iter().flatten() {
+        metadata_len = metadata_len
+            .checked_add(chunk_storage_len(payload)?)
+            .ok_or_else(|| {
+                CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned())
+            })?;
+    }
+    let existing_chunks_start = 30usize.checked_add(metadata_len).ok_or_else(|| {
+        CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned())
+    })?;
+    let output_len = existing_chunks_start
+        .checked_add(existing_len)
+        .ok_or_else(|| CodecError::Dimensions("WebP output exceeds addressable size".to_owned()))?;
+    encoded.reserve(output_len.saturating_sub(encoded.len()));
+    encoded.resize(output_len, 0);
+    encoded.copy_within(existing_start..existing_end, existing_chunks_start);
+
+    encoded[0..4].copy_from_slice(b"RIFF");
+    encoded[8..12].copy_from_slice(b"WEBP");
+    let mut flags = u8::from(alpha).wrapping_shl(4);
+    if icc.is_some() {
+        flags |= 1u8.wrapping_shl(5);
+    }
+    if opts.exif.is_some() {
+        flags |= 1u8.wrapping_shl(3);
+    }
+    if xmp.is_some() {
+        flags |= 1u8.wrapping_shl(2);
+    }
+    let mut vp8x = [0u8; 10];
+    vp8x[0] = flags;
+    vp8x[4..7].copy_from_slice(&width.saturating_sub(1).to_le_bytes()[..3]);
+    vp8x[7..10].copy_from_slice(&height.saturating_sub(1).to_le_bytes()[..3]);
+    let mut offset = 12usize;
+    write_chunk_in_place(&mut encoded, &mut offset, b"VP8X", &vp8x)?;
+    if let Some(payload) = icc {
+        write_chunk_in_place(&mut encoded, &mut offset, b"ICCP", payload)?;
+    }
+    if let Some(payload) = exif {
+        write_chunk_in_place(&mut encoded, &mut offset, b"EXIF", payload)?;
+    }
+    if let Some(payload) = xmp {
+        write_chunk_in_place(&mut encoded, &mut offset, b"XMP ", payload)?;
+    }
+    debug_assert_eq!(offset, existing_chunks_start);
+
+    #[cfg(coverage)]
+    let output_len = if opts.force_riff_size_overflow() {
+        usize::MAX
+    } else {
+        encoded.len()
+    };
+    #[cfg(not(coverage))]
+    let output_len = encoded.len();
+    finish_riff(encoded, output_len)
+}
+
+fn chunk_storage_len(payload: &[u8]) -> CodecResult<usize> {
+    8usize
+        .checked_add(payload.len())
+        .and_then(|length| length.checked_add(usize::from(!payload.len().is_multiple_of(2))))
+        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))
+}
+
+fn write_chunk_in_place(
+    output: &mut [u8],
+    offset: &mut usize,
+    name: &[u8; 4],
+    payload: &[u8],
+) -> CodecResult<()> {
+    let chunk_len = chunk_storage_len(payload)?;
+    let end = offset
+        .checked_add(chunk_len)
+        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))?;
+    let chunk = output.get_mut(*offset..end).ok_or_else(|| {
+        CodecError::Malformed("WebP output buffer is too short for its metadata".to_owned())
+    })?;
+    chunk[..4].copy_from_slice(name);
+    chunk[4..8].copy_from_slice(&low_u32(payload.len()).to_le_bytes());
+    let payload_end = 8usize
+        .checked_add(payload.len())
+        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))?;
+    chunk[8..payload_end].copy_from_slice(payload);
+    if !payload.len().is_multiple_of(2) {
+        chunk[payload_end] = 0;
+    }
+    *offset = end;
+    Ok(())
 }
 
 /// Lossless VP8L encoding via the internal `WebPEncoder`.
