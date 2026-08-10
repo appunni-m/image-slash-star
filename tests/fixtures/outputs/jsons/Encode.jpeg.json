@@ -118,7 +118,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "JPEG directly accepts only L8 and Rgb8"
+      "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8"
     },
     {
       "id": "enc_q100",
