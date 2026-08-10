@@ -294,5 +294,5 @@ Portable AVIF is complete only when:
    weakening any active case.
 
 Progress should update this document's current boundary, the manifest, and the
-[roadmap](roadmap.md). Run-by-run exploration belongs in commits and Coverage
+[canonical roadmap](roadmap-new.md). Run-by-run exploration belongs in commits and Coverage
 MCP artifacts rather than another permanent progress log.

@@ -679,16 +679,17 @@ Native builds using default features need no external codec library. Enabling
 - [Architecture and public contract](docs/architecture.md)
 - [Oracle, fixtures, tests, and coverage](docs/testing.md)
 - [AVIF support and portability boundary](docs/avif.md)
-- [Roadmap](docs/roadmap.md)
+- [Canonical roadmap](docs/roadmap-new.md)
+- [Historical roadmap audit](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Third-party provenance](third_party/README.md)
 
 Current behavior belongs in the README, architecture reference, rustdoc, and
-testing contract. Planned work belongs only in the roadmap. Historical
-investigation logs remain available through Git history rather than the active
-documentation tree.
+testing contract. Planned work belongs only in the [canonical roadmap](docs/roadmap-new.md).
+Historical investigation logs remain available through Git history rather than
+the active documentation tree.
 
 ## Support, contributing, and security
 
