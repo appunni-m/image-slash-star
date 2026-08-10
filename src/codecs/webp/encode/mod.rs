@@ -240,7 +240,14 @@ fn encode_pixels(
     let encoded = if opts.lossless == Some(true) {
         encode_lossless(&prepared, img.width, img.height, lossless_encoder, token)
     } else {
-        encode_lossy(&prepared, img.width, img.height, opts, token)
+        encode_lossy(
+            &prepared,
+            img.width,
+            img.height,
+            opts,
+            lossless_encoder,
+            token,
+        )
     }?;
     crate::codecs::error::check_cancelled(token)?;
     let alpha = prepared.has_nonopaque_alpha_with_token(token)?;
@@ -838,6 +845,7 @@ fn encode_lossy(
     width: u32,
     height: u32,
     opts: &WebPEncodeOptions,
+    encoder: &mut super::native::WebPEncoder,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     let quality = opts.quality.unwrap_or(80);
@@ -851,7 +859,8 @@ fn encode_lossy(
             if has_alpha {
                 crate::codecs::error::check_cancelled(token)?;
                 let alpha = pixels.alpha_channel_with_token(token)?;
-                let alpha_chunk = super::native::encode_alpha(&alpha, width, height, token)
+                let alpha_chunk = encoder
+                    .encode_alpha_with_token(&alpha, width, height, token)
                     .map_err(encode_error)?;
                 crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy_rgba(

@@ -25,7 +25,6 @@
 )]
 
 pub(crate) use self::decoder::{DecodingError, LoopCount, WebPDecoder};
-pub(crate) use self::encoder::encode_alpha;
 pub(crate) use self::encoder::{ColorType, EncodingError, WebPEncoder};
 
 mod alpha_blending;
