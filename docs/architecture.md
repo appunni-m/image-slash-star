@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `058ab449f8375a18a11ece898a69adf6486c3218`; the claim-ledger fixture
+revision `bae8b06e5907f0ccedc86c6c5f850ee81e61761a`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`7193e63b-3b95-4721-b306-a99d9827c687` (1,445/1,445 passed in 6,551 ms) at
+`d086426b-079f-4854-8175-8fabf46a606e` (1,445/1,445 passed in 5,507 ms) at
 this revision. Feature matrix run
-`8483924a-b723-4f2f-a36c-fac56ff722bc` terminated with 44 passed and 1 failed;
+`9aed6f7f-893f-4855-938e-783cda623c7a` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`041d3119-95ea-455d-850a-bd628d7b4ce3` likewise terminated 84/85 and ingested
+`935ca104-57d2-47fb-a118-30fe1e0a26d1` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -1030,8 +1030,7 @@ unchanged. This is a Rust-only hash-chain storage optimization, not
 allocator/OOM accounting, recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L frame, palette, and lossy ALPH substreams share one bounded
-image-stream scratch object per encoder invocation. Its trial-output and
-token-stream
+image-stream scratch object per encoder invocation. Its trial-output and token-stream
 buffers retain capacity across sequential streams, including nested metadata
 streams, while each stream still resets its logical contents before writing.
 For WebP animation, one encoder invocation spans the sequential frames, so
@@ -1042,6 +1041,12 @@ boundaries, candidate ordering, encoded bytes, errors, cancellation
 checkpoints, and sink output remain unchanged. This is a Rust-only image-stream
 scratch optimization, not allocator/OOM accounting, recoverable-OOM handling,
 or a streaming guarantee.
+
+The lossy ALPH packed transform image also reuses its `Vec<u32>` capacity across
+animation frames; its logical contents are cleared and rebuilt before each
+stream. This is a Rust-only workspace optimization with the same byte, error,
+checkpoint, and sink-output contract, not allocator/OOM accounting,
+recoverable-OOM handling, or a streaming guarantee.
 
 WebP VP8L token streams retain one bounded histogram-clustering scratch object
 per encoder image-stream scratch. Its original-tile histograms, cluster copies,
