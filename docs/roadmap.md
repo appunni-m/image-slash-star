@@ -3,17 +3,17 @@
 Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `89c30270f9c069488f1802921f7e25b8e5520e43`, and benchmark-protocol
+revision `b8ed4881c3055136a070226bedc5d91f0e859a4d`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`014871bb-a693-4ab4-bff4-88b7dc074394` (1,445/1,445 passed in 1,585 ms) at
+`c9cd1f69-341e-428f-903d-a7fe0e5f0f8f` (1,445/1,445 passed in 629 ms) at
 this revision. Feature matrix run
-`6e9ec153-9661-4d62-b655-206cf124d92c` terminated with 44 passed and 1 failed;
+`34a09218-662f-4049-8451-709f7aea1b82` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`031d51a9-a069-41bd-8c5a-5be3f0e27fa3` likewise terminated 84/85 with that
+`17a3bc7f-30bd-49f3-a468-7867d6001cf7` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. The same failure was reproduced from a clean copy of the preceding
 `879ddc6` source; the current WebP change does not touch that path. The
@@ -7115,6 +7115,33 @@ are Rust implementation/coverage records, not Pillow-parity coverage; the
 known LLVM JSON segment-normalization warning remains. The aggregate shortfall
 is 844 lines, 206 branches, 91 functions, and 1,881 regions.
 
+Current implementation record: WebP ALPH raw-winner output-buffer reuse
+
+The production slice is implemented at
+`b8ed4881c3055136a070226bedc5d91f0e859a4d`, following the ordinary ALPH
+result-allocation boundary at `940c9d82124fe0f2fc9b597fa2d7fb80e94fc4ea`.
+The no-token ALPH selector now reuses the encoded VP8L allocation for both
+possible winners: a raw winner clears that allocation, writes the uncompressed
+header, and copies the raw alpha plane into it; a compressed winner keeps the
+encoded bytes and inserts the one-byte compression header in place. The
+token-aware path retains its separate raw/compressed candidates and existing
+1,024-byte copy checkpoints.
+
+Pillow exposes the final ALPH bytes and errors, not candidate ownership or
+allocator lifetime. Existing WebP alpha fixture rows therefore provide the
+byte/error regression gate, while the existing feature-gated Rust contract
+remains the separate evidence for caller-token and sink behavior. No parity
+row, fixture-manifest row, diagnostic origin, new test function, coverage-only
+hook, or unit test was added because Pillow cannot observe this boundary.
+Exact-head managed Pillow parity run
+`c9cd1f69-341e-428f-903d-a7fe0e5f0f8f` passed 1,445/1,445 checks in 629 ms.
+Feature matrix run `34a09218-662f-4049-8451-709f7aea1b82` terminated 44/45 on
+the pre-existing native AVIF `source_alpha_matches_the_container_contract`
+status-5 lane. Nightly run
+`17a3bc7f-30bd-49f3-a468-7867d6001cf7` terminated 84/85 on the same failure;
+its required coverage artifact was `skipped_stale`, so no new snapshot or
+coverage claim exists for this slice.
+
 Current implementation record: WebP no-token animation frame output-buffer release
 
 The production slice is implemented at
@@ -8553,10 +8580,11 @@ The production and Rust test/runtime slice is implemented at
 palette-overflow short-circuit at `51cba9c0ec33cb3dbb20f4dc80442686af648476`.
 After encoding the lossless WebP alpha payload, the ordinary no-token path
 compares the known raw alpha length with the encoded VP8L payload before
-materializing ALPH candidates. A raw winner allocates only its final output
-vector; a compressed winner reuses the encoded payload allocation and inserts
-the one-byte header in place. The token-aware path retains separate copies and
-its 1,024-byte copy checkpoints. This is Rust-only allocation-ownership
+materializing ALPH candidates. A raw or compressed winner now reuses the
+encoded payload allocation, replacing its contents for a raw winner or
+inserting the one-byte header for a compressed winner. The token-aware path
+retains separate copies and its 1,024-byte copy checkpoints. This is Rust-only
+allocation-ownership
 evidence: existing Pillow rows prove byte/error regression, while the
 feature-gated Rust contract remains the separate caller-budget/sink evidence.
 No parity row, fixture-manifest row, diagnostic origin, new test function, or
@@ -11740,7 +11768,8 @@ short-write/rollback semantics, and the other roadmap categories below.
    scratch-reuse, ALPH packed-image transform workspace-reuse, RGBA
    alpha-channel staging-reuse, lossy VP8 RIFF output-buffer-reuse, lossy
    RGBA VP8X/ALPH output-buffer-reuse, still metadata output-buffer-reuse, and
-   no-token animation frame output-buffer-release slices
+   no-token animation frame output-buffer-release, and ALPH raw-winner
+   output-buffer-reuse slices
    are closed in the
    revision-bound
    history; the next audit target is

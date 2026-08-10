@@ -3,16 +3,16 @@
 Status: current implementation reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `89c30270f9c069488f1802921f7e25b8e5520e43`; the claim-ledger fixture
+revision `b8ed4881c3055136a070226bedc5d91f0e859a4d`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`014871bb-a693-4ab4-bff4-88b7dc074394` (1,445/1,445 passed in 1,585 ms) at
+`c9cd1f69-341e-428f-903d-a7fe0e5f0f8f` (1,445/1,445 passed in 629 ms) at
 this revision. Feature matrix run
-`6e9ec153-9661-4d62-b655-206cf124d92c` terminated with 44 passed and 1 failed;
+`34a09218-662f-4049-8451-709f7aea1b82` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`031d51a9-a069-41bd-8c5a-5be3f0e27fa3` likewise terminated 84/85 and ingested
+`17a3bc7f-30bd-49f3-a468-7867d6001cf7` likewise terminated 84/85 and ingested
 no snapshot because its required artifact was `skipped_stale`. The same
 failure was reproduced from a clean copy of the preceding `879ddc6` source;
 the current WebP change does not touch that path. The accepted Coverage MCP
@@ -486,14 +486,14 @@ allocation boundary, not Pillow-oracle coverage or a public palette contract.
 
 WebP ALPH assembly also separates ordinary result selection from the
 caller-controlled path. The no-token encoder compares the already-known raw
-alpha length with the encoded VP8L payload before materializing a second
-candidate: a raw winner gets one new output vector, while a compressed winner
-reuses the encoded payload allocation and inserts the one-byte ALPH header in
-place. The token-aware path retains its separate compressed and raw copies and
-1,024-byte copy checkpoints so its existing Rust-only work-budget/sink
-contract does not change. Pillow parity can regression-check the resulting
-bytes and errors, but exposes neither this allocation ownership nor the
-caller-token behavior.
+alpha length with the encoded VP8L payload and reuses that allocation for
+either candidate: a raw winner clears it, writes the uncompressed header, and
+copies the raw plane into place, while a compressed winner inserts the
+one-byte ALPH header in place. The token-aware path retains its separate
+compressed and raw copies and 1,024-byte copy checkpoints so its existing
+Rust-only work-budget/sink contract does not change. Pillow parity can
+regression-check the resulting bytes and errors, but exposes neither this
+allocation ownership nor the caller-token behavior.
 
 The ordinary no-token WebP still encoder then reuses the completed VP8L frame
 allocation for the final RIFF result. It reserves space for the 20-byte
