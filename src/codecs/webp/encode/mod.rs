@@ -290,6 +290,10 @@ pub fn encode_sequence_with_token(
         None => [0; 4],
     };
 
+    if token.is_none() {
+        return encode_sequence_without_token(sequence, opts, loop_count, background);
+    }
+
     let mut encoded_frames = Vec::with_capacity(sequence.frames.len());
     let mut lossless_encoder = super::native::WebPEncoder::new();
     let mut has_alpha = false;
@@ -333,6 +337,59 @@ pub fn encode_sequence_with_token(
     }
 
     crate::codecs::error::check_cancelled(token)?;
+    let output_len = output.len();
+    finish_riff(output, output_len)
+}
+
+fn encode_sequence_without_token(
+    sequence: &DecodedSequence,
+    opts: &WebPEncodeOptions,
+    loop_count: u16,
+    background: [u8; 4],
+) -> CodecResult<Vec<u8>> {
+    // The no-token path can transfer each completed frame into the final RIFF
+    // buffer immediately. The VP8X alpha flag is patched after the last frame,
+    // so no completed frame buffer needs to remain live just to assemble the
+    // container. This is an ownership optimization, not a streaming boundary:
+    // the complete encoded animation remains owned by the returned Vec.
+    let mut output = Vec::new();
+    output.extend_from_slice(b"RIFF");
+    output.extend_from_slice(&[0; 4]);
+    output.extend_from_slice(b"WEBP");
+
+    let mut vp8x = vec![0x02, 0, 0, 0];
+    vp8x.extend_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
+    vp8x.extend_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
+    write_chunk(&mut output, b"VP8X", &vp8x, None)?;
+
+    let mut animation = vec![background[2], background[1], background[0], background[3]];
+    animation.extend_from_slice(&loop_count.to_le_bytes());
+    write_chunk(&mut output, b"ANIM", &animation, None)?;
+
+    let mut lossless_encoder = super::native::WebPEncoder::new();
+    let mut has_alpha = false;
+    for frame in &sequence.frames {
+        validate_keyframe(sequence, frame)?;
+        let duration = duration_milliseconds(frame.source.duration)?;
+        let (encoded, alpha) = encode_pixels(&frame.image, opts, &mut lossless_encoder, None)?;
+        has_alpha |= alpha;
+
+        let chunks = if encoded.get(12..16) == Some(b"VP8X") {
+            &encoded[30..]
+        } else {
+            &encoded[12..]
+        };
+        let mut frame_header = [0u8; 16];
+        frame_header[6..9].copy_from_slice(&sequence.width.wrapping_sub(1).to_le_bytes()[..3]);
+        frame_header[9..12].copy_from_slice(&sequence.height.wrapping_sub(1).to_le_bytes()[..3]);
+        frame_header[12..15].copy_from_slice(&duration.to_le_bytes()[..3]);
+        frame_header[15] = 0x02;
+        write_chunk_with_prefix(&mut output, b"ANMF", &frame_header, chunks, None)?;
+    }
+
+    // RIFF/VP8X/size are fixed at the start of the container, and the VP8X
+    // payload's first byte is the animation/alpha flag byte.
+    output[20] = 0x02 | u8::from(has_alpha).wrapping_shl(4);
     let output_len = output.len();
     finish_riff(output, output_len)
 }
