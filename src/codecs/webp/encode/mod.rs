@@ -442,23 +442,6 @@ impl PreparedPixels<'_> {
         }
     }
 
-    fn alpha_channel_with_token(
-        &self,
-        token: Option<&crate::CancellationToken>,
-    ) -> CodecResult<Vec<u8>> {
-        if let Some(token) = token {
-            let mut alpha = Vec::with_capacity(self.bytes.len() / 4);
-            let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-            for pixel in self.bytes.chunks_exact(4) {
-                alpha.push(pixel[3]);
-                checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
-            }
-            Ok(alpha)
-        } else {
-            Ok(self.bytes.chunks_exact(4).map(|pixel| pixel[3]).collect())
-        }
-    }
-
     fn rgb_without_alpha_with_token(
         &self,
         token: Option<&crate::CancellationToken>,
@@ -858,9 +841,8 @@ fn encode_lossy(
             let has_alpha = pixels.has_nonopaque_alpha_with_token(token)?;
             if has_alpha {
                 crate::codecs::error::check_cancelled(token)?;
-                let alpha = pixels.alpha_channel_with_token(token)?;
                 let alpha_chunk = encoder
-                    .encode_alpha_with_token(&alpha, width, height, token)
+                    .encode_alpha_from_rgba_with_token(&pixels.bytes, width, height, token)
                     .map_err(encode_error)?;
                 crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy_rgba(

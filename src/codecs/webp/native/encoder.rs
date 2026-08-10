@@ -69,6 +69,7 @@ const VP8L_GRAYSCALE_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
+const VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_MAX_PALETTE_ENTRIES: usize = 256;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
@@ -2953,6 +2954,10 @@ fn write_chunk(
 
 /// WebP Encoder.
 pub struct WebPEncoder {
+    // Lossy RGBA ALPH encoding consumes the extracted alpha channel before the
+    // next sequential frame can use this encoder. Retain only its capacity;
+    // the logical channel is cleared after every encode attempt.
+    alpha_scratch: Vec<u8>,
     // Lossless animation frames are encoded sequentially. Retain the bounded
     // VP8L transform, histogram, token, and bitstream scratch between frames;
     // each returned frame owns its output bytes independently.
@@ -2964,11 +2969,52 @@ impl WebPEncoder {
     ///
     /// Only supports "VP8L" lossless encoding.
     pub const fn new() -> Self {
-        Self { scratch: None }
+        Self {
+            alpha_scratch: Vec::new(),
+            scratch: None,
+        }
+    }
+
+    /// Encode a lossy WebP alpha substream after reusing the RGBA alpha
+    /// extraction workspace for the next sequential frame.
+    pub(crate) fn encode_alpha_from_rgba_with_token(
+        &mut self,
+        rgba: &[u8],
+        width: u32,
+        height: u32,
+        token: Option<&crate::CancellationToken>,
+    ) -> Result<Vec<u8>, EncodingError> {
+        self.alpha_scratch.clear();
+        self.alpha_scratch.reserve(rgba.len() / 4);
+        let result = if let Some(token) = token {
+            let mut pixels_until_checkpoint = VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS;
+            (|| {
+                for pixel in rgba.chunks_exact(4) {
+                    self.alpha_scratch.push(pixel[3]);
+                    pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+                    if pixels_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        pixels_until_checkpoint = VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS;
+                    }
+                }
+                Ok(())
+            })()
+        } else {
+            self.alpha_scratch
+                .extend(rgba.chunks_exact(4).map(|pixel| pixel[3]));
+            Ok(())
+        };
+        let result = result.and_then(|()| {
+            let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
+            encode_alpha_with_scratch(&self.alpha_scratch, width, height, scratch, token)
+        });
+        self.alpha_scratch.clear();
+        result
     }
 
     /// Encode a lossy WebP alpha substream while retaining bounded VP8L
     /// scratch for the next sequential frame.
+    #[cfg(coverage)]
     pub(crate) fn encode_alpha_with_token(
         &mut self,
         alpha: &[u8],
