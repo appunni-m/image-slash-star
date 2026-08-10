@@ -115,6 +115,45 @@ impl<'a> LosslessDecoder<'a> {
         height: u32,
         buf: &mut [u8],
     ) -> Result<(), DecodingError> {
+        self.read_frame_header(width, height)?;
+        self.decode_frame_body(buf)
+    }
+
+    /// Decodes a no-alpha VP8L frame directly into an RGB output buffer when
+    /// the frame has no transforms. Transformed or alpha-bearing frames keep
+    /// the ordinary RGBA workspace because their internal pixels are four
+    /// bytes wide.
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    pub(crate) fn decode_frame_rgb(
+        &mut self,
+        width: u32,
+        height: u32,
+        buf: &mut [u8],
+    ) -> Result<(), DecodingError> {
+        let alpha_used = self.read_frame_header(width, height)?;
+        let transformed_width = self.read_transforms()?;
+
+        if !alpha_used && self.transform_order_len == 0 {
+            return self.decode_image_stream_rgb(transformed_width, self.height, buf);
+        }
+
+        let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
+        let mut data = vec![0; usize::from(self.width) * usize::from(self.height) * 4];
+        self.decode_image_stream(
+            transformed_width,
+            self.height,
+            true,
+            &mut data[..transformed_size],
+        )?;
+        self.apply_transforms(&mut data, transformed_width, transformed_size);
+        for (rgba_val, chunk) in data.chunks_exact(4).zip(buf.chunks_exact_mut(3)) {
+            chunk.copy_from_slice(&rgba_val[..3]);
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    fn read_frame_header(&mut self, width: u32, height: u32) -> Result<bool, DecodingError> {
         self.width = width as u16;
         self.height = height as u16;
 
@@ -126,7 +165,7 @@ impl<'a> LosslessDecoder<'a> {
         debug_assert_eq!(u32::from(self.width), width);
         debug_assert_eq!(u32::from(self.height), height);
 
-        let _alpha_used = self
+        let alpha_used = self
             .bit_reader
             .read_bits::<u8>(1)
             .expect("VP8L height read success proves the alpha bit is buffered");
@@ -136,7 +175,7 @@ impl<'a> LosslessDecoder<'a> {
             .expect("VP8L height read success proves the version bits are buffered");
         debug_assert_eq!(version_num, 0);
 
-        self.decode_frame_body(buf)
+        Ok(alpha_used != 0)
     }
 
     /// Decodes an ALPH lossless payload whose dimensions are supplied by the
@@ -164,6 +203,14 @@ impl<'a> LosslessDecoder<'a> {
             &mut buf[..transformed_size],
         )?;
 
+        self.apply_transforms(buf, transformed_width, transformed_size);
+
+        Ok(())
+    }
+
+    // `transform_order` only records slots populated by `read_transforms`.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    fn apply_transforms(&self, buf: &mut [u8], transformed_width: u16, transformed_size: usize) {
         let mut image_size = transformed_size;
         let mut width = transformed_width;
         for &trans_index in self.transform_order[..self.transform_order_len]
@@ -212,8 +259,6 @@ impl<'a> LosslessDecoder<'a> {
                 }
             }
         }
-
-        Ok(())
     }
 
     /// Reads Image data from the bitstream
@@ -236,6 +281,32 @@ impl<'a> LosslessDecoder<'a> {
 
         let huffman_info = self.read_huffman_codes(is_argb_img, xsize, ysize, color_cache)?;
         self.decode_image_data(xsize, ysize, huffman_info, data)
+    }
+
+    fn decode_image_stream_rgb(
+        &mut self,
+        xsize: u16,
+        ysize: u16,
+        data: &mut [u8],
+    ) -> Result<(), DecodingError> {
+        self.decode_image_stream_with_pixel_size::<3>(xsize, ysize, true, data)
+    }
+
+    fn decode_image_stream_with_pixel_size<const PIXEL_SIZE: usize>(
+        &mut self,
+        xsize: u16,
+        ysize: u16,
+        is_argb_img: bool,
+        data: &mut [u8],
+    ) -> Result<(), DecodingError> {
+        let color_cache_bits = self.read_color_cache()?;
+        let color_cache = color_cache_bits.map(|bits| ColorCache {
+            color_cache_bits: bits,
+            color_cache: vec![[0; 4]; 1 << bits],
+        });
+
+        let huffman_info = self.read_huffman_codes(is_argb_img, xsize, ysize, color_cache)?;
+        self.decode_image_data_with_pixel_size::<PIXEL_SIZE>(xsize, ysize, huffman_info, data)
     }
 
     /// Reads transforms and their data from the bitstream
@@ -569,6 +640,19 @@ impl<'a> LosslessDecoder<'a> {
         &mut self,
         width: u16,
         height: u16,
+        huffman_info: HuffmanInfo,
+        data: &mut [u8],
+    ) -> Result<(), DecodingError> {
+        self.decode_image_data_with_pixel_size::<4>(width, height, huffman_info, data)
+    }
+
+    /// Decodes image data with either the ordinary RGBA or the direct RGB
+    /// pixel width selected by the caller.
+    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    fn decode_image_data_with_pixel_size<const PIXEL_SIZE: usize>(
+        &mut self,
+        width: u16,
+        height: u16,
         mut huffman_info: HuffmanInfo,
         data: &mut [u8],
     ) -> Result<(), DecodingError> {
@@ -612,7 +696,7 @@ impl<'a> LosslessDecoder<'a> {
                     let value = [red as u8, code as u8, blue as u8, alpha as u8];
 
                     for i in 0..n {
-                        data[index * 4 + i * 4..][..4].copy_from_slice(&value);
+                        write_pixel::<PIXEL_SIZE>(data, index + i, value);
                     }
 
                     if let Some(color_cache) = huffman_info.color_cache.as_mut() {
@@ -637,10 +721,7 @@ impl<'a> LosslessDecoder<'a> {
                 }
                 let alpha = tree[ALPHA].read_symbol(&mut self.bit_reader)? as u8;
 
-                data[index * 4] = red;
-                data[index * 4 + 1] = green;
-                data[index * 4 + 2] = blue;
-                data[index * 4 + 3] = alpha;
+                write_pixel::<PIXEL_SIZE>(data, index, [red, green, blue, alpha]);
 
                 if let Some(color_cache) = huffman_info.color_cache.as_mut() {
                     color_cache.insert([red, green, blue, alpha]);
@@ -660,29 +741,40 @@ impl<'a> LosslessDecoder<'a> {
                 }
 
                 if dist == 1 {
-                    let value: [u8; 4] = data[(index - dist) * 4..][..4].try_into().unwrap();
+                    let value = read_pixel::<PIXEL_SIZE>(data, index - dist);
                     for i in 0..length {
-                        data[index * 4 + i * 4..][..4].copy_from_slice(&value);
+                        write_pixel::<PIXEL_SIZE>(data, index + i, value);
                     }
                 } else {
+                    let pixel_bytes = PIXEL_SIZE;
+                    let copy_chunk_bytes = pixel_bytes * 4;
                     if index + length + 3 <= num_values {
-                        let start = (index - dist) * 4;
-                        data.copy_within(start..start + 16, index * 4);
+                        let start = (index - dist) * pixel_bytes;
+                        data.copy_within(start..start + copy_chunk_bytes, index * pixel_bytes);
 
                         if copy_needs_overlap_expansion(length, dist) {
-                            for i in (0..length * 4).step_by((dist * 4).min(16)).skip(1) {
-                                data.copy_within(start + i..start + i + 16, index * 4 + i);
+                            for i in (0..length * pixel_bytes)
+                                .step_by((dist * pixel_bytes).min(copy_chunk_bytes))
+                                .skip(1)
+                            {
+                                data.copy_within(
+                                    start + i..start + i + copy_chunk_bytes,
+                                    index * pixel_bytes + i,
+                                );
                             }
                         }
                     } else {
-                        for i in 0..length * 4 {
-                            data[index * 4 + i] = data[index * 4 + i - dist * 4];
+                        for i in 0..length * pixel_bytes {
+                            data[index * pixel_bytes + i] =
+                                data[index * pixel_bytes + i - dist * pixel_bytes];
                         }
                     }
 
                     if let Some(color_cache) = huffman_info.color_cache.as_mut() {
-                        for pixel in data[index * 4..][..length * 4].chunks_exact(4) {
-                            color_cache.insert(pixel.try_into().unwrap());
+                        for pixel in data[index * pixel_bytes..][..length * pixel_bytes]
+                            .chunks_exact(pixel_bytes)
+                        {
+                            color_cache.insert(pixel_to_rgba(pixel));
                         }
                     }
                 }
@@ -694,7 +786,7 @@ impl<'a> LosslessDecoder<'a> {
                     .as_mut()
                     .ok_or(DecodingError::BitStreamError)?;
                 let color = color_cache.lookup((code - 280).into());
-                data[index * 4..][..4].copy_from_slice(&color);
+                write_pixel::<PIXEL_SIZE>(data, index, color);
                 index += 1;
 
                 if index < next_block_start
@@ -702,8 +794,7 @@ impl<'a> LosslessDecoder<'a> {
                     && code >= 280
                 {
                     self.bit_reader.consume(bits)?;
-                    data[index * 4..][..4]
-                        .copy_from_slice(&color_cache.lookup((code - 280).into()));
+                    write_pixel::<PIXEL_SIZE>(data, index, color_cache.lookup((code - 280).into()));
                     index += 1;
                 }
             }
@@ -763,6 +854,27 @@ impl<'a> LosslessDecoder<'a> {
             dist.try_into().unwrap()
         }
     }
+}
+
+#[inline]
+fn write_pixel<const PIXEL_SIZE: usize>(data: &mut [u8], index: usize, pixel: [u8; 4]) {
+    debug_assert!(PIXEL_SIZE == 3 || PIXEL_SIZE == 4);
+    let start = index * PIXEL_SIZE;
+    data[start..start + PIXEL_SIZE].copy_from_slice(&pixel[..PIXEL_SIZE]);
+}
+
+#[inline]
+fn read_pixel<const PIXEL_SIZE: usize>(data: &[u8], index: usize) -> [u8; 4] {
+    let start = index * PIXEL_SIZE;
+    pixel_to_rgba(&data[start..start + PIXEL_SIZE])
+}
+
+#[inline]
+fn pixel_to_rgba(pixel: &[u8]) -> [u8; 4] {
+    debug_assert!(pixel.len() == 3 || pixel.len() == 4);
+    let mut rgba = [0, 0, 0, 255];
+    rgba[..pixel.len()].copy_from_slice(pixel);
+    rgba
 }
 
 fn copy_is_out_of_bounds(index: usize, dist: usize, num_values: usize, length: usize) -> bool {

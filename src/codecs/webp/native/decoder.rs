@@ -527,11 +527,7 @@ impl<'a> WebPDecoder<'a> {
             if self.has_alpha {
                 decoder.decode_frame(self.width, self.height, buf)?;
             } else {
-                let mut data = vec![0; self.width as usize * self.height as usize * 4];
-                decoder.decode_frame(self.width, self.height, &mut data)?;
-                for (rgba_val, chunk) in data.chunks_exact(4).zip(buf.chunks_exact_mut(3)) {
-                    chunk.copy_from_slice(&rgba_val[..3]);
-                }
+                decoder.decode_frame_rgb(self.width, self.height, buf)?;
             }
         } else {
             let range = self
