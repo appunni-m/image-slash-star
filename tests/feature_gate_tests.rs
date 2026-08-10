@@ -2185,6 +2185,40 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             image_slash_star::ImageErrorKind::Malformed,
             "AVIF property-table overflow sequence"
         );
+
+        // The compatible-brand ceiling is an independent FileTypeBox
+        // parser-resource contract. It is source/container evidence rather
+        // than Pillow parity: Pillow exposes neither the declaration list nor
+        // this limit, so keep the witness in this existing feature-gated
+        // fixture contract without adding a parity row or unit test.
+        let too_many_compatible_brands = append_avif_compatible_brands(&alpha, 1_021)?;
+        let inspect_error = match image_slash_star::inspect(&too_many_compatible_brands) {
+            Ok(_) => return Err("AVIF compatible-brand overflow passed inspect".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            inspect_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF compatible-brand overflow inspect"
+        );
+        let decode_error = match image_slash_star::decode(&too_many_compatible_brands) {
+            Ok(_) => return Err("AVIF compatible-brand overflow passed decode".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            decode_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF compatible-brand overflow decode"
+        );
+        let sequence_error = match image_slash_star::decode_sequence(&too_many_compatible_brands) {
+            Ok(_) => return Err("AVIF compatible-brand overflow passed sequence".into()),
+            Err(error) => error,
+        };
+        assert_eq!(
+            sequence_error.kind(),
+            image_slash_star::ImageErrorKind::Malformed,
+            "AVIF compatible-brand overflow sequence"
+        );
     }
 
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
@@ -4702,6 +4736,54 @@ fn append_unassociated_avif_properties(
             cursor = cursor.checked_add(8).ok_or("AVIF iloc extent overflowed")?;
         }
     }
+    Ok(output)
+}
+
+fn append_avif_compatible_brands(
+    input: &[u8],
+    count: usize,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let ftyp = avif_nested_box_offset(input, b"ftyp")?;
+    let size_end = ftyp
+        .checked_add(4)
+        .ok_or("AVIF ftyp size field overflowed")?;
+    let ftyp_size = u32::from_be_bytes(
+        input
+            .get(ftyp..size_end)
+            .ok_or("AVIF ftyp size field is truncated")?
+            .try_into()?,
+    );
+    let ftyp_end = ftyp
+        .checked_add(usize::try_from(ftyp_size)?)
+        .ok_or("AVIF ftyp end overflowed")?;
+    if ftyp_end > input.len() {
+        return Err("AVIF ftyp extends past the input".into());
+    }
+    let compatible_start = ftyp
+        .checked_add(16)
+        .ok_or("AVIF ftyp declaration header overflowed")?;
+    if compatible_start > ftyp_end {
+        return Err("AVIF ftyp has no complete major/minor declaration".into());
+    }
+    let delta = count
+        .checked_mul(4)
+        .ok_or("AVIF compatible-brand witness size overflowed")?;
+    let delta_u32 = u32::try_from(delta)?;
+    let new_size = ftyp_size
+        .checked_add(delta_u32)
+        .ok_or("AVIF ftyp size overflowed")?;
+    let mut output = Vec::with_capacity(
+        input
+            .len()
+            .checked_add(delta)
+            .ok_or("AVIF compatible-brand witness output overflowed")?,
+    );
+    output.extend_from_slice(&input[..compatible_start]);
+    for _ in 0..count {
+        output.extend_from_slice(b"mif1");
+    }
+    output.extend_from_slice(&input[compatible_start..]);
+    output[ftyp..size_end].copy_from_slice(&new_size.to_be_bytes());
     Ok(output)
 }
 
