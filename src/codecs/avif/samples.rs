@@ -325,19 +325,47 @@ struct Item {
 
 #[derive(Clone)]
 enum Property {
-    Ispe { width: u32, height: u32 },
-    Pixi { depth: u8 },
+    Ispe {
+        width: u32,
+        height: u32,
+    },
+    Pixi {
+        depth: u8,
+    },
     Av1C(ByteSpan),
-    AuxC { is_alpha: bool },
+    AuxC {
+        is_alpha: bool,
+    },
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
-    ContentLightLevel(AvifContentLightLevel),
-    MasteringDisplayColorVolume(AvifMasteringDisplayColorVolume),
-    Rotation(AvifRotation),
-    Mirror(AvifMirrorAxis),
-    PixelAspectRatio(AvifPixelAspectRatio),
-    CleanAperture(AvifCleanAperture),
-    Other { kind: FourCc, data: Vec<u8> },
+    ContentLightLevel {
+        value: AvifContentLightLevel,
+        data: ByteSpan,
+    },
+    MasteringDisplayColorVolume {
+        value: AvifMasteringDisplayColorVolume,
+        data: ByteSpan,
+    },
+    Rotation {
+        value: AvifRotation,
+        data: ByteSpan,
+    },
+    Mirror {
+        value: AvifMirrorAxis,
+        data: ByteSpan,
+    },
+    PixelAspectRatio {
+        value: AvifPixelAspectRatio,
+        data: ByteSpan,
+    },
+    CleanAperture {
+        value: AvifCleanAperture,
+        data: ByteSpan,
+    },
+    Other {
+        kind: FourCc,
+        data: Vec<u8>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -722,7 +750,10 @@ fn parse_clli(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::ContentLightLevel(content_light_level))
+    Ok(Property::ContentLightLevel {
+        value: content_light_level,
+        data: payload,
+    })
 }
 
 fn parse_mdcv(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -743,8 +774,8 @@ fn parse_mdcv(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::MasteringDisplayColorVolume(
-        AvifMasteringDisplayColorVolume::new(
+    Ok(Property::MasteringDisplayColorVolume {
+        value: AvifMasteringDisplayColorVolume::new(
             red_x,
             red_y,
             green_x,
@@ -756,7 +787,8 @@ fn parse_mdcv(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
             max_display_mastering_luminance,
             min_display_mastering_luminance,
         ),
-    ))
+        data: payload,
+    })
 }
 
 fn parse_irot(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -771,7 +803,10 @@ fn parse_irot(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::Rotation(rotation))
+    Ok(Property::Rotation {
+        value: rotation,
+        data: payload,
+    })
 }
 
 fn parse_imir(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -784,7 +819,10 @@ fn parse_imir(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     if !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::Mirror(mirror))
+    Ok(Property::Mirror {
+        value: mirror,
+        data: payload,
+    })
 }
 
 fn parse_pasp(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -794,9 +832,10 @@ fn parse_pasp(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
         return Err(parse_failure!());
     }
-    Ok(Property::PixelAspectRatio(AvifPixelAspectRatio::new(
-        h_spacing, v_spacing,
-    )))
+    Ok(Property::PixelAspectRatio {
+        value: AvifPixelAspectRatio::new(h_spacing, v_spacing),
+        data: payload,
+    })
 }
 
 fn parse_clap(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
@@ -819,16 +858,19 @@ fn parse_clap(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     {
         return Err(parse_failure!());
     }
-    Ok(Property::CleanAperture(AvifCleanAperture::new(
-        width_numerator,
-        width_denominator,
-        height_numerator,
-        height_denominator,
-        horizontal_offset_numerator,
-        horizontal_offset_denominator,
-        vertical_offset_numerator,
-        vertical_offset_denominator,
-    )))
+    Ok(Property::CleanAperture {
+        value: AvifCleanAperture::new(
+            width_numerator,
+            width_denominator,
+            height_numerator,
+            height_denominator,
+            horizontal_offset_numerator,
+            horizontal_offset_denominator,
+            vertical_offset_numerator,
+            vertical_offset_denominator,
+        ),
+        data: payload,
+    })
 }
 
 fn parse_ipma(
@@ -1123,7 +1165,7 @@ impl Meta {
         if let Some(content_light_level) =
             self.associated(self.primary_item_id)
                 .find_map(|property| match property {
-                    Property::ContentLightLevel(content_light_level) => Some(*content_light_level),
+                    Property::ContentLightLevel { value, .. } => Some(*value),
                     _ => None,
                 })
         {
@@ -1131,7 +1173,7 @@ impl Meta {
         }
         let mut mastering_display_color_volume = None;
         for property in self.associated(self.primary_item_id) {
-            if let Property::MasteringDisplayColorVolume(value) = property
+            if let Property::MasteringDisplayColorVolume { value, .. } = property
                 && mastering_display_color_volume.replace(*value).is_some()
             {
                 return Err(parse_failure!());
@@ -1148,25 +1190,30 @@ impl Meta {
         let mut transform = AvifTransformProperties::new();
         for property in self.associated(self.primary_item_id) {
             match property {
-                Property::Rotation(rotation) => {
+                Property::Rotation {
+                    value: rotation, ..
+                } => {
                     if transform.rotation().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_rotation(*rotation);
                 }
-                Property::Mirror(mirror) => {
+                Property::Mirror { value: mirror, .. } => {
                     if transform.mirror().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_mirror(*mirror);
                 }
-                Property::PixelAspectRatio(ratio) => {
+                Property::PixelAspectRatio { value: ratio, .. } => {
                     if transform.pixel_aspect_ratio().is_some() {
                         return Err(parse_failure!());
                     }
                     transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
-                Property::CleanAperture(clean_aperture) => {
+                Property::CleanAperture {
+                    value: clean_aperture,
+                    ..
+                } => {
                     if transform.clean_aperture().is_some() {
                         return Err(parse_failure!());
                     }
@@ -1305,23 +1352,63 @@ impl Meta {
             .collect()
     }
 
-    fn non_primary_item_properties(&self, primary_item_id: u32) -> Vec<AvifItemProperty> {
-        self.associations
+    fn non_primary_item_properties(
+        &self,
+        input: &[u8],
+        primary_item_id: u32,
+    ) -> ParseResult<Vec<AvifItemProperty>> {
+        let mut result = Vec::new();
+        for association in self
+            .associations
             .iter()
             .filter(|association| association.item_id != primary_item_id)
-            .filter_map(|association| {
-                self.properties.get(association.property_index).and_then(
-                    |property| match property {
-                        Property::Other { kind, data } => Some(AvifItemProperty::new(
-                            association.item_id,
-                            *kind,
-                            data.clone(),
-                        )),
-                        _ => None,
-                    },
-                )
-            })
-            .collect()
+        {
+            let Some(property) = self.properties.get(association.property_index) else {
+                continue;
+            };
+            let record = match property {
+                Property::ContentLightLevel { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"clli",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::MasteringDisplayColorVolume { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"mdcv",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::Rotation { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"irot",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::Mirror { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"imir",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::PixelAspectRatio { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"pasp",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *b"clap",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::Other { kind, data } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *kind,
+                    data.clone(),
+                )),
+                _ => None,
+            };
+            if let Some(record) = record {
+                result.push(record);
+            }
+        }
+        Ok(result)
     }
 
     fn non_primary_item_plane_properties(
@@ -2122,12 +2209,12 @@ fn parse_sample_description(
             }
             Property::Color(_)
             | Property::IccProfile(_)
-            | Property::ContentLightLevel(_)
-            | Property::MasteringDisplayColorVolume(_)
-            | Property::Rotation(_)
-            | Property::Mirror(_)
-            | Property::PixelAspectRatio(_)
-            | Property::CleanAperture(_) => {}
+            | Property::ContentLightLevel { .. }
+            | Property::MasteringDisplayColorVolume { .. }
+            | Property::Rotation { .. }
+            | Property::Mirror { .. }
+            | Property::PixelAspectRatio { .. }
+            | Property::CleanAperture { .. } => {}
             Property::Other { .. } => {}
         }
     }
@@ -2406,7 +2493,8 @@ fn extract_inner_with_metadata(
         .unwrap_or_default();
     let item_properties = meta
         .as_ref()
-        .map(|meta| meta.non_primary_item_properties(meta.primary_item_id))
+        .map(|meta| meta.non_primary_item_properties(input, meta.primary_item_id))
+        .transpose()?
         .unwrap_or_default();
     let item_plane_properties = meta
         .as_ref()
@@ -4564,8 +4652,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let duplicate_rotation = Meta {
         primary_item_id: 1,
         properties: vec![
-            Property::Rotation(crate::types::AvifRotation::Zero),
-            Property::Rotation(crate::types::AvifRotation::CounterClockwise90),
+            Property::Rotation {
+                value: crate::types::AvifRotation::Zero,
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::Rotation {
+                value: crate::types::AvifRotation::CounterClockwise90,
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
@@ -4583,8 +4677,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let duplicate_pixel_aspect_ratio = Meta {
         primary_item_id: 1,
         properties: vec![
-            Property::PixelAspectRatio(AvifPixelAspectRatio::new(4, 3)),
-            Property::PixelAspectRatio(AvifPixelAspectRatio::new(16, 9)),
+            Property::PixelAspectRatio {
+                value: AvifPixelAspectRatio::new(4, 3),
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::PixelAspectRatio {
+                value: AvifPixelAspectRatio::new(16, 9),
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
@@ -4602,8 +4702,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let duplicate_clean_aperture = Meta {
         primary_item_id: 1,
         properties: vec![
-            Property::CleanAperture(AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1)),
-            Property::CleanAperture(AvifCleanAperture::new(4, 1, 3, 1, 0, 1, 0, 1)),
+            Property::CleanAperture {
+                value: AvifCleanAperture::new(2, 1, 3, 1, 0, 1, 0, 1),
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::CleanAperture {
+                value: AvifCleanAperture::new(4, 1, 3, 1, 0, 1, 0, 1),
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
@@ -4621,8 +4727,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let duplicate_mirror = Meta {
         primary_item_id: 1,
         properties: vec![
-            Property::Mirror(crate::types::AvifMirrorAxis::TopBottom),
-            Property::Mirror(crate::types::AvifMirrorAxis::LeftRight),
+            Property::Mirror {
+                value: crate::types::AvifMirrorAxis::TopBottom,
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::Mirror {
+                value: crate::types::AvifMirrorAxis::LeftRight,
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
