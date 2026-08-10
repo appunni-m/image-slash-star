@@ -1310,6 +1310,9 @@ struct ImageStreamScratch {
     tokens: TokenStreamScratch,
     predictor: predictor::PredictorScratch,
     cross_color: cross_color::CrossColorScratch,
+    // The packed ALPH transform image is consumed before the next frame can
+    // use this encoder, so retain its capacity without retaining frame output.
+    alpha_packed: Vec<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -2591,7 +2594,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     packed: &[u32],
     packed_width: usize,
     alpha: &[u8],
-    scratch: &mut ImageStreamScratch,
+    output_scratch: &mut Vec<u8>,
+    token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
     checkpoint: C,
 ) -> Result<Vec<u8>, EncodingError> {
@@ -2613,8 +2617,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         3,
         20,
         0,
-        &mut scratch.output,
-        &mut scratch.tokens,
+        output_scratch,
+        token_scratch,
         token,
     )?;
 
@@ -2627,8 +2631,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         5,
         32,
         2,
-        &mut scratch.output,
-        &mut scratch.tokens,
+        output_scratch,
+        token_scratch,
         token,
     )?;
     writer.flush()?;
@@ -2852,47 +2856,55 @@ fn encode_alpha_with_scratch(
     let pixels_per_group = 1usize << xbits;
     let bits_per_pixel = 8 >> xbits;
     let packed_width = width.div_ceil(pixels_per_group as u32) as usize;
-    let mut packed = Vec::with_capacity(packed_width * height as usize);
-    if let Some(token) = token {
-        check_token(Some(token))?;
-        let mut source_pixels_until_checkpoint = WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
-        for row in alpha.chunks_exact(width as usize) {
-            for group in row.chunks(pixels_per_group) {
-                let mut pixel = 0xff00_0000u32;
-                for (index, &value) in group.iter().enumerate() {
-                    let palette_index = u32::from(palette_indices[usize::from(value)]);
-                    pixel |= palette_index << (8 + bits_per_pixel * index);
-                }
-                packed.push(pixel);
-                source_pixels_until_checkpoint =
-                    source_pixels_until_checkpoint.saturating_sub(group.len());
-                if source_pixels_until_checkpoint == 0 {
-                    check_token(Some(token))?;
-                    source_pixels_until_checkpoint = WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
+    let packed_len = packed_width * height as usize;
+    {
+        let packed = &mut scratch.alpha_packed;
+        packed.clear();
+        packed.reserve(packed_len);
+        if let Some(token) = token {
+            check_token(Some(token))?;
+            let mut source_pixels_until_checkpoint = WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
+            for row in alpha.chunks_exact(width as usize) {
+                for group in row.chunks(pixels_per_group) {
+                    let mut pixel = 0xff00_0000u32;
+                    for (index, &value) in group.iter().enumerate() {
+                        let palette_index = u32::from(palette_indices[usize::from(value)]);
+                        pixel |= palette_index << (8 + bits_per_pixel * index);
+                    }
+                    packed.push(pixel);
+                    source_pixels_until_checkpoint =
+                        source_pixels_until_checkpoint.saturating_sub(group.len());
+                    if source_pixels_until_checkpoint == 0 {
+                        check_token(Some(token))?;
+                        source_pixels_until_checkpoint =
+                            WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS;
+                    }
                 }
             }
-        }
-    } else {
-        for row in alpha.chunks_exact(width as usize) {
-            for group in row.chunks(pixels_per_group) {
-                let mut pixel = 0xff00_0000u32;
-                for (index, &value) in group.iter().enumerate() {
-                    let palette_index = u32::from(palette_indices[usize::from(value)]);
-                    pixel |= palette_index << (8 + bits_per_pixel * index);
+        } else {
+            for row in alpha.chunks_exact(width as usize) {
+                for group in row.chunks(pixels_per_group) {
+                    let mut pixel = 0xff00_0000u32;
+                    for (index, &value) in group.iter().enumerate() {
+                        let palette_index = u32::from(palette_indices[usize::from(value)]);
+                        pixel |= palette_index << (8 + bits_per_pixel * index);
+                    }
+                    packed.push(pixel);
                 }
-                packed.push(pixel);
             }
         }
     }
 
+    let packed = &scratch.alpha_packed;
     match token {
         Some(token) => encode_alpha_stream(
             &palette_delta[..palette_len],
             palette_len,
-            &packed,
+            packed,
             packed_width,
             alpha,
-            scratch,
+            &mut scratch.output,
+            &mut scratch.tokens,
             Some(token),
             TokenBitWriterCheckpoint {
                 token,
@@ -2903,10 +2915,11 @@ fn encode_alpha_with_scratch(
         None => encode_alpha_stream(
             &palette_delta[..palette_len],
             palette_len,
-            &packed,
+            packed,
             packed_width,
             alpha,
-            scratch,
+            &mut scratch.output,
+            &mut scratch.tokens,
             None,
             NoopBitWriterCheckpoint,
         ),
