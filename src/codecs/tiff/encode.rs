@@ -718,6 +718,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
     let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
+    let mut sink = Vec::new();
+    let _ = encode_sequence_to_sink(
+        &sequence,
+        &TiffEncodeOptions::default(),
+        EncodePolicy::default(),
+        CodecOperation::SequenceEncode,
+        Some(&token),
+        &mut sink,
+    );
+    let mut malformed_next_pages = vec![
+        EncodedPage {
+            bytes: vec![0; 8],
+            ifd_offset: 0,
+            offset_positions: Vec::new(),
+            next_position: 8,
+        },
+        EncodedPage {
+            bytes: Vec::new(),
+            ifd_offset: 0,
+            offset_positions: Vec::new(),
+            next_position: 0,
+        },
+    ];
+    let _ = relocate_pages(&mut malformed_next_pages);
+    let mut malformed_offset_page = EncodedPage {
+        bytes: vec![0; 8],
+        ifd_offset: 0,
+        offset_positions: vec![8],
+        next_position: 0,
+    };
+    let _ = relocate_pages(std::slice::from_mut(&mut malformed_offset_page));
     let mut forced_sequence_overflow = TiffEncodeOptions::default();
     forced_sequence_overflow.set_force_sequence_len_overflow();
     let _ = encode_sequence(&sequence, &forced_sequence_overflow);
