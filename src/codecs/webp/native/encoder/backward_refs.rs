@@ -2377,6 +2377,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = normal_token_manager.insert_min_interval_with_checkpoint(
         CostInterval {
             cost: 0,
+            start: 2,
+            end: 2,
+            position: 0,
+        },
+        Some(&coverage_token),
+    );
+    let _ = normal_token_manager.push_with_checkpoint(0, 0, 256, Some(&coverage_token));
+    let _ = normal_token_manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
             start: 1,
             end: 3,
             position: 0,
@@ -2419,6 +2429,38 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut ordinary_trace_scratch,
     );
 
+    let copy_trace_pixels = vec![0xff00_0000; 2_048];
+    let copy_trace_chain = (0..copy_trace_pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else {
+                (1, (copy_trace_pixels.len() - position).min(64))
+            }
+        })
+        .collect::<Vec<_>>();
+    let copy_trace_source = vec![Token::Literal(0xff00_0000); copy_trace_pixels.len()];
+    let mut copy_fine_scratch = TraceScratch::default();
+    let _ = trace_backwards_impl::<true>(
+        &copy_trace_pixels,
+        32,
+        &copy_trace_chain,
+        &copy_trace_source,
+        1,
+        Some(&coverage_token),
+        &mut copy_fine_scratch,
+    );
+    let mut copy_ordinary_scratch = TraceScratch::default();
+    let _ = trace_backwards_impl::<false>(
+        &copy_trace_pixels,
+        32,
+        &copy_trace_chain,
+        &copy_trace_source,
+        0,
+        None,
+        &mut copy_ordinary_scratch,
+    );
+
     let token_pixels = (0..4_096)
         .map(|index| {
             if index % 8 < 4 {
@@ -2438,6 +2480,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut token_scratch,
         Some(&coverage_token),
     );
+    for checks in 0..1_024 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut candidate_scratch = CandidateScratch::default();
+        let _ = candidates(
+            &token_pixels,
+            32,
+            true,
+            80,
+            4,
+            &mut candidate_scratch,
+            Some(&token),
+        );
+    }
     let _ = std::panic::catch_unwind(|| {
         let pixels = [0xff00_0000; 8];
         let chain = [

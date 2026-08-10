@@ -1016,6 +1016,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         encode(&rgb, &JpegEncodeOptions::default()).expect("coverage JPEG image should encode");
     let mut rgb_sink = Vec::new();
     let _ = write_jpeg_to_sink(&encoded_rgb, None, &mut rgb_sink);
+    let mut invalid_soi_sink = Vec::new();
+    let _ = write_jpeg_to_sink(&[0xff, 0xd9], None, &mut invalid_soi_sink);
     let mut no_scan_sink = Vec::new();
     let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0xd9], None, &mut no_scan_sink);
     for malformed in [&[0_u8][..], &[0xff][..], &[0xff, 0][..], &[0xff, 0xff][..]] {
@@ -1025,10 +1027,32 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = jpeg_length_segment_end(&[0, 0], 0);
     let _ = find_scan_marker(&[1, 2], 0);
     let _ = find_scan_marker(&[0xff, 0], 0);
+    let _ = find_scan_marker(&[0xff, 0xff], 0);
+    let _ = find_scan_marker(&[0xff, 0, 0xff, 0xd9], 0);
     let mut second_soi = vec![0xff, 0xd8];
     second_soi.extend_from_slice(&encoded_rgb[2..]);
     let mut second_soi_sink = Vec::new();
     let _ = write_jpeg_to_sink(&second_soi, None, &mut second_soi_sink);
+    let mut explicit_second_soi_sink = Vec::new();
+    let _ = write_jpeg_to_sink(
+        &[0xff, 0xd8, 0xff, 0xd8, 0xff, 0xd9],
+        None,
+        &mut explicit_second_soi_sink,
+    );
+    let mut standalone_sink = Vec::new();
+    let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0x01], None, &mut standalone_sink);
+    let mut unterminated_scan_sink = Vec::new();
+    let _ = write_jpeg_to_sink(
+        &[0xff, 0xd8, 0xff, 0xda, 0, 2],
+        None,
+        &mut unterminated_scan_sink,
+    );
+    let mut trailing_eoi_sink = Vec::new();
+    let _ = write_jpeg_to_sink(
+        &[0xff, 0xd8, 0xff, 0xda, 0, 2, 0xff, 0xd9, 0],
+        None,
+        &mut trailing_eoi_sink,
+    );
     let mut progressive_sink = Vec::new();
     let progressive_sink_options = JpegEncodeOptions {
         progressive: Some(true),
@@ -1047,6 +1071,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let restart_bytes =
         encode(&rgb, &restart_sink_options).expect("coverage restart JPEG image should encode");
     let _ = write_jpeg_to_sink(&restart_bytes, None, &mut restart_sink);
+    struct RejectAfterWrites {
+        allowed: usize,
+        writes: usize,
+    }
+    impl crate::OutputSink for RejectAfterWrites {
+        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
+            if self.writes >= self.allowed {
+                return Err(crate::ImageError::parameter(
+                    "coverage JPEG sink rejected write",
+                ));
+            }
+            self.writes += 1;
+            Ok(())
+        }
+    }
+    for allowed in 0..128 {
+        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
+        let _ = write_jpeg_to_sink(&restart_bytes, None, &mut rejecting);
+        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
+        let _ = write_jpeg_to_sink(&progressive_bytes, None, &mut rejecting);
+    }
+    let _ = jpeg_length_segment_end(&[0xff, 0xda, 0, 5, 0], 2);
     let checkpoint_token = crate::CancellationToken::new();
     let mut output_checkpoint = TokenEntropyOutputCheckpoint::new(&checkpoint_token);
     let _ = output_checkpoint.observe(4_096);
@@ -1062,7 +1108,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![128; 17 * 17 * 3],
         crate::types::ColorType::Rgb8,
     );
-    for checks in [0, 1, 4, 12, 24, 28, 37, 43, 44, 46, 48, 96] {
+    for checks in 0..256 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&checkpoint_rgb, &JpegEncodeOptions::default(), Some(&token));
@@ -1223,6 +1269,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut ac_progressive_checkpoint,
         );
     }
+    let ac_first_scan = ProgScan {
+        comps: vec![0],
+        ss: 1,
+        se: 5,
+        ah: 0,
+        al: 0,
+        is_dc: false,
+    };
+    let mut ac_first_checkpoint = NoopProgressiveScanCheckpoint;
+    let _ = ac_progressive_events(
+        &ac_first_scan,
+        &progressive_components,
+        &mut ac_first_checkpoint,
+    );
 }
 
 fn bounded_usize(value: u32) -> usize {

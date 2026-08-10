@@ -53,13 +53,15 @@ pub enum EncodingError {
 }
 
 fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingError> {
-    match crate::codecs::error::check_cancelled(token) {
-        Ok(()) => Ok(()),
-        Err(crate::codecs::CodecError::Cancelled) => Err(EncodingError::Cancelled),
-        Err(crate::codecs::CodecError::WorkBudgetExceeded { maximum, observed }) => {
-            Err(EncodingError::WorkBudgetExceeded { maximum, observed })
-        }
-        Err(error) => unreachable!("token polling returned an unexpected error: {error:?}"),
+    match token {
+        None => Ok(()),
+        Some(token) => match token.poll() {
+            crate::cancel::PollResult::Continue => Ok(()),
+            crate::cancel::PollResult::Cancelled => Err(EncodingError::Cancelled),
+            crate::cancel::PollResult::WorkBudgetExceeded { maximum, observed } => {
+                Err(EncodingError::WorkBudgetExceeded { maximum, observed })
+            }
+        },
     }
 }
 
@@ -1044,8 +1046,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     let mut trailing_zero_bits = 0;
     // The normal-tree path always emits at least one non-zero code-length
     // token before trailing zero-repeat tokens.
-    if let Some(token) = token {
-        let mut trimmed_tokens = 0usize;
+    if token.is_some() {
         loop {
             let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
             if !matches!(huffman_token.code, 0 | 17 | 18) {
@@ -1058,10 +1059,6 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
                 18 => 7,
                 _ => 0,
             };
-            trimmed_tokens += 1;
-            if trimmed_tokens.is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
-                check_token(Some(token))?;
-            }
         }
     } else {
         loop {
@@ -3095,6 +3092,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut compressed_tokens = Vec::new();
     compressed_huffman_tokens_into(&[0; 300], &mut compressed_tokens);
     let coverage_token = crate::CancellationToken::new();
+    let cancelled_token = crate::CancellationToken::new();
+    cancelled_token.cancel();
+    assert!(matches!(
+        check_token(Some(&cancelled_token)),
+        Err(EncodingError::Cancelled)
+    ));
     let mut checkpoint = TokenBitWriterCheckpoint {
         token: &coverage_token,
         written_bits: 0,
@@ -3190,6 +3193,63 @@ pub(crate) fn __coverage_exercise_private_branches() {
     )
     .expect("token-aware huffman tree coverage input must encode");
     let _ = token_tree_writer.flush();
+
+    let mut dense_tree_bytes = Vec::new();
+    let mut dense_tree_writer = BitWriter {
+        writer: &mut dense_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut dense_tree_lengths = vec![0; 256];
+    let mut dense_tree_codes = vec![0; 256];
+    let dense_tree_frequencies = (0..256)
+        .map(|index| ((index * 37) % 251 + 1) as u32)
+        .collect::<Vec<_>>();
+    write_huffman_tree(
+        &mut dense_tree_writer,
+        &dense_tree_frequencies,
+        &mut dense_tree_lengths,
+        &mut dense_tree_codes,
+        &mut huffman_scratch,
+        Some(&coverage_token),
+    )
+    .expect("dense token-aware huffman tree coverage input must encode");
+    let _ = dense_tree_writer.flush();
+
+    // Walk cancellation checkpoints through the normal-tree writer.  The
+    // successful dense case above proves the format path; this bounded sweep
+    // proves each typed early-return boundary without fabricating an invalid
+    // Huffman tree.
+    for checks in 0..512 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = write_huffman_tree(
+            &mut writer,
+            &dense_tree_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&token),
+        );
+    }
 
     let mut trimmed_tree_bytes = Vec::new();
     let mut trimmed_tree_writer = BitWriter {
@@ -3313,7 +3373,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
     };
     let mut meta_scratch = TokenStreamScratch::default();
-    let _ = write_token_stream(
+    write_token_stream(
         &mut meta_writer,
         &meta_pixels,
         meta_width,
@@ -3326,8 +3386,126 @@ pub(crate) fn __coverage_exercise_private_branches() {
         },
         &mut meta_scratch,
         Some(&coverage_token),
-    );
+    )
+    .expect("token-aware metadata stream coverage input must encode");
     let _ = meta_writer.flush();
+
+    let wide_meta_width = 33_usize;
+    let wide_meta_height = 33_usize;
+    let wide_meta_pixels = (0..wide_meta_width * wide_meta_height)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let wide_meta_tokens = wide_meta_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    let mut wide_meta_bytes = Vec::new();
+    let mut wide_meta_writer = BitWriter {
+        writer: &mut wide_meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut wide_meta_scratch = TokenStreamScratch::default();
+    write_token_stream(
+        &mut wide_meta_writer,
+        &wide_meta_pixels,
+        wide_meta_width,
+        &wide_meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 0,
+            quality: 100,
+        },
+        &mut wide_meta_scratch,
+        Some(&coverage_token),
+    )
+    .expect("wide token-aware metadata stream coverage input must encode");
+    let _ = wide_meta_writer.flush();
+
+    for checks in 0..2_048 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &wide_meta_pixels,
+            wide_meta_width,
+            &wide_meta_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 0,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
+
+    let medium_meta_width = 11_usize;
+    let medium_meta_height = 10_usize;
+    let medium_meta_pixels = (0..medium_meta_width * medium_meta_height)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x9e37_79b9);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let medium_meta_tokens = medium_meta_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    for checks in 0..4_096 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &medium_meta_pixels,
+            medium_meta_width,
+            &medium_meta_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 0,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
 
     let mut ordinary_meta_bytes = Vec::new();
     let mut ordinary_meta_writer = BitWriter {
@@ -3400,7 +3578,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     let mut transform_scratch = ImageStreamScratch::default();
-    let _ = encode_frame_stream(
+    encode_frame_stream(
         &mut transform_pixels,
         64,
         64,
@@ -3416,7 +3594,79 @@ pub(crate) fn __coverage_exercise_private_branches() {
             output_bytes: 0,
         },
         &mut transform_scratch,
-    );
+    )
+    .expect("token-aware transform stream coverage input must encode");
+
+    let mut grayscale_transform_pixels = vec![0xff40_4040; 64 * 64];
+    let mut grayscale_transform_scratch = ImageStreamScratch::default();
+    encode_frame_stream(
+        &mut grayscale_transform_pixels,
+        64,
+        64,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&coverage_token),
+        TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut grayscale_transform_scratch,
+    )
+    .expect("token-aware grayscale predictor coverage input must encode");
+
+    let grayscale_frame = vec![0xff40_4040; 16 * 16];
+    let non_grayscale_frame = (0..16 * 16)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    for checks in 0..1_024 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {
         writer: &mut palette_bytes,
@@ -3526,7 +3776,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             output_bytes: 0,
         },
     };
-    let _ = apply_palette(
+    apply_palette(
         &mut token_palette_writer,
         &mut token_palette_pixels,
         64,
@@ -3534,7 +3784,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         token_palette,
         &mut palette_scratch,
         Some(&coverage_token),
-    );
+    )
+    .expect("token-aware palette coverage input must encode");
     let _ = token_palette_writer.flush();
 
     let alpha = [
@@ -3557,19 +3808,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let token_alpha = (0..2_048)
         .map(|index| alpha_values[index % alpha_values.len()])
         .collect::<Vec<_>>();
-    let _ = encode_alpha(
+    encode_alpha(
         &token_alpha,
         token_alpha.len() as u32,
         1,
         Some(&coverage_token),
-    );
+    )
+    .expect("token-aware alpha coverage input must encode");
     let flat_token_alpha = vec![0_u8; 2_048];
-    let _ = encode_alpha(
+    encode_alpha(
         &flat_token_alpha,
         flat_token_alpha.len() as u32,
         1,
         Some(&coverage_token),
-    );
+    )
+    .expect("flat token-aware alpha coverage input must encode");
+
+    for checks in 0..1_024 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let alpha = (0..20).map(|index| (index * 13) as u8).collect::<Vec<_>>();
+        let _ = encode_alpha(&alpha, alpha.len() as u32, 1, Some(&token));
+    }
+
+    for length in 1..=256 {
+        for pattern in 0..4 {
+            let alpha = (0..length)
+                .map(|index: usize| match pattern {
+                    0 => 0,
+                    1 => (index & 1) as u8 * 255,
+                    2 => (index.wrapping_mul(37) & 0xff) as u8,
+                    _ => ((index.wrapping_mul(73) ^ (index >> 2)) & 0xff) as u8,
+                })
+                .collect::<Vec<_>>();
+            let _ = encode_alpha(&alpha, length as u32, 1, None);
+        }
+    }
 
     let mut encoder = WebPEncoder::new();
     encoder
