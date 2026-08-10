@@ -3,12 +3,12 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`6c870e47fd28ddbc2a320dd64792ef0b7507e096`; the claim-ledger fixture tuple
+`371354b0a92d83f4384b7a9129ddc63bcbb326d3`; the claim-ledger fixture tuple
 remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
 The current exact-head Pillow parity run
-`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` passed 1,445/1,445 checks. The feature
-matrix run `d485d49b-af1d-4a55-8eff-38b7a2136a5d` and nightly Coverage MCP
-run `26d21516-2f0d-4f17-b1b9-a9959a3aad2e` both hit the pre-existing native
+`49d95968-7a17-4a9d-9002-c6504922610b` passed 1,445/1,445 checks. The feature
+matrix run `2f75bfbc-866c-44de-b118-e00e2cd0936b` and nightly Coverage MCP
+run `f37739ea-a252-4112-8234-268e86be2798` both hit the pre-existing native
 `source_alpha_matches_the_container_contract` AVIF status-5 failure; the
 nightly run ingested no snapshot. The accepted coverage snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
@@ -92,6 +92,8 @@ installed version. It requires `cmake`, `git`, `meson`, `ninja`, and
 The WASM path contains repository-owned:
 
 - ISO-BMFF brand and box parsing;
+- bounded FileTypeBox retention of major/minor and ordered compatible-brand
+  declarations;
 - item, extent, property, grid, alpha, and sample extraction;
 - bounded retention of recognized AVIF EXIF and XMP item extents as raw
   `OpaqueMetadata` records;
@@ -143,6 +145,17 @@ validated payload topology is also retained through
 version `0`, raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas.
 These fields are source provenance only; they do not expose tile placement or
 compose the grid.
+
+The AVIF `ftyp` FileTypeBox is retained as
+`SourceDescriptor::avif_file_type()` with its major brand, minor version, and
+ordered compatible-brand list. Both bounded parsers reject more than 1,024
+compatible-brand entries, and the existing feature-gated fixture contract
+exercises that overflow on inspection, still decode, and sequence parsing. The
+committed alpha, baseline, grid, animated, and portable RGB fixtures assert the
+available `avif`/`avis` records across their applicable surfaces. This is Rust
+source provenance only: Pillow has no equivalent FileTypeBox/source-descriptor
+result, and the descriptor does not promise item-level decoder capability, so
+no Pillow parity row represents it.
 
 The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
 `clli` content-light-level

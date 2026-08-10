@@ -3,21 +3,20 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `6c870e47fd28ddbc2a320dd64792ef0b7507e096`, and benchmark-protocol
+revision `371354b0a92d83f4384b7a9129ddc63bcbb326d3`, and benchmark-protocol
 revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
 tuple remains anchored to base revision
 `487348d01389eb8d100b8a668c9921d97634c022`.
 The latest exact-head managed Pillow parity run is
-`6c913462-7fd7-4fb2-9ac4-86299e1a1b31` (1,445/1,445 passed in 678 ms) at
+`49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 this revision. Feature matrix run
-`d485d49b-af1d-4a55-8eff-38b7a2136a5d` terminated with 44 passed and 1 failed;
+`2f75bfbc-866c-44de-b118-e00e2cd0936b` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
-`26d21516-2f0d-4f17-b1b9-a9959a3aad2e` likewise terminated 84/85 with that
+`f37739ea-a252-4112-8234-268e86be2798` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
-ingested. The same native failure was reproduced from a clean copy of the
-preceding `879ddc6` source, so it is not evidence against this property-table
-ceiling slice. The accepted Coverage MCP snapshot remains
+ingested. That known native failure is not evidence against this
+FileTypeBox/source-descriptor slice. The accepted Coverage MCP snapshot remains
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -644,6 +643,32 @@ AVIF ICC, `mdcv`, EXIF, and XMP item metadata are covered by the separate
 defensive/specification contract below, not by synthetic parity rows.
 
 ## Current revision-bound evidence
+
+Current acceptance record: AVIF FileTypeBox/source descriptor
+
+The production AVIF source-provenance slice is implemented at
+`c3c35af431b4e6eed61f507d143c2b4dd5003855`; the complete sequence-brand
+fixture expectation and compatible-brand overflow witness are recorded at
+`371354b0a92d83f4384b7a9129ddc63bcbb326d3`. Both bounded parsers retain the
+FileTypeBox major brand, minor version, and ordered compatible brands through
+`AvifFileTypeProperties` and `SourceDescriptor::avif_file_type()`, with a
+separate 1,024-entry ceiling. Existing feature-gated fixture contracts assert
+alpha inspection, portable-RGB still-decode propagation on WASI, native
+baseline/grid inspection and decode propagation, animated sequence propagation,
+and malformed overflow on committed witnesses.
+This is Rust source-provenance and defensive-parser evidence, not Pillow
+parity: Pillow has no equivalent result, so no parity row, fixture-manifest
+row, diagnostic origin, coverage-only hook, new test function, or unit test was
+added. The descriptor does not promise item-level decoder capability; that
+decision remains an open roadmap slice.
+
+Exact-head managed Pillow parity run
+`49d95968-7a17-4a9d-9002-c6504922610b` passed 1,445/1,445 checks in 584 ms.
+Feature-matrix run `2f75bfbc-866c-44de-b118-e00e2cd0936b` terminated 44/45 on
+the known native AVIF `source_alpha_matches_the_container_contract` status-5
+lane. Nightly run `f37739ea-a252-4112-8234-268e86be2798` terminated 84/85 on
+the same failure; its required coverage artifact was `skipped_stale`, so no
+new coverage snapshot or claim exists for this slice.
 
 Current acceptance record: AVIF unique item-property ceiling
 

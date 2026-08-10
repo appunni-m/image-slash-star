@@ -405,6 +405,12 @@ non-alpha `auxC`/`auxi` declarations retain exact source-local kind/payload
 through `SourceDescriptor::avif_item_properties()`, while track-only
 auxiliary payload selection/decoded content, richer item graphs, and grid tile
 placement/composition remain open.
+AVIF `FileTypeBox` declarations are retained through
+`SourceDescriptor::avif_file_type()` as major brand, minor version, and ordered
+compatible brands, with a 1,024-entry ceiling on inspection, still decode, and
+sequence-frame records. This is source provenance only; it does not imply
+decoder capability, and Pillow has no equivalent result, so it is not a parity
+field.
 Exact PNG color fields additionally surface through `source_color`
 (`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
 raw ICC profile bytes. Retaining them records what the source declares; it
