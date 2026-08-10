@@ -1657,6 +1657,93 @@ pub fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(b"not an image");
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let _ = encode_default(&image, ImageFormat::Png);
+
+    // Exercise the caller-owned sink boundary directly.  The codec dispatch
+    // hook covers format-specific structural writers; these calls cover the
+    // common admission, write, cancellation, and finalization decisions that
+    // sit around every writer.
+    struct RejectingSink;
+    impl OutputSink for RejectingSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> ImageResult<()> {
+            Err(ImageError::parameter("coverage sink rejected write"))
+        }
+    }
+
+    struct FlushRejectingSink;
+    impl OutputSink for FlushRejectingSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> ImageResult<()> {
+            Ok(())
+        }
+
+        fn flush(&mut self) -> ImageResult<()> {
+            Err(ImageError::parameter("coverage sink rejected flush"))
+        }
+    }
+
+    let sink_options = EncodeOptions::for_format(ImageFormat::Png);
+    let mut still_sink = Vec::new();
+    let _ = encode_to_sink_with_policy_impl(
+        &image,
+        ImageFormat::Png,
+        &sink_options,
+        &EncodePolicy::default(),
+        &mut still_sink,
+    );
+    let token = CancellationToken::new();
+    let mut token_sink = Vec::new();
+    let _ = encode_to_sink_with_token_and_policy_impl(
+        &image,
+        ImageFormat::Png,
+        &sink_options,
+        &EncodePolicy::default(),
+        &token,
+        &mut token_sink,
+    );
+    let sequence = DecodedSequence::from_image(image.clone());
+    let mut sequence_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_policy_impl(
+        &sequence,
+        ImageFormat::Png,
+        &sink_options,
+        &EncodePolicy::default(),
+        &mut sequence_sink,
+    );
+    let mut sequence_token_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token_and_policy_impl(
+        &sequence,
+        ImageFormat::Png,
+        &sink_options,
+        &EncodePolicy::default(),
+        &token,
+        &mut sequence_token_sink,
+    );
+    let mut rejecting_sink = RejectingSink;
+    let _ = write_sink_all(
+        &mut rejecting_sink,
+        b"coverage",
+        ImageFormat::Png,
+        ImageErrorStage::StillEncode,
+        None,
+    );
+    let mut flush_rejecting_sink = FlushRejectingSink;
+    let _ = write_sink_all(
+        &mut flush_rejecting_sink,
+        b"coverage",
+        ImageFormat::Png,
+        ImageErrorStage::StillEncode,
+        None,
+    );
+    let cancelled = CancellationToken::new();
+    cancelled.cancel();
+    let mut cancelled_sink = Vec::new();
+    let _ = finish_sink(
+        &mut cancelled_sink,
+        ImageFormat::Png,
+        ImageErrorStage::StillEncode,
+        8,
+        Some(&cancelled),
+    );
+
     let fresh = CancellationToken::new();
     assert!(!fresh.is_cancelled());
     let countdown = CancellationToken::new();
