@@ -653,9 +653,19 @@ impl<'a> WebPDecoder<'a> {
                     .ok_or(DecodingError::ImageTooLarge)?;
                 let reader = (&mut self.r).take(chunk_size);
                 let mut lossless_decoder = LosslessDecoder::new(Box::new(reader));
-                let mut rgba_frame = vec![0; frame_width as usize * frame_height as usize * 4];
-                lossless_decoder.decode_frame(frame_width, frame_height, &mut rgba_frame)?;
-                (rgba_frame, true)
+                if self.has_alpha {
+                    let mut rgba_frame = vec![0; frame_width as usize * frame_height as usize * 4];
+                    lossless_decoder.decode_frame(frame_width, frame_height, &mut rgba_frame)?;
+                    (rgba_frame, true)
+                } else {
+                    // The VP8X alpha flag selects the public animation buffer
+                    // layout, just as it does for still decode. Reuse the
+                    // direct RGB VP8L path for opaque animations so each frame
+                    // avoids a transient four-byte staging buffer.
+                    let mut rgb_frame = vec![0; frame_width as usize * frame_height as usize * 3];
+                    lossless_decoder.decode_frame_rgb(frame_width, frame_height, &mut rgb_frame)?;
+                    (rgb_frame, false)
+                }
             }
             WebPRiffChunk::ALPH => {
                 (frame_width <= 16384 && frame_height <= 16384)
