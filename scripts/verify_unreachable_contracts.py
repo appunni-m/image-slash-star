@@ -155,7 +155,85 @@ def verify_evidence(entry: object, category_id: str, index: int) -> None:
             )
 
 
-def verify_document(document_text: str) -> None:
+def markdown_table_cells(line: str) -> list[str] | None:
+    stripped = line.strip()
+    if not stripped.startswith("|") or not stripped.endswith("|"):
+        return None
+    return [cell.strip() for cell in stripped[1:-1].split("|")]
+
+
+def markdown_cell_value(cell: str) -> str:
+    if len(cell) >= 2 and cell.startswith("`") and cell.endswith("`"):
+        return cell[1:-1]
+    return cell
+
+
+def verify_catalog_table(document_text: str, categories: list[dict]) -> None:
+    """Keep the human-facing catalog tied to the machine-facing manifest."""
+
+    expected_ids = {category_id for category_id, _ in EXPECTED_CATEGORIES}
+    rows: dict[str, list[str]] = {}
+    for line in document_text.splitlines():
+        cells = markdown_table_cells(line)
+        if cells is None or len(cells) != 6:
+            continue
+        category_id = markdown_cell_value(cells[0])
+        if category_id not in expected_ids:
+            continue
+        if category_id in rows:
+            fail(f"{DOCUMENT} contains duplicate catalog table row for `{category_id}`")
+        rows[category_id] = cells
+
+    missing = sorted(expected_ids - set(rows))
+    if missing:
+        fail(f"{DOCUMENT} is missing catalog table rows: {missing}")
+
+    by_id = {category["id"]: category for category in categories}
+    labels = dict(EXPECTED_CATEGORIES)
+    for category_id in expected_ids:
+        category = by_id[category_id]
+        cells = rows[category_id]
+        if cells[1].replace("`", "") != labels[category_id]:
+            fail(
+                f"{DOCUMENT} catalog label for `{category_id}` does not match "
+                "the manifest"
+            )
+        if markdown_cell_value(cells[3]) != category["status"]:
+            fail(
+                f"{DOCUMENT} status for `{category_id}` does not match the "
+                "manifest"
+            )
+        if markdown_cell_value(cells[5]) != category["pillow_parity"]:
+            fail(
+                f"{DOCUMENT} Pillow-parity status for `{category_id}` does not "
+                "match the manifest"
+            )
+
+        evidence_cell = cells[4]
+        if category["status"] == "covered":
+            for evidence in category["evidence"]:
+                path = evidence["path"]
+                if f"`{path}`" not in evidence_cell:
+                    fail(
+                        f"{DOCUMENT} evidence cell for `{category_id}` omits "
+                        f"manifest path `{path}`"
+                    )
+        else:
+            marker = "No category-specific evidence is claimed"
+            if marker not in evidence_cell:
+                fail(
+                    f"{DOCUMENT} planned evidence cell for `{category_id}` must "
+                    f"say `{marker}`"
+                )
+            for path in category["planned_context"]:
+                if f"`{path}`" not in evidence_cell:
+                    fail(
+                        f"{DOCUMENT} planned context for `{category_id}` omits "
+                        f"manifest path `{path}`"
+                    )
+
+
+def verify_document(document_text: str, categories: list[dict]) -> None:
     required = (
         "tests/fixtures/unreachable_contract_manifest.json",
         "python3 scripts/verify_unreachable_contracts.py",
@@ -171,6 +249,7 @@ def verify_document(document_text: str) -> None:
             fail(f"{DOCUMENT} must contain exactly one mapping row for `{category_id}`")
         if label not in plain_document:
             fail(f"{DOCUMENT} is missing catalog label {label!r}")
+    verify_catalog_table(document_text, categories)
 
 
 def verify() -> tuple[int, int]:
@@ -254,7 +333,7 @@ def verify() -> tuple[int, int]:
                 repository_file(path, f"{expected_id}.planned_context[{index}]")
 
     try:
-        verify_document(DOCUMENT.read_text(encoding="utf-8"))
+        verify_document(DOCUMENT.read_text(encoding="utf-8"), categories)
     except OSError as error:
         fail(f"cannot read {DOCUMENT}: {error}")
     return len(categories), covered
