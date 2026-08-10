@@ -2500,6 +2500,34 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // existing alpha relationship remains present to prove the two facts
         // are retained independently, and decoded pixels remain unchanged.
         let alpha = fs::read(root.join("tests/fixtures/input/images/avif/alpha.avif"))?;
+
+        // A non-alpha auxiliary item declaration is source metadata rather
+        // than a Pillow-observable result. Retain its exact `auxC` payload
+        // without changing the established alpha relationship. This
+        // inspection assertion runs before the known native AVIF decoder
+        // witness below, so the portable metadata boundary remains directly
+        // exercised even when that unrelated native lane is unavailable.
+        let non_alpha_auxc_payload = [
+            &[0, 0, 0, 0][..],
+            b"urn:mpeg:mpegB:cicp:systems:auxiliary:depth".as_slice(),
+            &[0][..],
+        ]
+        .concat();
+        let non_alpha_auxc_bytes =
+            append_item_property_association(&alpha, b"auxC", &non_alpha_auxc_payload)?;
+        let expected_non_alpha_auxc = [AvifItemProperty::new(2, *b"auxC", non_alpha_auxc_payload)];
+        let non_alpha_auxc_inspected = image_slash_star::inspect(&non_alpha_auxc_bytes)?;
+        assert_eq!(
+            non_alpha_auxc_inspected.source.alpha(),
+            Some(SourceAlpha::Auxiliary),
+            "non-alpha auxiliary declaration preserves alpha provenance"
+        );
+        assert_eq!(
+            non_alpha_auxc_inspected.source.avif_item_properties(),
+            expected_non_alpha_auxc.as_slice(),
+            "non-alpha auxiliary declaration inspect payload"
+        );
+
         let premultiplied = append_premultiplied_relationship(&alpha)?;
         let expected_premultiplied = [AvifItemRelationship::new(*b"prem", 2, 1)];
         let inspected = image_slash_star::inspect(&premultiplied)?;
@@ -2743,6 +2771,26 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 .avif_item_properties(),
             expected_known.as_slice(),
             "known item property sequence declarations"
+        );
+
+        let non_alpha_auxc_decoded = image_slash_star::decode(&non_alpha_auxc_bytes)?;
+        assert_eq!(
+            non_alpha_auxc_decoded.content.pixels, baseline_decoded.content.pixels,
+            "non-alpha auxiliary declaration preserves decoded pixels"
+        );
+        assert_eq!(
+            non_alpha_auxc_decoded.content.source.avif_item_properties(),
+            expected_non_alpha_auxc.as_slice(),
+            "non-alpha auxiliary declaration decode payload"
+        );
+        let non_alpha_auxc_sequence = image_slash_star::decode_sequence(&non_alpha_auxc_bytes)?;
+        assert_eq!(
+            non_alpha_auxc_sequence.content.frames[0]
+                .image
+                .source
+                .avif_item_properties(),
+            expected_non_alpha_auxc.as_slice(),
+            "non-alpha auxiliary declaration sequence payload"
         );
 
         // `ispe` and `pixi` are known plane declarations rather than unknown

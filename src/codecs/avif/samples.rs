@@ -334,7 +334,9 @@ enum Property {
     },
     Av1C(ByteSpan),
     AuxC {
+        kind: FourCc,
         is_alpha: bool,
+        data: ByteSpan,
     },
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
@@ -664,7 +666,9 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             }
             let urn = reader.c_string()?;
             Ok(Property::AuxC {
+                kind: property.kind,
                 is_alpha: urn == ALPHA_URN_MPEG_B || urn == ALPHA_URN_HEVC,
+                data: property.payload,
             })
         }
         _ => Ok(Property::Other {
@@ -1126,7 +1130,7 @@ impl Meta {
 
     fn is_alpha(&self, item_id: u32) -> bool {
         self.associated(item_id)
-            .any(|property| matches!(property, Property::AuxC { is_alpha: true }))
+            .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. }))
     }
 
     fn source_color(&self, input: &[u8]) -> ParseResult<SourceColor> {
@@ -1395,6 +1399,15 @@ impl Meta {
                 Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
                     association.item_id,
                     *b"clap",
+                    data.bytes(input)?.to_vec(),
+                )),
+                Property::AuxC {
+                    is_alpha: false,
+                    kind,
+                    data,
+                } => Some(AvifItemProperty::new(
+                    association.item_id,
+                    *kind,
                     data.bytes(input)?.to_vec(),
                 )),
                 Property::Other { kind, data } => Some(AvifItemProperty::new(
@@ -2202,7 +2215,7 @@ fn parse_sample_description(
                     return Err(parse_failure!());
                 }
             }
-            Property::AuxC { is_alpha } => {
+            Property::AuxC { is_alpha, .. } => {
                 if aux_is_alpha.replace(is_alpha).is_some() {
                     return Err(parse_failure!());
                 }
@@ -4070,8 +4083,16 @@ fn coverage_structural_states() {
     assert_eq!(pixel_payload_bytes(&mixed_payload), 12);
     let duplicate_alpha_meta = Meta {
         properties: vec![
-            Property::AuxC { is_alpha: true },
-            Property::AuxC { is_alpha: true },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
@@ -4120,8 +4141,16 @@ fn coverage_structural_states() {
         ],
         properties: vec![
             Property::Av1C(config_span),
-            Property::AuxC { is_alpha: true },
-            Property::AuxC { is_alpha: true },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {
@@ -4182,8 +4211,16 @@ fn coverage_structural_states() {
         ],
         properties: vec![
             Property::Av1C(config_span),
-            Property::AuxC { is_alpha: true },
-            Property::AuxC { is_alpha: true },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
+            Property::AuxC {
+                kind: *b"auxC",
+                is_alpha: true,
+                data: ByteSpan { start: 0, end: 0 },
+            },
         ],
         associations: vec![
             Association {

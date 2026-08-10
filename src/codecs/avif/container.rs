@@ -197,7 +197,9 @@ enum Property {
         data: Vec<u8>,
     },
     AuxC {
+        kind: FourCc,
         is_alpha: bool,
+        data: Vec<u8>,
     },
     Color(AvifColorProperties),
     IccProfile(RawIccProfile),
@@ -678,7 +680,9 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
             let _ = parse_full_box_version_zero(&mut reader)?;
             let urn = reader.c_string()?;
             Ok(Property::AuxC {
+                kind: property.kind,
                 is_alpha: is_alpha_urn(urn),
+                data: property.payload.to_vec(),
             })
         }
         _ => Ok(Property::Other {
@@ -1209,7 +1213,7 @@ impl Meta {
                 !(reference.kind == *b"auxl"
                     && self
                         .associated(reference.from_id)
-                        .any(|property| matches!(property, Property::AuxC { is_alpha: true })))
+                        .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. })))
             })
             .map(|reference| {
                 AvifItemRelationship::new(reference.kind, reference.from_id, reference.to_id)
@@ -1295,6 +1299,15 @@ impl Meta {
                         Property::CleanAperture { data, .. } => Some(AvifItemProperty::new(
                             association.item_id,
                             *b"clap",
+                            data.clone(),
+                        )),
+                        Property::AuxC {
+                            is_alpha: false,
+                            kind,
+                            data,
+                        } => Some(AvifItemProperty::new(
+                            association.item_id,
+                            *kind,
                             data.clone(),
                         )),
                         Property::Other { kind, data } => Some(AvifItemProperty::new(
@@ -1416,7 +1429,7 @@ impl Meta {
                     && reference.to_id == item_id
                     && self
                         .associated(reference.from_id)
-                        .any(|property| matches!(property, Property::AuxC { is_alpha: true }))
+                        .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. }))
             })
             .map(|reference| reference.from_id);
         let result = matches.next();
@@ -1478,7 +1491,7 @@ impl Meta {
                 && color_items.contains(&reference.to_id)
                 && self
                     .associated(reference.from_id)
-                    .any(|property| matches!(property, Property::AuxC { is_alpha: true }))
+                    .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. }))
         })
     }
 }
@@ -1702,7 +1715,7 @@ fn parse_track_properties(
                 }
                 track.depth = Some(depth);
             }
-            Property::AuxC { is_alpha } => {
+            Property::AuxC { is_alpha, .. } => {
                 if track
                     .aux_is_alpha
                     .is_some_and(|existing| existing != is_alpha)
@@ -2934,8 +2947,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
             width: 2,
             height: 3,
         },
-        Property::AuxC { is_alpha: false },
-        Property::AuxC { is_alpha: true },
+        Property::AuxC {
+            kind: *b"auxC",
+            is_alpha: false,
+            data: Vec::new(),
+        },
+        Property::AuxC {
+            kind: *b"auxC",
+            is_alpha: true,
+            data: Vec::new(),
+        },
     ]);
     details_meta.associations.extend([
         Association {
