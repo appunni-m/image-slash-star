@@ -14,7 +14,45 @@ Reviewed: 2026-08-11
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
 
-### Latest RN-003 implementation candidate
+### Latest API-038 implementation candidate
+
+The caller-controlled decode-format restriction slice is implemented on `main`
+at `e82034db8a8a95dc0c660e70bc4571d820ff3b69`:
+
+- A caller can install an optional `DecodeFormatSet` on `DecodeLimits` or
+  `DecodePolicy`. Absent means unrestricted for compatibility; an explicit
+  empty set rejects every detected format. Signature detection remains
+  independent, and explicit-format dispatch still validates the input before
+  the policy is applied.
+- Policy-aware inspection, explicit-format, complete-slice, prefix, token,
+  and owned/borrowed source paths reject an excluded format with typed
+  `ImageError::Unsupported { reason: PolicyDenied }` and the correct public
+  operation stage. The owned lazy cache cannot bypass a later allow-list.
+- The Rust-only `decode_allowed_formats_are_a_rust_policy_contract` contract
+  covers all eight current format bits, allowed and rejected PNG/JPEG paths,
+  explicit hints, partial-input and token entry points, and source cache reuse.
+  Pillow cannot observe this caller policy or typed result, so no parity row is
+  added.
+- Exact local LLVM evidence at this source revision is 100% for lines
+  (65,100/65,100), branches (8,478/8,478), functions (3,323/3,323), and
+  regions (97,222/97,222). Native `feature_gate_tests` passed 48/48, the
+  focused `wasm32-wasip1` runtime contract passed 1/1, and the native parity
+  matrix passed 28/28 locally.
+- Managed Coverage MCP and managed parity could not be rerun after this source
+  change: even `project_context` returned `Transport closed` on repeated
+  attempts. The older managed parity and coverage identifiers above remain
+  the only accepted revision-bound evidence; this candidate is therefore
+  locally verified but **not accepted as the current managed proof** and the
+  claim ledger remains unchanged.
+
+This slice explains why the feature exists: a server or WASM page may accept
+only PNG files, for example, and should reject a JPEG before decoding it. It is
+not a missing Pillow codec; it is a missing caller safety rule around the
+codec. The broader API-038 inventory row remains open until this candidate's
+managed evidence is recovered and the adjacent detection-policy boundaries
+are reviewed.
+
+### Earlier RN-003 implementation candidate
 
 The next resource-control slice is implemented on `main` at
 `79ce9a98b32a39bbfab30023f4becd47ec3561d4`:
@@ -120,7 +158,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment | Integrated in the current tree | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 47/47. This is Rust-only and has no Pillow row. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate | Integrated locally; managed evidence pending for the latest candidate | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 48/48. API-038 is Rust-only and has no Pillow row; its local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -188,10 +226,10 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 47/47 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 48/48 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
-The current native all-feature feature-gated contract has 47 passing assertions.
+The current native all-feature feature-gated contract has 48 passing assertions.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
 evidence, not a reason to relabel source-provenance work as Pillow parity.
@@ -346,8 +384,43 @@ recovered and its 100% snapshot durably ingested at this revision. Until then,
 this slice is implemented and locally verified but not yet accepted as the
 roadmap's revision-bound coverage proof.
 
+#### Current candidate slice — API-038 allowed decode formats
+
+**Caller problem:** An application that accepts untrusted bytes may be willing
+to decode PNG but not JPEG, AVIF, or another container. The signature detector
+could identify formats, and the explicit-format API could validate a hint, but
+`DecodePolicy` had no way to express the caller's allow-list across complete,
+partial, token-aware, and lazy-source flows.
+
+**Pillow answer:** Pillow can decode the image, but it cannot observe this
+crate's caller-selected policy, the rejected format set, or the typed
+`PolicyDenied` result. This is therefore a Rust-only feature-gated contract;
+it must not become a fabricated parity row.
+
+**Implemented behavior:** `DecodeFormatSet` provides const constructors and
+membership operations for all current formats. An absent set preserves the
+unrestricted compatibility behavior; an explicit empty set rejects all
+detected formats. Policy-aware inspection and decode paths enforce the set
+after signature detection, explicit format validation remains separate, and
+owned/borrowed source decode checks the retained format before cache reuse.
+
+**Source/evidence:** `src/decode_policy.rs`, `src/lib.rs`, `src/source.rs`,
+`src/types/error.rs`, and `tests/feature_gate_tests.rs`; implementation commit
+`e82034db8a8a95dc0c660e70bc4571d820ff3b69`. The exact local LLVM report at
+this revision is 65,100/65,100 lines, 8,478/8,478 branches, 3,323/3,323
+functions, and 97,222/97,222 regions. Native feature tests pass 48/48, the
+focused WASI contract passes 1/1, and the local parity matrix passes 28/28.
+README, architecture, testing, AVIF portability notes, and rustdoc describe
+the public policy and its target-independent relationship to AVIF capability.
+
+**Remaining dependency:** Coverage MCP transport was closed for repeated
+`project_context` requests, so no durable same-revision managed snapshot or
+managed parity rerun is available. The existing accepted claim-ledger tuple
+must remain unchanged; this candidate cannot be promoted until managed
+evidence is recovered.
+
 **Source IDs:** `API-014`, `API-017`, `API-018`, `API-023`, `API-030`,
-`API-036`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `QA-016`,
+`API-036`, `API-038`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `QA-016`,
 `QA-020`, `QA-026`, `QA-030`, plus the remaining resource rows in the codec
 groups below.
 
