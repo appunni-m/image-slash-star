@@ -20124,6 +20124,65 @@ fn owned_source_verification_is_thread_safe_for_shared_success_and_failure()
     Ok(())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn borrowed_view_verification_is_thread_safe_for_shared_clones()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::EncodedImageView;
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cases: &[(&str, bool, &str, bool)] = &[
+        (
+            "valid PNG",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/1x1.png",
+            true,
+        ),
+        (
+            "bad-CRC PNG",
+            cfg!(feature = "png"),
+            "tests/fixtures/input/images/png/bad_idat_crc.png",
+            false,
+        ),
+    ];
+
+    for &(name, enabled, path, expect_success) in cases {
+        if !enabled {
+            continue;
+        }
+        let data = fs::read(root.join(path))?;
+        let view = EncodedImageView::new(&data)?;
+        let results = std::thread::scope(|scope| {
+            (0..8)
+                .map(|_| {
+                    let view = view.clone();
+                    scope.spawn(move || view.verify())
+                })
+                .map(|worker| match worker.join() {
+                    Ok(result) => result,
+                    Err(_) => panic!("verification worker must not panic"),
+                })
+                .collect::<Vec<_>>()
+        });
+
+        assert_eq!(results.len(), 8, "{name} worker count");
+        for result in &results {
+            assert_eq!(result, &results[0], "{name} concurrent verification result");
+        }
+        assert_eq!(view.verify(), results[0].clone(), "{name} cached result");
+        if expect_success {
+            assert!(results[0].is_ok(), "{name} must verify");
+        } else {
+            let error = match results[0].as_ref() {
+                Ok(()) => return Err(format!("{name} must fail verification").into()),
+                Err(error) => error,
+            };
+            assert_eq!(error.stage(), Some(ImageErrorStage::Verification), "{name}");
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 -> Result<(), Box<dyn std::error::Error>> {
