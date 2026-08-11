@@ -52,16 +52,17 @@ codec. The broader API-038 inventory row remains open until this candidate's
 managed evidence is recovered and the adjacent detection-policy boundaries
 are reviewed.
 
-### Latest API-045 implementation candidate — owned verification-result cache
+### Latest API-045 implementation candidate — owned and borrowed verification-result cache
 
 The next narrow runtime slice is implemented on `main` at
-`3506a70dc8b1681e55f6dfa5fc96d021f22a6ea3`:
+`924a5113014937bd0dca9ce051d8cbcb54198afb`:
 
 - **Caller problem:** A server, UI, or WASM page may inspect the same immutable
-  upload more than once—for example, verify it, pass a clone to another
-  component, and verify again before decoding. Re-running the same
-  format-specific verification parse wastes work. Pillow cannot express this
-  owned-source/clone lifecycle, so this is not a missing Pillow codec feature.
+  upload more than once—for example, verify it, pass an owned or borrowed view
+  clone to another component, and verify again before decoding. Re-running the
+  same format-specific verification parse wastes work. Pillow cannot express
+  this Rust source-lifecycle contract, so this is not a missing Pillow codec
+  feature.
 - **Implemented behavior:** `EncodedImage` now has a separate
   `OnceLock<ImageResult<()>>`. The first supported `verify()` stores either the
   successful result or the deterministic `ImageError`; later owned calls and
@@ -70,24 +71,27 @@ The next narrow runtime slice is implemented on `main` at
   a weaker cached result, and still/sequence decode caches are unchanged.
   `EncodedImageView` caches only its immutable verification result per view;
   its pixel decodes remain uncached because it borrows caller bytes and is
-  meant for short-lived use. A cloned view starts a separate verification
-  cache. A bounded native integration contract also calls the same owned source
-  concurrently from eight clones for both a valid PNG and a deterministic
-  bad-CRC verification failure; WASI stays sequential because its test runtime
-  has no portable thread support.
+  meant for short-lived use. Cloned views share that verification result, so a
+  caller can fan out a borrowed view without repeating the same verification
+  parse. Bounded native integration contracts call both the owned source and
+  borrowed-view clones concurrently from eight workers for a valid PNG and a
+  deterministic bad-CRC verification failure; WASI stays sequential because
+  its test runtime has no portable thread support.
 - **What this does not do:** It does not retain a parsed header/index,
-  decompressor, temporary workspace, allocator state, or borrowed-view result.
+  decompressor, temporary workspace, or allocator state. It retains the
+  borrowed-view verification result but no borrowed decoded pixels.
   It closes only repeated verification-result work; parsed codec-state reuse,
   eviction, allocation counts, and retained-cache-byte measurements remain
   open under API-045/RN-003.
-- **Local evidence:** Native `feature_gate_tests` passed 49/49, the native
+- **Local evidence:** Native `feature_gate_tests` passed 50/50, the native
   parity matrix passed 28/28, the focused `wasm32-wasip1` runtime contract
   passed 1/1, and the complete WASI feature-test binary compiled. Exact local
   LLVM coverage is 65,117/65,117 lines, 8,478/8,478 branches, 3,326/3,326
-  functions, and 97,236/97,236 regions. Formatting, locked all-feature check,
+  functions, and 97,238/97,238 regions. Formatting, locked all-feature check,
   strict Clippy, rustdoc warnings, and doctests also pass.
-- **Current runtime observation:** At this clean revision, a warm repeat of the
-  fixed schema-`@3` benchmark passed all 1,421 active Pillow-visible rows in
+- **Current runtime observation:** A warm repeat at the preceding clean
+  benchmark revision `551b6f59ca5a1aa4e26613a924a35a0af56acbd9`, before the
+  borrowed-view clone-sharing change, passed all 1,421 active Pillow-visible rows in
   `0.930113 s` wall time (`2.785177 s` user, `0.176559 s` system,
   254,164,992-byte peak RSS). The Rust-only feature-gate suite passed in
   `1.489344 s` wall time (`2.187826 s` user, `0.094414 s` system,
@@ -290,7 +294,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate | Integrated locally; managed evidence pending for the latest candidate | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 49/49. API-038 is Rust-only and has no Pillow row; its local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate | Integrated locally; managed evidence pending for the latest candidate | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 50/50. API-038 is Rust-only and has no Pillow row; its local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -358,7 +362,7 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 49/49 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 50/50 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract has 49 passing assertions.
