@@ -125,7 +125,7 @@ keeps predictor-transform green-channel values in a dedicated
 for codec state.
 
 - The inspector and map verifier change is pinned to
-  `a556a7f88f77ddbbcc325ebe7495491ffc91bb10`; the map records inspector SHA-256
+  `aeab9d6c3b18c6159a16da9d50c0fc900469ed4a`; the map records inspector SHA-256
   `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 - The property map now promotes 20 exact structural witnesses: 19 named
   decode streams (`vertical`, `horizontal`, `bilinear`, `diag_reverse`,
@@ -143,6 +143,11 @@ for codec state.
   The color-transform property separately covers every observed block size
   (2, 3, and 9 bits). This proves the combinations that exist in the fixtures,
   not every legal VP8L sequence.
+- A new predictor-absence property now proves four named candidate streams
+  independently contain no predictor transform: `mode0`, `quadrants`, and
+  `sparse` have no transforms, while `steps` uses color indexing only. This is
+  negative structural evidence, not a claim that every legal stream omits or
+  uses a predictor.
 - The meta-Huffman and entropy-image witnesses now also cover the observed
   3×3 entropy image produced with six prefix-width bits in `mode0_hybrid`; the
   other observed dimensions remain 2×1 and 24×24. Unobserved dimensions and
@@ -150,15 +155,15 @@ for codec state.
 - Distance witnesses now include the clamp, coordinate, full-width, and
   direct-distance branches (`10→1`, `5→16`, `24→4`, `23→256`, and `152→32`).
   Other mappings and malformed distance streams remain open.
-- `python3 scripts/verify_webp_vp8l_property_map.py` passes with 15 witnessed
-  properties, 94 named witnesses, 77 distinct active WebP rows, 79 structural
+- `python3 scripts/verify_webp_vp8l_property_map.py` passes with 16 witnessed
+  properties, 98 named witnesses, 79 distinct active WebP rows, 83 structural
   witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
   rows parsed. The property map and claim ledger hashes are updated together.
-- The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no
-  predictor transform in the inspected stream; `steps` uses color indexing.
-  Those rows remain candidates, as do predictor combinations not present in
-  the current fixtures. WEP-022 therefore remains open; this slice proves only
-  the named predictor maps and does not claim complete VP8L transform coverage.
+- The four named no-predictor rows are now independently witnessed. Other
+  no-predictor streams, predictor combinations not present in the current
+  fixtures, and complete VP8L transform coverage remain open. WEP-022
+  therefore remains open; this slice adds only the named negative evidence and
+  does not claim complete VP8L transform coverage.
 - No Rust product code or compiled coverage surface changed. The accepted
   managed evidence tuple remains the baseline above because Coverage MCP still
   closes during `project_context`; this evidence-only slice must not be used to
