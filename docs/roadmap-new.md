@@ -52,6 +52,57 @@ codec. The broader API-038 inventory row remains open until this candidate's
 managed evidence is recovered and the adjacent detection-policy boundaries
 are reviewed.
 
+### Latest API-045 implementation candidate — owned verification-result cache
+
+The next narrow runtime slice is implemented on `main` at
+`7e2e60981e2ce9b5912159997e92221df3834f14`:
+
+- **Caller problem:** A server, UI, or WASM page may inspect the same immutable
+  upload more than once—for example, verify it, pass a clone to another
+  component, and verify again before decoding. Re-running the same
+  format-specific verification parse wastes work. Pillow cannot express this
+  owned-source/clone lifecycle, so this is not a missing Pillow codec feature.
+- **Implemented behavior:** `EncodedImage` now has a separate
+  `OnceLock<ImageResult<()>>`. The first supported `verify()` stores either the
+  successful result or the deterministic `ImageError`; later owned calls and
+  clones reuse that result. `verify_with_scope` checks that the requested scope
+  is provided before reuse, stronger unsupported requests are never hidden by
+  a weaker cached result, and still/sequence decode caches are unchanged.
+  `EncodedImageView` remains intentionally uncached because it borrows caller
+  bytes and is meant for short-lived use.
+- **What this does not do:** It does not retain a parsed header/index,
+  decompressor, temporary workspace, allocator state, or borrowed-view result.
+  It closes only repeated verification-result work; parsed codec-state reuse,
+  eviction, allocation counts, and retained-cache-byte measurements remain
+  open under API-045/RN-003.
+- **Local evidence:** Native `feature_gate_tests` passed 48/48, the native
+  parity matrix passed 28/28, the focused `wasm32-wasip1` runtime contract
+  passed 1/1, and the complete WASI feature-test binary compiled. Exact local
+  LLVM coverage is 65,105/65,105 lines, 8,478/8,478 branches, 3,324/3,324
+  functions, and 97,226/97,226 regions. Formatting, locked all-feature check,
+  strict Clippy, rustdoc warnings, and doctests also pass.
+- **Current runtime observation:** At this clean revision, the fixed schema-`@3`
+  benchmark passed all 1,421 active Pillow-visible rows in `0.978447 s` wall
+  time (`2.824105 s` user, `0.199561 s` system, 249,544,704-byte peak RSS).
+  The Rust-only feature-gate suite passed in `1.534172 s` wall time
+  (`2.228947 s` user, `0.111117 s` system, 161,267,712-byte peak RSS). These
+  are host/cache/toolchain observations, not proof of a universal speedup; the
+  standard workload does not isolate repeated verification and allocation
+  counts, retained cache bytes, and WASM runtime cost remain unmeasured.
+- **Evidence boundary:** The managed Coverage MCP transport again closed at
+  `project_context`, so no fresh managed snapshot or parity rerun can replace
+  the accepted baseline tuple. The candidate is locally verified but is not
+  accepted as the current managed proof, and the claim ledger remains
+  unchanged. No parity row, fixture, diagnostic origin, or coverage-only test
+  was added.
+
+This slice explains why the feature exists in five-year-old terms: if the same
+picture box is checked twice, the machine should remember the answer instead
+of opening the box twice. We remember only “yes” or “no,” not the machine's
+private tools, so the optimization is safe and small. Pillow does not need to
+implement it because Pillow is the comparison oracle for picture results; this
+is a Rust ownership/performance rule around that oracle's visible behavior.
+
 ### Current WEP-022 evidence slice — VP8L predictor-mode maps
 
 This is an evidence-only slice of the open WebP structural-property task. A

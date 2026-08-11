@@ -1782,7 +1782,10 @@ inspects the header. It does not decode pixels. The owned and borrowed
 source-bound still and sequence methods reuse that validated format for
 dispatch, avoiding a second signature-detection scan; codec parsing and
 verification remain independent until a codec-specific parsed representation
-can be proved safe to retain.
+can be proved safe to retain. An owned source separately retains only the
+default verification result, so repeated verification can reuse an immutable
+success or deterministic error without retaining codec parser state; borrowed
+views deliberately remain uncached.
 
 The first call to `decode()` initializes a shared still `OnceLock`, and the
 first call to `decode_sequence()` initializes an independent sequence
@@ -1796,16 +1799,20 @@ first call to `decode_sequence()` initializes an independent sequence
   `NotAttempted`, `Succeeded`, and `Failed`, while the `is_*_decoded()` helpers
   remain success-only compatibility predicates; and
 - `verify()` runs independently and does not populate or modify either decode
-  cache.
+  cache; an owned source shares its verification result across clones, while a
+  borrowed view reparses on each call.
 
 The retained source payload is additive: an owned source keeps one shared copy
 of the encoded bytes, plus the inspected metadata and whichever decoded cache
 results have succeeded. A still cache retains its decoded pixel vector and
 palette/metadata payload; a sequence cache retains every retained frame and
-its presentation/metadata payload. Calling both operations therefore retains
-both decoded payload sets, while cloning an `EncodedImage` adds no encoded or
+its presentation/metadata payload. The owned verification cache retains only
+the `Ok(())` or `ImageError` result, not a parsed header/index or decompressor
+workspace. Calling both decode operations therefore retains both decoded
+payload sets, while cloning an `EncodedImage` adds no encoded, verification, or
 decoded buffer copy. A borrowed `EncodedImageView` owns none of the input
-bytes and has no cache, so each returned decode owns its result for that call.
+bytes and has no cache, so each returned decode or verification reparses for
+that call.
 These are retained-payload bounds, not a total allocator peak: codec parser,
 decompressor, and temporary materialization buffers may add transient memory,
 and no recoverable-OOM or allocator-count contract is promised.
@@ -1834,9 +1841,12 @@ also retains independently proved JPEG and WebP structural verifiers.
 the format provides and fails with a format-qualified `Unsupported` for a
 stronger request, never reporting weaker evidence as sufficient. No codec
 currently provides `FullPixels`, so requesting it always fails. The default
-`verify()` remains the format's Pillow-compatible scope; verification still
-reparses independently without a caller work budget, which remains backlog
-under API-023/030.
+`verify()` remains the format's Pillow-compatible scope. On an owned source,
+scope validation happens before the cached default result is reused, so an
+unsupported stronger request is never hidden by a weaker cached result. The
+first supported verification still performs the codec-specific parse, but
+later owned calls reuse its immutable result without a caller work budget;
+parsed header/index retention remains backlog under API-023/030 and API-045.
 
 The crate performs no filesystem or network I/O and emits no logs. Applications
 decide where bytes come from and how errors are recorded.
@@ -1872,7 +1882,7 @@ See [AVIF support](avif.md) for the native dependency and portable boundary.
 | Path | Responsibility |
 | --- | --- |
 | `src/lib.rs` | crate contract, signature detection, canonical root API |
-| `src/source.rs` | immutable encoded snapshots and lazy decode cache |
+| `src/source.rs` | immutable encoded snapshots and lazy verification/decode caches |
 | `src/encode_options.rs` | typed codec option records and strict legacy-pair migration |
 | `src/types/` | formats, modes, palettes, images, frames, sequences, errors, validation |
 | `src/codecs/mod.rs` | private feature dispatch and availability checks |
