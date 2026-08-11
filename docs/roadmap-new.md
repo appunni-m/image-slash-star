@@ -89,17 +89,16 @@ The next narrow runtime slice is implemented on `main` at
   LLVM coverage is 65,117/65,117 lines, 8,478/8,478 branches, 3,326/3,326
   functions, and 97,238/97,238 regions. Formatting, locked all-feature check,
   strict Clippy, rustdoc warnings, and doctests also pass.
-- **Current runtime observation:** A warm repeat at the preceding clean
-  benchmark revision `551b6f59ca5a1aa4e26613a924a35a0af56acbd9`, before the
-  borrowed-view clone-sharing change, passed all 1,421 active Pillow-visible rows in
-  `0.930113 s` wall time (`2.785177 s` user, `0.176559 s` system,
-  254,164,992-byte peak RSS). The Rust-only feature-gate suite passed in
-  `1.489344 s` wall time (`2.187826 s` user, `0.094414 s` system,
-  165,642,240-byte peak RSS). A preceding cold run was materially slower from
-  build/cache state, confirming that these are host/cache/toolchain
-  observations, not proof of a universal speedup; the standard workload does
-  not isolate repeated verification and allocation counts, retained cache
-  bytes, and WASM runtime cost remain unmeasured.
+- **Current runtime observation:** A warm repeat at clean revision
+  `a93234891f39a26d7a01336b8ceeba46d71fa15a` passed all 1,421 active
+  Pillow-visible rows in `0.974287 s` wall time (`2.795886 s` user,
+  `0.187440 s` system, 260,587,520-byte peak RSS). The Rust-only feature-gate
+  suite passed in `1.519496 s` wall time (`2.217217 s` user, `0.105523 s`
+  system, 158,547,968-byte peak RSS). An immediately preceding run was
+  materially slower from build/cache state, confirming that these are
+  host/cache/toolchain observations, not proof of a universal speedup; the
+  standard workload does not isolate repeated verification and allocation
+  counts, retained cache bytes, and WASM runtime cost remain unmeasured.
 - **Evidence boundary:** The managed Coverage MCP transport again closed at
   `project_context`, so no fresh managed snapshot or parity rerun can replace
   the accepted baseline tuple. The candidate is locally verified but is not
