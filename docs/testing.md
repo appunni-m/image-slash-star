@@ -11027,14 +11027,14 @@ being user-facing behavior.
 
 `tests/fixtures/webp_vp8l_property_map.json` is the compact property map for
 the active lossless WebP corpus. It is pinned to implementation revision
-`487348d01389eb8d100b8a668c9921d97634c022`, manifest SHA-256
-`bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3`, and
+`aeab9d6c3b18c6159a16da9d50c0fc900469ed4a`, manifest SHA-256
+`d3771d65557429ef4fcca730ddb11a30ffa4513dbf882aebd694107a0e601f8e`, and
 generated-matrix SHA-256
-`b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510`.
+`81bcff2c751c791958abecb7a249e3f7c50e968b4069aa548625401ca60e4326`.
 The map also pins the independent inspector SHA-256
-`833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
-`python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 14
-properties, 68 named witnesses, 79 distinct active WebP rows, 46 successful
+`8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
+`python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 16
+properties, 98 named witnesses, 79 distinct active WebP rows, 84 successful
 structural witnesses, and 40 malformed parser witnesses.
 
 The frame-header, color-indexing size-band, subtract-green, color-transform,
@@ -11055,10 +11055,12 @@ parser now sees predictor mode values 0–13, including mode 4 from the existing
 Pillow encode artifact; the predictor-mode property remains the one broad
 `candidate` at the full-category level because its source-pattern and
 transform-combination claims are wider. Its named rows are Pillow-origin
-outer-result fixtures, while the 46 successful structural
+outer-result fixtures, while the 84 successful structural
 witnesses independently establish only
 selected transform, meta-Huffman, color-cache, Huffman-tree, distance, and
-entropy-image facts. The 40 malformed witnesses independently check rejection
+entropy-image facts. The additional distance witness records the repeated
+back-reference mapping from plane code 2 to distance 64 in `lossless_noise`.
+The 40 malformed witnesses independently check rejection
 code, parser phase, and bit offset (including Pillow-tolerated malformed
 streams that the inspector accepts); those fields are specification evidence,
 never Pillow diagnostics. The map adds no synthetic parity row,
