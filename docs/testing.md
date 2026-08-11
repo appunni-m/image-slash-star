@@ -8451,7 +8451,7 @@ passes 52/52 and the native parity matrix passes 28/28. The exact local LLVM
 report passes 65,351/65,351 lines, 8,514/8,514 branches, 3,335/3,335
 functions, and 97,638/97,638 regions. Managed Coverage MCP remains
 unavailable at project-context transport; this is local evidence and adds no
-Pillow parity row. TIFF LZW/PackBits/raw traversal, predictor/sample
+Pillow parity row. TIFF raw payload traversal, predictor/sample
 conversion checkpoints, allocation/peak accounting, progress, sink rollback,
 and cleanup remain separate roadmap work.
 
@@ -8468,9 +8468,25 @@ packet edges. The native feature-gate suite passes 53/53 and the native parity
 matrix passes 28/28. The exact local LLVM report passes 65,402/65,402 lines,
 8,520/8,520 branches, 3,336/3,336 functions, and 97,740/97,740 regions.
 Managed Coverage MCP remains unavailable at project-context transport; this
-is local evidence and adds no Pillow parity row. TIFF LZW/raw traversal,
+is local evidence and adds no Pillow parity row. TIFF raw payload traversal,
 predictor/sample conversion checkpoints, allocation/peak accounting, progress,
 sink rollback, and cleanup remain separate roadmap work.
+
+The current TIFF LZW code/expansion checkpoint slice is implemented at
+`845ef5f4af68afa6d76caec799a238b98b36cc7f`: token-aware TIFF decoding now
+polls before every LZW code read and every 1,024 bytes emitted while expanding
+dictionary phrases, while the no-token decoder remains direct. The Rust-only
+`tiff_decode_work_budget_covers_lzw_codes_and_expansion` contract uses the
+committed 128×128 `lzw.tiff` witness and finds an inclusive boundary of
+44,166: exact success preserves every decoded pixel, while 44,165 returns the
+typed `DecodeWorkUnits` result with `observed = 44,166`. The native
+feature-gate suite passes 54/54 and the native parity matrix passes 28/28. The
+exact local LLVM report passes 65,597/65,597 lines, 8,558/8,558 branches,
+3,339/3,339 functions, and 98,027/98,027 regions. Managed Coverage MCP
+remains unavailable at project-context transport; this is local evidence and
+adds no Pillow parity row. TIFF raw payload traversal, predictor/sample
+conversion checkpoints, allocation/peak accounting, progress, sink rollback,
+and cleanup remain separate roadmap work.
 
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test

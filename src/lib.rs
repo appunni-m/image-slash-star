@@ -685,7 +685,9 @@ pub fn decode_prefix_with_policy(
 /// boundaries, including Adam7 passes. TIFF additionally polls Deflate block
 /// and dynamic-table boundaries, 1,024-byte stored/compressed output
 /// intervals, and 5,552-byte Adler-32 chunks while inflating strip/tile
-/// payloads, and polls before each token-aware PackBits packet. The operation
+/// payloads, polls before each token-aware PackBits packet, and polls before
+/// each token-aware LZW code read and every 1,024 bytes emitted while expanding
+/// a dictionary phrase. The operation
 /// stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
