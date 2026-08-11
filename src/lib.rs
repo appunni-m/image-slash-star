@@ -695,7 +695,9 @@ pub fn decode_prefix_with_policy(
 /// or materializing every 1,024 phrase bytes. Baseline JPEG additionally polls
 /// after each completed 1,024-MCU entropy batch, and progressive JPEG polls
 /// after each completed 1,024-MCU batch within each entropy scan. The operation
-/// stops with
+/// Uncompressed BMP additionally polls before each 1,024-byte raw pixel-payload
+/// chunk and before each converted scanline. The no-token BMP path keeps its
+/// bulk payload read and direct row conversion. The operation stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
 /// [`ImageError::NeedMoreData`] status as [`decode_prefix`].

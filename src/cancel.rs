@@ -18,7 +18,8 @@
 //! coding after each 1,024 MCUs, baseline decode entropy after each completed
 //! 1,024-MCU batch, progressive decode entropy after each completed 1,024-MCU
 //! batch within each scan, and entropy-output intervals after each 1,024 emitted
-//! entropy bytes, GIF decode LZW code reads and 1,024-link/byte
+//! entropy bytes, uncompressed BMP pixel-payload copies after each 1,024 bytes
+//! and scanline-conversion rows, GIF decode LZW code reads and 1,024-link/byte
 //! dictionary-expansion intervals, GIF frame/block and palette-quantization
 //! intervals, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, padded-plane edge replication when

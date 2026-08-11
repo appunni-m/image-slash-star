@@ -8628,6 +8628,25 @@ new Pillow parity row; managed Coverage MCP is still unavailable at
 `project_context`, and other codec work, allocation/peak accounting, progress,
 sink rollback, and cleanup remain open.
 
+The current BMP raw payload and scanline checkpoint slice is implemented at
+`9c8faa7`. Uncompressed BMP decode keeps its original direct bulk read and
+conversion loops when no caller token is present; the token-aware path polls
+before each 1,024-byte raw-payload chunk and before each conversion row. The
+Rust-only `bmp_decode_work_budget_covers_raw_scanline_checkpoints` contract
+uses public API-generated equal-height 64×64 and 128×64 RGB controls with
+inclusive work boundaries 78 and 90, exactly twelve additional payload chunks
+for the wider image. It also proves exact-boundary pixel identity, one-unit-
+below typed rejection, complete-slice `bmp_pixels` error context for a
+truncated first chunk, and row-boundary rejection across committed 1-bit,
+4-bit, 8-bit, 16-bit, 24-bit, 32-bit, and non-canonical 1-bit BMP fixtures.
+Native `feature_gate_tests` passes 62/62, the native parity matrix passes
+28/28, and exact local LLVM passes 66,531/66,531 lines, 8,654/8,654 branches,
+3,354/3,354 functions, and 99,398/99,398 regions. This is Rust-only
+work-budget evidence with no new Pillow parity row; managed Coverage MCP still
+closes at `project_context`, and compressed/RLE BMP interiors, other codec
+checkpoints, allocation/peak accounting, progress, sink rollback, and cleanup
+remain open.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now
