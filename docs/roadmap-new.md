@@ -98,18 +98,17 @@ The next narrow runtime slice is implemented on `main` at
   branches, 3,328/3,328 functions, and 97,327/97,327 regions. Formatting,
   locked all-feature check, strict Clippy, rustdoc warnings, doctests, and the
   repository claim/provenance/package/license/WebP verifiers also pass.
-- **Current runtime observation:** A warm repeat at clean revision
-  `a93234891f39a26d7a01336b8ceeba46d71fa15a` passed all 1,421 active
-  Pillow-visible rows in `0.974287 s` wall time (`2.795886 s` user,
-  `0.187440 s` system, 260,587,520-byte peak RSS). The Rust-only feature-gate
-  suite passed in `1.519496 s` wall time (`2.217217 s` user, `0.105523 s`
-  system, 158,547,968-byte peak RSS). An immediately preceding run was
-  materially slower from build/cache state, confirming that these are
-  host/cache/toolchain observations, not proof of a universal speedup; the
-  standard workload does not isolate repeated verification and allocation
-  counts, retained cache bytes, and WASM runtime cost remain unmeasured. This
-  source-bound policy-preflight candidate was not isolated by that workload,
-  so it makes no additional speedup claim.
+- **Current runtime observation:** The fixed benchmark protocol on clean
+  revision `b10129b919ac4c6bf8f242acacc26ecb8c947e42` passed all 1,421 active
+  Pillow-visible rows in `0.975437 s` wall time (`2.783871 s` user,
+  `0.189477 s` system, 258,293,760-byte peak RSS). The Rust-only feature-gate
+  suite passed in `1.497900 s` wall time (`2.196903 s` user, `0.090615 s`
+  system, 166,625,280-byte peak RSS). The prior warm reference at clean
+  revision `a93234891f39a26d7a01336b8ceeba46d71fa15a` measured `0.974287 s`
+  for parity and `1.519496 s` for the feature-gate suite; the small changes
+  are within host/cache/toolchain variation, not proof of a universal
+  speedup. The standard workload does not isolate repeated verification,
+  allocation counts, retained cache bytes, or WASM runtime cost.
 - **Evidence boundary:** The managed Coverage MCP transport again closed at
   `project_context`, so no fresh managed snapshot or parity rerun can replace
   the accepted baseline tuple. The candidate is locally verified but is not
