@@ -8537,6 +8537,22 @@ at project-context transport; this is local evidence and adds no Pillow parity
 row. Transient allocation/peak accounting, progress, short-write semantics,
 sink rollback, and cleanup remain separate roadmap work.
 
+The current TIFF raw-strip allocation-reuse slice is implemented at
+`122aae07cbe81ba74aa40343261e461012ca1195`: uncompressed strips now append
+directly into the pre-sized final raster instead of allocating a temporary
+decoded strip and copying it into the raster a second time. Token-aware raw
+strips retain the same 1,024-byte checkpoint cadence; compressed, predictor,
+and tiled paths retain scratch buffers where their transformations require
+them. The existing Rust-only raw-payload contract preserves byte-identical
+pixels and its inclusive boundary of 52 (`observed = 52` at maximum 51), while
+the native feature-gate suite passes 57/57 and the native parity matrix passes
+28/28. The exact local LLVM report passes 66,318/66,318 lines, 8,602/8,602
+branches, 3,348/3,348 functions, and 99,059/99,059 regions. Pillow exposes
+the resulting bytes and errors, not transient allocation ownership or peak
+RSS, so this is Rust runtime evidence with no new parity row. Broader
+allocation/peak accounting, progress, short-write semantics, sink rollback,
+and cleanup remain separate roadmap work.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now
