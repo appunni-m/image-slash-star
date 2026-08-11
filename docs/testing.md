@@ -8438,6 +8438,23 @@ adds no parity row. The exact local LLVM report for the final source passes
 97,627/97,627 regions. Managed Coverage MCP remains unavailable at
 project-context transport.
 
+The current TIFF Deflate-inflation checkpoint slice is implemented at
+`a8e4d3b61b6f8a79a1bad8196fd9dec7486b1af8`: TIFF strip/tile dispatch now
+passes its existing caller token into the shared token-aware zlib-prefix
+inflater for both Deflate compression tags;
+the no-token path remains direct. The Rust-only
+`tiff_decode_work_budget_covers_deflate_inflation` contract uses the committed
+128×128 `deflate.tiff` witness and finds an inclusive boundary of 71: exact
+success preserves every decoded pixel, while 70 returns the typed
+`DecodeWorkUnits` result with `observed = 71`. The native feature-gate suite
+passes 52/52 and the native parity matrix passes 28/28. The exact local LLVM
+report passes 65,351/65,351 lines, 8,514/8,514 branches, 3,335/3,335
+functions, and 97,638/97,638 regions. Managed Coverage MCP remains
+unavailable at project-context transport; this is local evidence and adds no
+Pillow parity row. TIFF LZW/PackBits/raw traversal, predictor/sample
+conversion checkpoints, allocation/peak accounting, progress, sink rollback,
+and cleanup remain separate roadmap work.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now

@@ -682,7 +682,10 @@ pub fn decode_prefix_with_policy(
 /// checkpoints. PNG additionally polls at Deflate block and dynamic-table
 /// boundaries, every 1,024 bytes emitted by stored/fixed/dynamic inflation,
 /// 5,552-byte Adler-32 chunks, and scanline reconstruction/sample-unpack row
-/// boundaries, including Adam7 passes. The operation stops with
+/// boundaries, including Adam7 passes. TIFF additionally polls Deflate block
+/// and dynamic-table boundaries, 1,024-byte stored/compressed output
+/// intervals, and 5,552-byte Adler-32 chunks while inflating strip/tile
+/// payloads. The operation stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
 /// [`ImageError::NeedMoreData`] status as [`decode_prefix`].
