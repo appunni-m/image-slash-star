@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 57/57, including the PNG, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, and raw-payload work-budget boundaries. API-038 and the decoder checkpoints are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 58/58, including the PNG, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -377,12 +377,12 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 57/57 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 58/58 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
 PNG zlib-inflation/scanline and TIFF Deflate/PackBits/LZW/predictor/sample-
-conversion/raw-payload boundary tests described
+conversion/raw-payload/raw-tile boundary tests described
 in the RN-003 candidates below.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
@@ -535,6 +535,22 @@ file was delivered.
 progress semantics, remaining work-budget checkpoints, short-write behavior,
 rollback, cleanup, and error precedence. Keep recoverable-OOM promises out of
 scope unless the public contract can actually support them.
+
+#### RN-003 status at the current roadmap review
+
+This table is the short, current view of RN-003. The candidate records below
+retain the detailed history and exact boundaries; this table prevents a passed
+coverage run from being mistaken for completion of every resource-control
+category.
+
+| Category | Status now | Evidence already in the tree | Exact remaining work |
+| --- | --- | --- | --- |
+| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 58/58, including PNG and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,361/66,361 lines, 8,608/8,608 branches, 3,349/3,349 functions, and 99,138/99,138 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
+| Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
+| Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
+| Rollback | Current checkpointed contract / partial | `OutputSink::checkpoint`/`rollback` restore opted-in sinks on write, cancellation, flush, and sequence failures; rollback failure is typed `OutputWrite` and feature-tested | Extend rollback only where a caller can provide a real reversible sink position; append-only sinks intentionally retain their documented prefix. |
+| Cleanup and error precedence | Current failure normalization / audit open | `finish_sink` and `rollback_sink_on_error` cover flush, cancellation, and rollback-failure precedence in the Rust-only sink contract | Audit every new progress, allocation, and short-write path for deterministic cleanup and error precedence; add a regression only when a real branch is found. |
 
 #### Completed candidate slice — inclusive decode work budgets
 
@@ -872,11 +888,13 @@ but it does not expose this crate's caller token, checkpoint counter, or typed
 `DecodeWorkUnits` result. This is a Rust-only resource-control contract and
 must not become a fabricated parity row.
 
-**Implemented behavior:** Commit
-`775c09a1201223b53f49c3d2176b17ce775f4f83` selects a token-aware raw-payload
-copy for TIFF `COMPRESSION_NONE` when a caller token is present. It polls
-before each 1,024-byte copy chunk; the missing-token path keeps the direct
-`to_vec()` fast path. Raw decoded bytes and pixels remain unchanged. This
+**Implemented behavior at that revision:** Commit
+`775c09a1201223b53f49c3d2176b17ce775f4f83` selected a token-aware
+raw-payload copy for TIFF `COMPRESSION_NONE` when a caller token was present.
+It polled before each 1,024-byte copy chunk; the missing-token path kept the
+direct `to_vec()` fast path. Later allocation-reuse candidates below replace
+that temporary copy for raw strips and tiles while retaining the same
+checkpoint contract. Raw decoded bytes and pixels remain unchanged. This
 slice covers payload traversal only; allocation size and peak accounting are
 separate work.
 
@@ -911,13 +929,14 @@ does not expose allocator ownership, transient capacity, or copy counts. This
 is an internal Rust runtime contract with Pillow-visible bytes as its
 regression guard; it must not become a fabricated parity row.
 
-**Implemented behavior:** Commit
-`122aae07cbe81ba74aa40343261e461012ca1195` appends uncompressed TIFF strip
-bytes directly into the pre-sized final raster. The token-aware path reuses
+**Implemented behavior at that strip-only revision:** Commit
+`122aae07cbe81ba74aa40343261e461012ca1195` appended uncompressed TIFF strip
+bytes directly into the pre-sized final raster. The token-aware path reused
 the same 1,024-byte copy checkpoints, while compressed strips, predictor
-reconstruction, and tiled layouts retain their scratch buffers because they
-still need decompression, transformation, or tile placement. No-token raw
-strip decoding keeps a bulk append fast path.
+reconstruction, and tiled layouts retained their scratch buffers because they
+still needed decompression, transformation, or tile placement. No-token raw
+strip decoding kept a bulk append fast path. The current raw-tile candidate
+below removes the analogous scratch copy for uncompressed tiles.
 
 **Source/evidence:** The existing Rust-only
 `tiff_decode_work_budget_covers_raw_payload_copy` contract retains exact
@@ -933,6 +952,48 @@ codec path. Broader allocation/peak accounting, progress callbacks,
 short-write semantics, rollback, and cleanup remain open RN-003 work. Managed
 Coverage MCP still closes at `project_context`, so the accepted claim-ledger
 tuple remains unchanged.
+
+#### Current candidate slice — API-045/RN-003 TIFF raw-tile allocation reuse
+
+**Caller problem:** The raw-payload checkpoint slice still decoded an
+uncompressed tile into a temporary `Vec`, then copied each visible tile row
+into the final image raster. Tiled TIFFs therefore paid for a scratch raster
+even when no decompression or predictor transform was needed.
+
+**Pillow answer:** Pillow can prove the finished tiled pixels and errors, but
+it does not expose allocator ownership, transient capacity, copy counts, or
+the caller's work-budget result. This is a Rust runtime contract with
+Pillow-visible pixels as its regression guard; it must not become a fabricated
+parity row.
+
+**Implemented behavior:** Commit
+`96f5e50e7cdce797e490a9b53d67e92aa05c7dc9` places uncompressed TIFF tile
+rows directly into the pre-sized final raster, including edge tiles whose
+visible width or height is smaller than the stored tile geometry. The
+token-aware path polls before each 1,024-byte chunk across the complete raw
+tile payload, including padding that is not copied to the visible raster. The
+no-token path keeps a direct row copy. Compressed tiles still retain scratch
+buffers because decompression, predictor reconstruction, or tile placement
+requires a separate transformed payload.
+
+**Source/evidence:** The Rust-only
+`tiff_decode_work_budget_covers_raw_tile_copy` contract uses the committed
+128×128 RGB `tests/fixtures/input/images/tiff/tiled.tiff` witness. Its exact
+inclusive boundary is 67: 67 succeeds with byte-identical pixels and 66
+rejects with the typed `DecodeWorkUnits` result (`observed = 67`). Native
+`feature_gate_tests` passes 58/58, the native matrix passes 28/28, and the
+exact local LLVM report passes 66,361/66,361 lines, 8,608/8,608 branches,
+3,349/3,349 functions, and 99,138/99,138 regions. Locked all-feature check,
+strict Clippy, rustdoc warnings, and the `wasm32-wasip1` TIFF feature-test
+binary compile also pass.
+
+**Remaining dependency:** This removes the raw-tile scratch copy but does not
+measure allocator counts, retained capacity, or peak RSS and does not promise
+recoverable OOM behavior. Progress callbacks, deeper codec work checkpoints,
+short-write semantics, rollback, cleanup/error precedence, and managed
+same-revision evidence remain open RN-003 work. The local proof is current;
+the managed Coverage MCP transport still closes at `project_context`, so the
+accepted claim-ledger tuple remains unchanged.
 
 ### RN-004 — Metadata and source facts — LATER
 

@@ -8521,11 +8521,12 @@ row. The later raw-payload checkpoint adds 32 copy checkpoints to this witness
 in the current tree, making its combined boundary 196; allocation/peak
 accounting, progress, sink rollback, and cleanup remain separate roadmap work.
 
-The current TIFF raw-payload copy checkpoint slice is implemented at
+The TIFF raw-payload copy checkpoint slice was implemented at
 `775c09a1201223b53f49c3d2176b17ce775f4f83`: token-aware decoding of an
-uncompressed TIFF strip or tile now copies the raw payload in 1,024-byte
-chunks and polls before each chunk, while the no-token path remains the direct
-`to_vec()` fast path. The Rust-only
+uncompressed TIFF strip or tile copied the raw payload in 1,024-byte chunks
+and polled before each chunk, while the no-token path kept the direct
+`to_vec()` fast path. The later allocation-reuse slices below preserve this
+checkpoint contract without the temporary raw strip/tile copy. The Rust-only
 `tiff_decode_work_budget_covers_raw_payload_copy` contract uses the committed
 128×128 RGB `uncompressed.tiff` witness and finds an inclusive boundary of 52:
 exact success preserves every decoded pixel, while 51 returns the typed
@@ -8537,13 +8538,14 @@ at project-context transport; this is local evidence and adds no Pillow parity
 row. Transient allocation/peak accounting, progress, short-write semantics,
 sink rollback, and cleanup remain separate roadmap work.
 
-The current TIFF raw-strip allocation-reuse slice is implemented at
-`122aae07cbe81ba74aa40343261e461012ca1195`: uncompressed strips now append
+The TIFF raw-strip allocation-reuse slice was implemented at
+`122aae07cbe81ba74aa40343261e461012ca1195`: uncompressed strips append
 directly into the pre-sized final raster instead of allocating a temporary
 decoded strip and copying it into the raster a second time. Token-aware raw
-strips retain the same 1,024-byte checkpoint cadence; compressed, predictor,
-and tiled paths retain scratch buffers where their transformations require
-them. The existing Rust-only raw-payload contract preserves byte-identical
+strips retain the same 1,024-byte checkpoint cadence; compressed and predictor
+paths retain scratch buffers where their transformations require them. The
+later raw-tile allocation-reuse slice below removes the analogous tile
+scratch copy. The existing Rust-only raw-payload contract preserves byte-identical
 pixels and its inclusive boundary of 52 (`observed = 52` at maximum 51), while
 the native feature-gate suite passes 57/57 and the native parity matrix passes
 28/28. The exact local LLVM report passes 66,318/66,318 lines, 8,602/8,602
@@ -8552,6 +8554,27 @@ the resulting bytes and errors, not transient allocation ownership or peak
 RSS, so this is Rust runtime evidence with no new parity row. Broader
 allocation/peak accounting, progress, short-write semantics, sink rollback,
 and cleanup remain separate roadmap work.
+
+The current TIFF raw-tile allocation-reuse slice is implemented at
+`96f5e50e7cdce797e490a9b53d67e92aa05c7dc9`: uncompressed tiles now place
+their visible rows directly into the pre-sized final raster instead of
+allocating a temporary decoded tile. The token-aware path still polls before
+each 1,024-byte chunk across the complete normalized raw tile payload,
+including stored padding; compressed tiles retain scratch buffers for
+decompression, predictor reconstruction, or transformed placement. The
+Rust-only `tiff_decode_work_budget_covers_raw_tile_copy` contract uses the
+committed 128×128 RGB `tiled.tiff` witness and finds an inclusive boundary of
+67: exact success preserves every decoded pixel, while 66 returns the typed
+`DecodeWorkUnits` result with `observed = 67`. Native `feature_gate_tests`
+passes 58/58, the native parity matrix passes 28/28, and the exact local LLVM
+report passes 66,361/66,361 lines, 8,608/8,608 branches, 3,349/3,349
+functions, and 99,138/99,138 regions. Locked all-feature check, strict
+Clippy, rustdoc warnings, and the `wasm32-wasip1` TIFF feature-test binary
+compile also pass. Pillow exposes the resulting pixels and errors, not
+transient allocation ownership or peak RSS, so this is Rust runtime evidence
+with no new parity row. Allocator/peak measurement, progress, short-write
+semantics, sink rollback, cleanup, and managed same-revision evidence remain
+open roadmap work.
 
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
