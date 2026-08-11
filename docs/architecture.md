@@ -586,7 +586,8 @@ and sample-unpack row boundaries (including Adam7 passes), and 1,024-byte
 adaptive-filter/filtered-row subsegments, BMP row-conversion
 subsegments after each 1,024 pixels, GIF block and frame boundaries plus RGB/RGBA
 palette quantization intervals, GIF decode LZW code reads and 1,024-link/byte
-dictionary-expansion intervals, and LZW input-symbol intervals, TIFF
+dictionary-expansion intervals, and LZW input-symbol intervals, JPEG baseline
+entropy after each completed 1,024-MCU batch, TIFF
 still page preparation/predictor, horizontal-predictor row and 1,024-byte
 reconstruction intervals, sample-conversion row and 1,024-byte sample
 intervals, raw uncompressed-payload copies after each 1,024 bytes, PackBits

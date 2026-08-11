@@ -8594,6 +8594,23 @@ work-budget evidence with no new Pillow parity row; managed Coverage MCP
 remains unavailable at `project_context`, and broader codec checkpoints,
 allocation/peak accounting, progress, sink rollback, and cleanup remain open.
 
+The current JPEG baseline-MCU decode checkpoint slice is implemented at
+`0c41c4744790848f169b5e10eadce51ecf1349f`. Baseline reconstruction now polls
+after each completed 1,024-MCU batch inside a no-restart entropy segment, while
+the ordinary no-token path retains its existing direct per-segment behavior.
+The Rust-only `jpeg_decode_work_budget_covers_baseline_mcu_checkpoint` contract
+uses deterministic public-API-generated JPEGs: a 64×64 control image admits at
+boundary 5, while a 512×512 default 4:2:0 image with exactly 1,024 MCUs admits
+at boundary 6. The larger image is byte-identical at its exact boundary and
+maximum 5 returns `DecodeWorkUnits` with `observed = 6`. Native
+`feature_gate_tests` passes 60/60, the native parity matrix passes 28/28, the
+JPEG `wasm32-wasip1` feature-test binary compiles, and exact local LLVM passes
+66,506/66,506 lines, 8,648/8,648 branches, 3,351/3,351 functions, and
+99,344/99,344 regions. This remains Rust-only evidence with no new Pillow
+parity row; managed Coverage MCP is still unavailable at `project_context`,
+and progressive JPEG interiors, other codec work, allocation/peak accounting,
+progress, sink rollback, and cleanup remain open.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now

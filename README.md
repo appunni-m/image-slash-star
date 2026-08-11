@@ -147,7 +147,7 @@ capabilities and setup.
 | `decode_with_format(&[u8], ImageFormat)` | Decode with a caller-selected format after validating the complete input signature |
 | `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, format allow-list, metadata, canvas, frame, and decoded-byte limits |
 | `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
-| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints; GIF LZW also polls before each code read and during 1,024-link/byte dictionary expansion |
+| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints; JPEG baseline entropy polls after each 1,024-MCU batch, and GIF LZW polls before each code read and during 1,024-link/byte dictionary expansion |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
@@ -212,8 +212,9 @@ after whole-buffer codecs; codec-specific checkpoints cover JPEG RGB-to-YCbCr
 conversion after each 1,024 pixels, color, sampling, quantization, baseline
 entropy after each 1,024 MCUs, entropy, 1,024-byte entropy-output intervals,
 and progressive scans, PNG rows and adaptive
-filter segments, BMP row-conversion subsegments, GIF blocks, decode LZW code/
-dictionary-expansion intervals, and encode LZW input-symbol intervals, TIFF Deflate work,
+filter segments, BMP row-conversion subsegments, JPEG baseline entropy after
+each 1,024-MCU batch, GIF blocks, decode LZW code/dictionary-expansion
+intervals, and encode LZW input-symbol intervals, TIFF Deflate work,
 WebP VP8 RGB/RGBA-to-YUV conversion, required padded Y/U/V edge-replication
 after each 1,024 padded items, analysis and segment-assignment macroblocks
 after each 1,024 items, filter-edge adjustment and coefficient-statistics
