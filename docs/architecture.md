@@ -2,7 +2,7 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-11 against measured source/evidence revision
+Reviewed: 2026-08-12 against measured source/evidence revision
 `36b939696415a962285d37f9120ff389aebf0205`. Current aggregate native
 all-feature coverage is recorded in [roadmap-new.md](roadmap-new.md); the
 claim-ledger base revision is the same measured revision. The current managed
@@ -414,7 +414,7 @@ translation cannot be bypassed.
 | `decode_with_format(&[u8], ImageFormat)` | Validate the complete signature against a caller-selected format, then decode through the normal feature and codec dispatch |
 | `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Apply the encoded-input limit, validate the selected signature, enforce the optional format allow-list, then apply metadata/canvas/frame/decoded-byte limits before decode |
 | `decode_prefix`, `decode_prefix_with_policy` | Incremental still decode with the non-terminal `NeedMoreData { minimum }` status |
-| `decode_with_token`, `decode_with_token_and_policy` | Still decode that polls a `CancellationToken` at structural checkpoints |
+| `decode_with_token`, `decode_with_token_and_policy` | Still decode that polls a `CancellationToken` at structural checkpoints; uncompressed BMP also polls before each 1,024-byte raw-payload chunk and scanline conversion row |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `decode_sequence_prefix`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame/page cancellation |
@@ -584,7 +584,8 @@ PNG zlib Deflate block boundaries, dynamic-table completion, 1,024-byte
 stored/compressed output intervals, Adler-32 chunks, scanline-reconstruction
 and sample-unpack row boundaries (including Adam7 passes), and 1,024-byte
 adaptive-filter/filtered-row subsegments, BMP row-conversion
-subsegments after each 1,024 pixels, GIF block and frame boundaries plus RGB/RGBA
+subsegments after each 1,024 pixels, uncompressed BMP raw-payload chunks before
+each 1,024 bytes and scanline-conversion rows, GIF block and frame boundaries plus RGB/RGBA
 palette quantization intervals, GIF decode LZW code reads and 1,024-link/byte
 dictionary-expansion intervals, and LZW input-symbol intervals, JPEG baseline
 entropy after each completed 1,024-MCU batch, progressive JPEG entropy within

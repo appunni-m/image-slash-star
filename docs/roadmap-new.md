@@ -10,11 +10,17 @@ Reviewed: 2026-08-12
   (1,449/1,449 passed at this revision)
 - Managed Coverage MCP run: `54ce9d6c-3c1f-43e5-9120-c79984bc9166`
 - Ingested Coverage MCP snapshot: `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`
+- Latest local RN-003 candidate: `9c8faa7` (BMP raw payload and scanline
+  checkpoints); local LLVM is exact at 66,531/66,531 lines, 8,654/8,654
+  branches, 3,354/3,354 functions, and 99,398/99,398 regions, with 62/62
+  native feature-gate tests passing. This is local evidence only: the managed
+  Coverage MCP transport still closes at `project_context` with `Transport
+  closed`, so the accepted managed tuple above remains unchanged.
 - Project: `image-slash-star`, a Rust image-codec library with optional native
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
 
-### Latest API-038 implementation candidate
+## Latest API-038 implementation candidate
 
 The caller-controlled decode-format restriction slice is implemented on `main`
 at `e82034db8a8a95dc0c660e70bc4571d820ff3b69`:
@@ -309,7 +315,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 61/61, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 62/62, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -377,7 +383,7 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 61/61 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 62/62 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
@@ -545,7 +551,7 @@ category.
 
 | Category | Status now | Evidence already in the tree | Exact remaining work |
 | --- | --- | --- | --- |
-| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 61/61, including PNG, GIF LZW, JPEG baseline/progressive-MCU, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,510/66,510 lines, 8,652/8,652 branches, 3,351/3,351 functions, and 99,353/99,353 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 62/62, including PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,531/66,531 lines, 8,654/8,654 branches, 3,354/3,354 functions, and 99,398/99,398 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
@@ -1142,6 +1148,53 @@ other codec interiors, progress callbacks, allocator/peak measurement,
 short-write semantics, rollback, cleanup/error precedence, and managed
 same-revision evidence remain open. RN-003 remains partial and the complete
 inventory remains 269 active finding rows.
+
+#### Current candidate slice — API-036 BMP raw payload and scanline checkpoints
+
+**Caller problem:** An uncompressed BMP can put a large padded pixel payload
+behind one bulk read and then spend another long interval converting packed or
+packed-palette rows. A server, UI, or WASM page that supplies a cancellation
+token or a decode work budget needs checkpoints inside both intervals; polling
+only at codec entry cannot stop that work promptly.
+
+**Pillow answer:** Pillow can prove the final BMP pixels and ordinary errors,
+but it does not expose this crate's caller token, checkpoint counter, inclusive
+`DecodeWorkUnits` result, or no-partial-state behavior. This is Rust-only
+caller-control evidence and adds no Pillow parity row.
+
+**Implemented behavior:** Commit `9c8faa7` keeps the ordinary no-token BMP
+path on its direct bulk raw-payload read and row conversion. When a caller
+token is present, uncompressed raw pixels are copied in 1,024-byte chunks and
+each conversion row is checked before it begins. The row checkpoints cover
+all six raw depths (1, 4, 8, 16, 24, and 32 bits), including canonical and
+non-canonical 1-bit palettes. Truncated token-aware payloads retain the
+complete-slice `Malformed` classification with `bmp_pixels` context rather
+than turning a terminal decode into an implicit retry.
+
+**Source/evidence:** The Rust-only
+`bmp_decode_work_budget_covers_raw_scanline_checkpoints` contract generates
+equal-height 64×64 and 128×64 RGB BMP controls through the public API. Their
+inclusive work boundaries are 78 and 90 respectively; the twelve-unit delta
+is exactly the twelve additional 1,024-byte raw-payload chunks, while row
+checkpoint cadence stays constant. The same contract proves exact-boundary
+pixel identity, one-unit-below typed rejection, truncated-payload error
+context, and row-boundary rejection on committed 1-bit, 4-bit, 8-bit, 16-bit,
+24-bit, 32-bit, and non-canonical 1-bit fixtures. Native `feature_gate_tests`
+passes 62/62, the native parity matrix passes 28/28, and exact local LLVM
+passes 66,531/66,531 lines, 8,654/8,654 branches, 3,354/3,354 functions, and
+99,398/99,398 regions.
+
+**Evidence boundary:** Managed Coverage MCP remains unavailable at
+`project_context` (`Transport closed`), so the accepted claim-ledger tuple
+and managed snapshot remain unchanged. This local candidate is not managed
+acceptance and claims no Pillow row or diagnostic origin.
+
+**Remaining dependency:** This slice covers uncompressed BMP payload-copy and
+row-conversion work only; compressed/RLE BMP interiors, other codec interiors,
+progress callbacks, allocator/peak measurement, short-write semantics,
+rollback, cleanup/error precedence, and managed same-revision evidence remain
+open. RN-003 remains partial and the complete inventory remains 269 active
+finding rows.
 
 ### RN-004 — Metadata and source facts — LATER
 
