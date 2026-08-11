@@ -614,6 +614,7 @@ pub fn decode(
         &compressed,
         palette_rgb,
         palette_alpha,
+        token,
     )
     .map_err(|error| match error {
         CodecError::NeedMore { message, .. } if saw_iend => CodecError::Malformed(message),
@@ -652,6 +653,7 @@ fn decode_image_data(
     compressed: &[u8],
     palette_rgb: Option<Vec<u8>>,
     palette_alpha: Vec<u8>,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<DecodedImage> {
     decode_image_data_with_status(
         spec,
@@ -660,6 +662,7 @@ fn decode_image_data(
         compressed,
         palette_rgb,
         palette_alpha,
+        token,
     )
     .map(|(image, _)| image)
 }
@@ -671,6 +674,7 @@ fn decode_image_data_with_status(
     compressed: &[u8],
     palette_rgb: Option<Vec<u8>>,
     palette_alpha: Vec<u8>,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedImage, bool)> {
     let expected_inflated = inflated_len(spec.width, spec.height, channels, spec.depth, interlace);
     let (inflated, oversized_scanline) =
@@ -689,6 +693,7 @@ fn decode_image_data_with_status(
         channels,
         spec.depth,
         interlace,
+        token,
     )?;
     build_image(spec, &samples, palette_rgb, palette_alpha).map(|image| (image, oversized_scanline))
 }
@@ -771,6 +776,7 @@ pub fn decode_sequence(
             &default_compressed,
             palette_rgb.clone(),
             palette_alpha.clone(),
+            token,
         )?;
         canvas = Some(default_image.clone());
         let mut default_frame = DecodedFrame::rendered_canvas(
@@ -811,6 +817,7 @@ pub fn decode_sequence(
             &encoded.compressed,
             palette_rgb.clone(),
             palette_alpha.clone(),
+            token,
         )?;
         let canvas = match &mut canvas {
             Some(canvas) => canvas,
@@ -1446,6 +1453,7 @@ fn decode_scanlines(
     channels: usize,
     depth: u8,
     interlace: u8,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u16>> {
     let width = width as usize;
     let height = height as usize;
@@ -1454,13 +1462,14 @@ fn decode_scanlines(
     let mut position = 0usize;
 
     if interlace == 0 {
-        let rows = unfilter_rows(data, &mut position, width, height, channels, depth)?;
+        let rows = unfilter_rows(data, &mut position, width, height, channels, depth, token)?;
         unpack_into(
             &rows,
             width,
             height,
             channels,
             depth,
+            token,
             |x, y, channel, value| {
                 let index = y
                     .wrapping_mul(width)
@@ -1469,7 +1478,7 @@ fn decode_scanlines(
                     .wrapping_add(channel);
                 samples[index] = value;
             },
-        );
+        )?;
     } else {
         for (x_start, y_start, x_step, y_step) in ADAM7 {
             let pass_width = pass_size(width, x_start, x_step);
@@ -1484,6 +1493,7 @@ fn decode_scanlines(
                 pass_height,
                 channels,
                 depth,
+                token,
             )?;
             unpack_into(
                 &rows,
@@ -1491,6 +1501,7 @@ fn decode_scanlines(
                 pass_height,
                 channels,
                 depth,
+                token,
                 |pass_x, pass_y, channel, value| {
                     let x = x_start.wrapping_add(pass_x.wrapping_mul(x_step));
                     let y = y_start.wrapping_add(pass_y.wrapping_mul(y_step));
@@ -1501,7 +1512,7 @@ fn decode_scanlines(
                         .wrapping_add(channel);
                     samples[index] = value;
                 },
-            );
+            )?;
         }
     }
     // `decompress_zlib_prefix` returns at most the exact scanline budget and
@@ -1536,13 +1547,14 @@ fn unfilter_rows(
     height: usize,
     channels: usize,
     depth: u8,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     let stride = row_bytes(width, channels, depth);
     let bytes_per_pixel = channels.wrapping_mul(usize::from(depth)).div_ceil(8).max(1);
     let rows_len = stride.wrapping_mul(height);
     let mut rows = vec![0u8; rows_len];
 
-    for row in 0..height {
+    let mut unfilter_row = |row: usize| -> CodecResult<()> {
         let (filter, source) = read_filtered_row(data, position, stride)?;
         let row_start = row.wrapping_mul(stride);
 
@@ -1583,6 +1595,17 @@ fn unfilter_rows(
                 }
             };
         }
+        Ok(())
+    };
+    if let Some(token) = token {
+        for row in 0..height {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            unfilter_row(row)?;
+        }
+    } else {
+        for row in 0..height {
+            unfilter_row(row)?;
+        }
     }
     Ok(rows)
 }
@@ -1593,12 +1616,14 @@ fn unpack_into<F>(
     height: usize,
     channels: usize,
     depth: u8,
+    token: Option<&crate::CancellationToken>,
     mut store: F,
-) where
+) -> CodecResult<()>
+where
     F: FnMut(usize, usize, usize, u16),
 {
     let stride = rows.len().checked_div(height).unwrap_or_default();
-    for y in 0..height {
+    let mut unpack_row = |y: usize| {
         let row_start = y.wrapping_mul(stride);
         let row = &rows[row_start..row_start.wrapping_add(stride)];
         for x in 0..width {
@@ -1623,7 +1648,16 @@ fn unpack_into<F>(
                 store(x, y, channel, value);
             }
         }
+    };
+    if let Some(token) = token {
+        for y in 0..height {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            unpack_row(y);
+        }
+        return Ok(());
     }
+    (0..height).for_each(|y| unpack_row(y));
+    Ok(())
 }
 
 struct PngImageSpec {
@@ -1987,10 +2021,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(chunks.next().is_none());
 
     let mut position = 0;
-    assert!(unfilter_rows(&[], &mut position, 1, 1, 1, 8).is_err());
+    assert!(unfilter_rows(&[], &mut position, 1, 1, 1, 8, None).is_err());
 
     let mut position = 0;
-    assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8).is_err());
+    assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8, None).is_err());
+    let token = crate::CancellationToken::new();
+    let mut position = 0;
+    assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8, Some(&token)).is_err());
 
     assert!(chunk_payload_with_crc(&[], b"IDAT", usize::MAX, 1, true).is_err());
 
@@ -2036,5 +2073,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode_sequence(apng, &mut budget, Some(&token));
+    }
+
+    // Exercise cancellation while a real multi-row PNG is being
+    // reconstructed and unpacked, rather than only at container boundaries.
+    let scanline_work = include_bytes!("../../../tests/fixtures/input/images/png/2x3.png");
+    for checks in [0, 4, 8, 12, 32] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(scanline_work, Some(&token));
+    }
+    let interlaced_scanline_work =
+        include_bytes!("../../../tests/fixtures/input/images/png/adam7_2x3.png");
+    for checks in [0, 4, 8, 12, 32] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(interlaced_scanline_work, Some(&token));
     }
 }
