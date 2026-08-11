@@ -269,6 +269,30 @@
       "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2, 3, 4, 11]}}
     },
     {
+      "property_id": "vp8l.transform.predictor_absence",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0",
+      "expect": {"transforms": []}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_absence",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_quadrants",
+      "expect": {"transforms": []}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_absence",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_sparse",
+      "expect": {"transforms": []}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_absence",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_steps",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 8, "index_bits": 1}]}
+    },
+    {
       "property_id": "vp8l.transform.color_indexing_size_bands",
       "operation": "decode",
       "row_id": "lossless_transform_variants",
@@ -682,6 +706,19 @@
         {"operation": "encode", "row_id": "enc_lossless_indexed"}
       ],
       "gap": "The independent parser now proves the predictor-mode map for the 19 named decode streams and the indexed encode artifact, covering every mode value observed in this fixture set. Rows without a predictor transform (mode0, quadrants, sparse, and steps) and complete coverage of every predictor-transform combination remain open."
+    },
+    {
+      "id": "vp8l.transform.predictor_absence",
+      "status": "witnessed",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": true,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_quadrants"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_sparse"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_steps"}
+      ],
+      "gap": "The independent parser now proves that the four named candidate streams contain no predictor transform: mode0 and the quadrants/sparse streams have no transforms, while steps uses color indexing only. Other no-predictor streams and every legal predictor-transform combination remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.color_indexing_size_bands",
