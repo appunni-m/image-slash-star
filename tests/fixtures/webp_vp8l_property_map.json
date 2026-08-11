@@ -385,6 +385,12 @@
       "expect": {"stream_index": 2, "stream": {"meta_huffman_bits": 2, "entropy_image_size": [24, 24], "huffman_groups": 2}}
     },
     {
+      "property_id": "vp8l.meta_huffman.prefix_groups",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "expect": {"stream_index": 2, "stream": {"meta_huffman_bits": 6, "entropy_image_size": [3, 3], "huffman_groups": 2}}
+    },
+    {
       "property_id": "vp8l.entropy_image_dimensions",
       "operation": "decode",
       "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -401,6 +407,12 @@
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_random_walk",
       "expect": {"stream_index": 2, "stream": {"entropy_image_size": [24, 24], "huffman_groups": 2}}
+    },
+    {
+      "property_id": "vp8l.entropy_image_dimensions",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "expect": {"stream_index": 2, "stream": {"entropy_image_size": [3, 3], "huffman_groups": 2}}
     },
     {
       "property_id": "vp8l.color_cache.boundaries",
@@ -677,9 +689,10 @@
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid"}
       ],
-      "gap": "The independent parser now proves the named meta-Huffman group forms (one and two groups) and their selected prefix streams; other group counts and prefix assignments remain outside this witnessed scope."
+      "gap": "The independent parser now proves the named meta-Huffman group forms (one and two groups), the observed 2- and 6-bit prefix widths, and their selected prefix streams; other group counts and prefix assignments remain outside this witnessed scope."
     },
     {
       "id": "vp8l.entropy_image_dimensions",
@@ -689,9 +702,10 @@
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_meta_cache_fast_fill"},
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_single_cache_peek"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid"}
       ],
-      "gap": "The independent parser now proves the explicitly listed entropy-image dimensions (2×1 and 24×24) and their two-group forms; other dimensions and grouping patterns remain outside this witnessed scope."
+      "gap": "The independent parser now proves the explicitly listed entropy-image dimensions (2×1, 3×3, and 24×24) and their two-group forms; other dimensions and grouping patterns remain outside this witnessed scope."
     },
     {
       "id": "vp8l.color_cache.boundaries",
