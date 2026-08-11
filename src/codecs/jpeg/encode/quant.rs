@@ -70,16 +70,18 @@ pub(crate) fn build_params(quality: u8, subsampling: &str, num_components: usize
     }
 
     let mut quant_tables = vec![luma];
-    if num_components >= 3 {
+    if num_components == 3 {
         // Cb and Cr share one chroma table (slot 1), as in libjpeg defaults.
         quant_tables.push(chroma);
     }
 
-    // Component→quant slot. Y → 0; Cb,Cr → 1 (chroma table).
+    // Component→quant slot. CMYK → 0; RGB Y → 0 and Cb,Cr → 1.
     let mut comp_quant = vec![0u8];
-    if num_components >= 3 {
+    if num_components == 3 {
         comp_quant.push(1);
         comp_quant.push(1);
+    } else if num_components == 4 {
+        comp_quant.extend([0, 0, 0]);
     }
     let _ = subsampling;
 

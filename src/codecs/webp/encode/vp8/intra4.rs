@@ -390,6 +390,151 @@ impl SelectionCheckpointControl for TokenSelectionCheckpoint<'_> {
     }
 }
 
+#[cfg(coverage)]
+struct CoverageFailingSelectionCheckpoint {
+    fail_point: u8,
+    trellis_completed: bool,
+    distortion_stage_calls: u8,
+    fail_after_stage: u16,
+    stage_calls: u16,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl SelectionCheckpointControl for CoverageFailingSelectionCheckpoint {
+    fn after_candidate_stage(&mut self) -> CodecResult<()> {
+        if self.fail_after_stage != u16::MAX {
+            if self.stage_calls == self.fail_after_stage {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.stage_calls = self.stage_calls.saturating_add(1);
+        }
+        if (10..=12).contains(&self.fail_point) {
+            let target = self.fail_point.saturating_sub(10);
+            if self.distortion_stage_calls == target {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.distortion_stage_calls = self.distortion_stage_calls.saturating_add(1);
+        }
+        if self.fail_point == 1 && self.trellis_completed {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn squared_error_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        if self.fail_point == 3 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        if self.fail_point == 13 {
+            let distortion = if self.distortion_stage_calls == 0 {
+                1_000_000_000
+            } else {
+                0
+            };
+            self.distortion_stage_calls = self.distortion_stage_calls.saturating_add(1);
+            return Ok(distortion);
+        }
+        Ok(squared_error_4x4(left, right))
+    }
+
+    fn spectral_distortion_4x4(&mut self, left: &[u8; 16], right: &[u8; 16]) -> CodecResult<u32> {
+        if self.fail_point == 4 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(spectral_distortion_4x4_plain(left, right))
+    }
+
+    fn residual_cost(
+        &mut self,
+        levels: &[i16; 16],
+        first: usize,
+        coefficient_type: usize,
+        initial_context: usize,
+        coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
+    ) -> CodecResult<u32> {
+        if self.fail_point == 7 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(residual_cost_plain(
+            levels,
+            first,
+            coefficient_type,
+            initial_context,
+            coefficient_probabilities,
+        ))
+    }
+
+    fn forward_transform(&mut self, block: &[i16; 16]) -> CodecResult<[i16; 16]> {
+        if self.fail_point == 5 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(vp8_fdct_4x4(block))
+    }
+
+    fn inverse_transform(
+        &mut self,
+        prediction: &[u8; 16],
+        coefficients: &[i16; 16],
+    ) -> CodecResult<[u8; 16]> {
+        if self.fail_point == 2 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(vp8_idct_add_4x4(prediction, coefficients))
+    }
+
+    fn quantize_block(
+        &mut self,
+        coefficients: &mut [i16; 16],
+        levels: &mut [i16; 16],
+        matrix: &QuantMatrix,
+    ) -> CodecResult<bool> {
+        if self.fail_point == 6 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(quantize_block(coefficients, levels, matrix))
+    }
+
+    fn trellis_quantize_block(&mut self, input: TrellisQuantizationInput<'_>) -> CodecResult<bool> {
+        if self.fail_point == 0 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.trellis_completed = true;
+        let TrellisQuantizationInput {
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+        } = input;
+        Ok(trellis_quantize_block(
+            coefficients,
+            levels,
+            initial_context,
+            coefficient_type,
+            matrix,
+            lambda,
+            probabilities,
+        ))
+    }
+
+    fn after_candidate(&mut self) -> CodecResult<()> {
+        if self.fail_point == 8 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn after_block(&mut self) -> CodecResult<()> {
+        if self.fail_point == 9 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Intra4SelectionInput<'a> {
     source: &'a [u8; 256],
@@ -740,6 +885,286 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
         }
     }
     Ok(result)
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let source = [128_u8; 256];
+    let top_boundary = [127_u8; 20];
+    let left_boundary = [129_u8; 16];
+    let top_modes = [Intra4Mode::Dc; 4];
+    let left_modes = [Intra4Mode::Dc; 4];
+    let matrices = super::quant::libwebp_segment_matrices(50, 0, 0);
+    for (fail_point, distortion_only, trellis) in [
+        (0, false, true),
+        (1, false, true),
+        (2, false, true),
+        (3, true, true),
+        (4, false, true),
+        (5, false, true),
+        (6, false, false),
+        (7, false, true),
+        (8, true, true),
+        (9, false, true),
+        (10, true, true),
+        (11, true, true),
+        (12, true, true),
+        (13, false, false),
+        (u8::MAX, false, true),
+        (u8::MAX, true, true),
+        (u8::MAX, false, false),
+    ] {
+        let mut checkpoint = CoverageFailingSelectionCheckpoint {
+            fail_point,
+            trellis_completed: false,
+            distortion_stage_calls: 0,
+            fail_after_stage: u16::MAX,
+            stage_calls: 0,
+        };
+        let _ = select_macroblock_with_control(
+            Intra4SelectionInput {
+                source: &source,
+                top_boundary: &top_boundary,
+                left_boundary: &left_boundary,
+                top_left: 127,
+                top_modes: &top_modes,
+                left_modes: &left_modes,
+                top_nonzero: [0; 4],
+                left_nonzero: [0; 4],
+                matrices: &matrices,
+                lambda_i4: matrices.lambda_i4.cast_unsigned(),
+                lambda_mode: matrices.lambda_mode.cast_unsigned(),
+                texture_lambda: matrices.texture_lambda.cast_unsigned(),
+                distortion_only,
+                coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+                trellis,
+            },
+            &mut checkpoint,
+        );
+    }
+
+    for fail_after_stage in [0, 3] {
+        let mut checkpoint = CoverageFailingSelectionCheckpoint {
+            fail_point: u8::MAX,
+            trellis_completed: false,
+            distortion_stage_calls: 0,
+            fail_after_stage,
+            stage_calls: 0,
+        };
+        let _ = std::hint::black_box(select_macroblock_with_control(
+            Intra4SelectionInput {
+                source: &source,
+                top_boundary: &top_boundary,
+                left_boundary: &left_boundary,
+                top_left: 127,
+                top_modes: &top_modes,
+                left_modes: &left_modes,
+                top_nonzero: [0; 4],
+                left_nonzero: [0; 4],
+                matrices: &matrices,
+                lambda_i4: matrices.lambda_i4.cast_unsigned(),
+                lambda_mode: matrices.lambda_mode.cast_unsigned(),
+                texture_lambda: matrices.texture_lambda.cast_unsigned(),
+                distortion_only: false,
+                coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+                trellis: false,
+            },
+            &mut checkpoint,
+        ));
+    }
+
+    let mut final_candidate_checkpoint = CoverageFailingSelectionCheckpoint {
+        fail_point: 8,
+        trellis_completed: false,
+        distortion_stage_calls: 0,
+        fail_after_stage: u16::MAX,
+        stage_calls: 0,
+    };
+    let _ = std::hint::black_box(select_macroblock_with_control(
+        Intra4SelectionInput {
+            source: &source,
+            top_boundary: &top_boundary,
+            left_boundary: &left_boundary,
+            top_left: 127,
+            top_modes: &top_modes,
+            left_modes: &left_modes,
+            top_nonzero: [0; 4],
+            left_nonzero: [0; 4],
+            matrices: &matrices,
+            lambda_i4: matrices.lambda_i4.cast_unsigned(),
+            lambda_mode: matrices.lambda_mode.cast_unsigned(),
+            texture_lambda: matrices.texture_lambda.cast_unsigned(),
+            distortion_only: false,
+            coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+            trellis: false,
+        },
+        &mut final_candidate_checkpoint,
+    ));
+
+    let textured_source = std::array::from_fn(|index| {
+        if ((index / 16).wrapping_add(index % 16)) % 2 == 0 {
+            0
+        } else {
+            u8::MAX
+        }
+    });
+    let mut textured_checkpoint = CoverageFailingSelectionCheckpoint {
+        fail_point: u8::MAX,
+        trellis_completed: false,
+        distortion_stage_calls: 0,
+        fail_after_stage: u16::MAX,
+        stage_calls: 0,
+    };
+    let _ = std::hint::black_box(select_macroblock_with_control(
+        Intra4SelectionInput {
+            source: &textured_source,
+            top_boundary: &top_boundary,
+            left_boundary: &left_boundary,
+            top_left: 127,
+            top_modes: &top_modes,
+            left_modes: &left_modes,
+            top_nonzero: [0; 4],
+            left_nonzero: [0; 4],
+            matrices: &matrices,
+            lambda_i4: matrices.lambda_i4.cast_unsigned(),
+            lambda_mode: matrices.lambda_mode.cast_unsigned(),
+            texture_lambda: matrices.texture_lambda.cast_unsigned(),
+            distortion_only: false,
+            coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+            trellis: false,
+        },
+        &mut textured_checkpoint,
+    ));
+
+    // The ordinary coverage cases use the no-op and deliberately failing
+    // controls. Keep one live token control on the complete trellis path so
+    // its successful `?` edges are represented in the instrumented generic
+    // specialization as well.
+    let token = crate::CancellationToken::new();
+    let mut token_checkpoint = TokenSelectionCheckpoint { token: &token };
+    let _ = std::hint::black_box(select_macroblock_with_control(
+        Intra4SelectionInput {
+            source: &source,
+            top_boundary: &top_boundary,
+            left_boundary: &left_boundary,
+            top_left: 127,
+            top_modes: &top_modes,
+            left_modes: &left_modes,
+            top_nonzero: [0; 4],
+            left_nonzero: [0; 4],
+            matrices: &matrices,
+            lambda_i4: matrices.lambda_i4.cast_unsigned(),
+            lambda_mode: matrices.lambda_mode.cast_unsigned(),
+            texture_lambda: matrices.texture_lambda.cast_unsigned(),
+            distortion_only: false,
+            coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+            trellis: true,
+        },
+        &mut token_checkpoint,
+    ));
+
+    // Measure the first trellis candidate's internal polling budget, then
+    // cancel at each of the three adjacent `?` edges in that same candidate.
+    // This keeps the probes bounded while making the token specialization
+    // exercise both the transform and trellis error exits.
+    let first_top = [127_u8; 8];
+    let first_left = [129_u8; 4];
+    let first_prediction = predict(Intra4Mode::Dc, &first_top, &first_left, 127);
+    let first_residual = std::array::from_fn(|index| {
+        i16::from(source[index]).wrapping_sub(i16::from(first_prediction[index]))
+    });
+    let measure_token = crate::CancellationToken::new();
+    measure_token.cancel_after(usize::MAX);
+    let mut measure_checkpoint = TokenSelectionCheckpoint {
+        token: &measure_token,
+    };
+    let mut measured_coefficients = measure_checkpoint
+        .forward_transform(&first_residual)
+        .expect("instrumented intra4 forward transform must encode");
+    let forward_checks = usize::MAX.saturating_sub(
+        measure_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    let mut measured_levels = [0_i16; 16];
+    let _ = measure_checkpoint
+        .trellis_quantize_block(TrellisQuantizationInput {
+            coefficients: &mut measured_coefficients,
+            levels: &mut measured_levels,
+            initial_context: 0,
+            coefficient_type: 3,
+            matrix: &matrices.y1,
+            lambda: matrices.lambda_trellis_i4,
+            probabilities: &super::tokenize::COEFF_PROBS,
+        })
+        .expect("instrumented intra4 trellis transform must encode");
+    let trellis_checks = usize::MAX
+        .saturating_sub(
+            measure_token
+                .coverage_remaining_checks()
+                .expect("coverage token must retain its remaining checks"),
+        )
+        .saturating_sub(forward_checks);
+    let run_token_selection = |checks: usize| {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut checkpoint = TokenSelectionCheckpoint { token: &token };
+        let _ = std::hint::black_box(select_macroblock_with_control(
+            Intra4SelectionInput {
+                source: &source,
+                top_boundary: &top_boundary,
+                left_boundary: &left_boundary,
+                top_left: 127,
+                top_modes: &top_modes,
+                left_modes: &left_modes,
+                top_nonzero: [0; 4],
+                left_nonzero: [0; 4],
+                matrices: &matrices,
+                lambda_i4: matrices.lambda_i4.cast_unsigned(),
+                lambda_mode: matrices.lambda_mode.cast_unsigned(),
+                texture_lambda: matrices.texture_lambda.cast_unsigned(),
+                distortion_only: false,
+                coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+                trellis: true,
+            },
+            &mut checkpoint,
+        ));
+    };
+    run_token_selection(1);
+    run_token_selection(
+        1usize
+            .saturating_add(forward_checks)
+            .saturating_add(trellis_checks.saturating_sub(1)),
+    );
+    run_token_selection(
+        1usize
+            .saturating_add(forward_checks)
+            .saturating_add(trellis_checks),
+    );
+    run_token_selection(
+        2usize
+            .saturating_add(forward_checks)
+            .saturating_add(trellis_checks),
+    );
+
+    let mut zero_levels = [0_i16; 16];
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenSelectionCheckpoint { token: &token };
+    let _ = checkpoint.residual_cost(&zero_levels, 0, 0, 0, &super::tokenize::COEFF_PROBS);
+
+    zero_levels[1] = 1;
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenSelectionCheckpoint { token: &token };
+    let _ = checkpoint.residual_cost(&zero_levels, 0, 0, 0, &super::tokenize::COEFF_PROBS);
+
+    let mut terminal_levels = [0_i16; 16];
+    terminal_levels[15] = 1;
+    let token = crate::CancellationToken::new();
+    token.cancel_after(15);
+    let mut checkpoint = TokenSelectionCheckpoint { token: &token };
+    let _ = checkpoint.residual_cost(&terminal_levels, 0, 0, 0, &super::tokenize::COEFF_PROBS);
 }
 
 fn average_two(a: u8, b: u8) -> u8 {

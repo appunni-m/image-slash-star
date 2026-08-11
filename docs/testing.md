@@ -2,21 +2,21 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `371354b0a92d83f4384b7a9129ddc63bcbb326d3`, and benchmark-protocol
-revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
-tuple remains anchored to base revision
-`487348d01389eb8d100b8a668c9921d97634c022`.
-The latest exact-head managed Pillow parity run is
+Reviewed: 2026-08-11 against the measured working tree at HEAD
+`2447f2f6fa20f15735db699805b15877d6f15611` (dirty working tree) and
+benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
+The claim-ledger base revision is
+`2447f2f6fa20f15735db699805b15877d6f15611`.
+The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
-this revision. Feature matrix run
+its recorded revision. Feature matrix run
 `2f75bfbc-866c-44de-b118-e00e2cd0936b` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
 `f37739ea-a252-4112-8234-268e86be2798` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. That known native failure is not evidence against this
-FileTypeBox/source-descriptor slice. The accepted Coverage MCP snapshot remains
+FileTypeBox/source-descriptor slice. The historical accepted Coverage MCP snapshot was
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,
@@ -27,6 +27,20 @@ branches, and 24/24 functions; cross-color records 517/530 lines, 83/86
 branches, and 27/27 functions. The known LLVM JSON segment-normalization
 warning remains. These exact-head records are test-result and Rust coverage
 evidence, not Pillow allocator or parity metrics.
+
+Current dirty-tree acceptance:
+
+- Managed Pillow parity run `56fe2d9b-b558-4c91-b025-4cc1859b11d0`: 1,447/1,447
+  passed at HEAD `2447f2f6fa20f15735db699805b15877d6f15611`.
+- `cargo test --all-features --test coverage_matrix_tests`: 28/28 passed.
+- `cargo test --all-features --test feature_gate_tests`: 46/46 passed.
+- Managed Coverage MCP run `97309ded-2087-4085-8b4b-cdab6d8245fa`: 86/86
+  passed, with the required artifact ingested into snapshot
+  `00622313-a734-4877-91ad-81707b8894ed`.
+- Aggregate native all-feature coverage: 64,883/64,883 lines, 8,458/8,458
+  branches, 3,299/3,299 functions, and 96,920/96,920 regions.
+- LLVM JSON segments are normalized to segment-start lines; aggregate region
+  coverage is preserved from the report summaries.
 
 Correctness in this repository means matching a fixed Pillow oracle for every
 active manifest case. It does not mean that tests or coverage prove complete
@@ -10961,7 +10975,8 @@ report answers "which implementation paths executed?"; it does not answer
 | Aggregate coverage | CI/Coverage MCP `cargo llvm-cov --all-features --branch --json` over the complete test suite | Execution coverage across parity tests, defensive contracts, and permitted private `cfg(coverage)` state models | Parity completeness, semantic correctness, security, or production readiness |
 | Coverage-origin inventory | `tests/fixtures/coverage_origin_manifest.json`; `scripts/verify_coverage_origins.py` | Static one-to-one accounting of every exact `#[cfg(coverage)]` guard and its non-Pillow origin | Test execution coverage or Pillow-observable behavior |
 | Diagnostic provenance audit | `tests/fixtures/diagnostic_manifest.json`; `scripts/verify_diagnostic_provenance.py` | Static separation of unchanged parity baselines, runtime mutations, and Rust-only diagnostic fields | A Pillow diagnostic or additional parity behavior |
-| Pillow-unreachable contract map | `tests/fixtures/unreachable_contract_manifest.json`; `scripts/verify_unreachable_contracts.py` | Exactly nine catalog categories mapped to existing Rust integration contracts or explicitly planned, with Pillow parity excluded | Category-wide completeness or a Rust-only field returned by Pillow |
+| Pillow-unreachable contract map | `tests/fixtures/unreachable_contract_manifest.json`; `scripts/verify_unreachable_contracts.py` | Ten catalog categories: 8 Rust-only behavior categories, one release-package category, and one explicitly planned private-model category, all with Pillow parity excluded | Category-wide completeness or a Rust-only field returned by Pillow |
+| Release package surface | `tests/fixtures/package_surface_manifest.json`; `scripts/verify_package_surface.py` | The exact `cargo package --list` path set and the deliberate exclusion of repository-only fixture roots | Clean-consumer installation, public API semver compatibility, or runtime image behavior |
 | VP8L property map | `tests/fixtures/webp_vp8l_property_map.json`; `scripts/inspect_webp_vp8l_structure.py` and `scripts/verify_webp_vp8l_property_map.py` | Named active WebP fixtures plus independently parsed VP8L structural facts and malformed parser code/phase/bit-offset witnesses, with their Pillow outer-result origin and current hashes | Proof that Pillow itself selected any internal VP8L state named by a candidate fixture |
 | Fixture benchmark protocol | `scripts/benchmark_fixture_workloads.py` schema-`@3` | Clean-revision workload timings with a fixed four-worker test-harness budget, manifest/matrix hashes, native release/WASM compile artifact sizes, and direct-child POSIX CPU/peak-RSS observations with parity and Rust-only provenance kept separate | Universal performance or process-tree memory claims, allocator counts, retained-cache size, stack, caller-buffer-reuse, or WASM-runtime claims |
 
@@ -11220,6 +11235,7 @@ Verify:
 ```bash
 cargo package --allow-dirty --locked
 python3 scripts/verify_third_party_licenses.py
+python3 scripts/verify_package_surface.py
 cargo deny check
 ```
 

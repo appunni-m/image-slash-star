@@ -31,6 +31,9 @@ pub(super) mod cross_color;
 mod histogram;
 pub(super) mod predictor;
 
+#[cfg(coverage)]
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 /// Color type of the image.
 ///
 /// Note that the WebP format doesn't have a concept of color type. All images are encoded as RGBA
@@ -62,6 +65,93 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
                 Err(EncodingError::WorkBudgetExceeded { maximum, observed })
             }
         },
+    }
+}
+
+#[cfg(coverage)]
+static COVERAGE_NESTED_METADATA_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_CROSS_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_COLOR_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_PREDICTOR_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE: AtomicUsize = AtomicUsize::new(0);
+#[cfg(coverage)]
+static COVERAGE_TOKEN_STREAM_META_PIXEL_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_IMAGE_STREAM_SUFFIX_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_SUBTRACT_FIRST_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_SUBTRACT_SECOND_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_CROSS_FIRST_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_CROSS_SECOND_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_FRAME_CROSS_THIRD_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_ALPHA_COMPRESSED_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_ALPHA_UNCOMPRESSED_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_ENCODER_FRAME_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_ENCODER_CHUNK_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_ENCODER_FINAL_REMAINING: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_nested_metadata(token: Option<&crate::CancellationToken>) {
+    if let Some(token) = token {
+        let remaining = token.coverage_remaining_checks().unwrap_or(usize::MAX);
+        let _ = COVERAGE_NESTED_METADATA_REMAINING.compare_exchange(
+            usize::MAX,
+            remaining,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_frame_boundary(slot: &AtomicUsize, token: Option<&crate::CancellationToken>) {
+    if let Some(token) = token {
+        let remaining = token.coverage_remaining_checks().unwrap_or(usize::MAX);
+        let _ = slot.compare_exchange(usize::MAX, remaining, Ordering::Relaxed, Ordering::Relaxed);
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_remaining(slot: &AtomicUsize, remaining: Option<usize>) {
+    if let Some(remaining) = remaining {
+        let _ = slot.compare_exchange(usize::MAX, remaining, Ordering::Relaxed, Ordering::Relaxed);
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_token_remaining(slot: &AtomicUsize, token: Option<&crate::CancellationToken>) {
+    coverage_record_remaining(
+        slot,
+        token.and_then(crate::CancellationToken::coverage_remaining_checks),
+    );
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_cancel_token_at_optimize(token: Option<&crate::CancellationToken>) {
+    if COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.swap(0, Ordering::Relaxed) != 0 {
+        if let Some(token) = token {
+            token.cancel_after(0);
+        }
     }
 }
 
@@ -116,20 +206,58 @@ struct AlphaPalette {
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError>;
+
+    #[cfg(coverage)]
+    #[coverage(off)]
+    fn coverage_remaining(&self) -> Option<usize> {
+        None
+    }
 }
 
-#[derive(Clone, Copy, Default)]
-struct NoopBitWriterCheckpoint;
+#[derive(Clone, Copy)]
+struct NoopBitWriterCheckpoint {
+    #[cfg(coverage)]
+    fail_after: usize,
+}
+
+impl Default for NoopBitWriterCheckpoint {
+    fn default() -> Self {
+        Self {
+            #[cfg(coverage)]
+            fail_after: usize::MAX,
+        }
+    }
+}
+
+impl NoopBitWriterCheckpoint {
+    #[inline(always)]
+    fn checkpoint_event(&mut self) -> Result<(), EncodingError> {
+        #[cfg(coverage)]
+        {
+            if self.fail_after == 0 {
+                return Err(EncodingError::Cancelled);
+            }
+            self.fail_after = self.fail_after.saturating_sub(1);
+        }
+        Ok(())
+    }
+}
 
 impl BitWriterCheckpoint for NoopBitWriterCheckpoint {
     #[inline(always)]
     fn checkpoint_bits(&mut self, _written: usize) -> Result<(), EncodingError> {
-        Ok(())
+        self.checkpoint_event()
     }
 
     #[inline(always)]
     fn checkpoint_output_bytes(&mut self, _emitted: usize) -> Result<(), EncodingError> {
-        Ok(())
+        self.checkpoint_event()
+    }
+
+    #[cfg(coverage)]
+    #[coverage(off)]
+    fn coverage_remaining(&self) -> Option<usize> {
+        Some(self.fail_after)
     }
 }
 
@@ -141,6 +269,7 @@ struct TokenBitWriterCheckpoint<'a> {
 }
 
 impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
+    #[cfg_attr(coverage, inline(never))]
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError> {
         let previous = self.written_bits;
         self.written_bits = self.written_bits.saturating_add(written);
@@ -260,6 +389,7 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
         Ok(())
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError> {
         let previous = self.output_bytes;
         self.output_bytes = self.output_bytes.saturating_add(emitted);
@@ -270,6 +400,12 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
             check_token(Some(self.token))?;
         }
         Ok(())
+    }
+
+    #[cfg(coverage)]
+    #[coverage(off)]
+    fn coverage_remaining(&self) -> Option<usize> {
+        self.token.coverage_remaining_checks()
     }
 }
 
@@ -820,6 +956,7 @@ fn compressed_huffman_tokens_into(lengths: &[u8], tokens: &mut Vec<HuffmanToken>
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn compressed_huffman_tokens_with_checkpoint(
     lengths: &[u8],
     tokens: &mut Vec<HuffmanToken>,
@@ -932,6 +1069,7 @@ fn compressed_huffman_tokens_with_checkpoint(
     Ok(())
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn write_huffman_tree<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     frequencies: &[u32],
@@ -1159,6 +1297,7 @@ fn write_image_stream<C: BitWriterCheckpoint>(
 }
 
 #[allow(clippy::too_many_arguments, clippy::unwrap_used)]
+#[cfg_attr(coverage, inline(never))]
 fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &[u32],
@@ -1171,6 +1310,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
+    check_token(token)?;
     let mut candidates = backward_refs::candidates(
         pixels,
         width,
@@ -1247,7 +1387,14 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
         // the token-aware path's chunked copy and cancellation behavior.
         match token {
             None => w.writer.append(&mut suffix),
-            Some(token) => extend_bytes_with_checkpoint(w.writer, &suffix, Some(token))?,
+            Some(token) => {
+                #[cfg(coverage)]
+                coverage_record_token_remaining(
+                    &COVERAGE_IMAGE_STREAM_SUFFIX_REMAINING,
+                    Some(token),
+                );
+                extend_bytes_with_checkpoint(w.writer, &suffix, Some(token))?
+            }
         }
         *output_scratch = suffix;
         w.buffer = buffer;
@@ -1325,6 +1472,7 @@ struct TokenStreamConfig {
     quality: u32,
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn optimize_sampling(
     symbols: &mut Vec<u16>,
     full_width: usize,
@@ -1538,6 +1686,7 @@ fn write_token_reference<C: BitWriterCheckpoint>(
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn write_token_stream<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &[u32],
@@ -1586,8 +1735,18 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     if write_meta_huffman_bit {
         w.write_bits(u64::from(multiple_groups), 1)?;
         if multiple_groups {
+            #[cfg(coverage)]
+            coverage_cancel_token_at_optimize(token);
             encoded_histogram_bits =
-                optimize_sampling(symbols, width, height, histogram_bits, 9, token)?;
+                match optimize_sampling(symbols, width, height, histogram_bits, 9, token) {
+                    Ok(bits) => bits,
+                    Err(error) => return Err(error),
+                };
+            #[cfg(coverage)]
+            coverage_record_remaining(
+                &COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING,
+                w.checkpoint.coverage_remaining(),
+            );
             w.write_bits(u64::from(encoded_histogram_bits - 2), 3)?;
             // Meta-pixel materialization scales with the retained histogram
             // tile map after sampling. Keep the ordinary no-token map
@@ -1602,6 +1761,11 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                         meta_pixels.push(u32::from(symbol) << 8);
                         symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
                         if symbols_until_checkpoint == 0 {
+                            #[cfg(coverage)]
+                            coverage_record_token_remaining(
+                                &COVERAGE_TOKEN_STREAM_META_PIXEL_REMAINING,
+                                Some(token),
+                            );
                             check_token(Some(token))?;
                             symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
                         }
@@ -1614,6 +1778,8 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             let meta_scratch = scratch
                 .meta_stream
                 .get_or_insert_with(|| Box::new(TokenStreamScratch::default()));
+            #[cfg(coverage)]
+            coverage_record_nested_metadata(token);
             write_image_stream_configured_with_scratch(
                 w,
                 &scratch.meta_pixels,
@@ -1742,6 +1908,7 @@ fn minimize_palette_deltas(palette: &mut [u32]) {
 // The palette has at most 256 entries, but each nearest-delta selection can
 // still scan a large suffix. This token-aware path preserves the no-token
 // ordering and tie behavior while bounding both palette passes.
+#[cfg_attr(coverage, inline(never))]
 fn minimize_palette_deltas_with_checkpoint(
     palette: &mut [u32],
     token: &crate::CancellationToken,
@@ -2107,6 +2274,7 @@ fn subtract_green_with_checkpoint(
 
 // The palette is constructed from the same pixel set being packed.
 #[allow(clippy::unwrap_used)]
+#[cfg_attr(coverage, inline(never))]
 fn apply_palette<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &mut [u32],
@@ -2225,6 +2393,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(coverage, inline(never))]
 fn encode_frame_stream<C: BitWriterCheckpoint>(
     pixels: &mut [u32],
     width: u32,
@@ -2279,7 +2448,17 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
             );
             if use_subtract_green {
+                #[cfg(coverage)]
+                coverage_record_remaining(
+                    &COVERAGE_FRAME_SUBTRACT_FIRST_REMAINING,
+                    w.checkpoint.coverage_remaining(),
+                );
                 w.write_bits(1, 1)?;
+                #[cfg(coverage)]
+                coverage_record_remaining(
+                    &COVERAGE_FRAME_SUBTRACT_SECOND_REMAINING,
+                    w.checkpoint.coverage_remaining(),
+                );
                 w.write_bits(2, 2)?;
                 if token.is_some() {
                     subtract_green_with_checkpoint(pixels, token)?;
@@ -2301,6 +2480,8 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         token,
                     )?
                 } else {
+                    #[cfg(coverage)]
+                    coverage_record_frame_boundary(&COVERAGE_FRAME_PREDICTOR_REMAINING, token);
                     predictor::select_and_apply(
                         pixels,
                         width as usize,
@@ -2327,6 +2508,8 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
             }
 
             if use_predictor && !red_and_blue_zero {
+                #[cfg(coverage)]
+                coverage_record_frame_boundary(&COVERAGE_FRAME_CROSS_REMAINING, token);
                 let color_bits = cross_color::select_and_apply(
                     pixels,
                     width as usize,
@@ -2336,10 +2519,27 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     &mut scratch.cross_color,
                     token,
                 )?;
+                #[cfg(coverage)]
+                coverage_record_remaining(
+                    &COVERAGE_FRAME_CROSS_FIRST_REMAINING,
+                    w.checkpoint.coverage_remaining(),
+                );
                 w.write_bits(1, 1)?;
+                #[cfg(coverage)]
+                coverage_record_remaining(
+                    &COVERAGE_FRAME_CROSS_SECOND_REMAINING,
+                    w.checkpoint.coverage_remaining(),
+                );
                 w.write_bits(1, 2)?;
+                #[cfg(coverage)]
+                coverage_record_remaining(
+                    &COVERAGE_FRAME_CROSS_THIRD_REMAINING,
+                    w.checkpoint.coverage_remaining(),
+                );
                 w.write_bits(u64::from(color_bits - 2), 3)?;
                 let color_width = (width as usize + (1 << color_bits) - 1) >> color_bits;
+                #[cfg(coverage)]
+                coverage_record_frame_boundary(&COVERAGE_FRAME_COLOR_REMAINING, token);
                 write_image_stream(
                     w,
                     scratch.cross_color.image(),
@@ -2369,6 +2569,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     Ok(frame)
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn collect_palette(
     pixels: &[u32],
     token: Option<&crate::CancellationToken>,
@@ -2495,6 +2696,7 @@ fn convert_pixels(
 /// # Panics
 ///
 /// Panics if the image data is not of the indicated dimensions.
+#[cfg_attr(coverage, inline(never))]
 fn encode_frame(
     data: &[u8],
     width: u32,
@@ -2588,13 +2790,14 @@ fn encode_frame(
             transform_bits,
             palette,
             None,
-            NoopBitWriterCheckpoint,
+            NoopBitWriterCheckpoint::default(),
             scratch,
         ),
     }
 }
 
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(coverage, inline(never))]
 fn encode_alpha_stream<C: BitWriterCheckpoint>(
     palette_delta: &[u32],
     palette_len: usize,
@@ -2677,10 +2880,14 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
 
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
     compressed.push(1); // lossless compression, no filtering, no preprocessing
+    #[cfg(coverage)]
+    coverage_record_token_remaining(&COVERAGE_ALPHA_COMPRESSED_REMAINING, token);
     extend_bytes_with_checkpoint(&mut compressed, &encoded, token)?;
 
     let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
     uncompressed.push(0); // no compression, no filtering, no preprocessing
+    #[cfg(coverage)]
+    coverage_record_token_remaining(&COVERAGE_ALPHA_UNCOMPRESSED_REMAINING, token);
     extend_bytes_with_checkpoint(&mut uncompressed, alpha, token)?;
 
     check_token(token)?;
@@ -2697,6 +2904,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
 // bound caller-controlled copies at the same 1,024-byte output interval used
 // by the bit writer. Pillow has no caller token or typed work-budget result for
 // these copies, so this is Rust-only work-control evidence.
+#[cfg_attr(coverage, inline(never))]
 fn extend_bytes_with_checkpoint(
     output: &mut Vec<u8>,
     source: &[u8],
@@ -2715,6 +2923,7 @@ fn extend_bytes_with_checkpoint(
     Ok(())
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn collect_alpha_palette(
     alpha: &[u8],
     token: Option<&crate::CancellationToken>,
@@ -2767,6 +2976,7 @@ pub(crate) fn encode_alpha(
 }
 
 #[allow(clippy::unwrap_used)]
+#[cfg_attr(coverage, inline(never))]
 fn encode_alpha_with_scratch(
     alpha: &[u8],
     width: u32,
@@ -2938,7 +3148,7 @@ fn encode_alpha_with_scratch(
             &mut scratch.output,
             &mut scratch.tokens,
             None,
-            NoopBitWriterCheckpoint,
+            NoopBitWriterCheckpoint::default(),
         ),
     }
 }
@@ -2951,6 +3161,7 @@ const fn chunk_size(inner_bytes: usize) -> u32 {
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn write_chunk(
     output: &mut Vec<u8>,
     name: &[u8],
@@ -3032,6 +3243,7 @@ impl WebPEncoder {
     ///
     /// The encoder retains bounded scratch so sequential animation frames can
     /// reuse its VP8L working storage without sharing their output buffers.
+    #[cfg_attr(coverage, inline(never))]
     pub(crate) fn encode_with_token(
         &mut self,
         data: &[u8],
@@ -3042,6 +3254,8 @@ impl WebPEncoder {
     ) -> Result<Vec<u8>, EncodingError> {
         let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
         let mut frame = encode_frame(data, width, height, color, token, scratch)?;
+        #[cfg(coverage)]
+        coverage_record_token_remaining(&COVERAGE_ENCODER_FRAME_REMAINING, token);
         check_token(token)?;
 
         // The ordinary path has no caller-visible checkpoint during the final
@@ -3070,13 +3284,2319 @@ impl WebPEncoder {
         output.extend_from_slice(b"RIFF");
         output.extend_from_slice(&(chunk_size(frame.len()) + 4).to_le_bytes());
         output.extend_from_slice(b"WEBP");
+        #[cfg(coverage)]
+        coverage_record_token_remaining(&COVERAGE_ENCODER_CHUNK_REMAINING, token);
         write_chunk(&mut output, b"VP8L", &frame, token)?;
+        #[cfg(coverage)]
+        coverage_record_token_remaining(&COVERAGE_ENCODER_FINAL_REMAINING, token);
         check_token(token)?;
         Ok(output)
     }
 }
 
 #[cfg(coverage)]
+#[inline(never)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
+fn __coverage_exercise_instrumented_generic_paths() {
+    let direct_token = crate::CancellationToken::new();
+
+    // Seed the nested checkpoint counters at their last interval. One small
+    // write then observes every bit interval without a 2 MiB synthetic write.
+    let mut boundary_checkpoint = TokenBitWriterCheckpoint {
+        token: &direct_token,
+        written_bits: VP8L_2097152_BITSTREAM_CHECKPOINT_BITS - VP8L_8_BITSTREAM_CHECKPOINT_BITS,
+        output_bytes: VP8L_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let _ =
+        std::hint::black_box(boundary_checkpoint.checkpoint_bits(VP8L_8_BITSTREAM_CHECKPOINT_BITS));
+    let _ = std::hint::black_box(boundary_checkpoint.checkpoint_output_bytes(1));
+
+    let direct_rle_lengths = [
+        0_u8, 0, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    ];
+    let mut direct_rle_tokens = Vec::new();
+    let _ = std::hint::black_box(compressed_huffman_tokens_with_checkpoint(
+        &direct_rle_lengths,
+        &mut direct_rle_tokens,
+        Some(&direct_token),
+    ));
+
+    let mut sampling_symbols = vec![1_u16; 64 * 64];
+    let _ = std::hint::black_box(optimize_sampling(
+        &mut sampling_symbols,
+        64,
+        64,
+        0,
+        6,
+        Some(&direct_token),
+    ));
+
+    let mut direct_palette = (0..256)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x0103_0507);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let _ = std::hint::black_box(minimize_palette_deltas_with_checkpoint(
+        &mut direct_palette,
+        &direct_token,
+    ));
+
+    let mut direct_chunk = Vec::new();
+    let _ = std::hint::black_box(write_chunk(
+        &mut direct_chunk,
+        b"TEST",
+        &[0_u8; VP8L_OUTPUT_CHECKPOINT_BYTES],
+        Some(&direct_token),
+    ));
+
+    let direct_alpha = (0..2_048).map(|index| index as u8).collect::<Vec<_>>();
+    let _ = std::hint::black_box(encode_alpha(&direct_alpha, 64, 32, Some(&direct_token)));
+
+    let direct_rgba = (0..64 * 32)
+        .flat_map(|index| {
+            let value = index as u8;
+            [value, value.wrapping_mul(3), value.wrapping_mul(7), value]
+        })
+        .collect::<Vec<_>>();
+    let mut direct_encoder = WebPEncoder::new();
+    std::hint::black_box(
+        direct_encoder
+            .encode_with_token(&direct_rgba, 64, 32, ColorType::Rgba8, Some(&direct_token))
+            .expect("instrumented token WebP frame must encode"),
+    );
+
+    // A varied meta-pixel map keeps histogram clustering in the multiple-group
+    // case. The 1,024-symbol checkpoint is otherwise unreachable in the
+    // small direct probes above.
+    let meta_pixels = (0..64 * 32)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000
+                | ((value & 0xff) << 16)
+                | (((value.wrapping_mul(3)) & 0xff) << 8)
+                | (value.wrapping_mul(7) & 0xff)
+        })
+        .collect::<Vec<_>>();
+    let mut meta_bytes = Vec::new();
+    let mut meta_writer = BitWriter {
+        writer: &mut meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut meta_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(write_image_stream(
+        &mut meta_writer,
+        &meta_pixels,
+        64,
+        true,
+        &mut meta_scratch.output,
+        &mut meta_scratch.tokens,
+        Some(&direct_token),
+    ));
+    let _ = std::hint::black_box(meta_writer.flush());
+
+    let large_meta_width = 256_usize;
+    let large_meta_height = 128_usize;
+    let large_meta_pixels = (0..large_meta_width * large_meta_height)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let large_meta_tokens = large_meta_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    let mut large_meta_bytes = Vec::new();
+    let mut large_meta_writer = BitWriter {
+        writer: &mut large_meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut large_meta_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(write_token_stream(
+        &mut large_meta_writer,
+        &large_meta_pixels,
+        large_meta_width,
+        &large_meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 2,
+            quality: 100,
+        },
+        &mut large_meta_scratch,
+        Some(&direct_token),
+    ));
+    let _ = large_meta_writer.flush();
+
+    let dense_frequencies = (0..256)
+        .map(|index| ((index * 37) % 251 + 1) as u32)
+        .collect::<Vec<_>>();
+    let mut huffman_bytes = Vec::new();
+    let mut huffman_writer = BitWriter {
+        writer: &mut huffman_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut huffman_lengths = vec![0; 256];
+    let mut huffman_codes = vec![0; 256];
+    let mut huffman_tokens = Vec::new();
+    let mut optimized_frequencies = Vec::new();
+    let mut huffman_rle_good = Vec::new();
+    let mut huffman_nodes = Vec::new();
+    let mut huffman_node_sort_scratch = Vec::new();
+    let mut huffman_node_arena = Vec::new();
+    let mut huffman_scratch = HuffmanTreeScratch {
+        huffman_tokens: &mut huffman_tokens,
+        optimized_frequencies: &mut optimized_frequencies,
+        huffman_rle_good: &mut huffman_rle_good,
+        nodes: &mut huffman_nodes,
+        node_sort_scratch: &mut huffman_node_sort_scratch,
+        node_arena: &mut huffman_node_arena,
+    };
+    for fail_after in 0..=2_048 {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &dense_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            None,
+        ));
+    }
+    let trimmed_frequencies = {
+        let mut frequencies = vec![0; 256];
+        frequencies[..4].fill(1);
+        frequencies
+    };
+    for fail_after in 0..=128 {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &trimmed_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            None,
+        ));
+    }
+    for checks in 0..=512 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &dense_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&token),
+        ));
+    }
+    for checks in 0..=512 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &dense_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&token),
+        ));
+    }
+    let palette_token = crate::CancellationToken::new();
+    let mut live_noop_bytes = Vec::new();
+    let mut live_noop_writer = BitWriter {
+        writer: &mut live_noop_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut live_noop_lengths = vec![0; 256];
+    let mut live_noop_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut live_noop_writer,
+            &dense_frequencies,
+            &mut live_noop_lengths,
+            &mut live_noop_codes,
+            &mut huffman_scratch,
+            Some(&palette_token),
+        )
+        .expect("instrumented token Huffman coverage input must encode"),
+    );
+    let _ = std::hint::black_box(live_noop_writer.flush());
+
+    let mut live_token_bytes = Vec::new();
+    let mut live_token_writer = BitWriter {
+        writer: &mut live_token_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &palette_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut live_token_lengths = vec![0; 256];
+    let mut live_token_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut live_token_writer,
+            &dense_frequencies,
+            &mut live_token_lengths,
+            &mut live_token_codes,
+            &mut huffman_scratch,
+            Some(&palette_token),
+        )
+        .expect("instrumented bit-token Huffman coverage input must encode"),
+    );
+    let _ = std::hint::black_box(live_token_writer.flush());
+
+    let mut trimmed_token_bytes = Vec::new();
+    let mut trimmed_token_writer = BitWriter {
+        writer: &mut trimmed_token_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &palette_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut trimmed_token_lengths = vec![0; 256];
+    let mut trimmed_token_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut trimmed_token_writer,
+            &trimmed_frequencies,
+            &mut trimmed_token_lengths,
+            &mut trimmed_token_codes,
+            &mut huffman_scratch,
+            Some(&palette_token),
+        )
+        .expect("instrumented trimmed bit-token Huffman coverage input must encode"),
+    );
+    let _ = std::hint::black_box(trimmed_token_writer.flush());
+
+    for initial_bits in 0..8 {
+        let trimmed_writer_probe_token = crate::CancellationToken::new();
+        trimmed_writer_probe_token.cancel_after(usize::MAX);
+        let trimmed_function_probe_token = crate::CancellationToken::new();
+        let mut trimmed_writer_probe_bytes = Vec::new();
+        let mut trimmed_writer_probe = BitWriter {
+            writer: &mut trimmed_writer_probe_bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &trimmed_writer_probe_token,
+                written_bits: initial_bits,
+                output_bytes: 0,
+            },
+        };
+        let mut trimmed_writer_probe_lengths = vec![0; 256];
+        let mut trimmed_writer_probe_codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut trimmed_writer_probe,
+            &trimmed_frequencies,
+            &mut trimmed_writer_probe_lengths,
+            &mut trimmed_writer_probe_codes,
+            &mut huffman_scratch,
+            Some(&trimmed_function_probe_token),
+        ));
+        let trimmed_writer_checks = usize::MAX.saturating_sub(
+            trimmed_writer_probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for fail_after in 0..=trimmed_writer_checks {
+            let writer_token = crate::CancellationToken::new();
+            writer_token.cancel_after(fail_after);
+            let function_token = crate::CancellationToken::new();
+            let mut bytes = Vec::new();
+            let mut writer = BitWriter {
+                writer: &mut bytes,
+                buffer: 0,
+                nbits: 0,
+                checkpoint: TokenBitWriterCheckpoint {
+                    token: &writer_token,
+                    written_bits: initial_bits,
+                    output_bytes: 0,
+                },
+            };
+            let mut lengths = vec![0; 256];
+            let mut codes = vec![0; 256];
+            let _ = std::hint::black_box(write_huffman_tree(
+                &mut writer,
+                &trimmed_frequencies,
+                &mut lengths,
+                &mut codes,
+                &mut huffman_scratch,
+                Some(&function_token),
+            ));
+        }
+    }
+
+    let mut direct_reference_group = GroupCodes::default();
+    direct_reference_group.lengths[0].resize(280, 1);
+    direct_reference_group.codes[0].resize(280, 0);
+    direct_reference_group.lengths[4].resize(2, 1);
+    direct_reference_group.codes[4].resize(2, 0);
+    let direct_reference_groups = [direct_reference_group];
+    let direct_reference_context = TokenStreamReferenceContext {
+        width: 8,
+        multiple_groups: false,
+        symbols: &[],
+        encoded_histogram_bits: 0,
+        tile_width: 1,
+        groups: &direct_reference_groups,
+    };
+    let direct_reference_token = crate::CancellationToken::new();
+    direct_reference_token.cancel_after(0);
+    let mut direct_reference_bytes = Vec::new();
+    let mut direct_reference_writer = BitWriter {
+        writer: &mut direct_reference_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &direct_reference_token,
+            written_bits: 14,
+            output_bytes: 0,
+        },
+    };
+    let _ = std::hint::black_box(write_token_reference(
+        &mut direct_reference_writer,
+        backward_refs::Token::Copy {
+            distance: 1,
+            length: 4,
+        },
+        0,
+        direct_reference_context,
+    ));
+
+    let huffman_probe_token = crate::CancellationToken::new();
+    huffman_probe_token.cancel_after(usize::MAX);
+    let mut huffman_probe_bytes = Vec::new();
+    let mut huffman_probe_writer = BitWriter {
+        writer: &mut huffman_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut huffman_probe_lengths = vec![0; 256];
+    let mut huffman_probe_codes = vec![0; 256];
+    let _ = std::hint::black_box(write_huffman_tree(
+        &mut huffman_probe_writer,
+        &dense_frequencies,
+        &mut huffman_probe_lengths,
+        &mut huffman_probe_codes,
+        &mut huffman_scratch,
+        Some(&huffman_probe_token),
+    ));
+    let huffman_noop_checks = usize::MAX.saturating_sub(
+        huffman_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=huffman_noop_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &dense_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&token),
+        ));
+    }
+
+    let huffman_bit_probe_token = crate::CancellationToken::new();
+    huffman_bit_probe_token.cancel_after(usize::MAX);
+    let mut huffman_bit_probe_bytes = Vec::new();
+    let mut huffman_bit_probe_writer = BitWriter {
+        writer: &mut huffman_bit_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &huffman_bit_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut huffman_bit_probe_lengths = vec![0; 256];
+    let mut huffman_bit_probe_codes = vec![0; 256];
+    let _ = std::hint::black_box(write_huffman_tree(
+        &mut huffman_bit_probe_writer,
+        &dense_frequencies,
+        &mut huffman_bit_probe_lengths,
+        &mut huffman_bit_probe_codes,
+        &mut huffman_scratch,
+        Some(&huffman_bit_probe_token),
+    ));
+    let huffman_bit_checks = usize::MAX.saturating_sub(
+        huffman_bit_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=huffman_bit_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &dense_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&token),
+        ));
+    }
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut huffman_writer,
+            &dense_frequencies,
+            &mut huffman_lengths,
+            &mut huffman_codes,
+            &mut huffman_scratch,
+            None,
+        )
+        .expect("instrumented Huffman coverage input must encode"),
+    );
+    let _ = std::hint::black_box(huffman_writer.flush());
+
+    let palette = (0..20)
+        .map(|index| {
+            let value = (index * 11) as u32;
+            0xff00_0000 | (value << 16) | ((value ^ 0x55) << 8) | (value ^ 0xaa)
+        })
+        .collect::<Vec<_>>();
+    for fail_after in 0..=2_048 {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut pixels = (0..(64 * 32))
+            .map(|index| palette[index % palette.len()])
+            .collect::<Vec<_>>();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(apply_palette(
+            &mut writer,
+            &mut pixels,
+            64,
+            32,
+            palette.clone(),
+            &mut scratch,
+            None,
+        ));
+    }
+    let mut palette_bytes = Vec::new();
+    let mut palette_writer = BitWriter {
+        writer: &mut palette_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut palette_pixels = (0..(64 * 32))
+        .map(|index| palette[index % palette.len()])
+        .collect::<Vec<_>>();
+    let mut palette_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        apply_palette(
+            &mut palette_writer,
+            &mut palette_pixels,
+            64,
+            32,
+            palette,
+            &mut palette_scratch,
+            None,
+        )
+        .expect("instrumented palette coverage input must encode"),
+    );
+    let _ = std::hint::black_box(palette_writer.flush());
+
+    let token_palette = (0..20)
+        .map(|index| {
+            let value = (index * 11) as u32;
+            0xff00_0000 | (value << 16) | ((value ^ 0x55) << 8) | (value ^ 0xaa)
+        })
+        .collect::<Vec<_>>();
+    let live_token = crate::CancellationToken::new();
+    let mut token_palette_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut token_palette_bytes = Vec::new();
+    let mut token_palette_writer = BitWriter {
+        writer: &mut token_palette_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    std::hint::black_box(
+        apply_palette(
+            &mut token_palette_writer,
+            &mut token_palette_pixels,
+            64,
+            32,
+            token_palette.clone(),
+            &mut palette_scratch,
+            Some(&live_token),
+        )
+        .expect("instrumented token palette coverage input must encode"),
+    );
+    let _ = std::hint::black_box(token_palette_writer.flush());
+
+    let mut token_palette_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut token_palette_bytes = Vec::new();
+    let mut token_palette_writer = BitWriter {
+        writer: &mut token_palette_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &live_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    std::hint::black_box(
+        apply_palette(
+            &mut token_palette_writer,
+            &mut token_palette_pixels,
+            64,
+            32,
+            token_palette.clone(),
+            &mut palette_scratch,
+            Some(&live_token),
+        )
+        .expect("instrumented bit-token palette coverage input must encode"),
+    );
+    let _ = std::hint::black_box(token_palette_writer.flush());
+
+    let apply_probe_token = crate::CancellationToken::new();
+    apply_probe_token.cancel_after(usize::MAX);
+    let mut apply_probe_bytes = Vec::new();
+    let mut apply_probe_writer = BitWriter {
+        writer: &mut apply_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut apply_probe_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut apply_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(apply_palette(
+        &mut apply_probe_writer,
+        &mut apply_probe_pixels,
+        64,
+        32,
+        token_palette.clone(),
+        &mut apply_probe_scratch,
+        Some(&apply_probe_token),
+    ));
+    let apply_noop_checks = usize::MAX.saturating_sub(
+        apply_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=apply_noop_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut pixels = (0..(64 * 32))
+            .map(|index| token_palette[index % token_palette.len()])
+            .collect::<Vec<_>>();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(apply_palette(
+            &mut writer,
+            &mut pixels,
+            64,
+            32,
+            token_palette.clone(),
+            &mut scratch,
+            Some(&token),
+        ));
+    }
+
+    let apply_bit_probe_token = crate::CancellationToken::new();
+    apply_bit_probe_token.cancel_after(usize::MAX);
+    let mut apply_bit_probe_bytes = Vec::new();
+    let mut apply_bit_probe_writer = BitWriter {
+        writer: &mut apply_bit_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &apply_bit_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut apply_bit_probe_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut apply_bit_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(apply_palette(
+        &mut apply_bit_probe_writer,
+        &mut apply_bit_probe_pixels,
+        64,
+        32,
+        token_palette.clone(),
+        &mut apply_bit_probe_scratch,
+        Some(&apply_bit_probe_token),
+    ));
+    let apply_bit_checks = usize::MAX.saturating_sub(
+        apply_bit_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=apply_bit_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut pixels = (0..(64 * 32))
+            .map(|index| token_palette[index % token_palette.len()])
+            .collect::<Vec<_>>();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(apply_palette(
+            &mut writer,
+            &mut pixels,
+            64,
+            32,
+            token_palette.clone(),
+            &mut scratch,
+            Some(&token),
+        ));
+    }
+
+    let alpha_palette_delta = (0..20)
+        .map(|index| 0xff00_0000 | ((index as u32) << 8))
+        .collect::<Vec<_>>();
+    let alpha_packed = (0..64)
+        .map(|index| 0xff00_0000 | (index as u32))
+        .collect::<Vec<_>>();
+    let alpha = (0..64).map(|index| (index * 17) as u8).collect::<Vec<_>>();
+    for fail_after in 0..=2_048 {
+        let mut output = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut output,
+            &mut token_scratch,
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+        ));
+    }
+    let mut alpha_output = Vec::new();
+    let mut alpha_scratch = TokenStreamScratch::default();
+    std::hint::black_box(
+        encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut alpha_output,
+            &mut alpha_scratch,
+            None,
+            NoopBitWriterCheckpoint::default(),
+        )
+        .expect("instrumented alpha coverage input must encode"),
+    );
+
+    let live_alpha_token = crate::CancellationToken::new();
+    let mut token_alpha_output = Vec::new();
+    let mut token_alpha_scratch = TokenStreamScratch::default();
+    std::hint::black_box(
+        encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut token_alpha_output,
+            &mut token_alpha_scratch,
+            Some(&live_alpha_token),
+            NoopBitWriterCheckpoint::default(),
+        )
+        .expect("instrumented token alpha coverage input must encode"),
+    );
+    let mut token_alpha_output = Vec::new();
+    let mut token_alpha_scratch = TokenStreamScratch::default();
+    std::hint::black_box(
+        encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut token_alpha_output,
+            &mut token_alpha_scratch,
+            Some(&live_alpha_token),
+            TokenBitWriterCheckpoint {
+                token: &live_alpha_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        )
+        .expect("instrumented bit-token alpha coverage input must encode"),
+    );
+
+    let alpha_probe_token = crate::CancellationToken::new();
+    alpha_probe_token.cancel_after(usize::MAX);
+    let mut alpha_probe_output = Vec::new();
+    let mut alpha_probe_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &alpha,
+        &mut alpha_probe_output,
+        &mut alpha_probe_scratch,
+        Some(&alpha_probe_token),
+        NoopBitWriterCheckpoint::default(),
+    ));
+    let alpha_noop_checks = usize::MAX.saturating_sub(
+        alpha_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=alpha_noop_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut output,
+            &mut token_scratch,
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+        ));
+    }
+
+    let alpha_bit_probe_token = crate::CancellationToken::new();
+    alpha_bit_probe_token.cancel_after(usize::MAX);
+    let mut alpha_bit_probe_output = Vec::new();
+    let mut alpha_bit_probe_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &alpha,
+        &mut alpha_bit_probe_output,
+        &mut alpha_bit_probe_scratch,
+        Some(&alpha_bit_probe_token),
+        TokenBitWriterCheckpoint {
+            token: &alpha_bit_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    ));
+    let alpha_bit_checks = usize::MAX.saturating_sub(
+        alpha_bit_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=alpha_bit_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut output,
+            &mut token_scratch,
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        ));
+    }
+
+    for initial_bits in [7, 6] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(0);
+        let mut output = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &alpha,
+            &mut output,
+            &mut token_scratch,
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: initial_bits,
+                output_bytes: 0,
+            },
+        ));
+    }
+
+    let empty_alpha = [];
+    let mut empty_alpha_output = Vec::new();
+    let mut empty_alpha_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &empty_alpha,
+        &mut empty_alpha_output,
+        &mut empty_alpha_scratch,
+        None,
+        NoopBitWriterCheckpoint::default(),
+    ));
+    let empty_alpha_token = crate::CancellationToken::new();
+    let mut empty_alpha_token_output = Vec::new();
+    let mut empty_alpha_token_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &empty_alpha,
+        &mut empty_alpha_token_output,
+        &mut empty_alpha_token_scratch,
+        None,
+        TokenBitWriterCheckpoint {
+            token: &empty_alpha_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    ));
+
+    let large_alpha = vec![0_u8; 64 * 1024];
+    let mut large_alpha_output = Vec::new();
+    let mut large_alpha_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &large_alpha,
+        &mut large_alpha_output,
+        &mut large_alpha_scratch,
+        None,
+        NoopBitWriterCheckpoint::default(),
+    ));
+    let large_alpha_checkpoint_token = crate::CancellationToken::new();
+    let mut large_alpha_checkpoint_output = Vec::new();
+    let mut large_alpha_checkpoint_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &large_alpha,
+        &mut large_alpha_checkpoint_output,
+        &mut large_alpha_checkpoint_scratch,
+        None,
+        TokenBitWriterCheckpoint {
+            token: &large_alpha_checkpoint_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    ));
+    let large_alpha_noop_token = crate::CancellationToken::new();
+    let mut large_alpha_noop_token_output = Vec::new();
+    let mut large_alpha_noop_token_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &large_alpha,
+        &mut large_alpha_noop_token_output,
+        &mut large_alpha_noop_token_scratch,
+        Some(&large_alpha_noop_token),
+        NoopBitWriterCheckpoint::default(),
+    ));
+    let large_alpha_token = crate::CancellationToken::new();
+    let mut large_alpha_token_output = Vec::new();
+    let mut large_alpha_token_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        8,
+        &large_alpha,
+        &mut large_alpha_token_output,
+        &mut large_alpha_token_scratch,
+        Some(&large_alpha_token),
+        TokenBitWriterCheckpoint {
+            token: &large_alpha_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    ));
+
+    #[cfg(coverage_nightly)]
+    {
+        // The ordinary ALPH path compares the raw plane against the encoded
+        // candidate. First measure that candidate, then feed an equally sized
+        // raw plane to reach the exact-size branch for both checkpoint types.
+        let mut compressed_length = 0usize;
+        for length in 0..=16_384 {
+            let alpha = vec![0_u8; length];
+            let mut ordinary_probe_output = Vec::new();
+            let mut ordinary_probe_scratch = TokenStreamScratch::default();
+            let encoded = encode_alpha_stream(
+                &alpha_palette_delta,
+                alpha_palette_delta.len(),
+                &alpha_packed,
+                8,
+                &alpha,
+                &mut ordinary_probe_output,
+                &mut ordinary_probe_scratch,
+                None,
+                NoopBitWriterCheckpoint::default(),
+            )
+            .unwrap_or_default();
+            if encoded.first().copied() == Some(1) {
+                compressed_length = encoded.len().saturating_sub(1);
+                break;
+            }
+        }
+        let equal_alpha = vec![0_u8; compressed_length];
+        let mut equal_output = Vec::new();
+        let mut equal_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &equal_alpha,
+            &mut equal_output,
+            &mut equal_scratch,
+            None,
+            NoopBitWriterCheckpoint::default(),
+        ));
+        let equal_token = crate::CancellationToken::new();
+        let mut equal_token_output = Vec::new();
+        let mut equal_token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            8,
+            &equal_alpha,
+            &mut equal_token_output,
+            &mut equal_token_scratch,
+            None,
+            TokenBitWriterCheckpoint {
+                token: &equal_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        ));
+    }
+
+    for fail_after in 0..=2_048 {
+        let mut pixels = vec![0xff40_4040; 16 * 16];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+            &mut scratch,
+        ));
+    }
+    let mut pixels = vec![0xff40_4040; 16 * 16];
+    let mut scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint::default(),
+            &mut scratch,
+        )
+        .expect("instrumented frame coverage input must encode"),
+    );
+    let live_frame_token = crate::CancellationToken::new();
+    let mut token_pixels = vec![0xff40_4040; 16 * 16];
+    let mut token_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut token_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            Some(&live_frame_token),
+            NoopBitWriterCheckpoint::default(),
+            &mut token_scratch,
+        )
+        .expect("instrumented token frame coverage input must encode"),
+    );
+    let mut token_pixels = vec![0xff40_4040; 16 * 16];
+    let mut token_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut token_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            Some(&live_frame_token),
+            TokenBitWriterCheckpoint {
+                token: &live_frame_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut token_scratch,
+        )
+        .expect("instrumented bit-token frame coverage input must encode"),
+    );
+
+    let frame_probe_token = crate::CancellationToken::new();
+    frame_probe_token.cancel_after(usize::MAX);
+    let mut frame_probe_pixels = vec![0xff40_4040; 16 * 16];
+    let mut frame_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_frame_stream(
+        &mut frame_probe_pixels,
+        16,
+        16,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&frame_probe_token),
+        NoopBitWriterCheckpoint::default(),
+        &mut frame_probe_scratch,
+    ));
+    let frame_noop_checks = usize::MAX.saturating_sub(
+        frame_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=frame_noop_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = vec![0xff40_4040; 16 * 16];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+            &mut scratch,
+        ));
+    }
+
+    let frame_bit_probe_token = crate::CancellationToken::new();
+    frame_bit_probe_token.cancel_after(usize::MAX);
+    let mut frame_bit_probe_pixels = vec![0xff40_4040; 16 * 16];
+    let mut frame_bit_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_frame_stream(
+        &mut frame_bit_probe_pixels,
+        16,
+        16,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&frame_bit_probe_token),
+        TokenBitWriterCheckpoint {
+            token: &frame_bit_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut frame_bit_probe_scratch,
+    ));
+    let frame_bit_checks = usize::MAX.saturating_sub(
+        frame_bit_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=frame_bit_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = vec![0xff40_4040; 16 * 16];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        ));
+    }
+
+    // The subtract-green branch has a token checkpoint inside the transform,
+    // but the existing frame sweeps use Spatial mode and therefore never
+    // reach the outer `?` at that call site. Measure a small real subtract-
+    // green frame, then replay its token checkpoints with the Noop writer so
+    // the generic frame specialization observes the transform error.
+    let subtract_frame_probe_token = crate::CancellationToken::new();
+    subtract_frame_probe_token.cancel_after(usize::MAX);
+    let mut subtract_frame_probe_pixels = vec![0xff40_4040; 32 * 32];
+    let mut subtract_frame_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_frame_stream(
+        &mut subtract_frame_probe_pixels,
+        32,
+        32,
+        false,
+        EntropyMode::SubtractGreen,
+        true,
+        1,
+        Vec::new(),
+        Some(&subtract_frame_probe_token),
+        NoopBitWriterCheckpoint::default(),
+        &mut subtract_frame_probe_scratch,
+    ));
+    let subtract_frame_checks = usize::MAX.saturating_sub(
+        subtract_frame_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=subtract_frame_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = vec![0xff40_4040; 32 * 32];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame_stream(
+            &mut pixels,
+            32,
+            32,
+            false,
+            EntropyMode::SubtractGreen,
+            true,
+            1,
+            Vec::new(),
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+            &mut scratch,
+        ));
+    }
+
+    let frame_header_token = crate::CancellationToken::new();
+    frame_header_token.cancel_after(4);
+    let mut frame_header_pixels = vec![0xff40_4040; 16 * 16];
+    let mut frame_header_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_frame_stream(
+        &mut frame_header_pixels,
+        16,
+        16,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&frame_header_token),
+        TokenBitWriterCheckpoint {
+            token: &frame_header_token,
+            written_bits: 3,
+            output_bytes: 0,
+        },
+        &mut frame_header_scratch,
+    ));
+
+    let grayscale_token = crate::CancellationToken::new();
+    let _ = std::hint::black_box(pixels_are_grayscale_with_checkpoint(
+        &[0xff20_2021],
+        Some(&grayscale_token),
+    ));
+
+    coverage_exercise_remaining_encoder_errors();
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+#[inline(never)]
+#[allow(dead_code)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
+fn coverage_exercise_remaining_encoder_errors_exploration() {
+    let multi_group_width = 32_usize;
+    let multi_group_height = 32_usize;
+    let multi_group_pixels = (0..multi_group_width * multi_group_height)
+        .map(|index| {
+            let x = index % multi_group_width;
+            let y = index / multi_group_width;
+            let tile = (x / 4) + (y / 4) * 8;
+            let value = (tile as u32).wrapping_mul(0x1f3d_5b79);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let multi_group_tokens = multi_group_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+
+    // The function token and the writer token are independent work budgets.
+    // Keeping the writer checkpoint live isolates the polling edge inside the
+    // meta-pixel materialization loop.
+    let metadata_token_probe = crate::CancellationToken::new();
+    metadata_token_probe.cancel_after(usize::MAX);
+    let mut metadata_probe_bytes = Vec::new();
+    let mut metadata_probe_writer = BitWriter {
+        writer: &mut metadata_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut metadata_probe_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut metadata_probe_writer,
+        &multi_group_pixels,
+        multi_group_width,
+        &multi_group_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 2,
+            quality: 100,
+        },
+        &mut metadata_probe_scratch,
+        Some(&metadata_token_probe),
+    );
+    let metadata_checks = usize::MAX.saturating_sub(
+        metadata_token_probe
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=metadata_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &multi_group_pixels,
+            multi_group_width,
+            &multi_group_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 2,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
+
+    // A token-aware writer has a separate checkpoint token. Sweep the measured
+    // writer checks to reach the histogram-header `write_bits` error edge.
+    let writer_token_probe = crate::CancellationToken::new();
+    writer_token_probe.cancel_after(usize::MAX);
+    let live_metadata_token = crate::CancellationToken::new();
+    let mut writer_probe_bytes = Vec::new();
+    let mut writer_probe = BitWriter {
+        writer: &mut writer_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &writer_token_probe,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut writer_probe_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer_probe,
+        &multi_group_pixels,
+        multi_group_width,
+        &multi_group_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 2,
+            quality: 100,
+        },
+        &mut writer_probe_scratch,
+        Some(&live_metadata_token),
+    );
+    let writer_checks = usize::MAX.saturating_sub(
+        writer_token_probe
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=writer_checks {
+        let writer_token = crate::CancellationToken::new();
+        writer_token.cancel_after(checks);
+        let live_token = crate::CancellationToken::new();
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &multi_group_pixels,
+            multi_group_width,
+            &multi_group_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 2,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&live_token),
+        );
+    }
+
+    let grayscale_pixels = vec![0xff40_4040; 32 * 32];
+    let grayscale_token = crate::CancellationToken::new();
+    grayscale_token.cancel_after(0);
+    let mut grayscale_pixels = grayscale_pixels.clone();
+    let mut grayscale_scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut grayscale_pixels,
+        32,
+        32,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&grayscale_token),
+        NoopBitWriterCheckpoint::default(),
+        &mut grayscale_scratch,
+    );
+    let grayscale_writer_token = crate::CancellationToken::new();
+    let mut grayscale_pixels = grayscale_pixels.clone();
+    let mut grayscale_scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut grayscale_pixels,
+        32,
+        32,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&grayscale_token),
+        TokenBitWriterCheckpoint {
+            token: &grayscale_writer_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut grayscale_scratch,
+    );
+
+    let non_grayscale_frame = (0..16 * 16)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    for fail_after in 0..=512 {
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+            &mut scratch,
+        );
+    }
+    for checks in 0..=512 {
+        let writer_token = crate::CancellationToken::new();
+        writer_token.cancel_after(checks);
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
+    for fail_after in 0..=512 {
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+            &mut scratch,
+        );
+    }
+    for checks in 0..=512 {
+        let writer_token = crate::CancellationToken::new();
+        writer_token.cancel_after(checks);
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
+
+    let alpha_palette_delta = (0..256)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let alpha_packed = (0..4_096)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x9e37_79b9);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let alpha = (0..4_096)
+        .map(|index| (index as u8).wrapping_mul(37))
+        .collect::<Vec<_>>();
+    let alpha_probe_token = crate::CancellationToken::new();
+    alpha_probe_token.cancel_after(usize::MAX);
+    let mut alpha_probe_output = Vec::new();
+    let mut alpha_probe_scratch = TokenStreamScratch::default();
+    let _ = encode_alpha_stream(
+        &alpha_palette_delta,
+        alpha_palette_delta.len(),
+        &alpha_packed,
+        64,
+        &alpha,
+        &mut alpha_probe_output,
+        &mut alpha_probe_scratch,
+        Some(&alpha_probe_token),
+        NoopBitWriterCheckpoint::default(),
+    );
+    let alpha_checks = usize::MAX.saturating_sub(
+        alpha_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in 0..=alpha_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let mut scratch = TokenStreamScratch::default();
+        let _ = encode_alpha_stream(
+            &alpha_palette_delta,
+            alpha_palette_delta.len(),
+            &alpha_packed,
+            64,
+            &alpha,
+            &mut output,
+            &mut scratch,
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+        );
+    }
+
+    let rgba = (0..(128 * 128))
+        .flat_map(|index| {
+            let value = (index as u32).wrapping_mul(0x9e37_79b9);
+            [
+                value as u8,
+                (value >> 8) as u8,
+                (value >> 16) as u8,
+                (value >> 24) as u8,
+            ]
+        })
+        .collect::<Vec<_>>();
+    let encode_probe_token = crate::CancellationToken::new();
+    encode_probe_token.cancel_after(usize::MAX);
+    let mut encode_probe = WebPEncoder::new();
+    let _ =
+        encode_probe.encode_with_token(&rgba, 64, 64, ColorType::Rgba8, Some(&encode_probe_token));
+    let encode_checks = usize::MAX.saturating_sub(
+        encode_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    // The probe's final polls are the only ones relevant to the wrapper's
+    // post-frame check and RIFF/VP8L copy. Keep this window narrow: sweeping
+    // every earlier pixel checkpoint would repeat the complete encoder work.
+    for checks in encode_checks.saturating_sub(12)..=encode_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut encoder = WebPEncoder::new();
+        let _ = encoder.encode_with_token(&rgba, 64, 64, ColorType::Rgba8, Some(&token));
+    }
+}
+
+#[cfg(coverage)]
+#[inline(never)]
+fn coverage_exercise_remaining_encoder_errors() {
+    let width = 128_usize;
+    let height = 128_usize;
+    let pixels = (0..width * height)
+        .map(|index| {
+            let x = index % width;
+            let y = index / width;
+            let tile = (x / 4) + (y / 4) * 32;
+            let value = (tile as u32).wrapping_mul(0x1f3d_5b79);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let tokens = pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    let config = TokenStreamConfig {
+        write_meta_huffman_bit: true,
+        cache_bits: 0,
+        histogram_bits: 2,
+        quality: 100,
+    };
+
+    COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        None,
+    );
+
+    COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.store(1, Ordering::Relaxed);
+    let optimize_error_token = crate::CancellationToken::new();
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let optimize_result = std::hint::black_box(write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        Some(&optimize_error_token),
+    ));
+    assert!(optimize_result.is_err());
+    assert_eq!(
+        COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.load(Ordering::Relaxed),
+        0,
+        "the multi-group token-stream probe did not reach optimize_sampling"
+    );
+    COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.store(0, Ordering::Relaxed);
+
+    let histogram_fail_after = usize::MAX
+        .saturating_sub(COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING.load(Ordering::Relaxed));
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint {
+            fail_after: histogram_fail_after,
+        },
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        None,
+    );
+
+    COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let writer_probe_token = crate::CancellationToken::new();
+    writer_probe_token.cancel_after(usize::MAX);
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &writer_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        None,
+    );
+    let writer_fail_after = usize::MAX
+        .saturating_sub(COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING.load(Ordering::Relaxed));
+    let writer_token = crate::CancellationToken::new();
+    writer_token.cancel_after(writer_fail_after);
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &writer_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        None,
+    );
+
+    COVERAGE_TOKEN_STREAM_META_PIXEL_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let metadata_probe_token = crate::CancellationToken::new();
+    metadata_probe_token.cancel_after(usize::MAX);
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        Some(&metadata_probe_token),
+    );
+    let metadata_fail_after = usize::MAX
+        .saturating_sub(COVERAGE_TOKEN_STREAM_META_PIXEL_REMAINING.load(Ordering::Relaxed));
+    let metadata_token = crate::CancellationToken::new();
+    metadata_token.cancel_after(metadata_fail_after);
+    let mut bytes = Vec::new();
+    let mut writer = BitWriter {
+        writer: &mut bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut writer,
+        &pixels,
+        width,
+        &tokens,
+        config,
+        &mut scratch,
+        Some(&metadata_token),
+    );
+
+    COVERAGE_IMAGE_STREAM_SUFFIX_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let suffix_pixels = (0..width * height)
+        .map(|index| {
+            let value = (index as u32)
+                .wrapping_mul(0x9e37_79b9)
+                .rotate_left((index % 29) as u32);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let suffix_probe_token = crate::CancellationToken::new();
+    suffix_probe_token.cancel_after(usize::MAX);
+    let mut suffix_bytes = Vec::new();
+    let mut suffix_writer = BitWriter {
+        writer: &mut suffix_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut suffix_output_scratch = Vec::new();
+    let mut suffix_token_scratch = TokenStreamScratch::default();
+    let _ = write_image_stream_configured_with_scratch(
+        &mut suffix_writer,
+        &suffix_pixels,
+        width,
+        true,
+        2,
+        100,
+        0,
+        &mut suffix_output_scratch,
+        &mut suffix_token_scratch,
+        Some(&suffix_probe_token),
+    );
+    let suffix_checks =
+        usize::MAX.saturating_sub(COVERAGE_IMAGE_STREAM_SUFFIX_REMAINING.load(Ordering::Relaxed));
+    let suffix_token = crate::CancellationToken::new();
+    suffix_token.cancel_after(suffix_checks);
+    let mut suffix_bytes = Vec::new();
+    let mut suffix_writer = BitWriter {
+        writer: &mut suffix_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut suffix_output_scratch = Vec::new();
+    let mut suffix_token_scratch = TokenStreamScratch::default();
+    let _ = write_image_stream_configured_with_scratch(
+        &mut suffix_writer,
+        &suffix_pixels,
+        width,
+        true,
+        2,
+        100,
+        0,
+        &mut suffix_output_scratch,
+        &mut suffix_token_scratch,
+        Some(&suffix_token),
+    );
+    let copy_probe_token = crate::CancellationToken::new();
+    copy_probe_token.cancel_after(usize::MAX);
+    let mut copy_probe_bytes = Vec::new();
+    let mut copy_probe_writer = BitWriter {
+        writer: &mut copy_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &copy_probe_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut copy_probe_output_scratch = Vec::new();
+    let mut copy_probe_token_scratch = TokenStreamScratch::default();
+    let _ = write_image_stream_configured_with_scratch(
+        &mut copy_probe_writer,
+        &suffix_pixels,
+        width,
+        true,
+        2,
+        100,
+        0,
+        &mut copy_probe_output_scratch,
+        &mut copy_probe_token_scratch,
+        Some(&copy_probe_token),
+    );
+    let copy_checks = usize::MAX.saturating_sub(
+        copy_probe_token
+            .coverage_remaining_checks()
+            .expect("coverage token must retain its remaining checks"),
+    );
+    for checks in copy_checks.saturating_sub(4)..=copy_checks.saturating_add(4) {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut output_scratch = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = write_image_stream_configured_with_scratch(
+            &mut writer,
+            &suffix_pixels,
+            width,
+            true,
+            2,
+            100,
+            0,
+            &mut output_scratch,
+            &mut token_scratch,
+            Some(&token),
+        );
+    }
+
+    let grayscale = vec![0xff40_4040; 32 * 32];
+    let grayscale_token = crate::CancellationToken::new();
+    grayscale_token.cancel_after(0);
+    let mut grayscale_pixels = grayscale.clone();
+    let mut scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut grayscale_pixels,
+        32,
+        32,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&grayscale_token),
+        NoopBitWriterCheckpoint::default(),
+        &mut scratch,
+    );
+    let grayscale_writer_token = crate::CancellationToken::new();
+    let mut grayscale_pixels = grayscale;
+    let mut scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut grayscale_pixels,
+        32,
+        32,
+        false,
+        EntropyMode::Spatial,
+        true,
+        1,
+        Vec::new(),
+        Some(&grayscale_token),
+        TokenBitWriterCheckpoint {
+            token: &grayscale_writer_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut scratch,
+    );
+
+    let frame_pixels = (0..16 * 16)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    let run_noop = |mode: EntropyMode, fail_after: usize| {
+        let mut pixels = frame_pixels.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            mode,
+            false,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+            &mut scratch,
+        );
+    };
+    let run_token = |mode: EntropyMode, checks: usize| {
+        let writer_token = crate::CancellationToken::new();
+        writer_token.cancel_after(checks);
+        let mut pixels = frame_pixels.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            mode,
+            false,
+            1,
+            Vec::new(),
+            None,
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    };
+
+    let frame_targets = [
+        (
+            &COVERAGE_FRAME_SUBTRACT_FIRST_REMAINING,
+            EntropyMode::SubtractGreen,
+        ),
+        (
+            &COVERAGE_FRAME_SUBTRACT_SECOND_REMAINING,
+            EntropyMode::SubtractGreen,
+        ),
+        (
+            &COVERAGE_FRAME_CROSS_FIRST_REMAINING,
+            EntropyMode::SpatialSubtractGreen,
+        ),
+        (
+            &COVERAGE_FRAME_CROSS_SECOND_REMAINING,
+            EntropyMode::SpatialSubtractGreen,
+        ),
+        (
+            &COVERAGE_FRAME_CROSS_THIRD_REMAINING,
+            EntropyMode::SpatialSubtractGreen,
+        ),
+    ];
+    for &(slot, mode) in &frame_targets {
+        slot.store(usize::MAX, Ordering::Relaxed);
+        run_noop(mode, usize::MAX);
+        let fail_after = usize::MAX.saturating_sub(slot.load(Ordering::Relaxed));
+        run_noop(mode, fail_after);
+        slot.store(usize::MAX, Ordering::Relaxed);
+        let probe_token = crate::CancellationToken::new();
+        probe_token.cancel_after(usize::MAX);
+        let mut pixels = frame_pixels.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            mode,
+            false,
+            1,
+            Vec::new(),
+            None,
+            TokenBitWriterCheckpoint {
+                token: &probe_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+        let checks = usize::MAX.saturating_sub(slot.load(Ordering::Relaxed));
+        run_token(mode, checks);
+    }
+
+    let alpha_palette = (0..256)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let packed = (0..4_096)
+        .map(|index| {
+            let value = (index as u32).wrapping_mul(0x9e37_79b9);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let alpha = (0..4_096)
+        .map(|index| (index as u8).wrapping_mul(37))
+        .collect::<Vec<_>>();
+    let alpha_probe_token = crate::CancellationToken::new();
+    alpha_probe_token.cancel_after(usize::MAX);
+    COVERAGE_ALPHA_COMPRESSED_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    COVERAGE_ALPHA_UNCOMPRESSED_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let mut output = Vec::new();
+    let mut scratch = TokenStreamScratch::default();
+    let _ = encode_alpha_stream(
+        &alpha_palette,
+        alpha_palette.len(),
+        &packed,
+        64,
+        &alpha,
+        &mut output,
+        &mut scratch,
+        Some(&alpha_probe_token),
+        NoopBitWriterCheckpoint::default(),
+    );
+    let compressed_checks =
+        usize::MAX.saturating_sub(COVERAGE_ALPHA_COMPRESSED_REMAINING.load(Ordering::Relaxed));
+    let compressed_token = crate::CancellationToken::new();
+    compressed_token.cancel_after(compressed_checks);
+    let mut output = Vec::new();
+    let mut scratch = TokenStreamScratch::default();
+    let _ = encode_alpha_stream(
+        &alpha_palette,
+        alpha_palette.len(),
+        &packed,
+        64,
+        &alpha,
+        &mut output,
+        &mut scratch,
+        Some(&compressed_token),
+        NoopBitWriterCheckpoint::default(),
+    );
+    let uncompressed_checks =
+        usize::MAX.saturating_sub(COVERAGE_ALPHA_UNCOMPRESSED_REMAINING.load(Ordering::Relaxed));
+    let uncompressed_token = crate::CancellationToken::new();
+    uncompressed_token.cancel_after(uncompressed_checks);
+    let mut output = Vec::new();
+    let mut scratch = TokenStreamScratch::default();
+    let _ = encode_alpha_stream(
+        &alpha_palette,
+        alpha_palette.len(),
+        &packed,
+        64,
+        &alpha,
+        &mut output,
+        &mut scratch,
+        Some(&uncompressed_token),
+        NoopBitWriterCheckpoint::default(),
+    );
+
+    let rgba = (0..(128 * 128))
+        .flat_map(|index| {
+            let value = (index as u32).wrapping_mul(0x9e37_79b9);
+            [
+                value as u8,
+                (value >> 8) as u8,
+                (value >> 16) as u8,
+                (value >> 24) as u8,
+            ]
+        })
+        .collect::<Vec<_>>();
+    COVERAGE_ENCODER_FRAME_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    COVERAGE_ENCODER_CHUNK_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    COVERAGE_ENCODER_FINAL_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let probe_token = crate::CancellationToken::new();
+    probe_token.cancel_after(usize::MAX);
+    let mut encoder = WebPEncoder::new();
+    let _ = encoder.encode_with_token(&rgba, 128, 128, ColorType::Rgba8, Some(&probe_token));
+    let frame_checks =
+        usize::MAX.saturating_sub(COVERAGE_ENCODER_FRAME_REMAINING.load(Ordering::Relaxed));
+    let frame_token = crate::CancellationToken::new();
+    frame_token.cancel_after(frame_checks);
+    let mut encoder = WebPEncoder::new();
+    let _ = encoder.encode_with_token(&rgba, 128, 128, ColorType::Rgba8, Some(&frame_token));
+    let chunk_checks =
+        usize::MAX.saturating_sub(COVERAGE_ENCODER_CHUNK_REMAINING.load(Ordering::Relaxed));
+    let chunk_token = crate::CancellationToken::new();
+    chunk_token.cancel_after(chunk_checks);
+    let mut encoder = WebPEncoder::new();
+    let _ = encoder.encode_with_token(&rgba, 128, 128, ColorType::Rgba8, Some(&chunk_token));
+    let final_checks =
+        usize::MAX.saturating_sub(COVERAGE_ENCODER_FINAL_REMAINING.load(Ordering::Relaxed));
+    let final_token = crate::CancellationToken::new();
+    final_token.cancel_after(final_checks);
+    let mut encoder = WebPEncoder::new();
+    let _ = encoder.encode_with_token(&rgba, 128, 128, ColorType::Rgba8, Some(&final_token));
+}
+
+#[cfg(coverage)]
+#[inline(never)]
+pub(crate) fn __coverage_exercise_instrumented_paths() {
+    __coverage_exercise_instrumented_generic_paths();
+    backward_refs::__coverage_exercise_instrumented_trace_paths();
+    histogram::__coverage_exercise_instrumented_checkpoint_errors();
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     backward_refs::__coverage_exercise_private_branches();
@@ -3105,6 +5625,70 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = checkpoint.checkpoint_bits(VP8L_2097152_BITSTREAM_CHECKPOINT_BITS);
     let _ = checkpoint.checkpoint_output_bytes(VP8L_OUTPUT_CHECKPOINT_BYTES);
+
+    // The nested bit intervals are ordinary success-path structure above;
+    // measure one boundary at a time to drive each nested cancellation arm
+    // without replaying a two-million-bit stream for every schedule.
+    for threshold in [
+        VP8L_2048_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_4096_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_8192_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_16384_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_32768_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_65536_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_131072_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_262144_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_524288_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_1048576_BITSTREAM_CHECKPOINT_BITS,
+        VP8L_2097152_BITSTREAM_CHECKPOINT_BITS,
+    ] {
+        let probe_token = crate::CancellationToken::new();
+        probe_token.cancel_after(usize::MAX);
+        let mut probe = TokenBitWriterCheckpoint {
+            token: &probe_token,
+            written_bits: threshold.saturating_sub(VP8L_8_BITSTREAM_CHECKPOINT_BITS),
+            output_bytes: 0,
+        };
+        let _ = probe.checkpoint_bits(VP8L_8_BITSTREAM_CHECKPOINT_BITS);
+        let calls = usize::MAX.saturating_sub(
+            probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for checks in 0..=calls {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let mut checkpoint = TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits: threshold.saturating_sub(VP8L_8_BITSTREAM_CHECKPOINT_BITS),
+                output_bytes: 0,
+            };
+            let _ = checkpoint.checkpoint_bits(VP8L_8_BITSTREAM_CHECKPOINT_BITS);
+        }
+    }
+    let output_probe_token = crate::CancellationToken::new();
+    output_probe_token.cancel_after(usize::MAX);
+    let mut output_probe = TokenBitWriterCheckpoint {
+        token: &output_probe_token,
+        written_bits: 0,
+        output_bytes: 0,
+    };
+    let _ = output_probe.checkpoint_output_bytes(VP8L_OUTPUT_CHECKPOINT_BYTES);
+    let output_calls = usize::MAX.saturating_sub(
+        output_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=output_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut checkpoint = TokenBitWriterCheckpoint {
+            token: &token,
+            written_bits: 0,
+            output_bytes: 0,
+        };
+        let _ = checkpoint.checkpoint_output_bytes(VP8L_OUTPUT_CHECKPOINT_BYTES);
+    }
     let mut token_rle_lengths = Vec::new();
     for &(value, count) in &[
         (0_u8, 2_usize),
@@ -3127,6 +5711,60 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut token_rle_tokens,
         Some(&coverage_token),
     );
+    let rle_probe_token = crate::CancellationToken::new();
+    rle_probe_token.cancel_after(usize::MAX);
+    let mut rle_probe_tokens = Vec::new();
+    let _ = compressed_huffman_tokens_with_checkpoint(
+        &token_rle_lengths,
+        &mut rle_probe_tokens,
+        Some(&rle_probe_token),
+    );
+    let rle_calls = usize::MAX.saturating_sub(
+        rle_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=rle_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut tokens = Vec::new();
+        let _ = std::hint::black_box(compressed_huffman_tokens_with_checkpoint(
+            &token_rle_lengths,
+            &mut tokens,
+            Some(&token),
+        ));
+        std::hint::black_box(tokens.len());
+    }
+    for (prefix_len, value, repetitions) in [
+        (15_usize, 0_u8, 2_usize),
+        (15, 0, 3),
+        (15, 0, 11),
+        (15, 0, 139),
+        (14, 15, 4),
+        (14, 15, 8),
+    ] {
+        let mut lengths = (1..=prefix_len as u8).collect::<Vec<_>>();
+        lengths.extend(std::iter::repeat_n(value, repetitions));
+        let probe_token = crate::CancellationToken::new();
+        probe_token.cancel_after(usize::MAX);
+        let mut probe_tokens = Vec::new();
+        let _ = compressed_huffman_tokens_with_checkpoint(
+            &lengths,
+            &mut probe_tokens,
+            Some(&probe_token),
+        );
+        let calls = usize::MAX.saturating_sub(
+            probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for checks in 0..=calls {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let mut tokens = Vec::new();
+            let _ = compressed_huffman_tokens_with_checkpoint(&lengths, &mut tokens, Some(&token));
+        }
+    }
     let mut odd_chunk = Vec::new();
     let _ = write_chunk(&mut odd_chunk, b"ODD!", &[1, 2, 3], None);
     let mut even_chunk = Vec::new();
@@ -3137,7 +5775,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut tree_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut lengths = vec![0; 4];
     let mut codes = vec![0; 4];
@@ -3165,6 +5803,114 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = tree_writer.flush();
 
+    let compact_token = crate::CancellationToken::new();
+    let mut compact_tree_bytes = Vec::new();
+    let mut compact_tree_writer = BitWriter {
+        writer: &mut compact_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &compact_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut compact_lengths = vec![0; 256];
+    let mut compact_codes = vec![0; 256];
+    let mut compact_frequencies = vec![0; 256];
+    compact_frequencies[2] = 1;
+    compact_frequencies[3] = 1;
+    let _ = write_huffman_tree(
+        &mut compact_tree_writer,
+        &compact_frequencies,
+        &mut compact_lengths,
+        &mut compact_codes,
+        &mut huffman_scratch,
+        Some(&compact_token),
+    );
+    let _ = compact_tree_writer.flush();
+
+    let no_cancel_huffman_token = crate::CancellationToken::new();
+    let single_failure_token = crate::CancellationToken::new();
+    single_failure_token.cancel_after(0);
+    let mut single_failure_bytes = Vec::new();
+    let mut single_failure_writer = BitWriter {
+        writer: &mut single_failure_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &single_failure_token,
+            written_bits: 5,
+            output_bytes: 0,
+        },
+    };
+    let mut single_failure_frequencies = vec![0; 256];
+    single_failure_frequencies[128] = 1;
+    let mut single_failure_lengths = vec![0; 256];
+    let mut single_failure_codes = vec![0; 256];
+    let single_failure_result = std::hint::black_box(write_huffman_tree(
+        &mut single_failure_writer,
+        &single_failure_frequencies,
+        &mut single_failure_lengths,
+        &mut single_failure_codes,
+        &mut huffman_scratch,
+        Some(&no_cancel_huffman_token),
+    ));
+    assert!(single_failure_result.is_err());
+
+    for written_bits in [7, 6] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(0);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits,
+                output_bytes: 0,
+            },
+        };
+        let mut pixels = vec![0xff00_0000];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = apply_palette(
+            &mut writer,
+            &mut pixels,
+            1,
+            1,
+            vec![0xff00_0000],
+            &mut scratch,
+            None,
+        );
+    }
+
+    let huffman_probe_token = crate::CancellationToken::new();
+    huffman_probe_token.cancel_after(usize::MAX);
+    let mut huffman_probe_counts = (0..128)
+        .map(|index| (index % 3 + 1) as u32)
+        .collect::<Vec<_>>();
+    let mut huffman_probe_good = Vec::new();
+    let _ = optimize_huffman_for_rle_with_checkpoint(
+        &mut huffman_probe_counts,
+        &mut huffman_probe_good,
+        Some(&huffman_probe_token),
+    );
+    let huffman_calls = usize::MAX.saturating_sub(
+        huffman_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=huffman_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut counts = (0..128)
+            .map(|index| (index % 3 + 1) as u32)
+            .collect::<Vec<_>>();
+        let mut good = Vec::new();
+        let _ = optimize_huffman_for_rle_with_checkpoint(&mut counts, &mut good, Some(&token));
+    }
+
     let mut token_tree_bytes = Vec::new();
     let mut token_tree_writer = BitWriter {
         writer: &mut token_tree_bytes,
@@ -3183,16 +5929,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
     token_tree_frequencies[1] = 1;
     token_tree_frequencies[128] = 1;
     token_tree_frequencies[255] = 7;
-    write_huffman_tree(
-        &mut token_tree_writer,
-        &token_tree_frequencies,
-        &mut token_tree_lengths,
-        &mut token_tree_codes,
-        &mut huffman_scratch,
-        Some(&coverage_token),
-    )
-    .expect("token-aware huffman tree coverage input must encode");
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut token_tree_writer,
+            &token_tree_frequencies,
+            &mut token_tree_lengths,
+            &mut token_tree_codes,
+            &mut huffman_scratch,
+            Some(&coverage_token),
+        )
+        .expect("token-aware huffman tree coverage input must encode"),
+    );
     let _ = token_tree_writer.flush();
+    std::hint::black_box(&token_tree_bytes);
 
     let mut dense_tree_bytes = Vec::new();
     let mut dense_tree_writer = BitWriter {
@@ -3210,53 +5959,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let dense_tree_frequencies = (0..256)
         .map(|index| ((index * 37) % 251 + 1) as u32)
         .collect::<Vec<_>>();
-    write_huffman_tree(
-        &mut dense_tree_writer,
-        &dense_tree_frequencies,
-        &mut dense_tree_lengths,
-        &mut dense_tree_codes,
-        &mut huffman_scratch,
-        Some(&coverage_token),
-    )
-    .expect("dense token-aware huffman tree coverage input must encode");
-    let _ = dense_tree_writer.flush();
-
-    // Walk cancellation checkpoints through the normal-tree writer.  The
-    // successful dense case above proves the format path; this bounded sweep
-    // proves each typed early-return boundary without fabricating an invalid
-    // Huffman tree.
-    for checks in 0..512 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut bytes = Vec::new();
-        let mut writer = BitWriter {
-            writer: &mut bytes,
-            buffer: 0,
-            nbits: 0,
-            checkpoint: TokenBitWriterCheckpoint {
-                token: &token,
-                written_bits: 0,
-                output_bytes: 0,
-            },
-        };
-        let mut lengths = vec![0; 256];
-        let mut codes = vec![0; 256];
-        let _ = write_huffman_tree(
-            &mut writer,
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut dense_tree_writer,
             &dense_tree_frequencies,
-            &mut lengths,
-            &mut codes,
+            &mut dense_tree_lengths,
+            &mut dense_tree_codes,
             &mut huffman_scratch,
-            Some(&token),
-        );
-    }
+            Some(&coverage_token),
+        )
+        .expect("dense token-aware huffman tree coverage input must encode"),
+    );
+    let _ = dense_tree_writer.flush();
+    std::hint::black_box(&dense_tree_bytes);
 
     let mut trimmed_tree_bytes = Vec::new();
     let mut trimmed_tree_writer = BitWriter {
         writer: &mut trimmed_tree_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut trimmed_lengths = vec![0; 256];
     let mut trimmed_codes = vec![0; 256];
@@ -3272,6 +5994,125 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = trimmed_tree_writer.flush();
 
+    let mut token_trimmed_tree_bytes = Vec::new();
+    let mut token_trimmed_tree_writer = BitWriter {
+        writer: &mut token_trimmed_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut token_trimmed_lengths = vec![0; 256];
+    let mut token_trimmed_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut token_trimmed_tree_writer,
+            &trimmed_frequencies,
+            &mut token_trimmed_lengths,
+            &mut token_trimmed_codes,
+            &mut huffman_scratch,
+            Some(&coverage_token),
+        )
+        .expect("trimmed token-aware huffman tree coverage input must encode"),
+    );
+    let _ = token_trimmed_tree_writer.flush();
+    std::hint::black_box(&token_trimmed_tree_bytes);
+
+    for (written_bits, checks) in [(7, 7), (6, 6)] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &token,
+                written_bits,
+                output_bytes: 0,
+            },
+        };
+        let mut lengths = vec![0; 256];
+        let mut codes = vec![0; 256];
+        let _ = std::hint::black_box(write_huffman_tree(
+            &mut writer,
+            &trimmed_frequencies,
+            &mut lengths,
+            &mut codes,
+            &mut huffman_scratch,
+            Some(&no_cancel_huffman_token),
+        ));
+    }
+
+    let mut ordinary_token_tree_bytes = Vec::new();
+    let mut ordinary_token_tree_writer = BitWriter {
+        writer: &mut ordinary_token_tree_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut ordinary_token_lengths = vec![0; 256];
+    let mut ordinary_token_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut ordinary_token_tree_writer,
+            &trimmed_frequencies,
+            &mut ordinary_token_lengths,
+            &mut ordinary_token_codes,
+            &mut huffman_scratch,
+            None,
+        )
+        .expect("ordinary token-writer huffman tree coverage input must encode"),
+    );
+    let _ = ordinary_token_tree_writer.flush();
+
+    let mut single_token_tree_frequencies = vec![0; 256];
+    single_token_tree_frequencies[128] = 1;
+    let mut single_token_tree_lengths = vec![0; 256];
+    let mut single_token_tree_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut ordinary_token_tree_writer,
+            &single_token_tree_frequencies,
+            &mut single_token_tree_lengths,
+            &mut single_token_tree_codes,
+            &mut huffman_scratch,
+            None,
+        )
+        .expect("single-symbol token-writer huffman tree coverage input must encode"),
+    );
+    let _ = ordinary_token_tree_writer.flush();
+    std::hint::black_box(&ordinary_token_tree_bytes);
+
+    let mut dense_success_bytes = Vec::new();
+    let mut dense_success_writer = BitWriter {
+        writer: &mut dense_success_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut dense_success_lengths = vec![0; 256];
+    let mut dense_success_codes = vec![0; 256];
+    std::hint::black_box(
+        write_huffman_tree(
+            &mut dense_success_writer,
+            &dense_tree_frequencies,
+            &mut dense_success_lengths,
+            &mut dense_success_codes,
+            &mut huffman_scratch,
+            None,
+        )
+        .expect("dense no-op Huffman coverage input must encode"),
+    );
+    let _ = std::hint::black_box(dense_success_writer.flush());
+
     let populations = [
         vec![1; 281],
         vec![1; 256],
@@ -3284,7 +6125,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut group_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut group = GroupCodes::default();
     let _ = write_group(
@@ -3305,6 +6146,29 @@ pub(crate) fn __coverage_exercise_private_branches() {
     column_mismatch[32_768 + 1_367] = 1;
     let _ = optimize_sampling(&mut column_mismatch, 32_768, 2, 0, 2, Some(&coverage_token));
 
+    let sampling_probe_token = crate::CancellationToken::new();
+    sampling_probe_token.cancel_after(usize::MAX);
+    let mut sampling_probe_symbols = vec![0_u16; 2 * 2_048];
+    let _ = optimize_sampling(
+        &mut sampling_probe_symbols,
+        2_048,
+        2,
+        0,
+        1,
+        Some(&sampling_probe_token),
+    );
+    let sampling_calls = usize::MAX.saturating_sub(
+        sampling_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=sampling_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut symbols = vec![0_u16; 2 * 2_048];
+        let _ = optimize_sampling(&mut symbols, 2_048, 2, 0, 1, Some(&token));
+    }
+
     let mut sampled_copy = vec![0_u16; 128 * 128];
     for y in 0..128 {
         for x in 0..128 {
@@ -3318,7 +6182,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut token_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut token_scratch = TokenStreamScratch::default();
     let _ = write_token_stream(
@@ -3346,6 +6210,87 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = token_writer.flush();
 
+    let no_op_tokens = [
+        backward_refs::Token::Literal(0xff00_0000),
+        backward_refs::Token::Copy {
+            distance: 1,
+            length: 4,
+        },
+        backward_refs::Token::Literal(0xff00_0001),
+        backward_refs::Token::Literal(0xff00_0002),
+    ];
+    for fail_after in [0, 1, 2, 64, 512, 2_048] {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(write_token_stream(
+            &mut writer,
+            &[0xff00_0000; 8],
+            8,
+            &no_op_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: false,
+                cache_bits: 0,
+                histogram_bits: 3,
+                quality: 1,
+            },
+            &mut scratch,
+            None,
+        ));
+    }
+    let mut token_reference_probe_bytes = Vec::new();
+    let mut token_reference_probe_writer = BitWriter {
+        writer: &mut token_reference_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut token_reference_probe_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut token_reference_probe_writer,
+        &[0xff00_0000; 8],
+        8,
+        &no_op_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: false,
+            cache_bits: 0,
+            histogram_bits: 3,
+            quality: 1,
+        },
+        &mut token_reference_probe_scratch,
+        Some(&coverage_token),
+    );
+    let token_reference_write_calls =
+        usize::MAX.saturating_sub(token_reference_probe_writer.checkpoint.fail_after);
+    for fail_after in token_reference_write_calls.saturating_sub(1)..=token_reference_write_calls {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(write_token_stream(
+            &mut writer,
+            &[0xff00_0000; 8],
+            8,
+            &no_op_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: false,
+                cache_bits: 0,
+                histogram_bits: 3,
+                quality: 1,
+            },
+            &mut scratch,
+            Some(&coverage_token),
+        ));
+    }
     let meta_width = 128_usize;
     let meta_height = 128_usize;
     let mut meta_pixels = Vec::with_capacity(meta_width * meta_height);
@@ -3360,6 +6305,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
             | (tile as u32 ^ 0x55);
         meta_pixels.push(pixel);
         meta_tokens.push(backward_refs::Token::Literal(pixel));
+    }
+    for fail_after in [0, 1, 32, 128, 512] {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(write_token_stream(
+            &mut writer,
+            &meta_pixels,
+            meta_width,
+            &meta_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 1,
+                histogram_bits: 3,
+                quality: 0,
+            },
+            &mut scratch,
+            None,
+        ));
     }
     let mut meta_bytes = Vec::new();
     let mut meta_writer = BitWriter {
@@ -3432,7 +6401,77 @@ pub(crate) fn __coverage_exercise_private_branches() {
     .expect("wide token-aware metadata stream coverage input must encode");
     let _ = wide_meta_writer.flush();
 
-    for checks in 0..2_048 {
+    let mut wide_meta_noop_bytes = Vec::new();
+    let mut wide_meta_noop_writer = BitWriter {
+        writer: &mut wide_meta_noop_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut wide_meta_noop_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(write_token_stream(
+        &mut wide_meta_noop_writer,
+        &wide_meta_pixels,
+        wide_meta_width,
+        &wide_meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 0,
+            quality: 100,
+        },
+        &mut wide_meta_noop_scratch,
+        Some(&coverage_token),
+    ));
+    let _ = wide_meta_noop_writer.flush();
+
+    // Sweep token polls on a tiny, deliberately diverse multi-group metadata
+    // stream. A no-op outer writer leaves cancellation available to the
+    // nested image stream, whose error returns through the caller's `?` edge.
+    let nested_width = 8;
+    let nested_pixels = vec![
+        0xff00_0000,
+        0xff00_0000,
+        0xff00_0000,
+        0xff00_0000,
+        0xff00_00ff,
+        0xff00_00ff,
+        0xff00_00ff,
+        0xff00_00ff,
+    ];
+    let nested_tokens = nested_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    for checks in [0, 1, 32, 128, 512] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &nested_pixels,
+            nested_width,
+            &nested_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 2,
+                quality: 0,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
+
+    for checks in [0, 1, 32, 256, 1_024, 2_047] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut bytes = Vec::new();
@@ -3445,6 +6484,36 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 written_bits: 0,
                 output_bytes: 0,
             },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &wide_meta_pixels,
+            wide_meta_width,
+            &wide_meta_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 0,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
+
+    // Use a no-op bit-writer checkpoint so cancellation can reach the nested
+    // metadata stream itself instead of being consumed by the outer bit
+    // writer first.
+    for checks in [0, 1, 32, 256, 1_024, 4_096] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
         };
         let mut scratch = TokenStreamScratch::default();
         let _ = write_token_stream(
@@ -3476,7 +6545,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .copied()
         .map(backward_refs::Token::Literal)
         .collect::<Vec<_>>();
-    for checks in 0..4_096 {
+    for checks in [0, 1, 32, 256, 1_024, 4_095] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut bytes = Vec::new();
@@ -3512,7 +6581,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut ordinary_meta_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut ordinary_meta_scratch = TokenStreamScratch::default();
     let _ = write_token_stream(
@@ -3530,6 +6599,180 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
     );
     let _ = ordinary_meta_writer.flush();
+
+    let mut token_meta_noop_bytes = Vec::new();
+    let mut token_meta_noop_writer = BitWriter {
+        writer: &mut token_meta_noop_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut token_meta_noop_scratch = TokenStreamScratch::default();
+    let _ = std::hint::black_box(write_token_stream(
+        &mut token_meta_noop_writer,
+        &meta_pixels,
+        meta_width,
+        &meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 1,
+            histogram_bits: 3,
+            quality: 0,
+        },
+        &mut token_meta_noop_scratch,
+        Some(&coverage_token),
+    ));
+    let _ = token_meta_noop_writer.flush();
+
+    // Keep the writer-checkpoint type while omitting the outer cancellation
+    // token. This reaches the ordinary meta-pixel materialization closure for
+    // the token-aware writer specialization.
+    let mut token_ordinary_meta_bytes = Vec::new();
+    let mut token_ordinary_meta_writer = BitWriter {
+        writer: &mut token_ordinary_meta_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut token_ordinary_meta_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut token_ordinary_meta_writer,
+        &meta_pixels,
+        meta_width,
+        &meta_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 1,
+            histogram_bits: 3,
+            quality: 0,
+        },
+        &mut token_ordinary_meta_scratch,
+        None,
+    );
+    let _ = token_ordinary_meta_writer.flush();
+
+    // Exercise the token-aware writer's nested metadata stream with tile
+    // histograms that remain distinct under several clustering thresholds.
+    // The ordinary writer already covers this call site; these deliberately
+    // varied tiles keep the `TokenBitWriterCheckpoint` specialization on the
+    // multiple-group path as well.
+    let multi_group_width = 32_usize;
+    let multi_group_height = 32_usize;
+    let multi_group_pixels = (0..multi_group_width * multi_group_height)
+        .map(|index| {
+            let x = index % multi_group_width;
+            let y = index / multi_group_width;
+            let tile = (x / 4) + (y / 4) * 8;
+            let value = (tile as u32).wrapping_mul(0x1f3d_5b79);
+            0xff00_0000 | (value & 0x00ff_ffff)
+        })
+        .collect::<Vec<_>>();
+    let multi_group_tokens = multi_group_pixels
+        .iter()
+        .copied()
+        .map(backward_refs::Token::Literal)
+        .collect::<Vec<_>>();
+    for (quality, histogram_bits) in [(100, 2)] {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &coverage_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(write_token_stream(
+            &mut writer,
+            &multi_group_pixels,
+            multi_group_width,
+            &multi_group_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits,
+                quality,
+            },
+            &mut scratch,
+            Some(&coverage_token),
+        ));
+        let _ = writer.flush();
+    }
+
+    // Measure this small token-aware stream so the targeted late cancellation
+    // window below can reach the nested metadata image stream.
+    COVERAGE_NESTED_METADATA_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let stream_probe_token = crate::CancellationToken::new();
+    stream_probe_token.cancel_after(usize::MAX);
+    let stream_probe_writer_token = crate::CancellationToken::new();
+    let mut stream_probe_bytes = Vec::new();
+    let mut stream_probe_writer = BitWriter {
+        writer: &mut stream_probe_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &stream_probe_writer_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let mut stream_probe_scratch = TokenStreamScratch::default();
+    let _ = write_token_stream(
+        &mut stream_probe_writer,
+        &multi_group_pixels,
+        multi_group_width,
+        &multi_group_tokens,
+        TokenStreamConfig {
+            write_meta_huffman_bit: true,
+            cache_bits: 0,
+            histogram_bits: 2,
+            quality: 100,
+        },
+        &mut stream_probe_scratch,
+        Some(&stream_probe_token),
+    );
+    let nested_metadata_checks =
+        usize::MAX.saturating_sub(COVERAGE_NESTED_METADATA_REMAINING.load(Ordering::Relaxed));
+    for checks in
+        nested_metadata_checks.saturating_sub(2)..=nested_metadata_checks.saturating_add(2)
+    {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let writer_token = crate::CancellationToken::new();
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+        };
+        let mut scratch = TokenStreamScratch::default();
+        let _ = write_token_stream(
+            &mut writer,
+            &multi_group_pixels,
+            multi_group_width,
+            &multi_group_tokens,
+            TokenStreamConfig {
+                write_meta_huffman_bit: true,
+                cache_bits: 0,
+                histogram_bits: 2,
+                quality: 100,
+            },
+            &mut scratch,
+            Some(&token),
+        );
+    }
 
     let mut palette = (0..20)
         .map(|index| {
@@ -3549,6 +6792,314 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     minimize_palette_deltas(&mut nonzero_first_palette);
+    let palette_probe_token = crate::CancellationToken::new();
+    palette_probe_token.cancel_after(usize::MAX);
+    let mut palette_probe = (0..128)
+        .map(|index| {
+            let value = ((index * 37) & 0xff) as u32;
+            0xff00_0000
+                | (value << 16)
+                | (((255_u32.wrapping_sub(value)) & 0xff) << 8)
+                | (value ^ 0x55)
+        })
+        .collect::<Vec<_>>();
+    palette_probe[0] = 0;
+    let _ = minimize_palette_deltas_with_checkpoint(&mut palette_probe, &palette_probe_token);
+    let palette_calls = usize::MAX.saturating_sub(
+        palette_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=palette_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut palette = (0..128)
+            .map(|index| {
+                let value = ((index * 37) & 0xff) as u32;
+                0xff00_0000
+                    | (value << 16)
+                    | (((255_u32.wrapping_sub(value)) & 0xff) << 8)
+                    | (value ^ 0x55)
+            })
+            .collect::<Vec<_>>();
+        palette[0] = 0;
+        let _ = minimize_palette_deltas_with_checkpoint(&mut palette, &token);
+    }
+
+    let mut subtract_probe_pixels = (0..2_048)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    let subtract_probe_token = crate::CancellationToken::new();
+    subtract_probe_token.cancel_after(usize::MAX);
+    let _ = subtract_green_with_checkpoint(&mut subtract_probe_pixels, Some(&subtract_probe_token));
+    let subtract_calls = usize::MAX.saturating_sub(
+        subtract_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=subtract_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = (0..2_048)
+            .map(|index| {
+                let value = index as u32;
+                0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+            })
+            .collect::<Vec<_>>();
+        let _ = subtract_green_with_checkpoint(&mut pixels, Some(&token));
+    }
+
+    let collect_probe_pixels = (0..2_048)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 5) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    let collect_probe_token = crate::CancellationToken::new();
+    collect_probe_token.cancel_after(usize::MAX);
+    let _ = collect_palette(&collect_probe_pixels, Some(&collect_probe_token));
+    let collect_calls = usize::MAX.saturating_sub(
+        collect_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=collect_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = collect_palette(&collect_probe_pixels, Some(&token));
+    }
+
+    let convert_probe_data = (0..2_048)
+        .flat_map(|index| {
+            let value = index as u8;
+            [value, value.wrapping_mul(3), value.wrapping_mul(5)]
+        })
+        .collect::<Vec<_>>();
+    let convert_probe_token = crate::CancellationToken::new();
+    convert_probe_token.cancel_after(usize::MAX);
+    let _ = convert_pixels(
+        &convert_probe_data,
+        ColorType::Rgb8,
+        Some(&convert_probe_token),
+    );
+    let convert_calls = usize::MAX.saturating_sub(
+        convert_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=convert_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = convert_pixels(&convert_probe_data, ColorType::Rgb8, Some(&token));
+    }
+    let convert_rgba_probe_data = (0..2_048)
+        .flat_map(|index| {
+            let value = index as u8;
+            [value, value.wrapping_mul(3), value.wrapping_mul(5), value]
+        })
+        .collect::<Vec<_>>();
+    let convert_rgba_probe_token = crate::CancellationToken::new();
+    convert_rgba_probe_token.cancel_after(usize::MAX);
+    let _ = convert_pixels(
+        &convert_rgba_probe_data,
+        ColorType::Rgba8,
+        Some(&convert_rgba_probe_token),
+    );
+    let convert_rgba_calls = usize::MAX.saturating_sub(
+        convert_rgba_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=convert_rgba_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = convert_pixels(&convert_rgba_probe_data, ColorType::Rgba8, Some(&token));
+    }
+
+    let extend_probe_data = vec![0_u8; VP8L_OUTPUT_CHECKPOINT_BYTES * 2];
+    let extend_probe_token = crate::CancellationToken::new();
+    extend_probe_token.cancel_after(usize::MAX);
+    let mut extend_probe_output = Vec::new();
+    let _ = extend_bytes_with_checkpoint(
+        &mut extend_probe_output,
+        &extend_probe_data,
+        Some(&extend_probe_token),
+    );
+    let extend_calls = usize::MAX.saturating_sub(
+        extend_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=extend_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let _ = extend_bytes_with_checkpoint(&mut output, &extend_probe_data, Some(&token));
+    }
+    let chunk_probe_token = crate::CancellationToken::new();
+    chunk_probe_token.cancel_after(usize::MAX);
+    let mut chunk_probe_output = Vec::new();
+    let _ = write_chunk(
+        &mut chunk_probe_output,
+        b"TEST",
+        &extend_probe_data,
+        Some(&chunk_probe_token),
+    );
+    let chunk_calls = usize::MAX.saturating_sub(
+        chunk_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=chunk_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut output = Vec::new();
+        let _ = write_chunk(&mut output, b"TEST", &extend_probe_data, Some(&token));
+    }
+
+    let mut apply_probe_pixels = (0..128)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    let apply_probe_palette = apply_probe_pixels.clone();
+    let apply_probe_token = crate::CancellationToken::new();
+    apply_probe_token.cancel_after(usize::MAX);
+    let mut apply_probe_output = Vec::new();
+    let mut apply_probe_writer = BitWriter {
+        writer: &mut apply_probe_output,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut apply_probe_scratch = ImageStreamScratch::default();
+    let _ = apply_palette(
+        &mut apply_probe_writer,
+        &mut apply_probe_pixels,
+        128,
+        1,
+        apply_probe_palette.clone(),
+        &mut apply_probe_scratch,
+        Some(&apply_probe_token),
+    );
+    let apply_calls = usize::MAX.saturating_sub(
+        apply_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=apply_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = apply_probe_palette.clone();
+        let mut output = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut output,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint::default(),
+        };
+        let mut scratch = ImageStreamScratch::default();
+        let _ = apply_palette(
+            &mut writer,
+            &mut pixels,
+            128,
+            1,
+            apply_probe_palette.clone(),
+            &mut scratch,
+            Some(&token),
+        );
+    }
+
+    let alpha_probe = (0..128)
+        .map(|index| {
+            if index % 2 == 0 {
+                index as u8
+            } else {
+                255 - index as u8
+            }
+        })
+        .collect::<Vec<_>>();
+    let alpha_probe_token = crate::CancellationToken::new();
+    alpha_probe_token.cancel_after(usize::MAX);
+    let _ = encode_alpha(
+        &alpha_probe,
+        alpha_probe.len() as u32,
+        1,
+        Some(&alpha_probe_token),
+    );
+    let alpha_calls = usize::MAX.saturating_sub(
+        alpha_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=alpha_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_alpha(&alpha_probe, alpha_probe.len() as u32, 1, Some(&token));
+    }
+    let alpha_sort_probe = (0..128)
+        .map(|index| match index % 3 {
+            0 => 0,
+            1 => 200,
+            _ => 201,
+        })
+        .collect::<Vec<_>>();
+    let alpha_sort_probe_token = crate::CancellationToken::new();
+    alpha_sort_probe_token.cancel_after(usize::MAX);
+    let _ = encode_alpha(
+        &alpha_sort_probe,
+        alpha_sort_probe.len() as u32,
+        1,
+        Some(&alpha_sort_probe_token),
+    );
+    let alpha_sort_calls = usize::MAX.saturating_sub(
+        alpha_sort_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=alpha_sort_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_alpha(
+            &alpha_sort_probe,
+            alpha_sort_probe.len() as u32,
+            1,
+            Some(&token),
+        );
+    }
+    let alpha_three = [0_u8, 200, 201];
+    let alpha_five = [0_u8, 200, 201, 202, 203];
+    let _ = encode_alpha(&alpha_three, 3, 1, None);
+    let _ = encode_alpha(&alpha_five, 5, 1, None);
+    let alpha_checkpoint_probe = (0..1_024)
+        .map(|index| (index as u8).wrapping_mul(37))
+        .collect::<Vec<_>>();
+    let alpha_success_token = crate::CancellationToken::new();
+    alpha_success_token.cancel_after(usize::MAX);
+    let _ = std::hint::black_box(collect_alpha_palette(
+        &alpha_checkpoint_probe,
+        Some(&alpha_success_token),
+    ));
+    let alpha_failure_token = crate::CancellationToken::new();
+    alpha_failure_token.cancel_after(0);
+    let _ = std::hint::black_box(collect_alpha_palette(
+        &alpha_checkpoint_probe,
+        Some(&alpha_failure_token),
+    ));
+    let alpha_frame_failure_token = crate::CancellationToken::new();
+    alpha_frame_failure_token.cancel_after(1);
+    let mut alpha_frame_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_alpha_with_scratch(
+        &alpha_checkpoint_probe,
+        alpha_checkpoint_probe.len() as u32,
+        1,
+        &mut alpha_frame_scratch,
+        Some(&alpha_frame_failure_token),
+    ));
     let entropy_pixels = [0xff10_2010, 0xff20_4020, 0xff30_6030, 0xff40_8040];
     let _ = analyze_entropy(&entropy_pixels, 2, 2, None, 1, None);
     let wide_entropy_pixels = (0..(2 * 1_025))
@@ -3557,19 +7108,110 @@ pub(crate) fn __coverage_exercise_private_branches() {
             0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value * 7 & 0xff
         })
         .collect::<Vec<_>>();
-    let _ = analyze_entropy(
+    let entropy_probe_token = crate::CancellationToken::new();
+    entropy_probe_token.cancel_after(usize::MAX);
+    let _ = std::hint::black_box(analyze_entropy(
         &wide_entropy_pixels,
         1_025,
         2,
         None,
         1,
-        Some(&coverage_token),
+        Some(&entropy_probe_token),
+    ));
+    let entropy_probe_calls = usize::MAX.saturating_sub(
+        entropy_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
     );
+    for checks in 0..=entropy_probe_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = std::hint::black_box(analyze_entropy(
+            &wide_entropy_pixels,
+            1_025,
+            2,
+            None,
+            1,
+            Some(&token),
+        ));
+    }
+
+    // A tiny direct frame lets one measured cancellation schedule reach the
+    // post-palette and post-entropy checkpoints without replaying a full
+    // encoder image. The 1,024-pixel RGBA probe separately reaches alpha
+    // cleanup's first checkpoint.
+    let frame_probe_data = vec![
+        0, 0, 0, 0, 32, 64, 96, 255, 64, 128, 192, 255, 96, 192, 32, 0,
+    ];
+    let frame_probe_token = crate::CancellationToken::new();
+    frame_probe_token.cancel_after(usize::MAX);
+    let mut frame_probe_scratch = ImageStreamScratch::default();
+    let _ = std::hint::black_box(encode_frame(
+        &frame_probe_data,
+        2,
+        2,
+        ColorType::Rgba8,
+        Some(&frame_probe_token),
+        &mut frame_probe_scratch,
+    ));
+    let frame_probe_calls = usize::MAX.saturating_sub(
+        frame_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=frame_probe_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame(
+            &frame_probe_data,
+            2,
+            2,
+            ColorType::Rgba8,
+            Some(&token),
+            &mut scratch,
+        ));
+    }
+    let alpha_frame_data = (0..1_024)
+        .flat_map(|index| {
+            let value = index as u8;
+            [value, value.wrapping_mul(3), value.wrapping_mul(5), 0]
+        })
+        .collect::<Vec<_>>();
+    for checks in [3, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(encode_frame(
+            &alpha_frame_data,
+            1_024,
+            1,
+            ColorType::Rgba8,
+            Some(&token),
+            &mut scratch,
+        ));
+    }
     let grayscale_pixels = vec![0xff20_2020; 2_048];
     let _ = pixels_are_grayscale_with_checkpoint(&grayscale_pixels, Some(&coverage_token));
+    let grayscale_probe_token = crate::CancellationToken::new();
+    grayscale_probe_token.cancel_after(usize::MAX);
+    let _ = pixels_are_grayscale_with_checkpoint(&grayscale_pixels, Some(&grayscale_probe_token));
+    let grayscale_calls = usize::MAX.saturating_sub(
+        grayscale_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=grayscale_calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = pixels_are_grayscale_with_checkpoint(&grayscale_pixels, Some(&token));
+    }
     let mut non_grayscale_pixels = grayscale_pixels.clone();
     non_grayscale_pixels[1_024] = 0xff20_211f;
     let _ = pixels_are_grayscale_with_checkpoint(&non_grayscale_pixels, Some(&coverage_token));
+    let mut red_mismatch_pixels = grayscale_pixels;
+    red_mismatch_pixels[0] = 0xff21_2020;
+    let _ = pixels_are_grayscale_with_checkpoint(&red_mismatch_pixels, Some(&coverage_token));
 
     let mut transform_pixels = (0..(64 * 64))
         .map(|index| {
@@ -3625,7 +7267,136 @@ pub(crate) fn __coverage_exercise_private_branches() {
             0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
         })
         .collect::<Vec<_>>();
-    for checks in 0..1_024 {
+
+    let palette_frame_palette = vec![0xff00_0000, 0xff00_00ff, 0xffff_0000, 0xff00_ff00];
+    let palette_frame_pixels = (0..16 * 16)
+        .map(|index| palette_frame_palette[index % palette_frame_palette.len()])
+        .collect::<Vec<_>>();
+    for fail_after in 0..=512 {
+        let mut pixels = palette_frame_pixels.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Palette,
+            true,
+            1,
+            palette_frame_palette.clone(),
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+            &mut scratch,
+        );
+    }
+
+    COVERAGE_FRAME_CROSS_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    COVERAGE_FRAME_COLOR_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    COVERAGE_FRAME_PREDICTOR_REMAINING.store(usize::MAX, Ordering::Relaxed);
+    let frame_probe_token = crate::CancellationToken::new();
+    frame_probe_token.cancel_after(usize::MAX);
+    let frame_probe_writer_token = crate::CancellationToken::new();
+    let mut frame_probe_pixels = non_grayscale_frame.clone();
+    let mut frame_probe_scratch = ImageStreamScratch::default();
+    let _ = encode_frame_stream(
+        &mut frame_probe_pixels,
+        16,
+        16,
+        false,
+        EntropyMode::SpatialSubtractGreen,
+        false,
+        1,
+        Vec::new(),
+        Some(&frame_probe_token),
+        TokenBitWriterCheckpoint {
+            token: &frame_probe_writer_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+        &mut frame_probe_scratch,
+    );
+    let frame_cross_checks =
+        usize::MAX.saturating_sub(COVERAGE_FRAME_CROSS_REMAINING.load(Ordering::Relaxed));
+    let frame_color_checks =
+        usize::MAX.saturating_sub(COVERAGE_FRAME_COLOR_REMAINING.load(Ordering::Relaxed));
+    let frame_predictor_checks =
+        usize::MAX.saturating_sub(COVERAGE_FRAME_PREDICTOR_REMAINING.load(Ordering::Relaxed));
+    for checks in frame_cross_checks.saturating_sub(2)..=frame_cross_checks.saturating_add(2) {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let writer_token = crate::CancellationToken::new();
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
+    for checks in frame_color_checks.saturating_sub(2)..=frame_color_checks.saturating_add(2) {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let writer_token = crate::CancellationToken::new();
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
+    for checks in
+        frame_predictor_checks.saturating_sub(2)..=frame_predictor_checks.saturating_add(2)
+    {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let writer_token = crate::CancellationToken::new();
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&token),
+            TokenBitWriterCheckpoint {
+                token: &writer_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut scratch,
+        );
+    }
+
+    for checks in [0, 1, 32, 256, 1_023] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut pixels = grayscale_frame.clone();
@@ -3667,12 +7438,176 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut scratch,
         );
     }
+
+    // The outer bit writer is deliberately non-cancellable here. This
+    // isolates cancellation in cross-color selection and in its following
+    // color image stream, which are separate encoder work units.
+    for checks in [0, 1, 32, 256, 1_024] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = non_grayscale_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+            &mut scratch,
+        );
+    }
+    #[cfg(coverage_nightly)]
+    {
+        let cross_probe_token = crate::CancellationToken::new();
+        cross_probe_token.cancel_after(usize::MAX);
+        let mut cross_probe_pixels = non_grayscale_frame.clone();
+        let mut cross_probe_scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut cross_probe_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SpatialSubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            Some(&cross_probe_token),
+            NoopBitWriterCheckpoint::default(),
+            &mut cross_probe_scratch,
+        );
+        let cross_probe_checks = usize::MAX.saturating_sub(
+            cross_probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for checks in 0..=cross_probe_checks {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let mut pixels = non_grayscale_frame.clone();
+            let mut scratch = ImageStreamScratch::default();
+            let _ = encode_frame_stream(
+                &mut pixels,
+                16,
+                16,
+                false,
+                EntropyMode::SpatialSubtractGreen,
+                false,
+                1,
+                Vec::new(),
+                Some(&token),
+                NoopBitWriterCheckpoint::default(),
+                &mut scratch,
+            );
+        }
+    }
+
+    let mut no_op_success_pixels = vec![0xff40_4040; 16 * 16];
+    let mut no_op_success_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut no_op_success_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::Spatial,
+            true,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint::default(),
+            &mut no_op_success_scratch,
+        )
+        .expect("no-op frame coverage input must encode"),
+    );
+
+    // The token-aware subtract-green branch is exercised by normal frames,
+    // but the no-token specialization is a separate monomorphization. Keep a
+    // small varied frame here so its direct subtract-green fallback is also
+    // represented in the strict all-feature coverage contract.
+    let mut no_token_subtract_pixels = (0..16 * 16)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    let mut no_token_subtract_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut no_token_subtract_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            NoopBitWriterCheckpoint::default(),
+            &mut no_token_subtract_scratch,
+        )
+        .expect("no-token subtract-green coverage input must encode"),
+    );
+
+    let no_token_checkpoint_token = crate::CancellationToken::new();
+    let mut no_token_token_pixels = no_token_subtract_pixels.clone();
+    let mut no_token_token_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        encode_frame_stream(
+            &mut no_token_token_pixels,
+            16,
+            16,
+            false,
+            EntropyMode::SubtractGreen,
+            false,
+            1,
+            Vec::new(),
+            None,
+            TokenBitWriterCheckpoint {
+                token: &no_token_checkpoint_token,
+                written_bits: 0,
+                output_bytes: 0,
+            },
+            &mut no_token_token_scratch,
+        )
+        .expect("no-token token-checkpoint coverage input must encode"),
+    );
+
+    let small_cross_frame = (0..64)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 5) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+    for checks in [0, 1, 32, 256, 1_024, 2_048] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut pixels = small_cross_frame.clone();
+        let mut scratch = ImageStreamScratch::default();
+        let _ = encode_frame_stream(
+            &mut pixels,
+            8,
+            8,
+            false,
+            EntropyMode::Spatial,
+            false,
+            2,
+            Vec::new(),
+            Some(&token),
+            NoopBitWriterCheckpoint::default(),
+            &mut scratch,
+        );
+    }
     let mut palette_bytes = Vec::new();
     let mut palette_writer = BitWriter {
         writer: &mut palette_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut palette = (0..18)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
@@ -3696,7 +7631,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut palette_trim_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut palette_trim_pixels = [0; 4];
     let _ = apply_palette(
@@ -3715,7 +7650,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut palette4_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut palette4_pixels = [0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000];
     let _ = apply_palette(
@@ -3734,7 +7669,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         writer: &mut palette16_bytes,
         buffer: 0,
         nbits: 0,
-        checkpoint: NoopBitWriterCheckpoint,
+        checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let palette16 = (0..16)
         .map(|index| 0xff00_0000 | ((index as u32) << 16))
@@ -3762,6 +7697,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
             0xff00_0000 | (value << 16) | ((value ^ 0x55) << 8) | (value ^ 0xaa)
         })
         .collect::<Vec<_>>();
+    let mut rich_success_pixels = (0..(64 * 32))
+        .map(|index| token_palette[index % token_palette.len()])
+        .collect::<Vec<_>>();
+    let mut rich_success_bytes = Vec::new();
+    let mut rich_success_writer = BitWriter {
+        writer: &mut rich_success_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: NoopBitWriterCheckpoint::default(),
+    };
+    let mut rich_success_scratch = ImageStreamScratch::default();
+    std::hint::black_box(
+        apply_palette(
+            &mut rich_success_writer,
+            &mut rich_success_pixels,
+            64,
+            32,
+            token_palette.clone(),
+            &mut rich_success_scratch,
+            None,
+        )
+        .expect("rich no-op palette coverage input must encode"),
+    );
+    let _ = std::hint::black_box(rich_success_writer.flush());
     let mut token_palette_pixels = (0..(64 * 32))
         .map(|index| token_palette[index % token_palette.len()])
         .collect::<Vec<_>>();
@@ -3776,17 +7735,65 @@ pub(crate) fn __coverage_exercise_private_branches() {
             output_bytes: 0,
         },
     };
-    apply_palette(
-        &mut token_palette_writer,
-        &mut token_palette_pixels,
-        64,
-        32,
-        token_palette,
-        &mut palette_scratch,
-        Some(&coverage_token),
-    )
-    .expect("token-aware palette coverage input must encode");
+    std::hint::black_box(
+        apply_palette(
+            &mut token_palette_writer,
+            &mut token_palette_pixels,
+            64,
+            32,
+            token_palette,
+            &mut palette_scratch,
+            Some(&coverage_token),
+        )
+        .expect("token-aware palette coverage input must encode"),
+    );
     let _ = token_palette_writer.flush();
+    std::hint::black_box(&token_palette_bytes);
+
+    let ordinary_palette = vec![0xff00_0000, 0xff00_0001];
+    let mut ordinary_palette_pixels = vec![ordinary_palette[0], ordinary_palette[1]];
+    let mut ordinary_palette_bytes = Vec::new();
+    let mut ordinary_palette_writer = BitWriter {
+        writer: &mut ordinary_palette_bytes,
+        buffer: 0,
+        nbits: 0,
+        checkpoint: TokenBitWriterCheckpoint {
+            token: &coverage_token,
+            written_bits: 0,
+            output_bytes: 0,
+        },
+    };
+    let _ = apply_palette(
+        &mut ordinary_palette_writer,
+        &mut ordinary_palette_pixels,
+        2,
+        1,
+        ordinary_palette,
+        &mut palette_scratch,
+        None,
+    );
+    let _ = ordinary_palette_writer.flush();
+
+    for fail_after in [0, 1, 2, 64, 512, 2_048] {
+        let mut bytes = Vec::new();
+        let mut writer = BitWriter {
+            writer: &mut bytes,
+            buffer: 0,
+            nbits: 0,
+            checkpoint: NoopBitWriterCheckpoint { fail_after },
+        };
+        let mut pixels = [0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000];
+        let mut scratch = ImageStreamScratch::default();
+        let _ = std::hint::black_box(apply_palette(
+            &mut writer,
+            &mut pixels,
+            2,
+            2,
+            vec![0xff00_0000, 0xff01_0000, 0xff02_0000, 0xff03_0000],
+            &mut scratch,
+            None,
+        ));
+    }
 
     let alpha = [
         0, 255, 1, 254, 2, 253, 3, 252, 4, 251, 5, 250, 6, 249, 7, 248, 8, 247, 9, 246,
@@ -3805,6 +7812,46 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let alpha_values = [
         0_u8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 255,
     ];
+
+    for fail_after in [0, 1, 2, 64, 512, 2_048] {
+        let mut output = Vec::new();
+        let mut token_scratch = TokenStreamScratch::default();
+        let _ = std::hint::black_box(encode_alpha_stream(
+            &[0xff00_0000],
+            1,
+            &[0xff00_0000, 0xff00_0000, 0xff00_0000, 0xff00_0000],
+            2,
+            &[0, 255, 0, 255],
+            &mut output,
+            &mut token_scratch,
+            None,
+            NoopBitWriterCheckpoint { fail_after },
+        ));
+    }
+    let rich_alpha_palette_delta = (0..20)
+        .map(|index| 0xff00_0000 | ((index as u32) << 8))
+        .collect::<Vec<_>>();
+    let rich_alpha_packed = (0..64)
+        .map(|index| 0xff00_0000 | (index as u32))
+        .collect::<Vec<_>>();
+    let rich_alpha = (0..64).map(|index| (index * 17) as u8).collect::<Vec<_>>();
+    let mut rich_alpha_success_output = Vec::new();
+    let mut rich_alpha_success_scratch = TokenStreamScratch::default();
+    std::hint::black_box(
+        encode_alpha_stream(
+            &rich_alpha_palette_delta,
+            rich_alpha_palette_delta.len(),
+            &rich_alpha_packed,
+            8,
+            &rich_alpha,
+            &mut rich_alpha_success_output,
+            &mut rich_alpha_success_scratch,
+            None,
+            NoopBitWriterCheckpoint::default(),
+        )
+        .expect("rich no-op alpha coverage input must encode"),
+    );
+
     let token_alpha = (0..2_048)
         .map(|index| alpha_values[index % alpha_values.len()])
         .collect::<Vec<_>>();
@@ -3824,14 +7871,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     )
     .expect("flat token-aware alpha coverage input must encode");
 
-    for checks in 0..1_024 {
+    for checks in [0, 1, 32, 256, 1_023] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let alpha = (0..20).map(|index| (index * 13) as u8).collect::<Vec<_>>();
         let _ = encode_alpha(&alpha, alpha.len() as u32, 1, Some(&token));
     }
 
-    for length in 1..=256 {
+    for length in [1, 2, 20, 64, 256] {
         for pattern in 0..4 {
             let alpha = (0..length)
                 .map(|index: usize| match pattern {

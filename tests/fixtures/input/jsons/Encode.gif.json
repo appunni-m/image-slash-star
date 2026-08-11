@@ -54,7 +54,6 @@
       },
       "params": {
         "rust_unsupported_modes": [
-          "1",
           "La8",
           "Cmyk8",
           "L16",
@@ -70,7 +69,7 @@
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "GIF directly accepts only P8, L8, Rgb8, and Rgba8",
+      "rust_error_reason": "GIF directly accepts L1, P8, L8, Rgb8, and Rgba8",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",
@@ -1849,6 +1848,49 @@
       "params": {},
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gray.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_bilevel",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit.png",
         "method": "PIL.Image.Image.save",
         "format": "GIF",
         "kwargs": {},

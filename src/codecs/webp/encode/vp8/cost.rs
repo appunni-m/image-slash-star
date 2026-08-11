@@ -549,4 +549,55 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut levels = [0i16; 16];
     levels[0] = 70;
     let _ = residual_cost(&levels, 0, 0, 0, &coefficient_probabilities);
+
+    let zero_levels = [0i16; 16];
+    for fail_after in [0, usize::MAX] {
+        let mut calls = 0usize;
+        let _ =
+            residual_cost_with_control(&zero_levels, 0, 0, 0, &coefficient_probabilities, || {
+                if calls >= fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                calls = calls.saturating_add(1);
+                Ok(())
+            });
+    }
+    let mut delayed_levels = [0i16; 16];
+    delayed_levels[1] = 1;
+    for fail_after in [0, usize::MAX] {
+        let mut calls = 0usize;
+        let _ = residual_cost_with_control(
+            &delayed_levels,
+            0,
+            0,
+            0,
+            &coefficient_probabilities,
+            || {
+                if calls >= fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                calls = calls.saturating_add(1);
+                Ok(())
+            },
+        );
+    }
+    let mut terminal_levels = [0i16; 16];
+    terminal_levels[15] = 1;
+    for fail_after in [15, usize::MAX] {
+        let mut calls = 0usize;
+        let _ = residual_cost_with_control(
+            &terminal_levels,
+            0,
+            0,
+            0,
+            &coefficient_probabilities,
+            || {
+                if calls >= fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                calls = calls.saturating_add(1);
+                Ok(())
+            },
+        );
+    }
 }

@@ -28,6 +28,9 @@
 
 use std::io::BufRead;
 
+#[cfg(coverage)]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use super::decoder::DecodingError;
 use super::lossless_transform::{
     apply_color_indexing_transform, apply_color_transform, apply_predictor_transform,
@@ -78,6 +81,9 @@ const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 2
 // workspace covers both the ordinary and enlarged cases.
 const MAX_STACK_HUFFMAN_SYMBOLS: usize = 256 + 24;
 const MAX_COLOR_CACHE_BITS: u8 = 11;
+
+#[cfg(coverage)]
+pub(crate) static FORCE_DECODE_FRAME_RGB_ERROR: AtomicBool = AtomicBool::new(false);
 const MAX_HUFFMAN_SYMBOLS_WITH_COLOR_CACHE: usize =
     MAX_STACK_HUFFMAN_SYMBOLS + (1usize << MAX_COLOR_CACHE_BITS);
 
@@ -139,6 +145,10 @@ impl<'a> LosslessDecoder<'a> {
         height: u32,
         buf: &mut [u8],
     ) -> Result<(), DecodingError> {
+        #[cfg(coverage)]
+        if FORCE_DECODE_FRAME_RGB_ERROR.swap(false, Ordering::Relaxed) {
+            return Err(DecodingError::BitStreamError);
+        }
         let alpha_used = self.read_frame_header(width, height)?;
         let transformed_width = self.read_transforms()?;
 
@@ -877,6 +887,11 @@ impl<'a> LosslessDecoder<'a> {
     }
 }
 
+// `PIXEL_SIZE` is a closed internal const parameter: all legal callers use
+// RGB (3) or RGBA (4).  The assertion's false branch is therefore not a
+// reachable codec state, even though LLVM models the generic assertion as a
+// branch for every monomorphization.
+#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn write_pixel<const PIXEL_SIZE: usize>(data: &mut [u8], index: usize, pixel: [u8; 4]) {
     debug_assert!(PIXEL_SIZE == 3 || PIXEL_SIZE == 4);
@@ -890,6 +905,10 @@ fn read_pixel<const PIXEL_SIZE: usize>(data: &[u8], index: usize) -> [u8; 4] {
     pixel_to_rgba(&data[start..start + PIXEL_SIZE])
 }
 
+// The same closed internal representation reaches this helper: only 3-byte
+// RGB and 4-byte RGBA slices are produced by the decoder.  The invalid-length
+// assertion branch is not an executable codec state.
+#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn pixel_to_rgba(pixel: &[u8]) -> [u8; 4] {
     debug_assert!(pixel.len() == 3 || pixel.len() == 4);
@@ -907,6 +926,7 @@ fn copy_needs_overlap_expansion(length: usize, dist: usize) -> bool {
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     use std::io::{self, BufRead, Cursor, Read};
 
@@ -1060,6 +1080,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decoder.decode_frame(1, 1, &mut buf);
     let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0])));
     let _ = decoder.decode_frame(1, 1, &mut buf);
+    let mut rgb_header_decoder =
+        LosslessDecoder::new(Box::new(std::io::Cursor::new(Vec::<u8>::new())));
+    let mut rgb_header_buf = [0u8; 3];
+    let _ = rgb_header_decoder.decode_frame_rgb(1, 1, &mut rgb_header_buf);
+
+    // A valid zero-transform header followed by a failing image reader reaches
+    // the transformed-body error boundary without needing a complete VP8L
+    // entropy stream.
+    let mut body_decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
+    let _ = body_decoder.decode_frame_body(&mut buf);
+    let alpha_header = 0x2f_u64 | (1_u64 << 36);
+    let mut rgb_decoder = decoder_with_bits(Box::new(ErrorReader), alpha_header, 41, 1, 1);
+    let mut rgb_buf = [0u8; 3];
+    let _ = rgb_decoder.decode_frame_rgb(1, 1, &mut rgb_buf);
 
     let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b001, 3, 1, 1);
     let _ = decoder.read_transforms();

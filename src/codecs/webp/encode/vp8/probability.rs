@@ -7,6 +7,13 @@ use super::{
 };
 use crate::codecs::CodecResult;
 
+#[cfg(coverage)]
+use super::{
+    chroma::{ChromaCandidate, ChromaMode},
+    intra4::{Intra4Mode, Intra4Result},
+    intra16::Intra16Mode,
+};
+
 type Statistics = [[[[u32; 11]; 3]; 8]; 4];
 
 const PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
@@ -30,6 +37,58 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut statistic = 0xfffe_0000;
     record_event(&mut statistic, true);
     assert_ne!(statistic, 0xfffe_0000);
+
+    let token = crate::CancellationToken::new();
+    let mut checkpoint = TokenStatisticsCheckpoint::new(&token);
+    checkpoint.macroblock_items = STATISTICS_CHECKPOINT_MACROBLOCKS - 1;
+    let _ = checkpoint.observe();
+    let _ = adapt_coefficients(&[], 1, true, Some(&token));
+    let _ = adapt_coefficients(&[], 1, false, None);
+
+    let decision = MacroblockDecision {
+        x: 0,
+        y: 0,
+        segment: 0,
+        intra16_mode: Intra16Mode::Dc,
+        luma: LumaDecision::Intra4(Intra4Result {
+            modes: [Intra4Mode::Dc; 16],
+            levels: [[0; 16]; 16],
+            reconstructed: [0; 256],
+            distortion: 0,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        }),
+        chroma: ChromaCandidate {
+            mode: ChromaMode::Dc,
+            levels: [[0; 16]; 8],
+            reconstructed_u: [0; 64],
+            reconstructed_v: [0; 64],
+            errors: [[0; 3]; 2],
+            distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        },
+        distortion: 0,
+        spectral_distortion: 0,
+        header_cost: 0,
+        rate_cost: 0,
+        score: 0,
+        nonzero: 0,
+    };
+    for checks in 0..=2 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = adapt_coefficients(std::slice::from_ref(&decision), 1, true, Some(&token));
+    }
+    let many_decisions = vec![decision; STATISTICS_CHECKPOINT_MACROBLOCKS];
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = adapt_coefficients(&many_decisions, 1, true, Some(&token));
 }
 
 fn record_block(
@@ -283,13 +342,7 @@ pub(super) fn adapt_coefficients(
             &mut checkpoint,
         )?
     } else {
-        let mut checkpoint = NoopStatisticsCheckpoint;
-        collect_statistics_with_checkpoint(
-            decisions,
-            macroblock_width,
-            token_buffer,
-            &mut checkpoint,
-        )?
+        collect_statistics_without_token(decisions, macroblock_width, token_buffer)
     };
     let mut coefficients = COEFF_PROBS;
     let mut updates = [[[[false; 11]; 3]; 8]; 4];
@@ -340,4 +393,15 @@ pub(super) fn adapt_coefficients(
         coefficients,
         updates,
     })
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn collect_statistics_without_token(
+    decisions: &[MacroblockDecision],
+    macroblock_width: usize,
+    token_buffer: bool,
+) -> Statistics {
+    let mut checkpoint = NoopStatisticsCheckpoint;
+    collect_statistics_with_checkpoint(decisions, macroblock_width, token_buffer, &mut checkpoint)
+        .unwrap_or_else(|error| panic!("no-token VP8 statistics checkpoint failed: {error:?}"))
 }

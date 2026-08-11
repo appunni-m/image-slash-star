@@ -8,10 +8,11 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
     AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
     AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
-    AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
-    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
-    AvifRotation, AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile,
-    SourceAlpha, SourceColor, SourceDescriptor,
+    AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile, AvifItemLocation,
+    AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
+    SourceColor, SourceDescriptor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -158,6 +159,15 @@ impl<'a> Reader<'a> {
         ]))
     }
 
+    fn uint(&mut self, width: u8) -> ParseResult<u64> {
+        match width {
+            0 => Ok(0),
+            4 => Ok(u64::from(self.u32()?)),
+            8 => self.u64(),
+            _ => Err(parse_failure!()),
+        }
+    }
+
     fn four_cc(&mut self) -> ParseResult<FourCc> {
         let bytes = self.take(4)?;
         Ok([bytes[0], bytes[1], bytes[2], bytes[3]])
@@ -267,6 +277,7 @@ struct Meta {
     properties: Vec<Property>,
     associations: Vec<Association>,
     references: Vec<Reference>,
+    locations: Vec<AvifItemLocation>,
 }
 
 #[derive(Clone)]
@@ -337,7 +348,7 @@ fn inspect_inner_with_grid(
                         return Err(parse_failure!());
                     }
                     meta = Some(
-                        parse_meta(child.payload, &mut budget)
+                        parse_meta_with_input(data, child.payload, &mut budget)
                             .map_err(|error| error.at(box_offset, "avif_box"))?,
                     );
                 }
@@ -502,7 +513,7 @@ fn parse_full_box_version_zero(reader: &mut Reader<'_>) -> ParseResult<u32> {
 }
 
 // libavif 1.4.1 src/read.c:3428-3511.
-fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
+fn parse_meta_with_input(input: &[u8], payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
     let first = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
@@ -515,6 +526,8 @@ fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut iinf_seen = false;
     let mut iprp_seen = false;
     let mut iref_seen = false;
+    let mut iloc = None;
+    let mut idat = None;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"hdlr" => return Err(parse_failure!()),
@@ -546,13 +559,139 @@ fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
                 iref_seen = true;
                 parse_iref(child.payload, &mut meta, budget)?;
             }
+            kind if kind == *b"iloc" => {
+                if iloc.replace(child.payload).is_some() {
+                    return Err(parse_failure!());
+                }
+            }
+            kind if kind == *b"idat" => {
+                if idat.is_some() {
+                    return Err(parse_failure!());
+                }
+                idat = Some(child.payload);
+            }
             _ => {}
         }
     }
     if !pitm_seen || !iinf_seen || !iprp_seen {
         return Err(parse_failure!());
     }
+    if let Some(iloc) = iloc {
+        parse_iloc(input, iloc, idat, &mut meta, budget)?;
+    }
     Ok(meta)
+}
+
+#[cfg(coverage)]
+fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
+    parse_meta_with_input(payload, payload, budget)
+}
+
+fn parse_iloc(
+    input: &[u8],
+    payload: &[u8],
+    idat: Option<&[u8]>,
+    meta: &mut Meta,
+    budget: &mut Budget,
+) -> ParseResult<()> {
+    let mut reader = Reader::new(payload);
+    let (version, _) = parse_full_box(&mut reader)?;
+    if version > 2 {
+        return Err(parse_failure!());
+    }
+    let field_sizes = reader.u16()?;
+    let sizes = field_sizes.to_be_bytes();
+    let offset_size = sizes[0] >> 4;
+    let length_size = sizes[0] & 0x0f;
+    let base_offset_size = sizes[1] >> 4;
+    let index_size = if matches!(version, 1 | 2) {
+        sizes[1] & 0x0f
+    } else {
+        0
+    };
+    if [offset_size, length_size, base_offset_size, index_size]
+        .into_iter()
+        .any(|width| !matches!(width, 0 | 4 | 8))
+    {
+        return Err(parse_failure!());
+    }
+    let item_count = if version < 2 {
+        usize::from(reader.u16()?)
+    } else {
+        // `u32` fits in `usize` on every supported target.  Keep a
+        // fail-closed fallback for a hypothetical narrower target without
+        // creating an untestable conversion-error closure in the coverage
+        // model.
+        usize::try_from(reader.u32()?).unwrap_or(usize::MAX)
+    };
+    for _ in 0..item_count {
+        budget.record_seen()?;
+    }
+    meta.locations.reserve(item_count);
+    for _ in 0..item_count {
+        let item_id = if version < 2 {
+            u32::from(reader.u16()?)
+        } else {
+            reader.u32()?
+        };
+        if item_id == 0
+            || meta
+                .locations
+                .iter()
+                .any(|location| location.item_id() == item_id)
+        {
+            return Err(parse_failure!());
+        }
+        let source = if matches!(version, 1 | 2) {
+            let construction = reader.u16()?;
+            if construction & 0xfff0 != 0 {
+                return Err(parse_failure!());
+            }
+            match construction & 0x000f {
+                0 => AvifItemLocationSource::File,
+                1 => AvifItemLocationSource::Idat,
+                _ => return Err(parse_failure!()),
+            }
+        } else {
+            AvifItemLocationSource::File
+        };
+        if reader.u16()? != 0 {
+            return Err(parse_failure!());
+        }
+        let base_offset = reader.uint(base_offset_size)?;
+        let extent_count = usize::from(reader.u16()?);
+        for _ in 0..extent_count {
+            budget.record_seen()?;
+        }
+        let mut extents = Vec::with_capacity(extent_count);
+        for _ in 0..extent_count {
+            if index_size != 0 {
+                let _ = reader.uint(index_size)?;
+            }
+            let extent_offset = reader.uint(offset_size)?;
+            let extent_length = reader.uint(length_size)?;
+            let relative = base_offset
+                .checked_add(extent_offset)
+                .ok_or_else(|| parse_failure!())?;
+            let limit = match source {
+                AvifItemLocationSource::File => input.len(),
+                AvifItemLocationSource::Idat => idat.ok_or_else(|| parse_failure!())?.len(),
+            };
+            let end = relative
+                .checked_add(extent_length)
+                .ok_or_else(|| parse_failure!())?;
+            if end > u64::try_from(limit).unwrap_or(u64::MAX) {
+                return Err(parse_failure!());
+            }
+            extents.push(AvifItemExtent::new(relative, extent_length));
+        }
+        meta.locations
+            .push(AvifItemLocation::new(item_id, source, extents));
+    }
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(())
 }
 
 // libavif 1.4.1 src/read.c:1948-1972.
@@ -1185,6 +1324,9 @@ impl Meta {
         let item_codec_properties = self.non_primary_item_codec_properties(primary)?;
         if !item_codec_properties.is_empty() {
             source = source.with_avif_item_codec_properties(item_codec_properties);
+        }
+        if !self.locations.is_empty() {
+            source = source.with_avif_item_locations(self.locations.clone());
         }
         let grid_item_ids = self.grid_item_ids(primary)?;
         if !grid_item_ids.is_empty() {
@@ -2408,6 +2550,7 @@ fn coverage_nested_parser_prefixes() {
             },
         ],
         references: Vec::new(),
+        locations: Vec::new(),
     };
     let _ = av1c_depth_meta.details();
     let _ = Movie {
@@ -2477,9 +2620,11 @@ fn coverage_malformed_leaf_corpus() {
         kind: *b"colr",
         payload: &extra_nclx,
     });
+    let _ = Meta::default().grid_item_ids(1);
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     coverage_nested_parser_prefixes();
     coverage_malformed_leaf_corpus();
@@ -2514,6 +2659,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = Reader::whole(b"unterminated").c_string();
     let mut integer_reader = Reader::new(&[0, 0, 0, 0, 0, 0, 0, 1]);
     let _ = integer_reader.u64();
+    let _ = integer_reader.uint(8);
+    let mut invalid_width_reader = Reader::new(&[]);
+    let _ = invalid_width_reader.uint(1);
 
     let mut budget = Budget::default();
     let mut reader = Reader::new(&[]);
@@ -2552,6 +2700,187 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = parse_ftyp(b"mif1\0\0\0\0avis");
     let _ = parse_full_box_version_zero(&mut Reader::new(&[1, 0, 0, 0]));
 
+    let iloc_v0 = coverage_full_box(
+        0,
+        0,
+        &[
+            0x44, 0x00, // four-byte extent offset and length
+            0x00, 0x01, // one item
+            0x00, 0x01, // item id
+            0x00, 0x00, // reserved/data-reference index
+            0x00, 0x01, // one extent
+            0x00, 0x00, 0x00, 0x00, // extent offset
+            0x00, 0x00, 0x00, 0x01, // extent length
+        ],
+    );
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &iloc_v0,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    coverage_each_prefix(&iloc_v0, |payload| {
+        let _ = parse_iloc(
+            &[0],
+            payload,
+            None,
+            &mut Meta::default(),
+            &mut Budget::default(),
+        );
+    });
+
+    let iloc_v1 = |construction: u16| {
+        let mut payload = coverage_full_box(1, 0, &[0x44, 0x44, 0x00, 0x01]);
+        payload.extend_from_slice(&[0x00, 0x01]); // item id
+        payload.extend_from_slice(&construction.to_be_bytes());
+        payload.extend_from_slice(&[0x00, 0x00]); // reserved/data-reference index
+        payload.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // base offset
+        payload.extend_from_slice(&[0x00, 0x01]); // one extent
+        payload.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // extent index
+        payload.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // extent offset
+        payload.extend_from_slice(&[0x00, 0x00, 0x00, 0x01]); // extent length
+        payload
+    };
+    for construction in [0, 1] {
+        let payload = iloc_v1(construction);
+        let idat: Option<&[u8]> = if construction == 1 {
+            Some(&[0_u8])
+        } else {
+            None
+        };
+        let _ = std::hint::black_box(parse_iloc(
+            if construction == 1 { &[] } else { &[0] },
+            &payload,
+            idat,
+            &mut Meta::default(),
+            &mut Budget::default(),
+        ));
+    }
+    let iloc_v1_file = iloc_v1(0);
+    coverage_each_prefix(&iloc_v1_file, |payload| {
+        let _ = parse_iloc(
+            &[0],
+            payload,
+            None,
+            &mut Meta::default(),
+            &mut Budget::default(),
+        );
+    });
+    let _ = std::hint::black_box(parse_iloc(
+        &[],
+        &iloc_v1(1),
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &iloc_v1(0x10),
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &iloc_v1(2),
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+
+    let mut iloc_v2 = coverage_full_box(2, 0, &[0x88, 0x88, 0x00, 0x00, 0x00, 0x01]);
+    iloc_v2.extend_from_slice(&[0x00, 0x00, 0x00, 0x01]); // item id
+    iloc_v2.extend_from_slice(&[0x00, 0x00]); // file construction method
+    iloc_v2.extend_from_slice(&[0x00, 0x00]); // reserved/data-reference index
+    iloc_v2.extend_from_slice(&[0; 8]); // base offset
+    iloc_v2.extend_from_slice(&[0x00, 0x01]); // one extent
+    iloc_v2.extend_from_slice(&[0; 8]); // extent index
+    iloc_v2.extend_from_slice(&[0; 8]); // extent offset
+    iloc_v2.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 1]); // extent length
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &iloc_v2,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    coverage_each_prefix(&iloc_v2, |payload| {
+        let _ = parse_iloc(
+            &[0],
+            payload,
+            None,
+            &mut Meta::default(),
+            &mut Budget::default(),
+        );
+    });
+    let mut overflowing_relative = iloc_v2.clone();
+    overflowing_relative[18..26].fill(0xff);
+    overflowing_relative[36..44].fill(0);
+    overflowing_relative[43] = 1;
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &overflowing_relative,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let mut overflowing_end = iloc_v2.clone();
+    overflowing_end[36..44].fill(0);
+    overflowing_end[43] = 1;
+    overflowing_end[44..52].fill(0xff);
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &overflowing_end,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &coverage_full_box(3, 0, &[]),
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let mut trailing_iloc = iloc_v0.clone();
+    trailing_iloc.push(0);
+    let _ = std::hint::black_box(parse_iloc(
+        &[0],
+        &trailing_iloc,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let duplicate_items = coverage_full_box(
+        0,
+        0,
+        &[
+            0x44, 0x00, 0x00, 0x02, // widths and two items
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // first item, no extents
+            0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // duplicate item, no extents
+        ],
+    );
+    let _ = std::hint::black_box(parse_iloc(
+        &[],
+        &duplicate_items,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+    let zero_item = coverage_full_box(
+        0,
+        0,
+        &[0x44, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+    );
+    let _ = std::hint::black_box(parse_iloc(
+        &[],
+        &zero_item,
+        None,
+        &mut Meta::default(),
+        &mut Budget::default(),
+    ));
+
     let handler = coverage_box(*b"hdlr", &coverage_handler(*b"pict"));
     let bad_handler = coverage_box(*b"hdlr", &coverage_handler(*b"vide"));
     let pitm = coverage_box(*b"pitm", &coverage_full_box(0, 0, &[0, 1]));
@@ -2580,6 +2909,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut Budget::default(),
         );
     }
+    let duplicate_iloc = coverage_box(*b"iloc", &coverage_full_box(0, 0, &[0, 0]));
+    let _ = parse_meta(
+        &coverage_join(&[
+            &meta_prefix,
+            &pitm,
+            &iinf,
+            &iprp,
+            &duplicate_iloc,
+            &duplicate_iloc,
+        ]),
+        &mut Budget::default(),
+    );
+    let duplicate_idat = coverage_box(*b"idat", &[0]);
+    let _ = parse_meta(
+        &coverage_join(&[
+            &meta_prefix,
+            &pitm,
+            &iinf,
+            &iprp,
+            &duplicate_idat,
+            &duplicate_idat,
+        ]),
+        &mut Budget::default(),
+    );
     let _ = parse_meta(&meta_prefix, &mut Budget::default());
     let _ = parse_meta(
         &coverage_join(&[&meta_prefix, &pitm]),
@@ -2946,6 +3299,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_ispe.non_primary_item_plane_properties(1);
+    let _ = duplicate_ispe.source_descriptor(1);
     let duplicate_pixi = Meta {
         items: vec![
             Item {
@@ -2973,6 +3327,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_pixi.non_primary_item_plane_properties(1);
+    let _ = duplicate_pixi.source_descriptor(1);
     let duplicate_av1c = Meta {
         items: vec![
             Item {
@@ -3011,6 +3366,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_av1c.non_primary_item_codec_properties(1);
+    let _ = duplicate_av1c.source_descriptor(1);
     let duplicate_alpha_targets = Meta {
         properties: vec![
             Property::AuxC {
@@ -3051,6 +3407,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..Meta::default()
     };
     let _ = duplicate_alpha_targets.alpha_targeting(1);
+    let _ = duplicate_alpha_targets.source_descriptor(1);
 
     let mut too_many_brands = Vec::new();
     too_many_brands.extend_from_slice(b"avif");
@@ -3277,9 +3634,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = details_meta.has_alpha(1);
 
     let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let mut duplicate_meta = baseline[..274].to_vec();
+    let mut duplicate_meta = baseline.to_vec();
     duplicate_meta.extend_from_slice(&baseline[32..274]);
-    let _ = inspect_inner(&duplicate_meta);
+    assert!(inspect_inner(&duplicate_meta).is_err());
     let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
     let mut duplicate_movie = animated[..1015].to_vec();
     duplicate_movie.extend_from_slice(&animated[286..1015]);
@@ -3298,6 +3655,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     track_fallback[8..12].copy_from_slice(b"avif");
     track_fallback[170..174].copy_from_slice(b"free");
     let _ = inspect_inner(&track_fallback);
+    // A valid container can still carry zero dimensions.  The parser reaches
+    // the final image-info projection, where the public inspection contract
+    // rejects that metadata as malformed.
+    let mut zero_width = baseline.to_vec();
+    zero_width[196..200].fill(0);
+    let _ = inspect_inner(&zero_width);
+    // Track dimensions are parsed independently of the still-image `ispe`
+    // property. A zero movie width therefore reaches the final image-info
+    // projection and exercises its malformed-details propagation.
+    let mut zero_track_width = animated.to_vec();
+    zero_track_width[518..522].fill(0);
+    let _ = inspect_inner(&zero_track_width);
     coverage_prefixes(baseline);
     coverage_prefixes(animated);
     coverage_prefixes(include_bytes!(

@@ -2,17 +2,12 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-10 on production implementation and test/runtime revision
-`371354b0a92d83f4384b7a9129ddc63bcbb326d3`; the claim-ledger fixture tuple
-remains anchored to base revision `487348d01389eb8d100b8a668c9921d97634c022`.
-The current exact-head Pillow parity run
-`49d95968-7a17-4a9d-9002-c6504922610b` passed 1,445/1,445 checks. The feature
-matrix run `2f75bfbc-866c-44de-b118-e00e2cd0936b` and nightly Coverage MCP
-run `f37739ea-a252-4112-8234-268e86be2798` both hit the pre-existing native
-`source_alpha_matches_the_container_contract` AVIF status-5 failure; the
-nightly run ingested no snapshot. The accepted coverage snapshot remains
-`44cec31e-7345-4673-a9a4-e9f8fa21cc08` at the preceding accepted revision
-`1d1b36100925f830408f5d41f0026e71fd220d6e`.
+Reviewed: 2026-08-11 against the measured working tree at HEAD
+`2447f2f6fa20f15735db699805b15877d6f15611` (dirty working tree). Current
+coverage and pending-work status are authoritative in
+[roadmap-new.md](roadmap-new.md); the claim-ledger base revision is the same
+HEAD SHA. Historical AVIF parity and target-lane records below retain their
+original revision scope.
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
@@ -156,6 +151,19 @@ available `avif`/`avis` records across their applicable surfaces. This is Rust
 source provenance only: Pillow has no equivalent FileTypeBox/source-descriptor
 result, and the descriptor does not promise item-level decoder capability, so
 no Pillow parity row represents it.
+
+The bounded `iloc` declarations are retained as
+`SourceDescriptor::avif_item_locations()`. Each source-order record preserves
+the item ID, its construction source (`File` or `Idat`), and its ordered
+source-local extent offsets and lengths; file extents are checked against the
+encoded file and `idat` extents against the enclosing payload with checked
+range arithmetic. These records describe container provenance only: they do
+not expose bytes, select auxiliary content, compose grid tiles, or imply that
+an item is decodable. The existing feature-gated contract asserts the exact
+alpha-fixture locations on inspection, native still/sequence decode when the
+native stack is available, and portable still-decode propagation on WASI. This
+is Rust-only source-provenance evidence because Pillow exposes no equivalent
+`iloc` location result, so it has no Pillow parity row.
 
 The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
 `clli` content-light-level

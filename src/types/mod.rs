@@ -46,6 +46,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
     let _ = ImageFormat::from_name("unknown");
     let _ = ImageFormat::from_path("fixture.PNG");
+    let _ = ImageFormat::from_path(String::from("fixture.PNG"));
+    let _ = ImageFormat::from_path(String::from("fixture.unknown"));
     let _ = ImageFormat::from_path("fixture.unknown");
     let _ = ImageFormat::from_path("fixture");
 
@@ -171,6 +173,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(file_type.major_brand(), *b"avif");
     assert_eq!(file_type.minor_version(), 1);
     assert_eq!(file_type.compatible_brands(), &[*b"mif1", *b"miaf"]);
+    let item_extent = AvifItemExtent::new(12, 34);
+    assert_eq!(item_extent.offset(), 12);
+    assert_eq!(item_extent.length(), 34);
+    let item_location =
+        AvifItemLocation::new(7, AvifItemLocationSource::Idat, vec![item_extent.clone()]);
+    assert_eq!(item_location.item_id(), 7);
+    assert_eq!(item_location.source(), AvifItemLocationSource::Idat);
+    assert_eq!(item_location.extents(), &[item_extent]);
 
     // Set every descriptor field once so every short-circuit arm of
     // `SourceDescriptor::is_empty` is reached by a real public value.
@@ -221,6 +231,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     assert!(
         !SourceDescriptor::new()
+            .with_avif_item_locations(vec![item_location.clone()])
+            .is_empty()
+    );
+    assert!(
+        !SourceDescriptor::new()
             .with_avif_grid_item_ids(vec![1, 2])
             .is_empty()
     );
@@ -244,6 +259,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .with_avif_item_properties(vec![item_property.clone()])
         .with_avif_item_plane_properties(vec![item_plane])
         .with_avif_item_codec_properties(vec![item_codec.clone()])
+        .with_avif_item_locations(vec![item_location.clone()])
         .with_avif_grid_item_ids(vec![1, 2])
         .with_avif_grid_properties(grid)
         .with_avif_file_type(file_type);
@@ -259,6 +275,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(provenance.avif_item_properties(), &[item_property]);
     assert_eq!(provenance.avif_item_plane_properties(), &[item_plane]);
     assert_eq!(provenance.avif_item_codec_properties(), &[item_codec]);
+    assert_eq!(provenance.avif_item_locations(), &[item_location]);
     assert_eq!(provenance.avif_grid_item_ids(), &[1, 2]);
     assert_eq!(provenance.avif_grid_properties(), Some(grid));
     assert_eq!(provenance.avif_file_type().unwrap().major_brand(), *b"avif");
@@ -1387,6 +1404,92 @@ impl AvifItemCodecProperties {
     }
 }
 
+/// The byte source selected by an AVIF `iloc` construction method.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AvifItemLocationSource {
+    /// An extent addressed from the encoded file.
+    File,
+    /// An extent addressed from the enclosing `idat` payload.
+    Idat,
+}
+
+/// One declared AVIF item extent.
+///
+/// The offset is relative to the source selected by [`Self::source`]. For a
+/// [`AvifItemLocationSource::File`] extent it is a file offset; for an
+/// [`AvifItemLocationSource::Idat`] extent it is an offset from the `idat`
+/// payload. These are container declarations only: the record does not grant
+/// access to the bytes or imply that the item is decoded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AvifItemExtent {
+    offset: u64,
+    length: u64,
+}
+
+impl AvifItemExtent {
+    /// Create one source-local AVIF item extent.
+    #[must_use]
+    pub const fn new(offset: u64, length: u64) -> Self {
+        Self { offset, length }
+    }
+
+    /// Return the source-local extent offset.
+    #[must_use]
+    pub const fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    /// Return the declared extent length.
+    #[must_use]
+    pub const fn length(&self) -> u64 {
+        self.length
+    }
+}
+
+/// Source-local AVIF `iloc` location records for one item.
+///
+/// Extents remain in their encoded order, and item identifiers remain local
+/// to the source container. This preserves construction and range provenance;
+/// it does not compose tiles, select auxiliary content, or expose decoded
+/// planes.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AvifItemLocation {
+    item_id: u32,
+    source: AvifItemLocationSource,
+    extents: Vec<AvifItemExtent>,
+}
+
+impl AvifItemLocation {
+    /// Create one source-local AVIF item location record.
+    #[must_use]
+    pub fn new(item_id: u32, source: AvifItemLocationSource, extents: Vec<AvifItemExtent>) -> Self {
+        Self {
+            item_id,
+            source,
+            extents,
+        }
+    }
+
+    /// Return the source-local item identifier.
+    #[must_use]
+    pub const fn item_id(&self) -> u32 {
+        self.item_id
+    }
+
+    /// Return the `iloc` construction source.
+    #[must_use]
+    pub const fn source(&self) -> AvifItemLocationSource {
+        self.source
+    }
+
+    /// Return the ordered extents declared for this item.
+    #[must_use]
+    pub fn extents(&self) -> &[AvifItemExtent] {
+        &self.extents
+    }
+}
+
 /// Topology declared by an AVIF `grid` derived image item.
 ///
 /// These fields are source-local container provenance. They describe the
@@ -1462,6 +1565,20 @@ impl AvifGridProperties {
     }
 }
 
+/// The declaration role of a four-byte AVIF `FileTypeBox` brand.
+///
+/// This describes source provenance only. A brand role is not a claim that the
+/// corresponding item, codec configuration, or target-specific decoder path
+/// is supported by this crate.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AvifFileTypeBrandRole {
+    /// The `FileTypeBox` major brand.
+    Major,
+    /// An entry in the ordered compatible-brand list.
+    Compatible,
+}
+
 /// The bounded AVIF `FileTypeBox` declarations retained from an encoded source.
 ///
 /// The major brand, minor version, and ordered compatible-brand list are source
@@ -1498,10 +1615,27 @@ impl AvifFileTypeProperties {
         self.minor_version
     }
 
-    /// Return the ordered compatible-brand list, excluding the major brand.
+    /// Return the ordered compatible-brand list exactly as declared, including
+    /// a repeated major brand when the source contains one.
     #[must_use]
     pub fn compatible_brands(&self) -> &[[u8; 4]] {
         &self.compatible_brands
+    }
+
+    /// Return the declaration role for `brand`, if it is declared.
+    ///
+    /// The major brand wins when it is also repeated in the compatible-brand
+    /// list, preserving the distinction between the primary declaration and a
+    /// compatibility declaration.
+    #[must_use]
+    pub fn brand_role(&self, brand: [u8; 4]) -> Option<AvifFileTypeBrandRole> {
+        if self.major_brand == brand {
+            Some(AvifFileTypeBrandRole::Major)
+        } else if self.compatible_brands.contains(&brand) {
+            Some(AvifFileTypeBrandRole::Compatible)
+        } else {
+            None
+        }
     }
 }
 
@@ -1524,6 +1658,7 @@ pub struct SourceDescriptor {
     avif_item_properties: Option<Vec<AvifItemProperty>>,
     avif_item_plane_properties: Option<Vec<AvifItemPlaneProperties>>,
     avif_item_codec_properties: Option<Vec<AvifItemCodecProperties>>,
+    avif_item_locations: Option<Vec<AvifItemLocation>>,
     avif_grid_item_ids: Option<Vec<u32>>,
     avif_grid_properties: Option<AvifGridProperties>,
     avif_file_type: Option<AvifFileTypeProperties>,
@@ -1547,6 +1682,7 @@ impl SourceDescriptor {
             avif_item_properties: None,
             avif_item_plane_properties: None,
             avif_item_codec_properties: None,
+            avif_item_locations: None,
             avif_grid_item_ids: None,
             avif_grid_properties: None,
             avif_file_type: None,
@@ -1742,6 +1878,19 @@ impl SourceDescriptor {
         self.avif_item_codec_properties.as_deref().unwrap_or(&[])
     }
 
+    /// Record bounded AVIF `iloc` item locations in source order.
+    #[must_use]
+    pub fn with_avif_item_locations(mut self, locations: Vec<AvifItemLocation>) -> Self {
+        self.avif_item_locations = (!locations.is_empty()).then_some(locations);
+        self
+    }
+
+    /// Return bounded AVIF `iloc` item locations in source order.
+    #[must_use]
+    pub fn avif_item_locations(&self) -> &[AvifItemLocation] {
+        self.avif_item_locations.as_deref().unwrap_or(&[])
+    }
+
     /// Record the ordered source-local item identifiers derived from a
     /// primary AVIF grid item.
     ///
@@ -1817,6 +1966,7 @@ impl SourceDescriptor {
             && self.avif_item_properties.is_none()
             && self.avif_item_plane_properties.is_none()
             && self.avif_item_codec_properties.is_none()
+            && self.avif_item_locations.is_none()
             && self.avif_grid_item_ids.is_none()
             && self.avif_grid_properties.is_none()
             && self.avif_file_type.is_none()
@@ -2346,10 +2496,12 @@ impl AvifTransformProperties {
             }
             index = index.saturating_add(1);
         }
-        if index < self.order.len() {
-            self.order[index] = kind;
-            self.order_len = self.order_len.saturating_add(1);
-        }
+        // `record_kind` is private and receives only the four transform kinds
+        // represented by `order`; the public builders can therefore never
+        // exhaust this fixed-capacity list.
+        debug_assert!(index < self.order.len());
+        self.order[index] = kind;
+        self.order_len = self.order_len.saturating_add(1);
         self
     }
 

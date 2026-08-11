@@ -1180,7 +1180,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     exercise_animation_data(public_reader_y_outside, 64, 64, true, 1, 0, false, 1);
 
     exercise_animation(vp8l_solid_64.clone(), 64, 64, true);
+    super::lossless::FORCE_DECODE_FRAME_RGB_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
     exercise_animation(vp8l_solid_64.clone(), 64, 64, false);
+    let mut invalid_opaque_vp8l = anmf_payload(0, 0, 0, 0, b"VP8L");
+    invalid_opaque_vp8l[20..24].copy_from_slice(&5u32.to_le_bytes());
+    invalid_opaque_vp8l.truncate(24);
+    invalid_opaque_vp8l.extend_from_slice(&vp8l_no_alpha);
+    invalid_opaque_vp8l.push(0);
+    exercise_animation(invalid_opaque_vp8l, 1, 1, false);
 
     let first_frame = chunk(b"ANMF", &vp8l_solid_64);
     let mut two_frames = first_frame.clone();

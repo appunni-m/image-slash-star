@@ -1,12 +1,16 @@
 # Roadmap: the one source of truth
 
-Status: canonical pending-work plan
+Status: canonical pending-work plan; current v1 evidence is recorded below
 
-Reviewed: 2026-08-10
+Reviewed: 2026-08-11
 
-- Baseline repository revision for this review: `f8e57d67a9d6fe6509e63a4e435eabf3806364b1`
-- Last code-and-test revision: `371354b0a92d83f4384b7a9129ddc63bcbb326d3`
-- Claim-ledger base revision: `487348d01389eb8d100b8a668c9921d97634c022`
+- Measured working-tree HEAD: `2447f2f6fa20f15735db699805b15877d6f15611`
+  (the working tree is dirty; the managed run records this HEAD SHA)
+- Claim-ledger base revision: `2447f2f6fa20f15735db699805b15877d6f15611`
+- Managed Pillow parity run: `56fe2d9b-b558-4c91-b025-4cc1859b11d0`
+  (1,447/1,447 passed at this HEAD)
+- Final managed run: `97309ded-2087-4085-8b4b-cdab6d8245fa`
+- Ingested Coverage MCP snapshot: `00622313-a734-4877-91ad-81707b8894ed`
 - Project: `image-slash-star`, a Rust image-codec library with optional native
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
@@ -89,16 +93,15 @@ that an entire workstream is finished because one slice passed.
 
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
-| W1 | Pillow-visible packed JPEG `L1` input expands to luminance output | Held in review checkout; not integrated | Isolated JPEG parity passed 1/1 and local checks passed. Its manifest/projection changes need a fresh same-revision parity and Coverage MCP acceptance before their hashes can enter the claim ledger. Native AVIF remains the current all-feature blocker. |
-| W2 | Cancellation during the final output-sink segment is observed before `flush` | Integrated as `28bd91d` | Existing fixture-backed feature-gate contract passes 45/45. This is Rust-only, so it has no Pillow row. A fresh accepted coverage snapshot is still required. |
-| W3 | GIF dispatch rejects PNG options with a typed parameter error and zero writes | Integrated as `3c48f2d` | Existing `static.gif` fixture and feature-gate contract pass 45/45; origin verifier passes. A fresh accepted coverage snapshot is still required. |
-| W4 | Native/WASI/unknown-target capability distinction | Held in review checkout; not integrated | Native and WASI feature-gate checks plus unknown-target compile checks passed. Capability-table changes need a fresh same-revision acceptance snapshot; native AVIF remains the blocker. |
-| W5 | Machine-checked catalog of contracts Pillow cannot prove | Integrated as `f8a372a` | Nine categories are mapped: 8 covered by existing Rust-only evidence and 1 explicitly planned. The verifier, claim ledger, docs audit, and CI wiring pass. |
+| W1 | Pillow-visible GIF `enc_bilevel` and JPEG `enc_cmyk` fixture projections | Integrated in the current tree | `Encode.gif` and `Encode.jpeg` now have the real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `56fe2d9b-b558-4c91-b025-4cc1859b11d0` passes 1,447/1,447 at the same HEAD. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment | Integrated in the current tree | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 46/46. This is Rust-only and has no Pillow row. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. The measured aggregate coverage is now exact; the next audit cycle still owns any newly introduced gaps. |
+| W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
+| W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
-The held W1 and W4 commits remain recoverable in their isolated review
-checkouts. They are intentionally not counted as accepted `main` behavior
-until the evidence ledger and coverage snapshot can refer to the same code
-revision.
+The five worker checkouts were disposable execution spaces. Their reviewed
+slices are represented in the current dirty tree above; no worker pushed
+directly and no clean commit is being claimed for this working tree.
 
 ## Contract catalog: behavior Pillow cannot prove
 
@@ -109,17 +112,17 @@ target, sink, or typed result for comparison.
 The bounded v1 map is machine-checked by
 `python3 scripts/verify_unreachable_contracts.py` from
 `tests/fixtures/unreachable_contract_manifest.json`. `covered` means that the
-manifest names an existing fixture-backed integration contract; `planned`
-means that no such contract is claimed yet. The map is an evidence index, not
-a claim that every legal format state is implemented.
+manifest names an existing fixture-backed integration contract or fixture
+verifier; `planned` means that no such contract is claimed yet. The map is an
+evidence index, not a claim that every legal format state is implemented.
 
-The verifier also parses this nine-row table. It requires each row's status and
+The verifier also parses this ten-row table. It requires each row's status and
 Pillow-parity column to match the manifest, every covered row to name the exact
-manifest evidence paths, and the planned allocation/stack/coverage row to say
-that no category-specific evidence is claimed while naming its bounded context
-paths. This is documentation-integrity evidence only: it does not promote the
-planned category to covered and does not add any Rust-only result to Pillow
-parity.
+manifest evidence paths, the release-package row to name its exact fixture
+verifier, and the planned allocation/stack/coverage row to say that no
+category-specific evidence is claimed while naming its bounded context paths.
+This is documentation-integrity evidence only: it does not promote the planned
+category to covered and does not add any Rust-only result to Pillow parity.
 
 | Map ID | Rust-only contract | Why Pillow cannot prove it | v1 status | Separate evidence | Pillow parity |
 | --- | --- | --- | --- | --- | --- |
@@ -131,6 +134,7 @@ parity.
 | `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
+| `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |
 | `allocation-stack-coverage-models` | Allocation/stack/coverage models | Pillow cannot witness Rust allocator checkpoints, stack measurements, or private defensive branches | `planned` | No category-specific evidence is claimed. Planned context: `scripts/benchmark_fixture_workloads.py`, `scripts/verify_coverage_origins.py`, `tests/fixtures/coverage_origin_manifest.json` | `excluded` |
 
 These cases must stay out of `coverage_matrix.json` unless a row also has a
@@ -153,15 +157,16 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Active fixture rows | 1,417/1,417 wired | 1,024 decode/inspect/verify rows plus 393 encode rows exist; none is planned or unwired. |
-| Managed Pillow checks | 1,445/1,445 passed | The current Pillow-observable parity surface passed at the last managed code revision. |
+| Active fixture rows | 1,419/1,419 wired | 1,024 decode/inspect/verify rows plus 395 encode rows exist; none is planned or unwired. |
+| Managed Pillow checks | 1,447/1,447 passed | The current managed Pillow-oracle run is bound to HEAD `2447f2f`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Baseline implementation state | clean at `f8e57d6` | The implementation state being measured was already pushed to `origin/main` before this roadmap rewrite. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 46/46 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Baseline implementation state | dirty working tree at HEAD `2447f2f` | The exact managed coverage result is bound to this HEAD SHA; changes are not committed or pushed by this task. |
 
-The separate feature-gated contract has 45 non-Pillow assertions per native
-and `wasm32-wasip1` lane. The current managed run is 44/45 because the native
-AVIF alpha decoder still returns status 5. That failure is real test evidence,
-not a reason to relabel the source-descriptor work as Pillow parity.
+The current native all-feature feature-gated contract has 46 passing assertions.
+Some broader historical native/WASI matrix records still contain the known
+libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
+evidence, not a reason to relabel source-provenance work as Pillow parity.
 
 ## What “100% coverage” means here
 
@@ -177,40 +182,28 @@ It does **not** mean that every legal file in every image specification is
 implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
-The accepted Coverage MCP snapshot is old relative to the current revision:
+The current managed Coverage MCP snapshot is exact for the measured native
+all-feature build:
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines | 55,926 | 56,803 | 98.456% | 877 | 1.544% |
-| Branches | 8,011 | 8,228 | 97.363% | 217 | 2.637% |
-| Functions | 3,122 | 3,218 | 97.017% | 96 | 2.983% |
-| Regions | 85,972 | 87,930 | 97.773% | 1,958 | 2.227% |
+| Lines | 64,883 | 64,883 | 100% | 0 | 0% |
+| Branches | 8,458 | 8,458 | 100% | 0 | 0% |
+| Functions | 3,299 | 3,299 | 100% | 0 | 0% |
+| Regions | 96,920 | 96,920 | 100% | 0 | 0% |
 
-That snapshot is `44cec31e-7345-4673-a9a4-e9f8fa21cc08`, measured at
-`1d1b36100925f830408f5d41f0026e71fd220d6e`. It is a baseline, not a current
-100% claim. The next valid coverage result must be generated at the current
-code revision and ingested by Coverage MCP; a stale or skipped artifact means
-“not measured,” never “unchanged.”
+That snapshot is `00622313-a734-4877-91ad-81707b8894ed`, produced by managed
+run `97309ded-2087-4085-8b4b-cdab6d8245fa` with 86/86 tests passing and one
+required artifact ingested. The LLVM JSON report carries the warning that
+segments are normalized to segment-start lines; aggregate region coverage is
+preserved from the report summaries. This closes RN-001 for the measured tree;
+it does not claim complete format support or close the product roadmap.
 
-The latest current-revision runtime matrix is Coverage MCP run
-`9484b9ce-5aa2-4185-a114-a0c20762bec5` at `f05d2771b1799b842c9579ad73f78bb415708a33`:
-44/45 assertions passed. The only failure is
-`source_alpha_matches_the_container_contract` in native AVIF, where the
-decoder returns status 5; the WASI WebP and WASI AVIF lanes passed. This
-command does not emit a coverage artifact, so the aggregate coverage numbers
-above remain the accepted baseline rather than fresh coverage for `main`.
-
-The largest measured weak areas are:
-
-| File | Lines | Branches | Functions | Regions | First question |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `src/codecs/webp/encode/mod.rs` | 649/775 | 88/102 | 49/62 | 1,052/1,327 | Which real WebP encode modes or work boundaries are missing? |
-| `src/codecs/avif/encode.rs` | 587/640 | 46/54 | 38/48 | 825/897 | Which native-only AVIF options or errors need a supported fixture? |
-| `src/codecs/gif/encode.rs` | 2,704/2,907 | 418/462 | 159/189 | 4,343/4,670 | Which source-mode and quantizer boundaries are still unproved? |
-| `src/codecs/mod.rs` | 1,064/1,118 | 108/120 | 92/96 | 1,328/1,377 | Which dispatch/capability/error combinations lack a lane? |
-| `src/codecs/tiff/encode.rs` | 844/886 | 131/134 | 38/50 | 1,504/1,569 | Which page/strip/output paths are not exercised? |
-| `src/types/mod.rs` | 1,596/1,644 | 123/134 | 160/176 | 1,590/1,639 | Which public-state constructors/accessors lack real use? |
-| `src/lib.rs` | 765/793 | 94/98 | 76/78 | 1,149/1,223 | Which root API error and dispatch paths need a fixture? |
+There are no aggregate line, branch, function, or region gaps in this measured
+build. The next work item is therefore a product/evidence boundary, not a
+coverage-only repair: RN-002 selects a real remaining WebP behavior or
+caller-control boundary and proves it with the correct Pillow or Rust-only
+contract. Any future source change must rerun all four coverage measures.
 
 Coverage work follows this order:
 
@@ -233,24 +226,25 @@ The following packages are the work queue. `NEXT` means work can begin after
 the preceding package's evidence is accepted. `LATER` means its prerequisites
 are not complete. `PARKED` means it is deliberately not current work.
 
-### RN-001 — Coverage baseline and honest accounting — NEXT
+### RN-001 — Coverage baseline and honest accounting — DONE for this measured tree
 
 **Why:** We need to know which flashlight beams are missing before choosing
 new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
-**Work:** Refresh the all-feature native Coverage MCP snapshot at the current
-revision; classify every uncovered line/branch/function/region; close real
-behavior with fixtures; remove dead paths; register only justified private
-models; keep the origin inventory and claim ledger green.
+**Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
+the current HEAD; the exact aggregate result is recorded above. Real behavior
+uses Pillow-visible fixtures or Rust-only feature contracts, private models
+remain origin-registered, and the claim ledger is bound to the same HEAD.
 
 **Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`, `DOC-005`.
 
-**Done when:** a fresh snapshot reports 100% lines, branches, functions, and
+**Done:** the fresh snapshot reports 100% lines, branches, functions, and
 regions, with no skipped artifact and with Pillow, Rust-only, and private-model
-origins still distinct.
+origins still distinct. Reopen this item on the next source revision if any
+metric falls below 100%.
 
-### RN-002 — Remaining WebP interior boundary — NEXT after RN-001
+### RN-002 — Remaining WebP interior boundary — NEXT
 
 **Why:** WebP has the largest measured weak implementation area. The next
 boundary must represent a real encoder/decoder operation or resource limit,
@@ -508,6 +502,7 @@ python3 scripts/verify_claim_ledger.py
 python3 scripts/verify_coverage_origins.py
 python3 scripts/verify_diagnostic_provenance.py
 python3 scripts/verify_unreachable_contracts.py
+python3 scripts/verify_package_surface.py
 python3 scripts/verify_third_party_licenses.py
 git diff --check
 ```

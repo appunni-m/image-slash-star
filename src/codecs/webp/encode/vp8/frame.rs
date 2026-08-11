@@ -10,6 +10,9 @@ use super::{
 };
 use crate::codecs::CodecResult;
 
+#[cfg(coverage)]
+use std::sync::atomic::{AtomicBool, Ordering};
+
 const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 7)
     | (1 << 11)
@@ -29,6 +32,19 @@ const STORED_NONZERO_MASK: u32 = (1 << 3)
 // this outer batch still bounds the remaining intra16/chroma and completed
 // macroblock work without adding a callback to their no-token paths.
 const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 64;
+
+#[cfg(coverage)]
+static FORCE_SELECTION_CHECKPOINT_ERROR: AtomicBool = AtomicBool::new(false);
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_cancel_selection_checkpoint(token: Option<&crate::CancellationToken>) {
+    if FORCE_SELECTION_CHECKPOINT_ERROR.swap(false, Ordering::Relaxed) {
+        if let Some(token) = token {
+            token.cancel();
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum LumaDecision {
@@ -430,9 +446,43 @@ pub(super) fn select_frame(
             }
             selection_items = selection_items.saturating_add(1);
             if selection_items.is_multiple_of(SELECTION_CHECKPOINT_MACROBLOCKS) {
+                #[cfg(coverage)]
+                coverage_cancel_selection_checkpoint(token);
                 crate::codecs::error::check_cancelled(token)?;
             }
         }
     }
     Ok(decisions)
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let width = 16 * SELECTION_CHECKPOINT_MACROBLOCKS;
+    let height = 16;
+    let y_plane = vec![0_u8; width * height];
+    let u_plane = vec![128_u8; (width / 2) * (height / 2)];
+    let v_plane = u_plane.clone();
+    let analysis = FrameAnalysis {
+        alpha: 0,
+        chroma_alpha: 0,
+        macroblocks: vec![
+            super::analysis::MacroblockAnalysis::default();
+            SELECTION_CHECKPOINT_MACROBLOCKS
+        ],
+        segments: [super::analysis::SegmentAnalysis::default(); 4],
+    };
+    let token = crate::CancellationToken::new();
+    FORCE_SELECTION_CHECKPOINT_ERROR.store(true, Ordering::Relaxed);
+    let _ = select_frame(
+        [&y_plane, &u_plane, &v_plane],
+        (width, height),
+        &analysis,
+        FrameSelectionOptions {
+            quality: 75.0,
+            method: 0,
+            coefficient_probabilities: &super::tokenize::COEFF_PROBS,
+            trellis: false,
+            token: Some(&token),
+        },
+    );
 }

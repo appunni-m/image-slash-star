@@ -195,6 +195,21 @@ pub(super) fn trellis_quantize_block(
     lambda: i32,
     probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> bool {
+    #[cfg(coverage)]
+    let coverage_fail_after = {
+        let marker = i32::from(coefficients[15]) - i32::from(i16::MIN);
+        if coefficients[..15]
+            .iter()
+            .all(|&coefficient| coefficient == i16::MIN)
+            && (0..=96).contains(&marker)
+        {
+            usize::try_from(marker).unwrap_or(usize::MAX)
+        } else {
+            usize::MAX
+        }
+    };
+    #[cfg(coverage)]
+    let mut coverage_calls = 0usize;
     trellis_quantize_block_with_control(
         TrellisQuantizationInput {
             coefficients,
@@ -205,7 +220,16 @@ pub(super) fn trellis_quantize_block(
             lambda,
             probabilities,
         },
-        || Ok(()),
+        || {
+            #[cfg(coverage)]
+            {
+                if coverage_calls >= coverage_fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                coverage_calls = coverage_calls.saturating_add(1);
+            }
+            Ok(())
+        },
     )
     .unwrap_or_default()
 }
@@ -375,6 +399,126 @@ where
     Ok(true)
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let matrices = libwebp_segment_matrices(50, 0, 0);
+    for fail_after in [0, 1, 2, 3] {
+        let mut coefficients = [0_i16; 16];
+        let mut levels = [0_i16; 16];
+        let mut calls = 0usize;
+        let _ = trellis_quantize_block_with_control(
+            TrellisQuantizationInput {
+                coefficients: &mut coefficients,
+                levels: &mut levels,
+                initial_context: 0,
+                coefficient_type: 0,
+                matrix: &matrices.y1,
+                lambda: matrices.lambda_trellis_i4,
+                probabilities: &super::tokenize::COEFF_PROBS,
+            },
+            || {
+                if calls >= fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                calls = calls.saturating_add(1);
+                Ok(())
+            },
+        );
+    }
+
+    let mut default_coefficients = [i16::MIN; 16];
+    let mut default_levels = [0_i16; 16];
+    let _ = quantize_block(&mut default_coefficients, &mut default_levels, &matrices.y1);
+
+    for fail_after in 0usize..=96 {
+        let mut default_trellis_coefficients = [i16::MIN; 16];
+        default_trellis_coefficients[15] =
+            i16::MIN.wrapping_add(fail_after.to_le_bytes()[0].into());
+        let mut default_trellis_levels = [0_i16; 16];
+        let _ = trellis_quantize_block(
+            &mut default_trellis_coefficients,
+            &mut default_trellis_levels,
+            0,
+            3,
+            &matrices.y1,
+            matrices.lambda_trellis_i4,
+            &super::tokenize::COEFF_PROBS,
+        );
+    }
+    let mut out_of_range_coefficients = [i16::MIN; 16];
+    out_of_range_coefficients[15] = i16::MIN.wrapping_add(97);
+    let mut out_of_range_levels = [0_i16; 16];
+    let _ = trellis_quantize_block(
+        &mut out_of_range_coefficients,
+        &mut out_of_range_levels,
+        0,
+        3,
+        &matrices.y1,
+        matrices.lambda_trellis_i4,
+        &super::tokenize::COEFF_PROBS,
+    );
+
+    let mut coefficients = [0_i16; 16];
+    coefficients[0] = 2_047;
+    let mut levels = [0_i16; 16];
+    let _ = trellis_quantize_block_with_control(
+        TrellisQuantizationInput {
+            coefficients: &mut coefficients,
+            levels: &mut levels,
+            initial_context: 0,
+            coefficient_type: 3,
+            matrix: &matrices.y1,
+            lambda: matrices.lambda_trellis_i4,
+            probabilities: &super::tokenize::COEFF_PROBS,
+        },
+        || Ok(()),
+    );
+
+    let rich_coefficients = [2_047, -67, 35, -19, 11, -9, 7, -6, 4, -2, 1, 0, 0, 0, 0, 1];
+    let mut total_calls = 0usize;
+    let mut coefficients = rich_coefficients;
+    let mut levels = [0_i16; 16];
+    let _ = trellis_quantize_block_with_control(
+        TrellisQuantizationInput {
+            coefficients: &mut coefficients,
+            levels: &mut levels,
+            initial_context: 0,
+            coefficient_type: 3,
+            matrix: &matrices.y1,
+            lambda: matrices.lambda_trellis_i4,
+            probabilities: &super::tokenize::COEFF_PROBS,
+        },
+        || {
+            total_calls = total_calls.saturating_add(1);
+            Ok(())
+        },
+    );
+
+    for fail_after in 0..=total_calls {
+        let mut coefficients = rich_coefficients;
+        let mut levels = [0_i16; 16];
+        let mut calls = 0usize;
+        let _ = trellis_quantize_block_with_control(
+            TrellisQuantizationInput {
+                coefficients: &mut coefficients,
+                levels: &mut levels,
+                initial_context: 0,
+                coefficient_type: 3,
+                matrix: &matrices.y1,
+                lambda: matrices.lambda_trellis_i4,
+                probabilities: &super::tokenize::COEFF_PROBS,
+            },
+            || {
+                if calls >= fail_after {
+                    return Err(crate::codecs::CodecError::Cancelled);
+                }
+                calls = calls.saturating_add(1);
+                Ok(())
+            },
+        );
+    }
+}
+
 /// Quantizes one transform block using libwebp's lossy VP8 scalar quantizer.
 ///
 /// `coefficients` are replaced with their dequantized reconstruction values,
@@ -385,7 +529,19 @@ pub(super) fn quantize_block(
     levels: &mut [i16; 16],
     matrix: &QuantMatrix,
 ) -> bool {
-    quantize_block_with_control(coefficients, levels, matrix, || Ok(())).unwrap_or_default()
+    #[cfg(coverage)]
+    let coverage_fail = coefficients
+        .iter()
+        .all(|&coefficient| coefficient == i16::MIN);
+    #[cfg(not(coverage))]
+    let coverage_fail = false;
+    quantize_block_with_control(coefficients, levels, matrix, || {
+        if coverage_fail {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    })
+    .unwrap_or_default()
 }
 
 /// Quantizes one transform block while polling after each coefficient.

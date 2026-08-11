@@ -67,7 +67,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // The embedded PNG encoder has nested row, compression, and chunk polls;
     // sweep through the nested call so ICO's post-embed and directory polls
     // are covered as well as its early exits.
-    for checks in 0..=40 {
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let _ = encode_with_token(&rgb, &exact_size, Some(&probe));
+    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&rgb, &exact_size, Some(&token));
@@ -76,7 +80,19 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // post-payload cancellation boundary that an ordinary caller cannot fire
     // deterministically without racing another thread. Exercise that real
     // boundary through the existing private coverage model, not a parity row.
-    for checks in 0..=40 {
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let mut sink = Vec::new();
+    let _ = encode_to_sink(
+        &rgb,
+        &IcoEncodeOptions::default(),
+        EncodePolicy::default(),
+        CodecOperation::StillEncode,
+        Some(&probe),
+        &mut sink,
+    );
+    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut sink = Vec::new();
@@ -313,6 +329,12 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
+#[derive(Clone, Copy)]
+enum IcoBmpPayloadMode {
+    Rgb8,
+    Rgba8,
+}
+
 fn encode_bmp_payload(
     img: &DecodedImage,
     token: Option<&crate::CancellationToken>,
@@ -320,15 +342,15 @@ fn encode_bmp_payload(
     crate::codecs::error::check_cancelled(token)?;
     let width = bounded_usize_u32(img.width);
     let height = bounded_usize_u32(img.height);
-    let (bits, row_bytes) = match img.color {
+    let (bits, row_bytes, mode) = match img.color {
         ColorType::Rgb8 => {
             let source_row_bytes = width.saturating_mul(3);
             let row_bytes = source_row_bytes.next_multiple_of(4);
-            (24u16, row_bytes)
+            (24u16, row_bytes, IcoBmpPayloadMode::Rgb8)
         }
         ColorType::Rgba8 => {
             let row_bytes = width.saturating_mul(4);
-            (32u16, row_bytes)
+            (32u16, row_bytes, IcoBmpPayloadMode::Rgba8)
         }
         _ => {
             return Err(CodecError::Unsupported(format!(
@@ -363,8 +385,8 @@ fn encode_bmp_payload(
     output.extend_from_slice(&3_780i32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
     output.extend_from_slice(&0u32.to_le_bytes());
-    match img.color {
-        ColorType::Rgb8 => {
+    match mode {
+        IcoBmpPayloadMode::Rgb8 => {
             let source_row_bytes = width.saturating_mul(3);
             for row in img.pixels.chunks_exact(source_row_bytes).rev() {
                 crate::codecs::error::check_cancelled(token)?;
@@ -375,7 +397,7 @@ fn encode_bmp_payload(
                 output.resize(output.len().saturating_add(padding), 0);
             }
         }
-        ColorType::Rgba8 => {
+        IcoBmpPayloadMode::Rgba8 => {
             for row in img.pixels.chunks_exact(row_bytes).rev() {
                 crate::codecs::error::check_cancelled(token)?;
                 for pixel in row.chunks_exact(4) {
@@ -383,7 +405,6 @@ fn encode_bmp_payload(
                 }
             }
         }
-        _ => unreachable!("ICO BMP payload mode was validated before materialization"),
     }
     debug_assert_eq!(output.len(), 40usize.saturating_add(pixel_bytes));
     output.resize(output.len().saturating_add(mask_bytes), 0);

@@ -436,7 +436,15 @@ fn finish_decoded<T>(
 }
 
 fn validate_explicit_format(data: &[u8], expected: ImageFormat) -> ImageResult<()> {
-    match detect_format(data) {
+    validate_explicit_format_with_detector(data, expected, detect_format)
+}
+
+fn validate_explicit_format_with_detector(
+    data: &[u8],
+    expected: ImageFormat,
+    detector: fn(&[u8]) -> ImageResult<ImageFormat>,
+) -> ImageResult<()> {
+    match detector(data) {
         Ok(actual) if actual == expected => Ok(()),
         Ok(actual) => Err(ImageError::Parameter {
             format: Some(expected),
@@ -1171,10 +1179,11 @@ pub fn encode_sequence_with_token_and_policy(
 /// Current sink writers additionally emit validated container structures
 /// through separate writes: JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native
 /// AVIF still paths, plus one-frame JPEG/PNG/BMP/ICO sequences and supported
-/// GIF/TIFF/WebP/AVIF sequences. A sink failure or cancellation after a write
-/// may therefore leave a prefix in the destination; `flush` failure likewise
-/// does not roll the prefix back. The trait does not provide rollback or
-/// short-write recovery.
+/// GIF/TIFF/WebP/AVIF sequences. A sink that does not opt into checkpointing
+/// may therefore retain a prefix after a write failure, cancellation, or
+/// `flush` failure. Sinks that return a checkpoint have their prefix restored
+/// through [`OutputSink::rollback`] by the public sink APIs when delivery
+/// fails.
 pub trait OutputSink {
     /// Append one fully accepted encoded segment to this sink.
     ///
@@ -1183,17 +1192,43 @@ pub trait OutputSink {
     /// Returns a structured error when the destination rejects the write. An
     /// implementation must return `Ok(())` only after accepting the complete
     /// slice; if it accepts a prefix and then returns an error, that prefix is
-    /// already delivered and cannot be rolled back by the encoder.
+    /// already delivered. A checkpointed sink can ask the encoder to restore
+    /// that prefix through [`OutputSink::rollback`].
     fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()>;
 
     /// Finalize delivery after the complete encoded result has been written.
     ///
     /// The default is suitable for in-memory sinks and preserves compatibility
     /// with existing implementations. A buffered or externally owned sink can
-    /// override this hook to surface its finalization error. A failure does
-    /// not roll back earlier writes.
+    /// override this hook to surface its finalization error. A checkpointed
+    /// sink is rolled back when finalization fails.
+    #[cfg_attr(coverage, coverage(off))]
     fn flush(&mut self) -> ImageResult<()> {
         Ok(())
+    }
+
+    /// Return an opaque position that can restore this sink after failed
+    /// output delivery.
+    ///
+    /// The default preserves the append-only behavior. A sink that returns
+    /// `Some` must implement [`OutputSink::rollback`] so the public sink APIs
+    /// can provide a no-partial-output result for failed delivery.
+    #[must_use]
+    fn checkpoint(&self) -> Option<usize> {
+        None
+    }
+
+    /// Restore the sink to a position returned by [`OutputSink::checkpoint`].
+    ///
+    /// This hook is called only after a failed still or sequence delivery. A
+    /// rollback failure is normalized to [`ImageError::OutputWrite`] because
+    /// the caller can no longer rely on the sink's output state. The default
+    /// rejects rollback so a sink cannot accidentally claim atomic delivery
+    /// by implementing [`OutputSink::checkpoint`] alone.
+    fn rollback(&mut self, _checkpoint: usize) -> ImageResult<()> {
+        Err(ImageError::parameter(
+            "output sink does not implement rollback",
+        ))
     }
 }
 
@@ -1202,11 +1237,39 @@ impl OutputSink for Vec<u8> {
         self.extend_from_slice(bytes);
         Ok(())
     }
+
+    fn checkpoint(&self) -> Option<usize> {
+        Some(self.len())
+    }
+
+    fn rollback(&mut self, checkpoint: usize) -> ImageResult<()> {
+        if checkpoint > self.len() {
+            return Err(ImageError::parameter(
+                "output sink rollback checkpoint is beyond the current length",
+            ));
+        }
+        self.truncate(checkpoint);
+        Ok(())
+    }
 }
 
 impl OutputSink for &mut Vec<u8> {
     fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()> {
         self.extend_from_slice(bytes);
+        Ok(())
+    }
+
+    fn checkpoint(&self) -> Option<usize> {
+        Some(self.len())
+    }
+
+    fn rollback(&mut self, checkpoint: usize) -> ImageResult<()> {
+        if checkpoint > self.len() {
+            return Err(ImageError::parameter(
+                "output sink rollback checkpoint is beyond the current length",
+            ));
+        }
+        self.truncate(checkpoint);
         Ok(())
     }
 }
@@ -1259,6 +1322,24 @@ fn encode_to_sink_with_policy_impl(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
+    let checkpoint = sink.checkpoint();
+    let result = encode_to_sink_with_policy_unchecked(img, format, opts, policy, sink);
+    rollback_sink_on_error(
+        sink,
+        checkpoint,
+        result,
+        format,
+        ImageErrorStage::StillEncode,
+    )
+}
+
+fn encode_to_sink_with_policy_unchecked(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, None);
     #[cfg(all(
         feature = "jpeg",
@@ -1281,13 +1362,13 @@ fn encode_to_sink_with_policy_impl(
             sink,
         )?
         .unwrap_or_else(missing_structural_writer);
-        return finish_sink(
+        finish_sink(
             sink,
             format,
             ImageErrorStage::StillEncode,
             written,
             budget_token.as_ref(),
-        );
+        )
     }
 
     #[cfg(not(all(
@@ -1366,6 +1447,26 @@ fn encode_to_sink_with_token_and_policy_impl(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
+    let checkpoint = sink.checkpoint();
+    let result =
+        encode_to_sink_with_token_and_policy_unchecked(img, format, opts, policy, token, sink);
+    rollback_sink_on_error(
+        sink,
+        checkpoint,
+        result,
+        format,
+        ImageErrorStage::StillEncode,
+    )
+}
+
+fn encode_to_sink_with_token_and_policy_unchecked(
+    img: &DecodedImage,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     #[cfg(all(
@@ -1389,13 +1490,13 @@ fn encode_to_sink_with_token_and_policy_impl(
             sink,
         )?
         .unwrap_or_else(missing_structural_writer);
-        return finish_sink(
+        finish_sink(
             sink,
             format,
             ImageErrorStage::StillEncode,
             written,
             Some(effective_token),
-        );
+        )
     }
 
     #[cfg(not(all(
@@ -1481,6 +1582,25 @@ fn encode_sequence_to_sink_with_policy_impl(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
+    let checkpoint = sink.checkpoint();
+    let result =
+        encode_sequence_to_sink_with_policy_unchecked(sequence, format, opts, policy, sink);
+    rollback_sink_on_error(
+        sink,
+        checkpoint,
+        result,
+        format,
+        ImageErrorStage::SequenceEncode,
+    )
+}
+
+fn encode_sequence_to_sink_with_policy_unchecked(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, None);
     #[cfg(all(
         feature = "jpeg",
@@ -1503,13 +1623,13 @@ fn encode_sequence_to_sink_with_policy_impl(
             sink,
         )?
         .unwrap_or_else(missing_structural_writer);
-        return finish_sink(
+        finish_sink(
             sink,
             format,
             ImageErrorStage::SequenceEncode,
             written,
             budget_token.as_ref(),
-        );
+        )
     }
 
     #[cfg(not(all(
@@ -1595,6 +1715,27 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
+    let checkpoint = sink.checkpoint();
+    let result = encode_sequence_to_sink_with_token_and_policy_unchecked(
+        sequence, format, opts, policy, token, sink,
+    );
+    rollback_sink_on_error(
+        sink,
+        checkpoint,
+        result,
+        format,
+        ImageErrorStage::SequenceEncode,
+    )
+}
+
+fn encode_sequence_to_sink_with_token_and_policy_unchecked(
+    sequence: &DecodedSequence,
+    format: ImageFormat,
+    opts: &EncodeOptions,
+    policy: &EncodePolicy,
+    token: &CancellationToken,
+    sink: &mut dyn OutputSink,
+) -> ImageResult<usize> {
     let budget_token = work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     #[cfg(all(
@@ -1618,13 +1759,13 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
             sink,
         )?
         .unwrap_or_else(missing_structural_writer);
-        return finish_sink(
+        finish_sink(
             sink,
             format,
             ImageErrorStage::SequenceEncode,
             written,
             Some(effective_token),
-        );
+        )
     }
 
     #[cfg(not(all(
@@ -1666,6 +1807,31 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
     }
 }
 
+/// Restore an opted-in sink after any failed still or sequence delivery.
+fn rollback_sink_on_error<T>(
+    sink: &mut dyn OutputSink,
+    checkpoint: Option<usize>,
+    result: ImageResult<T>,
+    format: ImageFormat,
+    stage: ImageErrorStage,
+) -> ImageResult<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            if let Some(checkpoint) = checkpoint
+                && let Err(rollback_error) = sink.rollback(checkpoint)
+            {
+                return Err(ImageError::OutputWrite {
+                    format: Some(format),
+                    message: format!("output rollback failed after {error}: {rollback_error}"),
+                    stage: Some(stage),
+                });
+            }
+            Err(error)
+        }
+    }
+}
+
 /// Write complete encoded bytes through a trait object so the sink error path
 /// has exactly one non-generic coverage instantiation.
 #[cfg(all(
@@ -1679,11 +1845,25 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
     feature = "avif",
     not(target_arch = "wasm32")
 ))]
-#[coverage(off)]
+#[cfg_attr(coverage, coverage(off))]
 fn missing_structural_writer() -> usize {
     unreachable!("all enabled native codecs provide a structural sink writer")
 }
 
+#[cfg(any(
+    coverage,
+    not(all(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif",
+        not(target_arch = "wasm32")
+    ))
+))]
 fn write_sink_all(
     sink: &mut dyn OutputSink,
     bytes: &[u8],
@@ -1845,6 +2025,43 @@ pub fn __coverage_exercise_private_branches() {
     let _ = decode_sequence(b"not an image");
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let _ = encode_default(&image, ImageFormat::Png);
+
+    // Exercise the explicit encoded-input policy gate on both source forms.
+    // The source bytes are valid so construction succeeds; the zero-byte
+    // limit then returns before sequence decoding, which is the error edge
+    // owned by each source method.
+    let invalid = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
+    for candidate in [&image, &invalid] {
+        if let Ok(encoded) = encode_default(candidate, ImageFormat::Png) {
+            let limited = DecodePolicy::default().with_max_encoded_bytes(0);
+            for bytes in [&encoded[..], b"not an image".as_slice()] {
+                if let Ok(view) = EncodedImageView::new(bytes) {
+                    let _ = view.decode_sequence_with_policy(&limited);
+                }
+            }
+            for bytes in [encoded.clone(), b"not an image".to_vec()] {
+                if let Ok(source) = EncodedImage::new(bytes) {
+                    let _ = source.decode_sequence_with_policy(&limited);
+                }
+            }
+        }
+    }
+
+    // `try_with_mode` deliberately validates caller-provided bytes instead
+    // of inheriting the unchecked constructor's compatibility behavior.
+    let _ = DecodedImage::try_with_mode(1, 1, Vec::new(), ImageMode::L8);
+
+    fn detector_with_non_signature_error(_: &[u8]) -> ImageResult<ImageFormat> {
+        Err(ImageError::Cancelled {
+            format: None,
+            stage: None,
+        })
+    }
+    let _ = validate_explicit_format_with_detector(
+        b"coverage",
+        ImageFormat::Png,
+        detector_with_non_signature_error,
+    );
 
     // Exercise the caller-owned sink boundary directly.  The codec dispatch
     // hook covers format-specific structural writers; these calls cover the

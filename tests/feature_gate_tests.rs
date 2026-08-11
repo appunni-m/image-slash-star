@@ -715,6 +715,67 @@ fn manifest_inputs_obey_the_exact_feature_and_target_contract()
         })
     ));
 
+    if cfg!(feature = "avif") {
+        // FileTypeBox declarations are Rust source provenance, not a
+        // Pillow-observable result. Keep this target-portable assertion in
+        // the existing feature-gate integration contract without adding a
+        // parity row or a standalone unit test.
+        let alpha = fs::read(root.join("tests/fixtures/input/images/avif/alpha.avif"))?;
+        let inspected = image_slash_star::inspect(&alpha)?;
+        let inspected_file_type = inspected
+            .source
+            .avif_file_type()
+            .ok_or("AVIF inspection omitted FileTypeBox declarations")?;
+        let expected_file_type = image_slash_star::AvifFileTypeProperties::new(
+            *b"avif",
+            0,
+            vec![*b"avif", *b"mif1", *b"miaf", *b"MA1A"],
+        );
+        assert_eq!(inspected_file_type, &expected_file_type);
+        // The major brand is repeated in the compatible-brand list. The
+        // primary declaration must retain its distinct role.
+        assert_eq!(
+            inspected_file_type.brand_role(*b"avif"),
+            Some(image_slash_star::AvifFileTypeBrandRole::Major),
+            "AVIF FileTypeBox major-brand role"
+        );
+        for brand in [*b"mif1", *b"miaf", *b"MA1A"] {
+            assert_eq!(
+                inspected_file_type.brand_role(brand),
+                Some(image_slash_star::AvifFileTypeBrandRole::Compatible),
+                "AVIF FileTypeBox compatible-brand role {brand:?}"
+            );
+        }
+        assert_eq!(
+            inspected_file_type.brand_role(*b"msf1"),
+            None,
+            "undeclared AVIF FileTypeBox brand"
+        );
+
+        // This RGB fixture is inside the portable still-decode subset, so
+        // the same source declaration can be checked after a native or WASI
+        // decode.
+        let portable =
+            fs::read(root.join("tests/fixtures/input/images/avif/partitioned_16x4_green.avif"))?;
+        let decoded = image_slash_star::decode(&portable)?;
+        let decoded_file_type = decoded
+            .content
+            .source
+            .avif_file_type()
+            .ok_or("portable AVIF decode omitted FileTypeBox declarations")?;
+        assert_eq!(decoded_file_type, &expected_file_type);
+        assert_eq!(
+            decoded_file_type.brand_role(*b"avif"),
+            Some(image_slash_star::AvifFileTypeBrandRole::Major),
+            "portable AVIF FileTypeBox major-brand role"
+        );
+        assert_eq!(
+            decoded_file_type.brand_role(*b"mif1"),
+            Some(image_slash_star::AvifFileTypeBrandRole::Compatible),
+            "portable AVIF FileTypeBox compatible-brand role"
+        );
+    }
+
     for (name, rows) in manifest.formats {
         let (format, feature, enabled) = format(&name);
         let options = EncodeOptions::for_format(format);
@@ -1752,8 +1813,9 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     use image_slash_star::{
         AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifColorProperties,
         AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
-        AvifItemColorProperties, AvifItemIccProfile, AvifItemPlaneProperties, AvifItemProperty,
-        AvifItemRelationship, RawIccProfile, SourceAlpha,
+        AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile, AvifItemLocation,
+        AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
+        RawIccProfile, SourceAlpha,
     };
 
     // SourceAlpha is Rust source-provenance metadata, not a Pillow-observable
@@ -2141,6 +2203,23 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             Some(&expected_file_type),
             "AVIF FileTypeBox inspection"
         );
+        let expected_locations = [
+            AvifItemLocation::new(
+                1,
+                AvifItemLocationSource::File,
+                vec![AvifItemExtent::new(727, 5_714)],
+            ),
+            AvifItemLocation::new(
+                2,
+                AvifItemLocationSource::File,
+                vec![AvifItemExtent::new(457, 270)],
+            ),
+        ];
+        assert_eq!(
+            inspected.source.avif_item_locations(),
+            expected_locations.as_slice(),
+            "AVIF iloc inspection"
+        );
         assert_eq!(expected_file_type.major_brand(), *b"avif");
         assert_eq!(expected_file_type.minor_version(), 0);
         assert_eq!(
@@ -2165,6 +2244,16 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 decoded.content.source.avif_file_type(),
                 Some(&portable_file_type),
                 "AVIF FileTypeBox portable still decode"
+            );
+            let expected_locations = [AvifItemLocation::new(
+                1,
+                AvifItemLocationSource::File,
+                vec![AvifItemExtent::new(275, 34)],
+            )];
+            assert_eq!(
+                decoded.content.source.avif_item_locations(),
+                expected_locations.as_slice(),
+                "AVIF iloc portable still decode"
             );
         }
         let too_many_properties = append_unassociated_avif_properties(&alpha, 2_049)?;
@@ -2414,6 +2503,18 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 8,
                 AvifChromaSamplePosition::Unknown,
             )];
+            let expected_locations = [
+                AvifItemLocation::new(
+                    1,
+                    AvifItemLocationSource::File,
+                    vec![AvifItemExtent::new(727, 5_714)],
+                ),
+                AvifItemLocation::new(
+                    2,
+                    AvifItemLocationSource::File,
+                    vec![AvifItemExtent::new(457, 270)],
+                ),
+            ];
             assert_eq!(
                 info.source.avif_item_plane_properties(),
                 expected_plane_properties.as_slice(),
@@ -2433,6 +2534,16 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                 decoded.content.source.avif_item_codec_properties(),
                 expected_codec_properties.as_slice(),
                 "{name} decode codec declarations"
+            );
+            assert_eq!(
+                info.source.avif_item_locations(),
+                expected_locations.as_slice(),
+                "{name} inspect item locations"
+            );
+            assert_eq!(
+                decoded.content.source.avif_item_locations(),
+                expected_locations.as_slice(),
+                "{name} decode item locations"
             );
             assert!(
                 info.source.avif_item_relationships().is_empty(),
@@ -2467,6 +2578,14 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
                     .avif_item_codec_properties(),
                 expected_codec_properties.as_slice(),
                 "{name} sequence codec declarations"
+            );
+            assert_eq!(
+                sequence.content.frames[0]
+                    .image
+                    .source
+                    .avif_item_locations(),
+                expected_locations.as_slice(),
+                "{name} sequence item locations"
             );
         } else if name == "avif opaque" {
             assert!(
@@ -5160,6 +5279,8 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         AvifFileTypeProperties::new(*b"avif", 0, vec![*b"avif", *b"mif1", *b"miaf", *b"MA1B"]);
     let source_with_file_type =
         |source: SourceDescriptor| source.with_avif_file_type(expected_file_type.clone());
+    let without_item_locations =
+        |source: SourceDescriptor| source.with_avif_item_locations(Vec::new());
 
     // ICC in AVIF is a `colr` item property, not a Pillow-observable decoded
     // field. Use the committed Pillow-generated metadata output as the source
@@ -5238,6 +5359,43 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
 
     let empty_icc = append_associated_property(&bytes, b"colr", b"prof", 6)?;
     assert_malformed(&empty_icc, "empty AVIF ICC profile")?;
+
+    // The AV1C declaration is a public sample-structure rule. A 12-bit
+    // declaration without the high-bit-depth flag is invalid before any
+    // native decoder is involved, so mutate the committed AVIF fixture in
+    // this existing Rust-only integration contract rather than adding a
+    // synthetic Pillow parity row.
+    let av1c = box_start(&bytes, b"av1C")?;
+    let mut invalid_av1c = bytes.clone();
+    let flags = invalid_av1c[av1c + 10];
+    invalid_av1c[av1c + 10] = (flags & !0x40) | 0x20;
+    assert_malformed(&invalid_av1c, "12-bit AV1C without high-bit-depth")?;
+
+    // Sample-entry `pixi` is a valid structural declaration but is not
+    // applied to the decoded image. Reuse the animated fixture and replace
+    // its sample-entry `colr` box in memory so the existing public inspection
+    // contract reaches the intentional no-op without adding Pillow parity.
+    let animated = fs::read(root.join("tests/fixtures/input/images/avif/animated.avif"))?;
+    let sample_colr = animated
+        .windows(4)
+        .enumerate()
+        .filter_map(|(offset, window)| (window == b"colr").then_some(offset))
+        .nth(1)
+        .and_then(|offset| offset.checked_sub(4))
+        .ok_or("animated AVIF has no sample-entry colr box")?;
+    let animated_info = image_slash_star::inspect(&animated)?;
+    let mut sample_entry_pixi = animated;
+    sample_entry_pixi[sample_colr + 4..sample_colr + 8].copy_from_slice(b"pixi");
+    sample_entry_pixi[sample_colr + 8..sample_colr + 14].copy_from_slice(&[0, 0, 0, 0, 1, 8]);
+    let pixi_info = image_slash_star::inspect(&sample_entry_pixi)?;
+    assert_eq!(pixi_info.format, animated_info.format, "sample pixi format");
+    assert_eq!(pixi_info.width, animated_info.width, "sample pixi width");
+    assert_eq!(pixi_info.height, animated_info.height, "sample pixi height");
+    assert_eq!(pixi_info.mode, animated_info.mode, "sample pixi mode");
+    assert_eq!(
+        pixi_info.bit_depth, animated_info.bit_depth,
+        "sample pixi depth"
+    );
 
     // CLLI is an item property, not a Pillow-observable result. Keep this
     // witness in the defensive/specification contract rather than adding a
@@ -5392,16 +5550,22 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         );
         assert!(!expected.is_empty());
         let inspected = image_slash_star::inspect(&variant)?;
-        assert_eq!(inspected.source, expected, "irot inspect value {value}");
+        assert_eq!(
+            without_item_locations(inspected.source.clone()),
+            expected,
+            "irot inspect value {value}"
+        );
         let decoded = image_slash_star::decode(&variant)?;
         assert_eq!(
-            decoded.content.source, expected,
+            without_item_locations(decoded.content.source.clone()),
+            expected,
             "irot decode value {value}"
         );
         assert_eq!(decoded.content.pixels, expected_pixels);
         let sequence = image_slash_star::decode_sequence(&variant)?;
         assert_eq!(
-            sequence.content.frames[0].image.source, expected,
+            without_item_locations(sequence.content.frames[0].image.source.clone()),
+            expected,
             "irot sequence value {value}"
         );
         assert_eq!(sequence.content.frames[0].image.pixels, expected_pixels);
@@ -5432,15 +5596,20 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         );
         let inspected = image_slash_star::inspect(&mirrored)?;
         assert_eq!(
-            inspected.source, expected_mirror,
+            without_item_locations(inspected.source.clone()),
+            expected_mirror,
             "imir inspect value {value}"
         );
         let mirrored_decoded = image_slash_star::decode(&mirrored)?;
-        assert_eq!(mirrored_decoded.content.source, expected_mirror);
+        assert_eq!(
+            without_item_locations(mirrored_decoded.content.source.clone()),
+            expected_mirror
+        );
         assert_eq!(mirrored_decoded.content.pixels, expected_pixels);
         let mirrored_sequence = image_slash_star::decode_sequence(&mirrored)?;
         assert_eq!(
-            mirrored_sequence.content.frames[0].image.source, expected_mirror,
+            without_item_locations(mirrored_sequence.content.frames[0].image.source.clone()),
+            expected_mirror,
             "imir sequence value {value}"
         );
     }
@@ -5461,7 +5630,11 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         Some(AvifPixelAspectRatio::new(4, 3))
     );
     let pasp_inspected = image_slash_star::inspect(&pasp)?;
-    assert_eq!(pasp_inspected.source, expected_pasp, "pasp inspect");
+    assert_eq!(
+        without_item_locations(pasp_inspected.source.clone()),
+        expected_pasp,
+        "pasp inspect"
+    );
     let pasp_transform = pasp_inspected.source.avif_transform().unwrap_or_default();
     assert_eq!(
         pasp_transform.order(),
@@ -5471,11 +5644,16 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         ]
     );
     let pasp_decoded = image_slash_star::decode(&pasp)?;
-    assert_eq!(pasp_decoded.content.source, expected_pasp, "pasp decode");
+    assert_eq!(
+        without_item_locations(pasp_decoded.content.source.clone()),
+        expected_pasp,
+        "pasp decode"
+    );
     assert_eq!(pasp_decoded.content.pixels, expected_pixels);
     let pasp_sequence = image_slash_star::decode_sequence(&pasp)?;
     assert_eq!(
-        pasp_sequence.content.frames[0].image.source, expected_pasp,
+        without_item_locations(pasp_sequence.content.frames[0].image.source.clone()),
+        expected_pasp,
         "pasp sequence"
     );
     assert_eq!(
@@ -5525,7 +5703,11 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         ))
     );
     let clap_inspected = image_slash_star::inspect(&clap)?;
-    assert_eq!(clap_inspected.source, expected_clap, "clap inspect");
+    assert_eq!(
+        without_item_locations(clap_inspected.source.clone()),
+        expected_clap,
+        "clap inspect"
+    );
     let clap_transform = clap_inspected.source.avif_transform().unwrap_or_default();
     assert_eq!(
         clap_transform.order(),
@@ -5535,11 +5717,16 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         ]
     );
     let clap_decoded = image_slash_star::decode(&clap)?;
-    assert_eq!(clap_decoded.content.source, expected_clap, "clap decode");
+    assert_eq!(
+        without_item_locations(clap_decoded.content.source.clone()),
+        expected_clap,
+        "clap decode"
+    );
     assert_eq!(clap_decoded.content.pixels, expected_pixels);
     let clap_sequence = image_slash_star::decode_sequence(&clap)?;
     assert_eq!(
-        clap_sequence.content.frames[0].image.source, expected_clap,
+        without_item_locations(clap_sequence.content.frames[0].image.source.clone()),
+        expected_clap,
         "clap sequence"
     );
     assert_eq!(
@@ -5560,7 +5747,7 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         ),
     );
     assert_eq!(
-        image_slash_star::inspect(&signed_clap)?.source,
+        without_item_locations(image_slash_star::inspect(&signed_clap)?.source),
         expected_signed_clap,
         "signed clap inspect"
     );
@@ -5825,6 +6012,76 @@ fn destination_buffers_match_the_output_size_contract() -> Result<(), Box<dyn st
         ));
         assert!(buffer.iter().all(|&byte| byte == 0xAA));
     }
+    Ok(())
+}
+
+#[test]
+fn primary_decoded_byte_limit_is_inclusive_rust_contract() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+
+    // W2/API-023/API-036/QA-026: this is a caller resource boundary, not a
+    // Pillow-visible image result. The saved PNG witness gives the policy an
+    // exact observed transfer-byte count without adding a parity row.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let info = image_slash_star::inspect(&data)?;
+    assert_eq!(info.format, ImageFormat::Png);
+    let expected = image_slash_star::decode(&data)?;
+    let maximum = u64::try_from(info.decoded_bytes()?)?;
+    assert!(maximum > 0);
+
+    let exact = image_slash_star::DecodePolicy::new().with_max_primary_decoded_bytes(maximum);
+    let still = image_slash_star::decode_with_policy(&data, &exact)?;
+    assert_eq!(still.content.pixels, expected.content.pixels);
+    let sequence = image_slash_star::decode_sequence_with_policy(&data, &exact)?;
+    assert_eq!(sequence.content.frames.len(), 1);
+    assert_eq!(
+        sequence.content.frames[0].image.pixels,
+        expected.content.pixels
+    );
+
+    let below = image_slash_star::DecodePolicy::new().with_max_primary_decoded_bytes(maximum - 1);
+    let still_error = match image_slash_star::decode_with_policy(&data, &below) {
+        Ok(_) => {
+            return Err(
+                "one byte below the primary decoded limit unexpectedly admitted the fixture".into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert!(matches!(
+        still_error,
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Png),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::PrimaryDecodedBytes,
+            maximum: observed_maximum,
+            observed,
+        } if observed_maximum == maximum - 1 && observed == maximum
+    ));
+
+    let sequence_error = match image_slash_star::decode_sequence_with_policy(&data, &below) {
+        Ok(_) => {
+            return Err(
+                "one byte below the sequence primary limit unexpectedly admitted the fixture"
+                    .into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert!(matches!(
+        sequence_error,
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Png),
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::PrimaryDecodedBytes,
+            maximum: observed_maximum,
+            observed,
+        } if observed_maximum == maximum - 1 && observed == maximum
+    ));
     Ok(())
 }
 
@@ -6509,6 +6766,24 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
     assert_eq!(direct, b"abc");
     let mut direct_ref: &mut Vec<u8> = &mut Vec::new();
     OutputSink::write_all(&mut direct_ref, b"def")?;
+    assert_eq!(*direct_ref, b"def");
+    let invalid_direct_checkpoint = direct.len().saturating_add(1);
+    let direct_rollback_error = OutputSink::rollback(&mut direct, invalid_direct_checkpoint)
+        .expect_err("Vec rollback must reject a checkpoint beyond its length");
+    assert_eq!(
+        direct_rollback_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    let invalid_borrowed_checkpoint = direct_ref.len().saturating_add(1);
+    let borrowed_rollback_error =
+        OutputSink::rollback(&mut direct_ref, invalid_borrowed_checkpoint)
+            .expect_err("borrowed Vec rollback must reject a checkpoint beyond its length");
+    assert_eq!(
+        borrowed_rollback_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    OutputSink::write_all(&mut direct_ref, b"ghi")?;
+    OutputSink::rollback(&mut direct_ref, 3)?;
     assert_eq!(*direct_ref, b"def");
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -9050,6 +9325,83 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             "AVIF output must cross box boundaries"
         );
 
+        let mut invalid_avif_options = avif_options.clone();
+        if let EncodeOptions::Avif(options) = &mut invalid_avif_options {
+            options.quality = Some(101);
+        }
+        let mut invalid_avif_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let invalid_avif_error = match image_slash_star::encode_to_sink(
+            &avif_image,
+            ImageFormat::Avif,
+            &invalid_avif_options,
+            &mut invalid_avif_sink,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("invalid AVIF option unexpectedly wrote {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            invalid_avif_error.kind(),
+            image_slash_star::ImageErrorKind::Parameter
+        );
+        assert_eq!(invalid_avif_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(
+            invalid_avif_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(invalid_avif_sink.writes, 0);
+        assert!(invalid_avif_sink.bytes.is_empty());
+
+        let invalid_avif_sequence = DecodedSequence {
+            width: 1,
+            height: 1,
+            frames: Vec::new(),
+            loop_count: None,
+            background: None,
+            kind: SequenceKind::SingleFrame,
+            opaque_blocks: Vec::new(),
+            metadata: Vec::new(),
+            source_color: SourceColor::new(),
+        };
+        let mut invalid_avif_sequence_sink = RecordingSink {
+            bytes: Vec::new(),
+            writes: 0,
+        };
+        let invalid_avif_sequence_error = match image_slash_star::encode_sequence_to_sink(
+            &invalid_avif_sequence,
+            ImageFormat::Avif,
+            &avif_options,
+            &mut invalid_avif_sequence_sink,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "invalid AVIF sequence sink unexpectedly wrote {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            invalid_avif_sequence_error.kind(),
+            image_slash_star::ImageErrorKind::Dimensions
+        );
+        assert_eq!(
+            invalid_avif_sequence_error.format(),
+            Some(ImageFormat::Avif)
+        );
+        assert_eq!(
+            invalid_avif_sequence_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(invalid_avif_sequence_sink.writes, 0);
+        assert!(invalid_avif_sequence_sink.bytes.is_empty());
+
         let avif_token = image_slash_star::CancellationToken::new();
         let mut cancelling_avif = CancellingSink {
             bytes: Vec::new(),
@@ -9136,6 +9488,34 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(avif_write_error.format(), Some(ImageFormat::Avif));
         assert_eq!(avif_write_error.stage(), Some(ImageErrorStage::StillEncode));
         assert_eq!(failing_avif.writes, 2);
+
+        let mut failing_avif_first = FailingAfterWrites {
+            fail_at: 1,
+            writes: 0,
+        };
+        let avif_first_write_error = match image_slash_star::encode_to_sink(
+            &avif_image,
+            ImageFormat::Avif,
+            &avif_options,
+            &mut failing_avif_first,
+        ) {
+            Ok(length) => {
+                return Err(
+                    format!("AVIF first-box sink unexpectedly accepted {length} bytes").into(),
+                );
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            avif_first_write_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(avif_first_write_error.format(), Some(ImageFormat::Avif));
+        assert_eq!(
+            avif_first_write_error.stage(),
+            Some(ImageErrorStage::StillEncode)
+        );
+        assert_eq!(failing_avif_first.writes, 1);
 
         // Native AVIF sequence top-level ISO-BMFF delivery is the same
         // Rust-only structural sink contract at SequenceEncode stage. The
@@ -9345,6 +9725,344 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
     );
     assert_eq!(sink.bytes, expected[..sink.bytes.len()]);
     assert_eq!(&sink.bytes[..8], b"\x89PNG\r\n\x1a\n");
+
+    // W2/API-023/API-036/QA-016/QA-026: a caller-owned sink may opt into
+    // rollback by returning its current position. Pillow cannot observe the
+    // checkpoint, typed sink error, or restored sentinel, so this remains in
+    // the existing Rust-only fixture contract and adds no parity row.
+    struct RollbackSink {
+        bytes: Vec<u8>,
+        writes: usize,
+        flushes: usize,
+        rollbacks: usize,
+        fail_at_second_write: bool,
+        cancel_on_first_write: bool,
+        fail_flush: bool,
+        fail_rollback: bool,
+        token: Option<image_slash_star::CancellationToken>,
+    }
+
+    impl image_slash_star::OutputSink for RollbackSink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.fail_at_second_write && self.writes == 2 {
+                let accepted = (bytes.len() / 2).max(1).min(bytes.len());
+                self.bytes.extend_from_slice(&bytes[..accepted]);
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "rollback sink rejected a partial segment".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            if self.cancel_on_first_write && self.writes == 1 {
+                if let Some(token) = &self.token {
+                    token.cancel();
+                }
+            }
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            if self.fail_flush {
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "rollback sink rejected finalization".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            Ok(())
+        }
+
+        fn checkpoint(&self) -> Option<usize> {
+            Some(self.bytes.len())
+        }
+
+        fn rollback(&mut self, checkpoint: usize) -> image_slash_star::ImageResult<()> {
+            self.rollbacks += 1;
+            if self.fail_rollback {
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "rollback sink could not restore its checkpoint".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            if checkpoint > self.bytes.len() {
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "test rollback checkpoint is beyond the sink length".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.truncate(checkpoint);
+            Ok(())
+        }
+    }
+
+    let mut partial_rollback = RollbackSink {
+        bytes: vec![0xD1],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: true,
+        cancel_on_first_write: false,
+        fail_flush: false,
+        fail_rollback: false,
+        token: None,
+    };
+    let partial_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut partial_rollback,
+    ) {
+        Ok(length) => {
+            return Err(
+                format!("checkpointed partial sink unexpectedly accepted {length} bytes").into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        partial_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(partial_error.format(), Some(ImageFormat::Png));
+    assert_eq!(partial_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(partial_rollback.bytes, vec![0xD1]);
+    assert_eq!(partial_rollback.flushes, 0);
+    assert_eq!(partial_rollback.rollbacks, 1);
+
+    // Checkpoint opt-in must fail closed when a sink forgets to implement the
+    // matching rollback hook; a default no-op would falsely promise atomic
+    // delivery while leaving the partial prefix in place.
+    struct CheckpointOnlySink {
+        bytes: Vec<u8>,
+        writes: usize,
+    }
+
+    impl image_slash_star::OutputSink for CheckpointOnlySink {
+        fn write_all(&mut self, bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            if self.writes == 2 {
+                let accepted = (bytes.len() / 2).max(1).min(bytes.len());
+                self.bytes.extend_from_slice(&bytes[..accepted]);
+                return Err(image_slash_star::ImageError::Unsupported {
+                    format: None,
+                    message: "checkpoint-only sink rejected a partial segment".to_owned(),
+                    stage: None,
+                    reason: None,
+                    offset: None,
+                    identity: None,
+                });
+            }
+            self.bytes.extend_from_slice(bytes);
+            Ok(())
+        }
+
+        fn checkpoint(&self) -> Option<usize> {
+            Some(self.bytes.len())
+        }
+    }
+
+    let mut checkpoint_only = CheckpointOnlySink {
+        bytes: vec![0xD6],
+        writes: 0,
+    };
+    let checkpoint_only_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut checkpoint_only,
+    ) {
+        Ok(length) => {
+            return Err(
+                format!("checkpoint-only sink unexpectedly accepted {length} bytes").into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        checkpoint_only_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(checkpoint_only_error.format(), Some(ImageFormat::Png));
+    assert_eq!(
+        checkpoint_only_error.stage(),
+        Some(ImageErrorStage::StillEncode)
+    );
+    assert!(
+        checkpoint_only_error
+            .message()
+            .is_some_and(|message| message.contains("output rollback failed"))
+    );
+    assert_eq!(checkpoint_only.writes, 2);
+    assert!(checkpoint_only.bytes.len() > 1);
+
+    let cancellation_token = image_slash_star::CancellationToken::new();
+    let mut cancelled_rollback = RollbackSink {
+        bytes: vec![0xD2],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_first_write: true,
+        fail_flush: false,
+        fail_rollback: false,
+        token: Some(cancellation_token.clone()),
+    };
+    let cancellation_error = match image_slash_star::encode_to_sink_with_token(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &cancellation_token,
+        &mut cancelled_rollback,
+    ) {
+        Ok(length) => {
+            return Err(format!(
+                "checkpointed cancelled sink unexpectedly accepted {length} bytes"
+            )
+            .into());
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        cancellation_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(cancellation_error.format(), Some(ImageFormat::Png));
+    assert_eq!(
+        cancellation_error.stage(),
+        Some(ImageErrorStage::StillEncode)
+    );
+    assert_eq!(cancelled_rollback.bytes, vec![0xD2]);
+    assert_eq!(cancelled_rollback.flushes, 0);
+    assert_eq!(cancelled_rollback.rollbacks, 1);
+
+    let mut flush_rollback = RollbackSink {
+        bytes: vec![0xD3],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_first_write: false,
+        fail_flush: true,
+        fail_rollback: false,
+        token: None,
+    };
+    let flush_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut flush_rollback,
+    ) {
+        Ok(length) => {
+            return Err(format!(
+                "checkpointed flush-failing sink unexpectedly accepted {length} bytes"
+            )
+            .into());
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        flush_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(flush_error.format(), Some(ImageFormat::Png));
+    assert_eq!(flush_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert!(flush_rollback.writes > 1);
+    assert_eq!(flush_rollback.flushes, 1);
+    assert_eq!(flush_rollback.bytes, vec![0xD3]);
+    assert_eq!(flush_rollback.rollbacks, 1);
+
+    let sequence = image_slash_star::DecodedSequence::from_image(decoded.content.clone());
+    let mut sequence_rollback = RollbackSink {
+        bytes: vec![0xD4],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_first_write: false,
+        fail_flush: true,
+        fail_rollback: false,
+        token: None,
+    };
+    let sequence_error = match image_slash_star::encode_sequence_to_sink(
+        &sequence,
+        ImageFormat::Png,
+        &options,
+        &mut sequence_rollback,
+    ) {
+        Ok(length) => {
+            return Err(
+                format!("checkpointed sequence sink unexpectedly accepted {length} bytes").into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        sequence_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(sequence_error.format(), Some(ImageFormat::Png));
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    assert_eq!(sequence_rollback.bytes, vec![0xD4]);
+    assert_eq!(sequence_rollback.flushes, 1);
+    assert_eq!(sequence_rollback.rollbacks, 1);
+
+    let mut rollback_failure = RollbackSink {
+        bytes: vec![0xD5],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: true,
+        cancel_on_first_write: false,
+        fail_flush: false,
+        fail_rollback: true,
+        token: None,
+    };
+    let rollback_error = match image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut rollback_failure,
+    ) {
+        Ok(length) => {
+            return Err(
+                format!("rollback-failing sink unexpectedly accepted {length} bytes").into(),
+            );
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        rollback_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite
+    );
+    assert_eq!(rollback_error.format(), Some(ImageFormat::Png));
+    assert_eq!(rollback_error.stage(), Some(ImageErrorStage::StillEncode));
+    assert!(
+        rollback_error
+            .message()
+            .is_some_and(|message| message.contains("output rollback failed"))
+    );
+    assert_eq!(rollback_failure.rollbacks, 1);
+
     Ok(())
 }
 
@@ -18721,6 +19439,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
 
         // The structural sink calls the BMP writer directly, so its same
         // row-conversion interval is reached after one fewer dispatcher poll.
+        // Vec<u8> opts into sink rollback, so a rejected interior checkpoint
+        // restores the caller's sentinel instead of retaining the header.
         let sink_policy = image_slash_star::EncodePolicy::new().with_max_work_units(3);
         let mut sink = vec![0xBE];
         let sink_error = match image_slash_star::encode_to_sink_with_policy(
@@ -18743,11 +19463,10 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 observed: 4,
             }
         ));
-        let mut expected_prefix = vec![0xBE];
-        expected_prefix.extend_from_slice(&expected[..54]);
         assert_eq!(
-            sink, expected_prefix,
-            "interior BMP work rejection preserves the delivered header prefix"
+            sink,
+            vec![0xBE],
+            "interior BMP work rejection rolls back the checkpointed Vec sink"
         );
     }
 

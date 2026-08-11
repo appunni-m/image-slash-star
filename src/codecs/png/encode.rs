@@ -236,6 +236,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut optimized = PngEncodeOptions::default();
     optimized.optimize = Some(true);
     let _ = encode(&rgb, &optimized);
+    let mut complete_output = Vec::new();
+    let mut complete_writer = |bytes: &[u8]| {
+        complete_output.extend_from_slice(bytes);
+        Ok(())
+    };
+    let _ = write_encoded(
+        &rgb,
+        &PngEncodeOptions::default(),
+        None,
+        None,
+        &mut complete_writer,
+    );
     for compression in [
         PngCompression::None,
         PngCompression::Default,
@@ -250,7 +262,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // These are internal sink/error-edge drills. Pillow has no caller-owned
     // sink, so they remain aggregate Rust coverage evidence rather than
     // parity cases.
-    for checks in 0..=10 {
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let mut probe_output = Vec::new();
+    let mut probe_writer = |bytes: &[u8]| {
+        probe_output.extend_from_slice(bytes);
+        Ok(())
+    };
+    let _ = write_encoded(
+        &rgb,
+        &PngEncodeOptions::default(),
+        Some(&probe),
+        None,
+        &mut probe_writer,
+    );
+    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut output = Vec::new();
@@ -258,12 +285,43 @@ pub(crate) fn __coverage_exercise_private_branches() {
             output.extend_from_slice(bytes);
             Ok(())
         };
+        let _ = writer(&[]);
         let _ = write_encoded(
             &rgb,
             &PngEncodeOptions::default(),
             Some(&token),
             None,
             &mut writer,
+        );
+    }
+
+    // A row wider than the checkpoint interval reaches both the adaptive
+    // filter-score polls and the filtered-row poll. Measure cancellation so
+    // every nested candidate is reached without a guessed schedule.
+    let wide_row: Vec<u8> = (0..2_048u16).map(|value| value as u8).collect();
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let _ = plain_rows(
+        &wide_row,
+        wide_row.len(),
+        1,
+        3,
+        Filter::Adaptive,
+        true,
+        Some(&probe),
+    );
+    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    for checks in 0..=calls {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = plain_rows(
+            &wide_row,
+            wide_row.len(),
+            1,
+            3,
+            Filter::Adaptive,
+            true,
+            Some(&token),
         );
     }
     for fail_at in 0..=24 {

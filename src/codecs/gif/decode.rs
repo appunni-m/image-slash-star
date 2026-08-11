@@ -274,8 +274,10 @@ fn decode_image(
         None
     };
     let palette_rgb = local_palette.or(global_palette);
+    let identity_grayscale_palette =
+        transparent_index.is_none() && palette_rgb.is_some_and(is_identity_grayscale_palette);
     if let Some(budget) = budget {
-        let mode = if palette_rgb.is_some() {
+        let mode = if palette_rgb.is_some() && !identity_grayscale_palette {
             ImageMode::P8
         } else {
             ImageMode::L8
@@ -300,27 +302,32 @@ fn decode_image(
         crate::types::SourceDescriptor::new()
     };
     let image = if let Some(palette_rgb) = palette_rgb {
-        let entries = palette_rgb.len().div_euclid(3);
-        let required_entries = indices
-            .iter()
-            .copied()
-            .map(usize::from)
-            .max()
-            .map_or(0, |index| index.saturating_add(1));
-        let padded_entries = entries.max(required_entries);
-        let mut rgb = palette_rgb.to_vec();
-        rgb.resize(padded_entries.saturating_mul(3), 0);
-        let mut alpha = Vec::new();
-        if let Some(index) = transparent_index
-            && usize::from(index) < padded_entries
-        {
-            alpha = vec![255; padded_entries];
-            alpha[usize::from(index)] = 0;
+        if identity_grayscale_palette {
+            DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::L8)
+                .with_source_descriptor(source_descriptor)
+        } else {
+            let entries = palette_rgb.len().div_euclid(3);
+            let required_entries = indices
+                .iter()
+                .copied()
+                .map(usize::from)
+                .max()
+                .map_or(0, |index| index.saturating_add(1));
+            let padded_entries = entries.max(required_entries);
+            let mut rgb = palette_rgb.to_vec();
+            rgb.resize(padded_entries.saturating_mul(3), 0);
+            let mut alpha = Vec::new();
+            if let Some(index) = transparent_index
+                && usize::from(index) < padded_entries
+            {
+                alpha = vec![255; padded_entries];
+                alpha[usize::from(index)] = 0;
+            }
+            let palette = ImagePalette { rgb, alpha };
+            DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
+                .with_palette(palette)
+                .with_source_descriptor(source_descriptor)
         }
-        let palette = ImagePalette { rgb, alpha };
-        DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::P8)
-            .with_palette(palette)
-            .with_source_descriptor(source_descriptor)
     } else {
         DecodedImage::with_mode(u32::from(width), u32::from(height), indices, ImageMode::L8)
             .with_source_descriptor(source_descriptor)
@@ -396,6 +403,18 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 
 fn color_table_len(packed: u8) -> usize {
     (1usize << (packed & 0x07).saturating_add(1)).saturating_mul(3)
+}
+
+fn is_identity_grayscale_palette(palette: &[u8]) -> bool {
+    let entries = palette.chunks_exact(3);
+    let complete = entries.remainder().is_empty();
+    let identity = entries.enumerate().all(|(index, entry)| {
+        let Ok(value) = u8::try_from(index) else {
+            return false;
+        };
+        entry == [value; 3]
+    });
+    identity && complete
 }
 
 /// Decode GIF's variable-width, least-significant-bit-first LZW stream.
@@ -569,6 +588,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut extension = gif_prefix(13, 0);
     extension.push(0x21);
     let _ = metadata_bytes(&extension);
+    // The GIF reader never emits more than 256 RGB entries, but the private
+    // palette predicate still fails closed if called with a larger buffer.
+    // This is a Rust-only defensive witness; Pillow parity cannot construct
+    // an over-sized GIF palette either.
+    let mut oversized_palette = (0..=u8::MAX)
+        .flat_map(|value| [value, value, value])
+        .collect::<Vec<_>>();
+    oversized_palette.extend_from_slice(&[0, 0, 0]);
+    let _ = is_identity_grayscale_palette(&oversized_palette);
     let mut extension_block = gif_prefix(13, 0);
     extension_block.extend_from_slice(&[0x21, 0x01, 0xaa]);
     let _ = metadata_bytes(&extension_block);

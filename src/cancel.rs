@@ -214,4 +214,10 @@ impl CancellationToken {
     pub(crate) fn cancel_after(&self, checks: usize) {
         self.cancel_after.set(Some(checks));
     }
+
+    #[cfg(coverage)]
+    #[coverage(off)]
+    pub(crate) fn coverage_remaining_checks(&self) -> Option<usize> {
+        self.cancel_after.get()
+    }
 }

@@ -1999,12 +1999,28 @@ impl LumaMode {
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     struct ErrorReader;
 
     impl std::io::Read for ErrorReader {
         fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
             Err(std::io::Error::from(std::io::ErrorKind::Other))
+        }
+    }
+
+    struct InterruptedReader {
+        interrupted: bool,
+    }
+
+    impl std::io::Read for InterruptedReader {
+        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.interrupted {
+                Ok(0)
+            } else {
+                self.interrupted = true;
+                Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
+            }
         }
     }
 
@@ -2073,9 +2089,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(LumaMode::B.into_intra(), None);
     assert_eq!(init_top_macroblocks(17).len(), 2);
 
+    // The production decoder uses a bounded reader wrapper. Exercise the
+    // exact plain `Cursor<Vec<u8>>` specialization as a private model too, so
+    // the prediction routines are covered independently of that wrapper.
+    let mut cursor_vec_decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
+    cursor_vec_decoder.mbwidth = 1;
+    cursor_vec_decoder.mbheight = 1;
+    cursor_vec_decoder.frame.width = 16;
+    cursor_vec_decoder.frame.height = 16;
+    cursor_vec_decoder.frame.ybuf = vec![0; 16 * 16];
+    cursor_vec_decoder.frame.ubuf = vec![128; 8 * 8];
+    cursor_vec_decoder.frame.vbuf = vec![128; 8 * 8];
+    cursor_vec_decoder.top = init_top_macroblocks(1);
+    cursor_vec_decoder.left = MacroBlock::default();
+    cursor_vec_decoder.top_border_y = vec![127; 16 + 4 + 16];
+    cursor_vec_decoder.left_border_y = vec![129; 1 + 16];
+    cursor_vec_decoder.top_border_u = vec![127; 8];
+    cursor_vec_decoder.left_border_u = vec![129; 1 + 8];
+    cursor_vec_decoder.top_border_v = vec![127; 8];
+    cursor_vec_decoder.left_border_v = vec![129; 1 + 8];
+    let mut prediction_macroblock = MacroBlock::default();
+    prediction_macroblock.luma_mode = LumaMode::DC;
+    prediction_macroblock.chroma_mode = ChromaMode::DC;
+    let prediction_residuals = [0i32; 384];
+    let cursor_vec_decoder = std::hint::black_box(&mut cursor_vec_decoder);
+    cursor_vec_decoder.intra_predict_luma(0, 0, &prediction_macroblock, &prediction_residuals);
+    cursor_vec_decoder.intra_predict_chroma(0, 0, &prediction_macroblock, &prediction_residuals);
+    std::hint::black_box(cursor_vec_decoder);
+
     let mut error_reader = ErrorReader;
     let _ = std::io::Read::read(&mut error_reader, &mut [0u8; 1]);
     let _ = Vp8Decoder::new(ErrorReader).init_partitions(1);
+    let mut interrupted_reader = InterruptedReader { interrupted: false };
+    let mut interrupted_partition = ArithmeticDecoder::new();
+    let _ = init_final_partition(&mut interrupted_reader, &mut interrupted_partition);
 
     let frame = Frame {
         width: 1,

@@ -336,11 +336,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['P', 'La8', 'Rgba8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['P', 'La8', 'Rgba8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: JPEG directly accepts L1, L8, and Rgb8
+      rust_error_reason: JPEG directly accepts L1, L8, Rgb8, and Cmyk8
     - id: enc_q100
       description: 
       params: {'quality': 100}
@@ -389,6 +389,10 @@ formats:
       description: 
       params: {'grayscale': False}
       source_asset: baseline_444.jpg
+    - id: enc_cmyk
+      description: Decode CMYK input and re-encode Pillow-compatible Adobe CMYK JPEG
+      params: {'color': 'cmyk'}
+      source_asset: baseline_cmyk.jpg
     - id: enc_error_rgba_png
       description: Pillow and Rust reject direct RGBA input because JPEG cannot represent alpha
       source_format: png
@@ -1321,11 +1325,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['1', 'La8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['La8', 'Cmyk8', 'L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: GIF directly accepts only P8, L8, Rgb8, and Rgba8
+      rust_error_reason: GIF directly accepts L1, P8, L8, Rgb8, and Rgba8
     - id: enc_static
       description: 
       params: {'animated': False}
@@ -1469,6 +1473,11 @@ formats:
       description: Grayscale source encoded with Pillow's grayscale palette
       source_format: png
       source_asset: gray.png
+      params: {}
+    - id: enc_bilevel
+      description: Bilevel source expanded to Pillow's grayscale GIF path
+      source_format: png
+      source_asset: 1bit.png
       params: {}
     - id: enc_rgba
       description: RGBA source quantized by Pillow with transparency

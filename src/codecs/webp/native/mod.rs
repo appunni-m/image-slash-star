@@ -45,6 +45,7 @@ mod yuv;
 pub(crate) fn __coverage_exercise_private_branches() {
     byteorder_lite::__coverage_exercise_private_branches();
     decoder::__coverage_exercise_private_branches();
+    encoder::__coverage_exercise_instrumented_paths();
     encoder::__coverage_exercise_private_branches();
     extended::__coverage_exercise_private_branches();
     huffman::__coverage_exercise_private_branches();

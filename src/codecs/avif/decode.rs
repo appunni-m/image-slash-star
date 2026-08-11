@@ -15,9 +15,8 @@ pub fn decode(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedImage, usize)> {
     crate::codecs::error::check_cancelled(token)?;
+    let file_type = read_avif_file_type(data)?;
     let mut extracted = extract_av1(data)?;
-    let file_type = super::samples::file_type(data)
-        .map_err(|error| error.context("AVIF container validation failed"))?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
@@ -31,6 +30,7 @@ pub fn decode(
     let item_properties = std::mem::take(&mut extracted.item_properties);
     let item_plane_properties = std::mem::take(&mut extracted.item_plane_properties);
     let item_codec_properties = std::mem::take(&mut extracted.item_codec_properties);
+    let item_locations = std::mem::take(&mut extracted.item_locations);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
@@ -135,6 +135,13 @@ pub fn decode(
             .with_avif_item_codec_properties(item_codec_properties);
         image.with_source_descriptor(source)
     };
+    let image = {
+        let source = image
+            .source
+            .clone()
+            .with_avif_item_locations(item_locations);
+        image.with_source_descriptor(source)
+    };
     let image = if grid_item_ids.is_empty() {
         image
     } else {
@@ -166,9 +173,8 @@ pub fn decode_sequence(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
+    let file_type = read_avif_file_type(data)?;
     let mut extracted = extract_av1(data)?;
-    let file_type = super::samples::file_type(data)
-        .map_err(|error| error.context("AVIF container validation failed"))?;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
@@ -182,6 +188,7 @@ pub fn decode_sequence(
     let item_properties = std::mem::take(&mut extracted.item_properties);
     let item_plane_properties = std::mem::take(&mut extracted.item_plane_properties);
     let item_codec_properties = std::mem::take(&mut extracted.item_codec_properties);
+    let item_locations = std::mem::take(&mut extracted.item_locations);
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
@@ -293,6 +300,14 @@ pub fn decode_sequence(
             frame.image.source = source;
         }
     }
+    for frame in &mut sequence.frames {
+        let source = frame
+            .image
+            .source
+            .clone()
+            .with_avif_item_locations(item_locations.clone());
+        frame.image.source = source;
+    }
     if !grid_item_ids.is_empty() {
         for frame in &mut sequence.frames {
             let source = frame
@@ -321,6 +336,11 @@ pub fn decode_sequence(
 
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
     super::samples::validated(data)
+        .map_err(|error| error.context("AVIF container validation failed"))
+}
+
+fn read_avif_file_type(data: &[u8]) -> CodecResult<crate::types::AvifFileTypeProperties> {
+    super::samples::file_type(data)
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
@@ -658,6 +678,7 @@ fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> D
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     use std::num::NonZeroU64;
 
@@ -785,6 +806,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     });
     let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
     let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let mut malformed_file_type = baseline.to_vec();
+    malformed_file_type[8..12].copy_from_slice(b"free");
+    for offset in (16..32).step_by(4) {
+        malformed_file_type[offset..offset + 4].copy_from_slice(b"free");
+    }
+    let _ = decode(&malformed_file_type, None);
+    let _ = decode_sequence(
+        &malformed_file_type,
+        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
+        None,
+    );
+    let _ = read_avif_file_type(&malformed_file_type);
     for checks in 0..=6 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
