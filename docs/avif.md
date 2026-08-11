@@ -3,7 +3,7 @@
 Status: native manifest parity retained; portable implementation incomplete
 
 Reviewed: 2026-08-11 against measured source/evidence revision
-`310b7d6a6b26f837b88e50029a5fc8052895ead0`. Current coverage and pending-work
+`36b939696415a962285d37f9120ff389aebf0205`. Current coverage and pending-work
 status are authoritative in [roadmap-new.md](roadmap-new.md); the claim-ledger
 base revision is the same measured revision. Historical AVIF parity and
 target-lane records below retain their original revision scope.
