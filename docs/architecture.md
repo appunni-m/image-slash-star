@@ -2,12 +2,13 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-11 against the measured working tree at HEAD
-`2447f2f6fa20f15735db699805b15877d6f15611` (dirty working tree). Current
-aggregate native all-feature coverage is recorded in
-[roadmap-new.md](roadmap-new.md); the claim-ledger base revision is the same
-HEAD SHA. Historical run records elsewhere in this document retain their
-original revision scope.
+Reviewed: 2026-08-11 against measured source/evidence revision
+`310b7d6a6b26f837b88e50029a5fc8052895ead0`. Current aggregate native
+all-feature coverage is recorded in [roadmap-new.md](roadmap-new.md); the
+claim-ledger base revision is the same measured revision. The current managed
+parity run is `0108393d-57d3-42b7-87fe-fa29f587f562` and the current exact
+coverage snapshot is `90cb225b-9c5b-4543-a5ba-6e26b56508a7`. Historical run
+records elsewhere in this document retain their original revision scope.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run

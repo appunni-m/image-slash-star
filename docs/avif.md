@@ -2,12 +2,11 @@
 
 Status: native manifest parity retained; portable implementation incomplete
 
-Reviewed: 2026-08-11 against the measured working tree at HEAD
-`2447f2f6fa20f15735db699805b15877d6f15611` (dirty working tree). Current
-coverage and pending-work status are authoritative in
-[roadmap-new.md](roadmap-new.md); the claim-ledger base revision is the same
-HEAD SHA. Historical AVIF parity and target-lane records below retain their
-original revision scope.
+Reviewed: 2026-08-11 against measured source/evidence revision
+`310b7d6a6b26f837b88e50029a5fc8052895ead0`. Current coverage and pending-work
+status are authoritative in [roadmap-new.md](roadmap-new.md); the claim-ledger
+base revision is the same measured revision. Historical AVIF parity and
+target-lane records below retain their original revision scope.
 
 AVIF is the only codec feature with different native and
 `wasm32-unknown-unknown` capabilities. The WASM behavior below executes at

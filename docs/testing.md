@@ -2,11 +2,16 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-11 against the measured working tree at HEAD
-`2447f2f6fa20f15735db699805b15877d6f15611` (dirty working tree) and
+Reviewed: 2026-08-11 against measured source/evidence revision
+`310b7d6a6b26f837b88e50029a5fc8052895ead0` and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The claim-ledger base revision is
-`2447f2f6fa20f15735db699805b15877d6f15611`.
+`310b7d6a6b26f837b88e50029a5fc8052895ead0`.
+The current managed Pillow parity run is
+`0108393d-57d3-42b7-87fe-fa29f587f562` (1,449/1,449 passed), and the current
+exact Coverage MCP snapshot is
+`90cb225b-9c5b-4543-a5ba-6e26b56508a7` from run
+`352170dc-8127-4ed2-bcb5-b9496af936e5`.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
@@ -28,17 +33,17 @@ branches, and 27/27 functions. The known LLVM JSON segment-normalization
 warning remains. These exact-head records are test-result and Rust coverage
 evidence, not Pillow allocator or parity metrics.
 
-Current dirty-tree acceptance:
+Current revision acceptance:
 
-- Managed Pillow parity run `56fe2d9b-b558-4c91-b025-4cc1859b11d0`: 1,447/1,447
-  passed at HEAD `2447f2f6fa20f15735db699805b15877d6f15611`.
+- Managed Pillow parity run `0108393d-57d3-42b7-87fe-fa29f587f562`: 1,449/1,449
+  passed at revision `310b7d6a6b26f837b88e50029a5fc8052895ead0`.
 - `cargo test --all-features --test coverage_matrix_tests`: 28/28 passed.
 - `cargo test --all-features --test feature_gate_tests`: 46/46 passed.
-- Managed Coverage MCP run `97309ded-2087-4085-8b4b-cdab6d8245fa`: 86/86
+- Managed Coverage MCP run `352170dc-8127-4ed2-bcb5-b9496af936e5`: 86/86
   passed, with the required artifact ingested into snapshot
-  `00622313-a734-4877-91ad-81707b8894ed`.
-- Aggregate native all-feature coverage: 64,883/64,883 lines, 8,458/8,458
-  branches, 3,299/3,299 functions, and 96,920/96,920 regions.
+  `90cb225b-9c5b-4543-a5ba-6e26b56508a7`.
+- Aggregate native all-feature coverage: 64,909/64,909 lines, 8,464/8,464
+  branches, 3,301/3,301 functions, and 96,968/96,968 regions.
 - LLVM JSON segments are normalized to segment-start lines; aggregate region
   coverage is preserved from the report summaries.
 

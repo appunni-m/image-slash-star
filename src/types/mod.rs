@@ -1416,7 +1416,8 @@ pub enum AvifItemLocationSource {
 
 /// One declared AVIF item extent.
 ///
-/// The offset is relative to the source selected by [`Self::source`]. For a
+/// The offset is relative to the source selected by the enclosing
+/// [`AvifItemLocation::source`] record. For a
 /// [`AvifItemLocationSource::File`] extent it is a file offset; for an
 /// [`AvifItemLocationSource::Idat`] extent it is an offset from the `idat`
 /// payload. These are container declarations only: the record does not grant

@@ -4,9 +4,10 @@ Status: accepted direction; items below are planned unless marked implemented
 
 Reviewed: 2026-08-11 for historical audit context. Current status and work
 order are authoritative in [roadmap-new.md](roadmap-new.md). The current
-claim-ledger base revision for the measured working tree is
-`2447f2f6fa20f15735db699805b15877d6f15611`; the tree is dirty and historical
-parity, feature-matrix, and coverage records below retain their original
+claim-ledger base revision for the measured source/evidence tree is
+`310b7d6a6b26f837b88e50029a5fc8052895ead0`; current managed parity and exact
+coverage records are maintained in `roadmap-new.md`. Historical parity,
+feature-matrix, and coverage records below retain their original
 revision-specific scope.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
@@ -24,9 +25,8 @@ FileTypeBox/source-descriptor slice. The historical accepted Coverage MCP snapsh
 8,011/8,228 branches, 3,122/3,218 functions, and 85,972/87,930 regions.
 These are Rust coverage records, not Pillow-oracle coverage or allocator/OOM
 accounting; the known LLVM JSON segment-normalization warning remains. The
-current WebP scratch slices have passing Pillow parity; their full managed
-feature/coverage acceptance cannot refresh while that unrelated native AVIF
-alpha lane fails.
+current WebP rolling slice has passing same-revision Pillow parity and exact
+managed coverage; the historical records below do not control its status.
 
 > Canonical source of truth: [roadmap-new.md](roadmap-new.md).
 > This file is retained as the historical audit and detailed finding record;
