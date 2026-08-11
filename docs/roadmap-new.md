@@ -892,10 +892,47 @@ exact local LLVM report passes 66,300/66,300 lines, 8,598/8,598 branches,
 **Remaining dependency:** The managed Coverage MCP transport still closes at
 `project_context`, so no same-revision managed snapshot is available and the
 accepted claim-ledger tuple remains unchanged. This slice covers raw-payload
-traversal only; transient allocation/peak accounting, progress callbacks,
-short-write semantics, rollback, and cleanup remain open RN-003 work. The
-copy path polls before each 1,024-byte chunk and does not claim interruption
-inside a single slice copy or allocator operation.
+traversal only; the separate allocation-reuse slice below removes one
+transient copy from the common strip path. Broader allocation/peak accounting,
+progress callbacks, short-write semantics, rollback, and cleanup remain open
+RN-003 work. The copy path polls before each 1,024-byte chunk and does not
+claim interruption inside a single slice copy or allocator operation.
+
+#### Current candidate slice — API-045/RN-003 TIFF raw-strip allocation reuse
+
+**Caller problem:** The token-aware raw-payload slice still decoded each
+uncompressed strip into a temporary `Vec`, then copied that strip into the
+already pre-sized final raster. A large strip therefore held two copies of the
+same raw pixels and did twice the memory traffic needed for the ordinary
+no-predictor path.
+
+**Pillow answer:** Pillow can prove the final TIFF pixels and errors, but it
+does not expose allocator ownership, transient capacity, or copy counts. This
+is an internal Rust runtime contract with Pillow-visible bytes as its
+regression guard; it must not become a fabricated parity row.
+
+**Implemented behavior:** Commit
+`122aae07cbe81ba74aa40343261e461012ca1195` appends uncompressed TIFF strip
+bytes directly into the pre-sized final raster. The token-aware path reuses
+the same 1,024-byte copy checkpoints, while compressed strips, predictor
+reconstruction, and tiled layouts retain their scratch buffers because they
+still need decompression, transformation, or tile placement. No-token raw
+strip decoding keeps a bulk append fast path.
+
+**Source/evidence:** The existing Rust-only
+`tiff_decode_work_budget_covers_raw_payload_copy` contract retains exact
+pixel identity and the inclusive boundary of 52 (51 rejects with
+`observed = 52`), and the all-feature TIFF matrix continues to cover ordinary
+raw strips. Native `feature_gate_tests` passes 57/57, the native matrix passes
+28/28, and the exact local LLVM report passes 66,318/66,318 lines,
+8,602/8,602 branches, 3,348/3,348 functions, and 99,059/99,059 regions.
+
+**Remaining dependency:** This slice removes one transient raw-strip copy; it
+does not measure allocator counts or peak RSS and does not optimize every
+codec path. Broader allocation/peak accounting, progress callbacks,
+short-write semantics, rollback, and cleanup remain open RN-003 work. Managed
+Coverage MCP still closes at `project_context`, so the accepted claim-ledger
+tuple remains unchanged.
 
 ### RN-004 — Metadata and source facts — LATER
 
