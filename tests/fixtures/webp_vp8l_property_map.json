@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star/webp-vp8l-property-map@1",
   "scope": "webp/vp8l",
-  "source_revision": "29969fdd5aadf71e00c4f34b06aeab3ace23fb72",
+  "source_revision": "a556a7f88f77ddbbcc325ebe7495491ffc91bb10",
   "oracle": {
     "name": "Pillow",
     "version": "12.2.0",
@@ -14,7 +14,7 @@
     "matrix_path": "tests/fixtures/coverage_matrix.json",
     "matrix_sha256": "81bcff2c751c791958abecb7a249e3f7c50e968b4069aa548625401ca60e4326",
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
-    "inspector_sha256": "833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541"
+    "inspector_sha256": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd"
   },
   "evidence_policy": {
     "pillow_outer_result": "The named row proves only the Pillow-observable pixels, bytes, metadata, or error result asserted by the matrix.",
@@ -50,85 +50,121 @@
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [0]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [0, 1, 9, 11]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_vertical",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [1]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_horizontal",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [2]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_bilinear",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [3]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [3, 12]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode5",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [5]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [5, 12]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode6",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [6]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [6]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode7",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [7]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [7]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode8",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [8]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [8]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode9",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [9]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2, 9]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode10",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [10]}}
-    },
-    {
-      "property_id": "vp8l.transform.predictor_modes",
-      "operation": "decode",
-      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [11]}}
-    },
-    {
-      "property_id": "vp8l.transform.predictor_modes",
-      "operation": "decode",
-      "row_id": "lossless_transform_variants_lossless_predictor_mode5",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [12]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1, 2, 10, 12, 13]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode13",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [13]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [13]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_product",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2, 12]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_radial",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [12]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_diamond",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_random_walk",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1, 12]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_saw",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1, 2]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_stripes",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2, 3, 11]}}
+    },
+    {
+      "property_id": "vp8l.transform.predictor_modes",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_xor",
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [1, 2, 11]}}
     },
     {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "encode",
       "row_id": "enc_lossless_indexed",
-      "expect": {"stream_index": 0, "stream": {"green_values_contains": [4]}}
+      "expect": {"stream_index": 0, "stream": {"predictor_modes_contains": [2, 3, 4, 11]}}
     },
     {
       "property_id": "vp8l.transform.color_indexing_size_bands",
@@ -414,23 +450,14 @@
     },
     {
       "id": "vp8l.transform.predictor_modes",
-      "status": "candidate",
+      "status": "witnessed",
       "claim_boundary": "pillow_outer_result",
-      "internal_state_proven": false,
+      "internal_state_proven": true,
       "minimal_witnesses": [
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_xor"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_product"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_radial"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diamond"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_vertical"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_horizontal"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_bilinear"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_stripes"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_steps"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_saw"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_quadrants"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode5"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode6"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode7"},
@@ -438,9 +465,17 @@
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode9"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode10"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode13"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_sparse"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_product"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_radial"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diamond"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_random_walk"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_saw"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_stripes"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_xor"},
+        {"operation": "encode", "row_id": "enc_lossless_indexed"}
       ],
-      "gap": "Source pattern names are intent candidates; Pillow does not report which predictor transform or mode the encoded stream selected."
+      "gap": "The independent parser now proves the predictor-mode map for the 19 named decode streams and the indexed encode artifact, covering every mode value observed in this fixture set. Rows without a predictor transform (mode0, quadrants, sparse, and steps) and complete coverage of every predictor-transform combination remain open."
     },
     {
       "id": "vp8l.transform.color_indexing_size_bands",

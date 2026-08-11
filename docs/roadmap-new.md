@@ -52,6 +52,42 @@ codec. The broader API-038 inventory row remains open until this candidate's
 managed evidence is recovered and the adjacent detection-policy boundaries
 are reviewed.
 
+### Current WEP-022 evidence slice — VP8L predictor-mode maps
+
+This is an evidence-only slice of the open WebP structural-property task. A
+fixture name such as `lossless_predictor_mode10` is only a recipe name; it does
+not prove that libwebp actually selected predictor mode 10, or even that the
+stream contains a predictor transform. Pillow returns the finished pixels but
+does not expose that internal transform map. The independent VP8L inspector now
+keeps predictor-transform green-channel values in a dedicated
+`predictor_modes` field, so ordinary decoded green samples cannot be mistaken
+for codec state.
+
+- The inspector and map verifier change is pinned to
+  `a556a7f88f77ddbbcc325ebe7495491ffc91bb10`; the map records inspector SHA-256
+  `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
+- The property map now promotes 20 exact structural witnesses: 19 named
+  decode streams (`vertical`, `horizontal`, `bilinear`, `diag_reverse`,
+  `diamond`, `mode0_hybrid`, `mode5`–`mode10`, `mode13`, `product`, `radial`,
+  `random_walk`, `saw`, `stripes`, and `xor`) plus the indexed encode artifact.
+  Together they cover every predictor-mode value observed in this fixture set,
+  including mode 4 from the encode artifact.
+- `python3 scripts/verify_webp_vp8l_property_map.py` passes with 14 witnessed
+  properties, 67 named witnesses, 75 distinct active WebP rows, 52 structural
+  witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
+  rows parsed. The property map and claim ledger hashes are updated together.
+- The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no
+  predictor transform in the inspected stream; `steps` uses color indexing.
+  Those rows remain candidates, as do predictor combinations not present in
+  the current fixtures. WEP-022 therefore remains open; this slice proves only
+  the named predictor maps and does not claim complete VP8L transform coverage.
+- No Rust product code or compiled coverage surface changed. The accepted
+  managed evidence tuple remains the baseline above because Coverage MCP still
+  closes during `project_context`; this evidence-only slice must not be used to
+  claim a refreshed managed snapshot. The next WEP-022 slice must select one
+  additional structural combination or remaining inner-bitstream boundary and
+  rerun the normal acceptance checks when managed evidence is available.
+
 ### Earlier RN-003 implementation candidate
 
 The next resource-control slice is implemented on `main` at
