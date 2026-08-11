@@ -6794,6 +6794,125 @@ fn jpeg_decode_work_budget_covers_baseline_mcu_checkpoint() -> Result<(), Box<dy
 }
 
 #[test]
+fn jpeg_decode_work_budget_covers_progressive_mcu_checkpoint()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "jpeg") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: progressive JPEG scans can contain
+    // thousands of MCUs inside one entropy segment. Pillow has no caller
+    // work-budget result, so this is Rust-only evidence. The smaller public
+    // API-generated JPEG is the control: the larger one must expose the
+    // additional 1,024-MCU scan checkpoints rather than merely doing more
+    // unobservable entropy work.
+    let small_image = DecodedImage::new(64, 64, vec![128; 64 * 64 * 3], ColorType::Rgb8);
+    let large_image = DecodedImage::new(512, 512, vec![128; 512 * 512 * 3], ColorType::Rgb8);
+    let mut jpeg_options = image_slash_star::JpegEncodeOptions::default();
+    jpeg_options.progressive = Some(true);
+    let options = EncodeOptions::from(jpeg_options);
+    let small_data = image_slash_star::encode(&small_image, ImageFormat::Jpeg, &options)?;
+    let large_data = image_slash_star::encode(&large_image, ImageFormat::Jpeg, &options)?;
+    let small_expected = image_slash_star::decode(&small_data)?;
+    let large_expected = image_slash_star::decode(&large_data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+
+    let discover_boundary = |data: &[u8], expected: &[u8]| {
+        let mut lower = 0_u64;
+        let mut upper = 1_u64;
+        loop {
+            let maximum = upper;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    break;
+                }
+                Err(error) => assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Jpeg),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                )),
+            }
+            if upper == 8_192 {
+                return Err(std::io::Error::other(
+                    "JPEG progressive-MCU work-budget boundary exceeded probe",
+                ));
+            }
+            upper = upper.saturating_mul(2);
+        }
+        while lower < upper {
+            let maximum = lower + (upper - lower) / 2;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    upper = maximum;
+                }
+                Err(error) => {
+                    assert!(matches!(
+                        error,
+                        ImageError::LimitExceeded {
+                            format: Some(ImageFormat::Jpeg),
+                            operation: image_slash_star::CodecOperation::StillDecode,
+                            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                            maximum: reported,
+                            observed,
+                        } if reported == maximum && observed == maximum.saturating_add(1)
+                    ));
+                    lower = maximum.saturating_add(1);
+                }
+            }
+        }
+        Ok::<u64, std::io::Error>(lower)
+    };
+
+    let small_boundary = discover_boundary(&small_data, &small_expected.content.pixels)?;
+    let large_boundary = discover_boundary(&large_data, &large_expected.content.pixels)?;
+    assert_eq!(
+        small_boundary, 14,
+        "the 64x64 progressive control must retain its documented checkpoint count"
+    );
+    assert_eq!(
+        large_boundary,
+        small_boundary.saturating_add(22),
+        "the 512x512 progressive JPEG must add its documented 1,024-MCU scan checkpoints"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary),
+        )?
+        .content
+        .pixels,
+        large_expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Jpeg),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == large_boundary - 1 && observed == large_boundary
+    ));
+    Ok(())
+}
+
+#[test]
 fn tiff_decode_work_budget_covers_deflate_inflation() -> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(feature = "tiff") {
         return Ok(());

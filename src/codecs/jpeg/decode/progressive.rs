@@ -795,6 +795,16 @@ pub(super) fn progressive_reconstruct(
                 if br.insufficient_data() {
                     break;
                 }
+
+                // A progressive scan can contain many MCUs inside one
+                // entropy segment. Keep the ordinary path free of a per-MCU
+                // token branch while giving callers a bounded checkpoint
+                // after each completed 1,024-MCU batch.
+                if let Some(token) = token
+                    && absolute_mcu.saturating_add(1).is_multiple_of(1_024)
+                {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                }
             }
         }
     }
