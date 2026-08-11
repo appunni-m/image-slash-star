@@ -69,6 +69,8 @@ pub enum UnsupportedReason {
     TargetUnavailable,
     /// The enabled codec or API surface does not implement the operation.
     NotImplemented,
+    /// The caller's decode policy excludes the detected format.
+    PolicyDenied,
 }
 
 /// Stable category of an [`ImageError`].

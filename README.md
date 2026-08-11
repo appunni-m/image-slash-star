@@ -145,14 +145,14 @@ capabilities and setup.
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Decode the still/first-image view and retain source format |
 | `decode_with_format(&[u8], ImageFormat)` | Decode with a caller-selected format after validating the complete input signature |
-| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, metadata, canvas, frame, and decoded-byte limits |
+| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, format allow-list, metadata, canvas, frame, and decoded-byte limits |
 | `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
 | `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
 | `Decoded<T>::diagnostics` | Stable non-fatal recovery records returned beside successful decode |
-| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled limits before the corresponding operation |
+| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled format restrictions and limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
 | `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
@@ -171,7 +171,7 @@ capabilities and setup.
 | `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
 | `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware selected-format uncached path |
 | `EncodedImage::decode_state`, `sequence_decode_state`, `is_decoded`, `is_sequence_decoded` | Observe separate not-attempted, succeeded, and failed lazy-cache states without exposing synchronization details |
-| `EncodedImage::*_with_policy(...)` | Enforce the same limits during source construction or lazy materialization |
+| `EncodedImage::*_with_policy(...)` | Enforce the same format restrictions and limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
 | `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with the same inspect/verify/decode operations and no copy or cache |
 | `EncodedImage::decode_frame(index)`, `EncodedImageView::decode_frame(index)` | Decode exactly one retained frame/page with stable per-frame errors; TIFF uses a genuine per-page path |
@@ -477,18 +477,22 @@ string keys. New integrations should construct codec records directly.
 ### Caller-controlled limits
 
 The unlimited entry points remain convenient for trusted inputs.
-`DecodePolicy` provides inclusive maxima for the complete encoded byte slice,
+`DecodePolicy` can optionally restrict detection to a caller-selected
+`DecodeFormatSet`; it provides inclusive maxima for the complete encoded byte slice,
 inspected canvas width, height, and pixel count, and the primary image's
 decoded transfer-byte length, the inspected frame/page count, every later
 frame/page's decoded byte length, and the cumulative retained sequence bytes:
 
 ```rust
-use image_slash_star::{decode_with_policy, DecodePolicy, ImageResult};
+use image_slash_star::{
+    decode_with_policy, DecodeFormatSet, DecodePolicy, ImageFormat, ImageResult,
+};
 
 fn decode_at_most_one_mebibyte(
     input: &[u8],
 ) -> ImageResult<image_slash_star::Decoded<image_slash_star::DecodedImage>> {
     let policy = DecodePolicy::new()
+        .with_allowed_formats(DecodeFormatSet::only(ImageFormat::Png))
         .with_max_encoded_bytes(1024 * 1024)
         .with_max_width(4096)
         .with_max_height(4096)
@@ -501,6 +505,15 @@ fn decode_at_most_one_mebibyte(
     decode_with_policy(input, &policy)
 }
 ```
+
+An absent format set keeps the compatibility API unrestricted. An explicit
+empty set rejects every detected format. `detect_format` remains an
+independent signature query; policy-aware inspection, explicit-format decode,
+complete and prefix decode, token-aware decode, and owned/borrowed source
+operations reject a detected format outside the set with
+`ImageError::Unsupported` and `UnsupportedReason::PolicyDenied`. The policy is
+checked after signature detection, so an explicit format hint still cannot
+override signature validation.
 
 The encoded-byte check occurs before signature detection and codec parsing. An
 oversized input returns a typed `LimitExceeded` error with the operation,

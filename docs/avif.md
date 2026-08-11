@@ -35,6 +35,12 @@ jq '.formats.avif' tests/fixtures/coverage_matrix.json
 This is a case inventory, not a claim of complete AVIF or AV1 specification
 support.
 
+Callers that accept untrusted bytes may include `ImageFormat::Avif` in a
+`DecodeFormatSet` allow-list, or exclude it, without changing AVIF detection or
+the native-versus-WASI capability table. Policy-aware paths report a typed
+`UnsupportedReason::PolicyDenied` when the detected AVIF format is excluded;
+portable AVIF support remains governed by the target capability above.
+
 ## Why native output is version-locked
 
 The Pillow 12.2.0 wheel used as the oracle selects:

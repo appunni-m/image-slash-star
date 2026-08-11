@@ -68,8 +68,9 @@ impl<'a> EncodedImageView<'a> {
     ///
     /// # Errors
     ///
-    /// Returns the same errors as [`Self::new`], plus
-    /// [`crate::ImageError::LimitExceeded`] for configured resource limits.
+    /// Returns [`crate::ImageError::Unsupported`] when the detected format is
+    /// outside the policy's allow-list, plus the same errors as [`Self::new`]
+    /// for configured resource limits.
     pub fn new_with_policy(bytes: &'a [u8], policy: &DecodePolicy) -> ImageResult<Self> {
         let info = crate::inspect_with_policy(bytes, policy)?;
         Ok(Self {
@@ -124,9 +125,12 @@ impl<'a> EncodedImageView<'a> {
     ///
     /// # Errors
     ///
-    /// Returns the same errors as [`crate::decode_with_policy`].
+    /// Returns [`crate::ImageError::Unsupported`] when this source's format is
+    /// outside the policy's allow-list, plus the same errors as
+    /// [`crate::decode_with_policy`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<Decoded<DecodedImage>> {
         policy.check_encoded_input(self.bytes, CodecOperation::StillDecode)?;
+        policy.check_allowed_format(self.format, ImageErrorStage::StillDecode)?;
         crate::decode_selected_with_policy(self.bytes, self.format, policy)
     }
 
@@ -321,7 +325,9 @@ impl EncodedImage {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::ImageError::LimitExceeded`] before cache access when
+    /// Returns [`crate::ImageError::Unsupported`] when this source's format is
+    /// outside the policy's allow-list. It returns
+    /// [`crate::ImageError::LimitExceeded`] before cache access when
     /// the encoded snapshot, retained primary canvas, primary decoded
     /// transfer-byte length, or a zero frame-count maximum exceeds the
     /// materialized still frame. On a cache miss, a configured decode work
@@ -330,6 +336,7 @@ impl EncodedImage {
     /// a later policy. Otherwise returns the same errors as [`Self::decode`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<&Decoded<DecodedImage>> {
         policy.check_encoded_input(&self.inner.bytes, CodecOperation::StillDecode)?;
+        policy.check_allowed_format(self.format(), ImageErrorStage::StillDecode)?;
         policy.check_metadata_bytes(
             &self.inner.bytes,
             self.format(),
@@ -387,7 +394,9 @@ impl EncodedImage {
     ///
     /// # Errors
     ///
-    /// Returns the same errors as [`crate::decode_sequence_with_policy`].
+    /// Returns [`crate::ImageError::Unsupported`] when this source's format is
+    /// outside the policy's allow-list, plus the same errors as
+    /// [`crate::decode_sequence_with_policy`].
     pub fn decode_sequence_with_policy(
         &self,
         policy: &DecodePolicy,

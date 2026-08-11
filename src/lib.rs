@@ -102,7 +102,7 @@ pub use capabilities::{
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
 };
 pub(crate) use decode_policy::SequenceDecodeBudget;
-pub use decode_policy::{DecodeLimits, DecodePolicy};
+pub use decode_policy::{DecodeFormatSet, DecodeLimits, DecodePolicy};
 pub use diagnostic::{DiagnosticKind, ImageDiagnostic};
 pub use encode_options::*;
 pub use encode_policy::EncodePolicy;
@@ -492,6 +492,7 @@ pub(crate) fn decode_selected_with_policy(
     format: ImageFormat,
     policy: &DecodePolicy,
 ) -> ImageResult<Decoded<DecodedImage>> {
+    policy.check_allowed_format(format, ImageErrorStage::StillDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
     if policy.requires_image_info() {
         let info = codecs::inspect_format(data, format)?;
@@ -519,6 +520,7 @@ pub(crate) fn decode_sequence_selected_with_policy(
     format: ImageFormat,
     policy: &DecodePolicy,
 ) -> ImageResult<Decoded<DecodedSequence>> {
+    policy.check_allowed_format(format, ImageErrorStage::SequenceDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
     let mut budget = policy.sequence_budget(format);
     if policy.requires_image_info() {
@@ -551,7 +553,9 @@ pub(crate) fn decode_sequence_selected_with_policy(
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
+/// Returns [`ImageError::Unsupported`] when the detected format is outside
+/// `policy`'s optional [`DecodeFormatSet`] allow-list, or
+/// [`ImageError::LimitExceeded`] when the complete input, inspected
 /// primary canvas, its decoded transfer-byte length, the materialized frame
 /// count, or the configured decode work budget exceeds a maximum. Otherwise
 /// returns the same errors as [`decode`].
@@ -573,8 +577,10 @@ pub fn decode_with_policy(
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] for an encoded-input or configured
-/// decode limit, [`ImageError::Parameter`] for a recognized signature from a
+/// Returns [`ImageError::Unsupported`] when the selected format is outside
+/// `policy`'s optional [`DecodeFormatSet`] allow-list,
+/// [`ImageError::LimitExceeded`] for an encoded-input or configured decode
+/// limit, [`ImageError::Parameter`] for a recognized signature from a
 /// different format, [`ImageError::Malformed`] for an incomplete or unknown
 /// complete-slice signature, and otherwise the same errors as
 /// [`decode_with_policy`].
@@ -620,6 +626,8 @@ pub fn decode_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
 /// # Errors
 ///
 /// Returns the same errors as [`decode_prefix`], plus
+/// [`ImageError::Unsupported`] when the detected format is outside the
+/// policy's optional [`DecodeFormatSet`] allow-list, and
 /// [`ImageError::LimitExceeded`] for the current input length, inspected
 /// primary canvas, or configured decode work budget.
 pub fn decode_prefix_with_policy(
@@ -628,6 +636,7 @@ pub fn decode_prefix_with_policy(
 ) -> ImageResult<Decoded<DecodedImage>> {
     policy.check_encoded_input(data, CodecOperation::StillDecode)?;
     let format = detect_prefix(data)?;
+    policy.check_allowed_format(format, ImageErrorStage::StillDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
     if policy.requires_image_info() {
         let info = codecs::inspect_basic_prefix_format(data, format)?;
@@ -670,6 +679,8 @@ pub fn decode_with_token(
 /// # Errors
 ///
 /// Returns the same errors as [`decode_with_token`], plus
+/// [`ImageError::Unsupported`] when the detected format is outside the
+/// policy's optional [`DecodeFormatSet`] allow-list, and
 /// [`ImageError::LimitExceeded`] for the current input length, inspected
 /// primary canvas, or configured decode work budget.
 pub fn decode_with_token_and_policy(
@@ -679,6 +690,7 @@ pub fn decode_with_token_and_policy(
 ) -> ImageResult<Decoded<DecodedImage>> {
     policy.check_encoded_input(data, CodecOperation::StillDecode)?;
     let format = detect_prefix(data)?;
+    policy.check_allowed_format(format, ImageErrorStage::StillDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::StillDecode)?;
     if policy.requires_image_info() {
         let info = codecs::inspect_basic_prefix_format(data, format)?;
@@ -754,7 +766,9 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
+/// Returns [`ImageError::Unsupported`] when the detected format is outside
+/// `policy`'s optional [`DecodeFormatSet`] allow-list, or
+/// [`ImageError::LimitExceeded`] when the complete input, inspected
 /// primary canvas, its decoded transfer-byte length, the inspected frame
 /// count, or the configured decode work budget exceeds a maximum, or when a
 /// later frame or the cumulative retained sequence exceeds the configured
@@ -790,14 +804,17 @@ pub fn decode_sequence_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedSequenc
 /// # Errors
 ///
 /// Returns the same errors as [`decode_sequence_prefix`], plus
-/// [`ImageError::LimitExceeded`] for the current input length, inspected
-/// frame count, decoded-byte budget, or configured decode work budget.
+/// [`ImageError::Unsupported`] when the detected format is outside the
+/// policy's optional [`DecodeFormatSet`] allow-list, and
+/// [`ImageError::LimitExceeded`] for the current input length, inspected frame
+/// count, decoded-byte budget, or configured decode work budget.
 pub fn decode_sequence_prefix_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
 ) -> ImageResult<Decoded<DecodedSequence>> {
     policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_prefix(data)?;
+    policy.check_allowed_format(format, ImageErrorStage::SequenceDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
     let mut budget = policy.sequence_budget(format);
     if policy.requires_image_info() {
@@ -843,8 +860,10 @@ pub fn decode_sequence_with_token(
 /// # Errors
 ///
 /// Returns the same errors as [`decode_sequence_with_token`], plus
-/// [`ImageError::LimitExceeded`] for the current input length, inspected
-/// frame count, decoded-byte budget, or configured decode work budget.
+/// [`ImageError::Unsupported`] when the detected format is outside the
+/// policy's optional [`DecodeFormatSet`] allow-list, and
+/// [`ImageError::LimitExceeded`] for the current input length, inspected frame
+/// count, decoded-byte budget, or configured decode work budget.
 pub fn decode_sequence_with_token_and_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -852,6 +871,7 @@ pub fn decode_sequence_with_token_and_policy(
 ) -> ImageResult<Decoded<DecodedSequence>> {
     policy.check_encoded_input(data, CodecOperation::SequenceDecode)?;
     let format = detect_prefix(data)?;
+    policy.check_allowed_format(format, ImageErrorStage::SequenceDecode)?;
     policy.check_metadata_bytes(data, format, CodecOperation::SequenceDecode)?;
     let mut budget = policy.sequence_budget(format);
     if policy.requires_image_info() {
@@ -930,13 +950,16 @@ pub fn inspect_basic_prefix(data: &[u8]) -> ImageResult<ImageInfo> {
 ///
 /// # Errors
 ///
-/// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, its decoded transfer-byte length, or the inspected frame
-/// count exceeds a configured maximum. Otherwise returns the same errors as
+/// Returns [`ImageError::Unsupported`] when the detected format is outside
+/// `policy`'s optional [`DecodeFormatSet`] allow-list, or
+/// [`ImageError::LimitExceeded`] when the complete input, inspected primary
+/// canvas, its decoded transfer-byte length, or the inspected frame count
+/// exceeds a configured maximum. Otherwise returns the same errors as
 /// [`inspect`].
 pub fn inspect_with_policy(data: &[u8], policy: &DecodePolicy) -> ImageResult<ImageInfo> {
     policy.check_encoded_input(data, CodecOperation::Inspection)?;
     let format = detect_format(data)?;
+    policy.check_allowed_format(format, ImageErrorStage::Inspection)?;
     policy.check_metadata_bytes(data, format, CodecOperation::Inspection)?;
     let info = codecs::inspect_format(data, format)?;
     policy.check_image_info(&info, CodecOperation::Inspection)?;
