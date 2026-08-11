@@ -5349,19 +5349,19 @@ no buffer copy; verification does not populate either decode cache; and a
 borrowed view owns neither its input nor a decoded-pixel cache. The current
 API-045 candidate adds a separate owned-source `OnceLock<ImageResult<()>>` that
 reuses the first successful or deterministic failed verification result across
-later calls and clones, after requested-scope validation. A bounded native
-integration contract invokes that source concurrently from eight clones for a
-valid PNG and a bad-CRC verification failure; the WASI lane remains sequential
-because its test runtime has no portable thread support. It retains no parsed
-header/index or temporary codec workspace. The borrowed view now retains only
+later calls and clones, after requested-scope validation. Bounded native
+integration contracts invoke that source and borrowed-view clones concurrently
+from eight workers for a valid PNG and a bad-CRC verification failure; the WASI
+lane remains sequential because its test runtime has no portable thread support.
+It retains no parsed header/index or temporary codec workspace. The borrowed view now retains only
 its immutable verification result per view; its pixel decodes remain uncached,
-and a cloned view starts a separate verification cache. Codec parser,
+and clones of that view share its verification cache. Codec parser,
 decompressor, and temporary materialization allocations are outside that
 accounting, so no Pillow-parity row or synthetic coverage hook is appropriate.
 Optional eviction, parsed codec-state reuse, and revision-bound allocator/peak
 measurements remain open under API-014, API-045, and QA-030. The native
 borrowed-view contract is committed at
-`3506a70dc8b1681e55f6dfa5fc96d021f22a6ea3`.
+`924a5113014937bd0dca9ce051d8cbcb54198afb`.
 
 The preceding Rust implementation revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction

@@ -173,7 +173,7 @@ capabilities and setup.
 | `EncodedImage::decode_state`, `sequence_decode_state`, `is_decoded`, `is_sequence_decoded` | Observe separate not-attempted, succeeded, and failed lazy-cache states without exposing synchronization details |
 | `EncodedImage::*_with_policy(...)` | Enforce the same format restrictions and limits during source construction or lazy materialization |
 | `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
-| `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with the same inspect/verify/decode operations and no copy or cache |
+| `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with no encoded-byte copy; clones share the immutable verification result while pixel decodes remain uncached |
 | `EncodedImage::decode_frame(index)`, `EncodedImageView::decode_frame(index)` | Decode exactly one retained frame/page with stable per-frame errors; TIFF uses a genuine per-page path |
 
 `Decoded::consumed_bytes` reports the encoded bytes of the container-defined
