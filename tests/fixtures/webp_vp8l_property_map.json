@@ -571,6 +571,19 @@
           "mapped_distances_contains": [32]
         }
       }
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_noise",
+      "expect": {
+        "stream_index": 2,
+        "stream": {
+          "distance_prefixes_contains": [0, 1],
+          "plane_codes_contains": [1, 2],
+          "mapped_distances_contains": [1, 64]
+        }
+      }
     }
   ],
   "malformed_witnesses": [
