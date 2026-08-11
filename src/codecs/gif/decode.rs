@@ -136,6 +136,7 @@ pub fn decode_sequence(
                     } else {
                         Some(&mut *budget)
                     },
+                    token,
                 )
                 .map_err(|error| error.at(descriptor_offset, "gif_image"))?;
                 frames.push(DecodedFrame::source_rectangle(
@@ -250,6 +251,7 @@ fn decode_image(
     global_palette: Option<&[u8]>,
     transparent_index: Option<u8>,
     budget: Option<&mut SequenceDecodeBudget>,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedImage, u16, u16, bool)> {
     let left = input.read_u16()?;
     let top = input.read_u16()?;
@@ -290,7 +292,10 @@ fn decode_image(
     let minimum_code_size = input.read_u8()?;
     let compressed = input.read_sub_blocks()?;
     let pixel_count = usize::from(width).saturating_mul(usize::from(height));
-    let mut indices = decode_lzw(&compressed, minimum_code_size, pixel_count)?;
+    let mut indices = match token {
+        Some(token) => decode_lzw_with_token(&compressed, minimum_code_size, pixel_count, token)?,
+        None => decode_lzw(&compressed, minimum_code_size, pixel_count)?,
+    };
 
     if interlaced {
         indices = deinterlace(&indices, usize::from(width), usize::from(height));
@@ -524,6 +529,110 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> CodecR
     }
 }
 
+/// Token-aware GIF LZW decoding for caller-controlled interruption.
+///
+/// The ordinary decoder above deliberately remains a direct fast path. A
+/// caller token charges one checkpoint before each compressed-code read and
+/// while traversing or materializing a long dictionary phrase. This bounds
+/// the uninterruptible work without changing the no-token byte path.
+fn decode_lzw_with_token(
+    data: &[u8],
+    minimum_code_size: u8,
+    expected_len: usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<Vec<u8>> {
+    if !(2..=8).contains(&minimum_code_size) {
+        return Err(CodecError::Malformed(
+            "invalid GIF LZW minimum code size".to_owned(),
+        ));
+    }
+
+    let clear_code = 1u16 << minimum_code_size;
+    let end_code = clear_code.saturating_add(1);
+    let first_free_code = end_code.saturating_add(1);
+    let mut code_size = minimum_code_size.saturating_add(1);
+    let mut next_code = first_free_code;
+    let mut previous_code = None;
+    let mut prefixes = [0u16; MAX_LZW_CODE];
+    let mut suffixes = [0u8; MAX_LZW_CODE];
+    let mut stack = [0u8; MAX_LZW_CODE];
+    let mut bits = BitReader::new(data);
+    let mut output = Vec::with_capacity(expected_len);
+
+    for value in 0..clear_code {
+        suffixes[usize::from(value)] = value.to_le_bytes()[0];
+    }
+
+    loop {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        let code = bits.read(code_size)?;
+        if code == clear_code {
+            code_size = minimum_code_size.saturating_add(1);
+            next_code = first_free_code;
+            previous_code = None;
+            continue;
+        }
+        if code == end_code {
+            return Err(CodecError::Malformed(
+                "GIF LZW stream ended before filling the frame".to_owned(),
+            ));
+        }
+
+        let Some(previous) = previous_code else {
+            if code >= clear_code || output.len() >= expected_len {
+                return Err(CodecError::Malformed(
+                    "invalid first GIF LZW code".to_owned(),
+                ));
+            }
+            output.push(code.to_le_bytes()[0]);
+            if output.len() == expected_len {
+                return Ok(output);
+            }
+            previous_code = Some(code);
+            continue;
+        };
+
+        let expansion_code = if code < next_code {
+            code
+        } else if code == next_code {
+            previous
+        } else {
+            return Err(CodecError::Malformed(
+                "GIF LZW code references a future dictionary entry".to_owned(),
+            ));
+        };
+        let first = append_code_with_token(
+            expansion_code,
+            clear_code,
+            &prefixes,
+            &suffixes,
+            &mut stack,
+            &mut output,
+            expected_len,
+            token,
+        )?;
+        if code == next_code && output.len() < expected_len {
+            output.push(first);
+        }
+
+        if output.len() == expected_len {
+            return Ok(output);
+        }
+
+        if usize::from(next_code) < MAX_LZW_CODE {
+            prefixes[usize::from(next_code)] = previous;
+            suffixes[usize::from(next_code)] = first;
+            next_code = next_code.saturating_add(1);
+
+            if code_size < 12 && next_code == (1u16 << code_size) {
+                code_size = code_size.saturating_add(1);
+            }
+        }
+
+        previous_code = Some(code);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn append_code(
     mut code: u16,
@@ -549,6 +658,42 @@ fn append_code(
     let remaining = expected_len.saturating_sub(output.len());
     output.extend(stack[..len].iter().rev().take(remaining));
     first
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_code_with_token(
+    mut code: u16,
+    clear_code: u16,
+    prefixes: &[u16; MAX_LZW_CODE],
+    suffixes: &[u8; MAX_LZW_CODE],
+    stack: &mut [u8; MAX_LZW_CODE],
+    output: &mut Vec<u8>,
+    expected_len: usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<u8> {
+    let mut len = 0usize;
+    while code >= clear_code {
+        stack[len] = suffixes[usize::from(code)];
+        len = len.saturating_add(1);
+        code = prefixes[usize::from(code)];
+        if len.is_multiple_of(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+
+    let first = code.to_le_bytes()[0];
+    debug_assert!(len < MAX_LZW_CODE);
+    stack[len] = first;
+    len = len.saturating_add(1);
+
+    let remaining = expected_len.saturating_sub(output.len());
+    for (index, &value) in stack[..len].iter().rev().take(remaining).enumerate() {
+        output.push(value);
+        if index.saturating_add(1).is_multiple_of(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+    Ok(first)
 }
 
 #[cfg(coverage)]
@@ -614,6 +759,37 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = metadata_bytes(&no_min_code);
     assert!(decode_lzw(&[0], 2, 0).is_err());
     assert_eq!(decode_lzw(&[0x2c], 2, 0), Ok(Vec::new()));
+    let empty_token = crate::CancellationToken::new();
+    assert!(decode_lzw_with_token(&[0], 2, 0, &empty_token).is_err());
+    assert!(decode_lzw_with_token(&[], 2, 1, &empty_token).is_err());
+
+    // The public fixture and work-budget test cover cancellation while
+    // walking a real dictionary. This deterministic structural witness also
+    // reaches the separate 1,024-byte materialization checkpoint: the first
+    // poll (after the 1,024th link) is allowed, and the next poll is cancelled
+    // while the phrase is being emitted.
+    let mut token_prefixes = [0u16; MAX_LZW_CODE];
+    let token_suffixes = [0u8; MAX_LZW_CODE];
+    for code in 4_u16..=1_027 {
+        token_prefixes[usize::from(code)] = code.saturating_sub(1);
+    }
+    let mut token_stack = [0u8; MAX_LZW_CODE];
+    let mut token_output = Vec::new();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    assert!(
+        append_code_with_token(
+            1_027,
+            3,
+            &token_prefixes,
+            &token_suffixes,
+            &mut token_stack,
+            &mut token_output,
+            1_024,
+            &token,
+        )
+        .is_err()
+    );
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {

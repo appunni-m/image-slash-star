@@ -6444,6 +6444,244 @@ fn png_decode_work_budget_covers_inflation_and_scanline_rows()
 }
 
 #[test]
+fn gif_decode_work_budget_covers_lzw_codes_and_expansion() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "gif") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: GIF LZW can spend most of its time
+    // reading compressed codes and walking dictionary phrases after the
+    // outer image block has started. Pillow has no caller work-budget result.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data =
+        fs::read(root.join("tests/fixtures/input/images/gif/lzw_dictionary_saturation.gif"))?;
+    let info = image_slash_star::inspect(&data)?;
+    assert_eq!(info.format, ImageFormat::Gif);
+    let expected = image_slash_star::decode(&data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+
+    let mut lower = 0_u64;
+    let mut upper = 1_u64;
+    loop {
+        let maximum = upper;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expected.content.pixels);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Gif),
+                    operation: image_slash_star::CodecOperation::StillDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+        if upper == 131_072 {
+            return Err(
+                std::io::Error::other("GIF LZW work-budget boundary exceeded probe").into(),
+            );
+        }
+        upper = upper.saturating_mul(2);
+    }
+    while lower < upper {
+        let maximum = lower + (upper - lower) / 2;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expected.content.pixels);
+                upper = maximum;
+            }
+            Err(error) => {
+                assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Gif),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                ));
+                lower = maximum.saturating_add(1);
+            }
+        }
+    }
+    let boundary = lower;
+    assert_eq!(
+        boundary, 4_105,
+        "the committed GIF LZW witness changed its checkpoint boundary"
+    );
+    assert!(
+        boundary > 32,
+        "GIF LZW should charge code/expansion checkpoints, got boundary {boundary}"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(&data, &unlimited.with_max_work_units(boundary))?
+            .content
+            .pixels,
+        expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &data,
+            &unlimited.with_max_work_units(boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Gif),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == boundary - 1 && observed == boundary
+    ));
+
+    // The token-aware decoder must preserve the same malformed-input
+    // classification as the direct decoder on the committed GIF LZW edge
+    // fixtures. These are real caller inputs, not coverage-only probes.
+    for name in [
+        "min_code_one.gif",
+        "lzw_end_only.gif",
+        "lzw_invalid_first.gif",
+        "lzw_invalid_future.gif",
+    ] {
+        let malformed = fs::read(root.join("tests/fixtures/input/images/gif").join(name))?;
+        assert!(
+            matches!(
+                image_slash_star::decode_with_policy(
+                    &malformed,
+                    &unlimited.with_max_work_units(u64::MAX),
+                ),
+                Err(ImageError::Malformed {
+                    format: ImageFormat::Gif,
+                    ..
+                })
+            ),
+            "token-aware GIF LZW must retain the malformed result for {name}"
+        );
+    }
+
+    let clipped = fs::read(root.join("tests/fixtures/input/images/gif/lzw_kwkwk_clipped.gif"))?;
+    let direct = image_slash_star::decode(&clipped)?;
+    let tokenized =
+        image_slash_star::decode_with_policy(&clipped, &unlimited.with_max_work_units(u64::MAX))?;
+    assert_eq!(tokenized.content.pixels, direct.content.pixels);
+
+    // A deterministic public-API round trip supplies a real long dictionary
+    // phrase. It proves that the expansion checkpoints are live, not merely
+    // that the outer compressed-code loop can be interrupted.
+    let expansion_image = DecodedImage::new(4_096, 256, vec![0; 4_096 * 256], ColorType::L8);
+    let expansion_encoded = image_slash_star::encode(
+        &expansion_image,
+        ImageFormat::Gif,
+        &EncodeOptions::for_format(ImageFormat::Gif),
+    )?;
+    let expansion_expected = image_slash_star::decode(&expansion_encoded)?;
+    let expansion_tokenized = image_slash_star::decode_with_policy(
+        &expansion_encoded,
+        &unlimited.with_max_work_units(u64::MAX),
+    )?;
+    assert_eq!(
+        expansion_tokenized.content.pixels,
+        expansion_expected.content.pixels
+    );
+
+    let mut expansion_lower = 0_u64;
+    let mut expansion_upper = 1_u64;
+    loop {
+        let maximum = expansion_upper;
+        match image_slash_star::decode_with_policy(
+            &expansion_encoded,
+            &unlimited.with_max_work_units(maximum),
+        ) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expansion_expected.content.pixels);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Gif),
+                    operation: image_slash_star::CodecOperation::StillDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+        if expansion_upper == 2_000_000 {
+            return Err(std::io::Error::other(
+                "GIF LZW expansion work-budget boundary exceeded probe",
+            )
+            .into());
+        }
+        expansion_upper = expansion_upper.saturating_mul(2);
+    }
+    while expansion_lower < expansion_upper {
+        let maximum = expansion_lower + (expansion_upper - expansion_lower) / 2;
+        match image_slash_star::decode_with_policy(
+            &expansion_encoded,
+            &unlimited.with_max_work_units(maximum),
+        ) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expansion_expected.content.pixels);
+                expansion_upper = maximum;
+            }
+            Err(error) => {
+                assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Gif),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                ));
+                expansion_lower = maximum.saturating_add(1);
+            }
+        }
+    }
+    let expansion_boundary = expansion_lower;
+    assert_eq!(
+        expansion_boundary, 2_298,
+        "the generated GIF LZW expansion witness changed its checkpoint boundary"
+    );
+    assert!(
+        expansion_boundary > 1_024,
+        "GIF LZW expansion should charge phrase checkpoints, got boundary {expansion_boundary}"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(
+            &expansion_encoded,
+            &unlimited.with_max_work_units(expansion_boundary),
+        )?
+        .content
+        .pixels,
+        expansion_expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &expansion_encoded,
+            &unlimited.with_max_work_units(expansion_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Gif),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == expansion_boundary - 1 && observed == expansion_boundary
+    ));
+    Ok(())
+}
+
+#[test]
 fn tiff_decode_work_budget_covers_deflate_inflation() -> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(feature = "tiff") {
         return Ok(());
