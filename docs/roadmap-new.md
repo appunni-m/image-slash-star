@@ -84,14 +84,16 @@ The next narrow runtime slice is implemented on `main` at
   LLVM coverage is 65,105/65,105 lines, 8,478/8,478 branches, 3,324/3,324
   functions, and 97,226/97,226 regions. Formatting, locked all-feature check,
   strict Clippy, rustdoc warnings, and doctests also pass.
-- **Current runtime observation:** At this clean revision, the fixed schema-`@3`
-  benchmark passed all 1,421 active Pillow-visible rows in `0.978447 s` wall
-  time (`2.824105 s` user, `0.199561 s` system, 249,544,704-byte peak RSS).
-  The Rust-only feature-gate suite passed in `1.534172 s` wall time
-  (`2.228947 s` user, `0.111117 s` system, 161,267,712-byte peak RSS). These
-  are host/cache/toolchain observations, not proof of a universal speedup; the
-  standard workload does not isolate repeated verification and allocation
-  counts, retained cache bytes, and WASM runtime cost remain unmeasured.
+- **Current runtime observation:** At this clean revision, a warm repeat of the
+  fixed schema-`@3` benchmark passed all 1,421 active Pillow-visible rows in
+  `0.930113 s` wall time (`2.785177 s` user, `0.176559 s` system,
+  254,164,992-byte peak RSS). The Rust-only feature-gate suite passed in
+  `1.489344 s` wall time (`2.187826 s` user, `0.094414 s` system,
+  165,642,240-byte peak RSS). A preceding cold run was materially slower from
+  build/cache state, confirming that these are host/cache/toolchain
+  observations, not proof of a universal speedup; the standard workload does
+  not isolate repeated verification and allocation counts, retained cache
+  bytes, and WASM runtime cost remain unmeasured.
 - **Evidence boundary:** The managed Coverage MCP transport again closed at
   `project_context`, so no fresh managed snapshot or parity rerun can replace
   the accepted baseline tuple. The candidate is locally verified but is not
