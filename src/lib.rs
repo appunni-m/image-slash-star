@@ -689,7 +689,8 @@ pub fn decode_prefix_with_policy(
 /// token-aware LZW code read and every 1,024 bytes emitted while expanding a
 /// dictionary phrase, before each horizontal-predictor row and every 1,024
 /// reconstructed bytes, and at sample-conversion row and 1,024-byte/sample
-/// intervals. The operation
+/// intervals. Uncompressed TIFF payload copies poll before each 1,024-byte
+/// chunk when a caller token is present. The operation
 /// stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
