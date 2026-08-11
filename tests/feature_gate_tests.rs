@@ -6302,7 +6302,11 @@ fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std
     assert!(png_and_jpeg.contains(ImageFormat::Jpeg));
     assert!(image_slash_star::DecodeFormatSet::all().contains(ImageFormat::Avif));
 
-    let policy = image_slash_star::DecodePolicy::new().with_allowed_formats(png_only);
+    let png_byte_limit = u64::try_from(png.len())?;
+    let policy = image_slash_star::DecodePolicy::new()
+        .with_allowed_formats(png_only)
+        .with_max_metadata_bytes(png_byte_limit)
+        .with_max_width(1);
     assert_eq!(policy.allowed_formats(), Some(png_only));
     assert_eq!(policy.limits().allowed_formats(), Some(png_only));
     assert_eq!(
@@ -6332,10 +6336,86 @@ fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std
     )?;
     let encoded = EncodedImage::new_with_policy(png.clone(), &policy)?;
     encoded.decode_with_policy(&policy)?;
+    encoded.decode_sequence_with_policy(&policy)?;
     let borrowed = image_slash_star::EncodedImageView::new_with_policy(&png, &policy)?;
     borrowed.decode_with_policy(&policy)?;
+    borrowed.decode_sequence_with_policy(&policy)?;
     let unrestricted_source = EncodedImage::new(jpeg.clone())?;
     let unrestricted_view = image_slash_star::EncodedImageView::new(&jpeg)?;
+
+    // Source-bound policy checks must retain the same rejection semantics as
+    // the root APIs, including metadata, dimensions, format, and cumulative
+    // sequence-byte limits. These paths also prove that retained inspection
+    // data is used before materialization rather than silently bypassed.
+    let metadata_png = fs::read(root.join("tests/fixtures/input/images/png/text_chunks.png"))?;
+    let metadata_source = EncodedImage::new(metadata_png.clone())?;
+    let metadata_view = image_slash_star::EncodedImageView::new(&metadata_png)?;
+    let metadata_limited = image_slash_star::DecodePolicy::new().with_max_metadata_bytes(0);
+    assert!(matches!(
+        metadata_source.decode_sequence_with_policy(&metadata_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::MetadataBytes,
+            ..
+        })
+    ));
+    assert!(matches!(
+        metadata_view.decode_with_policy(&metadata_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::MetadataBytes,
+            ..
+        })
+    ));
+    assert!(matches!(
+        metadata_view.decode_sequence_with_policy(&metadata_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::MetadataBytes,
+            ..
+        })
+    ));
+
+    let dimension_limited = image_slash_star::DecodePolicy::new().with_max_width(0);
+    assert!(matches!(
+        borrowed.decode_with_policy(&dimension_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::Width,
+            ..
+        })
+    ));
+    assert!(matches!(
+        borrowed.decode_sequence_with_policy(&dimension_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::Width,
+            ..
+        })
+    ));
+
+    let sequence_limited = image_slash_star::DecodePolicy::new().with_max_sequence_decoded_bytes(0);
+    assert!(matches!(
+        encoded.decode_sequence_with_policy(&sequence_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::SequenceDecodedBytes,
+            maximum: 0,
+            ..
+        })
+    ));
+    assert!(matches!(
+        borrowed.decode_sequence_with_policy(&sequence_limited),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::SequenceDecodedBytes,
+            maximum: 0,
+            ..
+        })
+    ));
+    let metadata_only =
+        image_slash_star::DecodePolicy::new().with_max_metadata_bytes(png_byte_limit);
+    encoded.decode_sequence_with_policy(&metadata_only)?;
 
     assert!(matches!(
         image_slash_star::inspect_with_policy(&jpeg, &policy),
@@ -6449,6 +6529,24 @@ fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std
         Err(ImageError::Unsupported {
             format: Some(ImageFormat::Jpeg),
             stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        unrestricted_source.decode_sequence_with_policy(&policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::SequenceDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        unrestricted_view.decode_sequence_with_policy(&policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::SequenceDecode),
             reason: Some(UnsupportedReason::PolicyDenied),
             ..
         })

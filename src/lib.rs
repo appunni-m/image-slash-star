@@ -498,6 +498,16 @@ pub(crate) fn decode_selected_with_policy(
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
+    decode_selected_after_policy_checks(data, format, policy)
+}
+
+/// Decode a selected format after the caller has performed input, format,
+/// metadata, and image-info policy checks.
+pub(crate) fn decode_selected_after_policy_checks(
+    data: &[u8],
+    format: ImageFormat,
+    policy: &DecodePolicy,
+) -> ImageResult<Decoded<DecodedImage>> {
     let budget_token = decode_work_budget_token(policy, None);
     let decoded = match budget_token.as_ref() {
         Some(token) => codecs::decode_format_with_token(data, format, token),
@@ -528,6 +538,17 @@ pub(crate) fn decode_sequence_selected_with_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
+    decode_sequence_after_policy_checks(data, format, policy, budget)
+}
+
+/// Decode a selected sequence after the caller has performed input, format,
+/// metadata, and image-info policy checks.
+pub(crate) fn decode_sequence_after_policy_checks(
+    data: &[u8],
+    format: ImageFormat,
+    policy: &DecodePolicy,
+    mut budget: SequenceDecodeBudget,
+) -> ImageResult<Decoded<DecodedSequence>> {
     let budget_token = decode_work_budget_token(policy, None);
     let decoded = match budget_token.as_ref() {
         Some(token) => codecs::decode_sequence_format_with_token(data, format, &mut budget, token),

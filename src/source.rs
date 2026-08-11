@@ -146,7 +146,9 @@ impl<'a> EncodedImageView<'a> {
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<Decoded<DecodedImage>> {
         policy.check_encoded_input(self.bytes, CodecOperation::StillDecode)?;
         policy.check_allowed_format(self.format, ImageErrorStage::StillDecode)?;
-        crate::decode_selected_with_policy(self.bytes, self.format, policy)
+        policy.check_metadata_bytes(self.bytes, self.format, CodecOperation::StillDecode)?;
+        policy.check_image_info(&self.info, CodecOperation::StillDecode)?;
+        crate::decode_selected_after_policy_checks(self.bytes, self.format, policy)
     }
 
     /// Decode every retained frame/page.
@@ -168,7 +170,14 @@ impl<'a> EncodedImageView<'a> {
         policy: &DecodePolicy,
     ) -> ImageResult<Decoded<crate::DecodedSequence>> {
         policy.check_encoded_input(self.bytes, CodecOperation::SequenceDecode)?;
-        crate::decode_sequence_selected_with_policy(self.bytes, self.format, policy)
+        policy.check_allowed_format(self.format, ImageErrorStage::SequenceDecode)?;
+        policy.check_metadata_bytes(self.bytes, self.format, CodecOperation::SequenceDecode)?;
+        let mut budget = policy.sequence_budget(self.format);
+        if policy.requires_image_info() {
+            policy.check_image_info(&self.info, CodecOperation::SequenceDecode)?;
+            budget.charge_primary(&self.info)?;
+        }
+        crate::decode_sequence_after_policy_checks(self.bytes, self.format, policy, budget)
     }
 
     /// Decode exactly one retained frame or page by index.
@@ -366,14 +375,17 @@ impl EncodedImage {
         )?;
         policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;
         if policy.max_work_units().is_some() && self.inner.decoded.get().is_none() {
-            let decoded =
-                crate::decode_selected_with_policy(&self.inner.bytes, self.format(), policy)?;
+            let decoded = crate::decode_selected_after_policy_checks(
+                &self.inner.bytes,
+                self.format(),
+                policy,
+            )?;
             let _ = self.inner.decoded.set(Ok(decoded));
         }
         self.inner
             .decoded
             .get_or_init(|| {
-                crate::decode_selected_with_policy(
+                crate::decode_selected_after_policy_checks(
                     &self.inner.bytes,
                     self.format(),
                     &DecodePolicy::default(),
@@ -398,10 +410,12 @@ impl EncodedImage {
         self.inner
             .sequence_decoded
             .get_or_init(|| {
-                crate::decode_sequence_selected_with_policy(
+                let policy = DecodePolicy::default();
+                crate::decode_sequence_after_policy_checks(
                     &self.inner.bytes,
                     self.format(),
-                    &DecodePolicy::default(),
+                    &policy,
+                    policy.sequence_budget(self.format()),
                 )
             })
             .clone()
@@ -427,7 +441,18 @@ impl EncodedImage {
             return self.decode_sequence();
         }
         policy.check_encoded_input(&self.inner.bytes, CodecOperation::SequenceDecode)?;
-        crate::decode_sequence_selected_with_policy(&self.inner.bytes, self.format(), policy)
+        policy.check_allowed_format(self.format(), ImageErrorStage::SequenceDecode)?;
+        policy.check_metadata_bytes(
+            &self.inner.bytes,
+            self.format(),
+            CodecOperation::SequenceDecode,
+        )?;
+        let mut budget = policy.sequence_budget(self.format());
+        if policy.requires_image_info() {
+            policy.check_image_info(&self.inner.info, CodecOperation::SequenceDecode)?;
+            budget.charge_primary(&self.inner.info)?;
+        }
+        crate::decode_sequence_after_policy_checks(&self.inner.bytes, self.format(), policy, budget)
     }
 
     /// Decode exactly one retained frame or page by index.
