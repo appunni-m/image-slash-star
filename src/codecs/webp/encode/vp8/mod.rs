@@ -25,9 +25,15 @@ mod tokenize;
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    analysis::__coverage_exercise_private_branches();
     bool_enc::__coverage_exercise_private_branches();
     cost::__coverage_exercise_private_branches();
     encoder::__coverage_exercise_private_branches();
+    frame::__coverage_exercise_private_branches();
     intra16::__coverage_exercise_private_branches();
+    intra4::__coverage_exercise_private_branches();
+    partition::__coverage_exercise_private_branches();
     probability::__coverage_exercise_private_branches();
+    quant::__coverage_exercise_private_branches();
+    residual::__coverage_exercise_private_branches();
 }

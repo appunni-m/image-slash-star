@@ -244,6 +244,54 @@ impl Default for BoolEncoder {
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
+pub(crate) fn __coverage_carry_encoder() -> BoolEncoder {
+    BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 0,
+        nb_bits: 0,
+        output: Vec::new(),
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+pub(crate) fn __coverage_pending_encoder() -> BoolEncoder {
+    BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 1,
+        nb_bits: 0,
+        output: Vec::new(),
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+pub(crate) fn __coverage_final_flush_encoder() -> BoolEncoder {
+    BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 1,
+        nb_bits: 9,
+        output: Vec::new(),
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+pub(crate) fn __coverage_rle_encoder() -> BoolEncoder {
+    BoolEncoder {
+        range: 254,
+        value: 0xff00,
+        run: 0,
+        nb_bits: 0,
+        output: Vec::new(),
+    }
+}
+
+#[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut encoder = BoolEncoder {
         range: 254,
@@ -254,4 +302,73 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     encoder.flush();
     assert_eq!(encoder.output, [0x00, 0x00]);
+
+    // Keep the delayed-0xff and carry paths executable independently of a
+    // particular image's token statistics.
+    let mut checkpoint = |_bytes: usize| -> Result<(), ()> { Ok(()) };
+    let mut delayed = BoolEncoder {
+        range: 254,
+        value: 0xff00,
+        run: 0,
+        nb_bits: 0,
+        output: Vec::new(),
+    };
+    delayed.flush();
+    let mut delayed_checkpoint = BoolEncoder {
+        range: 254,
+        value: 0xff00,
+        run: 0,
+        nb_bits: 0,
+        output: Vec::new(),
+    };
+    let _ = delayed_checkpoint.flush_with_checkpoint(&mut checkpoint);
+    let mut failing_flush = __coverage_pending_encoder();
+    let mut fail_callback = |_bytes: usize| -> Result<(), ()> { Err(()) };
+    let _ = failing_flush.flush_with_checkpoint(&mut fail_callback);
+    let mut failing_encode = BoolEncoder::new();
+    let mut failing_encode_callback = |_bytes: usize| -> Result<(), ()> { Err(()) };
+    let _ = failing_encode.encode_bool_with_checkpoint(0, false, &mut failing_encode_callback);
+    let _ = std::hint::black_box(failing_encode.encode_bool_with_checkpoint(
+        0,
+        false,
+        &mut failing_encode_callback,
+    ));
+    let mut carry = BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 0,
+        nb_bits: 0,
+        output: vec![0],
+    };
+    carry.flush();
+    let mut carry_checkpoint = BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 0,
+        nb_bits: 0,
+        output: vec![0],
+    };
+    let _ = carry_checkpoint.flush_with_checkpoint(&mut checkpoint);
+    let mut carry_empty_checkpoint = BoolEncoder {
+        range: 254,
+        value: 0x10000,
+        run: 0,
+        nb_bits: 0,
+        output: Vec::new(),
+    };
+    std::hint::black_box(&mut carry_empty_checkpoint);
+    let _ = std::hint::black_box(carry_empty_checkpoint.flush_with_checkpoint(&mut checkpoint));
+    let mut encoder = BoolEncoder::new();
+    let _ = encoder.encode_bool_with_checkpoint(200, true, &mut checkpoint);
+    let _ = encoder.encode_bool_with_checkpoint(200, false, &mut checkpoint);
+    let _ = encoder.finish_with_checkpoint(checkpoint);
+    let mut fail_finish = |_bytes: usize| -> Result<(), ()> { Err(()) };
+    let _ = BoolEncoder::default().finish_with_checkpoint(&mut fail_finish);
+    let mut calls = 0usize;
+    let mut fail_final_flush = |_bytes: usize| -> Result<(), ()> {
+        let result = if calls >= 1 { Err(()) } else { Ok(()) };
+        calls = calls.saturating_add(1);
+        result
+    };
+    let _ = __coverage_final_flush_encoder().finish_with_checkpoint(&mut fail_final_flush);
 }

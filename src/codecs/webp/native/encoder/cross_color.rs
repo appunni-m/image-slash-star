@@ -127,6 +127,7 @@ fn div_round(value: i64, divisor: i64) -> i64 {
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(div_round(-3, 2), -2);
     let pixels = [0xff00_0000, 0xff11_2233, 0xff22_4466, 0xff33_6699];
@@ -155,6 +156,133 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let mut sampling = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
     let _ = optimize_sampling(&mut sampling, 4, 4, 0, None);
+
+    for checks in 0..=24 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = best_green_to_red(
+            &pixels,
+            2,
+            2,
+            2,
+            Multipliers::default(),
+            Multipliers::default(),
+            40,
+            &accumulated,
+            Some(&token),
+        );
+    }
+    for checks in 0..=96 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = best_blue_multipliers(
+            &pixels,
+            2,
+            2,
+            2,
+            Multipliers::default(),
+            Multipliers::default(),
+            40,
+            &accumulated,
+            Some(&token),
+        );
+    }
+
+    let mut transform = [0xff11_2233; 16 * 16];
+    for checks in 0..=24 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = transform_tile(
+            &mut transform,
+            16,
+            16,
+            16,
+            Multipliers::default(),
+            Some(&token),
+        );
+    }
+    let equal_sampling = [0xff11_2233; 4 * 4];
+    for checks in 0..=8 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sample = equal_sampling;
+        let _ = optimize_sampling(&mut sample, 4, 4, 0, Some(&token));
+    }
+    let mut unequal_sampling = [0_u32; 4 * 4];
+    unequal_sampling[4..8].fill(1);
+    let sampling_token = crate::CancellationToken::new();
+    let _ = optimize_sampling(&mut unequal_sampling, 4, 4, 0, Some(&sampling_token));
+    let mut copy_sampling = [0xff11_2233; 16 * 16];
+    let copy_token = crate::CancellationToken::new();
+    let _ = optimize_sampling(&mut copy_sampling, 16, 16, 0, Some(&copy_token));
+
+    // Rows are equal, but each two-column block is not; the optimizer must
+    // retain one sampling level and enter the token-aware copy loop. Sweep
+    // the preceding checkpoints so the copy-loop cancellation edge is
+    // observable without manufacturing private transform state.
+    for checks in 0..=128 {
+        let mut sampling_copy = [0_u32; 16 * 16];
+        for y in 0..16 {
+            for x in 0..16 {
+                sampling_copy[y * 16 + x] = (x / 2) as u32;
+            }
+        }
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = optimize_sampling(&mut sampling_copy, 16, 16, 0, Some(&token));
+    }
+
+    for checks in 0..=512 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut selected = pixels;
+        let mut scratch = CrossColorScratch::default();
+        let _ = select_and_apply(&mut selected, 2, 2, 0, 40, &mut scratch, Some(&token));
+    }
+
+    let cross_probe_token = crate::CancellationToken::new();
+    cross_probe_token.cancel_after(usize::MAX);
+    let mut cross_probe = vec![0xff11_2233; 32 * 64];
+    let _ = optimize_sampling(&mut cross_probe, 32, 64, 0, Some(&cross_probe_token));
+    for checks in 0..=2 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut rows = vec![0xff11_2233; 32 * 64];
+        let _ = optimize_sampling(&mut rows, 32, 64, 0, Some(&token));
+    }
+
+    // Keep the sampling scan small while still reaching both late
+    // checkpoint families: paired columns make the row comparison fail at
+    // the first useful level, then leave a 2-column copy with 2,048 samples.
+    let column_probe = (0..4_096).map(|x| (x / 2) as u32).collect::<Vec<_>>();
+    let measure_token = crate::CancellationToken::new();
+    measure_token.cancel_after(usize::MAX);
+    let mut measure_image = column_probe.clone();
+    let _ = optimize_sampling(&mut measure_image, 4_096, 1, 0, Some(&measure_token));
+    let sampling_calls = usize::MAX.saturating_sub(
+        measure_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in [
+        sampling_calls.saturating_sub(5),
+        sampling_calls.saturating_sub(2),
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sampling = column_probe.clone();
+        let _ = optimize_sampling(&mut sampling, 4_096, 1, 0, Some(&token));
+    }
+    let mut no_token_sampling = vec![0xff11_2233; 16 * 16];
+    let _ = optimize_sampling(&mut no_token_sampling, 16, 16, 0, None);
+    let _ = transform_tile(
+        &mut cross_probe,
+        32,
+        32,
+        64,
+        Multipliers::default(),
+        Some(&cross_probe_token),
+    );
 }
 
 pub(super) fn prediction_bias(counts: &[u32; 256], zero_weight: u64, mut exponential: u64) -> i64 {

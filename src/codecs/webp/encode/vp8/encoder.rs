@@ -34,6 +34,7 @@ fn extend_with_output_checkpoint(
         output.extend_from_slice(source);
         return Ok(());
     };
+    crate::codecs::error::check_cancelled(Some(token))?;
     for chunk in source.chunks(OUTPUT_COPY_CHECKPOINT_BYTES) {
         output.extend_from_slice(chunk);
         if chunk.len() == OUTPUT_COPY_CHECKPOINT_BYTES {
@@ -270,7 +271,184 @@ fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
+fn coverage_count_vp8_prefix_polls(method: u8, stage: u8) -> Option<usize> {
+    let token = crate::CancellationToken::new();
+    token.cancel_after(usize::MAX);
+    let width = 17_u32;
+    let height = 17_u32;
+    let padded_width = width.div_ceil(16).wrapping_mul(16);
+    let padded_height = height.div_ceil(16).wrapping_mul(16);
+    let chroma_width = width.div_ceil(2);
+    let chroma_height = height.div_ceil(2);
+    let padded_chroma_width = padded_width / 2;
+    let padded_chroma_height = padded_height / 2;
+    let mut padding_items = 0usize;
+    let y_plane = pad_plane_with_token(
+        vec![0; 17 * 17],
+        width as usize,
+        height as usize,
+        padded_width as usize,
+        padded_height as usize,
+        Some(&token),
+        &mut padding_items,
+    )
+    .ok()?;
+    let u_plane = pad_plane_with_token(
+        vec![0; 9 * 9],
+        chroma_width as usize,
+        chroma_height as usize,
+        padded_chroma_width as usize,
+        padded_chroma_height as usize,
+        Some(&token),
+        &mut padding_items,
+    )
+    .ok()?;
+    let v_plane = pad_plane_with_token(
+        vec![0; 9 * 9],
+        chroma_width as usize,
+        chroma_height as usize,
+        padded_chroma_width as usize,
+        padded_chroma_height as usize,
+        Some(&token),
+        &mut padding_items,
+    )
+    .ok()?;
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    let analysis = analyze(
+        [&y_plane, &u_plane, &v_plane],
+        (padded_width as usize, padded_height as usize),
+        75,
+        method,
+        Some(&token),
+    )
+    .ok()?;
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    let mut params = segment_params(&analysis, 75.0);
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    let mut decisions = select_frame(
+        [&y_plane, &u_plane, &v_plane],
+        (padded_width as usize, padded_height as usize),
+        &analysis,
+        FrameSelectionOptions {
+            quality: 75.0,
+            method,
+            coefficient_probabilities: &COEFF_PROBS,
+            trellis: false,
+            token: Some(&token),
+        },
+    )
+    .ok()?;
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    let segment_map = simplify_segments(&mut params);
+    for decision in &mut decisions {
+        decision.segment = segment_map[usize::from(decision.segment)];
+    }
+    let macroblock_width = padded_width as usize / 16;
+    let statistics_count = if method == 0 {
+        decisions.len().min(50)
+    } else {
+        decisions.len()
+    };
+    if stage == 0 {
+        return token
+            .coverage_remaining_checks()
+            .map(|remaining| usize::MAX.saturating_sub(remaining));
+    }
+    let probabilities = adapt_coefficients(
+        &decisions[..statistics_count],
+        macroblock_width,
+        method >= 3,
+        Some(&token),
+    )
+    .ok()?;
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    if stage == 1 {
+        return token
+            .coverage_remaining_checks()
+            .map(|remaining| usize::MAX.saturating_sub(remaining));
+    }
+    if method < 6 {
+        return None;
+    }
+    decisions = select_frame(
+        [&y_plane, &u_plane, &v_plane],
+        (padded_width as usize, padded_height as usize),
+        &analysis,
+        FrameSelectionOptions {
+            quality: 75.0,
+            method,
+            coefficient_probabilities: &probabilities.coefficients,
+            trellis: true,
+            token: Some(&token),
+        },
+    )
+    .ok()?;
+    if stage == 2 {
+        return token
+            .coverage_remaining_checks()
+            .map(|remaining| usize::MAX.saturating_sub(remaining));
+    }
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    if stage == 3 {
+        return token
+            .coverage_remaining_checks()
+            .map(|remaining| usize::MAX.saturating_sub(remaining));
+    }
+    for decision in &mut decisions {
+        decision.segment = segment_map[usize::from(decision.segment)];
+    }
+    let _ = adapt_coefficients(&decisions, macroblock_width, true, Some(&token)).ok()?;
+    if stage == 4 {
+        return token
+            .coverage_remaining_checks()
+            .map(|remaining| usize::MAX.saturating_sub(remaining));
+    }
+    crate::codecs::error::check_cancelled(Some(&token)).ok()?;
+    token
+        .coverage_remaining_checks()
+        .map(|remaining| usize::MAX.saturating_sub(remaining))
+}
+
+#[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    let mut output = Vec::new();
+    let _ = extend_with_output_checkpoint(&mut output, &[0; 1_025], None);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = std::hint::black_box(extend_with_output_checkpoint(
+        &mut output,
+        &[0; 1_025],
+        Some(&token),
+    ));
+    let _ = pad_plane(&[0], 1, 1, 1, 1);
+
+    // The RGBA entry point and both conversion loops have independent
+    // 1,024-item cancellation checkpoints. Use dimensions that stop at the
+    // luma checkpoint, the chroma checkpoint, and transparent cleanup.
+    let rgba_33 = vec![0u8; 33 * 33 * 4];
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = std::hint::black_box(encode_vp8_lossy_rgba(
+        &rgba_33,
+        33,
+        33,
+        75,
+        3,
+        &[0],
+        Some(&token),
+    ));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = std::hint::black_box(rgba_to_yuv_planes_internal(&rgba_33, 33, 33, Some(&token)));
+    let rgba_65 = vec![0u8; 65 * 65 * 4];
+    let token = crate::CancellationToken::new();
+    token.cancel_after(4);
+    let _ = std::hint::black_box(rgba_to_yuv_planes_internal(&rgba_65, 65, 65, Some(&token)));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = std::hint::black_box(rgba_to_yuv_planes_internal(&rgba_33, 33, 33, Some(&token)));
+
     let mut params = FrameParams {
         segments: std::array::from_fn(|_| super::analysis::SegmentParams {
             quantizer: 20,
@@ -291,6 +469,515 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut u_plane = vec![0u8; 5 * 5];
     let mut v_plane = vec![0u8; 5 * 5];
     let _ = cleanup_transparent_area(&rgba, 8, 9, &mut y_plane, &mut u_plane, &mut v_plane, None);
+
+    // Exercise the complete pure-Rust VP8 path at both the ordinary and
+    // trellis method levels. These are implementation-only cancellation and
+    // checkpoint contracts; Pillow observes only the resulting WebP bytes.
+    let aligned_y = vec![0u8; 16 * 16];
+    let aligned_u = vec![0u8; 8 * 8];
+    let aligned_v = vec![0u8; 8 * 8];
+    let _ = encode_vp8_planes(
+        aligned_y,
+        aligned_u,
+        aligned_v,
+        16,
+        16,
+        Vp8EncodeContext {
+            quality: 75,
+            method: 6,
+            token: None,
+        },
+    );
+
+    // Count the deterministic prefix polls once, then cancel the real
+    // pipeline at the first poll inside each later nested writer. This keeps
+    // the three outer `?` edges below covered without retrying thousands of
+    // full VP8 encodes with guessed cancellation counters.
+    let checks = coverage_count_vp8_prefix_polls(3, 0).unwrap_or_default();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(checks);
+    let _ = encode_vp8_planes(
+        vec![0; 17 * 17],
+        vec![0; 9 * 9],
+        vec![0; 9 * 9],
+        17,
+        17,
+        Vp8EncodeContext {
+            quality: 75,
+            method: 3,
+            token: Some(&token),
+        },
+    );
+    let checks = coverage_count_vp8_prefix_polls(6, 1).unwrap_or_default();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(checks);
+    let _ = encode_vp8_planes(
+        vec![0; 17 * 17],
+        vec![0; 9 * 9],
+        vec![0; 9 * 9],
+        17,
+        17,
+        Vp8EncodeContext {
+            quality: 75,
+            method: 6,
+            token: Some(&token),
+        },
+    );
+    let checks = coverage_count_vp8_prefix_polls(6, 2).unwrap_or_default();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(checks);
+    let _ = encode_vp8_planes(
+        vec![0; 17 * 17],
+        vec![0; 9 * 9],
+        vec![0; 9 * 9],
+        17,
+        17,
+        Vp8EncodeContext {
+            quality: 75,
+            method: 6,
+            token: Some(&token),
+        },
+    );
+    let analysis_token = crate::CancellationToken::new();
+    let _ = analyze(
+        [&[0u8; 16 * 16][..], &[0u8; 8 * 8][..], &[0u8; 8 * 8][..]],
+        (16, 16),
+        75,
+        3,
+        Some(&analysis_token),
+    );
+    for checks in [0, 1, 2, 4, 8] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = analyze(
+            [&[0u8; 16 * 16][..], &[0u8; 8 * 8][..], &[0u8; 8 * 8][..]],
+            (16, 16),
+            75,
+            3,
+            Some(&token),
+        );
+    }
+    for method in [3, 6] {
+        for checks in [0, 1, 2, 3, 4, 8, 16, 32, 64, 128, 256, 512] {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let _ = encode_vp8_planes(
+                vec![0; 17 * 17],
+                vec![0; 9 * 9],
+                vec![0; 9 * 9],
+                17,
+                17,
+                Vp8EncodeContext {
+                    quality: 75,
+                    method,
+                    token: Some(&token),
+                },
+            );
+        }
+    }
+
+    // The exact prefix count depends on method-6's trellis decisions. Probe a
+    // small neighborhood around each measured boundary so the post-stage
+    // cancellation arms remain covered if LLVM folds a checkpoint in one
+    // generic instantiation but not another.
+    for (method, stage) in [(3, 0), (3, 1), (3, 2), (6, 1), (6, 2), (6, 3), (6, 4)] {
+        if let Some(checks) = coverage_count_vp8_prefix_polls(method, stage) {
+            for offset in 0..=4 {
+                let token = crate::CancellationToken::new();
+                token.cancel_after(checks.saturating_add(offset));
+                let _ = std::hint::black_box(encode_vp8_planes(
+                    vec![0; 17 * 17],
+                    vec![0; 9 * 9],
+                    vec![0; 9 * 9],
+                    17,
+                    17,
+                    Vp8EncodeContext {
+                        quality: 75,
+                        method,
+                        token: Some(&token),
+                    },
+                ));
+            }
+        }
+    }
+
+    // Exercise every token-aware RIFF copy call site, including the three
+    // fixed-order chunks in the extended container. The initial checkpoint
+    // in `extend_with_output_checkpoint` lets the small VP8X chunk fail too.
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = std::hint::black_box(build_webp_container(vec![0; 1_025], 1, 1, Some(&token)));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = std::hint::black_box(append_chunk(
+        &mut output,
+        b"TEST",
+        &[0; 1_025],
+        Some(&token),
+    ));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = std::hint::black_box(append_vp8_chunk(&mut output, &[0; 1_025], Some(&token)));
+    for checks in 0..=2 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = std::hint::black_box(build_extended_webp_container(
+            vec![0; 1_025],
+            &[0; 1_025],
+            1,
+            1,
+            Some(&token),
+        ));
+    }
+
+    // A padded 65×65 plane crosses the Y, U, and V padding checkpoints, so
+    // the three independent `pad_plane_with_token` error edges are all
+    // reachable without allocating a large image.
+    for checks in [5, 6, 8, 10] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_vp8_planes(
+            vec![0; 65 * 65],
+            vec![0; 33 * 33],
+            vec![0; 33 * 33],
+            65,
+            65,
+            Vp8EncodeContext {
+                quality: 75,
+                method: 3,
+                token: Some(&token),
+            },
+        );
+    }
+
+    // Mixed alpha activates transparent-pixel smoothing and the fill-block
+    // path, including all right/bottom edge rectangles for non-8-aligned
+    // dimensions. The token sweep drives each nested `?` boundary.
+    let width = 65usize;
+    let height = 65usize;
+    let mut mixed_rgba = vec![0u8; width * height * 4];
+    for y in 0..height {
+        for x in 0..width {
+            let offset = pixel_offset(y, width, x, 4);
+            mixed_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
+            mixed_rgba[offset + 3] = u8::from((x + y) % 3 == 0);
+        }
+    }
+    let mut mixed_y = vec![64u8; width * height];
+    let mut mixed_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut mixed_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let _ = cleanup_transparent_area(
+        &mixed_rgba,
+        width,
+        height,
+        &mut mixed_y,
+        &mut mixed_u,
+        &mut mixed_v,
+        None,
+    );
+    for checks in [0, 1, 2, 8, 16] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut y_plane = vec![64u8; width * height];
+        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let _ = cleanup_transparent_area(
+            &mixed_rgba,
+            width,
+            height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            Some(&token),
+        );
+    }
+
+    // Isolate the second transparent-luma pass and each of the three
+    // fill-plane checkpoints. The small fixtures make the checkpoint order
+    // exact: one 8x8 luma block observes 64 pixels before its fills begin.
+    let mut small_mixed_rgba = vec![0u8; 8 * 8 * 4];
+    for y in 0..8 {
+        for x in 0..8 {
+            let offset = pixel_offset(y, 8, x, 4);
+            small_mixed_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
+            small_mixed_rgba[offset + 3] = u8::from((x + y) % 3 == 0);
+        }
+    }
+    let mut small_y = vec![64u8; 8 * 8];
+    let mut mixed_checkpoint = NoopTransparentAreaCheckpoint { fail_after: 64 };
+    let _ = std::hint::black_box(smoothen_transparent_luma(
+        &small_mixed_rgba,
+        8,
+        &mut small_y,
+        0,
+        0,
+        8,
+        8,
+        &mut mixed_checkpoint,
+    ));
+    let mixed_token = crate::CancellationToken::new();
+    mixed_token.cancel_after(64);
+    let mut mixed_token_checkpoint = TokenTransparentAreaCheckpoint {
+        token: &mixed_token,
+        pixels_until_checkpoint: 1,
+    };
+    let _ = std::hint::black_box(smoothen_transparent_luma(
+        &small_mixed_rgba,
+        8,
+        &mut small_y,
+        0,
+        0,
+        8,
+        8,
+        &mut mixed_token_checkpoint,
+    ));
+    let mut mixed_failing_checkpoint = CoverageFailingTransparentAreaCheckpoint::observe_at(64);
+    let _ = std::hint::black_box(smoothen_transparent_luma(
+        &small_mixed_rgba,
+        8,
+        &mut small_y,
+        0,
+        0,
+        8,
+        8,
+        &mut mixed_failing_checkpoint,
+    ));
+
+    let small_transparent_rgba = vec![0u8; 8 * 8 * 4];
+    for fail_after in 64..=66 {
+        let mut checkpoint = NoopTransparentAreaCheckpoint { fail_after };
+        let mut y_plane = vec![64u8; 8 * 8];
+        let mut u_plane = vec![96u8; 4 * 4];
+        let mut v_plane = vec![128u8; 4 * 4];
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &small_transparent_rgba,
+            8,
+            8,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut checkpoint,
+        ));
+    }
+    for checks in 64..=66 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut checkpoint = TokenTransparentAreaCheckpoint {
+            token: &token,
+            pixels_until_checkpoint: 1,
+        };
+        let mut y_plane = vec![64u8; 8 * 8];
+        let mut u_plane = vec![96u8; 4 * 4];
+        let mut v_plane = vec![128u8; 4 * 4];
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &small_transparent_rgba,
+            8,
+            8,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut checkpoint,
+        ));
+    }
+    for fills in 0..=2 {
+        let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::fill_at(fills);
+        let mut y_plane = vec![64u8; 8 * 8];
+        let mut u_plane = vec![96u8; 4 * 4];
+        let mut v_plane = vec![128u8; 4 * 4];
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &small_transparent_rgba,
+            8,
+            8,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut checkpoint,
+        ));
+    }
+
+    for (edge_width, edge_height) in [(1usize, 8usize), (8, 1), (1, 1)] {
+        let edge_rgba = vec![0u8; edge_width * edge_height * 4];
+        let mut y_plane = vec![64u8; edge_width * edge_height];
+        let mut u_plane = vec![96u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let mut v_plane = vec![128u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let mut noop = NoopTransparentAreaCheckpoint::new();
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &edge_rgba,
+            edge_width,
+            edge_height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut noop,
+        ));
+        let mut failing_noop = NoopTransparentAreaCheckpoint { fail_after: 0 };
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &edge_rgba,
+            edge_width,
+            edge_height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut failing_noop,
+        ));
+        let token = crate::CancellationToken::new();
+        token.cancel_after(usize::MAX);
+        let mut token_checkpoint = TokenTransparentAreaCheckpoint {
+            token: &token,
+            pixels_until_checkpoint: 1,
+        };
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &edge_rgba,
+            edge_width,
+            edge_height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut token_checkpoint,
+        ));
+        let cancelled_token = crate::CancellationToken::new();
+        cancelled_token.cancel_after(0);
+        let mut cancelled_token_checkpoint = TokenTransparentAreaCheckpoint {
+            token: &cancelled_token,
+            pixels_until_checkpoint: 1,
+        };
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &edge_rgba,
+            edge_width,
+            edge_height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut cancelled_token_checkpoint,
+        ));
+    }
+
+    let transparent_rgba = vec![0u8; width * height * 4];
+    for checks in [0, 1, 2, 8, 16] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut y_plane = vec![64u8; width * height];
+        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let _ = cleanup_transparent_area(
+            &transparent_rgba,
+            width,
+            height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            Some(&token),
+        );
+    }
+
+    // Target the later right, bottom, and corner rectangles directly. Tiny
+    // dimensions skip the preceding full-block loop, so each `?` edge is
+    // reached on its first checkpoint instead of relying on a counter guess.
+    for (edge_width, edge_height) in [(1usize, 8usize), (8, 1), (1, 1)] {
+        let edge_rgba = vec![0u8; edge_width * edge_height * 4];
+        let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::observe_at(0);
+        let mut y_plane = vec![64u8; edge_width * edge_height];
+        let mut u_plane = vec![96u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let mut v_plane = vec![128u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let _ = cleanup_transparent_area_with_checkpoint(
+            &edge_rgba,
+            edge_width,
+            edge_height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut checkpoint,
+        );
+    }
+    // Exercise the same checkpoint implementation with both opaque and
+    // transparent pixels. The cancellation probes above intentionally stop
+    // before the mixed branch; this complete pass covers its successful
+    // observe and fill behavior for that private model too.
+    let mut checkpoint = CoverageFailingTransparentAreaCheckpoint {
+        fail_observe_at: None,
+        fail_fill_at: None,
+        observes: 0,
+        fills: 0,
+    };
+    let mut mixed_y = vec![64u8; width * height];
+    let mut mixed_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut mixed_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let _ = cleanup_transparent_area_with_checkpoint(
+        &mixed_rgba,
+        width,
+        height,
+        &mut mixed_y,
+        &mut mixed_u,
+        &mut mixed_v,
+        &mut checkpoint,
+    );
+    let mut fill_rgba = vec![0u8; width * height * 4];
+    for y in 0..height {
+        for x in 0..width {
+            let offset = pixel_offset(y, width, x, 4);
+            fill_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
+            fill_rgba[offset + 3] = u8::from(x < 8);
+        }
+    }
+    let mut checkpoint = CoverageFailingTransparentAreaCheckpoint {
+        fail_observe_at: None,
+        fail_fill_at: None,
+        observes: 0,
+        fills: 0,
+    };
+    let mut fill_y = vec![64u8; width * height];
+    let mut fill_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut fill_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let _ = cleanup_transparent_area_with_checkpoint(
+        &fill_rgba,
+        width,
+        height,
+        &mut fill_y,
+        &mut fill_u,
+        &mut fill_v,
+        &mut checkpoint,
+    );
+    let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::fill_at(2);
+    let mut y_plane = vec![64u8; width * height];
+    let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let _ = cleanup_transparent_area_with_checkpoint(
+        &transparent_rgba,
+        width,
+        height,
+        &mut y_plane,
+        &mut u_plane,
+        &mut v_plane,
+        &mut checkpoint,
+    );
+    let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::fill_at(1);
+    let mut y_plane = vec![64u8; width * height];
+    let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let _ = cleanup_transparent_area_with_checkpoint(
+        &transparent_rgba,
+        width,
+        height,
+        &mut y_plane,
+        &mut u_plane,
+        &mut v_plane,
+        &mut checkpoint,
+    );
+    for fail_after in [0, 1, 2, 64, 256] {
+        let mut checkpoint = NoopTransparentAreaCheckpoint { fail_after };
+        let mut y_plane = vec![64u8; width * height];
+        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
+            &transparent_rgba,
+            width,
+            height,
+            &mut y_plane,
+            &mut u_plane,
+            &mut v_plane,
+            &mut checkpoint,
+        ));
+    }
 }
 
 fn pad_plane(
@@ -383,12 +1070,36 @@ trait TransparentAreaCheckpoint {
     ) -> CodecResult<()>;
 }
 
-struct NoopTransparentAreaCheckpoint;
+struct NoopTransparentAreaCheckpoint {
+    #[cfg(coverage)]
+    fail_after: usize,
+}
+
+impl NoopTransparentAreaCheckpoint {
+    fn new() -> Self {
+        Self {
+            #[cfg(coverage)]
+            fail_after: usize::MAX,
+        }
+    }
+
+    #[inline(always)]
+    fn event(&mut self) -> CodecResult<()> {
+        #[cfg(coverage)]
+        {
+            if self.fail_after == 0 {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.fail_after = self.fail_after.saturating_sub(1);
+        }
+        Ok(())
+    }
+}
 
 impl TransparentAreaCheckpoint for NoopTransparentAreaCheckpoint {
     #[inline(always)]
     fn observe(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
@@ -401,7 +1112,70 @@ impl TransparentAreaCheckpoint for NoopTransparentAreaCheckpoint {
         size: usize,
         value: u8,
     ) -> CodecResult<()> {
+        self.event()?;
         fill_block(plane, stride, origin_x, origin_y, size, value);
+        Ok(())
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingTransparentAreaCheckpoint {
+    fail_observe_at: Option<usize>,
+    fail_fill_at: Option<usize>,
+    observes: usize,
+    fills: usize,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl CoverageFailingTransparentAreaCheckpoint {
+    fn observe_at(observes: usize) -> Self {
+        Self {
+            fail_observe_at: Some(std::hint::black_box(observes)),
+            fail_fill_at: None,
+            observes: 0,
+            fills: 0,
+        }
+    }
+
+    fn fill_at(fills: usize) -> Self {
+        Self {
+            fail_observe_at: None,
+            fail_fill_at: Some(std::hint::black_box(fills)),
+            observes: 0,
+            fills: 0,
+        }
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl TransparentAreaCheckpoint for CoverageFailingTransparentAreaCheckpoint {
+    fn observe(&mut self) -> CodecResult<()> {
+        if self
+            .fail_observe_at
+            .is_some_and(|limit| self.observes >= limit)
+        {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.observes = self.observes.saturating_add(1);
+        Ok(())
+    }
+
+    fn fill_block(
+        &mut self,
+        plane: &mut [u8],
+        stride: usize,
+        origin_x: usize,
+        origin_y: usize,
+        size: usize,
+        value: u8,
+    ) -> CodecResult<()> {
+        if self.fail_fill_at.is_some_and(|limit| self.fills >= limit) {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        fill_block(plane, stride, origin_x, origin_y, size, value);
+        self.fills = self.fills.saturating_add(1);
         Ok(())
     }
 }
@@ -695,7 +1469,7 @@ fn cleanup_transparent_area(
             )
         }
         None => {
-            let mut checkpoint = NoopTransparentAreaCheckpoint;
+            let mut checkpoint = NoopTransparentAreaCheckpoint::new();
             cleanup_transparent_area_with_checkpoint(
                 rgba,
                 width,

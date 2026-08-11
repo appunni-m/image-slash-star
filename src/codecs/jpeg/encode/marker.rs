@@ -34,6 +34,16 @@ pub(crate) fn write_jfif_app0(out: &mut Vec<u8>) {
     ]);
 }
 
+/// APP14 Adobe marker emitted by Pillow's CMYK libjpeg compressor.
+pub(crate) fn write_adobe_app14(out: &mut Vec<u8>) {
+    // The transform value is zero because the four components are encoded as
+    // inverted CMYK samples rather than YCCK.
+    out.extend_from_slice(&[
+        0xFF, 0xEE, 0x00, 0x0E, b'A', b'd', b'o', b'b', b'e', 0x00, 0x64, 0x00, 0x00, 0x00, 0x00,
+        0x00,
+    ]);
+}
+
 /// APP1 segment containing caller-provided EXIF bytes.
 pub(crate) fn write_exif_app1(out: &mut Vec<u8>, exif: &[u8]) -> CodecResult<()> {
     let length = u16::try_from(exif.len().saturating_add(2))

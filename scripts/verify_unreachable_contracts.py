@@ -41,6 +41,7 @@ EXPECTED_CATEGORIES = (
     ("structured-diagnostics", "Structured diagnostics"),
     ("feature-target-capability", "Feature and target capability"),
     ("cache-concurrency-api-lifecycle", "Cache/concurrency/API lifecycle"),
+    ("release-package-surface", "Release package surface"),
     ("allocation-stack-coverage-models", "Allocation/stack/coverage models"),
 )
 STATUSES = {"covered", "planned"}

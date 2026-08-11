@@ -1209,6 +1209,7 @@ fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resu
     let mut offset = 2usize;
     let mut sof = None::<(u8, &[u8])>;
     let mut has_exif = false;
+    let mut has_adobe_app14 = false;
     let mut has_restart_interval = false;
     while offset < encoded.len() {
         while encoded.get(offset) == Some(&0xff) {
@@ -1245,6 +1246,9 @@ fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resu
             .ok_or("truncated JPEG segment")?;
         if marker == 0xe1 && payload.starts_with(b"Exif\0\0") {
             has_exif = true;
+        }
+        if marker == 0xee && payload.starts_with(b"Adobe\0") {
+            has_adobe_app14 = true;
         }
         if marker == 0xdd {
             has_restart_interval = true;
@@ -1283,6 +1287,22 @@ fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resu
         };
         if sof_data[7] != expected {
             return Err(format!("JPEG sampling factors do not match {request}"));
+        }
+    }
+    if params.get("color").and_then(Value::as_str) == Some("cmyk") {
+        if sof_data[5] != 4 || sof_data.len() < 18 {
+            return Err("JPEG CMYK output does not have four components".to_owned());
+        }
+        let expected_components = [(b'C', 0x11), (b'M', 0x11), (b'Y', 0x11), (b'K', 0x11)];
+        for (index, (expected_id, expected_sampling)) in expected_components.into_iter().enumerate()
+        {
+            let component = 6 + index * 3;
+            if sof_data[component] != expected_id || sof_data[component + 1] != expected_sampling {
+                return Err("JPEG CMYK component layout does not match Pillow".to_owned());
+            }
+        }
+        if !has_adobe_app14 {
+            return Err("JPEG CMYK output has no Adobe APP14 marker".to_owned());
         }
     }
     if params.get("exif").and_then(Value::as_bool) == Some(false) && has_exif {

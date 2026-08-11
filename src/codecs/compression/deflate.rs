@@ -45,6 +45,7 @@ pub(crate) fn decompress_zlib_prefix_with_status(
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 #[allow(clippy::expect_used)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decompress_zlib_prefix(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 1);
@@ -89,6 +90,57 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let mut repeated = vec![0];
     assert!(extend_repeated(&mut repeated, 0, usize::MAX, usize::MAX).is_err());
+
+    #[cfg(feature = "png")]
+    {
+        // A partial final stored block forces the token-aware writer through
+        // both its non-final and final-block error edges. The checkpoint sweep is bounded and
+        // models a caller cancellation, which Pillow cannot provide.
+        let stored = vec![0u8; 65_536];
+        for checks in 0..=192 {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let _ = compress_zlib_stored_chunked_with_token(
+                &stored,
+                [32_768usize, 32_767].into_iter(),
+                &token,
+            );
+        }
+
+        // Keep the normal `IntoIter` instantiation alive as well as the
+        // cancellation/error paths above. This exercises the bounded
+        // stored-block continuation branch in the generic helper.
+        let token = crate::CancellationToken::new();
+        let _ = compress_zlib_stored_chunked_with_token(
+            &stored,
+            [32_768usize, 32_768].into_iter(),
+            &token,
+        );
+        for checks in 0..=72 {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let _ = compress_zlib_stored_chunked_with_token(
+                &stored,
+                RepeatedInputChunks::new(32_768, 1),
+                &token,
+            );
+        }
+
+        // A short final block has no preceding non-final block, so measure
+        // the exact checkpoint count to reach its writer error edge without
+        // paying for a broad speculative range.
+        let short = vec![0u8; 2_048];
+        let probe = crate::CancellationToken::new();
+        probe.cancel_after(usize::MAX);
+        let _ = compress_zlib_stored_chunked_with_token(&short, [short.len()].into_iter(), &probe);
+        let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+        for checks in 0..=calls {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let _ =
+                compress_zlib_stored_chunked_with_token(&short, [short.len()].into_iter(), &token);
+        }
+    }
 
     assert!(Huffman::from_lengths(&[]).is_err());
     assert!(Huffman::from_lengths(&[0]).is_err());
@@ -361,7 +413,7 @@ pub(crate) fn compress_zlib_png_repeated(
                 RepeatedInputChunks::new(row_len, height),
                 token,
             )?,
-            None => compress_zlib_stored_chunked(data, RepeatedInputChunks::new(row_len, height))?,
+            None => compress_zlib_stored_chunked(data, RepeatedInputChunks::new(row_len, height)),
         },
         1..=9 => super::zlib_ng::compress_repeated(data, row_len, height, level, token)?,
         _ => return Err(parameter("compression level is outside 0..=9")),
@@ -383,7 +435,7 @@ fn compress_zlib_repeated(
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
-fn compress_zlib_stored_chunked<I>(data: &[u8], input_chunks: I) -> CompressionResult<Vec<u8>>
+fn compress_zlib_stored_chunked<I>(data: &[u8], input_chunks: I) -> Vec<u8>
 where
     I: IntoIterator<Item = usize>,
 {
@@ -404,7 +456,7 @@ where
     }
     write_stored_block_bounded(&mut output, &data[pending_start..], true);
     output.extend_from_slice(&adler32(data).to_be_bytes());
-    Ok(output)
+    output
 }
 
 #[cfg(feature = "png")]

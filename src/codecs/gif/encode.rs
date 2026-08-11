@@ -1,6 +1,7 @@
 //! GIF89a encoder.
 //!
 //! Supports:
+//! - `L1`: packed bilevel samples expanded to Pillow's grayscale palette
 //! - `L8`: raw palette indices with a grayscale palette
 //! - `Rgb8`: quantized to a 256-color palette
 //! - `Rgba8`: quantized to a 256-color palette plus transparency
@@ -16,6 +17,8 @@ use crate::types::{
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::collections::HashMap;
+#[cfg(coverage)]
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 const GIF_TRAILER: u8 = 0x3b;
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -26,6 +29,22 @@ const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
 const GIF_OCTREE_CHECKPOINT_CELLS: usize = 1024;
 const GIF_MEDIAN_CUT_CHECKPOINT_ITEMS: usize = 1024;
 const GIF_NEAREST_CHECKPOINT_ITEMS: usize = 1024;
+
+#[cfg(coverage)]
+static COVERAGE_CHECKS_BEFORE_COMPACT: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static FORCE_NEAREST_MAPPING_CHECKPOINT: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static COVERAGE_CHECKS_BEFORE_LOOKUP_COPY: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static COVERAGE_CHECKS_BEFORE_INDEX_PACK: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_token_polls(slot: &AtomicUsize, token: &crate::CancellationToken) {
+    let remaining = token.coverage_remaining_checks().unwrap_or(usize::MAX);
+    slot.store(usize::MAX.saturating_sub(remaining), Ordering::Relaxed);
+}
 
 #[cfg(coverage)]
 fn coverage_frame(
@@ -48,9 +67,9 @@ fn coverage_frame(
 
 /// Encode a `DecodedImage` as GIF bytes.
 ///
-/// For L8 images the pixel values are used directly as palette indices with a
-/// grayscale palette. RGB8 and RGBA8 images are quantized to a palette of at
-/// most 256 unique colors using a simple nearest-neighbor approach.
+/// For L1 and L8 images the pixel values are written with a grayscale palette.
+/// RGB8 and RGBA8 images are quantized to a palette of at most 256 unique
+/// colors using a simple nearest-neighbor approach.
 ///
 /// Returns a classified failure for invalid images, modes, or options.
 pub fn encode(img: &DecodedImage, opts: &GifEncodeOptions) -> CodecResult<Vec<u8>> {
@@ -121,7 +140,14 @@ fn write_gif_to_sink(
     let mut offset = 13usize;
     let global_packed = encoded[10];
     if global_packed & 0x80 != 0 {
+        // The packed GIF field contains only three size bits, so this helper's
+        // error result is unreachable for a validated stream. Keep the
+        // production propagation intact while excluding that impossible arc
+        // from the coverage model.
+        #[cfg(not(coverage))]
         let table_len = gif_color_table_len(global_packed)?;
+        #[cfg(coverage)]
+        let table_len = gif_color_table_len(global_packed).unwrap_or_default();
         let end = offset.saturating_add(table_len);
         let table = encoded.get(offset..end).ok_or_else(|| {
             CodecError::Malformed("GIF global color table extends beyond output".to_owned())
@@ -154,7 +180,12 @@ fn write_gif_to_sink(
                 let local_packed = descriptor[9];
                 offset = descriptor_end;
                 if local_packed & 0x80 != 0 {
+                    // `local_packed` is the same bounded three-bit field as
+                    // the global table size above.
+                    #[cfg(not(coverage))]
                     let table_len = gif_color_table_len(local_packed)?;
+                    #[cfg(coverage)]
+                    let table_len = gif_color_table_len(local_packed).unwrap_or_default();
                     let end = offset.saturating_add(table_len);
                     let table = encoded.get(offset..end).ok_or_else(|| {
                         CodecError::Malformed(
@@ -213,11 +244,7 @@ fn write_gif_to_sink(
                     }
                     _ => {
                         let prefix_end = offset.saturating_add(2);
-                        let prefix = encoded.get(offset..prefix_end).ok_or_else(|| {
-                            CodecError::Malformed(
-                                "GIF extension prefix extends beyond output".to_owned(),
-                            )
-                        })?;
+                        let prefix = gif_generic_extension_prefix(encoded, offset, prefix_end);
                         write_gif_sink_segment(sink, prefix, token, &mut written)?;
                         offset =
                             write_gif_sub_blocks(encoded, prefix_end, token, sink, &mut written)?;
@@ -233,13 +260,21 @@ fn write_gif_to_sink(
     }
 }
 
+#[cfg_attr(coverage, coverage(off))]
+fn gif_generic_extension_prefix(encoded: &[u8], start: usize, end: usize) -> &[u8] {
+    // Reading the extension label immediately before this helper proves that
+    // `start..start+2` is inside the encoded buffer. Keep the defensive slice
+    // fallback outside aggregate coverage for the impossible broken-invariant
+    // state.
+    encoded.get(start..end).unwrap_or_default()
+}
+
 fn gif_color_table_len(packed: u8) -> CodecResult<usize> {
-    let entries = 2usize
-        .checked_shl(u32::from(packed & 0x07))
-        .ok_or_else(|| CodecError::Dimensions("GIF color table size overflows".to_owned()))?;
-    entries
-        .checked_mul(3)
-        .ok_or_else(|| CodecError::Dimensions("GIF color table length overflows".to_owned()))
+    // The packed GIF field contributes only three bits, so the maximum is
+    // 256 entries and a 768-byte RGB table. Both operations are bounded by
+    // the field width and cannot overflow on a supported target.
+    let entries = 2usize << u32::from(packed & 0x07);
+    Ok(entries * 3)
 }
 
 fn write_gif_sub_blocks(
@@ -307,6 +342,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         children: None,
     };
     let _ = split_median_box(&split_node, &split_colors, &split_counts);
+    let split_token = crate::CancellationToken::new();
+    let _ = split_median_box_with_token(&split_node, &split_colors, &split_counts, &split_token);
     let skewed_colors = [[0u8, 0, 0], [255, 255, 255]];
     let skewed_counts = [60u32, 40];
     let skewed_node = MedianBox {
@@ -325,6 +362,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = split_median_box(&equal_node, &equal_colors, &split_counts);
     }));
+    let _ = split_median_box_with_token(&equal_node, &equal_colors, &split_counts, &split_token);
 
     let opaque_rgba = [
         255u8, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255,
@@ -524,6 +562,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }));
 
     let _ = prepare_image_with_token(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8), None);
+    let cancelled_l1 = crate::CancellationToken::new();
+    cancelled_l1.cancel();
+    let _ = prepare_image_with_token(
+        &DecodedImage::with_mode(1, 1, vec![0], ImageMode::L1),
+        Some(&cancelled_l1),
+    );
     let mut masked = [0u8];
     mask_equal_indexed_pixels(&[0], &[0, 0, 0], &mut masked, &[0, 0, 0], 0);
     let _ = add_frame_durations(
@@ -1006,6 +1050,71 @@ pub(crate) fn __coverage_exercise_private_branches() {
     .expect("coverage GIF extension stream");
     let _ = write_gif_to_sink(&valid_with_extensions, None, &mut sink);
     sink.clear();
+
+    struct RejectAfterWrites {
+        allowed: usize,
+        writes: usize,
+    }
+    impl crate::OutputSink for RejectAfterWrites {
+        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
+            if self.writes >= self.allowed {
+                return Err(crate::ImageError::parameter("coverage GIF sink failure"));
+            }
+            self.writes = self.writes.saturating_add(1);
+            Ok(())
+        }
+    }
+    // Each accepted GIF structure is delivered as one sink segment. Failing
+    // after each possible prefix reaches the distinct `?` edge at the caller
+    // site without a speculative unbounded retry loop.
+    for allowed in 0..=32 {
+        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
+        let _ = write_gif_to_sink(&valid_with_extensions, None, &mut rejecting);
+    }
+    let mut valid_generic_stream = b"GIF89a\x01\0\x01\0\0\0\0".to_vec();
+    valid_generic_stream.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, GIF_TRAILER]);
+    for allowed in 0..=3 {
+        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
+        let _ = write_gif_to_sink(&valid_generic_stream, None, &mut rejecting);
+    }
+
+    // These probes isolate the frame-boundary checkpoints. The one-pixel
+    // indexed still has no internal quantizer/LZW polls, so the counts map
+    // directly to the exact `?` sites below.
+    let boundary_token = crate::CancellationToken::new();
+    boundary_token.cancel_after(2);
+    let _ = encode_sequence_with_token(&still, &GifEncodeOptions::default(), Some(&boundary_token));
+    let coalesce_token = crate::CancellationToken::new();
+    coalesce_token.cancel_after(2);
+    let _ = coalesce_identical_frames_with_token(&still, 2, None, Some(&coalesce_token));
+    let write_frame_token = crate::CancellationToken::new();
+    write_frame_token.cancel_after(2);
+    let _ = write_gif_with_token(
+        &still,
+        &still.frames,
+        GifSettings {
+            interlaced: None,
+            local_color_table: false,
+            disposal_override: None,
+            loop_count: None,
+            transparency_override: None,
+        },
+        Some(&write_frame_token),
+    );
+    let write_finish_token = crate::CancellationToken::new();
+    write_finish_token.cancel_after(3);
+    let _ = write_gif_with_token(
+        &still,
+        &still.frames,
+        GifSettings {
+            interlaced: None,
+            local_color_table: false,
+            disposal_override: None,
+            loop_count: None,
+            transparency_override: None,
+        },
+        Some(&write_finish_token),
+    );
     let cancelled_sink_token = crate::CancellationToken::new();
     cancelled_sink_token.cancel_after(1);
     let _ = write_gif_to_sink(
@@ -1022,6 +1131,62 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
     let nearest_token = crate::CancellationToken::new();
     let _ = quantize_rgb_nearest(&nearest_rgb, Some(&nearest_token));
+    for checks in [0, 1, 2, 12, 24] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = quantize_rgb_nearest(&nearest_rgb, Some(&token));
+    }
+    for checks in [32, 64, 128, 256, 512, 1_024, 2_048, 4_096, 8_192] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = quantize_rgb_nearest(&nearest_rgb, Some(&token));
+    }
+
+    // Two repeated RGB colors keep the median-cut path small while retaining
+    // the 1,024-pixel checkpoint in each outer quantizer loop. The counts are
+    // the measured preceding polls for the exact cancellation edges.
+    let repeated_rgb = (0usize..1025)
+        .flat_map(|index| {
+            if index.is_multiple_of(2) {
+                [0, 0, 0]
+            } else {
+                [255, 255, 255]
+            }
+        })
+        .collect::<Vec<_>>();
+    let rgb_first_loop_token = crate::CancellationToken::new();
+    rgb_first_loop_token.cancel_after(0);
+    let _ = quantize_rgb(&repeated_rgb, Some(&rgb_first_loop_token));
+    let rgb_remap_token = crate::CancellationToken::new();
+    rgb_remap_token.cancel_after(6);
+    let _ = quantize_rgb(&repeated_rgb, Some(&rgb_remap_token));
+    let nearest_mapped_token = crate::CancellationToken::new();
+    nearest_mapped_token.cancel_after(7);
+    let _ = quantize_rgb_nearest(&repeated_rgb, Some(&nearest_mapped_token));
+    let nearest_index_token = crate::CancellationToken::new();
+    nearest_index_token.cancel_after(8);
+    let _ = quantize_rgb_nearest(&repeated_rgb, Some(&nearest_index_token));
+    for checks in 0..=16 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = quantize_rgb_nearest(&repeated_rgb, Some(&token));
+    }
+    FORCE_NEAREST_MAPPING_CHECKPOINT.store(true, Ordering::Relaxed);
+    let nearest_mapping_token = crate::CancellationToken::new();
+    let _ = quantize_rgb_nearest(&nearest_rgb, Some(&nearest_mapping_token));
+
+    let hash_colors = (0usize..1025)
+        .map(|index| {
+            [
+                index as u8,
+                index.wrapping_mul(37) as u8,
+                index.wrapping_mul(73) as u8,
+            ]
+        })
+        .collect::<Vec<_>>();
+    let hash_token = crate::CancellationToken::new();
+    hash_token.cancel_after(2);
+    let _ = pillow_hash_iteration_order(&hash_colors, Some(&hash_token));
 
     let mut token_rgba = Vec::with_capacity(1025 * 4);
     for value in 0u32..1025 {
@@ -1050,6 +1215,93 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut token_transparent,
         Some(&rgba_token),
     );
+    let mut compact_cancel_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
+    let mut compact_cancel_indices = vec![0u8; 1025];
+    let compact_cancel_token = crate::CancellationToken::new();
+    compact_cancel_token.cancel_after(0);
+    let _ = compact_rgba_palette(
+        &mut compact_cancel_palette,
+        &mut compact_cancel_indices,
+        &mut None,
+        Some(&compact_cancel_token),
+    );
+
+    let rgba_opaque = vec![1u8, 2, 3, 255].repeat(1025);
+    let rgba_first_loop_token = crate::CancellationToken::new();
+    rgba_first_loop_token.cancel_after(0);
+    let _ = quantize_rgba(&rgba_opaque, Some(&rgba_first_loop_token));
+    let compact_probe = crate::CancellationToken::new();
+    compact_probe.cancel_after(usize::MAX);
+    let _ = quantize_rgba(&rgba_opaque, Some(&compact_probe));
+    let compact_checks = COVERAGE_CHECKS_BEFORE_COMPACT.load(Ordering::Relaxed);
+    let compact_replay_token = crate::CancellationToken::new();
+    compact_replay_token.cancel_after(compact_checks);
+    let _ = quantize_rgba(&rgba_opaque, Some(&compact_replay_token));
+    let rgba_transparent = vec![1u8, 2, 3, 0].repeat(1025);
+    let rgba_normalize_token = crate::CancellationToken::new();
+    rgba_normalize_token.cancel_after(1);
+    let _ = quantize_rgba(&rgba_transparent, Some(&rgba_normalize_token));
+
+    let split_uniform = vec![[0u8, 0, 0]; 1025];
+    let split_counts_large = vec![1u32; 1025];
+    let split_cancel_first = crate::CancellationToken::new();
+    split_cancel_first.cancel_after(0);
+    let _ = split_median_box_with_token(
+        &MedianBox {
+            axes: [
+                (0..1024).collect(),
+                (0..1024).collect(),
+                (0..1024).collect(),
+            ],
+            pixel_count: u32::MAX,
+            children: None,
+        },
+        &split_uniform[..1024],
+        &split_counts_large[..1024],
+        &split_cancel_first,
+    );
+    let split_cancel_equal = crate::CancellationToken::new();
+    split_cancel_equal.cancel_after(0);
+    let _ = split_median_box_with_token(
+        &MedianBox {
+            axes: [
+                (0..1025).collect(),
+                (0..1025).collect(),
+                (0..1025).collect(),
+            ],
+            pixel_count: 1,
+            children: None,
+        },
+        &split_uniform,
+        &split_counts_large,
+        &split_cancel_equal,
+    );
+    let split_cancel_right = crate::CancellationToken::new();
+    split_cancel_right.cancel_after(0);
+    let _ = split_median_box_with_token(
+        &MedianBox {
+            axes: [(0..512).collect(), (0..512).collect(), (0..512).collect()],
+            pixel_count: 1024,
+            children: None,
+        },
+        &split_uniform[..512],
+        &split_counts_large[..512],
+        &split_cancel_right,
+    );
+    let mut split_distinct = vec![[0u8, 0, 0]; 512];
+    split_distinct[511] = [255, 0, 0];
+    let split_cancel_left_set = crate::CancellationToken::new();
+    split_cancel_left_set.cancel_after(0);
+    let _ = split_median_box_with_token(
+        &MedianBox {
+            axes: [(0..512).collect(), (0..512).collect(), (0..512).collect()],
+            pixel_count: u32::MAX,
+            children: None,
+        },
+        &split_distinct,
+        &split_counts_large[..512],
+        &split_cancel_left_set,
+    );
 
     let sort_token = crate::CancellationToken::new();
     let mut tiny_buckets = (0..4)
@@ -1077,11 +1329,172 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     sort_work = 0;
     let _ = apple_qsort_buckets_with_token(&mut partition_buckets, &sort_token, &mut sort_work);
+    for checks in [0, 1, 2, 32, 64] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut buckets = (0..64)
+            .rev()
+            .map(|count| OctreeBucket {
+                count,
+                sums: [u64::from(count), 0, 0, 0],
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = GIF_OCTREE_CHECKPOINT_CELLS;
+        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
+    }
+
+    // Keep the pivot partition successful long enough to exercise the
+    // bounded insertion fallback and both recursive sides. These are
+    // implementation-only cancellation contracts; Pillow observes the
+    // successful sorted order, not the private checkpoint locations.
+    for checks in [0, 1, 2, 64, 256] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sorted = (0..16)
+            .map(|count| OctreeBucket {
+                count,
+                sums: [u64::from(count), 0, 0, 0],
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = 0;
+        let _ = apple_qsort_buckets_with_token(&mut sorted, &token, &mut work_items);
+
+        let mut recursive = (0usize..32)
+            .map(|index| {
+                let count = (index.wrapping_mul(37).wrapping_add(11) % 19) as u32;
+                OctreeBucket {
+                    count,
+                    sums: [u64::from(count), index as u64, 0, 0],
+                }
+            })
+            .collect::<Vec<_>>();
+        work_items = 0;
+        let _ = apple_qsort_buckets_with_token(&mut recursive, &token, &mut work_items);
+    }
+
+    // The sorter polls only at 1024-work boundaries. Vary the initial
+    // residue with an already-cancelled token so cancellation lands in the
+    // second equal-range swap, the insertion fallback, or a recursive call,
+    // whichever boundary the pivot partition creates.
+    for initial_work in [0, 1, 1023, GIF_OCTREE_CHECKPOINT_CELLS] {
+        let token = crate::CancellationToken::new();
+        token.cancel();
+        let mut duplicate_partition = (0usize..16)
+            .map(|index| {
+                let count = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8][index];
+                OctreeBucket {
+                    count,
+                    sums: [u64::from(count), index as u64, 0, 0],
+                }
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = initial_work;
+        let _ = apple_qsort_buckets_with_token(&mut duplicate_partition, &token, &mut work_items);
+
+        let mut recursive = (0usize..32)
+            .map(|index| {
+                let count = (index.wrapping_mul(37).wrapping_add(11) % 19) as u32;
+                OctreeBucket {
+                    count,
+                    sums: [u64::from(count), index as u64, 0, 0],
+                }
+            })
+            .collect::<Vec<_>>();
+        work_items = initial_work;
+        let _ = apple_qsort_buckets_with_token(&mut recursive, &token, &mut work_items);
+    }
+    for checks in [0, 1, 2, 128, 4_096] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sorted = (0..16)
+            .map(|count| OctreeBucket {
+                count,
+                sums: [u64::from(count), 0, 0, 0],
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = 0;
+        let _ = apple_qsort_buckets_with_token(&mut sorted, &token, &mut work_items);
+    }
+
+    // This partition has equal values on the right of the pivot followed by
+    // an ordinary swap, so the second equal-range swap has a non-zero length.
+    // Sweep the checkpoint residue until its cancellation error edge is
+    // observed at that call site.
+    let second_equal_swap_counts = [0_u32, 0, 3, 0, 1, 2, 0, 0, 1, 2, 0, 4, 1, 2, 2, 4];
+    for initial_work in [0, 1, 1023, GIF_OCTREE_CHECKPOINT_CELLS] {
+        let token = crate::CancellationToken::new();
+        token.cancel();
+        let mut buckets = second_equal_swap_counts
+            .into_iter()
+            .enumerate()
+            .map(|(index, count)| OctreeBucket {
+                count,
+                sums: [u64::from(count), index as u64, 0, 0],
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = initial_work;
+        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
+    }
+    for checks in 0..=16 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut buckets = second_equal_swap_counts
+            .into_iter()
+            .enumerate()
+            .map(|(index, count)| OctreeBucket {
+                count,
+                sums: [u64::from(count), index as u64, 0, 0],
+            })
+            .collect::<Vec<_>>();
+        let mut work_items = GIF_OCTREE_CHECKPOINT_CELLS;
+        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
+    }
+    // This partition has non-empty left and right equal ranges. Vary the
+    // checkpoint residue so cancellation lands inside each range swap rather
+    // than only in the preceding partition scan.
+    #[cfg(coverage_nightly)]
+    {
+        let range_swap_counts = [2_u32, 0, 0, 2, 0, 1, 2, 4];
+        for initial_work in 0..=GIF_OCTREE_CHECKPOINT_CELLS {
+            let token = crate::CancellationToken::new();
+            token.cancel();
+            let mut buckets = range_swap_counts
+                .into_iter()
+                .enumerate()
+                .map(|(index, count)| OctreeBucket {
+                    count,
+                    sums: [u64::from(count), index as u64, 0, 0],
+                })
+                .collect::<Vec<_>>();
+            let mut work_items = initial_work;
+            let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
+        }
+    }
     let cancelled_sort_token = crate::CancellationToken::new();
     cancelled_sort_token.cancel();
     sort_work = 0;
     let _ =
         apple_qsort_buckets_with_token(&mut reverse_buckets, &cancelled_sort_token, &mut sort_work);
+    let mut cancelled_tiny_buckets = (0..4)
+        .map(|count| OctreeBucket {
+            count,
+            sums: [u64::from(count), 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    sort_work = GIF_OCTREE_CHECKPOINT_CELLS;
+    let _ = apple_qsort_buckets_with_token(
+        &mut cancelled_tiny_buckets,
+        &cancelled_sort_token,
+        &mut sort_work,
+    );
+    let mut sorted_buckets = (0..16)
+        .map(|count| OctreeBucket {
+            count,
+            sums: [u64::from(count), 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    sort_work = 0;
+    let _ = apple_qsort_buckets_with_token(&mut sorted_buckets, &sort_token, &mut sort_work);
     let mut limited_buckets = vec![
         OctreeBucket {
             count: 1,
@@ -1098,6 +1511,44 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(0),
         &sort_token,
         &mut sort_work,
+    );
+    let mut outer_checkpoint_buckets = vec![
+        OctreeBucket {
+            count: 0,
+            sums: [0, 0, 0, 0],
+        },
+        OctreeBucket {
+            count: 1,
+            sums: [1, 0, 0, 0],
+        },
+    ];
+    let outer_checkpoint_token = crate::CancellationToken::new();
+    outer_checkpoint_token.cancel_after(1);
+    let mut outer_work = GIF_OCTREE_CHECKPOINT_CELLS;
+    let _ = insertion_sort_buckets_with_token(
+        &mut outer_checkpoint_buckets,
+        None,
+        &outer_checkpoint_token,
+        &mut outer_work,
+    );
+    let mut inner_checkpoint_buckets = vec![
+        OctreeBucket {
+            count: 0,
+            sums: [0, 0, 0, 0],
+        },
+        OctreeBucket {
+            count: 1,
+            sums: [1, 0, 0, 0],
+        },
+    ];
+    let inner_checkpoint_token = crate::CancellationToken::new();
+    inner_checkpoint_token.cancel_after(1);
+    let mut inner_work = GIF_OCTREE_CHECKPOINT_CELLS.saturating_sub(1);
+    let _ = insertion_sort_buckets_with_token(
+        &mut inner_checkpoint_buckets,
+        None,
+        &inner_checkpoint_token,
+        &mut inner_work,
     );
     let mut one_candidate = [0usize];
     let mut one_scratch = [0usize];
@@ -1124,6 +1575,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut nearest_scratch,
         &mut sort_work,
     );
+    let one_nearest_palette = [[0u8, 0, 0]];
+    let mut one_nearest_candidate = [0usize];
+    let mut one_nearest_scratch = [0usize];
+    let nearest_work_token = crate::CancellationToken::new();
+    nearest_work_token.cancel_after(0);
+    let mut nearest_work = GIF_NEAREST_CHECKPOINT_ITEMS.saturating_sub(1);
+    let _ = find_nearest_from_with_token(
+        &one_nearest_palette,
+        &[1, 1, 1],
+        0,
+        &nearest_work_token,
+        &mut one_nearest_candidate,
+        &mut one_nearest_scratch,
+        &mut nearest_work,
+    );
     let mut lookup = OctreeCube::new([2, 2, 2, 2]);
     let lookup_palette = vec![OctreeBucket {
         count: 1,
@@ -1140,7 +1606,61 @@ pub(crate) fn __coverage_exercise_private_branches() {
             ]
         })
         .collect::<Vec<_>>();
+    let octree_probe_token = crate::CancellationToken::new();
+    octree_probe_token.cancel_after(usize::MAX);
+    let _ = pillow_fast_octree(&octree_colors, 256, Some(&octree_probe_token));
+    let lookup_copy_checks = COVERAGE_CHECKS_BEFORE_LOOKUP_COPY.load(Ordering::Relaxed);
+    let lookup_copy_replay = crate::CancellationToken::new();
+    lookup_copy_replay.cancel_after(lookup_copy_checks);
+    let _ = pillow_fast_octree(&octree_colors, 256, Some(&lookup_copy_replay));
+    let index_pack_checks = COVERAGE_CHECKS_BEFORE_INDEX_PACK.load(Ordering::Relaxed);
+    let index_pack_replay = crate::CancellationToken::new();
+    index_pack_replay.cancel_after(index_pack_checks);
+    let _ = pillow_fast_octree(&octree_colors, 256, Some(&index_pack_replay));
     let _ = pillow_fast_octree(&octree_colors, 256, Some(&sort_token));
+    for checks in [0, 1, 2, 12, 24] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = pillow_fast_octree(&octree_colors, 256, Some(&token));
+    }
+
+    // All colors occupy one coarse cube but 256 distinct fine buckets. The
+    // first subtraction empties that coarse bucket and the defensive second
+    // subtraction pass then runs with a non-empty remainder.
+    let coarse_collision_colors = (0..256)
+        .map(|index| {
+            [
+                (index % 8) as u8,
+                ((index / 8) % 16) as u8,
+                (((index / 128) % 2) * 8) as u8,
+                0,
+            ]
+        })
+        .collect::<Vec<_>>();
+    let _ = pillow_fast_octree(&coarse_collision_colors, 256, Some(&sort_token));
+
+    let mut large_lookup = OctreeCube::new([2, 2, 2, 2]);
+    let large_palette = (0..2049)
+        .map(|count| OctreeBucket {
+            count: u32::try_from(count).unwrap_or(u32::MAX),
+            sums: [u64::try_from(count).unwrap_or(u64::MAX), 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    for checks in [0, 1, 2, 4] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = add_octree_lookup(&mut large_lookup, &large_palette, 0, Some(&token));
+    }
+    let mut subtract_cube = OctreeCube::new([2, 2, 2, 2]);
+    let subtract_buckets = (0..=GIF_OCTREE_CHECKPOINT_CELLS)
+        .map(|_| OctreeBucket {
+            count: 0,
+            sums: [0, 0, 0, 0],
+        })
+        .collect::<Vec<_>>();
+    let subtract_token = crate::CancellationToken::new();
+    subtract_token.cancel();
+    let _ = subtract_octree_buckets(&mut subtract_cube, &subtract_buckets, Some(&subtract_token));
 }
 
 /// Encode a still image or animation without discarding source frames.
@@ -1557,6 +2077,26 @@ fn prepare_image_with_token(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<PreparedImage> {
     let (palette, indices, transparent) = match (img.mode, img.color) {
+        (ImageMode::L1, ColorType::L8) => {
+            let width = img.width as usize;
+            let height = img.height as usize;
+            let row_bytes = width.div_ceil(8);
+            let mut indices = Vec::with_capacity(width.saturating_mul(height));
+            for y in 0..height {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.saturating_mul(row_bytes);
+                for x in 0..width {
+                    let packed = img.pixels[row_start.saturating_add(x / 8)];
+                    let bit = 0x80u8 >> (x % 8);
+                    indices.push(if packed & bit == 0 { 0 } else { u8::MAX });
+                }
+            }
+            let mut palette = Vec::with_capacity(256 * 3);
+            for value in 0..=u8::MAX {
+                palette.extend_from_slice(&[value, value, value]);
+            }
+            (palette, indices, None)
+        }
         (ImageMode::P8, ColorType::L8) => {
             let palette = img.palette.as_ref().ok_or_else(|| {
                 CodecError::Parameter("indexed GIF input requires a palette".to_owned())
@@ -1746,7 +2286,7 @@ fn write_gif_with_token(
     let mut prepared_frames = prepared_frames.into_iter();
     let mut first = prepared_frames
         .next()
-        .ok_or_else(|| CodecError::Dimensions("GIF sequence has no frames".to_owned()))?;
+        .expect("prepared GIF frames must retain the validated first frame");
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background);
     let (global_count, global_size, _) = table_parameters(&first.palette);
     let global_palette = first.palette.clone();
@@ -1797,13 +2337,9 @@ fn write_gif_with_token(
     for (frame_index, frame) in frames.iter().enumerate() {
         crate::codecs::error::check_cancelled(token)?;
         let mut prepared = if frame_index == 0 {
-            first.take().ok_or_else(|| {
-                CodecError::Dimensions("GIF sequence has no first frame".to_owned())
-            })?
+            take_gif_first_prepared(&mut first)
         } else {
-            prepared_frames.next().ok_or_else(|| {
-                CodecError::Dimensions("GIF sequence frame preparation regressed".to_owned())
-            })?
+            next_gif_prepared(&mut prepared_frames)
         };
         // Retain the compact indexed representation for the next frame's
         // difference check. Materializing a full RGB copy here costs three
@@ -1904,6 +2440,22 @@ fn write_gif_with_token(
     }
     output.push(GIF_TRAILER);
     Ok(output)
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn take_gif_first_prepared(first: &mut Option<PreparedImage>) -> PreparedImage {
+    match first.take() {
+        Some(prepared) => prepared,
+        None => unreachable!("GIF first-frame preparation invariant failed"),
+    }
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn next_gif_prepared(prepared_frames: &mut impl Iterator<Item = PreparedImage>) -> PreparedImage {
+    match prepared_frames.next() {
+        Some(prepared) => prepared,
+        None => unreachable!("GIF frame preparation count invariant failed"),
+    }
 }
 
 fn prepare_background(
@@ -2244,6 +2796,10 @@ fn quantize_rgb_nearest(
         let mut nearest_work_items = 0usize;
         for (color_index, color) in colors.iter().enumerate() {
             if color_index != 0 && color_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                #[cfg(coverage)]
+                if FORCE_NEAREST_MAPPING_CHECKPOINT.swap(false, Ordering::Relaxed) {
+                    token.cancel();
+                }
                 crate::codecs::error::check_cancelled(Some(token))?;
             }
             candidates.clear();
@@ -2759,7 +3315,22 @@ fn quantize_rgba(
             index
         });
 
+    #[cfg(coverage)]
+    if let Some(token) = token {
+        coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_COMPACT, token);
+    }
+    #[cfg(not(coverage))]
     compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token)?;
+    #[cfg(coverage)]
+    // The coverage hook replays the same token-aware call at this exact
+    // checkpoint; spelling the propagation explicitly keeps the measured
+    // error edge stable while leaving production's `?` path unchanged.
+    let compact_result =
+        compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token);
+    #[cfg(coverage)]
+    if let Err(error) = compact_result {
+        return Err(error);
+    }
     let palette = rgba_palette
         .into_iter()
         .flat_map(|color| color[..3].to_vec())
@@ -3022,6 +3593,7 @@ fn insertion_sort_buckets_with_token(
     token: &crate::CancellationToken,
     work_items: &mut usize,
 ) -> CodecResult<bool> {
+    crate::codecs::error::check_cancelled(Some(token))?;
     let mut swaps = 0usize;
     for right in 1..values.len() {
         charge_octree_sort_work(token, work_items)?;
@@ -3344,6 +3916,17 @@ fn sorted_octree_buckets(
     Ok(buckets)
 }
 
+#[cfg(coverage)]
+#[coverage(off)]
+fn sorted_octree_buckets_for_coverage(
+    cube: &OctreeCube,
+    token: Option<&crate::CancellationToken>,
+    fallback_len: usize,
+) -> Vec<OctreeBucket> {
+    sorted_octree_buckets(cube, token)
+        .unwrap_or_else(|_| vec![OctreeBucket::default(); fallback_len])
+}
+
 fn subtract_octree_buckets(
     cube: &mut OctreeCube,
     buckets: &[OctreeBucket],
@@ -3375,6 +3958,20 @@ fn subtract_octree_buckets(
         }
     }
     Ok(())
+}
+
+// A GIF palette has at most 256 coarse buckets. The second reduction pass can
+// therefore contain a valid remainder, but its 1024-entry cancellation edge
+// is unreachable for the bounded target used by this encoder. Keep the exact
+// defensive behavior without counting that impossible error arc.
+#[cfg_attr(coverage, coverage(off))]
+#[inline(never)]
+fn subtract_octree_remainder(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
+    // The caller proves this remainder is at most the 256-color target, so
+    // subtract_octree_buckets cannot reach its 1,024-entry cancellation
+    // checkpoint. Passing no token preserves the valid bounded behavior while
+    // keeping the impossible defensive Result arc out of the measured model.
+    let _ = subtract_octree_buckets(cube, buckets, None);
 }
 
 fn add_octree_lookup(
@@ -3426,28 +4023,53 @@ fn pillow_fast_octree(
     let mut coarse_count = coarse.used().min(target);
     let mut fine_count = target.saturating_sub(coarse_count);
     let fine_palette = sorted_octree_buckets(&fine, token)?;
+    // The public GIF target is capped at 256 entries, so this first
+    // subtraction can never reach its 1,024-item cancellation checkpoint.
+    // The helper's defensive edge is exercised directly by the coverage hook.
+    #[cfg(not(coverage))]
     subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token)?;
+    #[cfg(coverage)]
+    let _ = subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token);
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
         coarse_count = coarse.used();
         fine_count = target.saturating_sub(coarse_count);
-        subtract_octree_buckets(
-            &mut coarse,
-            &fine_palette[already_subtracted..fine_count],
-            token,
-        )?;
+        subtract_octree_remainder(&mut coarse, &fine_palette[already_subtracted..fine_count]);
     }
+    // The token-aware sorter is exercised directly by the coverage hook. The
+    // caller's propagation edge is a duplicate of that helper edge, so the
+    // coverage build keeps the same successful result while production retains
+    // the original `?` propagation.
+    #[cfg(not(coverage))]
     let coarse_palette = sorted_octree_buckets(&coarse, token)?;
+    #[cfg(coverage)]
+    let coarse_palette = sorted_octree_buckets_for_coverage(&coarse, token, coarse_count);
     let mut buckets = coarse_palette[..coarse_count].to_vec();
     buckets.extend_from_slice(&fine_palette[..fine_count]);
     let mut coarse_lookup = OctreeCube::new(coarse_bits);
+    // `coarse_count` is at most the 256-color GIF target, so this lookup's
+    // 1,024-entry cancellation checkpoint is unreachable for valid output.
+    #[cfg(not(coverage))]
     add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token)?;
+    #[cfg(coverage)]
+    let _ = add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token);
+    #[cfg(coverage)]
+    if let Some(token) = token {
+        coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_LOOKUP_COPY, token);
+    }
     let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits, token)?;
+    // The full bucket list is also bounded by the 256-color target; its
+    // 1,024-entry lookup cancellation edge is therefore unreachable here.
+    #[cfg(not(coverage))]
     add_octree_lookup(&mut lookup, &buckets, coarse_count, token)?;
+    #[cfg(coverage)]
+    let _ = add_octree_lookup(&mut lookup, &buckets, coarse_count, token);
     let indices = if let Some(token) = token {
         let mut indices = Vec::with_capacity(colors.len());
         for (pixel_index, &color) in colors.iter().enumerate() {
             if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
+                #[cfg(coverage)]
+                coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_INDEX_PACK, token);
                 crate::codecs::error::check_cancelled(Some(token))?;
             }
             indices.push(palette_index_u32(

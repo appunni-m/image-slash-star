@@ -2,21 +2,22 @@
 
 Status: accepted direction; items below are planned unless marked implemented
 
-Reviewed: 2026-08-10 against production implementation and Rust test/runtime
-revision `371354b0a92d83f4384b7a9129ddc63bcbb326d3`, and benchmark-protocol
-revision `4415a84463103d3d0916821a3ed8637b832442d6`; the claim-ledger fixture
-tuple remains anchored to base revision
-`487348d01389eb8d100b8a668c9921d97634c022`.
-The latest exact-head managed Pillow parity run is
+Reviewed: 2026-08-11 for historical audit context. Current status and work
+order are authoritative in [roadmap-new.md](roadmap-new.md). The current
+claim-ledger base revision for the measured working tree is
+`2447f2f6fa20f15735db699805b15877d6f15611`; the tree is dirty and historical
+parity, feature-matrix, and coverage records below retain their original
+revision-specific scope.
+The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
-this revision. Feature matrix run
+its recorded revision. Feature matrix run
 `2f75bfbc-866c-44de-b118-e00e2cd0936b` terminated with 44 passed and 1 failed;
 the failing `source_alpha_matches_the_container_contract` lane reports the
 pre-existing native AVIF decoder status-5 failure. Nightly Coverage MCP run
 `f37739ea-a252-4112-8234-268e86be2798` likewise terminated 84/85 with that
 failure; its required artifact was `skipped_stale` and no snapshot was
 ingested. That known native failure is not evidence against the current
-FileTypeBox/source-descriptor slice. The accepted Coverage MCP snapshot therefore remains
+FileTypeBox/source-descriptor slice. The historical accepted Coverage MCP snapshot therefore was
 `44cec31e-7345-4673-a9a4-e9f8fa21cc08` from run
 `beda2230-4d77-446c-8ce4-91700552cdc4` at revision
 `1d1b36100925f830408f5d41f0026e71fd220d6e`; it records 55,926/56,803 lines,

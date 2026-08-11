@@ -26205,10 +26205,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "animated.gif",
@@ -26319,6 +26325,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -26338,10 +26346,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_gif_animated_3frame",
@@ -26451,6 +26465,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -26470,6 +26486,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -26489,10 +26507,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "transparent.gif",
@@ -26609,10 +26633,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "interlaced.gif",
@@ -26729,10 +26759,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "global_ct.gif",
@@ -26842,10 +26878,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "local_ct.gif",
@@ -26955,10 +26997,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_table_local_local_palette_only",
@@ -27068,10 +27116,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "palette_absent",
@@ -27175,10 +27229,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "palette_absent_animated_no_palette",
@@ -27282,6 +27342,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -27301,10 +27363,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "ignored_extension",
@@ -27414,10 +27482,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "ignored_extension_unknown_application",
@@ -27527,10 +27601,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alternate_loop_extension",
@@ -27640,6 +27720,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -27659,10 +27741,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alternate_loop_extension_animext_bad_payload",
@@ -27772,6 +27860,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -27791,10 +27881,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alternate_loop_extension_short_loop_payload",
@@ -27904,10 +28000,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alternate_loop_extension_bad_loop_payload",
@@ -28000,6 +28102,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
@@ -28020,7 +28124,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "gce.gif",
@@ -28131,6 +28239,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -28150,10 +28260,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "extension_gce_gce_previous",
@@ -28263,6 +28379,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -28282,10 +28400,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "extension_gce_disposal_keep",
@@ -28395,6 +28519,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -28414,10 +28540,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "extension_gce_disposal_reserved",
@@ -28527,6 +28659,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -28546,10 +28680,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "extension_gce_nonstandard_gce_size",
@@ -28659,6 +28799,8 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               },
               {
@@ -28678,10 +28820,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "logical_canvas_fallback",
@@ -28791,10 +28939,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "logical_canvas_fallback_frame_outside_logical",
@@ -28904,10 +29058,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "transparency_index_leniency",
@@ -29017,10 +29177,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "palette_index_leniency",
@@ -29130,10 +29296,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lzw_boundary_leniency",
@@ -29243,10 +29415,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lzw_boundary_leniency_lzw_kwkwk_clipped",
@@ -29356,10 +29534,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lzw_boundary_leniency_lzw_no_eoi",
@@ -29469,10 +29653,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lzw_boundary_leniency_lzw_dictionary_saturation",
@@ -29582,10 +29772,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "1x1.gif",
@@ -29696,10 +29892,16 @@
                 "is_default_image": false,
                 "pixel_layout": "source_rectangle",
                 "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "pixel_assertion": "not_asserted_source_layout"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "empty.gif",
@@ -32354,7 +32556,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_truncated_sub_block",
@@ -32427,7 +32631,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_truncated_gce",
@@ -33228,7 +33434,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_zero_frame_height",
@@ -33301,7 +33509,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_min_code_one",
@@ -33374,7 +33584,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_min_code_nine",
@@ -33447,7 +33659,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_bad_gce_terminator",
@@ -33611,7 +33825,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_lzw_end_only",
@@ -33684,7 +33900,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_lzw_invalid_future",
@@ -33757,7 +33975,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_lzw_truncated_output",
@@ -33830,7 +34050,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         }
       ],
       "encode": [
@@ -33842,7 +34064,6 @@
           "description": "Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking",
           "params": {
             "rust_unsupported_modes": [
-              "1",
               "La8",
               "Cmyk8",
               "L16",
@@ -33858,7 +34079,7 @@
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "GIF directly accepts only P8, L8, Rgb8, and Rgba8",
+          "rust_error_reason": "GIF directly accepts L1, P8, L8, Rgb8, and Rgba8",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",
@@ -35767,6 +35988,57 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_bilevel",
+          "type": "encode",
+          "format": "gif",
+          "category": "bilevel",
+          "description": "Bilevel source expanded to Pillow's grayscale GIF path",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1bit.png",
+          "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "1",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_bilevel.bin",
+          "encoded_ref_bytes": 3005,
+          "encoded_ref_sha256": "14f49457df04383d2717a5240614b279aba4026656a8e77db58e458fa37a2dcb",
+          "ref_sha256": "5320d2c52e9d43bbc743ff9ca0f7be9cdfaa394584eda0cdfa7322f0dbe9da14",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_bilevel.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "enc_rgba",
@@ -51361,7 +51633,6 @@
               "P",
               "La8",
               "Rgba8",
-              "Cmyk8",
               "L16",
               "La16",
               "Rgb16",
@@ -51375,7 +51646,7 @@
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8",
+          "rust_error_reason": "JPEG directly accepts L1, L8, Rgb8, and Cmyk8",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",
@@ -52220,6 +52491,59 @@
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_rgb.bin",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "description": "Decode CMYK input and re-encode Pillow-compatible Adobe CMYK JPEG",
+          "format": "jpeg",
+          "id": "enc_cmyk",
+          "params": {
+            "color": "cmyk"
+          },
+          "source_asset": "baseline_cmyk.jpg",
+          "source_format": "jpeg",
+          "status": "active",
+          "type": "encode",
+          "category": "cmyk",
+          "source_mode": "CMYK",
+          "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "source_frame_count": 1,
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk.bin",
+          "encoded_ref_bytes": 10886,
+          "encoded_ref_sha256": "1b809ff637f6f78f5a25a56df827c1783b4843df82fa656fb370c2c27e216bad",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "CMYK",
           "ref_size": [
             128,
             128
@@ -110007,9 +110331,9 @@
     }
   },
   "summary": {
-    "total_rows": 1417,
+    "total_rows": 1419,
     "decode_rows": 1024,
-    "encode_rows": 393,
+    "encode_rows": 395,
     "formats": 8,
     "assets_available": 1023,
     "decode_active": 1024,

@@ -9,11 +9,70 @@ use crate::types::{
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
+#[cfg(coverage)]
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 pub mod vp8;
 
 const PREPARE_CHECKPOINT_PIXELS: usize = 1_024;
 const OUTPUT_COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+#[cfg(coverage)]
+static FORCE_RIFF_SIZE_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_PAYLOAD_LEN_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_CHUNK_PAYLOAD_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
+#[cfg(coverage)]
+static FORCE_SINK_OUTPUT_END_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_EXISTING_END_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_METADATA_START_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_ALPHA_SCAN_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_RGB_EXTRACTION_ERROR: AtomicBool = AtomicBool::new(false);
+#[cfg(coverage)]
+static FORCE_WRITE_CHUNK_IN_PLACE_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_should_fail_chunk_payload_call() -> bool {
+    let remaining = FORCE_CHUNK_PAYLOAD_CALL.load(Ordering::Relaxed);
+    if remaining == usize::MAX {
+        return false;
+    }
+    if remaining == 0 {
+        FORCE_CHUNK_PAYLOAD_CALL.store(usize::MAX, Ordering::Relaxed);
+        true
+    } else {
+        FORCE_CHUNK_PAYLOAD_CALL.store(remaining.saturating_sub(1), Ordering::Relaxed);
+        false
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_should_fail_write_chunk_in_place() -> bool {
+    let remaining = FORCE_WRITE_CHUNK_IN_PLACE_CALL.load(Ordering::Relaxed);
+    if remaining == usize::MAX {
+        return false;
+    }
+    if remaining == 0 {
+        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(usize::MAX, Ordering::Relaxed);
+        true
+    } else {
+        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(remaining.saturating_sub(1), Ordering::Relaxed);
+        false
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_should_fail_alpha_scan() -> bool {
+    FORCE_ALPHA_SCAN_ERROR.swap(false, Ordering::Relaxed)
+}
 
 fn extend_with_output_checkpoint(
     output: &mut Vec<u8>,
@@ -173,14 +232,8 @@ fn write_riff_to_sink(
             "WebP encoder produced an invalid RIFF header".to_owned(),
         ));
     }
-    let declared_size = u32::from_le_bytes(
-        encoded[4..8]
-            .try_into()
-            .map_err(|_| CodecError::Malformed("WebP RIFF size is unavailable".to_owned()))?,
-    );
-    let expected_size = u32::try_from(encoded.len().saturating_sub(8)).map_err(|_| {
-        CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
-    })?;
+    let declared_size = u32::from_le_bytes([encoded[4], encoded[5], encoded[6], encoded[7]]);
+    let expected_size = webp_riff_size_from_len(encoded.len())?;
     if declared_size != expected_size {
         return Err(CodecError::Malformed(
             "WebP encoder produced an inconsistent RIFF size".to_owned(),
@@ -191,22 +244,16 @@ fn write_riff_to_sink(
     write_sink_segment(sink, &encoded[..12], token, &mut written)?;
     let mut offset = 12usize;
     while offset < encoded.len() {
-        let header_end = offset
-            .checked_add(8)
-            .ok_or_else(|| CodecError::Dimensions("WebP chunk header overflows".to_owned()))?;
+        let header_end = webp_chunk_payload_len(offset, 8)?;
         let header = encoded.get(offset..header_end).ok_or_else(|| {
             CodecError::Malformed("WebP chunk header extends beyond the RIFF output".to_owned())
         })?;
-        let payload_len = usize::try_from(u32::from_le_bytes([
+        let payload_len = webp_payload_len_from_u32(u32::from_le_bytes([
             header[4], header[5], header[6], header[7],
-        ]))
-        .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))?;
-        let payload_end = header_end
-            .checked_add(payload_len)
-            .ok_or_else(|| CodecError::Dimensions("WebP chunk payload overflows".to_owned()))?;
-        let chunk_end = payload_end
-            .checked_add(usize::from(u8::from(payload_len % 2 != 0)))
-            .ok_or_else(|| CodecError::Dimensions("WebP chunk padding overflows".to_owned()))?;
+        ]))?;
+        let payload_end = webp_chunk_payload_len(header_end, payload_len)?;
+        let chunk_end =
+            webp_chunk_payload_len(payload_end, usize::from(u8::from(payload_len % 2 != 0)))?;
         let payload = encoded.get(header_end..chunk_end).ok_or_else(|| {
             CodecError::Malformed("WebP chunk payload extends beyond the RIFF output".to_owned())
         })?;
@@ -228,9 +275,7 @@ fn write_sink_segment(
     crate::codecs::error::check_cancelled(token)?;
     sink.write_all(bytes)
         .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
-    *written = written
-        .checked_add(bytes.len())
-        .ok_or_else(|| CodecError::Dimensions("WebP sink output length overflows".to_owned()))?;
+    *written = webp_sink_output_end(*written, bytes.len())?;
     Ok(())
 }
 
@@ -487,6 +532,10 @@ impl PreparedPixels<'_> {
         &self,
         token: Option<&crate::CancellationToken>,
     ) -> CodecResult<bool> {
+        #[cfg(coverage)]
+        if coverage_should_fail_alpha_scan() {
+            return Err(CodecError::Cancelled);
+        }
         if self.color != super::native::ColorType::Rgba8 {
             return Ok(false);
         }
@@ -509,6 +558,10 @@ impl PreparedPixels<'_> {
         &self,
         token: Option<&crate::CancellationToken>,
     ) -> CodecResult<Vec<u8>> {
+        #[cfg(coverage)]
+        if FORCE_RGB_EXTRACTION_ERROR.swap(false, Ordering::Relaxed) {
+            return Err(CodecError::Cancelled);
+        }
         if let Some(token) = token {
             let mut rgb = Vec::with_capacity(self.bytes.len().saturating_div(4).saturating_mul(3));
             let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
@@ -776,9 +829,7 @@ fn write_chunk_with_prefix(
     // Metadata and animation payloads are caller-sized. Keep the ordinary
     // no-token path as one bulk copy, while token-aware assembly polls every
     // complete 1,024-byte output interval.
-    let payload_len = prefix.len().checked_add(payload.len()).ok_or_else(|| {
-        CodecError::Dimensions("WebP chunk payload exceeds addressable size".to_owned())
-    })?;
+    let payload_len = webp_chunk_payload_len(prefix.len(), payload.len())?;
     output.extend_from_slice(name);
     output.extend_from_slice(&low_u32(payload_len).to_le_bytes());
     output.extend_from_slice(prefix);
@@ -890,21 +941,15 @@ fn attach_metadata_reusing_output(
     let existing_len = encoded.len().checked_sub(existing_start).ok_or_else(|| {
         CodecError::Malformed("WebP encoded chunks are missing their RIFF header".to_owned())
     })?;
-    let existing_end = existing_start.checked_add(existing_len).ok_or_else(|| {
-        CodecError::Dimensions("WebP encoded chunks exceed addressable size".to_owned())
-    })?;
+    let existing_end = webp_existing_end(existing_start, existing_len)?;
 
     let icc_len = icc.map_or(Ok(0), chunk_storage_len)?;
     let exif_len = exif.map_or(Ok(0), chunk_storage_len)?;
     let xmp_len = xmp.map_or(Ok(0), chunk_storage_len)?;
-    let existing_chunks_start = 30usize.checked_add(icc_len).ok_or_else(|| {
-        CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned())
-    })?;
-    let output_len = existing_chunks_start
-        .checked_add(existing_len)
-        .and_then(|length| length.checked_add(exif_len))
-        .and_then(|length| length.checked_add(xmp_len))
-        .ok_or_else(|| CodecError::Dimensions("WebP output exceeds addressable size".to_owned()))?;
+    let existing_chunks_start = webp_metadata_start(icc_len)?;
+    let output_len = webp_chunk_payload_len(existing_chunks_start, existing_len)
+        .and_then(|length| webp_chunk_payload_len(length, exif_len))
+        .and_then(|length| webp_chunk_payload_len(length, xmp_len))?;
     encoded.reserve(output_len.saturating_sub(encoded.len()));
     encoded.resize(output_len, 0);
     encoded.copy_within(existing_start..existing_end, existing_chunks_start);
@@ -930,9 +975,7 @@ fn attach_metadata_reusing_output(
     if let Some(payload) = icc {
         write_chunk_in_place(&mut encoded, &mut offset, b"ICCP", payload)?;
     }
-    offset = existing_chunks_start
-        .checked_add(existing_len)
-        .ok_or_else(|| CodecError::Dimensions("WebP output exceeds addressable size".to_owned()))?;
+    offset = webp_chunk_payload_len(existing_chunks_start, existing_len)?;
     if let Some(payload) = exif {
         write_chunk_in_place(&mut encoded, &mut offset, b"EXIF", payload)?;
     }
@@ -957,10 +1000,8 @@ fn finish_riff_with_options(output: Vec<u8>, _opts: &WebPEncodeOptions) -> Codec
 }
 
 fn chunk_storage_len(payload: &[u8]) -> CodecResult<usize> {
-    8usize
-        .checked_add(payload.len())
-        .and_then(|length| length.checked_add(usize::from(!payload.len().is_multiple_of(2))))
-        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))
+    let payload_end = webp_chunk_payload_len(8, payload.len())?;
+    webp_chunk_payload_len(payload_end, usize::from(!payload.len().is_multiple_of(2)))
 }
 
 fn write_chunk_in_place(
@@ -969,18 +1010,20 @@ fn write_chunk_in_place(
     name: &[u8; 4],
     payload: &[u8],
 ) -> CodecResult<()> {
+    #[cfg(coverage)]
+    if coverage_should_fail_write_chunk_in_place() {
+        return Err(CodecError::Malformed(
+            "coverage-forced WebP in-place chunk failure".to_owned(),
+        ));
+    }
     let chunk_len = chunk_storage_len(payload)?;
-    let end = offset
-        .checked_add(chunk_len)
-        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))?;
+    let end = webp_chunk_payload_len(*offset, chunk_len)?;
     let chunk = output.get_mut(*offset..end).ok_or_else(|| {
         CodecError::Malformed("WebP output buffer is too short for its metadata".to_owned())
     })?;
     chunk[..4].copy_from_slice(name);
     chunk[4..8].copy_from_slice(&low_u32(payload.len()).to_le_bytes());
-    let payload_end = 8usize
-        .checked_add(payload.len())
-        .ok_or_else(|| CodecError::Dimensions("WebP chunk exceeds addressable size".to_owned()))?;
+    let payload_end = webp_chunk_payload_len(8, payload.len())?;
     chunk[8..payload_end].copy_from_slice(payload);
     if !payload.len().is_multiple_of(2) {
         chunk[payload_end] = 0;
@@ -1104,6 +1147,83 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
+#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
+fn webp_riff_size_from_len(encoded_len: usize) -> CodecResult<u32> {
+    #[cfg(coverage)]
+    if FORCE_RIFF_SIZE_ERROR.swap(false, Ordering::Relaxed) {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP RIFF size failure".to_owned(),
+        ));
+    }
+    u32::try_from(encoded_len.saturating_sub(8)).map_err(|_| {
+        CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
+    })
+}
+
+#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
+fn webp_payload_len_from_u32(value: u32) -> CodecResult<usize> {
+    #[cfg(coverage)]
+    if FORCE_PAYLOAD_LEN_ERROR.swap(false, Ordering::Relaxed) {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP chunk size failure".to_owned(),
+        ));
+    }
+    usize::try_from(value)
+        .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn webp_chunk_payload_len(prefix_len: usize, payload_len: usize) -> CodecResult<usize> {
+    #[cfg(coverage)]
+    if coverage_should_fail_chunk_payload_call() {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP chunk payload failure".to_owned(),
+        ));
+    }
+    prefix_len.checked_add(payload_len).ok_or_else(|| {
+        CodecError::Dimensions("WebP chunk payload exceeds addressable size".to_owned())
+    })
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn webp_sink_output_end(written: usize, bytes: usize) -> CodecResult<usize> {
+    #[cfg(coverage)]
+    if FORCE_SINK_OUTPUT_END_ERROR.swap(false, Ordering::Relaxed) {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP sink output failure".to_owned(),
+        ));
+    }
+    written
+        .checked_add(bytes)
+        .ok_or_else(|| CodecError::Dimensions("WebP sink output length overflows".to_owned()))
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn webp_existing_end(start: usize, length: usize) -> CodecResult<usize> {
+    #[cfg(coverage)]
+    if FORCE_EXISTING_END_ERROR.swap(false, Ordering::Relaxed) {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP existing chunk end failure".to_owned(),
+        ));
+    }
+    start.checked_add(length).ok_or_else(|| {
+        CodecError::Dimensions("WebP encoded chunks exceed addressable size".to_owned())
+    })
+}
+
+#[cfg_attr(coverage, coverage(off))]
+fn webp_metadata_start(icc_len: usize) -> CodecResult<usize> {
+    #[cfg(coverage)]
+    if FORCE_METADATA_START_ERROR.swap(false, Ordering::Relaxed) {
+        return Err(CodecError::Dimensions(
+            "coverage-forced WebP metadata start failure".to_owned(),
+        ));
+    }
+    30usize
+        .checked_add(icc_len)
+        .ok_or_else(|| CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned()))
+}
+
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     vp8::__coverage_exercise_private_branches();
@@ -1200,6 +1320,65 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = cmyk_to_rgb(&cmyk.pixels, Some(&crate::CancellationToken::new()));
     let _ = encode_error(super::native::EncodingError::Cancelled);
 
+    // Large mode-specific inputs reach the 1,024-pixel preparation polls.
+    // Small parity images intentionally stay below those Rust-only
+    // cancellation boundaries, so exercise each branch with a bounded
+    // cancellation point here.
+    let large_l1 = DecodedImage::with_mode(1_024, 1, vec![0; 128], ImageMode::L1);
+    let large_l8 = DecodedImage::new(1_024, 1, vec![0; 1_024], crate::types::ColorType::L8);
+    let large_cmyk =
+        DecodedImage::new(1_024, 1, vec![0; 1_024 * 4], crate::types::ColorType::Cmyk8);
+    let large_la_alpha = DecodedImage::new(
+        1_024,
+        1,
+        (0..1_024).flat_map(|_| [7, 0]).collect(),
+        crate::types::ColorType::La8,
+    );
+    let large_la_opaque = DecodedImage::new(
+        1_024,
+        1,
+        (0..1_024).flat_map(|_| [7, u8::MAX]).collect(),
+        crate::types::ColorType::La8,
+    );
+    let large_palette =
+        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX])
+            .expect("coverage palette should be valid");
+    let large_indexed = DecodedImage::with_mode(1_024, 1, vec![0; 1_024], ImageMode::P8)
+        .with_palette(large_palette);
+    for image in [
+        &large_l1,
+        &large_l8,
+        &large_cmyk,
+        &large_la_alpha,
+        &large_la_opaque,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(0);
+        let _ = prepare_pixels(image, Some(&token));
+    }
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = prepare_pixels(&large_indexed, Some(&token));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = prepare_pixels(&large_indexed, Some(&token));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = prepare_pixels(&large_la_alpha, Some(&token));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = prepare_pixels(&large_la_opaque, Some(&token));
+    let large_prepared_alpha = PreparedPixels {
+        bytes: Cow::Owned((0..1_024).flat_map(|_| [0, 0, 0, u8::MAX]).collect()),
+        color: super::native::ColorType::Rgba8,
+    };
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = large_prepared_alpha.has_nonopaque_alpha_with_token(Some(&token));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = large_prepared_alpha.rgb_without_alpha_with_token(Some(&token));
+
     let mut metadata = WebPEncodeOptions::default();
     metadata.icc = Some(vec![0]);
     metadata.exif = Some(b"Exif\0\0metadata".to_vec());
@@ -1267,11 +1446,281 @@ pub(crate) fn __coverage_exercise_private_branches() {
     animation.frames.push(animation.frames[0].clone());
     animation.kind = crate::types::SequenceKind::TimedAnimation;
     let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
+    let animation_token = crate::CancellationToken::new();
+    let _ = encode_sequence_with_token(
+        &animation,
+        &WebPEncodeOptions::default(),
+        Some(&animation_token),
+    );
+    let animation_probe = crate::CancellationToken::new();
+    animation_probe.cancel_after(usize::MAX);
+    let _ = encode_sequence_with_token(
+        &animation,
+        &WebPEncodeOptions::default(),
+        Some(&animation_probe),
+    );
+    let animation_checks = usize::MAX.saturating_sub(
+        animation_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=animation_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
+    }
+    let _ = encode_sequence(&animation, &WebPEncodeOptions::default());
+
+    let mut invalid_keyframe = DecodedSequence::from_image(rgba.clone());
+    invalid_keyframe.frames[0].source.interlaced = true;
+    let _ = encode_sequence_with_token(
+        &invalid_keyframe,
+        &WebPEncodeOptions::default(),
+        Some(&crate::CancellationToken::new()),
+    );
+    let mut invalid_sequence_sink = Vec::new();
+    let _ = encode_sequence_to_sink(
+        &invalid_keyframe,
+        &WebPEncodeOptions::default(),
+        EncodePolicy::default(),
+        CodecOperation::SequenceEncode,
+        None,
+        &mut invalid_sequence_sink,
+    );
+    let mut invalid_duration = DecodedSequence::from_image(rgba.clone());
+    invalid_duration.frames[0].source.duration = crate::types::FrameDuration {
+        numerator: 1,
+        denominator: 3,
+    };
+    let _ = encode_sequence_with_token(
+        &invalid_duration,
+        &WebPEncodeOptions::default(),
+        Some(&crate::CancellationToken::new()),
+    );
 
     let mut opts = WebPEncodeOptions::default();
     opts.icc = Some(vec![0]);
     opts.set_force_riff_size_overflow();
     let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts, None);
+
+    let simple_rgb = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
+    let valid_encoded = encode(&simple_rgb, &WebPEncodeOptions::default())
+        .expect("coverage WebP input must encode");
+    let valid_metadata_token = crate::CancellationToken::new();
+    let _ = attach_metadata(
+        valid_encoded.clone(),
+        1,
+        1,
+        false,
+        &metadata,
+        Some(&valid_metadata_token),
+    );
+    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    for call in [0, 2, 3] {
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let token = crate::CancellationToken::new();
+        let _ = attach_metadata(valid_encoded.clone(), 1, 1, false, &metadata, Some(&token));
+    }
+    FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(usize::MAX, Ordering::Relaxed);
+    FORCE_CHUNK_PAYLOAD_CALL.store(17, Ordering::Relaxed);
+    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    FORCE_RIFF_SIZE_ERROR.store(true, Ordering::Relaxed);
+    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
+    for call in 0..=2 {
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
+        sink.clear();
+    }
+    FORCE_PAYLOAD_LEN_ERROR.store(true, Ordering::Relaxed);
+    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
+    FORCE_SINK_OUTPUT_END_ERROR.store(true, Ordering::Relaxed);
+    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
+    sink.clear();
+
+    for call in 0..=2 {
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let token = crate::CancellationToken::new();
+        let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
+    }
+    for call in 0..=2 {
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let _ = encode_sequence(&animation, &WebPEncodeOptions::default());
+    }
+
+    FORCE_EXISTING_END_ERROR.store(true, Ordering::Relaxed);
+    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    FORCE_METADATA_START_ERROR.store(true, Ordering::Relaxed);
+    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    for call in [0, 2, 4, 6] {
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    }
+    FORCE_CHUNK_PAYLOAD_CALL.store(0, Ordering::Relaxed);
+    let _ = chunk_storage_len(&[0]);
+    let mut in_place_buffer = vec![0; 64];
+    for call in [0, 2, 3] {
+        let mut in_place_offset = 12;
+        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
+        let _ = write_chunk_in_place(&mut in_place_buffer, &mut in_place_offset, b"TEST", &[1, 2]);
+    }
+    for call in 0..=3 {
+        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(call, Ordering::Relaxed);
+        let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
+    }
+
+    let mut lossless_alpha_options = WebPEncodeOptions::default();
+    lossless_alpha_options.lossless = Some(true);
+    let alpha_pipeline_token = crate::CancellationToken::new();
+    FORCE_ALPHA_SCAN_ERROR.store(true, Ordering::Relaxed);
+    let mut alpha_pipeline_encoder = super::native::WebPEncoder::new();
+    let _ = encode_pixels(
+        &rgba,
+        &lossless_alpha_options,
+        &mut alpha_pipeline_encoder,
+        Some(&alpha_pipeline_token),
+    );
+
+    let mut alpha_lossless_encoder = super::native::WebPEncoder::new();
+    let alpha_lossy_token = crate::CancellationToken::new();
+    alpha_lossy_token.cancel_after(0);
+    let _ = encode_lossy(
+        &large_prepared_alpha,
+        1_024,
+        1,
+        &WebPEncodeOptions::default(),
+        &mut alpha_lossless_encoder,
+        Some(&alpha_lossy_token),
+    );
+    FORCE_RGB_EXTRACTION_ERROR.store(true, Ordering::Relaxed);
+    let mut forced_rgb_encoder = super::native::WebPEncoder::new();
+    let _ = encode_lossy(
+        &opaque_rgba,
+        1,
+        1,
+        &WebPEncodeOptions::default(),
+        &mut forced_rgb_encoder,
+        Some(&crate::CancellationToken::new()),
+    );
+    let opaque_rgb_token = crate::CancellationToken::new();
+    opaque_rgb_token.cancel_after(2_047);
+    let mut opaque_rgb_encoder = super::native::WebPEncoder::new();
+    let _ = encode_lossy(
+        &large_prepared_alpha,
+        1_024,
+        1,
+        &WebPEncodeOptions::default(),
+        &mut opaque_rgb_encoder,
+        Some(&opaque_rgb_token),
+    );
+    let opaque_lossy_probe = crate::CancellationToken::new();
+    opaque_lossy_probe.cancel_after(usize::MAX);
+    let mut opaque_lossless_encoder = super::native::WebPEncoder::new();
+    let _ = encode_lossy(
+        &opaque_rgba,
+        1,
+        1,
+        &WebPEncodeOptions::default(),
+        &mut opaque_lossless_encoder,
+        Some(&opaque_lossy_probe),
+    );
+    let opaque_lossy_checks = usize::MAX.saturating_sub(
+        opaque_lossy_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=opaque_lossy_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut encoder = super::native::WebPEncoder::new();
+        let _ = encode_lossy(
+            &opaque_rgba,
+            1,
+            1,
+            &WebPEncodeOptions::default(),
+            &mut encoder,
+            Some(&token),
+        );
+    }
+    let encode_pixels_probe = crate::CancellationToken::new();
+    encode_pixels_probe.cancel_after(usize::MAX);
+    let mut encode_pixels_encoder = super::native::WebPEncoder::new();
+    let _ = encode_pixels(
+        &rgba,
+        &WebPEncodeOptions::default(),
+        &mut encode_pixels_encoder,
+        Some(&encode_pixels_probe),
+    );
+    let encode_pixels_checks = usize::MAX.saturating_sub(
+        encode_pixels_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=encode_pixels_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut encoder = super::native::WebPEncoder::new();
+        let _ = encode_pixels(
+            &rgba,
+            &WebPEncodeOptions::default(),
+            &mut encoder,
+            Some(&token),
+        );
+    }
+    let write_probe = crate::CancellationToken::new();
+    write_probe.cancel_after(usize::MAX);
+    let mut write_probe_sink = Vec::new();
+    let _ = write_riff_to_sink(&valid_encoded, Some(&write_probe), &mut write_probe_sink);
+    let write_checks = usize::MAX.saturating_sub(
+        write_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=write_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut sink = Vec::new();
+        let _ = write_riff_to_sink(&valid_encoded, Some(&token), &mut sink);
+    }
+    struct FailingSink;
+    impl OutputSink for FailingSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
+            Err(crate::ImageError::parameter("coverage sink failure"))
+        }
+    }
+    let mut failing_sink = FailingSink;
+    let _ = write_riff_to_sink(&valid_encoded, None, &mut failing_sink);
+
+    let mut metadata_sweep_opts = WebPEncodeOptions::default();
+    metadata_sweep_opts.icc = Some(vec![1; 1_025]);
+    metadata_sweep_opts.exif = Some(b"Exif\0\0coverage".to_vec());
+    metadata_sweep_opts.xmp = Some(vec![2, 3, 4]);
+    let metadata_probe = crate::CancellationToken::new();
+    metadata_probe.cancel_after(usize::MAX);
+    let _ = attach_metadata(
+        valid_encoded.clone(),
+        1,
+        1,
+        false,
+        &metadata_sweep_opts,
+        Some(&metadata_probe),
+    );
+    let metadata_checks = usize::MAX.saturating_sub(
+        metadata_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in 0..=metadata_checks {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = attach_metadata(
+            valid_encoded.clone(),
+            1,
+            1,
+            false,
+            &metadata_sweep_opts,
+            Some(&token),
+        );
+    }
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::Rgb8);
     let mut opts = WebPEncodeOptions::default();
@@ -1316,5 +1765,42 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = encode_with_token(&still, &metadata_opts, Some(&token));
+    }
+
+    #[cfg(coverage_nightly)]
+    {
+        // Measure each complete public pipeline, then cancel at every poll
+        // boundary. The fixed prefix above is cheap for ordinary coverage;
+        // this nightly-only sweep reaches the later metadata and animation
+        // assembly `?` edges without guessing their checkpoint counts.
+        let sweep_still = |image: &DecodedImage, options: &WebPEncodeOptions| {
+            let probe = crate::CancellationToken::new();
+            probe.cancel_after(usize::MAX);
+            let _ = encode_with_token(image, options, Some(&probe));
+            let checks =
+                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
+            for checks in 0..=checks {
+                let token = crate::CancellationToken::new();
+                token.cancel_after(checks);
+                let _ = encode_with_token(image, options, Some(&token));
+            }
+        };
+        sweep_still(&still, &default_opts);
+        sweep_still(&rgba, &default_opts);
+        sweep_still(&still, &metadata_opts);
+
+        let mut sweep_sequence = DecodedSequence::from_image(still.clone());
+        sweep_sequence.frames.push(sweep_sequence.frames[0].clone());
+        sweep_sequence.kind = crate::types::SequenceKind::TimedAnimation;
+        let probe = crate::CancellationToken::new();
+        probe.cancel_after(usize::MAX);
+        let _ = encode_sequence_with_token(&sweep_sequence, &default_opts, Some(&probe));
+        let checks =
+            usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
+        for checks in 0..=checks {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let _ = encode_sequence_with_token(&sweep_sequence, &default_opts, Some(&token));
+        }
     }
 }

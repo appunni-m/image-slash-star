@@ -477,6 +477,7 @@ pub(crate) fn apply_fixed(
 }
 
 #[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut scratch = PredictorScratch::default();
     let mut upper = Vec::new();
@@ -495,4 +496,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
     let mut source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
     let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
+
+    let predictor_probe_source = (0..2_048)
+        .map(|index| {
+            let value = index as u32;
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+        })
+        .collect::<Vec<_>>();
+
+    let mut tile_scratch_upper = Vec::new();
+    let mut tile_scratch_current = Vec::new();
+    let tile_source = predictor_probe_source[..1_024].to_vec();
+    for checks in 0..=6 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = tile_histogram(
+            &tile_source,
+            1_024,
+            1,
+            0,
+            0,
+            1_024,
+            0,
+            &mut tile_scratch_upper,
+            &mut tile_scratch_current,
+            Some(&token),
+        );
+    }
+
+    for checks in 0..=8 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut source = predictor_probe_source.clone();
+        let mut scratch = PredictorScratch::default();
+        scratch.modes.resize(512, ARGB_BLACK);
+        let _ = apply_modes(&mut source, 1_024, 2, 1, &mut scratch, Some(&token));
+    }
 }

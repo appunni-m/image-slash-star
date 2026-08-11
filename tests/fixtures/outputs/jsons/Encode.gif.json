@@ -64,7 +64,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "GIF directly accepts only P8, L8, Rgb8, and Rgba8"
+      "rust_error_reason": "GIF directly accepts L1, P8, L8, Rgb8, and Rgba8"
     },
     {
       "id": "enc_static",
@@ -1479,6 +1479,46 @@
       "encoded_ref_sha256": "fb9f6b71ae41eee3de66c5c6b46e789e149ce03550cafc09e223be875d174d4b",
       "source_mode": "L8",
       "source_sha256": "d0b0532c41978447b463b65e9bc836b66e99650b08515c3d575c3dc3433f6e19",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_bilevel",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_bilevel.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "L8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "5320d2c52e9d43bbc743ff9ca0f7be9cdfaa394584eda0cdfa7322f0dbe9da14",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_bilevel.bin",
+      "encoded_ref_bytes": 3005,
+      "encoded_ref_sha256": "14f49457df04383d2717a5240614b279aba4026656a8e77db58e458fa37a2dcb",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

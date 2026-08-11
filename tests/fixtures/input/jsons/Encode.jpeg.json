@@ -136,7 +136,6 @@
           "P",
           "La8",
           "Rgba8",
-          "Cmyk8",
           "L16",
           "La16",
           "Rgb16",
@@ -150,7 +149,7 @@
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8",
+      "rust_error_reason": "JPEG directly accepts L1, L8, Rgb8, and Cmyk8",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",
@@ -866,6 +865,51 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_444.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_cmyk",
+      "source_asset": "baseline_cmyk.jpg",
+      "source_format": "jpeg",
+      "source_mode": "CMYK",
+      "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "color": "cmyk"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
         "method": "PIL.Image.Image.save",
         "format": "JPEG",
         "kwargs": {},

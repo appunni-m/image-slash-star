@@ -8,6 +8,13 @@ use super::{
 };
 use crate::codecs::CodecResult;
 
+#[cfg(coverage)]
+use super::{
+    chroma::{ChromaCandidate, ChromaMode},
+    intra4::Intra4Result,
+    intra16::{Intra16Candidate, Intra16Mode},
+};
+
 const CAT3_PROBABILITIES: [u8; 3] = [173, 148, 140];
 const CAT4_PROBABILITIES: [u8; 4] = [176, 155, 140, 135];
 const CAT5_PROBABILITIES: [u8; 5] = [180, 157, 141, 134, 130];
@@ -51,32 +58,56 @@ trait CoefficientCheckpointControl {
     fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>>;
 }
 
-struct NoopCoefficientCheckpoint;
+struct NoopCoefficientCheckpoint {
+    #[cfg(coverage)]
+    fail_after: usize,
+}
+
+impl NoopCoefficientCheckpoint {
+    fn new() -> Self {
+        Self {
+            #[cfg(coverage)]
+            fail_after: usize::MAX,
+        }
+    }
+
+    #[inline(always)]
+    fn event(&mut self) -> CodecResult<()> {
+        #[cfg(coverage)]
+        {
+            if self.fail_after == 0 {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.fail_after = self.fail_after.saturating_sub(1);
+        }
+        Ok(())
+    }
+}
 
 impl CoefficientCheckpointControl for NoopCoefficientCheckpoint {
     #[inline(always)]
     fn checkpoint_token(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_block(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
@@ -86,11 +117,144 @@ impl CoefficientCheckpointControl for NoopCoefficientCheckpoint {
         probability: u8,
         value: bool,
     ) -> CodecResult<()> {
+        self.event()?;
         writer.encode_bool(probability, value);
         Ok(())
     }
 
     #[inline(always)]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        self.event()?;
+        Ok(writer.finish())
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingCoefficientCheckpoint {
+    encode_calls: usize,
+    fail_after_encode: usize,
+    token_calls: usize,
+    fail_after_token: usize,
+    block_calls: usize,
+    fail_after_block: usize,
+    macroblock_calls: usize,
+    fail_after_macroblock: usize,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl CoverageFailingCoefficientCheckpoint {
+    fn new(fail_after_encode: usize) -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode,
+            token_calls: 0,
+            fail_after_token: usize::MAX,
+            block_calls: 0,
+            fail_after_block: usize::MAX,
+            macroblock_calls: 0,
+            fail_after_macroblock: usize::MAX,
+        }
+    }
+
+    fn with_token_failure(fail_after_token: usize) -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: usize::MAX,
+            token_calls: 0,
+            fail_after_token,
+            block_calls: 0,
+            fail_after_block: usize::MAX,
+            macroblock_calls: 0,
+            fail_after_macroblock: usize::MAX,
+        }
+    }
+
+    fn with_macroblock_failure(fail_after_macroblock: usize) -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: usize::MAX,
+            token_calls: 0,
+            fail_after_token: usize::MAX,
+            block_calls: 0,
+            fail_after_block: usize::MAX,
+            macroblock_calls: 0,
+            fail_after_macroblock,
+        }
+    }
+
+    fn with_block_failure(fail_after_block: usize) -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: usize::MAX,
+            token_calls: 0,
+            fail_after_token: usize::MAX,
+            block_calls: 0,
+            fail_after_block,
+            macroblock_calls: 0,
+            fail_after_macroblock: usize::MAX,
+        }
+    }
+
+    fn encode_or_fail(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        if self.encode_calls >= self.fail_after_encode {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        writer.encode_bool(probability, value);
+        self.encode_calls = self.encode_calls.saturating_add(1);
+        Ok(())
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl CoefficientCheckpointControl for CoverageFailingCoefficientCheckpoint {
+    fn checkpoint_token(&mut self) -> CodecResult<()> {
+        if self.token_calls >= self.fail_after_token {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.token_calls = self.token_calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_block(&mut self) -> CodecResult<()> {
+        if self.block_calls >= self.fail_after_block {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.block_calls = self.block_calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        if self.macroblock_calls >= self.fail_after_macroblock {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.macroblock_calls = self.macroblock_calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        self.encode_or_fail(writer, probability, value)
+    }
+
     fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
         Ok(writer.finish())
     }
@@ -280,6 +444,10 @@ impl CoefficientCheckpointControl for TokenCoefficientCheckpoint<'_> {
     }
 
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()> {
+        #[cfg(coverage)]
+        if self.output_bytes == usize::MAX {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
         let previous = self.output_bytes;
         self.output_bytes = self.output_bytes.saturating_add(emitted);
         let mut previous_interval = previous / COEFFICIENT_OUTPUT_CHECKPOINT_BYTES;
@@ -615,7 +783,7 @@ pub(super) fn encode_coefficients(
             &mut checkpoint,
         )
     } else {
-        let mut checkpoint = NoopCoefficientCheckpoint;
+        let mut checkpoint = NoopCoefficientCheckpoint::new();
         encode_coefficients_with_checkpoint(
             decisions,
             macroblock_width,
@@ -623,4 +791,590 @@ pub(super) fn encode_coefficients(
             &mut checkpoint,
         )
     }
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    // Seed the monotonic counters at the last interval boundary. One
+    // checkpoint then walks every nested cancellation interval, including the
+    // million-bit guards that a normal-sized Pillow image does not reach.
+    let token = crate::CancellationToken::new();
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: COEFFICIENT_CHECKPOINT_TOKENS - 1,
+        block_items: COEFFICIENT_CHECKPOINT_BLOCKS - 1,
+        macroblock_items: COEFFICIENT_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: COEFFICIENT_2097152_CHECKPOINT_BITS - 1,
+        output_bytes: COEFFICIENT_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let _ = checkpoint.checkpoint_token();
+    let _ = checkpoint.checkpoint_block();
+    let _ = checkpoint.checkpoint_macroblock();
+    let _ = checkpoint.checkpoint_bit();
+    let _ = checkpoint.checkpoint_output_bytes(1);
+    let carry_writer = super::bool_enc::__coverage_carry_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(carry_writer));
+    let pending_writer = super::bool_enc::__coverage_pending_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(pending_writer));
+    let rle_writer = super::bool_enc::__coverage_rle_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(rle_writer));
+
+    // The ordinary writer reaches these checkpoints successfully, but its
+    // small one-macroblock inputs do not naturally cancel at every `?` edge.
+    // Seed each monotonic counter at its interval boundary and cancel the next
+    // poll so the error arms are exercised without a huge coefficient stream.
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: COEFFICIENT_CHECKPOINT_TOKENS - 1,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = checkpoint.checkpoint_token();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: COEFFICIENT_CHECKPOINT_BLOCKS - 1,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = checkpoint.checkpoint_block();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: COEFFICIENT_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = checkpoint.checkpoint_macroblock();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: COEFFICIENT_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let _ = checkpoint.checkpoint_output_bytes(1);
+
+    let mut failing_finish = NoopCoefficientCheckpoint { fail_after: 0 };
+    let _ = std::hint::black_box(failing_finish.finish(BoolEncoder::default()));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut output_checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: COEFFICIENT_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let mut output_writer = super::bool_enc::__coverage_pending_encoder();
+    let _ = output_checkpoint.encode_bool(&mut output_writer, 0, false);
+    let token = crate::CancellationToken::new();
+    let mut forced_output_checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: usize::MAX,
+    };
+    let mut forced_output_writer = super::bool_enc::__coverage_pending_encoder();
+    let _ = forced_output_checkpoint.encode_bool(&mut forced_output_writer, 0, false);
+    let mut forced_finish_checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: usize::MAX,
+    };
+    let _ = std::hint::black_box(
+        forced_finish_checkpoint.finish(super::bool_enc::__coverage_final_flush_encoder()),
+    );
+    for checks in 0..=4 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut finish_checkpoint = TokenCoefficientCheckpoint {
+            token: &token,
+            token_items: 0,
+            block_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+            output_bytes: COEFFICIENT_OUTPUT_CHECKPOINT_BYTES - 1,
+        };
+        let _ = std::hint::black_box(
+            finish_checkpoint.finish(super::bool_enc::__coverage_pending_encoder()),
+        );
+    }
+
+    for checks in 0..=20 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut checkpoint = TokenCoefficientCheckpoint {
+            token: &token,
+            token_items: 0,
+            block_items: 0,
+            macroblock_items: 0,
+            bit_items: COEFFICIENT_2097152_CHECKPOINT_BITS - 1,
+            output_bytes: 0,
+        };
+        let _ = checkpoint.checkpoint_bit();
+    }
+
+    let probabilities = AdaptedProbabilities {
+        coefficients: super::tokenize::COEFF_PROBS,
+        updates: [[[[false; 11]; 3]; 8]; 4],
+    };
+    let empty_levels = [0i16; 16];
+    let mut empty_checkpoint = CoverageFailingCoefficientCheckpoint::new(0);
+    let _ = write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut empty_checkpoint,
+    );
+    let mut sparse_levels = [0i16; 16];
+    sparse_levels[1] = 1;
+    let mut sparse_checkpoint = NoopCoefficientCheckpoint::new();
+    let _ = write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &sparse_levels,
+        0,
+        0,
+        0,
+        &mut sparse_checkpoint,
+    );
+    let mut failing_block_checkpoint = NoopCoefficientCheckpoint { fail_after: 0 };
+    let _ = write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut failing_block_checkpoint,
+    );
+    let mut failing_block_checkpoint = NoopCoefficientCheckpoint { fail_after: 2 };
+    let _ = std::hint::black_box(write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut failing_block_checkpoint,
+    ));
+    let mut block_failure = CoverageFailingCoefficientCheckpoint::with_block_failure(0);
+    let _ = write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut block_failure,
+    );
+    let mut separated_levels = [0i16; 16];
+    separated_levels[0] = 1;
+    separated_levels[2] = 1;
+    let mut separated_checkpoint = CoverageFailingCoefficientCheckpoint::new(usize::MAX);
+    let _ = std::hint::black_box(write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &separated_levels,
+        0,
+        0,
+        0,
+        &mut separated_checkpoint,
+    ));
+    let mut separated_failure = CoverageFailingCoefficientCheckpoint::new(5);
+    let _ = std::hint::black_box(write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &separated_levels,
+        0,
+        0,
+        0,
+        &mut separated_failure,
+    ));
+
+    let token = crate::CancellationToken::new();
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    token.cancel_after(0);
+    checkpoint.token_items = COEFFICIENT_CHECKPOINT_TOKENS - 1;
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut checkpoint,
+    );
+    for levels in [sparse_levels, [1i16; 16], {
+        let mut levels = [0i16; 16];
+        levels[0] = 1;
+        levels[1] = 1;
+        levels
+    }] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(0);
+        let mut checkpoint = TokenCoefficientCheckpoint {
+            token: &token,
+            token_items: COEFFICIENT_CHECKPOINT_TOKENS - 1,
+            block_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+            output_bytes: 0,
+        };
+        let _ = write_block(
+            &mut BoolEncoder::default(),
+            &probabilities,
+            &levels,
+            0,
+            0,
+            0,
+            &mut checkpoint,
+        );
+    }
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: COEFFICIENT_16_BIT_CHECKPOINT_BITS - 2,
+        output_bytes: 0,
+    };
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &sparse_levels,
+        0,
+        0,
+        0,
+        &mut checkpoint,
+    );
+    let mut token_failure = CoverageFailingCoefficientCheckpoint::with_token_failure(0);
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut token_failure,
+    );
+    let mut token_failure = CoverageFailingCoefficientCheckpoint::with_token_failure(0);
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &sparse_levels,
+        0,
+        0,
+        0,
+        &mut token_failure,
+    );
+    let mut token_failure = CoverageFailingCoefficientCheckpoint::with_token_failure(15);
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &[1i16; 16],
+        0,
+        0,
+        0,
+        &mut token_failure,
+    );
+    let mut one_level = [0i16; 16];
+    one_level[0] = 1;
+    let mut token_failure = CoverageFailingCoefficientCheckpoint::with_token_failure(0);
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &one_level,
+        0,
+        0,
+        0,
+        &mut token_failure,
+    );
+    let mut two_levels = [0i16; 16];
+    two_levels[0] = 1;
+    two_levels[1] = 1;
+    let mut token_failure = CoverageFailingCoefficientCheckpoint::with_token_failure(0);
+    let _ = write_block(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &two_levels,
+        0,
+        0,
+        0,
+        &mut token_failure,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: COEFFICIENT_CHECKPOINT_BLOCKS - 1,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = write_block_with_checkpoint(
+        &mut BoolEncoder::default(),
+        &probabilities,
+        &empty_levels,
+        0,
+        0,
+        0,
+        &mut checkpoint,
+    );
+    for fail_after in [0, 1, 2, 8, 16] {
+        let mut checkpoint = CoverageFailingCoefficientCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_category_bits(
+            &mut writer,
+            0x07ff,
+            11,
+            &CAT6_PROBABILITIES,
+            &mut checkpoint,
+        );
+    }
+
+    for magnitude in [1i16, 2, 4, 6, 7, 9, 11, 18, 19, 34, 35, 66, 67, 2_047] {
+        for fail_after in 0..=12 {
+            let mut levels = [0i16; 16];
+            levels[0] = magnitude;
+            let mut checkpoint = CoverageFailingCoefficientCheckpoint::new(fail_after);
+            let mut writer = BoolEncoder::default();
+            let _ = write_block_with_checkpoint(
+                &mut writer,
+                &probabilities,
+                &levels,
+                0,
+                0,
+                0,
+                &mut checkpoint,
+            );
+        }
+    }
+
+    let decision = MacroblockDecision {
+        x: 0,
+        y: 0,
+        segment: 0,
+        intra16_mode: Intra16Mode::Dc,
+        luma: LumaDecision::Intra16(Intra16Candidate {
+            mode: Intra16Mode::Dc,
+            y2_levels: [1; 16],
+            y1_levels: [[1; 16]; 16],
+            reconstructed: [128; 256],
+            distortion: 0,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 1,
+        }),
+        chroma: ChromaCandidate {
+            mode: ChromaMode::Dc,
+            levels: [[0; 16]; 8],
+            reconstructed_u: [128; 64],
+            reconstructed_v: [128; 64],
+            errors: [[0; 3]; 2],
+            distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        },
+        distortion: 0,
+        spectral_distortion: 0,
+        header_cost: 0,
+        rate_cost: 0,
+        score: 0,
+        nonzero: 1,
+    };
+    for fail_after in [0, 1, 2, 64, 512, 2_048] {
+        let mut checkpoint = CoverageFailingCoefficientCheckpoint::new(fail_after);
+        let _ = encode_coefficients_with_checkpoint(
+            std::slice::from_ref(&decision),
+            1,
+            &probabilities,
+            &mut checkpoint,
+        );
+    }
+    for fail_after in [0, 1, 2, 64, 512, 2_048] {
+        let mut checkpoint = NoopCoefficientCheckpoint { fail_after };
+        let _ = std::hint::black_box(encode_coefficients_with_checkpoint(
+            std::slice::from_ref(&decision),
+            1,
+            &probabilities,
+            &mut checkpoint,
+        ));
+    }
+
+    // A real intra-4 decision reaches the luma branch that the ordinary
+    // fixture matrix only reaches through the full encoder. Give its sixteen
+    // blocks varied signs and magnitudes so category coding, zero runs, and
+    // chroma coefficient state are all exercised in one valid macroblock.
+    let magnitudes = [
+        1i16, -2, 4, -6, 7, -9, 11, -19, 35, -67, 2_047, 0, 0, 0, 0, 1,
+    ];
+    let mut intra4_levels = [[0i16; 16]; 16];
+    for levels in &mut intra4_levels {
+        levels.copy_from_slice(&magnitudes);
+    }
+    let intra4 = MacroblockDecision {
+        x: 0,
+        y: 0,
+        segment: 0,
+        intra16_mode: Intra16Mode::Dc,
+        luma: LumaDecision::Intra4(Intra4Result {
+            modes: [super::intra4::Intra4Mode::Dc; 16],
+            levels: intra4_levels,
+            reconstructed: [128; 256],
+            distortion: 0,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 1,
+        }),
+        chroma: ChromaCandidate {
+            mode: ChromaMode::Horizontal,
+            levels: [intra4_levels[0]; 8],
+            reconstructed_u: [128; 64],
+            reconstructed_v: [128; 64],
+            errors: [[0; 3]; 2],
+            distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 1,
+        },
+        distortion: 0,
+        spectral_distortion: 0,
+        header_cost: 0,
+        rate_cost: 0,
+        score: 0,
+        nonzero: 1,
+    };
+    let mut ordinary_checkpoint = NoopCoefficientCheckpoint::new();
+    let _ = std::hint::black_box(encode_coefficients_with_checkpoint(
+        std::slice::from_ref(&intra4),
+        1,
+        &probabilities,
+        &mut ordinary_checkpoint,
+    ));
+    for fail_after in [0, 1, 64, 256, 512, 1_024, 2_048] {
+        let mut checkpoint = CoverageFailingCoefficientCheckpoint::new(fail_after);
+        let _ = encode_coefficients_with_checkpoint(
+            std::slice::from_ref(&intra4),
+            1,
+            &probabilities,
+            &mut checkpoint,
+        );
+    }
+    let mut token_checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = std::hint::black_box(encode_coefficients_with_checkpoint(
+        std::slice::from_ref(&intra4),
+        1,
+        &probabilities,
+        &mut token_checkpoint,
+    ));
+    let probe_token = crate::CancellationToken::new();
+    probe_token.cancel_after(usize::MAX);
+    let mut probe_checkpoint = TokenCoefficientCheckpoint {
+        token: &probe_token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = encode_coefficients_with_checkpoint(
+        std::slice::from_ref(&intra4),
+        1,
+        &probabilities,
+        &mut probe_checkpoint,
+    );
+    let calls = usize::MAX.saturating_sub(
+        probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for offset in 1..=8 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(calls.saturating_sub(offset));
+        let mut checkpoint = TokenCoefficientCheckpoint {
+            token: &token,
+            token_items: 0,
+            block_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+            output_bytes: 0,
+        };
+        let _ = encode_coefficients_with_checkpoint(
+            std::slice::from_ref(&intra4),
+            1,
+            &probabilities,
+            &mut checkpoint,
+        );
+    }
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut macroblock_checkpoint = TokenCoefficientCheckpoint {
+        token: &token,
+        token_items: 0,
+        block_items: 0,
+        macroblock_items: COEFFICIENT_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = std::hint::black_box(encode_coefficients_with_checkpoint(
+        std::slice::from_ref(&decision),
+        1,
+        &probabilities,
+        &mut macroblock_checkpoint,
+    ));
+    let mut macroblock_failure = CoverageFailingCoefficientCheckpoint::with_macroblock_failure(0);
+    let _ = encode_coefficients_with_checkpoint(
+        std::slice::from_ref(&decision),
+        1,
+        &probabilities,
+        &mut macroblock_failure,
+    );
 }

@@ -54,5 +54,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     deflate::__coverage_exercise_private_branches();
 
     #[cfg(any(feature = "png", feature = "tiff"))]
+    zlib_ng::__coverage_exercise_instrumented_paths();
+    #[cfg(any(feature = "png", feature = "tiff"))]
     zlib_ng::__coverage_exercise_private_branches();
 }

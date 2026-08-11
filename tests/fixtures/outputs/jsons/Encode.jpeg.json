@@ -118,7 +118,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "JPEG directly accepts L1, L8, and Rgb8"
+      "rust_error_reason": "JPEG directly accepts L1, L8, Rgb8, and Cmyk8"
     },
     {
       "id": "enc_q100",
@@ -705,6 +705,46 @@
       "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
       "source_mode": "Rgb8",
       "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_cmyk",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "CMYK",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk.bin",
+      "encoded_ref_bytes": 10886,
+      "encoded_ref_sha256": "1b809ff637f6f78f5a25a56df827c1783b4843df82fa656fb370c2c27e216bad",
+      "source_mode": "CMYK",
+      "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

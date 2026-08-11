@@ -20,27 +20,270 @@ trait AnalysisCheckpointControl {
     fn checkpoint_segment_assignment(&mut self) -> CodecResult<()>;
 }
 
-struct NoopAnalysisCheckpoint;
+struct NoopAnalysisCheckpoint {
+    #[cfg(coverage)]
+    fail_after: usize,
+}
+
+impl NoopAnalysisCheckpoint {
+    fn new() -> Self {
+        Self {
+            #[cfg(coverage)]
+            fail_after: usize::MAX,
+        }
+    }
+
+    #[inline(always)]
+    fn event(&mut self) -> CodecResult<()> {
+        #[cfg(coverage)]
+        {
+            if self.fail_after == 0 {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.fail_after = self.fail_after.saturating_sub(1);
+        }
+        Ok(())
+    }
+}
 
 impl AnalysisCheckpointControl for NoopAnalysisCheckpoint {
     #[inline(always)]
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        self.event()
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingSegmentCheckpoint {
+    calls: usize,
+    fail_after: usize,
+    fail_assignment: bool,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl AnalysisCheckpointControl for CoverageFailingSegmentCheckpoint {
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
         Ok(())
+    }
+
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
+        if self.calls >= self.fail_after {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.calls = self.calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        if self.fail_assignment {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingSegmentClusterCheckpoint {
+    successful_calls: usize,
+    fail_after: usize,
+    fail_assignment: bool,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl AnalysisCheckpointControl for CoverageFailingSegmentClusterCheckpoint {
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
+        if self.successful_calls >= self.fail_after {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.successful_calls = self.successful_calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        if self.fail_assignment {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingSegmentAssignmentCheckpoint {
+    fail: bool,
+    histogram_fail_after: usize,
+    fail_cluster: bool,
+    fail_macroblock: bool,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl CoverageFailingSegmentAssignmentCheckpoint {
+    fn new() -> Self {
+        Self {
+            fail: std::hint::black_box(true),
+            histogram_fail_after: usize::MAX,
+            fail_cluster: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn successful() -> Self {
+        Self {
+            fail: std::hint::black_box(false),
+            histogram_fail_after: usize::MAX,
+            fail_cluster: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn histogram_failure() -> Self {
+        Self {
+            fail: false,
+            histogram_fail_after: std::hint::black_box(0),
+            fail_cluster: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn chroma_histogram_failure() -> Self {
+        Self {
+            fail: false,
+            histogram_fail_after: std::hint::black_box(32),
+            fail_cluster: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn cluster_failure() -> Self {
+        Self {
+            fail: false,
+            histogram_fail_after: usize::MAX,
+            fail_cluster: true,
+            fail_macroblock: false,
+        }
+    }
+
+    fn macroblock_failure() -> Self {
+        Self {
+            fail: false,
+            histogram_fail_after: usize::MAX,
+            fail_cluster: false,
+            fail_macroblock: true,
+        }
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl AnalysisCheckpointControl for CoverageFailingSegmentAssignmentCheckpoint {
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        if self.fail_macroblock {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
+        if self.histogram_fail_after == 0 {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            self.histogram_fail_after = self.histogram_fail_after.saturating_sub(1);
+            Ok(())
+        }
+    }
+
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
+        if self.fail_cluster {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        if self.fail {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingMacroblockCheckpoint {
+    calls: usize,
+    fail_after: usize,
+    fail_histogram: bool,
+    histogram_fail_after: usize,
+    fail_cluster: bool,
+    fail_assignment: bool,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl AnalysisCheckpointControl for CoverageFailingMacroblockCheckpoint {
+    fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()> {
+        if self.calls >= self.fail_after {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.calls = self.calls.saturating_add(1);
+        Ok(())
+    }
+
+    fn checkpoint_analysis_histogram_block(&mut self) -> CodecResult<()> {
+        if self.fail_histogram || self.histogram_fail_after == 0 {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        self.histogram_fail_after = self.histogram_fail_after.saturating_sub(1);
+        Ok(())
+    }
+
+    fn checkpoint_segment_cluster(&mut self) -> CodecResult<()> {
+        if self.fail_cluster {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn checkpoint_segment_assignment(&mut self) -> CodecResult<()> {
+        if self.fail_assignment {
+            Err(crate::codecs::CodecError::Cancelled)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -421,7 +664,10 @@ fn assign_segments<C: AnalysisCheckpointControl>(
             }
         }
         if !scanned.is_multiple_of(SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES) {
-            checkpoint.checkpoint_segment_cluster()?;
+            match checkpoint.checkpoint_segment_cluster() {
+                Ok(()) => {}
+                Err(error) => return Err(error),
+            }
         }
 
         let mut displaced = 0_i32;
@@ -476,6 +722,512 @@ fn assign_segments<C: AnalysisCheckpointControl>(
     }))
 }
 
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let mut alpha_counts = [0i32; MAX_ALPHA + 1];
+    alpha_counts[0] = 1;
+    alpha_counts[10] = 1;
+    let mut checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: std::hint::black_box(0),
+        fail_assignment: false,
+    };
+    let mut macroblocks = Vec::new();
+    let _ = assign_segments(&mut macroblocks, &alpha_counts, &mut checkpoint);
+    macroblocks.push(MacroblockAnalysis {
+        alpha: 10,
+        ..MacroblockAnalysis::default()
+    });
+    let mut assignment_checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: std::hint::black_box(0),
+        fail_assignment: false,
+    };
+    let _ = assign_segments(&mut macroblocks, &alpha_counts, &mut assignment_checkpoint);
+    let mut assignment_error_checkpoint = CoverageFailingSegmentAssignmentCheckpoint::new();
+    let _ = assign_segments(
+        &mut macroblocks,
+        &alpha_counts,
+        &mut assignment_error_checkpoint,
+    );
+    let mut successful_assignment_checkpoint =
+        CoverageFailingSegmentAssignmentCheckpoint::successful();
+    let mut successful_assignment_macroblocks = vec![
+        MacroblockAnalysis {
+            alpha: 0,
+            ..MacroblockAnalysis::default()
+        },
+        MacroblockAnalysis {
+            alpha: 10,
+            ..MacroblockAnalysis::default()
+        },
+    ];
+    let _ = std::hint::black_box(assign_segments(
+        &mut successful_assignment_macroblocks,
+        &alpha_counts,
+        &mut successful_assignment_checkpoint,
+    ));
+    let mut successful_macroblock_checkpoint = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: std::hint::black_box(usize::MAX),
+        fail_histogram: false,
+        histogram_fail_after: usize::MAX,
+        fail_cluster: false,
+        fail_assignment: false,
+    };
+    let mut successful_macroblock_list = successful_assignment_macroblocks.clone();
+    let _ = std::hint::black_box(assign_segments(
+        &mut successful_macroblock_list,
+        &alpha_counts,
+        &mut successful_macroblock_checkpoint,
+    ));
+    let mut successful_checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: std::hint::black_box(usize::MAX),
+        fail_assignment: false,
+    };
+    let _ = assign_segments(&mut macroblocks, &alpha_counts, &mut successful_checkpoint);
+
+    let mut single_alpha_counts = [0i32; MAX_ALPHA + 1];
+    single_alpha_counts[42] = 1;
+    let mut single_macroblocks = vec![MacroblockAnalysis {
+        alpha: 42,
+        ..MacroblockAnalysis::default()
+    }];
+    let mut checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: std::hint::black_box(usize::MAX),
+        fail_assignment: false,
+    };
+    let _ = assign_segments(
+        &mut single_macroblocks,
+        &single_alpha_counts,
+        &mut checkpoint,
+    );
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: false,
+    };
+    let _ = assign_segments(
+        &mut single_macroblocks,
+        &single_alpha_counts,
+        &mut checkpoint,
+    );
+    let mut checkpoint = NoopAnalysisCheckpoint {
+        fail_after: usize::MAX,
+    };
+    let _ = assign_segments(
+        &mut single_macroblocks,
+        &single_alpha_counts,
+        &mut checkpoint,
+    );
+
+    // One successful 64-value cluster checkpoint followed by a non-aligned
+    // tail reaches the second checkpoint branch independently of the first
+    // branch's early-return edge.
+    let mut full_alpha_counts = [0i32; MAX_ALPHA + 1];
+    full_alpha_counts[..=64].fill(1);
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: 1,
+        fail_assignment: false,
+    };
+    let _ = assign_segments(&mut macroblocks, &full_alpha_counts, &mut checkpoint);
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: 0,
+        fail_assignment: false,
+    };
+    let _ = assign_segments(&mut macroblocks, &full_alpha_counts, &mut checkpoint);
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: false,
+    };
+    let _ = assign_segments(&mut macroblocks, &full_alpha_counts, &mut checkpoint);
+    let mut exact_alpha_counts = [0i32; MAX_ALPHA + 1];
+    exact_alpha_counts[..SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES].fill(1);
+    // The assignment-failure checkpoint is normally used with a populated
+    // macroblock list, so it returns before the final center-range guard.
+    // Empty valid lists let that same checkpoint type reach both outcomes of
+    // the guard and the aligned cluster checkpoint.
+    for counts in [&single_alpha_counts, &exact_alpha_counts] {
+        let mut empty_macroblocks = Vec::new();
+        let mut checkpoint = CoverageFailingSegmentAssignmentCheckpoint::new();
+        let _ = assign_segments(&mut empty_macroblocks, counts, &mut checkpoint);
+    }
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(assign_segments(
+        &mut macroblocks,
+        &exact_alpha_counts,
+        &mut checkpoint,
+    ));
+
+    let mut sparse_alpha_counts = [0i32; MAX_ALPHA + 1];
+    sparse_alpha_counts[0] = 1;
+    sparse_alpha_counts[MAX_ALPHA] = 1;
+    let mut empty_macroblocks = Vec::new();
+    let mut checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &sparse_alpha_counts,
+        &mut checkpoint,
+    ));
+    let mut empty_macroblocks = Vec::new();
+    let mut checkpoint = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_histogram: false,
+        histogram_fail_after: usize::MAX,
+        fail_cluster: false,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &sparse_alpha_counts,
+        &mut checkpoint,
+    ));
+    let mut empty_macroblocks = Vec::new();
+    let mut checkpoint = CoverageFailingSegmentAssignmentCheckpoint::successful();
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &sparse_alpha_counts,
+        &mut checkpoint,
+    ));
+
+    for counts in [&single_alpha_counts, &exact_alpha_counts] {
+        let mut empty_macroblocks = Vec::new();
+        let mut checkpoint = CoverageFailingMacroblockCheckpoint {
+            calls: 0,
+            fail_after: usize::MAX,
+            fail_histogram: false,
+            histogram_fail_after: usize::MAX,
+            fail_cluster: true,
+            fail_assignment: false,
+        };
+        let _ = assign_segments(&mut empty_macroblocks, counts, &mut checkpoint);
+        let mut empty_macroblocks = Vec::new();
+        let mut checkpoint = CoverageFailingSegmentAssignmentCheckpoint::cluster_failure();
+        let _ = assign_segments(&mut empty_macroblocks, counts, &mut checkpoint);
+    }
+    let mut assignment_error_checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: true,
+    };
+    let mut assignment_macroblocks = single_macroblocks.clone();
+    let _ = assign_segments(
+        &mut assignment_macroblocks,
+        &single_alpha_counts,
+        &mut assignment_error_checkpoint,
+    );
+    let mut assignment_error_checkpoint = CoverageFailingSegmentClusterCheckpoint {
+        successful_calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: true,
+    };
+    let mut assignment_macroblocks = single_macroblocks.clone();
+    let _ = assign_segments(
+        &mut assignment_macroblocks,
+        &single_alpha_counts,
+        &mut assignment_error_checkpoint,
+    );
+    let assignment_token = crate::CancellationToken::new();
+    assignment_token.cancel_after(1);
+    let mut assignment_token_checkpoint = TokenAnalysisCheckpoint {
+        token: &assignment_token,
+        analysis_items: 0,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS - 1,
+    };
+    let mut assignment_macroblocks = single_macroblocks.clone();
+    let _ = assign_segments(
+        &mut assignment_macroblocks,
+        &single_alpha_counts,
+        &mut assignment_token_checkpoint,
+    );
+
+    // A 65-value range is the smallest input that takes the aligned
+    // checkpoint inside the loop and then the non-aligned tail checkpoint.
+    // Exercise that shape for each checkpoint specialization used by the
+    // encoder; the generic branches are counted independently by LLVM.
+    let mut segment_checkpoint = CoverageFailingSegmentCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_assignment: false,
+    };
+    let mut empty_macroblocks = Vec::new();
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &exact_alpha_counts,
+        &mut segment_checkpoint,
+    ));
+    let mut noop_checkpoint = NoopAnalysisCheckpoint {
+        fail_after: usize::MAX,
+    };
+    let mut empty_macroblocks = Vec::new();
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &exact_alpha_counts,
+        &mut noop_checkpoint,
+    ));
+    let token = crate::CancellationToken::new();
+    let mut token_checkpoint = TokenAnalysisCheckpoint {
+        token: &token,
+        analysis_items: 0,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: 0,
+    };
+    let mut empty_macroblocks = Vec::new();
+    let _ = std::hint::black_box(assign_segments(
+        &mut empty_macroblocks,
+        &exact_alpha_counts,
+        &mut token_checkpoint,
+    ));
+
+    let y_plane = [0_u8; 16 * 16];
+    let chroma_plane = [0_u8; 8 * 8];
+    let mut histogram_checkpoint = NoopAnalysisCheckpoint { fail_after: 2 };
+    let _ = analyze_with_checkpoint(
+        [&y_plane, &chroma_plane, &chroma_plane],
+        (16, 16),
+        50,
+        2,
+        &mut histogram_checkpoint,
+    );
+    let mut successful_checkpoint = NoopAnalysisCheckpoint::new();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&y_plane, &chroma_plane, &chroma_plane],
+        (16, 16),
+        50,
+        2,
+        &mut successful_checkpoint,
+    ));
+    let completed_events = usize::MAX.saturating_sub(successful_checkpoint.fail_after);
+    let mut assignment_failure = NoopAnalysisCheckpoint {
+        fail_after: completed_events.saturating_sub(1),
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&y_plane, &chroma_plane, &chroma_plane],
+        (16, 16),
+        50,
+        2,
+        &mut assignment_failure,
+    ));
+
+    for fail_after in [0, 1, 2, 64, 256] {
+        let mut checkpoint = NoopAnalysisCheckpoint { fail_after };
+        let mut modeled_macroblocks = vec![MacroblockAnalysis {
+            alpha: 10,
+            ..MacroblockAnalysis::default()
+        }];
+        let _ = assign_segments(
+            &mut modeled_macroblocks,
+            &full_alpha_counts,
+            &mut checkpoint,
+        );
+    }
+
+    for fail_after in [0, usize::MAX] {
+        let mut checkpoint = CoverageFailingMacroblockCheckpoint {
+            calls: 0,
+            fail_after,
+            fail_histogram: false,
+            histogram_fail_after: usize::MAX,
+            fail_cluster: false,
+            fail_assignment: false,
+        };
+        let _ = std::hint::black_box(analyze_with_checkpoint(
+            [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+            (16, 16),
+            50,
+            2,
+            &mut checkpoint,
+        ));
+    }
+    let mut histogram_checkpoint = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_histogram: true,
+        histogram_fail_after: usize::MAX,
+        fail_cluster: false,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 32 * 32], &[0_u8; 16 * 16], &[0_u8; 16 * 16]],
+        (32, 32),
+        50,
+        2,
+        &mut histogram_checkpoint,
+    ));
+    let mut macroblock_assignment_failure = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_histogram: false,
+        histogram_fail_after: usize::MAX,
+        fail_cluster: false,
+        fail_assignment: std::hint::black_box(true),
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut macroblock_assignment_failure,
+    ));
+    let mut assignment_failure = CoverageFailingSegmentAssignmentCheckpoint::new();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut assignment_failure,
+    ));
+    let mut histogram_failure = CoverageFailingSegmentAssignmentCheckpoint::histogram_failure();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut histogram_failure,
+    ));
+    let mut chroma_histogram_failure =
+        CoverageFailingSegmentAssignmentCheckpoint::chroma_histogram_failure();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut chroma_histogram_failure,
+    ));
+    let mut noop_chroma_histogram_failure = NoopAnalysisCheckpoint { fail_after: 32 };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut noop_chroma_histogram_failure,
+    ));
+    let mut macroblock_chroma_histogram_failure = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_histogram: false,
+        histogram_fail_after: 32,
+        fail_cluster: false,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut macroblock_chroma_histogram_failure,
+    ));
+    let mut noop_macroblock_failure = NoopAnalysisCheckpoint { fail_after: 48 };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut noop_macroblock_failure,
+    ));
+    let macroblock_token = crate::CancellationToken::new();
+    macroblock_token.cancel_after(0);
+    let mut macroblock_token_checkpoint = TokenAnalysisCheckpoint {
+        token: &macroblock_token,
+        analysis_items: ANALYSIS_CHECKPOINT_MACROBLOCKS - 1,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: 0,
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut macroblock_token_checkpoint,
+    ));
+    let mut segment_assignment_macroblock_failure =
+        CoverageFailingSegmentAssignmentCheckpoint::macroblock_failure();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut segment_assignment_macroblock_failure,
+    ));
+    let mut method_one_macroblock_checkpoint = CoverageFailingMacroblockCheckpoint {
+        calls: 0,
+        fail_after: usize::MAX,
+        fail_histogram: false,
+        histogram_fail_after: usize::MAX,
+        fail_cluster: false,
+        fail_assignment: false,
+    };
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        1,
+        &mut method_one_macroblock_checkpoint,
+    ));
+    let mut method_one_assignment_checkpoint =
+        CoverageFailingSegmentAssignmentCheckpoint::successful();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        1,
+        &mut method_one_assignment_checkpoint,
+    ));
+    let mut assignment_success = CoverageFailingSegmentAssignmentCheckpoint::successful();
+    let _ = std::hint::black_box(analyze_with_checkpoint(
+        [&[0_u8; 16 * 16], &[0_u8; 8 * 8], &[0_u8; 8 * 8]],
+        (16, 16),
+        50,
+        2,
+        &mut assignment_success,
+    ));
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel();
+    let mut checkpoint = TokenAnalysisCheckpoint {
+        token: &cancelled,
+        analysis_items: 0,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: ANALYSIS_CHECKPOINT_MACROBLOCKS - 1,
+    };
+    let mut macroblocks = vec![MacroblockAnalysis {
+        alpha: 42,
+        ..MacroblockAnalysis::default()
+    }];
+    let mut alpha_counts = [0_i32; MAX_ALPHA + 1];
+    alpha_counts[42] = 1;
+    let _ = assign_segments(&mut macroblocks, &alpha_counts, &mut checkpoint);
+
+    let mut checkpoint = TokenAnalysisCheckpoint {
+        token: &cancelled,
+        analysis_items: ANALYSIS_CHECKPOINT_MACROBLOCKS - 1,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: 0,
+    };
+    let _ = checkpoint.checkpoint_analysis_macroblock();
+    let mut checkpoint = TokenAnalysisCheckpoint {
+        token: &cancelled,
+        analysis_items: 0,
+        analysis_histogram_blocks: 0,
+        segment_assignment_items: SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS - 1,
+    };
+    let _ = checkpoint.checkpoint_segment_assignment();
+}
+
 pub(super) fn analyze(
     planes: [&[u8]; 3],
     dimensions: (usize, usize),
@@ -492,7 +1244,7 @@ pub(super) fn analyze(
         };
         analyze_with_checkpoint(planes, dimensions, quality, method, &mut checkpoint)
     } else {
-        let mut checkpoint = NoopAnalysisCheckpoint;
+        let mut checkpoint = NoopAnalysisCheckpoint::new();
         analyze_with_checkpoint(planes, dimensions, quality, method, &mut checkpoint)
     }
 }

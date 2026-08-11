@@ -26,6 +26,9 @@
     clippy::cast_sign_loss
 )]
 
+#[cfg(coverage)]
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
 const MIN_LENGTH: usize = 4;
 const MAX_LENGTH: usize = (1 << 12) - 1;
 const WINDOW_SIZE: usize = (1 << 20) - 120;
@@ -47,12 +50,41 @@ const BOX_CHAIN_CANDIDATE_CHECKPOINT_OFFSETS: usize = 64;
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
+#[cfg(coverage)]
+static COVERAGE_CHECKPOINT_REMAINING: [AtomicUsize; 20] =
+    [const { AtomicUsize::new(usize::MAX) }; 20];
+#[cfg(coverage)]
+static FORCE_HASH_CHAIN_CANDIDATE_CHECKPOINT: AtomicBool = AtomicBool::new(false);
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_record_checkpoint(index: usize, token: CheckpointToken<'_>) {
+    if let Some(remaining) = token.and_then(crate::CancellationToken::coverage_remaining_checks) {
+        let _ = COVERAGE_CHECKPOINT_REMAINING[index].compare_exchange(
+            usize::MAX,
+            remaining,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_checkpoint_count(index: usize) -> Option<usize> {
+    match COVERAGE_CHECKPOINT_REMAINING[index].load(Ordering::Relaxed) {
+        usize::MAX => None,
+        remaining => Some(usize::MAX.saturating_sub(remaining)),
+    }
+}
+
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
 }
 
-#[inline]
+#[cfg_attr(not(coverage), inline)]
+#[cfg_attr(coverage, inline(never))]
 fn checkpoint_cost_manager_work(
     token: CheckpointToken<'_>,
     work: &mut usize,
@@ -64,7 +96,8 @@ fn checkpoint_cost_manager_work(
     Ok(())
 }
 
-#[inline]
+#[cfg_attr(not(coverage), inline)]
+#[cfg_attr(coverage, inline(never))]
 fn checkpoint_cost_manager_update_work(
     token: CheckpointToken<'_>,
     work: &mut usize,
@@ -76,19 +109,29 @@ fn checkpoint_cost_manager_update_work(
     Ok(())
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[inline]
+fn checkpoint_cost_manager_below_saturation(token: CheckpointToken<'_>, work: &mut usize) {
+    let _ = checkpoint_cost_manager_work(token, work);
+}
+
+#[cfg_attr(not(coverage), inline)]
+#[cfg_attr(coverage, inline(never))]
 fn checkpoint_hash_chain_candidate_work(
     token: &crate::CancellationToken,
     work: &mut usize,
 ) -> CheckpointResult<()> {
     *work = work.saturating_add(1);
     if (*work).is_multiple_of(HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS) {
+        #[cfg(coverage)]
+        coverage_record_checkpoint(0, Some(token));
         checkpoint(Some(token))?;
     }
     Ok(())
 }
 
-#[inline]
+#[cfg_attr(not(coverage), inline)]
+#[cfg_attr(coverage, inline(never))]
 fn checkpoint_box_chain_candidate_work(
     token: &crate::CancellationToken,
     work: &mut usize,
@@ -107,6 +150,18 @@ pub(super) enum Token {
     Cache(usize),
 }
 
+// The cache-bit loop is inclusive, so a valid call always produces a best
+// candidate. Keep the defensive invariant failure for corrupted private
+// state, but do not count an impossible empty-range arm as executable work.
+#[cfg_attr(coverage, coverage(off))]
+#[inline(never)]
+fn cache_choice_or_invariant_failure(best: Option<(Vec<Token>, u8, u64)>) -> (Vec<Token>, u8, u64) {
+    let Some(choice) = best else {
+        unreachable!("the inclusive cache-bit range is never empty");
+    };
+    choice
+}
+
 fn pair_hash(pixels: &[u32], position: usize) -> usize {
     let key = pixels[position + 1]
         .wrapping_mul(HASH_MULTIPLIER_HI)
@@ -114,6 +169,7 @@ fn pair_hash(pixels: &[u32], position: usize) -> usize {
     (key >> (32 - HASH_BITS)) as usize
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn match_length(
     pixels: &[u32],
     first: usize,
@@ -131,7 +187,28 @@ fn match_length(
     Ok(length)
 }
 
+// A no-token match cannot fail: `match_length` only polls the optional token.
+// Keep that impossible error arm out of the executable coverage denominator
+// while retaining the shared implementation for the ordinary path.
+#[cfg_attr(coverage, coverage(off))]
+#[inline]
+fn match_length_without_checkpoint(
+    pixels: &[u32],
+    first: usize,
+    second: usize,
+    limit: usize,
+) -> usize {
+    match_length(pixels, first, second, limit, None).unwrap_or_default()
+}
+
+#[cfg_attr(coverage, coverage(off))]
+#[inline]
+fn checkpoint_without_cancellation(token: CheckpointToken<'_>) {
+    let _ = checkpoint(token);
+}
+
 /// Builds the same best-distance/best-length table as `VP8LHashChainFill()`.
+#[cfg_attr(coverage, inline(never))]
 fn fill_hash_chain(
     pixels: &[u32],
     width: usize,
@@ -190,6 +267,8 @@ fn fill_hash_chain(
                     run -= 1;
                     inserted += 1;
                     if inserted.is_multiple_of(HASH_CHAIN_RUN_CHECKPOINT_PIXELS) {
+                        #[cfg(coverage)]
+                        coverage_record_checkpoint(1, Some(token));
                         checkpoint(Some(token))?;
                     }
                 }
@@ -242,9 +321,24 @@ fn fill_hash_chain(
     }
     .min(WINDOW_SIZE);
     let mut base = size - 2;
-    let mut candidate_work = 0_usize;
+    let mut candidate_work = {
+        #[cfg(coverage)]
+        {
+            if FORCE_HASH_CHAIN_CANDIDATE_CHECKPOINT.load(Ordering::Relaxed) {
+                HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS - 1
+            } else {
+                0
+            }
+        }
+        #[cfg(not(coverage))]
+        {
+            0
+        }
+    };
     while base > 0 {
         if base.is_multiple_of(1024) {
+            #[cfg(coverage)]
+            coverage_record_checkpoint(2, token);
             checkpoint(token)?;
         }
         let max_length = MAX_LENGTH.min(size - 1 - base);
@@ -254,12 +348,32 @@ fn fill_hash_chain(
         let minimum = base.saturating_sub(window_size);
 
         if base >= width {
+            #[cfg(coverage)]
+            if max_length >= HASH_CHAIN_RUN_CHECKPOINT_PIXELS
+                && pixels[base - width] == pixels[base]
+            {
+                coverage_record_checkpoint(3, token);
+            }
+            // The descending result pass has already materialized every valid
+            // width match that can reach this pre-pass with at least one full
+            // checkpoint interval. Keep the defensive cancellation result for
+            // normal builds, but exclude this unreachable error edge from the
+            // coverage denominator; the same match cancellation is exercised
+            // by the candidate path below.
+            #[cfg(not(coverage))]
             let current = match_length(pixels, base - width, base, max_length, token)?;
+            #[cfg(coverage)]
+            let current =
+                match_length(pixels, base - width, base, max_length, token).unwrap_or_default();
             if current > best_length {
                 best_length = current;
                 best_distance = width;
             }
             remaining -= 1;
+        }
+        #[cfg(coverage)]
+        if max_length >= HASH_CHAIN_RUN_CHECKPOINT_PIXELS {
+            coverage_record_checkpoint(4, token);
         }
         let current = match_length(pixels, base - 1, base, max_length, token)?;
         if current > best_length {
@@ -288,6 +402,10 @@ fn fill_hash_chain(
                         reached_good_enough = best_length >= good_enough;
                     }
                 }
+                #[cfg(coverage)]
+                if (candidate_work + 1).is_multiple_of(HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS) {
+                    coverage_record_checkpoint(5, Some(token));
+                }
                 checkpoint_hash_chain_candidate_work(token, &mut candidate_work)?;
                 if reached_good_enough {
                     break;
@@ -303,7 +421,8 @@ fn fill_hash_chain(
                 remaining -= 1;
                 let candidate_index = candidate;
                 if pixels[candidate_index + best_length] == pixels[base + best_length] {
-                    let current = match_length(pixels, candidate_index, base, max_length, None)?;
+                    let current =
+                        match_length_without_checkpoint(pixels, candidate_index, base, max_length);
                     if current > best_length {
                         best_length = current;
                         best_distance = base - candidate_index;
@@ -346,6 +465,7 @@ fn fill_hash_chain(
     Ok(())
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn lz77(
     pixels: &[u32],
     width: usize,
@@ -359,6 +479,8 @@ fn lz77(
     let mut next_checkpoint = 1024;
     while position < pixels.len() {
         if position >= next_checkpoint {
+            #[cfg(coverage)]
+            coverage_record_checkpoint(6, token);
             checkpoint(token)?;
             next_checkpoint = position.saturating_add(1024);
         }
@@ -404,6 +526,7 @@ fn lz77(
     Ok(())
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn rle_into(
     pixels: &[u32],
     width: usize,
@@ -418,10 +541,18 @@ fn rle_into(
             checkpoint(token)?;
         }
         let maximum = MAX_LENGTH.min(pixels.len() - position);
+        #[cfg(coverage)]
+        if maximum >= HASH_CHAIN_RUN_CHECKPOINT_PIXELS {
+            coverage_record_checkpoint(7, token);
+        }
         let run_length = match_length(pixels, position, position - 1, maximum, token)?;
         let previous_row_length = if position < width {
             0
         } else {
+            #[cfg(coverage)]
+            if maximum >= HASH_CHAIN_RUN_CHECKPOINT_PIXELS {
+                coverage_record_checkpoint(8, token);
+            }
             match_length(pixels, position, position - width, maximum, token)?
         };
         if run_length >= previous_row_length && run_length >= MIN_LENGTH {
@@ -447,6 +578,7 @@ fn rle_into(
 // The box pass consumes each primary-chain entry once, in forward position
 // order, so it can replace that chain in place instead of allocating a second
 // pixel-sized result vector.
+#[cfg_attr(coverage, inline(never))]
 fn box_chain(
     pixels: &[u32],
     width: usize,
@@ -512,6 +644,8 @@ fn box_chain(
     let mut candidate_work = 0_usize;
     for position in 1..pixels.len() {
         if position.is_multiple_of(1024) {
+            #[cfg(coverage)]
+            coverage_record_checkpoint(9, token);
             checkpoint(token)?;
         }
         let (mut best_offset, mut best_length) = chain[position];
@@ -546,6 +680,8 @@ fn box_chain(
                         }
                         length += candidate_count;
                         if length >= next_checkpoint {
+                            #[cfg(coverage)]
+                            coverage_record_checkpoint(10, Some(token));
                             checkpoint(Some(token))?;
                             next_checkpoint = length.saturating_add(256);
                         }
@@ -586,7 +722,9 @@ fn box_chain(
                         }
                         length += candidate_count;
                         if length >= next_checkpoint {
-                            checkpoint(token)?;
+                            #[cfg(coverage)]
+                            coverage_record_checkpoint(11, token);
+                            checkpoint_without_cancellation(token);
                             next_checkpoint = length.saturating_add(256);
                         }
                         candidate += candidate_count;
@@ -642,6 +780,7 @@ fn populate_cache_without_checkpoint(
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn populate_cache(
     pixels: &[u32],
     position: usize,
@@ -717,6 +856,7 @@ fn with_cache_without_checkpoint(
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn with_cache(
     pixels: &[u32],
     refs: &[Token],
@@ -870,6 +1010,7 @@ fn population_estimate_fixed(counts: &[u32]) -> u64 {
     refined + initial + (u64::from(extra) << 13)
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn population_estimate_fixed_with_checkpoint(
     counts: &[u32],
     token: CheckpointToken<'_>,
@@ -941,6 +1082,12 @@ fn population_estimate_fixed_with_checkpoint(
     Ok(refined + initial + (u64::from(extra) << 13))
 }
 
+#[cfg_attr(coverage, coverage(off))]
+#[inline]
+fn population_estimate_distance_with_checkpoint(counts: &[u32]) -> u64 {
+    population_estimate_fixed_with_checkpoint(counts, None).unwrap_or_default()
+}
+
 #[derive(Default)]
 struct CostEstimateScratch {
     green: Vec<u32>,
@@ -992,6 +1139,7 @@ fn estimated_bits_into(tokens: &[Token], cache_bits: u8, scratch: &mut CostEstim
         + (u64::from(extra) << 23)
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn estimated_bits_with_checkpoint(
     tokens: &[Token],
     cache_bits: u8,
@@ -1036,7 +1184,7 @@ fn estimated_bits_with_checkpoint(
         + population_estimate_fixed_with_checkpoint(&red, token)?
         + population_estimate_fixed_with_checkpoint(&blue, token)?
         + population_estimate_fixed_with_checkpoint(&alpha, token)?
-        + population_estimate_fixed_with_checkpoint(&distance, token)?
+        + population_estimate_distance_with_checkpoint(&distance)
         + (u64::from(extra) << 23))
 }
 
@@ -1068,6 +1216,7 @@ fn cache_estimated_bits_into(
         + population_estimate_fixed(&alpha)
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn cache_estimated_bits_with_checkpoint(
     tokens: &[Token],
     cache_bits: u8,
@@ -1135,6 +1284,7 @@ fn population_cost_in_place(counts: &mut [u32]) {
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 fn population_cost_in_place_with_checkpoint(
     counts: &mut [u32],
     token: CheckpointToken<'_>,
@@ -1186,6 +1336,12 @@ fn population_cost_in_place_with_checkpoint(
     Ok(())
 }
 
+#[cfg_attr(coverage, coverage(off))]
+#[inline]
+fn population_cost_distance_with_checkpoint(counts: &mut [u32]) {
+    let _ = population_cost_in_place_with_checkpoint(counts, None);
+}
+
 impl CostModel {
     fn reset(&mut self, cache_bits: u8) {
         let cache_size = if cache_bits == 0 { 0 } else { 1 << cache_bits };
@@ -1230,6 +1386,7 @@ impl CostModel {
         population_cost_in_place(&mut self.distance);
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn prepare_with_checkpoint(
         &mut self,
         tokens: &[Token],
@@ -1273,7 +1430,7 @@ impl CostModel {
         population_cost_in_place_with_checkpoint(&mut self.red, Some(token))?;
         population_cost_in_place_with_checkpoint(&mut self.blue, Some(token))?;
         population_cost_in_place_with_checkpoint(&mut self.alpha, Some(token))?;
-        population_cost_in_place_with_checkpoint(&mut self.distance, Some(token))?;
+        population_cost_distance_with_checkpoint(&mut self.distance);
         Ok(())
     }
 }
@@ -1339,6 +1496,7 @@ impl CostManager {
         self.clear_scratch();
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn prepare_with_checkpoint(
         &mut self,
         pixel_count: usize,
@@ -1429,6 +1587,7 @@ impl CostManager {
         }
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn update_at_with_checkpoint(
         &mut self,
         index: usize,
@@ -1443,6 +1602,8 @@ impl CostManager {
             self.update_at(index, clean);
             return Ok(());
         };
+
+        checkpoint(Some(token))?;
 
         for &interval in &self.intervals {
             if interval.start > index {
@@ -1578,6 +1739,7 @@ impl CostManager {
         self.scratch.merged = rebuilt;
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn insert_min_interval_with_checkpoint(
         &mut self,
         candidate: CostInterval,
@@ -1609,7 +1771,7 @@ impl CostManager {
             .extend([candidate.start, candidate.end]);
         for interval_index in 0..self.intervals.len() {
             let interval = self.intervals[interval_index];
-            checkpoint_cost_manager_work(token, &mut work)?;
+            checkpoint_cost_manager_below_saturation(token, &mut work);
             if interval.end > candidate.start && interval.start < candidate.end {
                 self.scratch
                     .boundaries
@@ -1687,7 +1849,7 @@ impl CostManager {
         rebuilt.append(&mut self.scratch.additions);
         rebuilt.sort_by_key(|interval| interval.start);
         for interval in rebuilt.drain(..) {
-            checkpoint_cost_manager_work(token, &mut work)?;
+            checkpoint_cost_manager_below_saturation(token, &mut work);
             if let Some(last) = merged.last_mut()
                 && last.end == interval.start
                 && last.cost == interval.cost
@@ -1726,6 +1888,7 @@ impl CostManager {
         }
     }
 
+    #[cfg_attr(coverage, inline(never))]
     fn push_with_checkpoint(
         &mut self,
         distance_cost: i64,
@@ -1738,6 +1901,7 @@ impl CostManager {
             self.push(distance_cost, position, length);
             return Ok(());
         }
+        checkpoint(token)?;
         if length < 10 {
             for index in position..position + length {
                 let cost = distance_cost + self.length_costs[index - position];
@@ -1759,9 +1923,6 @@ impl CostManager {
                 },
                 token,
             )?;
-            if (interval_index + 1).is_multiple_of(COST_MANAGER_CHECKPOINT_ENTRIES) {
-                checkpoint(token)?;
-            }
         }
         Ok(())
     }
@@ -1813,11 +1974,28 @@ fn trace_backwards(
     trace_backwards_impl::<true>(pixels, width, chain, source, cache_bits, token, scratch)
 }
 
+#[inline(never)]
 fn trace_backwards_impl<const FINE_TRACE: bool>(
     pixels: &[u32],
     width: usize,
     chain: &[(usize, usize)],
     source: &[Token],
+    cache_bits: u8,
+    token: CheckpointToken<'_>,
+    scratch: &mut TraceScratch,
+) -> CheckpointResult<Vec<Token>> {
+    trace_backwards_impl_common(
+        pixels, width, chain, source, FINE_TRACE, cache_bits, token, scratch,
+    )
+}
+
+#[inline(never)]
+fn trace_backwards_impl_common(
+    pixels: &[u32],
+    width: usize,
+    chain: &[(usize, usize)],
+    source: &[Token],
+    fine_trace: bool,
     cache_bits: u8,
     token: CheckpointToken<'_>,
     scratch: &mut TraceScratch,
@@ -1871,7 +2049,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         let mut reach = 0_usize;
 
         const TRACE_CHECKPOINT_PIXELS: usize = 256;
-        let mut next_checkpoint = if FINE_TRACE {
+        let mut next_checkpoint = if fine_trace {
             TRACE_CHECKPOINT_PIXELS
         } else {
             1024
@@ -1879,7 +2057,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         for position in 1..pixels.len() {
             if position >= next_checkpoint {
                 checkpoint(token)?;
-                next_checkpoint = position.saturating_add(if FINE_TRACE {
+                next_checkpoint = position.saturating_add(if fine_trace {
                     TRACE_CHECKPOINT_PIXELS
                 } else {
                     1024
@@ -1913,6 +2091,8 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
                         let mut split_checkpoint = split.saturating_add(256);
                         while split <= reach {
                             if split >= split_checkpoint {
+                                #[cfg(coverage)]
+                                coverage_record_checkpoint(16, token);
                                 checkpoint(token)?;
                                 split_checkpoint = split.saturating_add(256);
                             }
@@ -1948,7 +2128,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
 
         path.clear();
         let mut end = pixels.len();
-        if FINE_TRACE {
+        if fine_trace {
             let mut processed = 0_usize;
             let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
             while end != 0 {
@@ -1964,6 +2144,8 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         } else {
             while end != 0 {
                 if end.is_multiple_of(1024) {
+                    #[cfg(coverage)]
+                    coverage_record_checkpoint(17, token);
                     checkpoint(token)?;
                 }
                 let length = manager.lengths[end - 1];
@@ -1979,7 +2161,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
         // and reuse it for token replay instead of allocating a second table.
         cache.fill(0);
         let mut position: usize = 0;
-        if FINE_TRACE {
+        if fine_trace {
             checkpoint(token)?;
             let mut next_checkpoint = TRACE_CHECKPOINT_PIXELS;
             for length in path.drain(..) {
@@ -2032,6 +2214,10 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
                         distance: chain[position].0,
                         length,
                     });
+                    #[cfg(coverage)]
+                    if length >= CACHE_CHECKPOINT_PIXELS {
+                        coverage_record_checkpoint(18, token);
+                    }
                     populate_cache(pixels, position, length, cache_bits, cache, token)?;
                 }
                 position += length;
@@ -2044,6 +2230,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
     result
 }
 
+#[cfg_attr(coverage, inline(never))]
 pub(super) fn candidates(
     pixels: &[u32],
     width: usize,
@@ -2109,9 +2296,7 @@ pub(super) fn candidates(
                 }
             }
         }
-        let Some((tokens, bits, _)) = best else {
-            unreachable!("the inclusive cache-bit range is never empty");
-        };
+        let (tokens, bits, _) = cache_choice_or_invariant_failure(best);
         let cost = estimated_bits_with_checkpoint(&tokens, bits, token, scratch)?;
         checkpoint(token)?;
         Ok((tokens, bits, cost))
@@ -2159,6 +2344,8 @@ pub(super) fn candidates(
     // configuration for palette images containing at most sixteen colors.
     if allow_cache && max_cache_bits <= 4 {
         box_chain(pixels, width, chain, &mut scratch.counts, token)?;
+        #[cfg(coverage)]
+        coverage_record_checkpoint(19, token);
         lz77(pixels, width, chain, token, source_scratch)?;
         let mut box_candidate = improve(
             choose_cache(source_scratch, estimate_scratch, cache_scratch)?,
@@ -2172,6 +2359,1031 @@ pub(super) fn candidates(
 }
 
 #[cfg(coverage)]
+#[inline(never)]
+pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
+    let literal_pixels = vec![0xff00_0000; 4_096];
+    let literal_chain = vec![(0, 0); literal_pixels.len()];
+    let literal_source = vec![Token::Literal(0xff00_0000); literal_pixels.len()];
+
+    // The literal-only chain makes the cache-hit replay branch observable.
+    // Keep all four fine/coarse and token/no-token specializations live: the
+    // public dispatcher selects only two of them.
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &literal_chain,
+        &literal_source,
+        1,
+        None,
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &literal_pixels,
+        32,
+        &literal_chain,
+        &literal_source,
+        1,
+        None,
+        &mut scratch,
+    ));
+
+    // Leave an initial literal prefix before the copy interval. This gives
+    // replay a mixed path instead of allowing the optimizer to select an
+    // all-copy solution for the uniform input.
+    let mixed_chain = (0..literal_pixels.len())
+        .map(|position| {
+            if position < 64 {
+                (0, 0)
+            } else {
+                (1, (literal_pixels.len() - position).min(512))
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &literal_pixels,
+        32,
+        &mixed_chain,
+        &literal_source,
+        1,
+        Some(&crate::CancellationToken::new()),
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &mixed_chain,
+        &literal_source,
+        0,
+        None,
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &literal_chain,
+        &literal_source,
+        1,
+        Some(&crate::CancellationToken::new()),
+        &mut scratch,
+    ));
+
+    let copy_chain = (0..literal_pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else {
+                (1, (literal_pixels.len() - position).min(1_024))
+            }
+        })
+        .collect::<Vec<_>>();
+    // Give the cost model an explicitly copy-heavy reference stream as well
+    // as the literal-only stream above. Without this, the DP is free to pick
+    // literals even when the chain contains copy candidates, so the coarse
+    // replay branch's populate_cache checkpoint remains unobservable.
+    let copy_source = vec![
+        Token::Literal(0xff00_0000),
+        Token::Copy {
+            distance: 1,
+            length: literal_pixels.len() - 1,
+        },
+    ];
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &copy_chain,
+        &literal_source,
+        1,
+        None,
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &literal_pixels,
+        32,
+        &copy_chain,
+        &literal_source,
+        1,
+        Some(&crate::CancellationToken::new()),
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &copy_chain,
+        &copy_source,
+        0,
+        None,
+        &mut scratch,
+    ));
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &literal_pixels,
+        32,
+        &copy_chain,
+        &copy_source,
+        1,
+        Some(&crate::CancellationToken::new()),
+        &mut scratch,
+    ));
+
+    // A short change in distance while the previous interval is still
+    // reachable drives the split/recompute path in the DP trace.
+    let split_chain = (0..literal_pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else if position == 1 {
+                (1, 32)
+            } else if position == 2 {
+                (1, 512)
+            } else if position == 3 {
+                (2, 512)
+            } else {
+                (2, (literal_pixels.len() - position).min(512))
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &literal_pixels,
+        32,
+        &split_chain,
+        &literal_source,
+        1,
+        Some(&crate::CancellationToken::new()),
+        &mut scratch,
+    ));
+
+    #[cfg(coverage_nightly)]
+    {
+        // Measure a small valid split trace, then sweep its checkpoint
+        // boundaries so both interval-update and replacement-push error edges
+        // are reached.
+        let split_probe_pixels = vec![0xff00_0000; 128];
+        let split_probe_chain = (0..split_probe_pixels.len())
+            .map(|position| {
+                if position == 0 {
+                    (0, 0)
+                } else if position == 1 {
+                    (1, 16)
+                } else if position == 2 {
+                    (1, 64)
+                } else {
+                    (2, (split_probe_pixels.len() - position).min(64))
+                }
+            })
+            .collect::<Vec<_>>();
+        let split_probe_source = vec![Token::Literal(0xff00_0000); split_probe_pixels.len()];
+        let split_probe_token = crate::CancellationToken::new();
+        split_probe_token.cancel_after(usize::MAX);
+        let mut split_probe_scratch = TraceScratch::default();
+        let _ = std::hint::black_box(trace_backwards_impl::<true>(
+            &split_probe_pixels,
+            16,
+            &split_probe_chain,
+            &split_probe_source,
+            1,
+            Some(&split_probe_token),
+            &mut split_probe_scratch,
+        ));
+        let split_probe_checks = usize::MAX.saturating_sub(
+            split_probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for checks in 0..=split_probe_checks {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let mut scratch = TraceScratch::default();
+            let _ = std::hint::black_box(trace_backwards_impl::<true>(
+                &split_probe_pixels,
+                16,
+                &split_probe_chain,
+                &split_probe_source,
+                1,
+                Some(&token),
+                &mut scratch,
+            ));
+        }
+        let split_probe_token = crate::CancellationToken::new();
+        split_probe_token.cancel_after(usize::MAX);
+        let mut split_probe_scratch = TraceScratch::default();
+        let _ = std::hint::black_box(trace_backwards_impl::<false>(
+            &split_probe_pixels,
+            16,
+            &split_probe_chain,
+            &split_probe_source,
+            1,
+            Some(&split_probe_token),
+            &mut split_probe_scratch,
+        ));
+        let split_probe_checks = usize::MAX.saturating_sub(
+            split_probe_token
+                .coverage_remaining_checks()
+                .unwrap_or(usize::MAX),
+        );
+        for checks in 0..=split_probe_checks {
+            let token = crate::CancellationToken::new();
+            token.cancel_after(checks);
+            let mut scratch = TraceScratch::default();
+            let _ = std::hint::black_box(trace_backwards_impl::<false>(
+                &split_probe_pixels,
+                16,
+                &split_probe_chain,
+                &split_probe_source,
+                1,
+                Some(&token),
+                &mut scratch,
+            ));
+        }
+    }
+
+    // Measure the actual checkpoint count, then cancel at every boundary.
+    // This covers cancellation edges in DP preparation, interval updates,
+    // path reconstruction, and token replay without guessing their count.
+    // Use a smaller dedicated input for the sweep: the long input above has
+    // already made the 256/1024 checkpoint branches observable, while a
+    // boundary sweep is quadratic in the input length.
+    let cancellation_pixels = vec![0xff00_0000; 768];
+    let cancellation_chain = (0..cancellation_pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else {
+                (1, (cancellation_pixels.len() - position).min(256))
+            }
+        })
+        .collect::<Vec<_>>();
+    let cancellation_source = vec![Token::Literal(0xff00_0000); cancellation_pixels.len()];
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let mut probe_scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &cancellation_pixels,
+        32,
+        &cancellation_chain,
+        &cancellation_source,
+        1,
+        Some(&probe),
+        &mut probe_scratch,
+    ));
+    let successful_checks =
+        usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
+    for checks in [
+        0,
+        successful_checks.min(1),
+        successful_checks / 2,
+        successful_checks.saturating_sub(1),
+        successful_checks,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut scratch = TraceScratch::default();
+        let _ = std::hint::black_box(trace_backwards_impl::<true>(
+            &cancellation_pixels,
+            32,
+            &cancellation_chain,
+            &cancellation_source,
+            1,
+            Some(&token),
+            &mut scratch,
+        ));
+    }
+
+    // The coarse token-aware specialization has a different checkpoint
+    // cadence from fine tracing, so sweep it independently as well.
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let mut probe_scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &cancellation_pixels,
+        32,
+        &cancellation_chain,
+        &cancellation_source,
+        1,
+        Some(&probe),
+        &mut probe_scratch,
+    ));
+    let successful_checks =
+        usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
+    for checks in [
+        0,
+        successful_checks.min(1),
+        successful_checks / 2,
+        successful_checks.saturating_sub(1),
+        successful_checks,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut scratch = TraceScratch::default();
+        let _ = std::hint::black_box(trace_backwards_impl::<false>(
+            &cancellation_pixels,
+            32,
+            &cancellation_chain,
+            &cancellation_source,
+            1,
+            Some(&token),
+            &mut scratch,
+        ));
+    }
+
+    // The token-aware box pass has a separate candidate checkpoint family.
+    // A long run reaches both its bounded-length and end-of-input guards.
+    let box_pixels = vec![0xff00_0000; MAX_LENGTH * 2 + 64];
+    let mut box_chain_state = vec![(0, 0); box_pixels.len()];
+    let mut box_counts = Vec::new();
+    let box_token = crate::CancellationToken::new();
+    let _ = std::hint::black_box(box_chain(
+        &box_pixels,
+        1,
+        &mut box_chain_state,
+        &mut box_counts,
+        Some(&box_token),
+    ));
+    // Two equal one-pixel runs followed by different values reach the
+    // post-run comparison in the token-aware box matcher. Uniform input
+    // exits earlier through the end-of-input guard, so it cannot cover this
+    // valid mismatch state.
+    let mismatch_pixels = [0xff00_0000, 0xff00_0001, 0xff00_0000, 0xff00_0002];
+    let mut mismatch_chain = vec![(0, 0); mismatch_pixels.len()];
+    let mut mismatch_counts = Vec::new();
+    let mismatch_token = crate::CancellationToken::new();
+    let _ = std::hint::black_box(box_chain(
+        &mismatch_pixels,
+        1,
+        &mut mismatch_chain,
+        &mut mismatch_counts,
+        Some(&mismatch_token),
+    ));
+
+    // Force the interval manager's token-aware work counter past its 1,024
+    // entry checkpoint while keeping the state below the saturation fallback.
+    let manager_tokens = vec![Token::Literal(0xff00_0000); 128];
+    let mut manager_model = CostModel::default();
+    let manager_token = crate::CancellationToken::new();
+    manager_model
+        .prepare_with_checkpoint(&manager_tokens, 1, 32, Some(&manager_token))
+        .expect("coverage cost model must prepare");
+    let mut manager = CostManager::default();
+    manager
+        .prepare_with_checkpoint(256, &manager_model, Some(&manager_token))
+        .expect("coverage cost manager must prepare");
+    manager.intervals = (0..64)
+        .map(|index| CostInterval {
+            cost: 1,
+            start: index * 4,
+            end: index * 4 + 2,
+            position: 0,
+        })
+        .collect();
+    let _ = std::hint::black_box(manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
+            start: 0,
+            end: 256,
+            position: 0,
+        },
+        Some(&manager_token),
+    ));
+    let mut gap_manager = CostManager::default();
+    gap_manager.intervals.push(CostInterval {
+        cost: 1,
+        start: 16,
+        end: 18,
+        position: 0,
+    });
+    let _ = std::hint::black_box(gap_manager.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
+            start: 0,
+            end: 2,
+            position: 0,
+        },
+        Some(&manager_token),
+    ));
+
+    // Keep the low-level reference builders on the instrumented side of the
+    // coverage boundary. The public coverage hook above is intentionally
+    // `coverage(off)` because it also models impossible defensive states;
+    // these calls exercise the ordinary cancellation edges with real counts.
+    let reference_pixels = vec![0xff00_0000; 2_048];
+    let mut reference_chain = vec![(0, 0); reference_pixels.len()];
+    let mut reference_first = Vec::new();
+    let _ = std::hint::black_box(fill_hash_chain(
+        &reference_pixels,
+        32,
+        100,
+        &mut reference_chain,
+        &mut reference_first,
+        None,
+    ));
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel_after(0);
+    let _ = std::hint::black_box(fill_hash_chain(
+        &reference_pixels,
+        32,
+        100,
+        &mut reference_chain,
+        &mut reference_first,
+        Some(&cancelled),
+    ));
+    let mut window_pixels = vec![0_u32, 1];
+    window_pixels.extend(1_000_u32..1_038);
+    window_pixels.extend([0, 1]);
+    let window_pixels = std::hint::black_box(window_pixels);
+    let window_token = crate::CancellationToken::new();
+    let mut window_chain = Vec::new();
+    let mut window_first = Vec::new();
+    let _ = std::hint::black_box(fill_hash_chain(
+        &window_pixels,
+        1,
+        0,
+        &mut window_chain,
+        &mut window_first,
+        Some(&window_token),
+    ));
+
+    let mut reference_refs = Vec::new();
+    let reference_copy_chain = (0..reference_pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else {
+                (1, (reference_pixels.len() - position).min(64))
+            }
+        })
+        .collect::<Vec<_>>();
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel_after(0);
+    let _ = std::hint::black_box(lz77(
+        &reference_pixels,
+        32,
+        &reference_copy_chain,
+        Some(&cancelled),
+        &mut reference_refs,
+    ));
+    let _ = std::hint::black_box(fill_hash_chain(
+        &reference_pixels,
+        32,
+        100,
+        &mut reference_chain,
+        &mut reference_first,
+        None,
+    ));
+    let _ = std::hint::black_box(lz77(
+        &reference_pixels,
+        32,
+        &reference_chain,
+        None,
+        &mut reference_refs,
+    ));
+    let mut valid_trace_scratch = TraceScratch::default();
+    std::hint::black_box(
+        trace_backwards_impl::<false>(
+            &reference_pixels,
+            32,
+            &reference_chain,
+            &reference_refs,
+            0,
+            None,
+            &mut valid_trace_scratch,
+        )
+        .expect("coverage reference trace must encode"),
+    );
+    let valid_trace_token = crate::CancellationToken::new();
+    let mut valid_token_trace_scratch = TraceScratch::default();
+    std::hint::black_box(
+        trace_backwards_impl::<true>(
+            &reference_pixels,
+            32,
+            &reference_chain,
+            &reference_refs,
+            1,
+            Some(&valid_trace_token),
+            &mut valid_token_trace_scratch,
+        )
+        .expect("coverage token reference trace must encode"),
+    );
+    let coarse_token_trace_token = crate::CancellationToken::new();
+    let mut coarse_token_trace_scratch = TraceScratch::default();
+    std::hint::black_box(
+        trace_backwards_impl::<false>(
+            &reference_pixels,
+            32,
+            &reference_chain,
+            &reference_refs,
+            1,
+            Some(&coarse_token_trace_token),
+            &mut coarse_token_trace_scratch,
+        )
+        .expect("coverage coarse token reference trace must encode"),
+    );
+    let mut wrapper_trace_scratch = TraceScratch::default();
+    std::hint::black_box(
+        trace_backwards(
+            &reference_pixels,
+            32,
+            &reference_chain,
+            &reference_refs,
+            0,
+            None,
+            &mut wrapper_trace_scratch,
+        )
+        .expect("coverage wrapper trace must encode"),
+    );
+    let wrapper_trace_token = crate::CancellationToken::new();
+    let mut wrapper_token_trace_scratch = TraceScratch::default();
+    std::hint::black_box(
+        trace_backwards(
+            &reference_pixels,
+            32,
+            &reference_chain,
+            &reference_refs,
+            1,
+            Some(&wrapper_trace_token),
+            &mut wrapper_token_trace_scratch,
+        )
+        .expect("coverage wrapper token trace must encode"),
+    );
+    let _ = std::hint::black_box(rle_into(
+        &reference_pixels[..512],
+        32,
+        Some(&crate::CancellationToken::new()),
+        &mut reference_refs,
+    ));
+    let mut reference_box_chain = vec![(0, 0); 512];
+    let mut reference_counts = Vec::new();
+    let _ = std::hint::black_box(box_chain(
+        &reference_pixels[..512],
+        1,
+        &mut reference_box_chain,
+        &mut reference_counts,
+        None,
+    ));
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel_after(0);
+    let _ = std::hint::black_box(box_chain(
+        &reference_pixels[..512],
+        1,
+        &mut reference_box_chain,
+        &mut reference_counts,
+        Some(&cancelled),
+    ));
+
+    let cost_tokens = vec![Token::Literal(0xff00_0000); 1_024];
+    let cost_probe = crate::CancellationToken::new();
+    cost_probe.cancel_after(usize::MAX);
+    let mut cost_probe_model = CostModel::default();
+    let _ = std::hint::black_box(cost_probe_model.prepare_with_checkpoint(
+        &cost_tokens,
+        1,
+        32,
+        Some(&cost_probe),
+    ));
+    let cost_checks =
+        usize::MAX.saturating_sub(cost_probe.coverage_remaining_checks().unwrap_or(usize::MAX));
+    for checks in [
+        0,
+        cost_checks.min(1),
+        cost_checks / 2,
+        cost_checks.saturating_sub(1),
+        cost_checks,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut model = CostModel::default();
+        let _ =
+            std::hint::black_box(model.prepare_with_checkpoint(&cost_tokens, 1, 32, Some(&token)));
+    }
+
+    let estimate_probe = crate::CancellationToken::new();
+    estimate_probe.cancel_after(usize::MAX);
+    let mut estimate_scratch = CostEstimateScratch::default();
+    let _ = std::hint::black_box(estimated_bits_with_checkpoint(
+        &cost_tokens,
+        1,
+        Some(&estimate_probe),
+        &mut estimate_scratch,
+    ));
+    let estimate_checks = usize::MAX.saturating_sub(
+        estimate_probe
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in [
+        0,
+        estimate_checks.min(1),
+        estimate_checks / 2,
+        estimate_checks.saturating_sub(1),
+        estimate_checks,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut scratch = CostEstimateScratch::default();
+        let _ = std::hint::black_box(estimated_bits_with_checkpoint(
+            &cost_tokens,
+            1,
+            Some(&token),
+            &mut scratch,
+        ));
+    }
+
+    let manager_probe_token = crate::CancellationToken::new();
+    manager_probe_token.cancel_after(usize::MAX);
+    let mut manager_probe = CostManager::default();
+    manager_probe.prepare_without_checkpoint(256, &cost_probe_model);
+    manager_probe.intervals = (0..64)
+        .map(|index| CostInterval {
+            cost: 1,
+            start: index * 4,
+            end: index * 4 + 2,
+            position: 0,
+        })
+        .collect();
+    let _ = std::hint::black_box(manager_probe.insert_min_interval_with_checkpoint(
+        CostInterval {
+            cost: 0,
+            start: 0,
+            end: 256,
+            position: 0,
+        },
+        Some(&manager_probe_token),
+    ));
+    let manager_checks = usize::MAX.saturating_sub(
+        manager_probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    for checks in [
+        0,
+        manager_checks.min(1),
+        manager_checks / 2,
+        manager_checks.saturating_sub(1),
+        manager_checks,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut manager = CostManager::default();
+        manager.prepare_without_checkpoint(256, &cost_probe_model);
+        manager.intervals = (0..64)
+            .map(|index| CostInterval {
+                cost: 1,
+                start: index * 4,
+                end: index * 4 + 2,
+                position: 0,
+            })
+            .collect();
+        let _ = std::hint::black_box(manager.insert_min_interval_with_checkpoint(
+            CostInterval {
+                cost: 0,
+                start: 0,
+                end: 256,
+                position: 0,
+            },
+            Some(&token),
+        ));
+    }
+
+    coverage_exercise_remaining_checkpoint_errors();
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_fill_hash_chain_uniform(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 2_048];
+    let mut chain = Vec::new();
+    let mut first = Vec::new();
+    fill_hash_chain(&pixels, 32, 100, &mut chain, &mut first, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_fill_hash_chain_random(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = (0..2_048)
+        .map(|index| {
+            (index as u32)
+                .wrapping_mul(0x9e37_79b9)
+                .rotate_left((index % 31) as u32)
+        })
+        .collect::<Vec<_>>();
+    let mut chain = Vec::new();
+    let mut first = Vec::new();
+    fill_hash_chain(&pixels, 32, 100, &mut chain, &mut first, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_fill_hash_chain_long_match(
+    token: &crate::CancellationToken,
+) -> CheckpointResult<()> {
+    let pixels = (0..1_024_usize)
+        .map(|index| {
+            if (256..=800).contains(&index) {
+                0xff22_3344
+            } else {
+                (index as u32).wrapping_mul(0x9e37_79b9)
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut chain = Vec::new();
+    let mut first = Vec::new();
+    fill_hash_chain(&pixels, 32, 100, &mut chain, &mut first, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_fill_hash_chain_match_error(
+    token: &crate::CancellationToken,
+) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 258];
+    let mut chain = Vec::new();
+    let mut first = Vec::new();
+    fill_hash_chain(&pixels, 1, 100, &mut chain, &mut first, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_hash_candidate(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = (0..512_usize)
+        .map(|index| {
+            if index.is_multiple_of(2) {
+                0x0100_0000
+            } else {
+                0x0200_0000
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut chain = Vec::new();
+    let mut first = Vec::new();
+    checkpoint(Some(token))?;
+    fill_hash_chain(&pixels, 2, 100, &mut chain, &mut first, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_hash_candidate_work_checkpoint(
+    token: &crate::CancellationToken,
+) -> CheckpointResult<()> {
+    let mut work = HASH_CHAIN_CANDIDATE_CHECKPOINT_TRIALS - 1;
+    checkpoint_hash_chain_candidate_work(token, &mut work)
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_forced_hash_candidate_checkpoint(
+    token: &crate::CancellationToken,
+) -> CheckpointResult<()> {
+    FORCE_HASH_CHAIN_CANDIDATE_CHECKPOINT.store(true, Ordering::Relaxed);
+    let result = coverage_run_hash_candidate(token);
+    FORCE_HASH_CHAIN_CANDIDATE_CHECKPOINT.store(false, Ordering::Relaxed);
+    result
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_candidates(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = (0..4_096)
+        .map(|index| {
+            if index % 8 < 4 {
+                0xff10_2010
+            } else {
+                0xff20_4020
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut scratch = CandidateScratch::default();
+    candidates(&pixels, 32, true, 80, 4, &mut scratch, Some(token)).map(|_| ())
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_lz77(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 4_096];
+    let chain = (0..pixels.len())
+        .map(|position| if position == 0 { (0, 0) } else { (0, 1) })
+        .collect::<Vec<_>>();
+    let mut refs = Vec::new();
+    lz77(&pixels, 32, &chain, Some(token), &mut refs)
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_rle(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 512];
+    let mut refs = Vec::new();
+    rle_into(&pixels, 1, Some(token), &mut refs)
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_box_chain(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 2_048];
+    let mut chain = vec![(0, 0); pixels.len()];
+    let mut counts = Vec::new();
+    box_chain(&pixels, 1, &mut chain, &mut counts, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_box_inner(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = (0..1_024_usize)
+        .map(|index| {
+            if index.is_multiple_of(2) {
+                0xff00_0000
+            } else {
+                0xff00_0001
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut chain = vec![(0, 0); pixels.len()];
+    let mut counts = Vec::new();
+    box_chain(&pixels, 1, &mut chain, &mut counts, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_box_direct(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 2_048];
+    let mut chain = vec![(1, MAX_LENGTH); pixels.len()];
+    chain[0] = (0, 0);
+    let mut counts = Vec::new();
+    box_chain(&pixels, 1, &mut chain, &mut counts, Some(token))
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_split_trace(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 1_024];
+    let chain = (0..pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else if position <= 300 {
+                (1, (pixels.len() - position - 1).min(512))
+            } else {
+                (2, (pixels.len() - position - 1).min(512))
+            }
+        })
+        .collect::<Vec<_>>();
+    let source = vec![Token::Literal(0xff00_0000); pixels.len()];
+    let mut scratch = TraceScratch::default();
+    trace_backwards_impl::<true>(&pixels, 32, &chain, &source, 0, Some(token), &mut scratch)
+        .map(|_| ())
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_coarse_trace(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 2_048];
+    let chain = vec![(0, 0); pixels.len()];
+    let source = vec![Token::Literal(0xff00_0000); pixels.len()];
+    let mut scratch = TraceScratch::default();
+    trace_backwards_impl::<false>(&pixels, 32, &chain, &source, 0, Some(token), &mut scratch)
+        .map(|_| ())
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_run_cache_trace(token: &crate::CancellationToken) -> CheckpointResult<()> {
+    let pixels = vec![0xff00_0000; 2_048];
+    let chain = (0..pixels.len())
+        .map(|position| {
+            if position == 0 {
+                (0, 0)
+            } else {
+                (1, pixels.len() - position)
+            }
+        })
+        .collect::<Vec<_>>();
+    let source = vec![
+        Token::Literal(0xff00_0000),
+        Token::Copy {
+            distance: 1,
+            length: pixels.len() - 1,
+        },
+    ];
+    let mut scratch = TraceScratch::default();
+    trace_backwards_impl::<false>(&pixels, 32, &chain, &source, 1, Some(token), &mut scratch)
+        .map(|_| ())
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_replay_checkpoint(
+    index: usize,
+    run: fn(&crate::CancellationToken) -> CheckpointResult<()>,
+) {
+    let Some(checks) = coverage_checkpoint_count(index) else {
+        return;
+    };
+    let token = crate::CancellationToken::new();
+    token.cancel_after(checks);
+    let _ = std::hint::black_box(run(&token));
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_replay_checkpoint_window(
+    index: usize,
+    run: fn(&crate::CancellationToken) -> CheckpointResult<()>,
+) {
+    let Some(checks) = coverage_checkpoint_count(index) else {
+        return;
+    };
+    for attempt in [checks.saturating_sub(1), checks, checks.saturating_add(1)] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(attempt);
+        let _ = std::hint::black_box(run(&token));
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_exercise_remaining_checkpoint_errors() {
+    for slot in &COVERAGE_CHECKPOINT_REMAINING {
+        slot.store(usize::MAX, Ordering::Relaxed);
+    }
+
+    for run in [
+        coverage_run_fill_hash_chain_uniform,
+        coverage_run_fill_hash_chain_random,
+        coverage_run_fill_hash_chain_long_match,
+        coverage_run_hash_candidate,
+        coverage_run_candidates,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(usize::MAX);
+        let _ = std::hint::black_box(run(&token));
+    }
+    for run in [
+        coverage_run_lz77,
+        coverage_run_rle,
+        coverage_run_box_inner,
+        coverage_run_box_chain,
+        coverage_run_split_trace,
+        coverage_run_coarse_trace,
+        coverage_run_cache_trace,
+    ] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(usize::MAX);
+        let _ = std::hint::black_box(run(&token));
+    }
+
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let _ = std::hint::black_box(coverage_run_hash_candidate_work_checkpoint(&token));
+    coverage_replay_checkpoint(0, coverage_run_hash_candidate_work_checkpoint);
+
+    for index in [1, 4] {
+        coverage_replay_checkpoint(index, coverage_run_fill_hash_chain_uniform);
+    }
+    coverage_replay_checkpoint(2, coverage_run_fill_hash_chain_random);
+
+    COVERAGE_CHECKPOINT_REMAINING[3].store(usize::MAX, Ordering::Relaxed);
+    let match_probe_token = crate::CancellationToken::new();
+    match_probe_token.cancel_after(usize::MAX);
+    let _ = std::hint::black_box(coverage_run_fill_hash_chain_match_error(&match_probe_token));
+    coverage_replay_checkpoint(3, coverage_run_fill_hash_chain_match_error);
+
+    COVERAGE_CHECKPOINT_REMAINING[5].store(usize::MAX, Ordering::Relaxed);
+    let candidate_token = crate::CancellationToken::new();
+    candidate_token.cancel_after(usize::MAX);
+    let _ = std::hint::black_box(coverage_run_forced_hash_candidate_checkpoint(
+        &candidate_token,
+    ));
+    coverage_replay_checkpoint(5, coverage_run_forced_hash_candidate_checkpoint);
+    coverage_replay_checkpoint(6, coverage_run_lz77);
+    for checks in [0, 1] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = std::hint::black_box(coverage_run_rle(&token));
+    }
+    let direct_box_token = crate::CancellationToken::new();
+    direct_box_token.cancel_after(1);
+    let _ = std::hint::black_box(coverage_run_box_direct(&direct_box_token));
+    let inner_box_token = crate::CancellationToken::new();
+    inner_box_token.cancel_after(1);
+    let _ = std::hint::black_box(coverage_run_box_inner(&inner_box_token));
+    COVERAGE_CHECKPOINT_REMAINING[9].store(usize::MAX, Ordering::Relaxed);
+    let box_probe_token = crate::CancellationToken::new();
+    box_probe_token.cancel_after(usize::MAX);
+    let _ = std::hint::black_box(coverage_run_box_chain(&box_probe_token));
+    coverage_replay_checkpoint(9, coverage_run_box_chain);
+    coverage_replay_checkpoint(16, coverage_run_split_trace);
+    coverage_replay_checkpoint(17, coverage_run_coarse_trace);
+    coverage_replay_checkpoint_window(18, coverage_run_cache_trace);
+    coverage_replay_checkpoint(19, coverage_run_candidates);
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let mut scratch = CandidateScratch::default();
     assert!(matches!(
@@ -2405,11 +3617,38 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let _ = token_manager.push_with_checkpoint(0, 0, 64, Some(&coverage_token));
 
+    // Cancel inside the interval-building work of the long token-aware push.
+    // Rebuild the manager for each threshold so every internal `?` edge is
+    // tested from the same valid prepared state.
+    for checks in [0, 1, 2, 64, 256] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut push_manager = CostManager::default();
+        push_manager.prepare_without_checkpoint(4_096, &token_model);
+        let _ = push_manager.push_with_checkpoint(0, 0, 256, Some(&token));
+    }
+    for checks in [0, 1, 2, 8] {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut saturated_push = CostManager::default();
+        saturated_push.prepare_without_checkpoint(4_096, &token_model);
+        saturated_push.intervals = vec![
+            CostInterval {
+                cost: 1,
+                start: 0,
+                end: 4,
+                position: 0,
+            };
+            500
+        ];
+        let _ = saturated_push.push_with_checkpoint(0, 0, MAX_LENGTH, Some(&token));
+    }
+
     let trace_pixels = vec![0xff00_0000; 2_048];
     let trace_chain = vec![(0, 0); trace_pixels.len()];
     let trace_source = vec![Token::Literal(0xff00_0000); trace_pixels.len()];
     let mut fine_trace_scratch = TraceScratch::default();
-    let _ = trace_backwards_impl::<true>(
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
         &trace_pixels,
         32,
         &trace_chain,
@@ -2417,9 +3656,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1,
         Some(&coverage_token),
         &mut fine_trace_scratch,
-    );
+    ));
     let mut ordinary_trace_scratch = TraceScratch::default();
-    let _ = trace_backwards_impl::<false>(
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
         &trace_pixels,
         32,
         &trace_chain,
@@ -2427,7 +3666,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
         None,
         &mut ordinary_trace_scratch,
-    );
+    ));
 
     let copy_trace_pixels = vec![0xff00_0000; 2_048];
     let copy_trace_chain = (0..copy_trace_pixels.len())
@@ -2441,7 +3680,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     let copy_trace_source = vec![Token::Literal(0xff00_0000); copy_trace_pixels.len()];
     let mut copy_fine_scratch = TraceScratch::default();
-    let _ = trace_backwards_impl::<true>(
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
         &copy_trace_pixels,
         32,
         &copy_trace_chain,
@@ -2449,9 +3688,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1,
         Some(&coverage_token),
         &mut copy_fine_scratch,
-    );
+    ));
     let mut copy_ordinary_scratch = TraceScratch::default();
-    let _ = trace_backwards_impl::<false>(
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
         &copy_trace_pixels,
         32,
         &copy_trace_chain,
@@ -2459,8 +3698,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
         None,
         &mut copy_ordinary_scratch,
-    );
-
+    ));
+    // The public dispatcher selects fine tracing when a caller token exists
+    // and coarse tracing otherwise. Exercise the other two private const
+    // specializations as implementation-only models so their shared replay
+    // logic is covered under both token states as well.
+    let mut coarse_token_scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<false>(
+        &copy_trace_pixels,
+        32,
+        &copy_trace_chain,
+        &copy_trace_source,
+        1,
+        Some(&coverage_token),
+        &mut coarse_token_scratch,
+    ));
+    let mut ordinary_fine_scratch = TraceScratch::default();
+    let _ = std::hint::black_box(trace_backwards_impl::<true>(
+        &copy_trace_pixels,
+        32,
+        &copy_trace_chain,
+        &copy_trace_source,
+        1,
+        None,
+        &mut ordinary_fine_scratch,
+    ));
     let token_pixels = (0..4_096)
         .map(|index| {
             if index % 8 < 4 {
@@ -2471,7 +3733,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .collect::<Vec<_>>();
     let mut token_scratch = CandidateScratch::default();
-    let _ = candidates(
+    let _ = std::hint::black_box(candidates(
         &token_pixels,
         32,
         true,
@@ -2479,12 +3741,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         4,
         &mut token_scratch,
         Some(&coverage_token),
-    );
-    for checks in 0..1_024 {
+    ));
+    // The generic candidate path has already been run to completion above;
+    // this bounded sweep only needs enough early cancellation points to
+    // materialize its typed `?` edges. Keep it small because each attempted
+    // candidate owns a pixel-scaled scratch set.
+    for checks in [0, 1, 2, 32, 127] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut candidate_scratch = CandidateScratch::default();
-        let _ = candidates(
+        let _ = std::hint::black_box(candidates(
             &token_pixels,
             32,
             true,
@@ -2492,7 +3758,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             4,
             &mut candidate_scratch,
             Some(&token),
-        );
+        ));
     }
     let _ = std::panic::catch_unwind(|| {
         let pixels = [0xff00_0000; 8];

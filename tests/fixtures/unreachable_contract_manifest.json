@@ -206,6 +206,24 @@
       "planned_context": []
     },
     {
+      "id": "release-package-surface",
+      "label": "Release package surface",
+      "status": "covered",
+      "scope": "Cargo's exact release package path set, including the deliberate repository-only exclusion of parity fixtures and integration targets; Pillow cannot inspect this crate archive or its Cargo package boundary. Source IDs FTR-012, QA-013, and DOC-004.",
+      "pillow_parity": "excluded",
+      "evidence": [
+        {
+          "kind": "fixture_verifier",
+          "path": "scripts/verify_package_surface.py",
+          "fixture": "tests/fixtures/package_surface_manifest.json",
+          "tests": [],
+          "command": ["python3", "scripts/verify_package_surface.py"]
+        }
+      ],
+      "planned_reason": null,
+      "planned_context": []
+    },
+    {
       "id": "allocation-stack-coverage-models",
       "label": "Allocation/stack/coverage models",
       "status": "planned",

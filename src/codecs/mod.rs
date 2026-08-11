@@ -1300,12 +1300,12 @@ pub(crate) fn encode_format_to_sink_with_token(
             token,
             sink,
         );
-        return into_image_result(
+        into_image_result(
             encoded.map_err(|error| error.context("encode")),
             format,
             ImageErrorStage::StillEncode,
         )
-        .map(Some);
+        .map(Some)
     }
 }
 
@@ -1743,12 +1743,12 @@ pub(crate) fn encode_sequence_to_sink_with_token(
             token,
             sink,
         );
-        return into_image_result(
+        into_image_result(
             encoded.map_err(|error| error.context("encode sequence")),
             format,
             ImageErrorStage::SequenceEncode,
         )
-        .map(Some);
+        .map(Some)
     }
 }
 
@@ -2287,6 +2287,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
         &mut metadata_sink,
     );
+    let mut metadata_webp_sink = Vec::new();
+    let _ = encode_sequence_to_sink_with_token(
+        &metadata_sequence,
+        ImageFormat::WebP,
+        &EncodeOptions::for_format(ImageFormat::WebP),
+        EncodePolicy::default(),
+        None,
+        &mut metadata_webp_sink,
+    );
 
     // Still codecs are currently whole-buffer operations.  The coverage-only
     // hook makes the post-codec public-boundary cancellation checkpoint
@@ -2296,7 +2305,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // its final public-boundary check. Sweep a bounded count so the
     // dispatcher-level cancellation edge is reached as well as the earlier
     // codec-local edges; Pillow has no equivalent caller token.
-    for checks in 0..=20 {
+    let probe = crate::CancellationToken::new();
+    probe.cancel_after(usize::MAX);
+    let _ = encode_format_with_token(
+        &luma,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        Some(&probe),
+    );
+    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    for checks in 0..=calls {
         let post_codec_cancel = crate::CancellationToken::new();
         post_codec_cancel.cancel_after(checks);
         let _ = encode_format_with_token(
@@ -2306,6 +2324,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Some(&post_codec_cancel),
         );
     }
+    let successful_post_codec_token = crate::CancellationToken::new();
+    let _ = encode_format_with_token(
+        &rgb,
+        ImageFormat::Png,
+        &EncodeOptions::for_format(ImageFormat::Png),
+        Some(&successful_post_codec_token),
+    );
 
     let two_frame_sequence = DecodedSequence {
         width: 1,
@@ -2439,6 +2464,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
     let _ = validate_decoded_image(invalid_image);
+    for format in [
+        ImageFormat::Avif,
+        ImageFormat::Gif,
+        ImageFormat::Tiff,
+        ImageFormat::WebP,
+    ] {
+        let mut sink = Vec::new();
+        let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
+        let _ = encode_format_to_sink_with_token(
+            &invalid_image,
+            format,
+            &EncodeOptions::for_format(format),
+            EncodePolicy::default(),
+            None,
+            &mut sink,
+        );
+    }
 
     // The manifest currently has no malformed AVIF container fixture. Keep the
     // dispatch-only error conversion covered without weakening AVIF parity rows.

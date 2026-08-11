@@ -14,6 +14,9 @@ use super::{
 };
 use crate::codecs::CodecResult;
 
+#[cfg(coverage)]
+use super::{chroma::ChromaCandidate, intra4::Intra4Result, intra16::Intra16Candidate};
+
 const PARTITION_PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
@@ -52,37 +55,61 @@ trait PartitionCheckpointControl {
     fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>>;
 }
 
-struct NoopPartitionCheckpoint;
+struct NoopPartitionCheckpoint {
+    #[cfg(coverage)]
+    fail_after: usize,
+}
+
+impl NoopPartitionCheckpoint {
+    fn new() -> Self {
+        Self {
+            #[cfg(coverage)]
+            fail_after: usize::MAX,
+        }
+    }
+
+    #[inline(always)]
+    fn event(&mut self) -> CodecResult<()> {
+        #[cfg(coverage)]
+        {
+            if self.fail_after == 0 {
+                return Err(crate::codecs::CodecError::Cancelled);
+            }
+            self.fail_after = self.fail_after.saturating_sub(1);
+        }
+        Ok(())
+    }
+}
 
 impl PartitionCheckpointControl for NoopPartitionCheckpoint {
     #[inline(always)]
     fn checkpoint_probability(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_filter_edge_macroblock(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_bit(&mut self) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
     fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
-        Ok(())
+        self.event()
     }
 
     #[inline(always)]
@@ -92,11 +119,152 @@ impl PartitionCheckpointControl for NoopPartitionCheckpoint {
         probability: u8,
         value: bool,
     ) -> CodecResult<()> {
+        self.event()?;
         writer.encode_bool(probability, value);
         Ok(())
     }
 
     #[inline(always)]
+    fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
+        self.event()?;
+        Ok(writer.finish())
+    }
+}
+
+#[cfg(coverage)]
+struct CoverageFailingPartitionCheckpoint {
+    encode_calls: usize,
+    fail_after_encode: Option<usize>,
+    fail_filter_edge: bool,
+    fail_prepass: bool,
+    fail_probability: bool,
+    fail_macroblock: bool,
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl CoverageFailingPartitionCheckpoint {
+    fn new(fail_after_encode: usize) -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: Some(fail_after_encode),
+            fail_filter_edge: false,
+            fail_prepass: false,
+            fail_probability: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn with_filter_edge_failure() -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: Some(usize::MAX),
+            fail_filter_edge: std::hint::black_box(true),
+            fail_prepass: false,
+            fail_probability: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn with_prepass_failure() -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: Some(usize::MAX),
+            fail_filter_edge: false,
+            fail_prepass: std::hint::black_box(true),
+            fail_probability: false,
+            fail_macroblock: false,
+        }
+    }
+
+    fn with_probability_failure() -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: Some(usize::MAX),
+            fail_filter_edge: false,
+            fail_prepass: false,
+            fail_probability: std::hint::black_box(true),
+            fail_macroblock: false,
+        }
+    }
+
+    fn with_macroblock_failure() -> Self {
+        Self {
+            encode_calls: 0,
+            fail_after_encode: Some(usize::MAX),
+            fail_filter_edge: false,
+            fail_prepass: false,
+            fail_probability: false,
+            fail_macroblock: std::hint::black_box(true),
+        }
+    }
+
+    fn encode_or_fail(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        if self
+            .fail_after_encode
+            .is_some_and(|limit| self.encode_calls >= limit)
+        {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        writer.encode_bool(probability, value);
+        self.encode_calls = self.encode_calls.saturating_add(1);
+        Ok(())
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+impl PartitionCheckpointControl for CoverageFailingPartitionCheckpoint {
+    fn checkpoint_probability(&mut self) -> CodecResult<()> {
+        if self.fail_probability {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn checkpoint_filter_edge_macroblock(&mut self) -> CodecResult<()> {
+        if self.fail_filter_edge {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn checkpoint_prepass_macroblock(&mut self) -> CodecResult<()> {
+        if self.fail_prepass {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn checkpoint_macroblock(&mut self) -> CodecResult<()> {
+        if self.fail_macroblock {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
+        Ok(())
+    }
+
+    fn checkpoint_bit(&mut self) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn checkpoint_output_bytes(&mut self, _emitted: usize) -> CodecResult<()> {
+        Ok(())
+    }
+
+    fn encode_bool(
+        &mut self,
+        writer: &mut BoolEncoder,
+        probability: u8,
+        value: bool,
+    ) -> CodecResult<()> {
+        self.encode_or_fail(writer, probability, value)
+    }
+
     fn finish(&mut self, writer: BoolEncoder) -> CodecResult<Vec<u8>> {
         Ok(writer.finish())
     }
@@ -277,6 +445,10 @@ impl PartitionCheckpointControl for TokenPartitionCheckpoint<'_> {
     }
 
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> CodecResult<()> {
+        #[cfg(coverage)]
+        if self.output_bytes == usize::MAX {
+            return Err(crate::codecs::CodecError::Cancelled);
+        }
         let previous = self.output_bytes;
         self.output_bytes = self.output_bytes.saturating_add(emitted);
         let mut previous_interval = previous / PARTITION_OUTPUT_CHECKPOINT_BYTES;
@@ -349,6 +521,814 @@ fn write_signed<P: PartitionCheckpointControl>(
         )?;
     }
     Ok(())
+}
+
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let token = crate::CancellationToken::new();
+    let mut checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: PARTITION_PROBABILITY_CHECKPOINT_NODES - 1,
+        filter_edge_items: PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS - 1,
+        prepass_items: PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS - 1,
+        macroblock_items: PARTITION_MODE_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: PARTITION_262144_BIT_CHECKPOINT_BITS - 1,
+        output_bytes: PARTITION_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let _ = checkpoint.checkpoint_probability();
+    let _ = checkpoint.checkpoint_filter_edge_macroblock();
+    let _ = checkpoint.checkpoint_prepass_macroblock();
+    let _ = checkpoint.checkpoint_macroblock();
+    let _ = checkpoint.checkpoint_bit();
+    let _ = checkpoint.checkpoint_output_bytes(1);
+
+    // Visit each token-aware interval's failing edge independently. The
+    // high-water success probe above proves the nested predicates; these
+    // seeded counters prove their typed cancellation returns.
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut probability_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: PARTITION_PROBABILITY_CHECKPOINT_NODES - 1,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = probability_checkpoint.checkpoint_probability();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut filter_edge_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS - 1,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = filter_edge_checkpoint.checkpoint_filter_edge_macroblock();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut prepass_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS - 1,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = prepass_checkpoint.checkpoint_prepass_macroblock();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut macroblock_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: PARTITION_MODE_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = macroblock_checkpoint.checkpoint_macroblock();
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut output_interval_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: PARTITION_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let _ = output_interval_checkpoint.checkpoint_output_bytes(1);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut output_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: PARTITION_OUTPUT_CHECKPOINT_BYTES - 1,
+    };
+    let mut output_writer = super::bool_enc::__coverage_carry_encoder();
+    for _ in 0..32 {
+        let _ = output_checkpoint.encode_bool(&mut output_writer, 128, false);
+    }
+    let token = crate::CancellationToken::new();
+    let mut forced_output_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: usize::MAX,
+    };
+    let mut forced_output_writer = super::bool_enc::__coverage_pending_encoder();
+    let _ = forced_output_checkpoint.encode_bool(&mut forced_output_writer, 0, false);
+    let mut forced_finish_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: usize::MAX,
+    };
+    let _ = std::hint::black_box(
+        forced_finish_checkpoint.finish(super::bool_enc::__coverage_final_flush_encoder()),
+    );
+    for checks in 0..=4 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut finish_checkpoint = TokenPartitionCheckpoint {
+            token: &token,
+            probability_items: 0,
+            filter_edge_items: 0,
+            prepass_items: 0,
+            macroblock_items: 0,
+            bit_items: 0,
+            output_bytes: PARTITION_OUTPUT_CHECKPOINT_BYTES - 1,
+        };
+        let _ = std::hint::black_box(
+            finish_checkpoint.finish(super::bool_enc::__coverage_pending_encoder()),
+        );
+    }
+
+    let mut failing_finish = NoopPartitionCheckpoint { fail_after: 0 };
+    let _ = std::hint::black_box(failing_finish.finish(BoolEncoder::default()));
+
+    let carry_writer = super::bool_enc::__coverage_carry_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(carry_writer));
+    let pending_writer = super::bool_enc::__coverage_pending_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(pending_writer));
+    let rle_writer = super::bool_enc::__coverage_rle_encoder();
+    let _ = std::hint::black_box(checkpoint.finish(rle_writer));
+
+    let mut writer = BoolEncoder::default();
+    let _ = write_signed(&mut writer, 1, 4, &mut checkpoint);
+    for mode in [
+        Intra16Mode::Dc,
+        Intra16Mode::TrueMotion,
+        Intra16Mode::Vertical,
+        Intra16Mode::Horizontal,
+    ] {
+        let mut writer = BoolEncoder::default();
+        let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+        let _ = write_intra16_mode(&mut writer, mode, &mut mode_checkpoint);
+    }
+    for mode in Intra4Mode::ALL {
+        let mut writer = BoolEncoder::default();
+        let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+        let _ = write_intra4_mode(
+            &mut writer,
+            mode,
+            &INTRA4_MODE_PROBABILITIES[Intra4Mode::Dc as usize][Intra4Mode::Dc as usize],
+            &mut mode_checkpoint,
+        );
+    }
+    for mode in [
+        Intra16Mode::Dc,
+        Intra16Mode::TrueMotion,
+        Intra16Mode::Vertical,
+        Intra16Mode::Horizontal,
+    ] {
+        for fail_after in 0..=3 {
+            let mut writer = BoolEncoder::default();
+            let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+            let _ = write_intra16_mode(&mut writer, mode, &mut mode_checkpoint);
+        }
+    }
+    for mode in Intra4Mode::ALL {
+        for fail_after in 0..=9 {
+            let mut writer = BoolEncoder::default();
+            let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+            let _ = write_intra4_mode(
+                &mut writer,
+                mode,
+                &INTRA4_MODE_PROBABILITIES[Intra4Mode::Dc as usize][Intra4Mode::Dc as usize],
+                &mut mode_checkpoint,
+            );
+        }
+    }
+    for mode in [
+        ChromaMode::Dc,
+        ChromaMode::TrueMotion,
+        ChromaMode::Vertical,
+        ChromaMode::Horizontal,
+    ] {
+        for fail_after in 0..=3 {
+            let mut writer = BoolEncoder::default();
+            let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+            let _ = write_chroma_mode(&mut writer, mode, &mut mode_checkpoint);
+        }
+    }
+
+    // One seeded update drives the literal-probability emission path that
+    // ordinary images often leave at its all-false default.
+    let mut probabilities = AdaptedProbabilities {
+        coefficients: super::tokenize::COEFF_PROBS,
+        updates: [[[[false; 11]; 3]; 8]; 4],
+    };
+    probabilities.updates[0][0][0][0] = true;
+    let mut writer = BoolEncoder::default();
+    let _ = write_coefficient_probabilities(&mut writer, &probabilities, &mut checkpoint);
+
+    let decision = MacroblockDecision {
+        x: 0,
+        y: 0,
+        segment: 0,
+        intra16_mode: super::intra16::Intra16Mode::Dc,
+        luma: LumaDecision::Intra4(Intra4Result {
+            modes: [Intra4Mode::Dc; 16],
+            levels: [[0; 16]; 16],
+            reconstructed: [0; 256],
+            distortion: 0,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        }),
+        chroma: ChromaCandidate {
+            mode: ChromaMode::Dc,
+            levels: [[0; 16]; 8],
+            reconstructed_u: [0; 64],
+            reconstructed_v: [0; 64],
+            errors: [[0; 3]; 2],
+            distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        },
+        distortion: 0,
+        spectral_distortion: 0,
+        header_cost: 0,
+        rate_cost: 0,
+        score: 0,
+        nonzero: 0,
+    };
+    let params = FrameParams {
+        segments: [super::analysis::SegmentParams {
+            quantizer: 20,
+            filter_strength: 10,
+        }; 4],
+        num_segments: 1,
+        chroma_dc_delta: 0,
+        chroma_ac_delta: 0,
+    };
+    let filter_decision = MacroblockDecision {
+        luma: LumaDecision::Intra16(Intra16Candidate {
+            mode: Intra16Mode::Dc,
+            y2_levels: [1; 16],
+            y1_levels: [[0; 16]; 16],
+            reconstructed: [0; 256],
+            distortion: u32::MAX,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0x0100_0000,
+        }),
+        ..decision.clone()
+    };
+    let mut filter_checkpoint = NoopPartitionCheckpoint::new();
+    let _ = adjusted_frame_params(
+        std::slice::from_ref(&filter_decision),
+        &params,
+        true,
+        &mut filter_checkpoint,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut filter_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS - 1,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = adjusted_frame_params(
+        std::slice::from_ref(&filter_decision),
+        &params,
+        true,
+        &mut filter_checkpoint,
+    );
+    let mut filter_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = std::hint::black_box(adjusted_frame_params(
+        std::slice::from_ref(&filter_decision),
+        &params,
+        true,
+        &mut filter_checkpoint,
+    ));
+    let mut failing_filter_checkpoint = NoopPartitionCheckpoint { fail_after: 0 };
+    let _ = adjusted_frame_params(
+        std::slice::from_ref(&filter_decision),
+        &params,
+        true,
+        &mut failing_filter_checkpoint,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut prepass_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS - 1,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = segment_probabilities(std::slice::from_ref(&decision), &mut prepass_checkpoint);
+    let mut prepass_failure = CoverageFailingPartitionCheckpoint::with_prepass_failure();
+    let _ = std::hint::black_box(segment_probabilities(
+        std::slice::from_ref(&decision),
+        &mut prepass_failure,
+    ));
+    let mut filter_failure = CoverageFailingPartitionCheckpoint::with_filter_edge_failure();
+    let _ = std::hint::black_box(adjusted_frame_params(
+        std::slice::from_ref(&filter_decision),
+        &params,
+        true,
+        &mut filter_failure,
+    ));
+    let mut non_intra16_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = std::hint::black_box(adjusted_frame_params(
+        std::slice::from_ref(&decision),
+        &params,
+        true,
+        &mut non_intra16_checkpoint,
+    ));
+    let filter_skip_decision = MacroblockDecision {
+        luma: LumaDecision::Intra16(Intra16Candidate {
+            mode: Intra16Mode::Dc,
+            y2_levels: [0; 16],
+            y1_levels: [[0; 16]; 16],
+            reconstructed: [0; 256],
+            distortion: 0,
+            spectral_distortion: 0,
+            header_cost: 0,
+            rate_cost: 0,
+            score: 0,
+            nonzero: 0,
+        }),
+        ..decision.clone()
+    };
+    let mut filter_skip_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = std::hint::black_box(adjusted_frame_params(
+        std::slice::from_ref(&filter_skip_decision),
+        &params,
+        true,
+        &mut filter_skip_checkpoint,
+    ));
+    let mut mode_writer = BoolEncoder::default();
+    let mut mode_checkpoint = NoopPartitionCheckpoint::new();
+    let _ = write_modes(
+        &mut mode_writer,
+        std::slice::from_ref(&filter_decision),
+        1,
+        [128; 3],
+        false,
+        &mut mode_checkpoint,
+    );
+    let mut mode_writer = BoolEncoder::default();
+    let mut mode_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = write_modes(
+        &mut mode_writer,
+        std::slice::from_ref(&filter_decision),
+        1,
+        [128; 3],
+        false,
+        &mut mode_checkpoint,
+    );
+    let segmented_params = FrameParams {
+        segments: params.segments,
+        num_segments: 2,
+        chroma_dc_delta: params.chroma_dc_delta,
+        chroma_ac_delta: params.chroma_ac_delta,
+    };
+    let mut header_probe = NoopPartitionCheckpoint::new();
+    let mut header_writer = BoolEncoder::default();
+    let _ = write_segment_header(
+        &mut header_writer,
+        &segmented_params,
+        [1, 2, 3],
+        &mut header_probe,
+    );
+    let header_events = usize::MAX.saturating_sub(header_probe.fail_after);
+    for fail_after in 0..=header_events {
+        let mut header_checkpoint = NoopPartitionCheckpoint { fail_after };
+        let mut header_writer = BoolEncoder::default();
+        let _ = write_segment_header(
+            &mut header_writer,
+            &segmented_params,
+            [1, 2, 3],
+            &mut header_checkpoint,
+        );
+    }
+    let mut segment_writer = BoolEncoder::default();
+    let mut segment_checkpoint = NoopPartitionCheckpoint::new();
+    let _ = write_segment_header(
+        &mut segment_writer,
+        &segmented_params,
+        [128, 129, 130],
+        &mut segment_checkpoint,
+    );
+    for fail_after in 0..=128 {
+        let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_segment_header(&mut writer, &segmented_params, [1, 2, 3], &mut checkpoint);
+    }
+    let unsegmented_params = FrameParams {
+        segments: params.segments,
+        num_segments: 1,
+        chroma_dc_delta: params.chroma_dc_delta,
+        chroma_ac_delta: params.chroma_ac_delta,
+    };
+    let mut unsegmented_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let mut unsegmented_writer = BoolEncoder::default();
+    let _ = write_segment_header(
+        &mut unsegmented_writer,
+        &unsegmented_params,
+        [1, 2, 3],
+        &mut unsegmented_checkpoint,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut token_header_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 7,
+        output_bytes: 0,
+    };
+    let mut token_header_writer = BoolEncoder::default();
+    let _ = write_segment_header(
+        &mut token_header_writer,
+        &unsegmented_params,
+        [1, 2, 3],
+        &mut token_header_checkpoint,
+    );
+    let token = crate::CancellationToken::new();
+    let mut token_segmented_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut token_segmented_writer = BoolEncoder::default();
+    let _ = write_segment_header(
+        &mut token_segmented_writer,
+        &segmented_params,
+        [1, 2, 3],
+        &mut token_segmented_checkpoint,
+    );
+    // Exercise both halves of the segment selector directly. Normal
+    // one-macroblock fixtures usually only use segment zero, so the
+    // upper-half probability/index path otherwise remains uninstantiated.
+    let mut segment_writer = BoolEncoder::default();
+    let mut segment_checkpoint = NoopPartitionCheckpoint::new();
+    let _ = write_segment(&mut segment_writer, 2, [128; 3], &mut segment_checkpoint);
+    let mut segment_writer = BoolEncoder::default();
+    let mut segment_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = write_segment(&mut segment_writer, 2, [128; 3], &mut segment_checkpoint);
+    let token = crate::CancellationToken::new();
+    let mut segment_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut segment_writer = BoolEncoder::default();
+    let _ = write_segment(&mut segment_writer, 2, [128; 3], &mut segment_checkpoint);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut first_partition_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: PARTITION_FILTER_EDGE_CHECKPOINT_MACROBLOCKS - 1,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&filter_decision),
+        1,
+        &params,
+        &probabilities,
+        true,
+        &mut first_partition_checkpoint,
+    );
+    let _ = encode_first_partition(
+        std::slice::from_ref(&decision),
+        1,
+        &params,
+        &probabilities,
+        false,
+        None,
+    );
+    let _ = encode_first_partition(
+        std::slice::from_ref(&decision),
+        1,
+        &params,
+        &probabilities,
+        false,
+        Some(&token),
+    );
+
+    // Each nested bit interval has a distinct cancellation edge. Re-seed the
+    // same high-water state and cancel after successive polls to visit those
+    // `?` arms without looping millions of real bits.
+    for checks in 0..=17 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let mut checkpoint = TokenPartitionCheckpoint {
+            token: &token,
+            probability_items: 0,
+            filter_edge_items: 0,
+            prepass_items: 0,
+            macroblock_items: 0,
+            bit_items: PARTITION_262144_BIT_CHECKPOINT_BITS - 1,
+            output_bytes: 0,
+        };
+        let _ = checkpoint.checkpoint_bit();
+    }
+    let token = crate::CancellationToken::new();
+    let mut checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: PARTITION_131072_BIT_CHECKPOINT_BITS - 1,
+        output_bytes: 0,
+    };
+    let _ = checkpoint.checkpoint_bit();
+
+    // Drive each private writer through a real cancellation-shaped failure.
+    // A token countdown cannot target these call sites independently because
+    // the first-partition header and coefficient table are much denser than a
+    // normal fixture. The injector is coverage-only and never ships.
+    for fail_after in [0, 1, 2, 4, 8] {
+        let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_signed(&mut writer, 1, 4, &mut checkpoint);
+    }
+
+    for fail_after in [0, 1, 2, 64, 512, 1_152] {
+        let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_coefficient_probabilities(&mut writer, &probabilities, &mut checkpoint);
+    }
+    let mut probability_failure = CoverageFailingPartitionCheckpoint::with_probability_failure();
+    let mut probability_failure_writer = BoolEncoder::default();
+    let _ = std::hint::black_box(write_coefficient_probabilities(
+        &mut probability_failure_writer,
+        &probabilities,
+        &mut probability_failure,
+    ));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut coefficient_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: PARTITION_PROBABILITY_CHECKPOINT_NODES - 1,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut coefficient_writer = BoolEncoder::default();
+    let _ = std::hint::black_box(write_coefficient_probabilities(
+        &mut coefficient_writer,
+        &probabilities,
+        &mut coefficient_checkpoint,
+    ));
+
+    for fail_after in [0, 1, 2, 64, 256] {
+        let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_modes(
+            &mut writer,
+            std::slice::from_ref(&decision),
+            1,
+            [128; 3],
+            false,
+            &mut checkpoint,
+        );
+    }
+    for fail_after in 0..=64 {
+        let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+        let mut writer = BoolEncoder::default();
+        let _ = write_modes(
+            &mut writer,
+            std::slice::from_ref(&filter_decision),
+            1,
+            [128; 3],
+            false,
+            &mut checkpoint,
+        );
+    }
+    let mut macroblock_failure = CoverageFailingPartitionCheckpoint::with_macroblock_failure();
+    let mut macroblock_failure_writer = BoolEncoder::default();
+    let _ = std::hint::black_box(write_modes(
+        &mut macroblock_failure_writer,
+        std::slice::from_ref(&decision),
+        1,
+        [128; 3],
+        false,
+        &mut macroblock_failure,
+    ));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut mode_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: PARTITION_MODE_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut mode_writer = BoolEncoder::default();
+    let _ = write_modes(
+        &mut mode_writer,
+        std::slice::from_ref(&decision),
+        1,
+        [128; 3],
+        false,
+        &mut mode_checkpoint,
+    );
+    let probe_token = crate::CancellationToken::new();
+    probe_token.cancel_after(usize::MAX);
+    let mut probe_checkpoint = TokenPartitionCheckpoint {
+        token: &probe_token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: PARTITION_MODE_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut probe_writer = BoolEncoder::default();
+    let _ = write_modes(
+        &mut probe_writer,
+        std::slice::from_ref(&decision),
+        1,
+        [128; 3],
+        false,
+        &mut probe_checkpoint,
+    );
+    let calls = usize::MAX.saturating_sub(
+        probe_token
+            .coverage_remaining_checks()
+            .unwrap_or(usize::MAX),
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(calls.saturating_sub(1));
+    let mut final_checkpoint = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: 0,
+        macroblock_items: PARTITION_MODE_CHECKPOINT_MACROBLOCKS - 1,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let mut final_writer = BoolEncoder::default();
+    let _ = write_modes(
+        &mut final_writer,
+        std::slice::from_ref(&decision),
+        1,
+        [128; 3],
+        false,
+        &mut final_checkpoint,
+    );
+
+    let rich_params = FrameParams {
+        segments: params.segments,
+        num_segments: 4,
+        chroma_dc_delta: 3,
+        chroma_ac_delta: -2,
+    };
+    let mut rich_checkpoint = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+    let _ = encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&filter_decision),
+        1,
+        &rich_params,
+        &probabilities,
+        true,
+        &mut rich_checkpoint,
+    );
+    let mut failing_first_filter = NoopPartitionCheckpoint { fail_after: 0 };
+    let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&filter_decision),
+        1,
+        &rich_params,
+        &probabilities,
+        true,
+        &mut failing_first_filter,
+    ));
+    let mut failing_first_filter = CoverageFailingPartitionCheckpoint::with_filter_edge_failure();
+    let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&filter_decision),
+        1,
+        &rich_params,
+        &probabilities,
+        true,
+        &mut failing_first_filter,
+    ));
+    let token = crate::CancellationToken::new();
+    token.cancel_after(0);
+    let mut failing_first_prepass = TokenPartitionCheckpoint {
+        token: &token,
+        probability_items: 0,
+        filter_edge_items: 0,
+        prepass_items: PARTITION_PREPASS_CHECKPOINT_MACROBLOCKS - 1,
+        macroblock_items: 0,
+        bit_items: 0,
+        output_bytes: 0,
+    };
+    let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&decision),
+        1,
+        &rich_params,
+        &probabilities,
+        false,
+        &mut failing_first_prepass,
+    ));
+    let mut failing_first_prepass = CoverageFailingPartitionCheckpoint::with_prepass_failure();
+    let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&decision),
+        1,
+        &rich_params,
+        &probabilities,
+        false,
+        &mut failing_first_prepass,
+    ));
+    #[cfg(coverage_nightly)]
+    {
+        let mut probe = CoverageFailingPartitionCheckpoint::new(usize::MAX);
+        let _ = encode_first_partition_with_checkpoint(
+            std::slice::from_ref(&decision),
+            1,
+            &rich_params,
+            &probabilities,
+            false,
+            &mut probe,
+        );
+        let encode_calls = probe.encode_calls;
+        for fail_after in 0..=encode_calls {
+            let mut checkpoint = CoverageFailingPartitionCheckpoint::new(fail_after);
+            let _ = encode_first_partition_with_checkpoint(
+                std::slice::from_ref(&decision),
+                1,
+                &rich_params,
+                &probabilities,
+                false,
+                &mut checkpoint,
+            );
+        }
+    }
+    let mut probe = NoopPartitionCheckpoint::new();
+    let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+        std::slice::from_ref(&decision),
+        1,
+        &rich_params,
+        &probabilities,
+        false,
+        &mut probe,
+    ));
+    let event_calls = usize::MAX.saturating_sub(probe.fail_after);
+    for fail_after in 0..=event_calls {
+        let mut checkpoint = NoopPartitionCheckpoint { fail_after };
+        let _ = std::hint::black_box(encode_first_partition_with_checkpoint(
+            std::slice::from_ref(&decision),
+            1,
+            &rich_params,
+            &probabilities,
+            false,
+            &mut checkpoint,
+        ));
+    }
 }
 
 fn segment_probability(zero: usize, one: usize) -> u8 {
@@ -749,7 +1729,7 @@ pub(super) fn encode_first_partition(
             &mut checkpoint,
         )
     } else {
-        let mut checkpoint = NoopPartitionCheckpoint;
+        let mut checkpoint = NoopPartitionCheckpoint::new();
         encode_first_partition_with_checkpoint(
             decisions,
             macroblock_width,

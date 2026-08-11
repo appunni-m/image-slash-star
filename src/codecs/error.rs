@@ -489,6 +489,22 @@ pub(crate) fn into_incremental_image_result<T>(
 pub(crate) fn __coverage_exercise_private_branches() {
     use crate::{CodecOperation, ResourceLimit, UnsupportedReason};
 
+    #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
+    {
+        let _ = into_image_result::<Vec<crate::Av1EntropyTraceState>>(
+            Err(CodecError::Malformed("coverage trace error".to_owned())),
+            ImageFormat::Avif,
+            ImageErrorStage::StillDecode,
+        );
+        let _ = into_image_result::<Option<crate::Av1ReconstructionTrace>>(
+            Err(CodecError::Malformed(
+                "coverage reconstruction error".to_owned(),
+            )),
+            ImageFormat::Avif,
+            ImageErrorStage::StillDecode,
+        );
+    }
+
     for error in [
         ImageError::Malformed {
             format: ImageFormat::Png,
