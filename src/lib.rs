@@ -690,7 +690,9 @@ pub fn decode_prefix_with_policy(
 /// dictionary phrase, before each horizontal-predictor row and every 1,024
 /// reconstructed bytes, and at sample-conversion row and 1,024-byte/sample
 /// intervals. Uncompressed TIFF payload copies poll before each 1,024-byte
-/// chunk when a caller token is present. The operation
+/// chunk when a caller token is present. GIF additionally polls before each
+/// compressed LZW code read and while traversing every 1,024 dictionary links
+/// or materializing every 1,024 phrase bytes. The operation
 /// stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
