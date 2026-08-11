@@ -6851,6 +6851,28 @@ fn source_bound_frame_decode_matches_sequence_ordering() -> Result<(), Box<dyn s
             EncodedImageDecodeState::NotAttempted,
             "{name} sequence cache starts empty"
         );
+        assert_eq!(source.verify(), Ok(()), "{name} verification succeeds");
+        let verified_clone = source.clone();
+        assert_eq!(
+            verified_clone.verify(),
+            Ok(()),
+            "{name} clone reuses the verification result"
+        );
+        assert_eq!(
+            source.verify_with_scope(source.verification_scope()),
+            Ok(()),
+            "{name} scoped verification reuses the verification result"
+        );
+        assert_eq!(
+            source.decode_state(),
+            EncodedImageDecodeState::NotAttempted,
+            "{name} verification does not materialize still pixels"
+        );
+        assert_eq!(
+            source.sequence_decode_state(),
+            EncodedImageDecodeState::NotAttempted,
+            "{name} verification does not materialize sequence pixels"
+        );
         let count = source.info().frame_count.unwrap_or(1);
         let sequence = image_slash_star::decode_sequence(&data)?;
         let cached_sequence = source.decode_sequence()?;
