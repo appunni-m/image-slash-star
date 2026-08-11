@@ -1355,6 +1355,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // cancellation point here.
     let large_l1 = DecodedImage::with_mode(1_024, 1, vec![0; 128], ImageMode::L1);
     let large_l8 = DecodedImage::new(1_024, 1, vec![0; 1_024], crate::types::ColorType::L8);
+    let large_l16 = DecodedImage::with_mode(
+        1_024,
+        1,
+        (0..1_024)
+            .flat_map(|pixel| [pixel as u8, u8::from(pixel % 2 != 0)])
+            .collect(),
+        ImageMode::L16,
+    );
     let large_cmyk =
         DecodedImage::new(1_024, 1, vec![0; 1_024 * 4], crate::types::ColorType::Cmyk8);
     let large_la_alpha = DecodedImage::new(
@@ -1377,6 +1385,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for image in [
         &large_l1,
         &large_l8,
+        &large_l16,
         &large_cmyk,
         &large_la_alpha,
         &large_la_opaque,
