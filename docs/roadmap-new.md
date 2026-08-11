@@ -81,8 +81,12 @@ for codec state.
   four predictor-plus-color size pairs, and three subtract-green combinations.
   This proves the combinations that exist in the fixtures, not every legal
   VP8L sequence.
+- The meta-Huffman and entropy-image witnesses now also cover the observed
+  3×3 entropy image produced with six prefix-width bits in `mode0_hybrid`; the
+  other observed dimensions remain 2×1 and 24×24. Unobserved dimensions and
+  grouping patterns remain open.
 - `python3 scripts/verify_webp_vp8l_property_map.py` passes with 15 witnessed
-  properties, 88 named witnesses, 77 distinct active WebP rows, 73 structural
+  properties, 90 named witnesses, 77 distinct active WebP rows, 75 structural
   witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
   rows parsed. The property map and claim ledger hashes are updated together.
 - The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no
