@@ -326,6 +326,31 @@ fn decode_ifd(
                     message: "TIFF tile payload is out of bounds".to_owned(),
                 });
             };
+            let tile_column = tile_index.checked_rem(tiles_across).unwrap_or_default();
+            let tile_row = tile_index.checked_div(tiles_across).unwrap_or_default();
+            let tile_x = tile_column.wrapping_mul(tile_width);
+            let tile_y = tile_row.wrapping_mul(tile_height);
+            let copied_width = tile_width.min(width_usize.saturating_sub(tile_x));
+            let copied_height = tile_height.min(height_usize.saturating_sub(tile_y));
+            let copied_bytes = copied_width.wrapping_mul(bytes_per_pixel);
+            if compression == COMPRESSION_NONE {
+                copy_raw_tile_into(
+                    &mut pixels,
+                    encoded,
+                    RawTilePlacement {
+                        tile_row_bytes,
+                        row_bytes,
+                        tile_x,
+                        tile_y,
+                        bytes_per_pixel,
+                        copied_height,
+                        copied_bytes,
+                    },
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+                continue;
+            }
             let mut decoded = decode_block(compression, encoded, tile_size, token)
                 .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
             // Every compressed decoder returns exactly the requested size, and
@@ -351,13 +376,6 @@ fn decode_ifd(
                     );
                 }
             }
-            let tile_column = tile_index.checked_rem(tiles_across).unwrap_or_default();
-            let tile_row = tile_index.checked_div(tiles_across).unwrap_or_default();
-            let tile_x = tile_column.wrapping_mul(tile_width);
-            let tile_y = tile_row.wrapping_mul(tile_height);
-            let copied_width = tile_width.min(width_usize.saturating_sub(tile_x));
-            let copied_height = tile_height.min(height_usize.saturating_sub(tile_y));
-            let copied_bytes = copied_width.wrapping_mul(bytes_per_pixel);
             for y in 0..copied_height {
                 let source = y.wrapping_mul(tile_row_bytes);
                 let destination = tile_y
@@ -551,10 +569,6 @@ fn decode_block(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     match compression {
-        COMPRESSION_NONE => match token {
-            Some(token) => copy_raw_with_token(encoded, token),
-            None => Ok(encoded.to_vec()),
-        },
         COMPRESSION_LZW => match token {
             Some(token) => decode_lzw_with_token(encoded, expected, token),
             None => decode_lzw(encoded, expected),
@@ -579,12 +593,6 @@ fn decode_block(
     }
 }
 
-fn copy_raw_with_token(data: &[u8], token: &crate::CancellationToken) -> CodecResult<Vec<u8>> {
-    let mut output = Vec::with_capacity(data.len());
-    copy_raw_into(&mut output, data, Some(token))?;
-    Ok(output)
-}
-
 fn copy_raw_into(
     output: &mut Vec<u8>,
     data: &[u8],
@@ -597,6 +605,62 @@ fn copy_raw_into(
         }
     } else {
         output.extend_from_slice(data);
+    }
+    Ok(())
+}
+
+struct RawTilePlacement {
+    tile_row_bytes: usize,
+    row_bytes: usize,
+    tile_x: usize,
+    tile_y: usize,
+    bytes_per_pixel: usize,
+    copied_height: usize,
+    copied_bytes: usize,
+}
+
+fn copy_raw_tile_into(
+    output: &mut [u8],
+    data: &[u8],
+    placement: RawTilePlacement,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    if let Some(token) = token {
+        let mut chunk_start = 0usize;
+        for chunk in data.chunks(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            let chunk_end = chunk_start.wrapping_add(chunk.len());
+            for y in 0..placement.copied_height {
+                let row_start = y.wrapping_mul(placement.tile_row_bytes);
+                let row_end = row_start.wrapping_add(placement.copied_bytes);
+                let source_start = row_start.max(chunk_start);
+                let source_end = row_end.min(chunk_end);
+                if source_start < source_end {
+                    let source_offset = source_start.wrapping_sub(chunk_start);
+                    let destination = placement
+                        .tile_y
+                        .wrapping_add(y)
+                        .wrapping_mul(placement.row_bytes)
+                        .wrapping_add(placement.tile_x.wrapping_mul(placement.bytes_per_pixel))
+                        .wrapping_add(source_start.wrapping_sub(row_start));
+                    let length = source_end.wrapping_sub(source_start);
+                    output[destination..destination.wrapping_add(length)]
+                        .copy_from_slice(&chunk[source_offset..source_offset.wrapping_add(length)]);
+                }
+            }
+            chunk_start = chunk_end;
+        }
+    } else {
+        for y in 0..placement.copied_height {
+            let source = y.wrapping_mul(placement.tile_row_bytes);
+            let destination = placement
+                .tile_y
+                .wrapping_add(y)
+                .wrapping_mul(placement.row_bytes)
+                .wrapping_add(placement.tile_x.wrapping_mul(placement.bytes_per_pixel));
+            output[destination..destination.wrapping_add(placement.copied_bytes)]
+                .copy_from_slice(&data[source..source.wrapping_add(placement.copied_bytes)]);
+        }
     }
     Ok(())
 }
@@ -2630,14 +2694,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let raw_payload = include_bytes!("../../../tests/fixtures/input/images/tiff/uncompressed.tiff");
     let token = crate::CancellationToken::new();
     let _ = decode(raw_payload, Some(&token));
-    let token = crate::CancellationToken::new();
-    let _ = copy_raw_with_token(&[0; 2_048], &token);
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = copy_raw_with_token(&[0; 2_048], &token);
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = copy_raw_with_token(&[0; 2_048], &token);
     let palette = Some(ImagePalette {
         rgb: vec![0; 768],
         alpha: Vec::new(),
