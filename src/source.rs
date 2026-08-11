@@ -43,15 +43,27 @@ pub struct EncodedImage {
 ///
 /// [`EncodedImageView`] borrows a byte slice and performs the same detection,
 /// inspection, verification, and decoding as [`EncodedImage`] without copying
-/// the bytes into an owned snapshot. It has no cache: every decode reparses
-/// the borrowed bytes, so it is best for short-lived uses where ownership and
-/// shared lazy caching are not needed. The owned [`EncodedImage`] remains the
-/// primary API.
-#[derive(Debug, Clone)]
+/// the bytes into an owned snapshot. It caches only the immutable verification
+/// result for this view; every decode reparses the borrowed bytes, so it is
+/// still best for short-lived uses where owned decoded caching is not needed.
+/// The owned [`EncodedImage`] remains the primary API.
+#[derive(Debug)]
 pub struct EncodedImageView<'a> {
     bytes: &'a [u8],
     format: ImageFormat,
     info: ImageInfo,
+    verified: OnceLock<ImageResult<()>>,
+}
+
+impl<'a> Clone for EncodedImageView<'a> {
+    fn clone(&self) -> Self {
+        Self {
+            bytes: self.bytes,
+            format: self.format,
+            info: self.info.clone(),
+            verified: OnceLock::new(),
+        }
+    }
 }
 
 impl<'a> EncodedImageView<'a> {
@@ -78,6 +90,7 @@ impl<'a> EncodedImageView<'a> {
             bytes,
             format: info.format,
             info,
+            verified: OnceLock::new(),
         })
     }
 
@@ -172,12 +185,18 @@ impl<'a> EncodedImageView<'a> {
 
     /// Verify the borrowed bytes under the format's default scope.
     ///
+    /// The immutable success or deterministic failure is retained by this
+    /// view and reused by later calls. A cloned view starts its own cache.
+    /// Pixel decodes remain uncached.
+    ///
     /// # Errors
     ///
     /// Returns a structured error when the format's verification contract
     /// rejects the bytes.
     pub fn verify(&self) -> ImageResult<()> {
-        crate::codecs::verify_format(self.bytes, self.format)
+        self.verified
+            .get_or_init(|| crate::codecs::verify_format(self.bytes, self.format))
+            .clone()
     }
 
     /// Verify with an explicit caller-requested strength.

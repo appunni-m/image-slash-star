@@ -6781,6 +6781,8 @@ fn borrowed_view_matches_the_owned_snapshot_contract() -> Result<(), Box<dyn std
             "{name} policy sequence"
         );
         assert!(view.verify().is_ok(), "{name} verify");
+        let cloned_view = view.clone();
+        assert!(cloned_view.verify().is_ok(), "{name} cloned-view verify");
         let provided = view.verification_scope();
         assert!(
             view.verify_with_scope(provided).is_ok(),
