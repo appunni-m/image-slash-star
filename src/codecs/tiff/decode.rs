@@ -458,6 +458,11 @@ fn decode_ifd(
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
         let expected = row_bytes.wrapping_mul(strip_rows);
+        if compression == COMPRESSION_NONE {
+            copy_raw_into(&mut pixels, encoded, token)
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+            continue;
+        }
         let mut decoded = decode_block(compression, encoded, expected, token)
             .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
@@ -576,11 +581,24 @@ fn decode_block(
 
 fn copy_raw_with_token(data: &[u8], token: &crate::CancellationToken) -> CodecResult<Vec<u8>> {
     let mut output = Vec::with_capacity(data.len());
-    for chunk in data.chunks(1_024) {
-        crate::codecs::error::check_cancelled(Some(token))?;
-        output.extend_from_slice(chunk);
-    }
+    copy_raw_into(&mut output, data, Some(token))?;
     Ok(output)
+}
+
+fn copy_raw_into(
+    output: &mut Vec<u8>,
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    if let Some(token) = token {
+        for chunk in data.chunks(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            output.extend_from_slice(chunk);
+        }
+    } else {
+        output.extend_from_slice(data);
+    }
+    Ok(())
 }
 
 fn uses_horizontal_predictor(predictor: usize, compression: usize, bits: u8) -> bool {
