@@ -697,7 +697,9 @@ pub fn decode_prefix_with_policy(
 /// after each completed 1,024-MCU batch within each entropy scan. The operation
 /// Uncompressed BMP additionally polls before each 1,024-byte raw pixel-payload
 /// chunk and before each converted scanline. The no-token BMP path keeps its
-/// bulk payload read and direct row conversion. The operation stops with
+/// bulk payload read and direct row conversion. ICO's embedded 24-bit BMP
+/// conversion additionally polls before each output row. The operation stops
+/// with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
 /// [`ImageError::NeedMoreData`] status as [`decode_prefix`].
