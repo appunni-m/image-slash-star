@@ -6183,6 +6183,10 @@ fn decode_work_budget_is_an_inclusive_rust_contract() -> Result<(), Box<dyn std:
     );
     source.decode_with_policy(&exact)?;
     assert!(source.is_decoded());
+    assert_eq!(
+        source.decode_with_policy(&zero)?.content.pixels,
+        expected.content.pixels
+    );
 
     // The sequence entry point uses the same inclusive budget and must report
     // sequence operation identity rather than silently falling back to still
@@ -6225,6 +6229,26 @@ fn decode_work_budget_is_an_inclusive_rust_contract() -> Result<(), Box<dyn std:
             ..
         }) if maximum == sequence_boundary - 1 && observed == sequence_boundary
     ));
+
+    // JPEG has no native sequence decoder in this crate, so this complete
+    // bounded path must adapt its ordinary still result into one frame. A
+    // maximum of u64::MAX still passes the caller token through the real
+    // dispatch path while intentionally avoiding a private checkpoint count.
+    if cfg!(feature = "jpeg") {
+        let jpeg = fs::read(root.join("tests/fixtures/input/images/jpeg/q50.jpg"))?;
+        let sequence = image_slash_star::decode_sequence_with_policy(
+            &jpeg,
+            &unlimited.with_max_work_units(u64::MAX),
+        )?;
+        assert_eq!(sequence.content.frames.len(), 1);
+        assert_eq!(
+            (
+                sequence.content.frames[0].image.width,
+                sequence.content.frames[0].image.height
+            ),
+            (sequence.content.width, sequence.content.height)
+        );
+    }
 
     // Combining a caller token with a policy budget preserves the distinct
     // typed limit error when the budget, rather than cancellation, fires.
