@@ -369,9 +369,17 @@ fn decode_ifd(
             }
         }
         return Ok((
-            convert_pixels((width, height), pixels, layout, endian, palette, alpha)
-                .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
-                .with_metadata(std::mem::take(&mut directory.metadata)),
+            convert_pixels_for_token(
+                (width, height),
+                pixels,
+                layout,
+                endian,
+                palette,
+                alpha,
+                token,
+            )?
+            .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+            .with_metadata(std::mem::take(&mut directory.metadata)),
             next_offset,
             directory_end,
         ));
@@ -478,9 +486,17 @@ fn decode_ifd(
     pixels.resize(expected_total, 0);
 
     Ok((
-        convert_pixels((width, height), pixels, layout, endian, palette, alpha)
-            .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
-            .with_metadata(std::mem::take(&mut directory.metadata)),
+        convert_pixels_for_token(
+            (width, height),
+            pixels,
+            layout,
+            endian,
+            palette,
+            alpha,
+            token,
+        )?
+        .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+        .with_metadata(std::mem::take(&mut directory.metadata)),
         next_offset,
         directory_end,
     ))
@@ -659,6 +675,159 @@ fn convert_pixels(
     image.with_source_descriptor(descriptor)
 }
 
+fn convert_pixels_for_token(
+    dimensions: (u32, u32),
+    pixels: Vec<u8>,
+    layout: TiffLayout,
+    endian: Endian,
+    palette: Option<ImagePalette>,
+    alpha: Option<SourceAlpha>,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
+    match token {
+        Some(token) => {
+            convert_pixels_with_token(dimensions, pixels, layout, endian, palette, alpha, token)
+        }
+        None => Ok(convert_pixels(
+            dimensions, pixels, layout, endian, palette, alpha,
+        )),
+    }
+}
+
+fn convert_pixels_with_token(
+    dimensions: (u32, u32),
+    mut pixels: Vec<u8>,
+    layout: TiffLayout,
+    endian: Endian,
+    palette: Option<ImagePalette>,
+    alpha: Option<SourceAlpha>,
+    token: &crate::CancellationToken,
+) -> CodecResult<DecodedImage> {
+    let (width, height) = dimensions;
+    let width_usize = width as usize;
+    let image = match layout {
+        TiffLayout::Bilevel { invert } => {
+            if invert {
+                let row_bytes = width_usize.div_ceil(8);
+                let mut processed = 0usize;
+                for row in pixels.chunks_exact_mut(row_bytes) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    for byte in row.iter_mut() {
+                        *byte = !*byte;
+                        processed = processed.saturating_add(1);
+                        if processed.is_multiple_of(1_024) {
+                            crate::codecs::error::check_cancelled(Some(token))?;
+                        }
+                    }
+                    if !width_usize.is_multiple_of(8) {
+                        let last = row_bytes.wrapping_sub(1);
+                        let shift = 8_usize.saturating_sub(width_usize % 8);
+                        row[last] &= u8::MAX.wrapping_shl(shift.to_le_bytes()[0].into());
+                    }
+                }
+            }
+            DecodedImage::with_mode(width, height, pixels, ImageMode::L1)
+        }
+        TiffLayout::Gray8 { invert } => {
+            if invert {
+                let mut processed = 0usize;
+                for row in pixels.chunks_exact_mut(width_usize) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    for byte in row.iter_mut() {
+                        *byte = !*byte;
+                        processed = processed.saturating_add(1);
+                        if processed.is_multiple_of(1_024) {
+                            crate::codecs::error::check_cancelled(Some(token))?;
+                        }
+                    }
+                }
+            }
+            DecodedImage::new(width, height, pixels, ColorType::L8)
+        }
+        TiffLayout::GrayAlpha8 => DecodedImage::with_mode(width, height, pixels, ImageMode::La8),
+        TiffLayout::Gray2 { invert } | TiffLayout::Gray4 { invert } => {
+            let bits = if matches!(layout, TiffLayout::Gray2 { .. }) {
+                2
+            } else {
+                4
+            };
+            let maximum = 1_u16.wrapping_shl(bits.into()).wrapping_sub(1);
+            let indices = unpack_indices_with_token(&pixels, width, height, bits, token)?;
+            let mut output = Vec::with_capacity(indices.len());
+            let mut processed = 0usize;
+            for sample in indices {
+                let value = u16::from(sample)
+                    .wrapping_mul(255)
+                    .checked_div(maximum)
+                    .unwrap_or_default()
+                    .to_le_bytes()[0];
+                output.push(if invert {
+                    255_u8.wrapping_sub(value)
+                } else {
+                    value
+                });
+                processed = processed.saturating_add(1);
+                if processed.is_multiple_of(1_024) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                }
+            }
+            DecodedImage::new(width, height, output, ColorType::L8)
+        }
+        TiffLayout::Gray16 => {
+            let row_bytes = width_usize.wrapping_mul(2);
+            let mut output = Vec::with_capacity(pixels.len());
+            let mut processed = 0usize;
+            for row in pixels.chunks_exact(row_bytes) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                for bytes in row.chunks_exact(2) {
+                    let value = endian.u16_exact([bytes[0], bytes[1]]);
+                    output.extend_from_slice(&value.to_le_bytes());
+                    processed = processed.saturating_add(2);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                    }
+                }
+            }
+            DecodedImage::new(width, height, output, ColorType::L16)
+        }
+        TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
+        TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
+        TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
+        TiffLayout::Rgba8 => DecodedImage::new(width, height, pixels, ColorType::Rgba8),
+        TiffLayout::Palette { bits } => {
+            let indices = unpack_indices_with_token(&pixels, width, height, bits, token)?;
+            let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
+            if let Some(palette) = palette {
+                image.with_palette(palette)
+            } else {
+                image
+            }
+        }
+        TiffLayout::Cmyk8 => DecodedImage::new(width, height, pixels, ColorType::Cmyk8),
+        TiffLayout::Ycbcr8 => {
+            let row_bytes = width_usize.wrapping_mul(4);
+            let mut rgb = Vec::with_capacity((pixels.len() / 4).wrapping_mul(3));
+            let mut processed = 0usize;
+            for row in pixels.chunks_exact(row_bytes) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                for pixel in row.chunks_exact(4) {
+                    rgb.extend_from_slice(&pixel[..3]);
+                    processed = processed.saturating_add(4);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                    }
+                }
+            }
+            DecodedImage::new(width, height, rgb, ColorType::Rgb8)
+        }
+    };
+    let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
+    if let Some(alpha) = alpha {
+        descriptor = descriptor.with_alpha(alpha);
+    }
+    Ok(image.with_source_descriptor(descriptor))
+}
+
 /// Map TIFF tag 338 (`ExtraSamples`) to the declared source alpha semantics.
 ///
 /// TIFF defines 1 as associated (premultiplied) and 2 as unassociated
@@ -697,6 +866,56 @@ fn unpack_indices(data: &[u8], width: u32, height: u32, bits: u8) -> Vec<u8> {
         }
     }
     output
+}
+
+fn unpack_indices_with_token(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    bits: u8,
+    token: &crate::CancellationToken,
+) -> CodecResult<Vec<u8>> {
+    let width = width as usize;
+    let height = height as usize;
+    if bits == 8 {
+        let mut output = Vec::with_capacity(width.wrapping_mul(height));
+        let mut processed = 0usize;
+        for row in data.chunks_exact(width) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            for &sample in row {
+                output.push(sample);
+                processed = processed.saturating_add(1);
+                if processed.is_multiple_of(1_024) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                }
+            }
+        }
+        return Ok(output);
+    }
+    let bits = usize::from(bits);
+    let stride = width.wrapping_mul(bits).div_ceil(8);
+    let output_len = width.wrapping_mul(height);
+    debug_assert_eq!(data.len(), stride.wrapping_mul(height));
+    let mut output = Vec::with_capacity(output_len);
+    let mut processed = 0usize;
+    for y in 0..height {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        let row_start = y.wrapping_mul(stride);
+        let row = &data[row_start..row_start.wrapping_add(stride)];
+        for x in 0..width {
+            let bit = x.wrapping_mul(bits);
+            let shift = 8_usize.saturating_sub(bits).saturating_sub(bit % 8);
+            let mask = 1_u8
+                .wrapping_shl(bits.to_le_bytes()[0].into())
+                .wrapping_sub(1);
+            output.push(row[bit / 8].wrapping_shr(shift.to_le_bytes()[0].into()) & mask);
+            processed = processed.saturating_add(1);
+            if processed.is_multiple_of(1_024) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+        }
+    }
+    Ok(output)
 }
 
 fn reverse_horizontal_predictor(
@@ -2357,4 +2576,349 @@ pub(crate) fn __coverage_exercise_private_branches() {
         token.cancel_after(checks);
         let _ = decode(&tiny, Some(&token));
     }
+    for checks in 0..=16 {
+        let tiny = tiny_tiled_tiff(16, true, true, 1, 1, 1, COMPRESSION_NONE as u16, &[0, 0]);
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(&tiny, Some(&token));
+    }
+    let conversion_fixtures: &[&[u8]] = &[
+        include_bytes!("../../../tests/fixtures/input/images/tiff/bilevel.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/miniswhite_8bit.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/gray2.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/gray4.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/16bit.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/palette.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/palette2.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/palette4.tiff"),
+        include_bytes!("../../../tests/fixtures/input/images/tiff/ycbcr.tiff"),
+    ];
+    for fixture in conversion_fixtures {
+        let token = crate::CancellationToken::new();
+        let _ = decode(fixture, Some(&token));
+    }
+    let palette = Some(ImagePalette {
+        rgb: vec![0; 768],
+        alpha: Vec::new(),
+    });
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Bilevel { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (8_191, 1),
+        vec![0; 1_024],
+        TiffLayout::Bilevel { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray8 { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Bilevel { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Bilevel { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray8 { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray8 { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    for (bits, bytes) in [(2_u8, 2_048_usize), (4, 4_096)] {
+        let token = crate::CancellationToken::new();
+        let _ = convert_pixels_with_token(
+            (8_192, 1),
+            vec![0; bytes],
+            if bits == 2 {
+                TiffLayout::Gray2 { invert: true }
+            } else {
+                TiffLayout::Gray4 { invert: true }
+            },
+            Endian::Little,
+            None,
+            None,
+            &token,
+        );
+    }
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray2 { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(9);
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray2 { invert: true },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1_024, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray16,
+        Endian::Big,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (1_024, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray16,
+        Endian::Big,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (1_024, 1),
+        vec![0; 2_048],
+        TiffLayout::Gray16,
+        Endian::Big,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 4],
+        TiffLayout::I32,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 2],
+        TiffLayout::GrayAlpha8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 4],
+        TiffLayout::F32,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 3],
+        TiffLayout::Rgb8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 4],
+        TiffLayout::Rgba8,
+        Endian::Little,
+        None,
+        Some(SourceAlpha::Straight),
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Palette { bits: 1 },
+        Endian::Little,
+        palette.clone(),
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 2_048],
+        TiffLayout::Palette { bits: 2 },
+        Endian::Little,
+        palette.clone(),
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 4_096],
+        TiffLayout::Palette { bits: 4 },
+        Endian::Little,
+        palette.clone(),
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Palette { bits: 8 },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Palette { bits: 1 },
+        Endian::Little,
+        palette.clone(),
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Palette { bits: 8 },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (2_048, 1),
+        vec![0; 2_048],
+        TiffLayout::Palette { bits: 8 },
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (8_192, 1),
+        vec![0; 1_024],
+        TiffLayout::Palette { bits: 1 },
+        Endian::Little,
+        palette.clone(),
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (1, 1),
+        vec![0; 4],
+        TiffLayout::Cmyk8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let _ = convert_pixels_with_token(
+        (256, 1),
+        vec![0; 1_024],
+        TiffLayout::Ycbcr8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = convert_pixels_with_token(
+        (256, 1),
+        vec![0; 1_024],
+        TiffLayout::Ycbcr8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = convert_pixels_with_token(
+        (256, 1),
+        vec![0; 1_024],
+        TiffLayout::Ycbcr8,
+        Endian::Little,
+        None,
+        None,
+        &token,
+    );
 }
