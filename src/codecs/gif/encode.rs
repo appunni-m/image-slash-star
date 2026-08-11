@@ -2284,9 +2284,13 @@ fn write_gif_with_token(
         .iter()
         .any(|prepared| prepared.transparent.is_some());
     let mut prepared_frames = prepared_frames.into_iter();
-    let mut first = prepared_frames.next().ok_or_else(|| {
-        CodecError::Dimensions("GIF sequence lost its validated first frame".to_owned())
-    })?;
+    // The iterator is populated from the already-validated nonempty frame
+    // list above; keep the invariant explicit without adding an unreachable
+    // error path to the measured GIF pipeline.
+    #[allow(clippy::expect_used)]
+    let mut first = prepared_frames
+        .next()
+        .expect("prepared GIF frames must retain the validated first frame");
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background);
     let (global_count, global_size, _) = table_parameters(&first.palette);
     let global_palette = first.palette.clone();
