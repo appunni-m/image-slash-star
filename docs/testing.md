@@ -8402,6 +8402,24 @@ separate from Pillow parity. Interior work in other codec rows, deeper
 Deflate/structural interruption, allocation accounting, and rollback remain
 open.
 
+The current PNG decoder interior work-budget slice is implemented at
+`7d9e256df33296be832869fb41670a8d1e07fbb6`: token-aware still and APNG frame
+decode now poll before each filtered-row reconstruction and each sample-unpack
+row, including Adam7 passes. The no-token path keeps its direct row traversal.
+The Rust-only contract test uses the committed 128×128 `no_interlace.png`
+witness, discovers the inclusive work-budget boundary with exponential and
+binary probing, proves exact-boundary success and one-below rejection, and
+requires more than 128 charged checkpoints so container-only polling cannot
+satisfy the test. The coverage-only hook uses the small committed `2x3.png`
+and `adam7_2x3.png` witnesses to fire both scanline layouts without a timing-
+sensitive public cancellation test. Pillow exposes neither caller tokens nor
+typed work-budget results, so this adds no parity row.
+
+The exact local LLVM report for this revision passes 65,208/65,208 lines,
+8,486/8,486 branches, 3,330/3,330 functions, and 97,401/97,401 regions.
+Managed Coverage MCP remains unavailable at project-context transport, so
+this is local evidence until a same-revision managed snapshot is recovered.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now

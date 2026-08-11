@@ -1656,7 +1656,7 @@ where
         }
         return Ok(());
     }
-    (0..height).for_each(|y| unpack_row(y));
+    (0..height).for_each(unpack_row);
     Ok(())
 }
 

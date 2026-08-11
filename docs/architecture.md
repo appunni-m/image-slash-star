@@ -579,8 +579,9 @@ cannot repair them. Policy limits are re-evaluated on every retry against the
 current input length.
 
 Cooperative cancellation polls a caller token at structural and selected
-codec-internal checkpoints: dispatch entry, PNG chunk boundaries and
-1,024-byte adaptive-filter/filtered-row subsegments, BMP row-conversion
+codec-internal checkpoints: dispatch entry, PNG chunk boundaries,
+scanline-reconstruction and sample-unpack row boundaries (including Adam7
+passes), and 1,024-byte adaptive-filter/filtered-row subsegments, BMP row-conversion
 subsegments after each 1,024 pixels, GIF block and frame boundaries plus RGB/RGBA
 palette quantization intervals and LZW input-symbol intervals, TIFF
 still page preparation/predictor/PackBits/LZW work, Deflate level-six matcher
