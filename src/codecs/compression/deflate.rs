@@ -292,6 +292,230 @@ pub(crate) fn __coverage_exercise_private_branches() {
         decode_compressed(&mut bits, &literal_match, &distance_extra, &mut output, 16,).is_err()
     );
 
+    #[cfg(any(feature = "png", feature = "tiff"))]
+    {
+        // The token-aware decode helpers share the ordinary decoder's
+        // defensive states, but their copies are separate so their error
+        // edges need their own justified coverage model.
+        let token = crate::CancellationToken::new();
+        let literal_reserved = huffman_with_symbol(286);
+        let literal_long = huffman_with_symbol(285);
+
+        let mut bits = BitReader::new(&[]);
+        let mut output = Vec::new();
+        assert!(decode_stored_with_token(&mut bits, &mut output, 1, Some(&token)).is_err());
+
+        let mut bits = BitReader::new(&[0, 0]);
+        let mut output = Vec::new();
+        assert!(decode_stored_with_token(&mut bits, &mut output, 1, Some(&token)).is_err());
+
+        let mut bits = BitReader::new(&[0, 0, 0, 0]);
+        let mut output = Vec::new();
+        assert!(decode_stored_with_token(&mut bits, &mut output, 1, Some(&token)).is_err());
+
+        let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
+        let mut output = vec![0];
+        assert!(decode_stored_with_token(&mut bits, &mut output, 0, Some(&token)).is_err());
+
+        let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
+        let mut output = Vec::new();
+        assert!(decode_stored_with_token(&mut bits, &mut output, 1, Some(&token)).is_err());
+
+        let cancelled = crate::CancellationToken::new();
+        cancelled.cancel_after(0);
+        let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff, 0]);
+        let mut output = Vec::new();
+        assert!(decode_stored_with_token(&mut bits, &mut output, 1, Some(&cancelled)).is_err());
+
+        let mut bits = BitReader::new(&[1, 0, 0xfe, 0xff]);
+        let mut output = Vec::new();
+        assert!(matches!(
+            decode_stored_with_token(&mut bits, &mut output, 0, Some(&token)),
+            Ok(DecodeStatus::OutputFull)
+        ));
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = Vec::new();
+        assert!(matches!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_zero,
+                &distance_zero,
+                &mut output,
+                0,
+                Some(&token),
+            ),
+            Ok(DecodeStatus::OutputFull)
+        ));
+
+        let mut bits = BitReader::new(&[]);
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_zero,
+                &distance_zero,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader {
+            data: &[0],
+            bit_position: 7,
+        };
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_extra,
+                &distance_zero,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader {
+            data: &[0],
+            bit_position: 7,
+        };
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_zero,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader {
+            data: &[0],
+            bit_position: 6,
+        };
+        let mut output = vec![7];
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_extra,
+                &mut output,
+                16,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_reserved,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_zero,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = vec![7];
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_zero,
+                &mut output,
+                0,
+                Some(&token),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = vec![7];
+        assert!(matches!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_zero,
+                &mut output,
+                1,
+                Some(&token),
+            ),
+            Ok(DecodeStatus::OutputFull)
+        ));
+
+        let cancelled = crate::CancellationToken::new();
+        cancelled.cancel_after(0);
+        let mut bits = BitReader::new(&[0]);
+        let mut output = vec![7];
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_match,
+                &distance_zero,
+                &mut output,
+                1,
+                Some(&cancelled),
+            )
+            .is_err()
+        );
+
+        let cancelled = crate::CancellationToken::new();
+        cancelled.cancel_after(0);
+        let mut bits = BitReader::new(&[0]);
+        let mut output = vec![0];
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_long,
+                &distance_zero,
+                &mut output,
+                2_000,
+                Some(&cancelled),
+            )
+            .is_err()
+        );
+
+        let mut bits = BitReader::new(&[0]);
+        let mut output = Vec::new();
+        assert!(
+            decode_compressed_with_token(
+                &mut bits,
+                &literal_reserved,
+                &distance_zero,
+                &mut output,
+                8,
+                Some(&token),
+            )
+            .is_err()
+        );
+    }
+
     let mut overflowing_codes = vec![1u8; usize::from(u16::MAX)];
     overflowing_codes.extend_from_slice(&[2, 2]);
     assert!(Huffman::from_lengths(&overflowing_codes).is_err());

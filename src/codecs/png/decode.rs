@@ -2090,7 +2090,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
     let interlaced_scanline_work =
         include_bytes!("../../../tests/fixtures/input/images/png/adam7_2x3.png");
-    for checks in [0, 4, 8, 12, 32] {
+    for checks in 0..=64 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(interlaced_scanline_work, Some(&token));
