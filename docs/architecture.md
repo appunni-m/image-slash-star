@@ -654,9 +654,10 @@ unlimited wrappers avoid this extra pass. These are primary-canvas limits, not
 bounds on later TIFF pages or animation frames, source rectangles, cumulative
 sequence memory, metadata, codec work, other allocations, or transient encoded
 output allocation. In the TIFF strip path, an uncompressed strip without a
-transformation appends directly into the pre-sized final raster; compressed,
-predictor, and tiled paths retain scratch buffers where their work requires
-them. `EncodePolicy` is the separate encode-side result policy.
+transformation appends directly into the pre-sized final raster; in the tile
+path, an uncompressed tile places its visible rows directly into that raster.
+Compressed and predictor paths retain scratch buffers where their work
+requires them. `EncodePolicy` is the separate encode-side result policy.
 
 `max_frames` is an inclusive limit on the exact inspected frame/page count.
 Inspection, sequence decode, and immutable-source construction reject a source
