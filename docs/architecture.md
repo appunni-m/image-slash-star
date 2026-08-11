@@ -468,7 +468,7 @@ translation cannot be bypassed.
 | `EncodedImage::new(bytes)` | Snapshot encoded bytes, inspect immediately, defer decoding, and reuse the retained format for source-bound dispatch |
 | `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware selected-format uncached path |
 | `EncodedImage::decode_state`, `sequence_decode_state` | Report separate not-attempted, succeeded, and failed lazy-cache states for still and sequence materialization |
-| `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; no cache, so decodes reparse |
+| `EncodedImageView::new(&[u8])` | Borrow encoded bytes for the same operations without copying into an owned snapshot; verification is cached per view while decodes reparse |
 | `EncodedImage::decode_frame(index)` | Return the exact frame at an index; TIFF decodes only that page's IFD, other sequence formats currently use an eager fallback that matches `decode_sequence` |
 
 The WebP VP8L token-aware list includes entropy-mode histogram-cost scans after
@@ -1800,7 +1800,8 @@ first call to `decode_sequence()` initializes an independent sequence
   remain success-only compatibility predicates; and
 - `verify()` runs independently and does not populate or modify either decode
   cache; an owned source shares its verification result across clones, while a
-  borrowed view reparses on each call.
+  borrowed view shares its verification result within that view and keeps
+  pixel decodes uncached.
 
 The retained source payload is additive: an owned source keeps one shared copy
 of the encoded bytes, plus the inspected metadata and whichever decoded cache
@@ -1811,8 +1812,9 @@ the `Ok(())` or `ImageError` result, not a parsed header/index or decompressor
 workspace. Calling both decode operations therefore retains both decoded
 payload sets, while cloning an `EncodedImage` adds no encoded, verification, or
 decoded buffer copy. A borrowed `EncodedImageView` owns none of the input
-bytes and has no cache, so each returned decode or verification reparses for
-that call.
+bytes and has no decoded-pixel cache; each returned decode reparses for that
+call, while its small verification result is retained per view. Cloning a
+borrowed view starts a separate verification cache.
 These are retained-payload bounds, not a total allocator peak: codec parser,
 decompressor, and temporary materialization buffers may add transient memory,
 and no recoverable-OOM or allocator-count contract is promised.
@@ -1845,8 +1847,10 @@ currently provides `FullPixels`, so requesting it always fails. The default
 scope validation happens before the cached default result is reused, so an
 unsupported stronger request is never hidden by a weaker cached result. The
 first supported verification still performs the codec-specific parse, but
-later owned calls reuse its immutable result without a caller work budget;
-parsed header/index retention remains backlog under API-023/030 and API-045.
+later owned calls and later calls on the same borrowed view reuse their
+immutable result without a caller work budget. A cloned borrowed view repeats
+its first verification independently; parsed header/index retention remains
+backlog under API-023/030 and API-045.
 
 The crate performs no filesystem or network I/O and emits no logs. Applications
 decide where bytes come from and how errors are recorded.

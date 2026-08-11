@@ -55,7 +55,7 @@ are reviewed.
 ### Latest API-045 implementation candidate — owned verification-result cache
 
 The next narrow runtime slice is implemented on `main` at
-`a6f4e94c50477602526c12753fe92ed6fd5bdadf`:
+`3506a70dc8b1681e55f6dfa5fc96d021f22a6ea3`:
 
 - **Caller problem:** A server, UI, or WASM page may inspect the same immutable
   upload more than once—for example, verify it, pass a clone to another
@@ -68,11 +68,13 @@ The next narrow runtime slice is implemented on `main` at
   clones reuse that result. `verify_with_scope` checks that the requested scope
   is provided before reuse, stronger unsupported requests are never hidden by
   a weaker cached result, and still/sequence decode caches are unchanged.
-  `EncodedImageView` remains intentionally uncached because it borrows caller
-  bytes and is meant for short-lived use. A bounded native integration contract
-  also calls the same owned source concurrently from eight clones for both a
-  valid PNG and a deterministic bad-CRC verification failure; WASI stays
-  sequential because its test runtime has no portable thread support.
+  `EncodedImageView` caches only its immutable verification result per view;
+  its pixel decodes remain uncached because it borrows caller bytes and is
+  meant for short-lived use. A cloned view starts a separate verification
+  cache. A bounded native integration contract also calls the same owned source
+  concurrently from eight clones for both a valid PNG and a deterministic
+  bad-CRC verification failure; WASI stays sequential because its test runtime
+  has no portable thread support.
 - **What this does not do:** It does not retain a parsed header/index,
   decompressor, temporary workspace, allocator state, or borrowed-view result.
   It closes only repeated verification-result work; parsed codec-state reuse,
@@ -81,8 +83,8 @@ The next narrow runtime slice is implemented on `main` at
 - **Local evidence:** Native `feature_gate_tests` passed 49/49, the native
   parity matrix passed 28/28, the focused `wasm32-wasip1` runtime contract
   passed 1/1, and the complete WASI feature-test binary compiled. Exact local
-  LLVM coverage is 65,105/65,105 lines, 8,478/8,478 branches, 3,324/3,324
-  functions, and 97,226/97,226 regions. Formatting, locked all-feature check,
+  LLVM coverage is 65,117/65,117 lines, 8,478/8,478 branches, 3,326/3,326
+  functions, and 97,236/97,236 regions. Formatting, locked all-feature check,
   strict Clippy, rustdoc warnings, and doctests also pass.
 - **Current runtime observation:** At this clean revision, a warm repeat of the
   fixed schema-`@3` benchmark passed all 1,421 active Pillow-visible rows in
