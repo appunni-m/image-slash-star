@@ -853,7 +853,10 @@ fn decode_stored_with_token(
     let copied = usize::from(len).min(available);
     for index in 0..copied {
         output.push(bits.read(8)?.to_le_bytes()[0]);
-        if (index + 1).is_multiple_of(COPY_CHECKPOINT_BYTES) {
+        if index
+            .saturating_add(1)
+            .is_multiple_of(COPY_CHECKPOINT_BYTES)
+        {
             crate::codecs::error::check_cancelled(Some(token))?;
         }
     }
