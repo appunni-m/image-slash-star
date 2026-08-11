@@ -8510,14 +8510,32 @@ endian conversion, palette unpacking, and YCbCr compaction at row boundaries
 and 1,024-byte or sample intervals, while the no-token conversion path remains
 direct. The Rust-only `tiff_decode_work_budget_covers_sample_conversion`
 contract uses the committed `16bit.tiff` witness and finds an inclusive
-boundary of 164: exact success preserves every decoded pixel, while 163
-returns the typed `DecodeWorkUnits` result with `observed = 164`. The native
-feature-gate suite passes 56/56 and the native parity matrix passes 28/28. The
-exact local LLVM report passes 66,280/66,280 lines, 8,598/8,598 branches,
-3,345/3,345 functions, and 98,992/98,992 regions. Managed Coverage MCP
-remains unavailable at project-context transport; this is local evidence and
-adds no Pillow parity row. TIFF raw payload traversal, allocation/peak
+boundary of 164 at that implementation revision: exact success preserves every
+decoded pixel, while 163 returns the typed `DecodeWorkUnits` result with
+`observed = 164`. The feature-gate suite passed 56/56 and the native parity
+matrix passed 28/28 at that revision. The exact local LLVM report passed
+66,280/66,280 lines, 8,598/8,598 branches, 3,345/3,345 functions, and
+98,992/98,992 regions. Managed Coverage MCP remains unavailable at
+project-context transport; this is local evidence and adds no Pillow parity
+row. The later raw-payload checkpoint adds 32 copy checkpoints to this witness
+in the current tree, making its combined boundary 196; allocation/peak
 accounting, progress, sink rollback, and cleanup remain separate roadmap work.
+
+The current TIFF raw-payload copy checkpoint slice is implemented at
+`775c09a1201223b53f49c3d2176b17ce775f4f83`: token-aware decoding of an
+uncompressed TIFF strip or tile now copies the raw payload in 1,024-byte
+chunks and polls before each chunk, while the no-token path remains the direct
+`to_vec()` fast path. The Rust-only
+`tiff_decode_work_budget_covers_raw_payload_copy` contract uses the committed
+128×128 RGB `uncompressed.tiff` witness and finds an inclusive boundary of 52:
+exact success preserves every decoded pixel, while 51 returns the typed
+`DecodeWorkUnits` result with `observed = 52`. The native feature-gate suite
+passes 57/57 and the native parity matrix passes 28/28. The exact local LLVM
+report passes 66,300/66,300 lines, 8,598/8,598 branches, 3,346/3,346
+functions, and 99,035/99,035 regions. Managed Coverage MCP remains unavailable
+at project-context transport; this is local evidence and adds no Pillow parity
+row. Transient allocation/peak accounting, progress, short-write semantics,
+sink rollback, and cleanup remain separate roadmap work.
 
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
