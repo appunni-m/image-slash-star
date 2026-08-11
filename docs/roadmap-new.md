@@ -76,8 +76,13 @@ for codec state.
   37-row lossless corpus: 1, 3, 4, 5, 7, and 10 bits. The added witnesses use
   actual cache-lookup activity; widths 2, 6, 8, 9, and 11 are not present in
   this corpus and are not claimed.
-- `python3 scripts/verify_webp_vp8l_property_map.py` passes with 14 witnessed
-  properties, 71 named witnesses, 75 distinct active WebP rows, 56 structural
+- The map also promotes all 17 distinct transform sequences present in the
+  successful corpus: no transform, all observed color-indexing table sizes,
+  four predictor-plus-color size pairs, and three subtract-green combinations.
+  This proves the combinations that exist in the fixtures, not every legal
+  VP8L sequence.
+- `python3 scripts/verify_webp_vp8l_property_map.py` passes with 15 witnessed
+  properties, 88 named witnesses, 77 distinct active WebP rows, 73 structural
   witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
   rows parsed. The property map and claim ledger hashes are updated together.
 - The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no

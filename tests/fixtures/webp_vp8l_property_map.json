@@ -47,6 +47,108 @@
       }
     },
     {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0",
+      "expect": {"transforms": []}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 1, "index_bits": 3}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_checker2",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 2, "index_bits": 3}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette4",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 4, "index_bits": 2}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_steps",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 8, "index_bits": 1}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette16",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 16, "index_bits": 1}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette17",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 17, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette32",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 32, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette64",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 64, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette256",
+      "expect": {"transforms": [{"type": "color_indexing", "table_size": 256, "index_bits": 0}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
+      "expect": {"transforms": [{"type": "predictor", "size_bits": 2}, {"type": "color", "size_bits": 2}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_diagonal",
+      "expect": {"transforms": [{"type": "predictor", "size_bits": 2}, {"type": "color", "size_bits": 9}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse",
+      "expect": {"transforms": [{"type": "predictor", "size_bits": 9}, {"type": "color", "size_bits": 2}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_horizontal",
+      "expect": {"transforms": [{"type": "predictor", "size_bits": 9}, {"type": "color", "size_bits": 9}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_bilinear",
+      "expect": {"transforms": [{"type": "subtract_green"}, {"type": "predictor", "size_bits": 2}, {"type": "color", "size_bits": 2}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_product",
+      "expect": {"transforms": [{"type": "subtract_green"}, {"type": "predictor", "size_bits": 2}, {"type": "color", "size_bits": 9}]}
+    },
+    {
+      "property_id": "vp8l.transform.combinations",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_diamond",
+      "expect": {"transforms": [{"type": "subtract_green"}, {"type": "predictor", "size_bits": 9}, {"type": "color", "size_bits": 2}]}
+    },
+    {
       "property_id": "vp8l.transform.predictor_modes",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -471,6 +573,32 @@
         {"operation": "decode", "row_id": "lossless_transform_variants"}
       ],
       "gap": "The independent parser now proves the exact header dimensions and transform records for the two listed successful rows; other VP8L headers, transform orderings, and stream states remain outside this witnessed scope."
+    },
+    {
+      "id": "vp8l.transform.combinations",
+      "status": "witnessed",
+      "claim_boundary": "pillow_outer_result",
+      "internal_state_proven": true,
+      "minimal_witnesses": [
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0"},
+        {"operation": "decode", "row_id": "lossless_transform_variants"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette4"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_steps"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette16"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette17"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette32"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette64"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette256"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_mode0_hybrid"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_diagonal"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diag_reverse"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_horizontal"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_bilinear"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_product"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_diamond"}
+      ],
+      "gap": "The independent parser now proves all 17 distinct transform sequences present in the 37-row successful lossless corpus, including no-transform, every observed color-indexing size, four predictor-plus-color size pairs, and three subtract-green combinations. Transform sequences not present in this corpus and malformed or repeated-transform forms remain outside this scope."
     },
     {
       "id": "vp8l.transform.predictor_modes",
