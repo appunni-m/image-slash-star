@@ -2,7 +2,9 @@
 
 use super::inspect::TiffLayout;
 use crate::SequenceDecodeBudget;
-use crate::codecs::compression::deflate::decompress_zlib_prefix;
+use crate::codecs::compression::deflate::{
+    decompress_zlib_prefix, decompress_zlib_prefix_with_status_and_token,
+};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, need_slice};
 use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
@@ -324,7 +326,7 @@ fn decode_ifd(
                     message: "TIFF tile payload is out of bounds".to_owned(),
                 });
             };
-            let mut decoded = decode_block(compression, encoded, tile_size)
+            let mut decoded = decode_block(compression, encoded, tile_size, token)
                 .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
@@ -436,7 +438,7 @@ fn decode_ifd(
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
         let expected = row_bytes.wrapping_mul(strip_rows);
-        let mut decoded = decode_block(compression, encoded, expected)
+        let mut decoded = decode_block(compression, encoded, expected, token)
             .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
             reverse_horizontal_predictor(
@@ -497,13 +499,24 @@ pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
     Ok((endian, ifd_offset))
 }
 
-fn decode_block(compression: usize, encoded: &[u8], expected: usize) -> CodecResult<Vec<u8>> {
+fn decode_block(
+    compression: usize,
+    encoded: &[u8],
+    expected: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
     match compression {
         COMPRESSION_NONE => Ok(encoded.to_vec()),
         COMPRESSION_LZW => decode_lzw(encoded, expected),
         COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE => {
-            decompress_zlib_prefix(encoded, expected)
-                .map_err(|error| error.context("decode TIFF Deflate stream"))
+            let inflated = match token {
+                Some(token) => {
+                    decompress_zlib_prefix_with_status_and_token(encoded, expected, Some(token))
+                        .map(|(output, _)| output)
+                }
+                None => decompress_zlib_prefix(encoded, expected),
+            };
+            inflated.map_err(|error| error.context("decode TIFF Deflate stream"))
         }
         COMPRESSION_PACKBITS => decode_packbits(encoded, expected),
         _ => Err(CodecError::Malformed(
