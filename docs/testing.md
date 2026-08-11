@@ -5306,6 +5306,19 @@ contract: Pillow has no caller-supplied format-hint operation, so it adds no
 parity row, no new fixture, no diagnostic-origin assignment, and no new test
 function.
 
+The current API-038 slice adds `DecodeFormatSet` to `DecodePolicy`. A caller
+accepting untrusted bytes can allow only selected containers while retaining
+signature validation: `detect_format` remains independent, and policy-aware
+inspection, explicit-format, complete/prefix, token-aware, and owned/borrowed
+source paths reject a detected format outside the set with
+`UnsupportedReason::PolicyDenied`. The
+`decode_allowed_formats_are_a_rust_policy_contract` feature-gated test covers
+all current format bits, allowed and rejected PNG/JPEG paths, explicit hints,
+partial-input and token entry points, and lazy source cache reuse. Pillow has
+no equivalent caller policy or typed result, so this is Rust-only evidence and
+does not add a parity row. The format restriction is orthogonal to target
+capability: native and WASI lanes still report the existing AVIF availability.
+
 The preceding Rust implementation revision also closes API-012 and API-013. `EncodedImage` now has an
 independent lazy sequence cache, so repeated owned-source sequence materialization
 does not repeat codec work or collapse an animated source to its first frame.

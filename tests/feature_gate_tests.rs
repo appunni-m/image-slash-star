@@ -6267,6 +6267,196 @@ fn decode_work_budget_is_an_inclusive_rust_contract() -> Result<(), Box<dyn std:
 }
 
 #[test]
+fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(all(feature = "png", feature = "jpeg")) {
+        return Ok(());
+    }
+
+    // API-038: a caller accepting untrusted bytes may restrict auto-detection
+    // to a known format set. The signature detector remains independent, but
+    // every policy-aware inspection/decode entry point must enforce the set.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let png = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let jpeg = fs::read(root.join("tests/fixtures/input/images/jpeg/q50.jpg"))?;
+    let png_only = image_slash_star::DecodeFormatSet::only(ImageFormat::Png);
+    let png_and_jpeg = png_only.with_format(ImageFormat::Jpeg);
+    let all_formats = [
+        ImageFormat::Jpeg,
+        ImageFormat::Png,
+        ImageFormat::Gif,
+        ImageFormat::Bmp,
+        ImageFormat::WebP,
+        ImageFormat::Tiff,
+        ImageFormat::Ico,
+        ImageFormat::Avif,
+    ];
+    let mut constructed_all = image_slash_star::DecodeFormatSet::empty();
+    for format in all_formats {
+        assert!(image_slash_star::DecodeFormatSet::only(format).contains(format));
+        constructed_all = constructed_all.with_format(format);
+    }
+    assert_eq!(constructed_all, image_slash_star::DecodeFormatSet::all());
+    assert!(image_slash_star::DecodeFormatSet::empty().is_empty());
+    assert!(png_only.contains(ImageFormat::Png));
+    assert!(!png_only.contains(ImageFormat::Jpeg));
+    assert!(png_and_jpeg.contains(ImageFormat::Jpeg));
+    assert!(image_slash_star::DecodeFormatSet::all().contains(ImageFormat::Avif));
+
+    let policy = image_slash_star::DecodePolicy::new().with_allowed_formats(png_only);
+    assert_eq!(policy.allowed_formats(), Some(png_only));
+    assert_eq!(policy.limits().allowed_formats(), Some(png_only));
+    assert_eq!(
+        image_slash_star::detect_format(&jpeg),
+        Ok(ImageFormat::Jpeg)
+    );
+
+    let inspected = image_slash_star::inspect_with_policy(&png, &policy)?;
+    assert_eq!(inspected.format, ImageFormat::Png);
+    let decoded = image_slash_star::decode_with_policy(&png, &policy)?;
+    let mut destination = vec![0; decoded.content.pixels.len()];
+    image_slash_star::decode_into_with_policy(&png, &policy, &mut destination)?;
+    assert_eq!(destination, decoded.content.pixels);
+    image_slash_star::decode_with_format_and_policy(&png, ImageFormat::Png, &policy)?;
+    image_slash_star::decode_prefix_with_policy(&png, &policy)?;
+    image_slash_star::decode_sequence_with_policy(&png, &policy)?;
+    image_slash_star::decode_sequence_prefix_with_policy(&png, &policy)?;
+    image_slash_star::decode_with_token_and_policy(
+        &png,
+        &policy,
+        &image_slash_star::CancellationToken::new(),
+    )?;
+    image_slash_star::decode_sequence_with_token_and_policy(
+        &png,
+        &policy,
+        &image_slash_star::CancellationToken::new(),
+    )?;
+    let encoded = EncodedImage::new_with_policy(png.clone(), &policy)?;
+    encoded.decode_with_policy(&policy)?;
+    let borrowed = image_slash_star::EncodedImageView::new_with_policy(&png, &policy)?;
+    borrowed.decode_with_policy(&policy)?;
+    let unrestricted_source = EncodedImage::new(jpeg.clone())?;
+    let unrestricted_view = image_slash_star::EncodedImageView::new(&jpeg)?;
+
+    assert!(matches!(
+        image_slash_star::inspect_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::Inspection),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_with_format_and_policy(&jpeg, ImageFormat::Jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_prefix_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_sequence_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::SequenceDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_sequence_prefix_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::SequenceDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_with_token_and_policy(
+            &jpeg,
+            &policy,
+            &image_slash_star::CancellationToken::new(),
+        ),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::decode_sequence_with_token_and_policy(
+            &jpeg,
+            &policy,
+            &image_slash_star::CancellationToken::new(),
+        ),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::SequenceDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        EncodedImage::new_with_policy(jpeg.clone(), &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::Inspection),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        image_slash_star::EncodedImageView::new_with_policy(&jpeg, &policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::Inspection),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        unrestricted_source.decode_with_policy(&policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    assert!(matches!(
+        unrestricted_view.decode_with_policy(&policy),
+        Err(ImageError::Unsupported {
+            format: Some(ImageFormat::Jpeg),
+            stage: Some(ImageErrorStage::StillDecode),
+            reason: Some(UnsupportedReason::PolicyDenied),
+            ..
+        })
+    ));
+    Ok(())
+}
+
+#[test]
 fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::TransferLayout;
 

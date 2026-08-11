@@ -1,18 +1,92 @@
 //! Caller-selected policy for encoded image inspection and decoding.
 
 use crate::{
-    CodecOperation, ImageError, ImageFormat, ImageInfo, ImageMode, ImageResult, ResourceLimit,
+    CodecOperation, ImageError, ImageErrorStage, ImageFormat, ImageInfo, ImageMode, ImageResult,
+    ResourceLimit, UnsupportedReason,
 };
 
 const _: () = assert!(usize::BITS <= u64::BITS);
 
-/// Resource limits applied before or during inspection and decoding.
+/// A caller-selected set of image formats accepted by [`DecodePolicy`].
+///
+/// An empty set rejects every detected format when installed in a policy.
+/// [`DecodeFormatSet::all`] is the explicit all-current-formats set; an absent
+/// policy value remains the backwards-compatible unrestricted behavior.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct DecodeFormatSet {
+    bits: u16,
+}
+
+impl DecodeFormatSet {
+    const ALL_BITS: u16 = (1 << 8) - 1;
+
+    /// Create a set that accepts no format.
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    /// Create a set containing every format currently defined by this crate.
+    #[must_use]
+    pub const fn all() -> Self {
+        Self {
+            bits: Self::ALL_BITS,
+        }
+    }
+
+    /// Create a set containing exactly one format.
+    #[must_use]
+    pub const fn only(format: ImageFormat) -> Self {
+        Self {
+            bits: format_bit(format),
+        }
+    }
+
+    /// Return a copy of this set with one format added.
+    #[must_use]
+    pub const fn with_format(mut self, format: ImageFormat) -> Self {
+        self.bits |= format_bit(format);
+        self
+    }
+
+    /// Return whether this set accepts `format`.
+    #[must_use]
+    pub const fn contains(self, format: ImageFormat) -> bool {
+        self.bits & format_bit(format) != 0
+    }
+
+    /// Return whether this set accepts no formats.
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        self.bits == 0
+    }
+}
+
+const fn format_bit(format: ImageFormat) -> u16 {
+    1 << match format {
+        ImageFormat::Jpeg => 0,
+        ImageFormat::Png => 1,
+        ImageFormat::Gif => 2,
+        ImageFormat::Bmp => 3,
+        ImageFormat::WebP => 4,
+        ImageFormat::Tiff => 5,
+        ImageFormat::Ico => 6,
+        ImageFormat::Avif => 7,
+    }
+}
+
+/// Resource limits and format restrictions applied before or during inspection
+/// and decoding.
 ///
 /// An absent limit is unlimited for backward compatibility. A maximum of zero
-/// is valid and rejects any non-empty encoded input.
+/// is valid and rejects any non-empty encoded input. An absent format set keeps
+/// the compatibility API unrestricted; an explicitly empty set rejects every
+/// detected format.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DecodeLimits {
+    allowed_formats: Option<DecodeFormatSet>,
     max_encoded_bytes: Option<u64>,
     max_width: Option<u32>,
     max_height: Option<u32>,
@@ -30,6 +104,7 @@ impl DecodeLimits {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            allowed_formats: None,
             max_encoded_bytes: None,
             max_width: None,
             max_height: None,
@@ -41,6 +116,19 @@ impl DecodeLimits {
             max_metadata_bytes: None,
             max_work_units: None,
         }
+    }
+
+    /// Return the optional allowed-format set.
+    #[must_use]
+    pub const fn allowed_formats(self) -> Option<DecodeFormatSet> {
+        self.allowed_formats
+    }
+
+    /// Restrict this policy to the supplied format set.
+    #[must_use]
+    pub const fn with_allowed_formats(mut self, formats: DecodeFormatSet) -> Self {
+        self.allowed_formats = Some(formats);
+        self
     }
 
     /// Return the maximum accepted encoded-input length.
@@ -183,9 +271,9 @@ impl DecodeLimits {
 
 /// Policy shared by encoded-image inspection and decoding.
 ///
-/// [`Default`] preserves the original unlimited behavior. New limits are
-/// added here rather than as codec-specific knobs so every canonical entry
-/// point has one precedence and error contract.
+/// [`Default`] preserves the original unlimited behavior. New limits and
+/// format restrictions are added here rather than as codec-specific knobs so
+/// every canonical entry point has one precedence and error contract.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DecodePolicy {
@@ -205,6 +293,19 @@ impl DecodePolicy {
     #[must_use]
     pub const fn with_limits(limits: DecodeLimits) -> Self {
         Self { limits }
+    }
+
+    /// Return the optional allowed-format set.
+    #[must_use]
+    pub const fn allowed_formats(self) -> Option<DecodeFormatSet> {
+        self.limits.allowed_formats()
+    }
+
+    /// Restrict this policy to the supplied format set.
+    #[must_use]
+    pub const fn with_allowed_formats(mut self, formats: DecodeFormatSet) -> Self {
+        self.limits = self.limits.with_allowed_formats(formats);
+        self
     }
 
     /// Return this policy's resource limits.
@@ -308,6 +409,27 @@ impl DecodePolicy {
                 resource: ResourceLimit::EncodedBytes,
                 maximum,
                 observed,
+            });
+        }
+        Ok(())
+    }
+
+    /// Reject a detected format that is outside the caller's allow-list.
+    pub(crate) fn check_allowed_format(
+        self,
+        format: ImageFormat,
+        stage: ImageErrorStage,
+    ) -> ImageResult<()> {
+        if let Some(allowed) = self.limits.allowed_formats
+            && !allowed.contains(format)
+        {
+            return Err(ImageError::Unsupported {
+                format: Some(format),
+                message: format!("{format} is not allowed by the decode policy"),
+                stage: Some(stage),
+                reason: Some(UnsupportedReason::PolicyDenied),
+                offset: None,
+                identity: None,
             });
         }
         Ok(())

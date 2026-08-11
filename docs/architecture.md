@@ -412,14 +412,14 @@ translation cannot be bypassed.
 | `inspect_basic_prefix(&[u8])` | Incremental basic inspection: header facts when provable, `NeedMoreData { minimum }` while the basic header is incomplete |
 | `decode(&[u8])` | Auto-detect and decode the still/first-image view |
 | `decode_with_format(&[u8], ImageFormat)` | Validate the complete signature against a caller-selected format, then decode through the normal feature and codec dispatch |
-| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Apply the encoded-input limit, validate the selected signature, then apply metadata/canvas/frame/decoded-byte limits before decode |
+| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Apply the encoded-input limit, validate the selected signature, enforce the optional format allow-list, then apply metadata/canvas/frame/decoded-byte limits before decode |
 | `decode_prefix`, `decode_prefix_with_policy` | Incremental still decode with the non-terminal `NeedMoreData { minimum }` status |
 | `decode_with_token`, `decode_with_token_and_policy` | Still decode that polls a `CancellationToken` at structural checkpoints |
 | `decode_sequence(&[u8])` | Auto-detect and retain every supported frame plus presentation metadata |
 | `decode_sequence_prefix`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame/page cancellation |
 | `CancellationToken` | Dependency-free cooperative cancellation: `Rc<Cell>` state shared by clones, `cancel()` fires every clone, single-threaded by design |
-| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected policy before the corresponding operation |
+| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected format restriction and resource policy before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
@@ -615,7 +615,14 @@ target-specific defaults, while the strict legacy-pair adapter exists only for
 migration and is never consulted by an encoder.
 
 `DecodePolicy::default()` is the unlimited compatibility policy used by the
-short entry points. `max_encoded_bytes` is inclusive and checked against the
+short entry points. `DecodeFormatSet` is an optional caller-selected
+allow-list: the absent value accepts every detected format, while an explicit
+empty set accepts none. Policy-aware inspection and decode paths enforce the
+allow-list after signature detection, including prefix, token, explicit-format,
+and source-bound operations. `detect_format` remains independent so callers
+can inspect a signature without applying a decode policy. A denied format is a
+typed `Unsupported` result with `UnsupportedReason::PolicyDenied` and the
+operation stage. `max_encoded_bytes` is inclusive and checked against the
 complete byte slice before signature detection. This ordering bounds AVIF
 compatible-brand scanning as well as every codec parser, but intentionally
 leaves `ImageError::format()` as `None` on rejection.
@@ -1803,10 +1810,11 @@ These are retained-payload bounds, not a total allocator peak: codec parser,
 decompressor, and temporary materialization buffers may add transient memory,
 and no recoverable-OOM or allocator-count contract is promised.
 
-`EncodedImage::new_with_policy` applies the input limit before inspection and
-primary-canvas dimension, pixel, decoded-byte, and frame-count limits
-immediately afterward. `decode_with_policy` checks encoded bytes and retained
-`ImageInfo` before consulting the `OnceLock`: a policy failure is never cached,
+`EncodedImage::new_with_policy` applies the input limit and format allow-list
+before inspection and primary-canvas dimension, pixel, decoded-byte, and
+frame-count limits immediately afterward. `decode_with_policy` checks encoded
+bytes, the retained format, and retained `ImageInfo` before consulting the
+`OnceLock`: a policy failure is never cached,
 a later sufficient policy can initialize the ordinary cache, and an earlier
 cached success cannot bypass a later stricter policy. The policy is per
 operation rather than permanently attached to the source. The sequence policy
