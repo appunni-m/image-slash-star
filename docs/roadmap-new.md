@@ -14,6 +14,33 @@ Reviewed: 2026-08-11
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
 
+### Latest RN-003 implementation candidate
+
+The next resource-control slice is implemented on `main` at
+`79ce9a98b32a39bbfab30023f4becd47ec3561d4`:
+
+- A caller can set an inclusive decode checkpoint budget with
+  `DecodeLimits::with_max_work_units` or `DecodePolicy::with_max_work_units`.
+  Still, sequence, token-aware, and lazy `EncodedImage` paths preserve the
+  typed `DecodeWorkUnits` result and do not retain a rejected lazy decode.
+- The managed parity run `71ae3c8c-d6bf-4e49-99cf-913210a9311d` passed at this
+  exact revision. Its 28 matrix workers passed all 1,421 active fixture rows
+  plus their 28 worker-level checks: 1,449/1,449.
+- The exact local LLVM report at this revision is 100% for lines
+  (65,024/65,024), branches (8,474/8,474), functions (3,311/3,311), and
+  regions (97,115/97,115). Native `feature_gate_tests` passed 47/47, and the
+  focused `wasm32-wasip1` runtime contract passed 1/1.
+- The managed Coverage MCP run
+  `afcbc587-ed6f-4865-83b8-540bc8eee16b` was submitted at this exact
+  revision, but the Coverage MCP transport closed before it returned a
+  durable terminal status or snapshot. It is therefore **not accepted as
+  same-revision coverage evidence yet**; the claim ledger still points to the
+  last accepted snapshot above.
+
+This candidate is behaviorally complete but remains evidence-pending until a
+fresh managed snapshot is durably ingested. Do not move the claim-ledger base
+revision or call this slice mergeable before that happens.
+
 The old roadmap contains the original investigation and long-form findings.
 This file is the authority for what is still to do, why it matters, what must
 prove it, and which task comes next. When this file and the old audit disagree,
@@ -93,15 +120,16 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment | Integrated in the current tree | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 46/46. This is Rust-only and has no Pillow row. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment | Integrated in the current tree | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 47/47. This is Rust-only and has no Pillow row. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
-directly. The current evidence tuple is revision-bound to
-`36b939696415a962285d37f9120ff389aebf0205`.
+directly. The accepted evidence tuple remains revision-bound to
+`36b939696415a962285d37f9120ff389aebf0205`; the RN-003 candidate above is
+newer but awaits managed coverage ingestion.
 
 ## Contract catalog: behavior Pillow cannot prove
 
@@ -160,10 +188,10 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 46/46 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 47/47 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
-The current native all-feature feature-gated contract has 46 passing assertions.
+The current native all-feature feature-gated contract has 47 passing assertions.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
 evidence, not a reason to relabel source-provenance work as Pillow parity.
@@ -276,7 +304,7 @@ WebP interior behavior, and resource-limit work stay in the open inventory.
 and lossless rows, unchanged parity, Rust-only token-path coverage model, and
 same-revision exact coverage result above.
 
-### RN-003 — Resource limits, interruption, and output recovery — NEXT
+### RN-003 — Resource limits, interruption, and output recovery — IN PROGRESS
 
 **Why:** A picture library must not unexpectedly spend all of a caller's
 memory or time, and a failed output write must not pretend that a complete
@@ -286,6 +314,37 @@ file was delivered.
 progress semantics, remaining work-budget checkpoints, short-write behavior,
 rollback, cleanup, and error precedence. Keep recoverable-OOM promises out of
 scope unless the public contract can actually support them.
+
+#### Completed candidate slice — inclusive decode work budgets
+
+**Caller problem:** A caller may know that decoding a very large picture is
+expensive, but the old decode policy could only limit bytes, dimensions, or
+frames. It had no deterministic “stop after this many decoder checkpoints”
+rule. This matters for a UI, server, or WASM page that must stay responsive.
+
+**Pillow answer:** Pillow cannot prove this result. Pillow does not expose
+this crate's checkpoint counter, caller token, typed `DecodeWorkUnits` error,
+or lazy-cache state. The proof is therefore Rust-only, using the existing
+fixture-backed `feature_gate_tests` lane; no parity row is added.
+
+**Implemented behavior:** `DecodeLimits` and `DecodePolicy` expose an
+inclusive `max_work_units` bound. Zero rejects at the first real checkpoint;
+the exact discovered boundary succeeds; one less rejects with the observed
+count; still and sequence operations retain their operation identity; token
+combination preserves cancellation precedence; and a rejected lazy decode
+does not poison `EncodedImage`'s shared cache. The complete-slice sequence
+fallback is also exercised with a JPEG still input.
+
+**Source/evidence:** `src/cancel.rs`, `src/decode_policy.rs`,
+`src/codecs/error.rs`, `src/codecs/mod.rs`, `src/lib.rs`, `src/source.rs`,
+`src/types/error.rs`, and `tests/feature_gate_tests.rs`. The implementation
+commit is `79ce9a98b32a39bbfab30023f4becd47ec3561d4`; the local native/WASI
+and parity evidence is listed in the candidate block above.
+
+**Remaining dependency:** The managed Coverage MCP run must be rerun or
+recovered and its 100% snapshot durably ingested at this revision. Until then,
+this slice is implemented and locally verified but not yet accepted as the
+roadmap's revision-bound coverage proof.
 
 **Source IDs:** `API-014`, `API-017`, `API-018`, `API-023`, `API-030`,
 `API-036`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `QA-016`,
