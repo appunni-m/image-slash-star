@@ -119,6 +119,13 @@ caller-buffer reuse, peak stack/recursion, and WASM runtime cost remain
 unmeasured; an optimization should be accepted only after a repeatable
 same-host comparison identifies a real bottleneck.
 
+For local experimentation, the matrix-only lane also passed repeatedly with
+eight test threads in `0.64`–`1.04 s` wall time, while the feature-gate lane
+was unchanged at about `1.48`–`1.50 s` with four or eight threads. The standard
+benchmark remains fixed at four threads so cross-revision results stay
+comparable; eight threads is an observed local fast profile, not a new release
+performance guarantee.
+
 ### Earlier RN-003 implementation candidate
 
 The next resource-control slice is implemented on `main` at
