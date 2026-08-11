@@ -6641,6 +6641,105 @@ fn tiff_decode_work_budget_covers_packbits_packets() -> Result<(), Box<dyn std::
 }
 
 #[test]
+fn tiff_decode_work_budget_covers_lzw_codes_and_expansion() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "tiff") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: TIFF LZW can spend time reading many
+    // codes and expanding dictionary entries after the strip/tile checkpoint.
+    // Pillow has no equivalent caller work-budget result.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = fs::read(root.join("tests/fixtures/input/images/tiff/lzw.tiff"))?;
+    let info = image_slash_star::inspect(&data)?;
+    assert_eq!(info.format, ImageFormat::Tiff);
+    let expected = image_slash_star::decode(&data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+
+    let mut lower = 0_u64;
+    let mut upper = 1_u64;
+    loop {
+        let maximum = upper;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expected.content.pixels);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Tiff),
+                    operation: image_slash_star::CodecOperation::StillDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+        if upper == 131_072 {
+            return Err(
+                std::io::Error::other("TIFF LZW work-budget boundary exceeded probe").into(),
+            );
+        }
+        upper = upper.saturating_mul(2);
+    }
+    while lower < upper {
+        let maximum = lower + (upper - lower) / 2;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expected.content.pixels);
+                upper = maximum;
+            }
+            Err(error) => {
+                assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Tiff),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                ));
+                lower = maximum.saturating_add(1);
+            }
+        }
+    }
+    let boundary = lower;
+    assert_eq!(
+        boundary, 44_166,
+        "the committed TIFF LZW witness changed its checkpoint boundary"
+    );
+    assert!(
+        boundary > 32,
+        "TIFF LZW should charge code/expansion checkpoints, got boundary {boundary}"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(&data, &unlimited.with_max_work_units(boundary),)?
+            .content
+            .pixels,
+        expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &data,
+            &unlimited.with_max_work_units(boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Tiff),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == boundary - 1 && observed == boundary
+    ));
+    Ok(())
+}
+
+#[test]
 fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(all(feature = "png", feature = "jpeg")) {
         return Ok(());
