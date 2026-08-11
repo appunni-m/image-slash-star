@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star/webp-vp8l-property-map@1",
   "scope": "webp/vp8l",
-  "source_revision": "666ecd2724eb8e66cabbe1ca69bc9512425593a7",
+  "source_revision": "29969fdd5aadf71e00c4f34b06aeab3ace23fb72",
   "oracle": {
     "name": "Pillow",
     "version": "12.2.0",
