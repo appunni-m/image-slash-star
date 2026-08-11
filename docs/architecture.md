@@ -586,7 +586,8 @@ and sample-unpack row boundaries (including Adam7 passes), and 1,024-byte
 adaptive-filter/filtered-row subsegments, BMP row-conversion
 subsegments after each 1,024 pixels, GIF block and frame boundaries plus RGB/RGBA
 palette quantization intervals and LZW input-symbol intervals, TIFF
-still page preparation/predictor, PackBits packet, and LZW work, Deflate zlib block and
+still page preparation/predictor, PackBits packet, LZW code and 1,024-byte
+dictionary-expansion intervals, Deflate zlib block and
 dynamic-table boundaries, 1,024-byte stored/compressed output intervals,
 Adler-32 chunks, and level-six matcher intervals, plus sequence page and
 strip/tile boundaries, JPEG color/sampling/quantization rows, progressive scan
