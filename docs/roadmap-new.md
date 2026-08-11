@@ -105,6 +105,20 @@ for codec state.
   additional structural combination or remaining inner-bitstream boundary and
   rerun the normal acceptance checks when managed evidence is available.
 
+### Current fixed test-runtime observation
+
+The repository's schema-`@3` benchmark was run on clean revision
+`9623193182997ccb59084f0d9c5e4e10865a9ee5` with its fixed four-test-thread
+budget. The Pillow-visible matrix passed all 1,421 active rows in `0.990571 s`
+wall time (`2.813331 s` user, `0.201317 s` system, 256,983,040-byte peak RSS),
+and the Rust-only feature-gate suite passed in `1.509984 s` wall time
+(`2.188653 s` user, `0.103410 s` system, 181,010,432-byte peak RSS). These are
+single-host/cache/toolchain observations, not a universal performance claim or
+proof that one revision is faster. Allocation counts, retained cache bytes,
+caller-buffer reuse, peak stack/recursion, and WASM runtime cost remain
+unmeasured; an optimization should be accepted only after a repeatable
+same-host comparison identifies a real bottleneck.
+
 ### Earlier RN-003 implementation candidate
 
 The next resource-control slice is implemented on `main` at
