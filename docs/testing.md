@@ -8451,8 +8451,8 @@ passes 52/52 and the native parity matrix passes 28/28. The exact local LLVM
 report passes 65,351/65,351 lines, 8,514/8,514 branches, 3,335/3,335
 functions, and 97,638/97,638 regions. Managed Coverage MCP remains
 unavailable at project-context transport; this is local evidence and adds no
-Pillow parity row. TIFF raw payload traversal, predictor/sample
-conversion checkpoints, allocation/peak accounting, progress, sink rollback,
+Pillow parity row. TIFF raw payload traversal, allocation/peak accounting,
+progress, sink rollback,
 and cleanup remain separate roadmap work.
 
 The current TIFF PackBits packet-checkpoint slice is implemented at
@@ -8469,7 +8469,7 @@ matrix passes 28/28. The exact local LLVM report passes 65,402/65,402 lines,
 8,520/8,520 branches, 3,336/3,336 functions, and 97,740/97,740 regions.
 Managed Coverage MCP remains unavailable at project-context transport; this
 is local evidence and adds no Pillow parity row. TIFF raw payload traversal,
-predictor/sample conversion checkpoints, allocation/peak accounting, progress,
+allocation/peak accounting, progress,
 sink rollback, and cleanup remain separate roadmap work.
 
 The current TIFF LZW code/expansion checkpoint slice is implemented at
@@ -8484,9 +8484,40 @@ feature-gate suite passes 54/54 and the native parity matrix passes 28/28. The
 exact local LLVM report passes 65,597/65,597 lines, 8,558/8,558 branches,
 3,339/3,339 functions, and 98,027/98,027 regions. Managed Coverage MCP
 remains unavailable at project-context transport; this is local evidence and
-adds no Pillow parity row. TIFF raw payload traversal, predictor/sample
-conversion checkpoints, allocation/peak accounting, progress, sink rollback,
+adds no Pillow parity row. TIFF raw payload traversal, allocation/peak
+accounting, progress, sink rollback,
 and cleanup remain separate roadmap work.
+
+The current TIFF horizontal-predictor checkpoint slice is implemented at
+`6682a00649b064bb8b328c721498844f9bc2785f`: token-aware TIFF decoding now
+polls before each horizontal-predictor row and after each 1,024 reconstructed
+bytes for 8-, 16-, and 32-bit samples, while the no-token predictor remains
+direct. The Rust-only `tiff_decode_work_budget_covers_predictor_rows` contract
+uses the committed 128×128 `rgb_deflate_predictor.tiff` witness and finds an
+inclusive boundary of 194: exact success preserves every decoded pixel, while
+193 returns the typed `DecodeWorkUnits` result with `observed = 194`. The
+native feature-gate suite passes 55/55 and the native parity matrix passes
+28/28. The exact local LLVM report passes 65,757/65,757 lines, 8,568/8,568
+branches, 3,342/3,342 functions, and 98,264/98,264 regions. Managed Coverage
+MCP remains unavailable at project-context transport; this is local evidence
+and adds no Pillow parity row. TIFF raw payload traversal, allocation/peak
+accounting, progress, sink rollback, and cleanup remain separate roadmap work.
+
+The current TIFF sample-conversion checkpoint slice is implemented at
+`80d5871dd982eeab7b205b138917f44724c7c490`: token-aware TIFF decoding now
+checkpoints grayscale inversion, packed-index unpacking and scaling, 16-bit
+endian conversion, palette unpacking, and YCbCr compaction at row boundaries
+and 1,024-byte or sample intervals, while the no-token conversion path remains
+direct. The Rust-only `tiff_decode_work_budget_covers_sample_conversion`
+contract uses the committed `16bit.tiff` witness and finds an inclusive
+boundary of 164: exact success preserves every decoded pixel, while 163
+returns the typed `DecodeWorkUnits` result with `observed = 164`. The native
+feature-gate suite passes 56/56 and the native parity matrix passes 28/28. The
+exact local LLVM report passes 66,280/66,280 lines, 8,598/8,598 branches,
+3,345/3,345 functions, and 98,992/98,992 regions. Managed Coverage MCP
+remains unavailable at project-context transport; this is local evidence and
+adds no Pillow parity row. TIFF raw payload traversal, allocation/peak
+accounting, progress, sink rollback, and cleanup remain separate roadmap work.
 
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test

@@ -6,8 +6,10 @@
 //! strip/tile loops, TIFF Deflate zlib block/dynamic-table boundaries,
 //! stored/compressed output intervals, Adler-32 chunks, level-six matcher
 //! positions/candidate chains, and Deflate expansion/Huffman/bitstream/checksum
-//! stages, TIFF PackBits packet boundaries, TIFF LZW code boundaries and
-//! 1,024-byte dictionary-expansion intervals, PNG zlib Deflate block and
+//! stages, TIFF horizontal-predictor rows and 1,024-byte reconstruction
+//! intervals, sample-conversion rows and 1,024-byte sample intervals, PackBits
+//! packet boundaries, TIFF LZW code boundaries and 1,024-byte
+//! dictionary-expansion intervals, PNG zlib Deflate block and
 //! dynamic-table boundaries, stored/compressed output intervals, Adler-32
 //! chunks, and scanline reconstruction/sample-unpack row boundaries, JPEG
 //! RGB-to-YCbCr conversion items and chroma-downsample output
