@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG scanline row checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 51/51, including the PNG scanline work-budget boundary. API-038 and the PNG row checkpoint are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation and scanline checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 51/51, including the PNG zlib-inflation and scanline work-budget boundary. API-038 and the PNG decoder checkpoints are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -381,7 +381,8 @@ were the same unit.
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
-new PNG scanline boundary test described in the RN-003 candidate below.
+new PNG zlib-inflation and scanline boundary test described in the RN-003
+candidate below.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
 evidence, not a reason to relabel source-provenance work as Pillow parity.
@@ -609,13 +610,13 @@ groups below.
 inclusive boundary fixture, a no-partial-output assertion where applicable,
 and a feature-gated origin when Pillow cannot observe it.
 
-#### Current candidate slice — API-036 PNG scanline row checkpoints
+#### Current candidate slice — API-036 PNG zlib inflation and scanline checkpoints
 
 **Caller problem:** A large PNG can spend meaningful time reconstructing
-filtered rows and unpacking samples after the container and zlib stages have
-already finished. A caller-controlled token or work budget that polls only at
-chunk boundaries cannot stop that interior work promptly enough for a server,
-UI, or WASM page.
+filtered rows, unpacking samples, or expanding zlib output after the container
+has been recognized. A caller-controlled token or work budget that polls only
+at chunk boundaries cannot stop that interior work promptly enough for a
+server, UI, or WASM page.
 
 **Pillow answer:** Pillow can decode the same pixels, but it does not expose a
 caller token, a checkpoint counter, or a typed `DecodeWorkUnits` result. This
@@ -623,29 +624,48 @@ is a Rust-only resource-control contract and must not become a fabricated
 parity row.
 
 **Implemented behavior:** Commit
-`7d9e256df33296be832869fb41670a8d1e07fbb6` threads the existing token through
-PNG still and APNG frame decode. It charges one checkpoint before every
-filtered-row reconstruction and every sample-unpack row, including each
-Adam7 pass. The no-token path retains direct row traversal. A fired token or
-exhausted finite work budget returns before the next row can publish into the
-decoded result; ordinary bytes and pixels remain unchanged.
+`4320977aa62768009df74d2f3a0e3b4f4a218bdb` adds a token-aware PNG zlib-prefix
+decoder; arithmetic fix `e97b514` keeps its checkpoint counters within the
+repository's checked-arithmetic policy; and coverage-origin follow-up
+`a7207ed` models the defensive error edges. The token-aware path polls before
+each Deflate block, after dynamic
+table construction, while stored blocks copy output in 1,024-byte intervals,
+while fixed/dynamic blocks emit literals and back-references in 1,024-byte
+intervals, and during Adler-32 in 5,552-byte chunks. It still stops at the
+declared raster prefix, so the existing oversized-scanline diagnostic and
+trailing-data policy remain unchanged. A missing token stays on the direct
+no-token decode loops. The earlier commit
+`7d9e256df33296be832869fb41670a8d1e07fbb6` threads the same token through PNG
+still and APNG frame scanline reconstruction: it charges before every
+filtered-row reconstruction and every sample-unpack row, including each Adam7
+pass. A fired token or exhausted finite work budget returns before the next
+row can publish into the decoded result; ordinary bytes and pixels remain
+unchanged.
 
 **Source/evidence:** The Rust-only
-`png_decode_work_budget_covers_scanline_rows` contract uses the committed
-128×128 `no_interlace.png` witness, finds the boundary with exponential and
-binary probes, proves exact-boundary success and one-below rejection, and
-requires more than 128 charged checkpoints. The coverage-only origin uses the
-small committed `2x3.png` and `adam7_2x3.png` witnesses to reach both layouts.
-Native `feature_gate_tests` passes 51/51, the native matrix passes 28/28, and
-the exact local LLVM report passes 65,208/65,208 lines, 8,486/8,486 branches,
-3,330/3,330 functions, and 97,401/97,401 regions.
+`png_decode_work_budget_covers_inflation_and_scanline_rows` contract uses the
+committed 128×128 `no_interlace.png` normal-compressed witness and finds its
+inclusive boundary at 327; the exact boundary succeeds and 326 rejects with
+the typed work-budget result. The committed 128×128 `compress_none.png`
+stored-block witness finds a second boundary at 322, with exact success and
+321 rejection, proving that polling only after row reconstruction is
+insufficient. The same contract keeps the decoded pixels byte-identical at
+both exact boundaries. The coverage-only origin uses the small committed
+`2x3.png` and `adam7_2x3.png` witnesses to reach both scanline layouts, plus
+the existing Deflate private-branch model for malformed streams and
+cancellation edges. Native `feature_gate_tests` passes 51/51, the native
+matrix passes 28/28, and the exact local LLVM report passes 65,342/65,342
+lines, 8,514/8,514 branches, 3,335/3,335 functions, and 97,627/97,627
+regions.
 
 **Remaining dependency:** The managed Coverage MCP transport still closes at
 `project_context`, so no same-revision managed snapshot is available. The
 accepted claim-ledger tuple remains unchanged until managed evidence is
-recovered. Deeper interruption inside one row, transient allocation/peak
-accounting, progress callbacks, short-write semantics, rollback, and cleanup
-remain open RN-003 work.
+recovered. The production cadence still permits up to one 1,024-byte output
+interval between Deflate polls, and does not claim interruption inside every
+bit read or Huffman-table operation. Transient allocation/peak accounting,
+progress callbacks, short-write semantics, rollback, and cleanup remain open
+RN-003 work.
 
 ### RN-004 — Metadata and source facts — LATER
 

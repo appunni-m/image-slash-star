@@ -678,8 +678,12 @@ pub fn decode_prefix_with_policy(
 /// Decode a still image with cooperative cancellation.
 ///
 /// The [`CancellationToken`] is polled at structural checkpoints (chunk
-/// boundaries, per-entry selection, pixel-payload work) and the operation
-/// stops with [`ImageError::Cancelled`] without publishing partial state.
+/// boundaries, per-entry selection, pixel-payload work) and selected codec
+/// checkpoints. PNG additionally polls at Deflate block and dynamic-table
+/// boundaries, every 1,024 bytes emitted by stored/fixed/dynamic inflation,
+/// 5,552-byte Adler-32 chunks, and scanline reconstruction/sample-unpack row
+/// boundaries, including Adam7 passes. The operation stops with
+/// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
 /// [`ImageError::NeedMoreData`] status as [`decode_prefix`].
 ///
