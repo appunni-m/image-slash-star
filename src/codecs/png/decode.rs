@@ -3,6 +3,7 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::{
     decompress_zlib_prefix, decompress_zlib_prefix_with_status,
+    decompress_zlib_prefix_with_status_and_token,
 };
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
 use crate::types::{
@@ -677,9 +678,13 @@ fn decode_image_data_with_status(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(DecodedImage, bool)> {
     let expected_inflated = inflated_len(spec.width, spec.height, channels, spec.depth, interlace);
-    let (inflated, oversized_scanline) =
-        decompress_zlib_prefix_with_status(compressed, expected_inflated)
-            .map_err(|error| error.context("decode PNG zlib stream"))?;
+    let (inflated, oversized_scanline) = match token {
+        Some(token) => {
+            decompress_zlib_prefix_with_status_and_token(compressed, expected_inflated, Some(token))
+        }
+        None => decompress_zlib_prefix_with_status(compressed, expected_inflated),
+    }
+    .map_err(|error| error.context("decode PNG zlib stream"))?;
     if inflated.len() != expected_inflated {
         return Err(CodecError::Malformed(
             "PNG image data has an unexpected decompressed length".to_owned(),
