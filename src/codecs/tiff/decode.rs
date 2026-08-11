@@ -331,13 +331,25 @@ fn decode_ifd(
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
             if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
-                reverse_horizontal_predictor(
-                    &mut decoded,
-                    tile_row_bytes,
-                    samples_per_pixel,
-                    bits_per_sample,
-                    endian,
-                );
+                if let Some(token) = token {
+                    reverse_horizontal_predictor_with_token(
+                        &mut decoded,
+                        tile_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                        token,
+                    )
+                    .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+                } else {
+                    reverse_horizontal_predictor(
+                        &mut decoded,
+                        tile_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                    );
+                }
             }
             let tile_column = tile_index.checked_rem(tiles_across).unwrap_or_default();
             let tile_row = tile_index.checked_div(tiles_across).unwrap_or_default();
@@ -441,13 +453,25 @@ fn decode_ifd(
         let mut decoded = decode_block(compression, encoded, expected, token)
             .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
-            reverse_horizontal_predictor(
-                &mut decoded,
-                row_bytes,
-                samples_per_pixel,
-                bits_per_sample,
-                endian,
-            );
+            if let Some(token) = token {
+                reverse_horizontal_predictor_with_token(
+                    &mut decoded,
+                    row_bytes,
+                    samples_per_pixel,
+                    bits_per_sample,
+                    endian,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+            } else {
+                reverse_horizontal_predictor(
+                    &mut decoded,
+                    row_bytes,
+                    samples_per_pixel,
+                    bits_per_sample,
+                    endian,
+                );
+            }
         }
         pixels.extend_from_slice(&decoded);
     }
@@ -730,6 +754,81 @@ fn reverse_horizontal_predictor(
             }
         }
     }
+}
+
+fn reverse_horizontal_predictor_with_token(
+    data: &mut [u8],
+    row_bytes: usize,
+    samples: usize,
+    bits: u8,
+    endian: Endian,
+    token: &crate::CancellationToken,
+) -> CodecResult<()> {
+    match bits {
+        8 => {
+            for row in data.chunks_exact_mut(row_bytes) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                let mut processed = 0usize;
+                for index in samples..row.len() {
+                    row[index] = row[index].wrapping_add(row[index.wrapping_sub(samples)]);
+                    processed = processed.saturating_add(1);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                    }
+                }
+            }
+        }
+        16 => {
+            let sample_stride = samples.wrapping_mul(2);
+            for row in data.chunks_exact_mut(row_bytes) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                let mut processed = 0usize;
+                for offset in (sample_stride..row.len()).step_by(2) {
+                    let previous_offset = offset.wrapping_sub(sample_stride);
+                    let previous = endian
+                        .u16_exact([row[previous_offset], row[previous_offset.wrapping_add(1)]]);
+                    let current = endian
+                        .u16_exact([row[offset], row[offset.wrapping_add(1)]])
+                        .wrapping_add(previous);
+                    endian.write_u16(current, &mut row[offset..offset.wrapping_add(2)]);
+                    processed = processed.saturating_add(2);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                    }
+                }
+            }
+        }
+        _ => {
+            let sample_stride = samples.wrapping_mul(4);
+            for row in data.chunks_exact_mut(row_bytes) {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                let mut processed = 0usize;
+                for offset in (sample_stride..row.len()).step_by(4) {
+                    let previous_offset = offset.wrapping_sub(sample_stride);
+                    let previous = endian.u32_exact([
+                        row[previous_offset],
+                        row[previous_offset.wrapping_add(1)],
+                        row[previous_offset.wrapping_add(2)],
+                        row[previous_offset.wrapping_add(3)],
+                    ]);
+                    let current = endian
+                        .u32_exact([
+                            row[offset],
+                            row[offset.wrapping_add(1)],
+                            row[offset.wrapping_add(2)],
+                            row[offset.wrapping_add(3)],
+                        ])
+                        .wrapping_add(previous);
+                    endian.write_u32(current, &mut row[offset..offset.wrapping_add(4)]);
+                    processed = processed.saturating_add(4);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn decode_packbits(data: &[u8], expected: usize) -> CodecResult<Vec<u8>> {
@@ -2180,4 +2279,82 @@ pub(crate) fn __coverage_exercise_private_branches() {
     reverse_horizontal_predictor(&mut predicted, 4, 1, 16, Endian::Big);
     let mut predicted = vec![0, 0, 0, 1, 0, 0, 0, 2];
     reverse_horizontal_predictor(&mut predicted, 8, 1, 32, Endian::Little);
+    let tiled_predictor =
+        include_bytes!("../../../tests/fixtures/input/images/tiff/tiled_lzw_predictor.tiff");
+    let token = crate::CancellationToken::new();
+    let _ = decode(tiled_predictor, Some(&token));
+    let _ = decode(tiled_predictor, None);
+    let token = crate::CancellationToken::new();
+    let mut predicted = vec![0u8; 1_025];
+    let _ = reverse_horizontal_predictor_with_token(
+        &mut predicted,
+        1_025,
+        1,
+        8,
+        Endian::Little,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    let mut predicted = vec![0u8; 2_050];
+    let _ =
+        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
+    let token = crate::CancellationToken::new();
+    let mut predicted = vec![0u8; 4_100];
+    let _ = reverse_horizontal_predictor_with_token(
+        &mut predicted,
+        4_100,
+        1,
+        32,
+        Endian::Little,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let mut predicted = vec![0u8; 1_025];
+    let _ = reverse_horizontal_predictor_with_token(
+        &mut predicted,
+        1_025,
+        1,
+        8,
+        Endian::Little,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let mut predicted = vec![0u8; 2_050];
+    let _ =
+        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let mut predicted = vec![0u8; 2_050];
+    let _ =
+        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let mut predicted = vec![0u8; 4_100];
+    let _ = reverse_horizontal_predictor_with_token(
+        &mut predicted,
+        4_100,
+        1,
+        32,
+        Endian::Little,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let mut predicted = vec![0u8; 4_100];
+    let _ = reverse_horizontal_predictor_with_token(
+        &mut predicted,
+        4_100,
+        1,
+        32,
+        Endian::Little,
+        &token,
+    );
+    for checks in 0..=32 {
+        let tiny = tiny_tiled_tiff(8, true, true, 1, 1, 2, COMPRESSION_LZW as u16, &lzw_a);
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode(&tiny, Some(&token));
+    }
 }
