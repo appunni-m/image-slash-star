@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star/webp-vp8l-property-map@1",
   "scope": "webp/vp8l",
-  "source_revision": "487348d01389eb8d100b8a668c9921d97634c022",
+  "source_revision": "666ecd2724eb8e66cabbe1ca69bc9512425593a7",
   "oracle": {
     "name": "Pillow",
     "version": "12.2.0",
@@ -10,9 +10,9 @@
   },
   "inputs": {
     "manifest_path": "manifest.yaml",
-    "manifest_sha256": "bffa47f55b0a4ef2d64979392410e7544617fcebdedcd4086cd76532a4c936e3",
+    "manifest_sha256": "d3771d65557429ef4fcca730ddb11a30ffa4513dbf882aebd694107a0e601f8e",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "b087396b064ed216a03ed789d9a6171d1f97ec99491f2f90f0c134bce29bf510",
+    "matrix_sha256": "81bcff2c751c791958abecb7a249e3f7c50e968b4069aa548625401ca60e4326",
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
     "inspector_sha256": "833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541"
   },
