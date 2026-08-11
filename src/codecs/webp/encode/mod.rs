@@ -1097,7 +1097,11 @@ fn encode_error(error: super::native::EncodingError) -> CodecError {
         }
         super::native::EncodingError::Cancelled => CodecError::Cancelled,
         super::native::EncodingError::WorkBudgetExceeded { maximum, observed } => {
-            CodecError::WorkBudgetExceeded { maximum, observed }
+            CodecError::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource: crate::ResourceLimit::EncodeWorkUnits,
+            }
         }
     }
 }

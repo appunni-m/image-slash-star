@@ -110,11 +110,12 @@ pub use source::{EncodedImage, EncodedImageDecodeState, EncodedImageView};
 pub use types::*;
 
 fn work_budget_token(
-    policy: &EncodePolicy,
+    maximum: Option<u64>,
+    resource: ResourceLimit,
     source: Option<&CancellationToken>,
 ) -> Option<CancellationToken> {
-    policy.max_work_units().map(|maximum| {
-        // `u64::MAX` cannot be exhausted by a finite encode: checkpoint
+    maximum.map(|maximum| {
+        // `u64::MAX` cannot be exhausted by a finite operation: checkpoint
         // counts are derived from usize-sized input and output traversals.
         // Preserve the token-aware codec path while avoiding a redundant
         // budget cell and per-poll counter mutation for this common ample
@@ -123,10 +124,32 @@ fn work_budget_token(
             return source.cloned().unwrap_or_default();
         }
         match source {
-            Some(source) => CancellationToken::with_work_budget_from(source, maximum),
-            None => CancellationToken::with_work_budget(maximum),
+            Some(source) => CancellationToken::with_work_budget_from(source, maximum, resource),
+            None => CancellationToken::with_work_budget(maximum, resource),
         }
     })
+}
+
+fn encode_work_budget_token(
+    policy: &EncodePolicy,
+    source: Option<&CancellationToken>,
+) -> Option<CancellationToken> {
+    work_budget_token(
+        policy.max_work_units(),
+        ResourceLimit::EncodeWorkUnits,
+        source,
+    )
+}
+
+fn decode_work_budget_token(
+    policy: &DecodePolicy,
+    source: Option<&CancellationToken>,
+) -> Option<CancellationToken> {
+    work_budget_token(
+        policy.max_work_units(),
+        ResourceLimit::DecodeWorkUnits,
+        source,
+    )
 }
 
 /// Detect an encoded image format from its magic bytes.
@@ -474,7 +497,12 @@ pub(crate) fn decode_selected_with_policy(
         let info = codecs::inspect_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_format(data, format).map(|(image, consumed_bytes, diagnostics)| {
+    let budget_token = decode_work_budget_token(policy, None);
+    let decoded = match budget_token.as_ref() {
+        Some(token) => codecs::decode_format_with_token(data, format, token),
+        None => codecs::decode_format(data, format),
+    };
+    decoded.map(|(image, consumed_bytes, diagnostics)| {
         finish_decoded(
             format,
             image,
@@ -498,18 +526,21 @@ pub(crate) fn decode_sequence_selected_with_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_format(data, format, &mut budget).map(
-        |(sequence, consumed_bytes, diagnostics)| {
-            finish_decoded(
-                format,
-                sequence,
-                consumed_bytes,
-                data.len(),
-                ImageErrorStage::SequenceDecode,
-                diagnostics,
-            )
-        },
-    )
+    let budget_token = decode_work_budget_token(policy, None);
+    let decoded = match budget_token.as_ref() {
+        Some(token) => codecs::decode_sequence_format_with_token(data, format, &mut budget, token),
+        None => codecs::decode_sequence_format(data, format, &mut budget),
+    };
+    decoded.map(|(sequence, consumed_bytes, diagnostics)| {
+        finish_decoded(
+            format,
+            sequence,
+            consumed_bytes,
+            data.len(),
+            ImageErrorStage::SequenceDecode,
+            diagnostics,
+        )
+    })
 }
 
 /// Decode with an explicit caller-controlled policy.
@@ -521,9 +552,9 @@ pub(crate) fn decode_sequence_selected_with_policy(
 /// # Errors
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, its decoded transfer-byte length, or the materialized frame
-/// count exceeds a configured maximum. Otherwise returns the same errors as
-/// [`decode`].
+/// primary canvas, its decoded transfer-byte length, the materialized frame
+/// count, or the configured decode work budget exceeds a maximum. Otherwise
+/// returns the same errors as [`decode`].
 pub fn decode_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -589,8 +620,8 @@ pub fn decode_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedImage>> {
 /// # Errors
 ///
 /// Returns the same errors as [`decode_prefix`], plus
-/// [`ImageError::LimitExceeded`] for the current input length or inspected
-/// primary canvas.
+/// [`ImageError::LimitExceeded`] for the current input length, inspected
+/// primary canvas, or configured decode work budget.
 pub fn decode_prefix_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -639,8 +670,8 @@ pub fn decode_with_token(
 /// # Errors
 ///
 /// Returns the same errors as [`decode_with_token`], plus
-/// [`ImageError::LimitExceeded`] for the current input length or inspected
-/// primary canvas.
+/// [`ImageError::LimitExceeded`] for the current input length, inspected
+/// primary canvas, or configured decode work budget.
 pub fn decode_with_token_and_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -653,16 +684,20 @@ pub fn decode_with_token_and_policy(
         let info = codecs::inspect_basic_prefix_format(data, format)?;
         policy.check_image_info(&info, CodecOperation::StillDecode)?;
     }
-    codecs::decode_token_format(data, format, token).map(|(image, consumed_bytes, diagnostics)| {
-        finish_decoded(
-            format,
-            image,
-            consumed_bytes,
-            data.len(),
-            ImageErrorStage::StillDecode,
-            diagnostics,
-        )
-    })
+    let budget_token = decode_work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
+    codecs::decode_token_format(data, format, effective_token).map(
+        |(image, consumed_bytes, diagnostics)| {
+            finish_decoded(
+                format,
+                image,
+                consumed_bytes,
+                data.len(),
+                ImageErrorStage::StillDecode,
+                diagnostics,
+            )
+        },
+    )
 }
 
 /// Decode a still image into an exact-size caller-provided destination.
@@ -720,12 +755,13 @@ pub fn decode_sequence(data: &[u8]) -> ImageResult<Decoded<DecodedSequence>> {
 /// # Errors
 ///
 /// Returns [`ImageError::LimitExceeded`] when the complete input, inspected
-/// primary canvas, its decoded transfer-byte length, or the inspected frame
-/// count exceeds a configured maximum, or when a later frame or the cumulative
-/// retained sequence exceeds the configured decoded-byte maxima. Frame-count
-/// and primary checks run before sequence materialization; later-frame and
-/// cumulative byte checks run before each later frame's pixel work. Otherwise
-/// returns the same errors as [`decode_sequence`].
+/// primary canvas, its decoded transfer-byte length, the inspected frame
+/// count, or the configured decode work budget exceeds a maximum, or when a
+/// later frame or the cumulative retained sequence exceeds the configured
+/// decoded-byte maxima. Frame-count and primary checks run before sequence
+/// materialization; later-frame and cumulative byte checks run before each
+/// later frame's pixel work. Otherwise returns the same errors as
+/// [`decode_sequence`].
 pub fn decode_sequence_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -755,7 +791,7 @@ pub fn decode_sequence_prefix(data: &[u8]) -> ImageResult<Decoded<DecodedSequenc
 ///
 /// Returns the same errors as [`decode_sequence_prefix`], plus
 /// [`ImageError::LimitExceeded`] for the current input length, inspected
-/// frame count, or decoded-byte budget.
+/// frame count, decoded-byte budget, or configured decode work budget.
 pub fn decode_sequence_prefix_with_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -808,7 +844,7 @@ pub fn decode_sequence_with_token(
 ///
 /// Returns the same errors as [`decode_sequence_with_token`], plus
 /// [`ImageError::LimitExceeded`] for the current input length, inspected
-/// frame count, or decoded-byte budget.
+/// frame count, decoded-byte budget, or configured decode work budget.
 pub fn decode_sequence_with_token_and_policy(
     data: &[u8],
     policy: &DecodePolicy,
@@ -823,7 +859,9 @@ pub fn decode_sequence_with_token_and_policy(
         policy.check_image_info(&info, CodecOperation::SequenceDecode)?;
         budget.charge_primary(&info)?;
     }
-    codecs::decode_sequence_token_format(data, format, &mut budget, token).map(
+    let budget_token = decode_work_budget_token(policy, Some(token));
+    let effective_token = budget_token.as_ref().unwrap_or(token);
+    codecs::decode_sequence_token_format(data, format, &mut budget, effective_token).map(
         |(sequence, consumed_bytes, diagnostics)| {
             finish_decoded(
                 format,
@@ -942,7 +980,7 @@ pub fn encode_with_policy(
     opts: &EncodeOptions,
     policy: &EncodePolicy,
 ) -> ImageResult<Vec<u8>> {
-    let budget_token = work_budget_token(policy, None);
+    let budget_token = encode_work_budget_token(policy, None);
     let encoded = match budget_token.as_ref() {
         Some(token) => codecs::encode_format_with_token(img, format, opts, Some(token))?,
         None => codecs::encode_format(img, format, opts)?,
@@ -1074,7 +1112,7 @@ pub fn encode_with_token_and_policy(
     policy: &EncodePolicy,
     token: &CancellationToken,
 ) -> ImageResult<Vec<u8>> {
-    let budget_token = work_budget_token(policy, Some(token));
+    let budget_token = encode_work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     let encoded = codecs::encode_format_with_token(img, format, opts, Some(effective_token))?;
     policy.check_output(&encoded, format, CodecOperation::StillEncode)?;
@@ -1121,7 +1159,7 @@ pub fn encode_sequence_with_policy(
     opts: &EncodeOptions,
     policy: &EncodePolicy,
 ) -> ImageResult<Vec<u8>> {
-    let budget_token = work_budget_token(policy, None);
+    let budget_token = encode_work_budget_token(policy, None);
     let encoded = match budget_token.as_ref() {
         Some(token) => {
             codecs::encode_sequence_format_with_token(sequence, format, opts, Some(token))?
@@ -1165,7 +1203,7 @@ pub fn encode_sequence_with_token_and_policy(
     policy: &EncodePolicy,
     token: &CancellationToken,
 ) -> ImageResult<Vec<u8>> {
-    let budget_token = work_budget_token(policy, Some(token));
+    let budget_token = encode_work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     let encoded =
         codecs::encode_sequence_format_with_token(sequence, format, opts, Some(effective_token))?;
@@ -1340,7 +1378,7 @@ fn encode_to_sink_with_policy_unchecked(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    let budget_token = work_budget_token(policy, None);
+    let budget_token = encode_work_budget_token(policy, None);
     #[cfg(all(
         feature = "jpeg",
         feature = "png",
@@ -1467,7 +1505,7 @@ fn encode_to_sink_with_token_and_policy_unchecked(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    let budget_token = work_budget_token(policy, Some(token));
+    let budget_token = encode_work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     #[cfg(all(
         feature = "jpeg",
@@ -1601,7 +1639,7 @@ fn encode_sequence_to_sink_with_policy_unchecked(
     policy: &EncodePolicy,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    let budget_token = work_budget_token(policy, None);
+    let budget_token = encode_work_budget_token(policy, None);
     #[cfg(all(
         feature = "jpeg",
         feature = "png",
@@ -1736,7 +1774,7 @@ fn encode_sequence_to_sink_with_token_and_policy_unchecked(
     token: &CancellationToken,
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
-    let budget_token = work_budget_token(policy, Some(token));
+    let budget_token = encode_work_budget_token(policy, Some(token));
     let effective_token = budget_token.as_ref().unwrap_or(token);
     #[cfg(all(
         feature = "jpeg",

@@ -312,18 +312,22 @@ impl EncodedImage {
 
     /// Lazily decode pixels under an explicit caller-controlled policy.
     ///
-    /// A policy rejection happens before consulting or initializing the
-    /// shared cache. A later call with a sufficient policy can therefore
-    /// materialize normally, while a cached success cannot bypass a stricter
-    /// encoded-input maximum.
+    /// A policy rejection for the encoded input, metadata, or image facts
+    /// happens before cache access. A later call with a sufficient policy can
+    /// therefore materialize normally, while a cached success cannot bypass a
+    /// stricter encoded-input maximum. On a cache miss, a configured work
+    /// budget is enforced during the decode; a cached success requires no
+    /// further decode work.
     ///
     /// # Errors
     ///
     /// Returns [`crate::ImageError::LimitExceeded`] before cache access when
-    /// the encoded snapshot, retained primary canvas, or primary decoded
+    /// the encoded snapshot, retained primary canvas, primary decoded
     /// transfer-byte length, or a zero frame-count maximum exceeds the
-    /// materialized still frame. Otherwise returns the same errors as
-    /// [`Self::decode`].
+    /// materialized still frame. On a cache miss, a configured decode work
+    /// budget is also enforced and a rejected decode is not retained. A
+    /// cached success performs no decode work and can therefore be reused by
+    /// a later policy. Otherwise returns the same errors as [`Self::decode`].
     pub fn decode_with_policy(&self, policy: &DecodePolicy) -> ImageResult<&Decoded<DecodedImage>> {
         policy.check_encoded_input(&self.inner.bytes, CodecOperation::StillDecode)?;
         policy.check_metadata_bytes(
@@ -332,6 +336,11 @@ impl EncodedImage {
             CodecOperation::StillDecode,
         )?;
         policy.check_image_info(&self.inner.info, CodecOperation::StillDecode)?;
+        if policy.max_work_units().is_some() && self.inner.decoded.get().is_none() {
+            let decoded =
+                crate::decode_selected_with_policy(&self.inner.bytes, self.format(), policy)?;
+            let _ = self.inner.decoded.set(Ok(decoded));
+        }
         self.inner
             .decoded
             .get_or_init(|| {

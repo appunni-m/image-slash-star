@@ -37,6 +37,8 @@ pub enum ResourceLimit {
     EncodedOutputBytes,
     /// Number of cooperative encode checkpoints admitted to the operation.
     EncodeWorkUnits,
+    /// Number of cooperative decode checkpoints admitted to the operation.
+    DecodeWorkUnits,
     /// Inspected image canvas width in pixels.
     Width,
     /// Inspected image canvas height in pixels.

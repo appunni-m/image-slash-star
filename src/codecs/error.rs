@@ -25,7 +25,11 @@ pub(crate) enum CodecError {
     /// [`ImageError::LimitExceeded`] value is retained verbatim.
     LimitExceeded(ImageError),
     /// The deterministic cooperative checkpoint budget was exhausted.
-    WorkBudgetExceeded { maximum: u64, observed: u64 },
+    WorkBudgetExceeded {
+        maximum: u64,
+        observed: u64,
+        resource: ResourceLimit,
+    },
     /// The operation stopped at a cooperative checkpoint because the
     /// caller's cancellation token fired.
     Cancelled,
@@ -184,10 +188,14 @@ impl CodecError {
                 identity: None,
             },
             Self::LimitExceeded(error) => error,
-            Self::WorkBudgetExceeded { maximum, observed } => ImageError::LimitExceeded {
+            Self::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource,
+            } => ImageError::LimitExceeded {
                 format: Some(format),
                 operation: operation_for_stage(stage),
-                resource: ResourceLimit::EncodeWorkUnits,
+                resource,
                 maximum,
                 observed,
             },
@@ -265,9 +273,15 @@ impl CodecError {
             Self::Dimensions(message) => Self::Dimensions(format!("{stage}: {message}")),
             Self::Parameter(message) => Self::Parameter(format!("{stage}: {message}")),
             Self::LimitExceeded(error) => Self::LimitExceeded(error),
-            Self::WorkBudgetExceeded { maximum, observed } => {
-                Self::WorkBudgetExceeded { maximum, observed }
-            }
+            Self::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource,
+            } => Self::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource,
+            },
             Self::Cancelled => Self::Cancelled,
             Self::OutputWrite(message) => Self::OutputWrite(message),
             Self::At {
@@ -292,9 +306,15 @@ pub(crate) fn check_cancelled(token: Option<&crate::CancellationToken>) -> Codec
         Some(token) => match token.poll() {
             crate::cancel::PollResult::Continue => Ok(()),
             crate::cancel::PollResult::Cancelled => Err(CodecError::Cancelled),
-            crate::cancel::PollResult::WorkBudgetExceeded { maximum, observed } => {
-                Err(CodecError::WorkBudgetExceeded { maximum, observed })
-            }
+            crate::cancel::PollResult::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource,
+            } => Err(CodecError::WorkBudgetExceeded {
+                maximum,
+                observed,
+                resource,
+            }),
         },
         None => Ok(()),
     }
@@ -302,12 +322,10 @@ pub(crate) fn check_cancelled(token: Option<&crate::CancellationToken>) -> Codec
 
 fn operation_for_stage(stage: ImageErrorStage) -> CodecOperation {
     match stage {
+        ImageErrorStage::Inspection | ImageErrorStage::StillDecode => CodecOperation::StillDecode,
+        ImageErrorStage::SequenceDecode => CodecOperation::SequenceDecode,
         ImageErrorStage::SequenceEncode => CodecOperation::SequenceEncode,
-        // Work budgets are only installed by public encode entry points. A
-        // non-sequence encode stage is therefore the only other valid input;
-        // keeping the fallback defensive avoids pretending decode or
-        // verification paths can consume an encode budget.
-        _ => CodecOperation::StillEncode,
+        ImageErrorStage::StillEncode | ImageErrorStage::Verification => CodecOperation::StillEncode,
     }
 }
 

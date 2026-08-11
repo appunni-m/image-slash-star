@@ -269,13 +269,33 @@ pub(crate) fn decode_token_format(
     format: ImageFormat,
     token: &crate::CancellationToken,
 ) -> ImageDecodedResult<DecodedImage> {
+    decode_token_format_with_mode(data, format, token, true)
+}
+
+/// Dispatch still decode with a caller-supplied work-budget token while
+/// preserving the complete-slice terminal malformed-input contract.
+pub(crate) fn decode_format_with_token(
+    data: &[u8],
+    format: ImageFormat,
+    token: &crate::CancellationToken,
+) -> ImageDecodedResult<DecodedImage> {
+    decode_token_format_with_mode(data, format, token, false)
+}
+
+fn decode_token_format_with_mode(
+    data: &[u8],
+    format: ImageFormat,
+    token: &crate::CancellationToken,
+    incremental: bool,
+) -> ImageDecodedResult<DecodedImage> {
     #[cfg(all(target_arch = "wasm32", feature = "avif"))]
     if format == ImageFormat::Avif {
-        let (image, consumed) = into_incremental_image_result(
-            avif::decode::decode(data, Some(token)),
-            format,
-            ImageErrorStage::StillDecode,
-        )?;
+        let decoded = avif::decode::decode(data, Some(token));
+        let (image, consumed) = if incremental {
+            into_incremental_image_result(decoded, format, ImageErrorStage::StillDecode)?
+        } else {
+            into_image_result(decoded, format, ImageErrorStage::StillDecode)?
+        };
         return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
     }
 
@@ -296,9 +316,12 @@ pub(crate) fn decode_token_format(
     let (image, consumed, diagnostics) = match decode_codec(data, format, Some(token)) {
         Ok(decoded) => decoded,
         Err(error) => {
-            return Err(error
-                .context("decode")
-                .into_incremental_image_error(format, ImageErrorStage::StillDecode));
+            let error = error.context("decode");
+            return if incremental {
+                Err(error.into_incremental_image_error(format, ImageErrorStage::StillDecode))
+            } else {
+                Err(error.into_image_error(format, ImageErrorStage::StillDecode))
+            };
         }
     };
     validate_decoded_image(image).map(|image| {
@@ -680,6 +703,27 @@ pub(crate) fn decode_sequence_token_format(
     budget: &mut SequenceDecodeBudget,
     token: &crate::CancellationToken,
 ) -> ImageDecodedResult<DecodedSequence> {
+    decode_sequence_token_format_with_mode(data, format, budget, token, true)
+}
+
+/// Dispatch sequence decode with a caller-supplied work-budget token while
+/// preserving the complete-slice terminal malformed-input contract.
+pub(crate) fn decode_sequence_format_with_token(
+    data: &[u8],
+    format: ImageFormat,
+    budget: &mut SequenceDecodeBudget,
+    token: &crate::CancellationToken,
+) -> ImageDecodedResult<DecodedSequence> {
+    decode_sequence_token_format_with_mode(data, format, budget, token, false)
+}
+
+fn decode_sequence_token_format_with_mode(
+    data: &[u8],
+    format: ImageFormat,
+    budget: &mut SequenceDecodeBudget,
+    token: &crate::CancellationToken,
+    incremental: bool,
+) -> ImageDecodedResult<DecodedSequence> {
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -695,20 +739,23 @@ pub(crate) fn decode_sequence_token_format(
     ))]
     ensure_available(format)?;
     if let Some(decoded) = decode_sequence_codec(data, format, budget, Some(token)) {
-        return into_incremental_image_result(
-            decoded.map_err(|error| error.context("decode sequence")),
-            format,
-            ImageErrorStage::SequenceDecode,
-        )
-        .map(|(sequence, consumed, diagnostics)| {
-            (
-                sequence,
-                consumed,
-                set_diagnostic_stage(diagnostics, ImageErrorStage::SequenceDecode),
-            )
-        });
+        let decoded = decoded.map_err(|error| error.context("decode sequence"));
+        let decoded = if incremental {
+            into_incremental_image_result(decoded, format, ImageErrorStage::SequenceDecode)
+        } else {
+            into_image_result(decoded, format, ImageErrorStage::SequenceDecode)
+        }?;
+        return Ok((
+            decoded.0,
+            decoded.1,
+            set_diagnostic_stage(decoded.2, ImageErrorStage::SequenceDecode),
+        ));
     }
-    decode_token_format(data, format, token)
+    if incremental {
+        return decode_token_format(data, format, token)
+            .map(|(image, consumed, diagnostics)| still_to_sequence(image, consumed, diagnostics));
+    }
+    decode_format_with_token(data, format, token)
         .map(|(image, consumed, diagnostics)| still_to_sequence(image, consumed, diagnostics))
 }
 
