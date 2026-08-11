@@ -22,6 +22,7 @@ pub struct DecodeLimits {
     max_frame_decoded_bytes: Option<u64>,
     max_sequence_decoded_bytes: Option<u64>,
     max_metadata_bytes: Option<u64>,
+    max_work_units: Option<u64>,
 }
 
 impl DecodeLimits {
@@ -38,6 +39,7 @@ impl DecodeLimits {
             max_frame_decoded_bytes: None,
             max_sequence_decoded_bytes: None,
             max_metadata_bytes: None,
+            max_work_units: None,
         }
     }
 
@@ -159,6 +161,24 @@ impl DecodeLimits {
         self.max_metadata_bytes = Some(maximum);
         self
     }
+
+    /// Return the maximum number of cooperative decode checkpoints admitted.
+    #[must_use]
+    pub const fn max_work_units(self) -> Option<u64> {
+        self.max_work_units
+    }
+
+    /// Set the inclusive maximum number of cooperative decode checkpoints.
+    ///
+    /// One work unit is charged at each documented cancellation checkpoint.
+    /// This is a deterministic work-control bound, not a CPU-time or
+    /// allocation guarantee. An absent value preserves the unlimited decode
+    /// behavior of the compatibility API.
+    #[must_use]
+    pub const fn with_max_work_units(mut self, maximum: u64) -> Self {
+        self.max_work_units = Some(maximum);
+        self
+    }
 }
 
 /// Policy shared by encoded-image inspection and decoding.
@@ -254,6 +274,22 @@ impl DecodePolicy {
     #[must_use]
     pub const fn with_max_metadata_bytes(mut self, maximum: u64) -> Self {
         self.limits = self.limits.with_max_metadata_bytes(maximum);
+        self
+    }
+
+    /// Return the maximum number of cooperative decode checkpoints admitted.
+    #[must_use]
+    pub const fn max_work_units(self) -> Option<u64> {
+        self.limits.max_work_units()
+    }
+
+    /// Set the inclusive maximum number of cooperative decode checkpoints.
+    ///
+    /// The bound is layered with any caller cancellation token and reports a
+    /// typed [`ResourceLimit::DecodeWorkUnits`] error when exhausted.
+    #[must_use]
+    pub const fn with_max_work_units(mut self, maximum: u64) -> Self {
+        self.limits = self.limits.with_max_work_units(maximum);
         self
     }
 

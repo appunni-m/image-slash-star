@@ -6086,6 +6086,163 @@ fn primary_decoded_byte_limit_is_inclusive_rust_contract() -> Result<(), Box<dyn
 }
 
 #[test]
+fn decode_work_budget_is_an_inclusive_rust_contract() -> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "png") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: this is a Rust-only caller-control
+    // boundary. The committed PNG witness exercises the real decoder's
+    // cancellation checkpoints; Pillow has no equivalent work-budget result.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
+    let expected = image_slash_star::decode(&data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+    assert_eq!(unlimited.max_work_units(), None);
+
+    let zero = unlimited.with_max_work_units(0);
+    let zero_error = match image_slash_star::decode_with_policy(&data, &zero) {
+        Ok(_) => return Err("zero decode-work budget unexpectedly completed".into()),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        zero_error,
+        ImageError::LimitExceeded {
+            format: Some(ImageFormat::Png),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum: 0,
+            observed: 1,
+        }
+    ));
+
+    // Discover the first admitted checkpoint count from this fixed fixture,
+    // then prove both sides of the inclusive boundary. This avoids baking a
+    // private count into the public contract while still requiring the exact
+    // same real input to reject at N-1 and succeed at N.
+    let mut still_boundary = None;
+    for maximum in 0_u64..=4_096 {
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, expected.content.pixels);
+                still_boundary = Some(maximum);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Png),
+                    operation: image_slash_star::CodecOperation::StillDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+    }
+    let still_boundary = still_boundary.ok_or_else(|| {
+        std::io::Error::other("PNG decode-work boundary did not complete within the probe")
+    })?;
+    assert!(still_boundary > 0);
+    let exact = unlimited.with_max_work_units(still_boundary);
+    assert_eq!(
+        image_slash_star::decode_with_policy(&data, &exact)?
+            .content
+            .pixels,
+        expected.content.pixels
+    );
+    let below = unlimited.with_max_work_units(still_boundary - 1);
+    assert!(matches!(
+        image_slash_star::decode_with_policy(&data, &below),
+        Err(ImageError::LimitExceeded {
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+            ..
+        }) if maximum == still_boundary - 1 && observed == still_boundary
+    ));
+
+    // A policy-limited lazy decode must not cache a rejected work-budget
+    // attempt, while a successful bounded decode may populate the ordinary
+    // shared cache. This keeps a later larger policy from inheriting a
+    // policy-dependent failure.
+    let source = EncodedImage::new(data.clone())?;
+    assert!(matches!(
+        source.decode_with_policy(&zero),
+        Err(ImageError::LimitExceeded {
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum: 0,
+            observed: 1,
+            ..
+        })
+    ));
+    assert_eq!(
+        source.decode_state(),
+        image_slash_star::EncodedImageDecodeState::NotAttempted
+    );
+    source.decode_with_policy(&exact)?;
+    assert!(source.is_decoded());
+
+    // The sequence entry point uses the same inclusive budget and must report
+    // sequence operation identity rather than silently falling back to still
+    // decoding.
+    let mut sequence_boundary = None;
+    for maximum in 0_u64..=4_096 {
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_sequence_with_policy(&data, &policy) {
+            Ok(sequence) => {
+                assert_eq!(sequence.content.frames.len(), 1);
+                sequence_boundary = Some(maximum);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Png),
+                    operation: image_slash_star::CodecOperation::SequenceDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+    }
+    let sequence_boundary = sequence_boundary.ok_or_else(|| {
+        std::io::Error::other("PNG sequence decode-work boundary did not complete within the probe")
+    })?;
+    assert!(sequence_boundary > 0);
+    assert!(matches!(
+        image_slash_star::decode_sequence_with_policy(
+            &data,
+            &unlimited.with_max_work_units(sequence_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::SequenceDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+            ..
+        }) if maximum == sequence_boundary - 1 && observed == sequence_boundary
+    ));
+
+    // Combining a caller token with a policy budget preserves the distinct
+    // typed limit error when the budget, rather than cancellation, fires.
+    let token = image_slash_star::CancellationToken::new();
+    assert!(matches!(
+        image_slash_star::decode_with_token_and_policy(&data, &zero, &token),
+        Err(ImageError::LimitExceeded {
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum: 0,
+            observed: 1,
+            ..
+        })
+    ));
+    Ok(())
+}
+
+#[test]
 fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::TransferLayout;
 

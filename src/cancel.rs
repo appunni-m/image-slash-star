@@ -89,17 +89,24 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+use crate::ResourceLimit;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct WorkBudget {
     maximum: u64,
     consumed: u64,
+    resource: ResourceLimit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PollResult {
     Continue,
     Cancelled,
-    WorkBudgetExceeded { maximum: u64, observed: u64 },
+    WorkBudgetExceeded {
+        maximum: u64,
+        observed: u64,
+        resource: ResourceLimit,
+    },
 }
 
 /// Cooperative cancellation handle for token-aware operations.
@@ -152,22 +159,28 @@ impl CancellationToken {
         }
     }
 
-    pub(crate) fn with_work_budget(maximum: u64) -> Self {
+    pub(crate) fn with_work_budget(maximum: u64, resource: ResourceLimit) -> Self {
         Self {
             work_budget: Rc::new(Cell::new(Some(WorkBudget {
                 maximum,
                 consumed: 0,
+                resource,
             }))),
             ..Self::new()
         }
     }
 
-    pub(crate) fn with_work_budget_from(source: &Self, maximum: u64) -> Self {
+    pub(crate) fn with_work_budget_from(
+        source: &Self,
+        maximum: u64,
+        resource: ResourceLimit,
+    ) -> Self {
         Self {
             cancelled: source.cancelled.clone(),
             work_budget: Rc::new(Cell::new(Some(WorkBudget {
                 maximum,
                 consumed: 0,
+                resource,
             }))),
             #[cfg(coverage)]
             cancel_after: source.cancel_after.clone(),
@@ -198,6 +211,7 @@ impl CancellationToken {
             return PollResult::WorkBudgetExceeded {
                 maximum: budget.maximum,
                 observed: budget.consumed.saturating_add(1),
+                resource: budget.resource,
             };
         }
         budget.consumed = budget.consumed.saturating_add(1);

@@ -61,9 +61,9 @@ fn check_token(token: Option<&crate::CancellationToken>) -> Result<(), EncodingE
         Some(token) => match token.poll() {
             crate::cancel::PollResult::Continue => Ok(()),
             crate::cancel::PollResult::Cancelled => Err(EncodingError::Cancelled),
-            crate::cancel::PollResult::WorkBudgetExceeded { maximum, observed } => {
-                Err(EncodingError::WorkBudgetExceeded { maximum, observed })
-            }
+            crate::cancel::PollResult::WorkBudgetExceeded {
+                maximum, observed, ..
+            } => Err(EncodingError::WorkBudgetExceeded { maximum, observed }),
         },
     }
 }
