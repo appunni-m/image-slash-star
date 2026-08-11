@@ -5,7 +5,7 @@ Status: accepted direction; items below are planned unless marked implemented
 Reviewed: 2026-08-11 for historical audit context. Current status and work
 order are authoritative in [roadmap-new.md](roadmap-new.md). The current
 claim-ledger base revision for the measured source/evidence tree is
-`310b7d6a6b26f837b88e50029a5fc8052895ead0`; current managed parity and exact
+`36b939696415a962285d37f9120ff389aebf0205`; current managed parity and exact
 coverage records are maintained in `roadmap-new.md`. Historical parity,
 feature-matrix, and coverage records below retain their original
 revision-specific scope.

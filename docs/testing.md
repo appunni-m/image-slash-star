@@ -3,15 +3,15 @@
 Status: current contributor reference
 
 Reviewed: 2026-08-11 against measured source/evidence revision
-`310b7d6a6b26f837b88e50029a5fc8052895ead0` and
+`36b939696415a962285d37f9120ff389aebf0205` and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The claim-ledger base revision is
-`310b7d6a6b26f837b88e50029a5fc8052895ead0`.
+`36b939696415a962285d37f9120ff389aebf0205`.
 The current managed Pillow parity run is
-`0108393d-57d3-42b7-87fe-fa29f587f562` (1,449/1,449 passed), and the current
+`84716077-aee7-4396-8328-e6735202b044` (1,449/1,449 passed), and the current
 exact Coverage MCP snapshot is
-`90cb225b-9c5b-4543-a5ba-6e26b56508a7` from run
-`352170dc-8127-4ed2-bcb5-b9496af936e5`.
+`05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` from run
+`54ce9d6c-3c1f-43e5-9120-c79984bc9166`.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
@@ -35,13 +35,13 @@ evidence, not Pillow allocator or parity metrics.
 
 Current revision acceptance:
 
-- Managed Pillow parity run `0108393d-57d3-42b7-87fe-fa29f587f562`: 1,449/1,449
-  passed at revision `310b7d6a6b26f837b88e50029a5fc8052895ead0`.
+- Managed Pillow parity run `84716077-aee7-4396-8328-e6735202b044`: 1,449/1,449
+  passed at revision `36b939696415a962285d37f9120ff389aebf0205`.
 - `cargo test --all-features --test coverage_matrix_tests`: 28/28 passed.
 - `cargo test --all-features --test feature_gate_tests`: 46/46 passed.
-- Managed Coverage MCP run `352170dc-8127-4ed2-bcb5-b9496af936e5`: 86/86
+- Managed Coverage MCP run `54ce9d6c-3c1f-43e5-9120-c79984bc9166`: 86/86
   passed, with the required artifact ingested into snapshot
-  `90cb225b-9c5b-4543-a5ba-6e26b56508a7`.
+  `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`.
 - Aggregate native all-feature coverage: 64,909/64,909 lines, 8,464/8,464
   branches, 3,301/3,301 functions, and 96,968/96,968 regions.
 - LLVM JSON segments are normalized to segment-start lines; aggregate region
