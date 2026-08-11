@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate | Integrated locally; managed evidence pending for the latest candidate | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 50/50. API-038 is Rust-only and has no Pillow row; its local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG scanline row checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 51/51, including the PNG scanline work-budget boundary. API-038 and the PNG row checkpoint are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -327,7 +327,7 @@ similar idea internally, but it cannot return this crate's exact field, token,
 target, sink, or typed result for comparison.
 
 The bounded v1 map is machine-checked by
-`python3 scripts/verify_unreachable_contracts.py` from
+`python3 scripts/verify_unreachable_contracts.py` against
 `tests/fixtures/unreachable_contract_manifest.json`. `covered` means that the
 manifest names an existing fixture-backed integration contract or fixture
 verifier; `planned` means that no such contract is claimed yet. The map is an
@@ -377,10 +377,11 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 50/50 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 51/51 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
-The current native all-feature feature-gated contract has 49 passing assertions.
+The current native all-feature feature-gated contract is green, including the
+new PNG scanline boundary test described in the RN-003 candidate below.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
 evidence, not a reason to relabel source-provenance work as Pillow parity.
@@ -607,6 +608,44 @@ groups below.
 **Done when:** each resource or sink boundary has a typed result, an
 inclusive boundary fixture, a no-partial-output assertion where applicable,
 and a feature-gated origin when Pillow cannot observe it.
+
+#### Current candidate slice — API-036 PNG scanline row checkpoints
+
+**Caller problem:** A large PNG can spend meaningful time reconstructing
+filtered rows and unpacking samples after the container and zlib stages have
+already finished. A caller-controlled token or work budget that polls only at
+chunk boundaries cannot stop that interior work promptly enough for a server,
+UI, or WASM page.
+
+**Pillow answer:** Pillow can decode the same pixels, but it does not expose a
+caller token, a checkpoint counter, or a typed `DecodeWorkUnits` result. This
+is a Rust-only resource-control contract and must not become a fabricated
+parity row.
+
+**Implemented behavior:** Commit
+`7d9e256df33296be832869fb41670a8d1e07fbb6` threads the existing token through
+PNG still and APNG frame decode. It charges one checkpoint before every
+filtered-row reconstruction and every sample-unpack row, including each
+Adam7 pass. The no-token path retains direct row traversal. A fired token or
+exhausted finite work budget returns before the next row can publish into the
+decoded result; ordinary bytes and pixels remain unchanged.
+
+**Source/evidence:** The Rust-only
+`png_decode_work_budget_covers_scanline_rows` contract uses the committed
+128×128 `no_interlace.png` witness, finds the boundary with exponential and
+binary probes, proves exact-boundary success and one-below rejection, and
+requires more than 128 charged checkpoints. The coverage-only origin uses the
+small committed `2x3.png` and `adam7_2x3.png` witnesses to reach both layouts.
+Native `feature_gate_tests` passes 51/51, the native matrix passes 28/28, and
+the exact local LLVM report passes 65,208/65,208 lines, 8,486/8,486 branches,
+3,330/3,330 functions, and 97,401/97,401 regions.
+
+**Remaining dependency:** The managed Coverage MCP transport still closes at
+`project_context`, so no same-revision managed snapshot is available. The
+accepted claim-ledger tuple remains unchanged until managed evidence is
+recovered. Deeper interruption inside one row, transient allocation/peak
+accounting, progress callbacks, short-write semantics, rollback, and cleanup
+remain open RN-003 work.
 
 ### RN-004 — Metadata and source facts — LATER
 

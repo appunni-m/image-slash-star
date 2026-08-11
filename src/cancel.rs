@@ -5,7 +5,8 @@
 //! and codec-internal checkpoints (frame/page boundaries, chunk boundaries,
 //! strip/tile loops, TIFF Deflate level-six matcher positions/candidate chains,
 //! Deflate expansion/Huffman/bitstream/checksum stages, PNG stored-block copy
-//! intervals, JPEG RGB-to-YCbCr conversion items and chroma-downsample output
+//! intervals and scanline reconstruction/sample-unpack row boundaries, JPEG
+//! RGB-to-YCbCr conversion items and chroma-downsample output
 //! pixels after each 1,024 converted or produced pixels, JPEG baseline entropy
 //! coding after each 1,024 MCUs, and entropy-output intervals after each 1,024
 //! emitted entropy bytes, lossy WebP VP8
