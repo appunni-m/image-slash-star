@@ -1128,7 +1128,7 @@ Minute gaps:
 
 | ID | Finding | Next slice |
 | --- | --- | --- |
-| JPG-001 | Encoder rejects decoded `Cmyk8` even though the decoder produces it and Pillow saves CMYK JPEG. | Add decode-CMYK→encode-CMYK fixtures and preserve Adobe/JFIF color interpretation. |
+| JPG-001 | Closed in the current v1 tree: the encoder accepts decoded `Cmyk8`, emits Pillow-compatible Adobe CMYK JPEG bytes, and the `enc_cmyk` fixture asserts component layout, marker, pixels, and encoded bytes. | Keep progressive-CMYK and broader JPEG source-color/metadata work separate; do not reopen this row unless the accepted Pillow contract changes. |
 | JPG-002 | Pillow accepts bilevel and YCbCr source modes; Rust has neither private bilevel normalization nor a YCbCr input mode. | Add one mode at a time with exact marker, component, and pixel references. |
 | JPG-004 | Public options omit Pillow 12.2.0 surfaces including quantization tables, ICC, DPI, comments, `keep_rgb`, separate restart-block/row controls, and stream type. | Inventory pinned `JpegImagePlugin._save`; accept only independently fixture-backed options in a typed JPEG options struct. |
 | JPG-006 | Legal JPEG classes beyond the manifest—lossless processes, arithmetic coding, uncommon sampling/component layouts, and 12-bit data—have no support statement. | Classify each as supported, Pillow-rejected, or explicit `Unsupported` using pinned libjpeg/Pillow and upstream corpora. |
