@@ -6,9 +6,9 @@
 //! strip/tile loops, TIFF Deflate zlib block/dynamic-table boundaries,
 //! stored/compressed output intervals, Adler-32 chunks, level-six matcher
 //! positions/candidate chains, and Deflate expansion/Huffman/bitstream/checksum
-//! stages, PNG zlib Deflate block and dynamic-table boundaries, stored/compressed
-//! output intervals, Adler-32 chunks, and scanline reconstruction/sample-unpack
-//! row boundaries, JPEG
+//! stages, TIFF PackBits packet boundaries, PNG zlib Deflate block and
+//! dynamic-table boundaries, stored/compressed output intervals, Adler-32
+//! chunks, and scanline reconstruction/sample-unpack row boundaries, JPEG
 //! RGB-to-YCbCr conversion items and chroma-downsample output
 //! pixels after each 1,024 converted or produced pixels, JPEG baseline entropy
 //! coding after each 1,024 MCUs, and entropy-output intervals after each 1,024
