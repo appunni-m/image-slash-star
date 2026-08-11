@@ -230,7 +230,7 @@ fn decode_entry(
                     )
                 })
         } else {
-            decode_ico_bmp(entry_data, entry)
+            decode_ico_bmp(entry_data, entry, token)
                 .map_err(terminalize)
                 .map_err(|error| {
                     error.at(u64::try_from(data_offset).unwrap_or(u64::MAX), "ico_dib")
@@ -315,7 +315,11 @@ pub(super) fn cur_bmp_prefix(
 /// ICO-embedded BMP data differs from standalone BMPs:
 ///   - No "BM" file header (starts directly with BITMAPINFOHEADER)
 ///   - Pixel data is uncompressed and stored in a specific layout
-fn decode_ico_bmp(data: &[u8], _entry: &[u8]) -> CodecResult<DecodedImage> {
+fn decode_ico_bmp(
+    data: &[u8],
+    _entry: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
     if data.len() < 40 {
         return Err(CodecError::Malformed("truncated ICO DIB header".to_owned()));
     }
@@ -342,7 +346,7 @@ fn decode_ico_bmp(data: &[u8], _entry: &[u8]) -> CodecResult<DecodedImage> {
 
     match bpp {
         32 => decode_ico_bmp_32bpp(data, width, actual_height),
-        24 => decode_ico_bmp_24bpp(data, width, actual_height),
+        24 => decode_ico_bmp_24bpp(data, width, actual_height, token),
         8 => decode_ico_bmp_8bpp(data, width, actual_height, colors_used),
         4 => decode_ico_bmp_4bpp(data, width, actual_height, colors_used),
         1 => decode_ico_bmp_1bpp(data, width, actual_height, colors_used),
@@ -391,7 +395,12 @@ fn decode_ico_bmp_32bpp(data: &[u8], width: u32, height: u32) -> CodecResult<Dec
 }
 
 /// Decode a 24-bit BGR ICO BMP entry (3 bytes/pixel).
-fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> CodecResult<DecodedImage> {
+fn decode_ico_bmp_24bpp(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
     let header_size = 40_usize;
     let row_size = (width as usize).wrapping_mul(3);
     let padded_row = row_size.wrapping_add(3) & !3;
@@ -417,6 +426,7 @@ fn decode_ico_bmp_24bpp(data: &[u8], width: u32, height: u32) -> CodecResult<Dec
     );
 
     for y in (0..height as usize).rev() {
+        crate::codecs::error::check_cancelled(token)?;
         let row_start = y.wrapping_mul(padded_row);
         let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
@@ -796,11 +806,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         dib[4..8].copy_from_slice(&width.to_le_bytes());
         dib[8..12].copy_from_slice(&stored_height.to_le_bytes());
         dib[14..16].copy_from_slice(&32u16.to_le_bytes());
-        assert!(decode_ico_bmp(&dib, &[]).is_err());
+        assert!(decode_ico_bmp(&dib, &[], None).is_err());
     }
 
     let dib24 = dib24(1, 1, &[0, 0, 255], &[0x80]);
-    assert!(decode_ico_bmp_24bpp(&dib24, 1, 1).is_ok());
+    assert!(decode_ico_bmp_24bpp(&dib24, 1, 1, None).is_ok());
 
     let dib8 = indexed_dib(1, 1, 8, 3, &[0]);
     assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3).is_ok());
