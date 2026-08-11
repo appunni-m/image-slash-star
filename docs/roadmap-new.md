@@ -4,13 +4,12 @@ Status: canonical pending-work plan; current v1 evidence is recorded below
 
 Reviewed: 2026-08-11
 
-- Measured working-tree HEAD: `2447f2f6fa20f15735db699805b15877d6f15611`
-  (the working tree is dirty; the managed run records this HEAD SHA)
-- Claim-ledger base revision: `2447f2f6fa20f15735db699805b15877d6f15611`
-- Managed Pillow parity run: `56fe2d9b-b558-4c91-b025-4cc1859b11d0`
-  (1,447/1,447 passed at this HEAD)
-- Final managed run: `97309ded-2087-4085-8b4b-cdab6d8245fa`
-- Ingested Coverage MCP snapshot: `00622313-a734-4877-91ad-81707b8894ed`
+- Measured source/evidence revision: `310b7d6a6b26f837b88e50029a5fc8052895ead0`
+- Claim-ledger base revision: `310b7d6a6b26f837b88e50029a5fc8052895ead0`
+- Managed Pillow parity run: `0108393d-57d3-42b7-87fe-fa29f587f562`
+  (1,449/1,449 passed at this revision)
+- Managed Coverage MCP run: `352170dc-8127-4ed2-bcb5-b9496af936e5`
+- Ingested Coverage MCP snapshot: `90cb225b-9c5b-4543-a5ba-6e26b56508a7`
 - Project: `image-slash-star`, a Rust image-codec library with optional native
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
@@ -93,15 +92,16 @@ that an entire workstream is finished because one slice passed.
 
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
-| W1 | Pillow-visible GIF `enc_bilevel` and JPEG `enc_cmyk` fixture projections | Integrated in the current tree | `Encode.gif` and `Encode.jpeg` now have the real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `56fe2d9b-b558-4c91-b025-4cc1859b11d0` passes 1,447/1,447 at the same HEAD. |
+| W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `0108393d-57d3-42b7-87fe-fa29f587f562` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment | Integrated in the current tree | `OutputSink` has caller-visible checkpoint/rollback behavior and the current all-feature `feature_gate_tests` contract passes 46/46. This is Rust-only and has no Pillow row. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. The measured aggregate coverage is now exact; the next audit cycle still owns any newly introduced gaps. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `90cb225b-9c5b-4543-a5ba-6e26b56508a7` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
-slices are represented in the current dirty tree above; no worker pushed
-directly and no clean commit is being claimed for this working tree.
+slices are represented by reviewed commits on `main`; no worker pushed
+directly. The current evidence tuple is revision-bound to
+`310b7d6a6b26f837b88e50029a5fc8052895ead0`.
 
 ## Contract catalog: behavior Pillow cannot prove
 
@@ -157,11 +157,11 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Active fixture rows | 1,419/1,419 wired | 1,024 decode/inspect/verify rows plus 395 encode rows exist; none is planned or unwired. |
-| Managed Pillow checks | 1,447/1,447 passed | The current managed Pillow-oracle run is bound to HEAD `2447f2f`. |
+| Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
+| Managed Pillow checks | 1,449/1,449 passed | Managed parity run `0108393d-57d3-42b7-87fe-fa29f587f562` is bound to revision `310b7d6`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 28/28 matrix tests and 46/46 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
-| Baseline implementation state | dirty working tree at HEAD `2447f2f` | The exact managed coverage result is bound to this HEAD SHA; changes are not committed or pushed by this task. |
+| Baseline implementation state | reviewed revision `310b7d6` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract has 46 passing assertions.
 Some broader historical native/WASI matrix records still contain the known
@@ -187,23 +187,23 @@ all-feature build:
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines | 64,883 | 64,883 | 100% | 0 | 0% |
-| Branches | 8,458 | 8,458 | 100% | 0 | 0% |
-| Functions | 3,299 | 3,299 | 100% | 0 | 0% |
-| Regions | 96,920 | 96,920 | 100% | 0 | 0% |
+| Lines | 64,909 | 64,909 | 100% | 0 | 0% |
+| Branches | 8,464 | 8,464 | 100% | 0 | 0% |
+| Functions | 3,301 | 3,301 | 100% | 0 | 0% |
+| Regions | 96,968 | 96,968 | 100% | 0 | 0% |
 
-That snapshot is `00622313-a734-4877-91ad-81707b8894ed`, produced by managed
-run `97309ded-2087-4085-8b4b-cdab6d8245fa` with 86/86 tests passing and one
+That snapshot is `90cb225b-9c5b-4543-a5ba-6e26b56508a7`, produced by managed
+run `352170dc-8127-4ed2-bcb5-b9496af936e5` with 86/86 tests passing and one
 required artifact ingested. The LLVM JSON report carries the warning that
 segments are normalized to segment-start lines; aggregate region coverage is
 preserved from the report summaries. This closes RN-001 for the measured tree;
 it does not claim complete format support or close the product roadmap.
 
 There are no aggregate line, branch, function, or region gaps in this measured
-build. The next work item is therefore a product/evidence boundary, not a
-coverage-only repair: RN-002 selects a real remaining WebP behavior or
-caller-control boundary and proves it with the correct Pillow or Rust-only
-contract. Any future source change must rerun all four coverage measures.
+build. RN-002 selected and closed one real WebP behavior boundary; the next
+work item is therefore RN-003, a product/evidence boundary rather than a
+coverage-only repair. Any future source change must rerun all four coverage
+measures.
 
 Coverage work follows this order:
 
@@ -244,28 +244,39 @@ regions, with no skipped artifact and with Pillow, Rust-only, and private-model
 origins still distinct. Reopen this item on the next source revision if any
 metric falls below 100%.
 
-### RN-002 — Remaining WebP interior boundary — NEXT
+### RN-002 — WebP 16-bit luminance normalization boundary — DONE (selected slice)
 
-**Why:** WebP has the largest measured weak implementation area. The next
-boundary must represent a real encoder/decoder operation or resource limit,
-not a coverage-only branch.
+**Why:** Pillow accepts `I;16` grayscale images as WebP inputs. Before this
+slice, the Rust encoder rejected that real caller input as an unsupported mode.
+Users converting scientific, camera, or PNG 16-bit grayscale data therefore
+could not keep the Pillow-visible WebP workflow in this crate.
 
-**Work:** Choose one remaining WebP inner bitstream, result-trace, transform,
-or transient-work boundary after an ownership/lifetime audit. Preserve the
-fast no-token path. Use existing Pillow rows for unchanged byte/error behavior
-and the existing feature-gated contract for caller-budget behavior.
+**Work/result:** The encoder now accepts `ImageMode::L16`, reads the PNG
+little-endian sample bytes, clamps each sample to Pillow's `0..=255` RGB
+conversion behavior, and expands it to RGB. The no-token path remains a tight
+loop; the caller-token path checkpoints every 1,024 pixels. The fixture
+`tests/fixtures/input/images/png/l16_clamp.png` deliberately contains both
+values at or below 255 and values above 255. The manifest and generated
+lossy/lossless WebP references add `enc_lossy_l16` and `enc_lossless_l16`.
 
-**Source IDs:** `API-023`, `API-036`, `QA-026`, `WEP-003`, `WEP-004`,
-`WEP-005`, `WEP-007`, `WEP-008`, `WEP-009`, `WEP-010`, `WEP-011`, `WEP-012`,
-`WEP-013`, `WEP-014`, `WEP-015`, `WEP-016`, `WEP-017`, `WEP-018`, `WEP-019`,
-`WEP-020`, `WEP-021`, `WEP-022`.
+**Files/evidence:** `src/codecs/webp/encode/mod.rs`,
+`scripts/generate_test_assets.py`, `manifest.yaml`, the generated matrix and
+references, plus the WebP property-map pin. Managed parity is
+`0108393d-57d3-42b7-87fe-fa29f587f562` (1,449/1,449). Managed Coverage MCP
+snapshot `90cb225b-9c5b-4543-a5ba-6e26b56508a7` is 100% lines, branches,
+functions, and regions. Local matrix, feature-gate, check, strict Clippy, and
+WebP structural-map verification also pass.
 
-**Done when:** a committed fixture reaches the selected boundary, the
-feature-gated contract proves the Rust-only result if needed, parity remains
-unchanged, and the relevant uncovered coverage disappears for the right
-origin.
+**Scope:** This closes one selected `WEP-004` mode-normalization boundary and
+the supporting `API-023`/`API-036`/`QA-026` evidence path. It does not close
+the broader WebP mode family: integer/float/YCbCr normalization, remaining
+WebP interior behavior, and resource-limit work stay in the open inventory.
 
-### RN-003 — Resource limits, interruption, and output recovery — LATER
+**Done when:** satisfied by the committed fixture, the Pillow-visible lossy
+and lossless rows, unchanged parity, Rust-only token-path coverage model, and
+same-revision exact coverage result above.
+
+### RN-003 — Resource limits, interruption, and output recovery — NEXT
 
 **Why:** A picture library must not unexpectedly spend all of a caller's
 memory or time, and a failed output write must not pretend that a complete
@@ -449,9 +460,9 @@ finding while this table is the canonical status inventory.
 These 270 rows are not 270 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact row count, the four coverage gaps above, and the explicit
-dependency order; an hour estimate would be invented until the next slice is
-chosen and measured.
+today are the exact 270 active finding rows, zero aggregate coverage gaps, and
+the explicit dependency order; an hour estimate would be invented until the
+next slice is chosen and measured.
 
 ## Parked, not pending
 
