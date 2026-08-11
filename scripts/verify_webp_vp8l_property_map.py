@@ -254,7 +254,13 @@ def verify_structure(expect: object, structure: dict, label: str) -> None:
         for key in ("color_cache_bits", "meta_huffman_bits", "entropy_image_size", "huffman_groups"):
             if key in stream_expect and stream.get(key) != stream_expect[key]:
                 fail(f"{stream_label}: {key} differs from structural witness")
-        for key in ("green_values_contains", "distance_prefixes_contains", "plane_codes_contains", "mapped_distances_contains"):
+        for key in (
+            "green_values_contains",
+            "predictor_modes_contains",
+            "distance_prefixes_contains",
+            "plane_codes_contains",
+            "mapped_distances_contains",
+        ):
             if key in stream_expect:
                 source_key = key.removesuffix("_contains")
                 contains_all(stream.get(source_key), stream_expect[key], f"{stream_label}: {source_key}")
