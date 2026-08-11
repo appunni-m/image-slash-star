@@ -1990,6 +1990,7 @@ fn trace_backwards_impl<const FINE_TRACE: bool>(
 }
 
 #[inline(never)]
+#[allow(clippy::too_many_arguments)]
 fn trace_backwards_impl_common(
     pixels: &[u32],
     width: usize,

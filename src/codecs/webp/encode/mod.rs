@@ -621,6 +621,7 @@ fn prepare_pixels<'a>(
                 color: super::native::ColorType::Rgb8,
             })
         }
+        ImageMode::L16 => expand_l16_to_rgb(img, token),
         ImageMode::La8 => expand_luminance_alpha(img, token),
         ImageMode::Rgb8 => Ok(PreparedPixels {
             bytes: Cow::Borrowed(&img.pixels),
@@ -1157,6 +1158,34 @@ fn webp_riff_size_from_len(encoded_len: usize) -> CodecResult<u32> {
     }
     u32::try_from(encoded_len.saturating_sub(8)).map_err(|_| {
         CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
+    })
+}
+
+fn expand_l16_to_rgb(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'static>> {
+    // Pillow's I;16 -> RGB conversion clamps each unsigned sample to 255.
+    // PNG decoding stores L16 samples as little-endian bytes, so a zero high
+    // byte keeps the low byte and every larger sample becomes 255.
+    let pixel_count = img.pixels.len().saturating_div(2);
+    let mut rgb = Vec::with_capacity(pixel_count.saturating_mul(3));
+    if let Some(token) = token {
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for pixel in img.pixels.chunks_exact(2) {
+            let value = if pixel[1] == 0 { pixel[0] } else { u8::MAX };
+            rgb.extend_from_slice(&[value; 3]);
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+    } else {
+        for pixel in img.pixels.chunks_exact(2) {
+            let value = if pixel[1] == 0 { pixel[0] } else { u8::MAX };
+            rgb.extend_from_slice(&[value; 3]);
+        }
+    }
+    Ok(PreparedPixels {
+        bytes: Cow::Owned(rgb),
+        color: super::native::ColorType::Rgb8,
     })
 }
 

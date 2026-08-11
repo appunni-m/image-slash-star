@@ -274,7 +274,7 @@ fn gif_color_table_len(packed: u8) -> CodecResult<usize> {
     // 256 entries and a 768-byte RGB table. Both operations are bounded by
     // the field width and cannot overflow on a supported target.
     let entries = 2usize << u32::from(packed & 0x07);
-    Ok(entries * 3)
+    Ok(entries.saturating_mul(3))
 }
 
 fn write_gif_sub_blocks(
@@ -2284,9 +2284,9 @@ fn write_gif_with_token(
         .iter()
         .any(|prepared| prepared.transparent.is_some());
     let mut prepared_frames = prepared_frames.into_iter();
-    let mut first = prepared_frames
-        .next()
-        .expect("prepared GIF frames must retain the validated first frame");
+    let mut first = prepared_frames.next().ok_or_else(|| {
+        CodecError::Dimensions("GIF sequence lost its validated first frame".to_owned())
+    })?;
     let background = prepare_background(&mut first, first_frame.image.mode, sequence.background);
     let (global_count, global_size, _) = table_parameters(&first.palette);
     let global_palette = first.palette.clone();

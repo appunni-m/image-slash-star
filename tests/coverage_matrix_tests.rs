@@ -1296,8 +1296,10 @@ fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resu
         let expected_components = [(b'C', 0x11), (b'M', 0x11), (b'Y', 0x11), (b'K', 0x11)];
         for (index, (expected_id, expected_sampling)) in expected_components.into_iter().enumerate()
         {
-            let component = 6 + index * 3;
-            if sof_data[component] != expected_id || sof_data[component + 1] != expected_sampling {
+            let component = 6usize.saturating_add(index.saturating_mul(3));
+            if sof_data[component] != expected_id
+                || sof_data[component.saturating_add(1)] != expected_sampling
+            {
                 return Err("JPEG CMYK component layout does not match Pillow".to_owned());
             }
         }

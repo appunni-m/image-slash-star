@@ -220,6 +220,7 @@ struct NoopBitWriterCheckpoint {
     fail_after: usize,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for NoopBitWriterCheckpoint {
     fn default() -> Self {
         Self {
@@ -1738,10 +1739,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
             #[cfg(coverage)]
             coverage_cancel_token_at_optimize(token);
             encoded_histogram_bits =
-                match optimize_sampling(symbols, width, height, histogram_bits, 9, token) {
-                    Ok(bits) => bits,
-                    Err(error) => return Err(error),
-                };
+                optimize_sampling(symbols, width, height, histogram_bits, 9, token)?;
             #[cfg(coverage)]
             coverage_record_remaining(
                 &COVERAGE_TOKEN_STREAM_HISTOGRAM_REMAINING,

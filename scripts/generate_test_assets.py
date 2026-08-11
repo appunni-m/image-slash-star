@@ -947,6 +947,9 @@ def gen_png():
     write_png_scanlines(d / "2bit.png", low_width, low_height, 2, 0, gray2_rows)
     write_png_scanlines(d / "4bit.png", low_width, low_height, 4, 0, gray4_rows)
     img.convert("I;16").save(d / "16bit.png")
+    l16_clamp = Image.new("I;16", (8, 1))
+    l16_clamp.putdata([0, 1, 127, 255, 256, 257, 511, 65535])
+    l16_clamp.save(d / "l16_clamp.png")
     wide_width, wide_height = 9, 7
     rgb16_rows = []
     la16_rows = []
