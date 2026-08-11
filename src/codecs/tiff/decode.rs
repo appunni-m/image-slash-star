@@ -518,7 +518,10 @@ fn decode_block(
             };
             inflated.map_err(|error| error.context("decode TIFF Deflate stream"))
         }
-        COMPRESSION_PACKBITS => decode_packbits(encoded, expected),
+        COMPRESSION_PACKBITS => match token {
+            Some(token) => decode_packbits_with_token(encoded, expected, token),
+            None => decode_packbits(encoded, expected),
+        },
         _ => Err(CodecError::Malformed(
             "TIFF compression method is unsupported".to_owned(),
         )),
@@ -730,6 +733,53 @@ fn decode_packbits(data: &[u8], expected: usize) -> CodecResult<Vec<u8>> {
     let mut output = Vec::with_capacity(expected);
     let mut position = 0usize;
     while position < data.len() && output.len() < expected {
+        let header = data[position] as i8;
+        position = position.wrapping_add(1);
+        match header {
+            0..=127 => {
+                let count = usize::from(header.cast_unsigned()).wrapping_add(1);
+                let end = position.saturating_add(count);
+                let packet = data
+                    .get(position..end)
+                    .malformed("TIFF PackBits literal packet is truncated")?;
+                let remaining = expected.saturating_sub(output.len());
+                output.extend_from_slice(&packet[..count.min(remaining)]);
+                position = end;
+            }
+            -127..=-1 => {
+                let count = usize::from(1_i16.wrapping_sub(i16::from(header)).cast_unsigned());
+                let value = *data
+                    .get(position)
+                    .malformed("TIFF PackBits repeat packet is truncated")?;
+                position = position.wrapping_add(1);
+                output.resize(
+                    output
+                        .len()
+                        .wrapping_add(count.min(expected.saturating_sub(output.len()))),
+                    value,
+                );
+            }
+            -128 => {}
+        }
+    }
+    if output.len() == expected {
+        Ok(output)
+    } else {
+        Err(CodecError::Malformed(
+            "TIFF PackBits stream ended before the expected output".to_owned(),
+        ))
+    }
+}
+
+fn decode_packbits_with_token(
+    data: &[u8],
+    expected: usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<Vec<u8>> {
+    let mut output = Vec::with_capacity(expected);
+    let mut position = 0usize;
+    while position < data.len() && output.len() < expected {
+        crate::codecs::error::check_cancelled(Some(token))?;
         let header = data[position] as i8;
         position = position.wrapping_add(1);
         match header {
