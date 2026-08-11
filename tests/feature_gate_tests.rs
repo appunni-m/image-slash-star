@@ -6913,6 +6913,179 @@ fn jpeg_decode_work_budget_covers_progressive_mcu_checkpoint()
 }
 
 #[test]
+fn bmp_decode_work_budget_covers_raw_scanline_checkpoints() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "bmp") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: an uncompressed BMP can place a large
+    // padded scanline payload behind one read_exact call. Pillow has no
+    // caller work-budget result, so this is Rust-only evidence. Equal-height
+    // public API-generated controls isolate the extra 1,024-byte payload
+    // checkpoints from the row-boundary checkpoints.
+    let small_image = DecodedImage::new(64, 64, vec![128; 64 * 64 * 3], ColorType::Rgb8);
+    let large_image = DecodedImage::new(128, 64, vec![128; 128 * 64 * 3], ColorType::Rgb8);
+    let options = EncodeOptions::for_format(ImageFormat::Bmp);
+    let small_data = image_slash_star::encode(&small_image, ImageFormat::Bmp, &options)?;
+    let large_data = image_slash_star::encode(&large_image, ImageFormat::Bmp, &options)?;
+    let small_expected = image_slash_star::decode(&small_data)?;
+    let large_expected = image_slash_star::decode(&large_data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+
+    let discover_boundary = |data: &[u8], expected: &[u8]| {
+        let mut lower = 0_u64;
+        let mut upper = 1_u64;
+        loop {
+            let maximum = upper;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    break;
+                }
+                Err(error) => assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Bmp),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                )),
+            }
+            if upper == 8_192 {
+                return Err(std::io::Error::other(
+                    "BMP raw-scanline work-budget boundary exceeded probe",
+                ));
+            }
+            upper = upper.saturating_mul(2);
+        }
+        while lower < upper {
+            let maximum = lower + (upper - lower) / 2;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    upper = maximum;
+                }
+                Err(error) => {
+                    assert!(matches!(
+                        error,
+                        ImageError::LimitExceeded {
+                            format: Some(ImageFormat::Bmp),
+                            operation: image_slash_star::CodecOperation::StillDecode,
+                            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                            maximum: reported,
+                            observed,
+                        } if reported == maximum && observed == maximum.saturating_add(1)
+                    ));
+                    lower = maximum.saturating_add(1);
+                }
+            }
+        }
+        Ok::<u64, std::io::Error>(lower)
+    };
+
+    let small_boundary = discover_boundary(&small_data, &small_expected.content.pixels)?;
+    let large_boundary = discover_boundary(&large_data, &large_expected.content.pixels)?;
+    assert_eq!(
+        large_boundary,
+        small_boundary.saturating_add(12),
+        "the wider equal-height BMP must add twelve 1,024-byte payload checkpoints"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary),
+        )?
+        .content
+        .pixels,
+        large_expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Bmp),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == large_boundary - 1 && observed == large_boundary
+    ));
+
+    // A token-aware raw read must retain the ordinary truncated-input
+    // classification when the first 1,024-byte chunk is incomplete.
+    let pixel_offset: usize = u32::from_le_bytes(large_data[10..14].try_into()?).try_into()?;
+    let truncated_len = pixel_offset.saturating_add(1_023);
+    let truncated_error = match image_slash_star::decode_with_policy(
+        &large_data[..truncated_len],
+        &unlimited.with_max_work_units(u64::MAX),
+    ) {
+        Err(error) => error,
+        Ok(decoded) => panic!("truncated BMP raw payload unexpectedly decoded: {decoded:?}"),
+    };
+    assert!(matches!(
+        truncated_error,
+        ImageError::Malformed {
+            format: ImageFormat::Bmp,
+            identity: Some("bmp_pixels"),
+            ..
+        }
+    ));
+
+    // Exercise the row-checkpoint rejection edge for every raw BMP depth
+    // covered by the decoder. The maximum is the exact count consumed by the
+    // decode-entry poll plus all complete 1,024-byte payload polls, so the
+    // next poll is the first row boundary and must report an inclusive limit
+    // failure.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    for filename in [
+        "1bit.bmp",
+        "top_down_1.bmp",
+        "4bit.bmp",
+        "8bit.bmp",
+        "16bit.bmp",
+        "24bit.bmp",
+        "32bit.bmp",
+    ] {
+        let data = fs::read(root.join("tests/fixtures/input/images/bmp").join(filename))?;
+        let width = usize::try_from(u32::from_le_bytes(data[18..22].try_into()?))?;
+        let height = usize::try_from(i32::from_le_bytes(data[22..26].try_into()?).unsigned_abs())?;
+        let bits = usize::from(u16::from_le_bytes(data[28..30].try_into()?));
+        let stride = bits.saturating_mul(width).div_ceil(32).saturating_mul(4);
+        let raw_chunks = stride.saturating_mul(height).div_ceil(1_024);
+        let maximum = 2_u64.saturating_add(u64::try_from(raw_chunks)?);
+        let error = match image_slash_star::decode_with_policy(
+            &data,
+            &unlimited.with_max_work_units(maximum),
+        ) {
+            Err(error) => error,
+            Ok(decoded) => panic!("BMP row checkpoint budget unexpectedly completed: {decoded:?}"),
+        };
+        assert!(matches!(
+            error,
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Bmp),
+                operation: image_slash_star::CodecOperation::StillDecode,
+                resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                maximum: reported,
+                observed,
+            } if reported == maximum && observed == maximum.saturating_add(1)
+        ));
+    }
+    Ok(())
+}
+
+#[test]
 fn tiff_decode_work_budget_covers_deflate_inflation() -> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(feature = "tiff") {
         return Ok(());

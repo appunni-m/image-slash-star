@@ -88,6 +88,34 @@ enum BmpBitDepth {
     ThirtyTwo,
 }
 
+const RAW_COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+fn read_raw_pixels(
+    r: &mut Cursor<&[u8]>,
+    length: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    let start = r.position();
+    let mut raw = vec![0u8; length];
+    let read_error = || {
+        CodecError::NeedMore {
+            minimum: bounded_usize(start.saturating_add(length as u64)),
+            message: "truncated BMP pixel data".to_owned(),
+        }
+        .at(start, "bmp_pixels")
+    };
+
+    if let Some(token) = token {
+        for chunk in raw.chunks_mut(RAW_COPY_CHECKPOINT_BYTES) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            r.read_exact(chunk).map_err(|_| read_error())?;
+        }
+    } else {
+        r.read_exact(&mut raw).map_err(|_| read_error())?;
+    }
+    Ok(raw)
+}
+
 impl BmpBitDepth {
     fn from_raw(value: u16) -> CodecResult<Self> {
         Ok(match value {
@@ -532,15 +560,7 @@ pub fn decode(
     } else {
         // BI_RGB or BI_BITFIELDS — uncompressed scanlines
         let stride = row_size(bit_depth.bits_per_pixel(), w);
-        let mut raw = vec![0u8; stride.saturating_mul(height_usize)];
-        let start = r.position();
-        r.read_exact(&mut raw).map_err(|_| {
-            CodecError::NeedMore {
-                minimum: bounded_usize(start.saturating_add(raw.len() as u64)),
-                message: "truncated BMP pixel data".to_owned(),
-            }
-            .at(start, "bmp_pixels")
-        })?;
+        let raw = read_raw_pixels(&mut r, stride.saturating_mul(height_usize), token)?;
 
         match bit_depth {
             BmpBitDepth::One => {
@@ -550,6 +570,7 @@ pub fn decode(
                     let packed_per_row = width_usize.div_ceil(8);
                     let mut out = Vec::with_capacity(packed_per_row.saturating_mul(height_usize));
                     for row in 0..height_usize {
+                        crate::codecs::error::check_cancelled(token)?;
                         let src_row = if top_down {
                             row
                         } else {
@@ -564,6 +585,7 @@ pub fn decode(
                     // Pillow expands each packed bit to one palette index.
                     let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                     for row in 0..height_usize {
+                        crate::codecs::error::check_cancelled(token)?;
                         let src_row = if top_down {
                             row
                         } else {
@@ -583,6 +605,7 @@ pub fn decode(
                 // 4 bpp — expand nibbles to full-byte indices
                 let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                 for row in 0..height_usize {
+                    crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {
                         row
                     } else {
@@ -605,6 +628,7 @@ pub fn decode(
                 // 8 bpp — raw palette indices, skip stride padding (PIL mode 'P' parity)
                 let mut out = Vec::with_capacity(width_usize.saturating_mul(height_usize));
                 for row in 0..height_usize {
+                    crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {
                         row
                     } else {
@@ -620,6 +644,7 @@ pub fn decode(
                 let mut out =
                     Vec::with_capacity(width_usize.saturating_mul(height_usize).saturating_mul(3));
                 for row in 0..height_usize {
+                    crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {
                         row
                     } else {
@@ -644,6 +669,7 @@ pub fn decode(
                 let mut out =
                     Vec::with_capacity(width_usize.saturating_mul(height_usize).saturating_mul(3));
                 for row in 0..height_usize {
+                    crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {
                         row
                     } else {
@@ -670,6 +696,7 @@ pub fn decode(
                         .saturating_mul(channels),
                 );
                 for row in 0..height_usize {
+                    crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {
                         row
                     } else {
