@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 58/58, including the PNG, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 59/59, including the PNG, GIF LZW, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -377,7 +377,7 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 58/58 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 59/59 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
@@ -545,7 +545,7 @@ category.
 
 | Category | Status now | Evidence already in the tree | Exact remaining work |
 | --- | --- | --- | --- |
-| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 58/58, including PNG and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,361/66,361 lines, 8,608/8,608 branches, 3,349/3,349 functions, and 99,138/99,138 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 59/59, including PNG, GIF LZW, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,502/66,502 lines, 8,644/8,644 branches, 3,351/3,351 functions, and 99,335/99,335 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
@@ -994,6 +994,62 @@ short-write semantics, rollback, cleanup/error precedence, and managed
 same-revision evidence remain open RN-003 work. The local proof is current;
 the managed Coverage MCP transport still closes at `project_context`, so the
 accepted claim-ledger tuple remains unchanged.
+
+#### Current candidate slice — API-036 GIF LZW code/expansion checkpoints
+
+**Caller problem:** Once a GIF image descriptor starts, the decoder can spend
+most of its time reading compressed LZW codes, following a long dictionary
+phrase, and copying that phrase into the output. A caller-controlled budget
+that only polls at the outer GIF block boundary cannot stop a large or
+adversarial image promptly enough for a responsive UI, server, or WASM page.
+
+**Pillow answer:** Pillow can prove the final GIF pixels and ordinary errors,
+but it does not expose this crate's `CancellationToken`, checkpoint counter,
+inclusive `DecodeWorkUnits` error, or no-partial-state guarantee. This is a
+Rust-only caller-control slice; it adds no Pillow parity row.
+
+**Implemented behavior:** Commit
+`1dac4bb4fc614d9fbba9e6f92e47f038e8a1fa90` passes the caller token through the
+real GIF still/sequence decode path. With a token, GIF LZW now polls before
+each compressed-code read, while traversing every 1,024 dictionary links, and
+while materializing every 1,024 phrase bytes. The ordinary no-token decoder
+keeps its direct path, so legacy byte production does not pay for an optional
+token check. Malformed code, truncated-bitstream, and clipped KwKwK paths
+retain their existing typed classification.
+
+**Source/evidence:** The Rust-only
+`gif_decode_work_budget_covers_lzw_codes_and_expansion` contract uses the
+committed `tests/fixtures/input/images/gif/lzw_dictionary_saturation.gif`
+witness. Its inclusive work boundary is 4,105: exact success preserves every
+pixel and maximum 4,104 rejects with `observed = 4,105`. The same contract
+checks the committed malformed GIF fixtures
+`min_code_one.gif`, `lzw_end_only.gif`, `lzw_invalid_first.gif`,
+`lzw_invalid_future.gif`, and `lzw_kwkwk_clipped.gif`. A deterministic public
+API round trip of a 4,096×256 all-zero image supplies a real long dictionary
+phrase and finds the expansion boundary at 2,298; this is a runtime-generated
+model for the expansion stress, not a claim of a new fixture row. Native
+`feature_gate_tests` passes 59/59, the native matrix passes 28/28, the GIF
+`wasm32-wasip1` feature-test binary compiles, and exact local LLVM evidence is
+66,502/66,502 lines, 8,644/8,644 branches, 3,351/3,351 functions, and
+99,335/99,335 regions. Locked all-feature check, strict Clippy, rustdoc
+warnings, doctests, and all repository claim/provenance/package/license/WebP
+verifiers pass.
+
+**Evidence boundary:** Managed Coverage MCP still closes at
+`project_context` (`Transport closed`), so the accepted claim-ledger tuple
+and managed snapshot remain unchanged. The local proof is current but is not
+managed acceptance. The existing `cfg(coverage)` defensive-model hook covers
+the private zero-length, truncated-bitstream, and cancellation branches; the
+coverage-origin inventory already classifies `src/codecs/gif/decode.rs` as
+`defensive_model`. No Pillow parity row or diagnostic origin is claimed for
+this Rust-only behavior.
+
+**Remaining dependency:** This is one independently enforceable GIF decoder
+checkpoint slice, not completion of RN-003. Other codec interiors, progress
+callbacks, allocator/peak measurement, short-write semantics, rollback,
+cleanup/error precedence, and managed same-revision evidence remain open. The
+complete inventory therefore remains 269 active finding rows; this slice
+narrows the API-036/RN-003 work without closing the whole category.
 
 ### RN-004 — Metadata and source facts — LATER
 

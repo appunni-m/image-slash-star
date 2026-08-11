@@ -8576,6 +8576,24 @@ with no new parity row. Allocator/peak measurement, progress, short-write
 semantics, sink rollback, cleanup, and managed same-revision evidence remain
 open roadmap work.
 
+The current GIF LZW decode checkpoint slice is implemented at
+`1dac4bb4fc614d9fbba9e6f92e47f038e8a1fa90`. Token-aware still and sequence
+decoding now polls before each compressed LZW code read, while following every
+1,024 dictionary links and materializing every 1,024 phrase bytes; the
+ordinary no-token decoder keeps its direct fast path. The Rust-only
+`gif_decode_work_budget_covers_lzw_codes_and_expansion` contract uses the
+committed dictionary-saturation GIF and finds an inclusive boundary of 4,105,
+preserving byte-identical pixels at the boundary and reporting `observed =
+4,105` one unit below it. It also checks committed malformed and clipped GIF
+LZW witnesses plus a deterministic 4,096×256 public-API expansion model with
+boundary 2,298. Native `feature_gate_tests` passes 59/59, the native parity
+matrix passes 28/28, the GIF `wasm32-wasip1` feature-test binary compiles, and
+the exact local LLVM report passes 66,502/66,502 lines, 8,644/8,644 branches,
+3,351/3,351 functions, and 99,335/99,335 regions. This is Rust-only
+work-budget evidence with no new Pillow parity row; managed Coverage MCP
+remains unavailable at `project_context`, and broader codec checkpoints,
+allocation/peak accounting, progress, sink rollback, and cleanup remain open.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now

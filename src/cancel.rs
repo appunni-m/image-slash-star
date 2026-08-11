@@ -16,7 +16,9 @@
 //! RGB-to-YCbCr conversion items and chroma-downsample output
 //! pixels after each 1,024 converted or produced pixels, JPEG baseline entropy
 //! coding after each 1,024 MCUs, and entropy-output intervals after each 1,024
-//! emitted entropy bytes, lossy WebP VP8
+//! emitted entropy bytes, GIF decode LZW code reads and 1,024-link/byte
+//! dictionary-expansion intervals, GIF frame/block and palette-quantization
+//! intervals, lossy WebP VP8
 //! RGB/RGBA-to-YUV conversion items, padded-plane edge replication when
 //! padding is required, filter-edge adjustment, RGBA transparent-area cleanup
 //! after each 1,024 scanned or flattened pixels, RGBA alpha-palette source
