@@ -1829,8 +1829,12 @@ a later sufficient policy can initialize the ordinary cache, and an earlier
 cached success cannot bypass a later stricter policy. The policy is per
 operation rather than permanently attached to the source. The sequence policy
 variant follows the same resource-limit semantics through the selected-format
-dispatch path; it does not poison the unlimited sequence cache with a
-policy-dependent failure.
+dispatch path; source-bound still and sequence operations reuse the retained
+`ImageInfo` for dimension, decoded-byte, frame-count, and primary
+sequence-byte checks instead of repeating generic header inspection. Encoded
+metadata is still checked per operation, and the source does not retain a
+parsed codec header or index. The sequence operation does not poison the
+unlimited sequence cache with a policy-dependent failure.
 
 `ImageFormat::verification_scope()` and
 `EncodedImage::verification_scope()` distinguish `Structure` from

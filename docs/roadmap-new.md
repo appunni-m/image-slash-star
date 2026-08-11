@@ -52,10 +52,10 @@ codec. The broader API-038 inventory row remains open until this candidate's
 managed evidence is recovered and the adjacent detection-policy boundaries
 are reviewed.
 
-### Latest API-045 implementation candidate — owned and borrowed verification-result cache
+### Latest API-045 implementation candidate — verification cache and retained policy preflight
 
 The next narrow runtime slice is implemented on `main` at
-`924a5113014937bd0dca9ce051d8cbcb54198afb`:
+`e26fb5ff534df1981365f1d5d7845a1af5356c4c`:
 
 - **Caller problem:** A server, UI, or WASM page may inspect the same immutable
   upload more than once—for example, verify it, pass an owned or borrowed view
@@ -77,18 +77,27 @@ The next narrow runtime slice is implemented on `main` at
   borrowed-view clones concurrently from eight workers for a valid PNG and a
   deterministic bad-CRC verification failure; WASI stays sequential because
   its test runtime has no portable thread support.
+- **Policy-preflight behavior:** Source-bound still and sequence operations now
+  perform the encoded-input, allowed-format, and metadata checks for that
+  operation, then reuse the retained `ImageInfo` for dimension, decoded-byte,
+  frame-count, and primary sequence-byte checks. They dispatch through helpers
+  that do not repeat generic header inspection. Metadata scanning remains
+  per-operation, and a policy is still temporary rather than attached to the
+  source forever.
 - **What this does not do:** It does not retain a parsed header/index,
   decompressor, temporary workspace, or allocator state. It retains the
   borrowed-view verification result but no borrowed decoded pixels.
-  It closes only repeated verification-result work; parsed codec-state reuse,
-  eviction, allocation counts, and retained-cache-byte measurements remain
-  open under API-045/RN-003.
+  It closes repeated verification-result work and repeated generic header
+  inspection on source-bound policy paths; parsed codec-state reuse, eviction,
+  allocation counts, and retained-cache-byte measurements remain open under
+  API-045/RN-003.
 - **Local evidence:** Native `feature_gate_tests` passed 50/50, the native
-  parity matrix passed 28/28, the focused `wasm32-wasip1` runtime contract
-  passed 1/1, and the complete WASI feature-test binary compiled. Exact local
-  LLVM coverage is 65,117/65,117 lines, 8,478/8,478 branches, 3,326/3,326
-  functions, and 97,238/97,238 regions. Formatting, locked all-feature check,
-  strict Clippy, rustdoc warnings, and doctests also pass.
+  parity matrix passed 28/28, two focused `wasm32-wasip1` source contracts
+  passed 2/2, and the complete WASI feature-test binary compiled. The full
+  local LLVM report passes exactly: 65,157/65,157 lines, 8,482/8,482
+  branches, 3,328/3,328 functions, and 97,327/97,327 regions. Formatting,
+  locked all-feature check, strict Clippy, rustdoc warnings, doctests, and the
+  repository claim/provenance/package/license/WebP verifiers also pass.
 - **Current runtime observation:** A warm repeat at clean revision
   `a93234891f39a26d7a01336b8ceeba46d71fa15a` passed all 1,421 active
   Pillow-visible rows in `0.974287 s` wall time (`2.795886 s` user,
@@ -98,7 +107,9 @@ The next narrow runtime slice is implemented on `main` at
   materially slower from build/cache state, confirming that these are
   host/cache/toolchain observations, not proof of a universal speedup; the
   standard workload does not isolate repeated verification and allocation
-  counts, retained cache bytes, and WASM runtime cost remain unmeasured.
+  counts, retained cache bytes, and WASM runtime cost remain unmeasured. This
+  source-bound policy-preflight candidate was not isolated by that workload,
+  so it makes no additional speedup claim.
 - **Evidence boundary:** The managed Coverage MCP transport again closed at
   `project_context`, so no fresh managed snapshot or parity rerun can replace
   the accepted baseline tuple. The candidate is locally verified but is not
