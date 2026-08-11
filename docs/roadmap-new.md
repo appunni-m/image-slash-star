@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline-MCU, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 60/60, including the PNG, GIF LZW, JPEG baseline-MCU, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 61/61, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -377,7 +377,7 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 60/60 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 61/61 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
@@ -545,7 +545,7 @@ category.
 
 | Category | Status now | Evidence already in the tree | Exact remaining work |
 | --- | --- | --- | --- |
-| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 60/60, including PNG, GIF LZW, JPEG baseline-MCU, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,506/66,506 lines, 8,648/8,648 branches, 3,351/3,351 functions, and 99,344/99,344 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 61/61, including PNG, GIF LZW, JPEG baseline/progressive-MCU, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,510/66,510 lines, 8,652/8,652 branches, 3,351/3,351 functions, and 99,353/99,353 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
@@ -1092,10 +1092,56 @@ managed snapshot remain unchanged. This local candidate is not managed
 acceptance and claims no Pillow row or diagnostic origin.
 
 **Remaining dependency:** This slice covers baseline JPEG entropy work only;
-progressive scan interior work, other codec interiors, progress callbacks,
+other codec interiors, progress callbacks,
 allocator/peak measurement, short-write semantics, rollback, cleanup/error
 precedence, and managed same-revision evidence remain open. RN-003 remains
 partial and the complete inventory remains 269 active finding rows.
+
+#### Current candidate slice — API-036 JPEG progressive-MCU decode checkpoint
+
+**Caller problem:** A progressive JPEG is made of several entropy scans. A
+token that polls only when a scan starts or ends cannot interrupt a large scan
+while it is decoding its inner MCU loop, so a large upload can still monopolize
+a UI, server, or WASM page between public checkpoints.
+
+**Pillow answer:** Pillow can prove the final JPEG pixels and ordinary errors,
+but it does not expose this crate's caller token, checkpoint counter, inclusive
+`DecodeWorkUnits` result, or no-partial-state behavior. This is Rust-only
+caller-control evidence and adds no Pillow parity row.
+
+**Implemented behavior:** Commit
+`a47515f011dc269a0ffc5e537a1a7651afbc0493` adds a token-aware checkpoint after
+each completed 1,024-MCU batch within each progressive entropy scan. The
+ordinary no-token path keeps its existing scan-level behavior and does not
+enter the checkpoint branch. Incomplete entropy data still follows the
+existing progressive JPEG classification before the batch checkpoint is
+charged.
+
+**Source/evidence:** The Rust-only
+`jpeg_decode_work_budget_covers_progressive_mcu_checkpoint` contract constructs
+64×64 and 512×512 deterministic progressive JPEGs through the public API,
+decodes them through both the direct and policy-aware paths, and discovers the
+inclusive boundaries. The 64×64 control admits at work boundary 14; the
+512×512 image admits at boundary 36, exactly 22 additional 1,024-MCU scan
+checkpoints. The larger image is byte-identical at its exact boundary and
+maximum 35 returns the typed `DecodeWorkUnits` error with `observed = 36`.
+Native `feature_gate_tests` passes 61/61, the native parity matrix passes
+28/28, the JPEG `wasm32-wasip1` feature-test binary compiles, and exact local
+LLVM evidence is 66,510/66,510 lines, 8,652/8,652 branches, 3,351/3,351
+functions, and 99,353/99,353 regions. Locked all-feature check, strict
+Clippy, rustdoc warnings, doctests, and the repository claim/provenance/
+package/license/WebP verifiers pass.
+
+**Evidence boundary:** Managed Coverage MCP remains unavailable at
+`project_context` (`Transport closed`), so the accepted claim-ledger tuple and
+managed snapshot remain unchanged. This local candidate is not managed
+acceptance and claims no Pillow row or diagnostic origin.
+
+**Remaining dependency:** This slice covers progressive JPEG entropy work;
+other codec interiors, progress callbacks, allocator/peak measurement,
+short-write semantics, rollback, cleanup/error precedence, and managed
+same-revision evidence remain open. RN-003 remains partial and the complete
+inventory remains 269 active finding rows.
 
 ### RN-004 — Metadata and source facts — LATER
 

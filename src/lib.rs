@@ -693,7 +693,8 @@ pub fn decode_prefix_with_policy(
 /// chunk when a caller token is present. GIF additionally polls before each
 /// compressed LZW code read and while traversing every 1,024 dictionary links
 /// or materializing every 1,024 phrase bytes. Baseline JPEG additionally polls
-/// after each completed 1,024-MCU entropy batch. The operation
+/// after each completed 1,024-MCU entropy batch, and progressive JPEG polls
+/// after each completed 1,024-MCU batch within each entropy scan. The operation
 /// stops with
 /// [`ImageError::Cancelled`] without publishing partial state.
 /// Truncated input reports the same non-terminal
