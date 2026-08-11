@@ -86,8 +86,11 @@ for codec state.
   3×3 entropy image produced with six prefix-width bits in `mode0_hybrid`; the
   other observed dimensions remain 2×1 and 24×24. Unobserved dimensions and
   grouping patterns remain open.
+- Distance witnesses now include the clamp, coordinate, full-width, and
+  direct-distance branches (`10→1`, `5→16`, `24→4`, `23→256`, and `152→32`).
+  Other mappings and malformed distance streams remain open.
 - `python3 scripts/verify_webp_vp8l_property_map.py` passes with 15 witnessed
-  properties, 91 named witnesses, 77 distinct active WebP rows, 76 structural
+  properties, 94 named witnesses, 77 distinct active WebP rows, 79 structural
   witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
   rows parsed. The property map and claim ledger hashes are updated together.
 - The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no

@@ -511,6 +511,42 @@
           "mapped_distances_contains": [16]
         }
       }
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette17",
+      "expect": {
+        "stream_index": 0,
+        "stream": {
+          "plane_codes_contains": [24],
+          "mapped_distances_contains": [4]
+        }
+      }
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette256",
+      "expect": {
+        "stream_index": 1,
+        "stream": {
+          "plane_codes_contains": [23],
+          "mapped_distances_contains": [256]
+        }
+      }
+    },
+    {
+      "property_id": "vp8l.distance_mapping",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_palette32",
+      "expect": {
+        "stream_index": 1,
+        "stream": {
+          "plane_codes_contains": [152],
+          "mapped_distances_contains": [32]
+        }
+      }
     }
   ],
   "malformed_witnesses": [
@@ -759,9 +795,12 @@
       "internal_state_proven": true,
       "minimal_witnesses": [
         {"operation": "decode", "row_id": "lossless_transform_variants_vp8l_plane_distance_clamp"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_checker2"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette17"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette256"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_palette32"}
       ],
-      "gap": "The independent parser now proves the two listed successful plane-distance mappings (10→1 and 5→16 at their respective plane widths); malformed distance streams and other mapping entries remain outside this witnessed scope."
+      "gap": "The independent parser now proves the listed successful plane-distance mappings, including clamp behavior (10→1), coordinate mapping (5→16 and 24→4), a full-width mapping (23→256), and the direct-distance branch (152→32); malformed distance streams and other mapping entries remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.malformed_forms",
