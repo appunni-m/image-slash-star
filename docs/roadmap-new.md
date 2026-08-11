@@ -72,8 +72,12 @@ for codec state.
   `random_walk`, `saw`, `stripes`, and `xor`) plus the indexed encode artifact.
   Together they cover every predictor-mode value observed in this fixture set,
   including mode 4 from the encode artifact.
+- The same map now promotes every successful color-cache width observed in the
+  37-row lossless corpus: 1, 3, 4, 5, 7, and 10 bits. The added witnesses use
+  actual cache-lookup activity; widths 2, 6, 8, 9, and 11 are not present in
+  this corpus and are not claimed.
 - `python3 scripts/verify_webp_vp8l_property_map.py` passes with 14 witnessed
-  properties, 67 named witnesses, 75 distinct active WebP rows, 52 structural
+  properties, 71 named witnesses, 75 distinct active WebP rows, 56 structural
   witnesses, 40 malformed-parser witnesses, and all 37 active lossless success
   rows parsed. The property map and claim ledger hashes are updated together.
 - The deliberately excluded `mode0`, `quadrants`, and `sparse` rows contain no
