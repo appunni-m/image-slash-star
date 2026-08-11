@@ -1761,6 +1761,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode_packbits(&[0xff, 5], 2);
     let _ = decode_packbits(&[0xff], 2);
     let _ = decode_packbits(&[2, 1], 3);
+    let token = crate::CancellationToken::new();
+    let _ = decode_packbits_with_token(&[0x80, 0, 9], 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_packbits_with_token(&[0, 7, 9], 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_packbits_with_token(&[1, 7], 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_packbits_with_token(&[0xff], 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_packbits_with_token(&[0x80], 1, &token);
 
     fn pack_lzw_9(codes: &[u16]) -> Vec<u8> {
         let mut out = Vec::new();
