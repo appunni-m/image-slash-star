@@ -474,6 +474,35 @@ WebP interior behavior, and resource-limit work stay in the open inventory.
 and lossless rows, unchanged parity, Rust-only token-path coverage model, and
 same-revision exact coverage result above.
 
+### Completed W1 slice — JPG-001 CMYK JPEG encode — DONE (selected row)
+
+**Caller problem:** A caller may decode a CMYK JPEG, adjust or inspect its
+four-channel pixels, and save those pixels back as JPEG. Before this slice the
+Rust encoder rejected `Cmyk8`, even though Pillow accepts the workflow and
+emits an Adobe-marked four-component JPEG.
+
+**Pillow answer:** Pillow can observe the encoded component layout, Adobe APP14
+marker, decoded CMYK mode, dimensions, pixels, and exact retained reference
+bytes. This is therefore a real parity row, not a Rust-only compatibility
+claim.
+
+**Implemented behavior:** The JPEG encoder accepts direct `Cmyk8` input,
+emits inverted CMYK samples with Adobe transform `0`, writes the four `C/M/Y/K`
+component identifiers, and rejects only the still-open progressive-CMYK option.
+The committed `enc_cmyk` fixture asserts the Pillow-visible result and the
+encoded-byte reference.
+
+**Evidence:** Implementation and fixture projection landed in
+`54097c906f6ba098e441ccd4c39cb33d5ed5a820`; managed Pillow parity
+`84716077-aee7-4396-8328-e6735202b044` passed 1,449/1,449 at the accepted
+revision, including `Encode.jpeg/enc_cmyk`. The current native matrix remains
+28/28, and the exact local LLVM build remains 100% across all four aggregate
+metrics.
+
+**Scope:** This removes only `JPG-001` from the active inventory. It does not
+close YCbCr/bilevel input as a family, progressive CMYK, JPEG source-color
+provenance, uncommon JPEG classes, or JPEG metadata/options.
+
 ### RN-003 — Resource limits, interruption, and output recovery — IN PROGRESS
 
 **Why:** A picture library must not unexpectedly spend all of a caller's
@@ -699,13 +728,13 @@ scope, a validation command, and a visible proved/planned/unknown label.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **270 active
+moved into the appropriate contract document. The list contains **269 active
 finding rows**.
 
 | Area | Count | Open IDs |
 | --- | ---: | --- |
 | Common API | 26 | `API-008`, `API-014`, `API-017`, `API-018`, `API-019`, `API-020`, `API-023`, `API-026`, `API-027`, `API-030`, `API-033`, `API-034`, `API-036`, `API-038`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `API-047`, `API-048`, `API-050`, `API-051`, `API-052`, `API-053`, `API-054` |
-| JPEG | 20 | `JPG-001`, `JPG-002`, `JPG-003`, `JPG-004`, `JPG-006`–`JPG-021` |
+| JPEG | 19 | `JPG-002`, `JPG-003`, `JPG-004`, `JPG-006`–`JPG-021` |
 | PNG | 15 | `PNG-003`, `PNG-004`, `PNG-005`, `PNG-006`, `PNG-008`, `PNG-010`–`PNG-013`, `PNG-015`–`PNG-020` |
 | GIF | 17 | `GIF-002`, `GIF-005`–`GIF-007`, `GIF-009`–`GIF-021` |
 | BMP | 20 | `BMP-001`–`BMP-020` |
@@ -721,10 +750,10 @@ The shorthand ranges above expand only to the IDs actually present in the
 current audit. The old roadmap remains the detailed description of each
 finding while this table is the canonical status inventory.
 
-These 270 rows are not 270 equal-sized coding tasks. A row may be a small
+These 269 rows are not 269 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 270 active finding rows, zero aggregate coverage gaps, and
+today are the exact 269 active finding rows, zero aggregate coverage gaps, and
 the explicit dependency order; an hour estimate would be invented until the
 next slice is chosen and measured.
 
