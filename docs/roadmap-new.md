@@ -309,7 +309,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation and scanline checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 51/51, including the PNG zlib-inflation and scanline work-budget boundary. API-038 and the PNG decoder checkpoints are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline and TIFF Deflate checkpoints | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 52/52, including the PNG and TIFF zlib work-budget boundaries. API-038 and the decoder checkpoints are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -377,12 +377,12 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 51/51 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 52/52 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
-new PNG zlib-inflation and scanline boundary test described in the RN-003
-candidate below.
+PNG zlib-inflation/scanline and TIFF Deflate boundary tests described in the
+RN-003 candidates below.
 Some broader historical native/WASI matrix records still contain the known
 libavif/dav1d/libaom-dependent AVIF alpha status-5 failure; that is real target
 evidence, not a reason to relabel source-provenance work as Pillow parity.
@@ -666,6 +666,47 @@ interval between Deflate polls, and does not claim interruption inside every
 bit read or Huffman-table operation. Transient allocation/peak accounting,
 progress callbacks, short-write semantics, rollback, and cleanup remain open
 RN-003 work.
+
+#### Current candidate slice — API-036 TIFF Deflate inflation checkpoints
+
+**Caller problem:** TIFF already passes a cancellation token around strips and
+tiles, but a Deflate-compressed strip or tile can still spend most of its time
+inside zlib inflation. Polling only before and after the strip means a server,
+UI, or WASM page cannot stop that interior work promptly.
+
+**Pillow answer:** Pillow can prove that the TIFF pixels are correct, but it
+does not expose this crate's caller token, checkpoint counter, or typed
+`DecodeWorkUnits` result. This is a Rust-only resource-control contract and
+must not become a fabricated parity row.
+
+**Implemented behavior:** Commit
+`a8e4d3b61b6f8a79a1bad8196fd9dec7486b1af8` passes the existing token from
+TIFF strip/tile dispatch into `decode_block`. Both TIFF Deflate compression
+tags use the token-aware zlib
+prefix inflater when a token is present; the missing-token path keeps the
+direct no-token inflater. The shared inflater polls at zlib block and
+dynamic-table boundaries, 1,024-byte stored/fixed/dynamic output intervals,
+and 5,552-byte Adler-32 chunks. TIFF's ordinary decoded bytes and pixels are
+unchanged.
+
+**Source/evidence:** The Rust-only
+`tiff_decode_work_budget_covers_deflate_inflation` contract uses the committed
+128×128 `tests/fixtures/input/images/tiff/deflate.tiff` witness. Its exact
+inclusive boundary is 71: 71 succeeds with byte-identical pixels and 70
+rejects with the typed `DecodeWorkUnits` result (`observed = 71`). Native
+`feature_gate_tests` passes 52/52, the native matrix passes 28/28, and the
+exact local LLVM report passes 65,351/65,351 lines, 8,514/8,514 branches,
+3,335/3,335 functions, and 97,638/97,638 regions.
+
+**Remaining dependency:** The managed Coverage MCP transport still closes at
+`project_context`, so no same-revision managed snapshot is available and the
+accepted claim-ledger tuple remains unchanged. This slice covers TIFF Deflate
+inflation only; TIFF LZW/PackBits/raw payload traversal, predictor and sample
+conversion checkpoints, transient allocation/peak accounting, progress
+callbacks, short-write semantics, rollback, and cleanup remain open RN-003
+work. The production cadence still permits up to one 1,024-byte output interval
+between Deflate polls and does not claim interruption inside every bit read or
+Huffman-table operation.
 
 ### RN-004 — Metadata and source facts — LATER
 
