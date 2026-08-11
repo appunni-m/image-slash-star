@@ -46,13 +46,14 @@ pub struct EncodedImage {
 /// the bytes into an owned snapshot. It caches only the immutable verification
 /// result for this view; every decode reparses the borrowed bytes, so it is
 /// still best for short-lived uses where owned decoded caching is not needed.
-/// The owned [`EncodedImage`] remains the primary API.
+/// Clones share that verification result, while the owned [`EncodedImage`]
+/// remains the primary API.
 #[derive(Debug)]
 pub struct EncodedImageView<'a> {
     bytes: &'a [u8],
     format: ImageFormat,
     info: ImageInfo,
-    verified: OnceLock<ImageResult<()>>,
+    verified: Arc<OnceLock<ImageResult<()>>>,
 }
 
 impl<'a> Clone for EncodedImageView<'a> {
@@ -61,7 +62,7 @@ impl<'a> Clone for EncodedImageView<'a> {
             bytes: self.bytes,
             format: self.format,
             info: self.info.clone(),
-            verified: OnceLock::new(),
+            verified: Arc::clone(&self.verified),
         }
     }
 }
@@ -90,7 +91,7 @@ impl<'a> EncodedImageView<'a> {
             bytes,
             format: info.format,
             info,
-            verified: OnceLock::new(),
+            verified: Arc::new(OnceLock::new()),
         })
     }
 
@@ -186,8 +187,8 @@ impl<'a> EncodedImageView<'a> {
     /// Verify the borrowed bytes under the format's default scope.
     ///
     /// The immutable success or deterministic failure is retained by this
-    /// view and reused by later calls. A cloned view starts its own cache.
-    /// Pixel decodes remain uncached.
+    /// view and reused by later calls and clones. Pixel decodes remain
+    /// uncached.
     ///
     /// # Errors
     ///
