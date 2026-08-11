@@ -8420,6 +8420,24 @@ The exact local LLVM report for this revision passes 65,208/65,208 lines,
 Managed Coverage MCP remains unavailable at project-context transport, so
 this is local evidence until a same-revision managed snapshot is recovered.
 
+The subsequent PNG zlib-inflation checkpoint slice is implemented at
+`4320977aa62768009df74d2f3a0e3b4f4a218bdb` plus arithmetic fix `e97b514`,
+with its coverage-origin defensive model at `a7207ed`. The token-aware PNG
+decoder polls at Deflate block and
+dynamic-table boundaries, every 1,024 stored or compressed output bytes, and
+5,552-byte Adler-32 chunks, then retains the existing row and Adam7
+checkpoints. The Rust-only
+`png_decode_work_budget_covers_inflation_and_scanline_rows` contract discovers
+an inclusive boundary of 327 for the normal-compressed `no_interlace.png`
+witness and 322 for the stored-block `compress_none.png` witness; each exact
+boundary succeeds with identical pixels and one less returns the typed
+`DecodeWorkUnits` result. The ordinary no-token path remains on the direct
+decoder loops. Pillow has no caller token or typed work-budget result, so this
+adds no parity row. The exact local LLVM report for the final source passes
+65,342/65,342 lines, 8,514/8,514 branches, 3,335/3,335 functions, and
+97,627/97,627 regions. Managed Coverage MCP remains unavailable at
+project-context transport.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now
