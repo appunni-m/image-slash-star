@@ -2,7 +2,7 @@
 
 Status: canonical pending-work plan; current v1 evidence is recorded below
 
-Reviewed: 2026-08-11
+Reviewed: 2026-08-12
 
 - Measured source/evidence revision: `36b939696415a962285d37f9120ff389aebf0205`
 - Claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`
