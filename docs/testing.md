@@ -8455,6 +8455,23 @@ Pillow parity row. TIFF LZW/PackBits/raw traversal, predictor/sample
 conversion checkpoints, allocation/peak accounting, progress, sink rollback,
 and cleanup remain separate roadmap work.
 
+The current TIFF PackBits packet-checkpoint slice is implemented at
+`83e924ca9bed6ceb27024a50014dcc7904836812`: token-aware TIFF decoding now
+polls before each literal, repeat, or no-op packet while the no-token decoder
+remains direct. The Rust-only
+`tiff_decode_work_budget_covers_packbits_packets` contract uses the committed
+128×128 `packbits.tiff` witness and finds an inclusive boundary of 895: exact
+success preserves every decoded pixel, while 894 returns the typed
+`DecodeWorkUnits` result with `observed = 895`. Coverage-origin follow-up
+`c124d0ac89533030cbd9ceb17d7f974c9de392b1` models the token-aware defensive
+packet edges. The native feature-gate suite passes 53/53 and the native parity
+matrix passes 28/28. The exact local LLVM report passes 65,402/65,402 lines,
+8,520/8,520 branches, 3,336/3,336 functions, and 97,740/97,740 regions.
+Managed Coverage MCP remains unavailable at project-context transport; this
+is local evidence and adds no Pillow parity row. TIFF LZW/raw traversal,
+predictor/sample conversion checkpoints, allocation/peak accounting, progress,
+sink rollback, and cleanup remain separate roadmap work.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now
