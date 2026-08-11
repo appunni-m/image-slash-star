@@ -85662,7 +85662,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_q10",
@@ -85733,7 +85737,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_q50",
@@ -85804,7 +85812,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_q90",
@@ -85875,7 +85887,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_q100",
@@ -85946,7 +85962,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_solid_17x19_q90_m0",
@@ -86017,7 +86037,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_lossy_checker_17x19_q1_m0",
@@ -86088,7 +86112,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_filter_variants",
@@ -86159,7 +86187,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_strong_sharp7",
@@ -86230,7 +86262,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_filter_off",
@@ -86301,7 +86337,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_segment_one",
@@ -86372,7 +86412,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossy_vp8_filter_variants_lossy_partitions_eight",
@@ -86443,7 +86487,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "lossless.webp",
@@ -86515,7 +86563,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants",
@@ -86586,7 +86638,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_horizontal",
@@ -86657,7 +86713,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_vertical",
@@ -86728,7 +86788,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_diagonal",
@@ -86799,7 +86863,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_checker2",
@@ -86870,7 +86938,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette4",
@@ -86941,7 +87013,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette16",
@@ -87012,7 +87088,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette17",
@@ -87083,7 +87163,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette32",
@@ -87154,7 +87238,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette64",
@@ -87225,7 +87313,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_palette256",
@@ -87296,7 +87388,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_noise",
@@ -87367,7 +87463,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode0",
@@ -87438,7 +87538,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode0_hybrid",
@@ -87509,7 +87613,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_diag_reverse",
@@ -87580,7 +87688,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_xor",
@@ -87651,7 +87763,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_product",
@@ -87722,7 +87838,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_radial",
@@ -87793,7 +87913,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_diamond",
@@ -87864,7 +87988,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_bilinear",
@@ -87935,7 +88063,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_stripes",
@@ -88006,7 +88138,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_steps",
@@ -88077,7 +88213,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_saw",
@@ -88148,7 +88288,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_quadrants",
@@ -88219,7 +88363,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_random_walk",
@@ -88290,7 +88438,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode5",
@@ -88361,7 +88513,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode6",
@@ -88432,7 +88588,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode7",
@@ -88503,7 +88663,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode8",
@@ -88574,7 +88738,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode9",
@@ -88645,7 +88813,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode10",
@@ -88716,7 +88888,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_mode13",
@@ -88787,7 +88963,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_lossless_predictor_sparse",
@@ -88858,7 +89038,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_vp8l_plane_distance_clamp",
@@ -88929,7 +89113,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_vp8l_meta_cache_fast_fill",
@@ -89000,7 +89188,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "lossless_transform_variants_vp8l_single_cache_peek",
@@ -89071,7 +89263,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "extended.webp",
@@ -89143,7 +89339,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "no_alpha.webp",
@@ -89215,7 +89415,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "with_alpha.webp",
@@ -89287,7 +89491,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "with_alpha_alpha_lossy",
@@ -89358,7 +89566,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "alpha_lossless.webp",
@@ -89430,7 +89642,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_horizontal",
@@ -89501,7 +89717,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_vertical",
@@ -89572,7 +89792,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_gradient",
@@ -89643,7 +89867,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_noise",
@@ -89714,7 +89942,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_vertical_filter",
@@ -89785,7 +90017,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_lossy_gradient_filter",
@@ -89856,7 +90092,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_uncompressed",
@@ -89927,7 +90167,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "alpha_lossless_alpha_preprocessing",
@@ -89998,7 +90242,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "animated.webp",
@@ -90053,6 +90301,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -90081,6 +90331,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -90149,7 +90401,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_sequence_rgba_keyframes",
@@ -90241,6 +90497,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_sequence_rgba_keyframes_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -90269,6 +90527,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_sequence_rgba_keyframes_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -90299,7 +90559,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha",
@@ -90353,6 +90617,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90381,6 +90647,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90449,7 +90717,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_holes_partial_background",
@@ -90503,6 +90775,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_partial_background_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90531,6 +90805,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_partial_background_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90599,7 +90875,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_holes_opaque_background",
@@ -90653,6 +90933,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_opaque_background_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90681,6 +90963,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_opaque_background_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -90749,7 +91033,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_rgb_opaque_background",
@@ -90803,6 +91091,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_opaque_background_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -90831,6 +91121,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_opaque_background_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -90899,7 +91191,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_rgb_palette_background",
@@ -90953,6 +91249,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_palette_background_webp_frame_0.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -90981,6 +91279,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_palette_background_webp_frame_1.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -91049,7 +91349,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_rgb_full_delta",
@@ -91103,6 +91407,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_delta_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91131,6 +91437,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_delta_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91199,7 +91507,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_lossy",
@@ -91253,6 +91565,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91281,6 +91595,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_lossy_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91349,7 +91665,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_overlap",
@@ -91403,6 +91723,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_overlap_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91431,6 +91753,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_overlap_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91499,7 +91823,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_holes",
@@ -91553,6 +91881,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91581,6 +91911,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_holes_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91649,7 +91981,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_loop_twice",
@@ -91703,6 +92039,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_loop_twice_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -91731,6 +92069,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_loop_twice_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -91799,7 +92139,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_blend",
@@ -91853,6 +92197,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_blend_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91881,6 +92227,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_blend_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -91949,7 +92297,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_full",
@@ -92003,6 +92355,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92031,6 +92385,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92099,7 +92455,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_full_dispose",
@@ -92153,6 +92513,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_dispose_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92181,6 +92543,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_dispose_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92249,7 +92613,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_alpha_full_blend_after_dispose",
@@ -92303,6 +92671,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_blend_after_dispose_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92331,6 +92701,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_full_blend_after_dispose_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92399,7 +92771,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_dispose",
@@ -92453,6 +92829,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_dispose_webp_frame_0.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92481,6 +92859,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_dispose_webp_frame_1.bin",
                 "ref_bytes": 16384,
                 "ref_mode": "Rgba8",
@@ -92549,7 +92929,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_rgb_full_dispose",
@@ -92603,6 +92987,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_dispose_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -92631,6 +93017,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_full_dispose_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -92699,7 +93087,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "animated_animated_rgb_partial_dispose",
@@ -92753,6 +93145,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_partial_dispose_webp_frame_0.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -92781,6 +93175,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_rgb_partial_dispose_webp_frame_1.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -92849,7 +93245,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "16x16.webp",
@@ -92921,7 +93321,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "odd.webp",
@@ -92993,7 +93397,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "icc.webp",
@@ -93065,7 +93473,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "xmp.webp",
@@ -93137,7 +93549,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "exif.webp",
@@ -93209,7 +93625,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "truncated.webp",
@@ -94416,7 +94836,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_extended_missing_image_chunk",
@@ -96309,7 +96731,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_alpha_invalid_compression",
@@ -96382,7 +96806,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_alpha_header_only",
@@ -96455,7 +96881,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_short_header",
@@ -96619,7 +97047,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_8",
@@ -96692,7 +97122,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_12",
@@ -96765,7 +97197,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_16",
@@ -96838,7 +97272,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_24",
@@ -96911,7 +97347,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_32",
@@ -96984,7 +97422,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_64",
@@ -97057,7 +97497,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_truncated_128",
@@ -97130,7 +97572,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_plane_distance_truncated_12",
@@ -97203,7 +97647,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_meta_cache_truncated_10",
@@ -97276,7 +97722,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_single_cache_truncated_18",
@@ -97349,7 +97797,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_empty_payload",
@@ -97786,7 +98236,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_tail_truncated",
@@ -97950,7 +98402,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_duplicate_transform",
@@ -98023,7 +98477,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_invalid_color_cache",
@@ -98096,7 +98552,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_invalid_zero_symbol",
@@ -98169,7 +98627,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_empty_code_length_tree",
@@ -98242,7 +98702,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_incomplete_huffman_tree",
@@ -98315,7 +98777,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_invalid_max_symbol",
@@ -98388,7 +98852,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_color_index_size_truncated",
@@ -98461,7 +98927,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
@@ -98534,7 +99002,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_color_transform_stream_truncated",
@@ -98607,7 +99077,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_meta_huffman_stream_truncated",
@@ -98680,7 +99152,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_two_symbol_truncated_one_symbol",
@@ -98753,7 +99227,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_code_lengths_max_symbol_flag_truncated",
@@ -98826,7 +99302,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_code_lengths_length_nbits_truncated",
@@ -98899,7 +99377,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_code_lengths_max_value_truncated",
@@ -98972,7 +99452,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_color_index_stream_truncated",
@@ -99045,7 +99527,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_zero_symbol_truncated",
@@ -99118,7 +99602,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_code_length_alphabet_truncated",
@@ -99191,7 +99677,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_repeat_code17_extra_truncated",
@@ -99264,7 +99752,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_repeat_code18_extra_truncated",
@@ -99337,7 +99827,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_repeat_overflow",
@@ -99410,7 +99902,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_single_backref",
@@ -99483,7 +99977,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8l_backref_before_output",
@@ -99556,7 +100052,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_0",
@@ -99629,7 +100127,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_1",
@@ -99702,7 +100202,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_2",
@@ -99775,7 +100277,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_3",
@@ -99848,7 +100352,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_4",
@@ -99921,7 +100427,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_5",
@@ -99994,7 +100502,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_6",
@@ -100067,7 +100577,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_7",
@@ -100140,7 +100652,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_8",
@@ -100213,7 +100727,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_9",
@@ -100286,7 +100802,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_10",
@@ -100359,7 +100877,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_11",
@@ -100432,7 +100952,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_12",
@@ -100505,7 +101027,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_13",
@@ -100578,7 +101102,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_14",
@@ -100651,7 +101177,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_15",
@@ -100724,7 +101252,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_16",
@@ -100797,7 +101327,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_17",
@@ -100870,7 +101402,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_18",
@@ -100943,7 +101477,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_19",
@@ -101016,7 +101552,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_20",
@@ -101089,7 +101627,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_21",
@@ -101162,7 +101702,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_22",
@@ -101235,7 +101777,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_23",
@@ -101308,7 +101852,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_24",
@@ -101381,7 +101927,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_25",
@@ -101454,7 +102002,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_26",
@@ -101527,7 +102077,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_27",
@@ -101600,7 +102152,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_28",
@@ -101673,7 +102227,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_29",
@@ -101746,7 +102302,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_30",
@@ -101819,7 +102377,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_31",
@@ -101892,7 +102452,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_container_vp8_partition_32",
@@ -101965,7 +102527,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_related_riff_containers",
@@ -102217,6 +102781,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_bad_anim_size_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102245,6 +102811,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_bad_anim_size_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102313,7 +102881,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_animated_frame_too_large",
@@ -102367,6 +102939,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_too_large_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102395,6 +102969,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_too_large_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102463,7 +103039,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_animated_frame_dimension_mismatch",
@@ -102517,6 +103097,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_dimension_mismatch_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102545,6 +103127,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_frame_dimension_mismatch_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -102613,7 +103197,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_animated_bad_nested_chunk",
@@ -102684,7 +103272,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_extended_missing_exif_chunk",
@@ -102755,7 +103347,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_extended_missing_xmp_chunk",
@@ -102826,7 +103422,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_alpha_missing_chunk",
@@ -102897,7 +103497,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_vp8_missing_last_byte",
@@ -102968,7 +103572,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_vp8l_unused_invalid_one_symbol",
@@ -103039,7 +103647,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         }
       ],
       "encode": [
@@ -103139,6 +103751,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgb_keyframes_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -103167,6 +103781,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgb_keyframes_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -103276,6 +103892,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgb_background_webp_frame_0.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -103304,6 +103922,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgb_background_webp_frame_1.bin",
                 "ref_bytes": 12288,
                 "ref_mode": "Rgb8",
@@ -103421,6 +104041,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgba_keyframes_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103449,6 +104071,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossy_rgba_keyframes_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103565,6 +104189,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgba_keyframes_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103593,6 +104219,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_rgba_keyframes_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103705,6 +104333,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_default_controls_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103733,6 +104363,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_sequence_lossless_default_controls_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103857,6 +104489,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_loop_overflow_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103885,6 +104519,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_loop_overflow_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -103935,10 +104571,6 @@
           },
           "source_mode": "Rgba8",
           "source_frame_count": 2,
-          "oracle_status": "error",
-          "oracle_error_type": "builtins.ValueError",
-          "oracle_error_message": "invalid configuration",
-          "oracle_error_kind": "parameter",
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
@@ -103957,7 +104589,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "invalid configuration",
+          "oracle_error_kind": "parameter"
         },
         {
           "id": "enc_error_sequence_frame_mode",
@@ -103972,7 +104608,7 @@
             "lossless": true,
             "method": 4,
             "kmax": 1,
-            "sequence_frame_mode": "L16"
+            "sequence_frame_mode": "La16"
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
@@ -103997,6 +104633,29 @@
           },
           "source_mode": "Rgba8",
           "source_frame_count": 2,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "pillow_fixture",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "unsupported",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
           "oracle_status": "ok",
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_frame_mode.bin",
           "encoded_ref_bytes": 144,
@@ -104046,6 +104705,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_frame_mode_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104074,6 +104735,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_frame_mode_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104086,29 +104749,6 @@
                 "pixel_origin": "pillow_fixture"
               }
             ]
-          },
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture",
-            "rust_contract": "defensive_model",
-            "sequence_canvas": "pillow_fixture",
-            "sequence_source": "pillow_fixture",
-            "sequence_pixels": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "not_applicable",
-            "encode_sequence": "error"
-          },
-          "error_contracts": {
-            "encode_sequence": {
-              "pillow_type": null,
-              "pillow_message": null,
-              "rust_kind": "unsupported",
-              "rust_format": "WEBP",
-              "rust_message": "non_empty",
-              "origin": "defensive_model"
-            }
           }
         },
         {
@@ -104221,6 +104861,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_palette_background_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104249,6 +104891,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_palette_background_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104373,6 +105017,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_icc_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104401,6 +105047,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_icc_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104525,6 +105173,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_exif_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104553,6 +105203,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_exif_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104677,6 +105329,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_xmp_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104705,6 +105359,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_xmp_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104829,6 +105485,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmax_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104857,6 +105515,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmax_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -104981,6 +105641,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_minimize_size_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105009,6 +105671,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_minimize_size_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105132,6 +105796,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmin_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105160,6 +105826,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_kmin_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105284,6 +105952,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_allow_mixed_webp_frame_0.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105312,6 +105982,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_allow_mixed_webp_frame_1.bin",
                 "ref_bytes": 252,
                 "ref_mode": "Rgba8",
@@ -105443,6 +106115,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_left_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105471,6 +106145,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_left_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105602,6 +106278,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_top_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105630,6 +106308,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_top_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105757,6 +106437,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_width_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105785,6 +106467,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_width_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105912,6 +106596,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_height_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -105940,6 +106626,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_height_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106064,6 +106752,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_interlace_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106092,6 +106782,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_interlace_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106216,6 +106908,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_default_image_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106244,6 +106938,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_default_image_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106368,6 +107064,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_disposal_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106396,6 +107094,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_disposal_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106520,6 +107220,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_blend_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106548,6 +107250,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_reserved_blend_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106675,6 +107379,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_fractional_duration_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106703,6 +107409,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_fractional_duration_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106830,6 +107538,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_zero_duration_denominator_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106858,6 +107568,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_zero_duration_denominator_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -106982,6 +107694,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_duration_overflow_webp_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -107010,6 +107724,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.webp_encoded_enc_error_sequence_duration_overflow_webp_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -107032,7 +107748,6 @@
           "description": "Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking",
           "params": {
             "rust_unsupported_modes": [
-              "L16",
               "La16",
               "Rgb16",
               "Rgba16",
@@ -107045,7 +107760,7 @@
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "WebP directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8",
+          "rust_error_reason": "WebP directly accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, and Cmyk8",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",
@@ -107528,6 +108243,112 @@
           "ref_size": [
             128,
             128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_l16",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy WebP clamps Pillow I;16 luminance samples to 8-bit RGB",
+          "params": {
+            "lossless": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "l16_clamp.png",
+          "source_sha256": "da2b1e80f67593d47ba567be64c1364cfc25cc12897b38b7afd737f84fb14021",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_l16.bin",
+          "encoded_ref_bytes": 54,
+          "encoded_ref_sha256": "eddea14e78dc12416a89857cfaac4b3f27eb98805ef9e849708d0556b2cf4ac1",
+          "ref_sha256": "95e97ceed5dfa46dc3b8b7be780dca052db37f4c77c859214e58d01d04f548a8",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_l16.bin",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_l16",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless WebP clamps Pillow I;16 luminance samples to 8-bit RGB",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "l16_clamp.png",
+          "source_sha256": "da2b1e80f67593d47ba567be64c1364cfc25cc12897b38b7afd737f84fb14021",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_l16.bin",
+          "encoded_ref_bytes": 56,
+          "encoded_ref_sha256": "e46b74fd4d1a824f52549900fdb013705a0fcbb8bed230965f0d035b6debc360",
+          "ref_sha256": "a53b2c87a40305a1e9f320ad6df955c00d1fdf0c02096dff0a3bab1a4d856153",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_l16.bin",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            1
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
@@ -110331,9 +111152,9 @@
     }
   },
   "summary": {
-    "total_rows": 1419,
+    "total_rows": 1421,
     "decode_rows": 1024,
-    "encode_rows": 395,
+    "encode_rows": 397,
     "formats": 8,
     "assets_available": 1023,
     "decode_active": 1024,

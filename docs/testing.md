@@ -4407,6 +4407,12 @@ source-preparation boundary with a generated 1,024×1 probe at
 `maximum: 3`, `observed: 4` in both whole-buffer and caller-owned-sink calls;
 the sink sentinel remains `[0xCA]`.
 
+The current Pillow-visible WebP source-mode contract also accepts PNG `I;16`
+(`ImageMode::L16`) input. It clamps each unsigned sample to the `0..=255`
+range before expanding it to RGB; `tests/fixtures/input/images/png/l16_clamp.png`
+proves both the below-256 and above-255 cases through the lossy and lossless
+`enc_*_l16` rows.
+
 This is Rust-only interruption evidence, not a Pillow parity fixture or row.
 Pillow has no caller token, typed work-budget result, caller-owned sink, or
 rollback contract, so the witness remains in the existing feature-gated

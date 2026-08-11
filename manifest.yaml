@@ -2126,7 +2126,7 @@ formats:
     - id: enc_error_sequence_frame_mode
       description: A valid retained sequence with an unsupported frame mode returns a structured error
       source_asset: animated_sequence_rgba_keyframes.webp
-      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_frame_mode': 'L16'}
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1, 'sequence_frame_mode': 'La16'}
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: WebP sequence frames obey the same exact direct-mode contract as still images
@@ -2268,11 +2268,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['L16', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: WebP directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8
+      rust_error_reason: WebP directly accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, and Cmyk8
     - id: enc_lossy_q100
       description: 
       params: {'lossless': False, 'quality': 100}
@@ -2301,6 +2301,16 @@ formats:
       source_format: png
       source_asset: gray.png
       params: {'lossless': True, 'grayscale': True}
+    - id: enc_lossy_l16
+      description: Lossy WebP clamps Pillow I;16 luminance samples to 8-bit RGB
+      source_format: png
+      source_asset: l16_clamp.png
+      params: {'lossless': False}
+    - id: enc_lossless_l16
+      description: Lossless WebP clamps Pillow I;16 luminance samples to 8-bit RGB
+      source_format: png
+      source_asset: l16_clamp.png
+      params: {'lossless': True}
     - id: enc_lossy_bilevel
       description: Lossy bilevel WebP converted through Pillow's RGB path
       source_format: png

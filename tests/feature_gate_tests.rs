@@ -6768,16 +6768,20 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
     OutputSink::write_all(&mut direct_ref, b"def")?;
     assert_eq!(*direct_ref, b"def");
     let invalid_direct_checkpoint = direct.len().saturating_add(1);
-    let direct_rollback_error = OutputSink::rollback(&mut direct, invalid_direct_checkpoint)
-        .expect_err("Vec rollback must reject a checkpoint beyond its length");
+    let direct_rollback_error = match OutputSink::rollback(&mut direct, invalid_direct_checkpoint) {
+        Ok(()) => panic!("Vec rollback accepted a checkpoint beyond its length"),
+        Err(error) => error,
+    };
     assert_eq!(
         direct_rollback_error.kind(),
         image_slash_star::ImageErrorKind::Parameter
     );
     let invalid_borrowed_checkpoint = direct_ref.len().saturating_add(1);
     let borrowed_rollback_error =
-        OutputSink::rollback(&mut direct_ref, invalid_borrowed_checkpoint)
-            .expect_err("borrowed Vec rollback must reject a checkpoint beyond its length");
+        match OutputSink::rollback(&mut direct_ref, invalid_borrowed_checkpoint) {
+            Ok(()) => panic!("borrowed Vec rollback accepted a checkpoint beyond its length"),
+            Err(error) => error,
+        };
     assert_eq!(
         borrowed_rollback_error.kind(),
         image_slash_star::ImageErrorKind::Parameter
@@ -9758,10 +9762,11 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
                 });
             }
             self.bytes.extend_from_slice(bytes);
-            if self.cancel_on_first_write && self.writes == 1 {
-                if let Some(token) = &self.token {
-                    token.cancel();
-                }
+            if self.cancel_on_first_write
+                && self.writes == 1
+                && let Some(token) = &self.token
+            {
+                token.cancel();
             }
             Ok(())
         }
