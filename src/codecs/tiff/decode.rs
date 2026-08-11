@@ -507,7 +507,10 @@ fn decode_block(
 ) -> CodecResult<Vec<u8>> {
     match compression {
         COMPRESSION_NONE => Ok(encoded.to_vec()),
-        COMPRESSION_LZW => decode_lzw(encoded, expected),
+        COMPRESSION_LZW => match token {
+            Some(token) => decode_lzw_with_token(encoded, expected, token),
+            None => decode_lzw(encoded, expected),
+        },
         COMPRESSION_DEFLATE | COMPRESSION_ADOBE_DEFLATE => {
             let inflated = match token {
                 Some(token) => {
@@ -908,6 +911,101 @@ fn decode_lzw(data: &[u8], expected: usize) -> CodecResult<Vec<u8>> {
     }
 }
 
+fn decode_lzw_with_token(
+    data: &[u8],
+    expected: usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<Vec<u8>> {
+    const CLEAR: u16 = 256;
+    const END: u16 = 257;
+    const LIMIT: usize = 4096;
+    let mut prefixes = [0u16; LIMIT];
+    let mut suffixes = [0u8; LIMIT];
+    for value in 0..256u16 {
+        suffixes[usize::from(value)] = value.to_le_bytes()[0];
+    }
+    let mut stack = [0u8; LIMIT];
+    let mut reader = MsbBits::new(data);
+    let mut output = Vec::with_capacity(expected);
+    let mut width = 9u8;
+    let mut next_code = 258u16;
+    let mut previous = None;
+
+    loop {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        let code = reader.read(width)?;
+        if code == CLEAR {
+            width = 9;
+            next_code = 258;
+            previous = None;
+            continue;
+        }
+        if code == END {
+            return Err(CodecError::Malformed(
+                "TIFF LZW end code preceded the expected output".to_owned(),
+            ));
+        }
+        let Some(old_code) = previous else {
+            if code >= CLEAR || output.len() >= expected {
+                return Err(CodecError::Malformed(
+                    "TIFF LZW stream starts with an invalid code".to_owned(),
+                ));
+            }
+            output.push(code.to_le_bytes()[0]);
+            if output.len() == expected {
+                return Ok(output);
+            }
+            previous = Some(code);
+            continue;
+        };
+
+        let first = if code < next_code {
+            append_lzw_with_token(
+                code,
+                &prefixes,
+                &suffixes,
+                &mut stack,
+                &mut output,
+                expected,
+                token,
+            )?
+        } else if code == next_code {
+            let first = append_lzw_with_token(
+                old_code,
+                &prefixes,
+                &suffixes,
+                &mut stack,
+                &mut output,
+                expected,
+                token,
+            )?;
+            if output.len() >= expected {
+                return Ok(output);
+            }
+            output.push(first);
+            first
+        } else {
+            return Err(CodecError::Malformed(
+                "TIFF LZW code exceeds the current dictionary".to_owned(),
+            ));
+        };
+
+        if output.len() == expected {
+            return Ok(output);
+        }
+
+        if usize::from(next_code) < LIMIT {
+            prefixes[usize::from(next_code)] = old_code;
+            suffixes[usize::from(next_code)] = first;
+            next_code = next_code.wrapping_add(1);
+            if width < 12 && next_code == 1_u16.wrapping_shl(width.into()).wrapping_sub(1) {
+                width = width.wrapping_add(1);
+            }
+        }
+        previous = Some(code);
+    }
+}
+
 fn append_lzw(
     mut code: u16,
     prefixes: &[u16; 4096],
@@ -930,6 +1028,34 @@ fn append_lzw(
     let remaining = expected.saturating_sub(output.len());
     output.extend(stack[..count].iter().rev().take(remaining));
     first
+}
+
+fn append_lzw_with_token(
+    mut code: u16,
+    prefixes: &[u16; 4096],
+    suffixes: &[u8; 4096],
+    stack: &mut [u8; 4096],
+    output: &mut Vec<u8>,
+    expected: usize,
+    token: &crate::CancellationToken,
+) -> CodecResult<u8> {
+    let mut count = 0usize;
+    while code >= 256 {
+        stack[count] = suffixes[usize::from(code)];
+        count = count.wrapping_add(1);
+        code = prefixes[usize::from(code)];
+    }
+    let first = code.to_le_bytes()[0];
+    stack[count] = first;
+    count = count.wrapping_add(1);
+    let remaining = expected.saturating_sub(output.len());
+    for (index, &value) in stack[..count].iter().rev().take(remaining).enumerate() {
+        output.push(value);
+        if index.saturating_add(1).is_multiple_of(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+    Ok(first)
 }
 
 struct MsbBits<'a> {
@@ -1791,11 +1917,99 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out
     }
 
+    fn pack_lzw_variable(codes: &[u16]) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut current = 0u8;
+        let mut used = 0u8;
+        let mut width = 9u8;
+        let mut next_code = 258u16;
+        let mut previous = false;
+        for &code in codes {
+            for shift in (0..width).rev() {
+                current = (current << 1) | (((code >> shift) & 1) as u8);
+                used = used.wrapping_add(1);
+                if used == 8 {
+                    out.push(current);
+                    current = 0;
+                    used = 0;
+                }
+            }
+            if previous {
+                next_code = next_code.wrapping_add(1);
+                if width < 12 && next_code == 1_u16.wrapping_shl(width.into()).wrapping_sub(1) {
+                    width = width.wrapping_add(1);
+                }
+            }
+            previous = true;
+        }
+        out.push(current.wrapping_shl(u32::from(8_u8.wrapping_sub(used))));
+        out
+    }
+
     let _ = decode_lzw(&pack_lzw_9(&[258]), 1);
     let _ = decode_lzw(&pack_lzw_9(&[65]), 0);
     let _ = decode_lzw(&pack_lzw_9(&[65]), 1);
     let _ = decode_lzw(&pack_lzw_9(&[65, 66, 257]), 2);
     let lzw_a = pack_lzw_9(&[65]);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&[], 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&pack_lzw_9(&[257]), 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&pack_lzw_9(&[258]), 1, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&pack_lzw_9(&[65, 258]), 2, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&pack_lzw_9(&[65]), 0, &token);
+    let token = crate::CancellationToken::new();
+    let _ = decode_lzw_with_token(&pack_lzw_9(&[65, 300]), 2, &token);
+    let width_probe = vec![65u16; 2_000];
+    let _ = pack_lzw_variable(&width_probe);
+    let mut growth_codes = vec![65u16, 66];
+    growth_codes.extend(259..=1282);
+    let growth = pack_lzw_variable(&growth_codes);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1_026);
+    let _ = decode_lzw_with_token(&growth, 525_826, &token);
+    let mut repeated_growth = growth_codes.clone();
+    repeated_growth.push(1282);
+    let repeated_growth = pack_lzw_variable(&repeated_growth);
+    for checks in 1_027..=1_032 {
+        let token = crate::CancellationToken::new();
+        token.cancel_after(checks);
+        let _ = decode_lzw_with_token(&repeated_growth, 526_851, &token);
+    }
+    let dictionary_saturation =
+        include_bytes!("../../../tests/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff");
+    let token = crate::CancellationToken::new();
+    let _ = decode(dictionary_saturation, Some(&token));
+    let mut prefixes = [0u16; 4096];
+    let suffixes = [0u8; 4096];
+    let mut stack = [0u8; 4096];
+    for value in 1..=1024u16 {
+        prefixes[usize::from(value)] = value - 1;
+    }
+    let token = crate::CancellationToken::new();
+    let _ = append_lzw_with_token(
+        1024,
+        &prefixes,
+        &suffixes,
+        &mut stack,
+        &mut Vec::new(),
+        1025,
+        &token,
+    );
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = append_lzw_with_token(
+        1024,
+        &prefixes,
+        &suffixes,
+        &mut stack,
+        &mut Vec::new(),
+        1025,
+        &token,
+    );
     for checks in 0..=6 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
