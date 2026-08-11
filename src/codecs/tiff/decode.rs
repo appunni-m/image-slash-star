@@ -546,7 +546,10 @@ fn decode_block(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     match compression {
-        COMPRESSION_NONE => Ok(encoded.to_vec()),
+        COMPRESSION_NONE => match token {
+            Some(token) => copy_raw_with_token(encoded, token),
+            None => Ok(encoded.to_vec()),
+        },
         COMPRESSION_LZW => match token {
             Some(token) => decode_lzw_with_token(encoded, expected, token),
             None => decode_lzw(encoded, expected),
@@ -569,6 +572,15 @@ fn decode_block(
             "TIFF compression method is unsupported".to_owned(),
         )),
     }
+}
+
+fn copy_raw_with_token(data: &[u8], token: &crate::CancellationToken) -> CodecResult<Vec<u8>> {
+    let mut output = Vec::with_capacity(data.len());
+    for chunk in data.chunks(1_024) {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        output.extend_from_slice(chunk);
+    }
+    Ok(output)
 }
 
 fn uses_horizontal_predictor(predictor: usize, compression: usize, bits: u8) -> bool {
@@ -2597,6 +2609,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         let _ = decode(fixture, Some(&token));
     }
+    let raw_payload = include_bytes!("../../../tests/fixtures/input/images/tiff/uncompressed.tiff");
+    let token = crate::CancellationToken::new();
+    let _ = decode(raw_payload, Some(&token));
+    let token = crate::CancellationToken::new();
+    let _ = copy_raw_with_token(&[0; 2_048], &token);
+    let token = crate::CancellationToken::new();
+    token.cancel();
+    let _ = copy_raw_with_token(&[0; 2_048], &token);
+    let token = crate::CancellationToken::new();
+    token.cancel_after(1);
+    let _ = copy_raw_with_token(&[0; 2_048], &token);
     let palette = Some(ImagePalette {
         rgb: vec![0; 768],
         alpha: Vec::new(),
