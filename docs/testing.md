@@ -5345,12 +5345,17 @@ hook.
 The source memory contract is a retained-payload model rather than an allocator
 benchmark: an owned source retains one shared encoded-byte snapshot, inspected
 metadata, and each successful still/sequence result independently; clones add
-no buffer copy; verification does not populate either cache; and a borrowed
-view owns neither its input nor a persistent cache. Codec parser, decompressor,
-and temporary materialization allocations are outside that accounting, so no
-Pillow-parity row or synthetic coverage hook is appropriate. Optional eviction,
-cached verification, and revision-bound allocator/peak measurements remain
-open under API-014 and QA-030.
+no buffer copy; verification does not populate either decode cache; and a
+borrowed view owns neither its input nor a persistent cache. The current
+API-045 candidate adds a separate owned-source `OnceLock<ImageResult<()>>` that
+reuses the first successful or deterministic failed verification result across
+later calls and clones, after requested-scope validation. It retains no parsed
+header/index or temporary codec workspace, and the borrowed view remains
+uncached. Codec parser, decompressor, and temporary materialization allocations
+are outside that accounting, so no Pillow-parity row or synthetic coverage
+hook is appropriate. Optional eviction, parsed codec-state reuse, and
+revision-bound allocator/peak measurements remain open under API-014, API-045,
+and QA-030.
 
 The preceding Rust implementation revision also closes API-006. `DecodedImage::try_new`,
 `try_with_mode`, and `try_with_palette` provide checked zero-copy construction
