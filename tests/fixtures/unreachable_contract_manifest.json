@@ -188,7 +188,7 @@
       "id": "cache-concurrency-api-lifecycle",
       "label": "Cache/concurrency/API lifecycle",
       "status": "covered",
-      "scope": "EncodedImage lazy-cache state, clone sharing, borrowed versus owned lifecycle, and frame/page selection; thread-safety beyond the single-threaded public model is not claimed.",
+      "scope": "EncodedImage lazy-cache state, clone sharing, borrowed versus owned lifecycle, frame/page selection, and bounded native concurrent verification of shared success and failure; WASI remains sequential because its test runtime has no portable thread support, and panic recovery is not claimed.",
       "pillow_parity": "excluded",
       "evidence": [
         {
@@ -197,7 +197,8 @@
           "fixture": null,
           "tests": [
             "borrowed_view_matches_the_owned_snapshot_contract",
-            "source_bound_frame_decode_matches_sequence_ordering"
+            "source_bound_frame_decode_matches_sequence_ordering",
+            "owned_source_verification_is_thread_safe_for_shared_success_and_failure"
           ],
           "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
         }

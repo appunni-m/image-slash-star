@@ -1,4 +1,4 @@
-//! Immutable encoded-image sources with persistent lazy decoding.
+//! Immutable encoded-image sources with persistent lazy verification and decoding.
 
 use std::sync::{Arc, OnceLock};
 
@@ -28,7 +28,7 @@ struct EncodedImageInner {
     sequence_decoded: OnceLock<ImageResult<Decoded<DecodedSequence>>>,
 }
 
-/// An immutable encoded-image snapshot with a shared lazy decode cache.
+/// An immutable encoded-image snapshot with shared lazy verification and decode caches.
 ///
 /// Construction performs signature detection and header inspection but does
 /// not decompress pixels. Clones share the encoded bytes and the
