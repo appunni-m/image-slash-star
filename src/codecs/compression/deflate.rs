@@ -44,6 +44,16 @@ pub(crate) fn decompress_zlib_prefix_with_status(
     decompress_zlib_with_limit(data, max_output)
 }
 
+/// Inflate a PNG zlib prefix while polling the caller's cancellation token.
+#[cfg(feature = "png")]
+pub(crate) fn decompress_zlib_prefix_with_status_and_token(
+    data: &[u8],
+    max_output: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<(Vec<u8>, bool)> {
+    decompress_zlib_with_limit_and_token(data, max_output, token)
+}
+
 #[cfg(coverage)]
 #[coverage(off)]
 #[allow(clippy::expect_used)]
@@ -319,12 +329,21 @@ enum DecodeStatus {
     OutputFull,
 }
 
-// The fixed RFC 1951 distance table is statically valid.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
 fn decompress_zlib_with_limit(
     data: &[u8],
     max_output: usize,
 ) -> CompressionResult<(Vec<u8>, bool)> {
+    decompress_zlib_with_limit_and_token(data, max_output, None)
+}
+
+// The fixed RFC 1951 distance table is statically valid.
+#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+fn decompress_zlib_with_limit_and_token(
+    data: &[u8],
+    max_output: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<(Vec<u8>, bool)> {
+    crate::codecs::error::check_cancelled(token)?;
     if data.len() < 6 {
         return Err(CodecError::NeedMore {
             minimum: 6,
@@ -353,19 +372,35 @@ fn decompress_zlib_with_limit(
     let mut bits = BitReader::new(&data[2..payload_end]);
     let mut output = Vec::with_capacity(max_output.min(65_536));
     loop {
+        crate::codecs::error::check_cancelled(token)?;
         let block_header = bits.read(3)?;
         let final_block = block_header & 1 != 0;
         let status = match block_header >> 1 {
-            0 => decode_stored(&mut bits, &mut output, max_output)?,
+            0 => decode_stored_with_token(&mut bits, &mut output, max_output, token)?,
             1 => {
                 let literal = fixed_literal_table();
                 let distance =
                     Huffman::from_lengths(&[5; 32]).expect("fixed DEFLATE distance table is valid");
-                decode_compressed(&mut bits, &literal, &distance, &mut output, max_output)?
+                decode_compressed_with_token(
+                    &mut bits,
+                    &literal,
+                    &distance,
+                    &mut output,
+                    max_output,
+                    token,
+                )?
             }
             2 => {
                 let (literal, distance) = read_dynamic_tables(&mut bits)?;
-                decode_compressed(&mut bits, &literal, &distance, &mut output, max_output)?
+                crate::codecs::error::check_cancelled(token)?;
+                decode_compressed_with_token(
+                    &mut bits,
+                    &literal,
+                    &distance,
+                    &mut output,
+                    max_output,
+                    token,
+                )?
             }
             _ => return Err(malformed("DEFLATE block type is reserved")),
         };
@@ -379,7 +414,7 @@ fn decompress_zlib_with_limit(
 
     let trailer = &data[payload_end..];
     let expected = u32::from_be_bytes([trailer[0], trailer[1], trailer[2], trailer[3]]);
-    if adler32(&output) != expected {
+    if adler32_with_optional_token(&output, token)? != expected {
         return Err(malformed("zlib Adler-32 checksum does not match"));
     }
     Ok((output, false))
@@ -570,6 +605,42 @@ fn decode_stored(
     }
 }
 
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn decode_stored_with_token(
+    bits: &mut BitReader<'_>,
+    output: &mut Vec<u8>,
+    max_output: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<DecodeStatus> {
+    let Some(token) = token else {
+        return decode_stored(bits, output, max_output);
+    };
+    const COPY_CHECKPOINT_BYTES: usize = 1_024;
+
+    bits.align_to_byte();
+    let len = low_u16(bounded_usize(bits.read(16)?));
+    let complement = low_u16(bounded_usize(bits.read(16)?));
+    if len != !complement {
+        return Err(malformed("stored DEFLATE length complement does not match"));
+    }
+    let Some(available) = max_output.checked_sub(output.len()) else {
+        return Err(malformed("inflated output exceeds its configured limit"));
+    };
+    let copied = usize::from(len).min(available);
+    for index in 0..copied {
+        output.push(bits.read(8)?.to_le_bytes()[0]);
+        if (index + 1).is_multiple_of(COPY_CHECKPOINT_BYTES) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+        }
+    }
+    crate::codecs::error::check_cancelled(Some(token))?;
+    if copied < usize::from(len) {
+        Ok(DecodeStatus::OutputFull)
+    } else {
+        Ok(DecodeStatus::Complete)
+    }
+}
+
 // The fixed RFC 1951 literal table is statically valid.
 #[allow(clippy::expect_used)]
 fn fixed_literal_table() -> Huffman {
@@ -700,6 +771,75 @@ fn decode_compressed(
     }
 }
 
+#[cfg(any(feature = "png", feature = "tiff"))]
+fn decode_compressed_with_token(
+    bits: &mut BitReader<'_>,
+    literal: &Huffman,
+    distance: &Huffman,
+    output: &mut Vec<u8>,
+    max_output: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<DecodeStatus> {
+    let Some(token) = token else {
+        return decode_compressed(bits, literal, distance, output, max_output);
+    };
+    const OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
+    let mut emitted_since_checkpoint = 0usize;
+
+    loop {
+        match literal.decode(bits)? {
+            byte @ 0..=255 => {
+                if output.len() >= max_output {
+                    return Ok(DecodeStatus::OutputFull);
+                }
+                output.push(byte.to_le_bytes()[0]);
+                emitted_since_checkpoint = emitted_since_checkpoint.saturating_add(1);
+                if emitted_since_checkpoint >= OUTPUT_CHECKPOINT_BYTES {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    emitted_since_checkpoint = 0;
+                }
+            }
+            256 => {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                return Ok(DecodeStatus::Complete);
+            }
+            symbol @ 257..=285 => {
+                let length_index = usize::from(symbol.saturating_sub(257));
+                let length = LENGTH_BASE[length_index]
+                    .saturating_add(bounded_usize(bits.read(LENGTH_EXTRA[length_index])?));
+                let distance_symbol = distance.decode(bits)?;
+                if distance_symbol >= 30 {
+                    return Err(malformed("distance symbol is reserved"));
+                }
+                let distance_index = usize::from(distance_symbol);
+                let backwards = DISTANCE_BASE[distance_index]
+                    .saturating_add(bounded_usize(bits.read(DISTANCE_EXTRA[distance_index])?));
+                if backwards > output.len() {
+                    return Err(malformed("back-reference precedes the inflated output"));
+                }
+                let Some(available) = max_output.checked_sub(output.len()) else {
+                    return Err(malformed("inflated output exceeds its configured limit"));
+                };
+                let copied = length.min(available);
+                for _ in 0..copied {
+                    let source = output.len().saturating_sub(backwards);
+                    output.push(output[source]);
+                    emitted_since_checkpoint = emitted_since_checkpoint.saturating_add(1);
+                    if emitted_since_checkpoint >= OUTPUT_CHECKPOINT_BYTES {
+                        crate::codecs::error::check_cancelled(Some(token))?;
+                        emitted_since_checkpoint = 0;
+                    }
+                }
+                if copied < length {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    return Ok(DecodeStatus::OutputFull);
+                }
+            }
+            _ => return Err(malformed("literal/length symbol is reserved")),
+        }
+    }
+}
+
 fn adler32(data: &[u8]) -> u32 {
     const MODULUS: u32 = 65_521;
     let mut a = 1u32;
@@ -709,6 +849,27 @@ fn adler32(data: &[u8]) -> u32 {
         b = b.saturating_add(a).rem_euclid(MODULUS);
     }
     b.wrapping_shl(16) | a
+}
+
+fn adler32_with_optional_token(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CompressionResult<u32> {
+    let Some(token) = token else {
+        return Ok(adler32(data));
+    };
+    const MODULUS: u32 = 65_521;
+    let mut a = 1u32;
+    let mut b = 0u32;
+    for chunk in data.chunks(5_552) {
+        crate::codecs::error::check_cancelled(Some(token))?;
+        for &byte in chunk {
+            a = a.saturating_add(u32::from(byte)).rem_euclid(MODULUS);
+            b = b.saturating_add(a).rem_euclid(MODULUS);
+        }
+    }
+    crate::codecs::error::check_cancelled(Some(token))?;
+    Ok(b.wrapping_shl(16) | a)
 }
 
 #[cfg(feature = "png")]

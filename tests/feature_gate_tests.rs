@@ -6267,7 +6267,8 @@ fn decode_work_budget_is_an_inclusive_rust_contract() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn png_decode_work_budget_covers_scanline_rows() -> Result<(), Box<dyn std::error::Error>> {
+fn png_decode_work_budget_covers_inflation_and_scanline_rows()
+-> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(feature = "png") {
         return Ok(());
     }
@@ -6353,6 +6354,91 @@ fn png_decode_work_budget_covers_scanline_rows() -> Result<(), Box<dyn std::erro
             maximum,
             observed,
         }) if maximum == boundary - 1 && observed == boundary
+    ));
+
+    // A stored-block PNG must also charge while zlib emits its large raster,
+    // before the row-reconstruction checkpoints begin. This threshold is
+    // deliberately above the container and 128-row work already proven
+    // above, so a decoder that only polls after inflation cannot pass it.
+    let stored_data = fs::read(root.join("tests/fixtures/input/images/png/compress_none.png"))?;
+    let stored_expected = image_slash_star::decode(&stored_data)?;
+    let mut stored_lower = 0_u64;
+    let mut stored_upper = 1_u64;
+    loop {
+        let maximum = stored_upper;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&stored_data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, stored_expected.content.pixels);
+                break;
+            }
+            Err(error) => assert!(matches!(
+                error,
+                ImageError::LimitExceeded {
+                    format: Some(ImageFormat::Png),
+                    operation: image_slash_star::CodecOperation::StillDecode,
+                    resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                    maximum: reported,
+                    observed,
+                } if reported == maximum && observed == maximum.saturating_add(1)
+            )),
+        }
+        if stored_upper == 2_048 {
+            return Err(
+                std::io::Error::other("PNG inflation work-budget boundary exceeded probe").into(),
+            );
+        }
+        stored_upper = stored_upper.saturating_mul(2);
+    }
+    while stored_lower < stored_upper {
+        let maximum = stored_lower + (stored_upper - stored_lower) / 2;
+        let policy = unlimited.with_max_work_units(maximum);
+        match image_slash_star::decode_with_policy(&stored_data, &policy) {
+            Ok(decoded) => {
+                assert_eq!(decoded.content.pixels, stored_expected.content.pixels);
+                stored_upper = maximum;
+            }
+            Err(error) => {
+                assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Png),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                ));
+                stored_lower = maximum.saturating_add(1);
+            }
+        }
+    }
+    let stored_boundary = stored_lower;
+    assert!(
+        stored_boundary > 300,
+        "stored PNG inflation should charge internal output checkpoints, got boundary {stored_boundary}"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(
+            &stored_data,
+            &unlimited.with_max_work_units(stored_boundary),
+        )?
+        .content
+        .pixels,
+        stored_expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &stored_data,
+            &unlimited.with_max_work_units(stored_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Png),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == stored_boundary - 1 && observed == stored_boundary
     ));
     Ok(())
 }
