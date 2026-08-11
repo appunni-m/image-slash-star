@@ -44,8 +44,8 @@ pub(crate) fn decompress_zlib_prefix_with_status(
     decompress_zlib_with_limit(data, max_output)
 }
 
-/// Inflate a PNG zlib prefix while polling the caller's cancellation token.
-#[cfg(feature = "png")]
+/// Inflate a PNG or TIFF zlib prefix while polling the caller's cancellation token.
+#[cfg(any(feature = "png", feature = "tiff"))]
 pub(crate) fn decompress_zlib_prefix_with_status_and_token(
     data: &[u8],
     max_output: usize,
