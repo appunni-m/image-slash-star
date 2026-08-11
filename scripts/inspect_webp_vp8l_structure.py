@@ -255,6 +255,7 @@ class StreamStats:
         self.plane_codes: set[int] = set()
         self.mapped_distances: set[int] = set()
         self.green_values: set[int] = set()
+        self.predictor_modes: set[int] = set()
 
     def summary(self) -> dict:
         return {
@@ -272,6 +273,7 @@ class StreamStats:
             "plane_codes": sorted(self.plane_codes),
             "mapped_distances": sorted(self.mapped_distances),
             "green_values": sorted(self.green_values),
+            "predictor_modes": sorted(self.predictor_modes),
         }
 
 
@@ -448,6 +450,12 @@ class VP8LParser:
                 index += 1
 
         stats.green_values.update(pixel[1] for pixel in output)
+        if phase == "predictor_transform_stream":
+            # In a VP8L predictor-transform image, the green channel is the
+            # predictor-mode map. Keep it separate from ordinary decoded green
+            # samples so the structural witness cannot confuse output pixels
+            # with transform state.
+            stats.predictor_modes.update(pixel[1] for pixel in output)
         return output
 
     def parse(self) -> dict:
