@@ -23,6 +23,7 @@ pub enum EncodedImageDecodeState {
 struct EncodedImageInner {
     bytes: Arc<[u8]>,
     info: ImageInfo,
+    verified: OnceLock<ImageResult<()>>,
     decoded: OnceLock<ImageResult<Decoded<DecodedImage>>>,
     sequence_decoded: OnceLock<ImageResult<Decoded<DecodedSequence>>>,
 }
@@ -30,9 +31,9 @@ struct EncodedImageInner {
 /// An immutable encoded-image snapshot with a shared lazy decode cache.
 ///
 /// Construction performs signature detection and header inspection but does
-/// not decompress pixels. Clones share both the encoded bytes and the
-/// once-initialized decode result. Deterministic decode failures are cached as
-/// well as successful results.
+/// not decompress pixels. Clones share the encoded bytes and the
+/// once-initialized verification and decode results. Deterministic failures
+/// are cached as well as successful results.
 #[derive(Debug, Clone)]
 pub struct EncodedImage {
     inner: Arc<EncodedImageInner>,
@@ -246,6 +247,7 @@ impl EncodedImage {
             inner: Arc::new(EncodedImageInner {
                 bytes,
                 info,
+                verified: OnceLock::new(),
                 decoded: OnceLock::new(),
                 sequence_decoded: OnceLock::new(),
             }),
@@ -430,14 +432,18 @@ impl EncodedImage {
     /// does not prove that later pixel decompression will succeed.
     ///
     /// Verification executes independently from ordinary materialization, so
-    /// it does not populate or change the shared decode cache.
+    /// it does not populate or change the shared decode cache. The immutable
+    /// verification result is shared by clones and reused by later calls.
     ///
     /// # Errors
     ///
     /// Returns a structured error when the pinned Pillow oracle's
     /// format-specific verification contract rejects the snapshot.
     pub fn verify(&self) -> ImageResult<()> {
-        crate::codecs::verify_format(&self.inner.bytes, self.format())
+        self.inner
+            .verified
+            .get_or_init(|| crate::codecs::verify_format(&self.inner.bytes, self.format()))
+            .clone()
     }
 
     /// Verify with an explicit caller-requested strength.
@@ -450,7 +456,8 @@ impl EncodedImage {
     /// [`VerificationScope::FullPixels`].
     ///
     /// Verification executes independently from ordinary materialization, so
-    /// it does not populate or change the shared decode cache.
+    /// it does not populate or change the shared decode cache. The
+    /// verification result is reused by this owned source.
     ///
     /// # Errors
     ///
