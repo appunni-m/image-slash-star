@@ -341,6 +341,12 @@
       "expect": {"transforms_contains": [{"type": "color", "size_bits": 9}]}
     },
     {
+      "property_id": "vp8l.transform.color",
+      "operation": "decode",
+      "row_id": "lossless_transform_variants_lossless_predictor_bilinear",
+      "expect": {"transforms_contains": [{"type": "color", "size_bits": 2}]}
+    },
+    {
       "property_id": "vp8l.transform.subtract_green",
       "operation": "decode",
       "row_id": "lossless_transform_variants_lossless_predictor_product",
@@ -667,9 +673,10 @@
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_horizontal"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_vertical"},
         {"operation": "decode", "row_id": "lossless_transform_variants_lossless_diagonal"},
-        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"}
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_noise"},
+        {"operation": "decode", "row_id": "lossless_transform_variants_lossless_predictor_bilinear"}
       ],
-      "gap": "The independent parser now proves the color-transform record and the named block-size boundaries (3 and 9 bits) for the four listed rows; other transform selections and sizes remain outside this witnessed scope."
+      "gap": "The independent parser now proves the color-transform record and every observed block-size boundary (2, 3, and 9 bits) for the listed rows; other transform selections and sizes remain outside this witnessed scope."
     },
     {
       "id": "vp8l.transform.subtract_green",
