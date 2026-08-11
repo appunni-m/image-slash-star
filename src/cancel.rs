@@ -16,7 +16,8 @@
 //! RGB-to-YCbCr conversion items and chroma-downsample output
 //! pixels after each 1,024 converted or produced pixels, JPEG baseline entropy
 //! coding after each 1,024 MCUs, baseline decode entropy after each completed
-//! 1,024-MCU batch, and entropy-output intervals after each 1,024 emitted
+//! 1,024-MCU batch, progressive decode entropy after each completed 1,024-MCU
+//! batch within each scan, and entropy-output intervals after each 1,024 emitted
 //! entropy bytes, GIF decode LZW code reads and 1,024-link/byte
 //! dictionary-expansion intervals, GIF frame/block and palette-quantization
 //! intervals, lossy WebP VP8

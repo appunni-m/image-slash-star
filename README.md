@@ -147,7 +147,7 @@ capabilities and setup.
 | `decode_with_format(&[u8], ImageFormat)` | Decode with a caller-selected format after validating the complete input signature |
 | `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, format allow-list, metadata, canvas, frame, and decoded-byte limits |
 | `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
-| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints; JPEG baseline entropy polls after each 1,024-MCU batch, and GIF LZW polls before each code read and during 1,024-link/byte dictionary expansion |
+| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints; JPEG baseline entropy polls after each 1,024-MCU batch, progressive JPEG polls within each scan at the same cadence, and GIF LZW polls before each code read and during 1,024-link/byte dictionary expansion |
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
@@ -233,7 +233,8 @@ finalization hook once, and a flush failure is reported as `OutputWrite`
 without rollback. Progress callbacks and universal structural writing remain
 roadmap work. An
 `EncodePolicy::max_work_units` budget counts those documented encode
-checkpoints, including GIF LZW input-symbol intervals, and reports a typed
+checkpoints, including GIF LZW input-symbol intervals and progressive JPEG
+scan batches, and reports a typed
 limit error before the checkpoint that would exceed it; it is not a CPU-time
 or allocation guarantee. Legacy APIs never cancel and remain unlimited.
 

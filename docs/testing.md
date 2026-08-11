@@ -8608,8 +8608,25 @@ JPEG `wasm32-wasip1` feature-test binary compiles, and exact local LLVM passes
 66,506/66,506 lines, 8,648/8,648 branches, 3,351/3,351 functions, and
 99,344/99,344 regions. This remains Rust-only evidence with no new Pillow
 parity row; managed Coverage MCP is still unavailable at `project_context`,
-and progressive JPEG interiors, other codec work, allocation/peak accounting,
-progress, sink rollback, and cleanup remain open.
+other codec work, allocation/peak accounting, progress, sink rollback, and
+cleanup remain open.
+
+The JPEG progressive-MCU decode checkpoint slice is implemented at
+`a47515f011dc269a0ffc5e537a1a7651afbc0493`. Progressive reconstruction now
+polls after each completed 1,024-MCU batch within each entropy scan, while the
+ordinary no-token path retains its existing scan-level behavior. The Rust-only
+`jpeg_decode_work_budget_covers_progressive_mcu_checkpoint` contract uses
+deterministic public-API-generated progressive JPEGs: the 64×64 control image
+admits at boundary 14, while the 512×512 image admits at boundary 36, exactly
+22 additional scan checkpoints. The larger image is byte-identical at its
+exact boundary and maximum 35 returns `DecodeWorkUnits` with `observed = 36`.
+Native `feature_gate_tests` passes 61/61, the native parity matrix passes
+28/28, the JPEG `wasm32-wasip1` feature-test binary compiles, and exact local
+LLVM passes 66,510/66,510 lines, 8,652/8,652 branches, 3,351/3,351
+functions, and 99,353/99,353 regions. This remains Rust-only evidence with no
+new Pillow parity row; managed Coverage MCP is still unavailable at
+`project_context`, and other codec work, allocation/peak accounting, progress,
+sink rollback, and cleanup remain open.
 
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
