@@ -579,8 +579,6 @@ pub(crate) fn encode_with_token(
         && !optimize
         && subsampling == "420"
         && quality > 25
-        && w != 0
-        && h != 0
         && w.saturating_mul(h) >= 1024
     {
         let chroma_quantizer = chroma_quantizer
@@ -728,8 +726,6 @@ pub(crate) fn encode_with_token(
         && num_components == 4
         && !progressive
         && !optimize
-        && w != 0
-        && h != 0
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
         && y_plane.len() == w.saturating_mul(h)
         && cb_plane.len() == y_plane.len()
@@ -756,8 +752,6 @@ pub(crate) fn encode_with_token(
         && num_components == 1
         && !progressive
         && !optimize
-        && w != 0
-        && h != 0
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
         && y_plane.len() == w.saturating_mul(h)
     {
@@ -779,8 +773,6 @@ pub(crate) fn encode_with_token(
         && !progressive
         && !optimize
         && subsampling == "422"
-        && w != 0
-        && h != 0
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(64) && h.is_multiple_of(8)))
         && y_plane.len() == w.saturating_mul(h)
         && cb_w == w.div_ceil(16).saturating_mul(8)
@@ -816,8 +808,6 @@ pub(crate) fn encode_with_token(
         && !progressive
         && !optimize
         && subsampling == "444"
-        && w != 0
-        && h != 0
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
         && y_plane.len() == w.saturating_mul(h)
         && cb_w == w
@@ -851,8 +841,6 @@ pub(crate) fn encode_with_token(
         && !optimize
         && subsampling == "420"
         && quality <= 25
-        && w != 0
-        && h != 0
         && w.saturating_mul(h) >= 1024
         && y_plane.len() == w.saturating_mul(h)
         && cb_w == w.div_ceil(16).saturating_mul(8)
