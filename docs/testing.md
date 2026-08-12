@@ -16,6 +16,12 @@ The current strict Coverage MCP snapshot is
 109,876/110,011 regions. The managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
 all-feature parity matrix currently passes 28/28.
+The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
+final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
+1,449/1,449 passed and no skips. The immutable managed feature-matrix
+registration failed before execution because it invokes sandbox-blocked
+`sccache`; the exact script with `CARGO_BUILD_RUSTC_WRAPPER=` completed all
+30 native/WASI lanes locally.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
