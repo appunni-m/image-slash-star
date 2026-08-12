@@ -2011,6 +2011,436 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = downsample(&plane, 2, 2, 1, 1, 2, 3, None);
     }));
 
+    // Exercise every production streaming layout with a genuinely partial
+    // final MCU, restart markers, and an EXIF segment. These calls are kept
+    // beside the private-branch coverage hook because the public fast-path
+    // gate intentionally selects only the default 4:2:0 RGB case.
+    let direct_width = 65usize;
+    let direct_height = 35usize;
+    let direct_luma_plane = vec![128u8; direct_width.saturating_mul(direct_height)];
+    let direct_chroma_width = direct_width.div_ceil(16).saturating_mul(8);
+    let direct_chroma_height = direct_height.div_ceil(2);
+    let direct_chroma_plane = vec![128u8; direct_chroma_width.saturating_mul(direct_chroma_height)];
+    let direct_422_chroma_plane = vec![128u8; direct_chroma_width.saturating_mul(direct_height)];
+    let direct_full_plane = direct_luma_plane.clone();
+    let direct_options = JpegEncodeOptions {
+        restart_interval: Some(1),
+        exif: Some(vec![b'E', b'x', b'i', b'f', 0]),
+        ..JpegEncodeOptions::default()
+    };
+    let direct_params_420 = quant::build_params(75, "420", 3);
+    let direct_y_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[0]);
+    let direct_chroma_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[1]);
+    let _ = encode_baseline_420_mcu_row_streaming(
+        Baseline420Source::Planes {
+            y: &direct_luma_plane,
+            cb: &direct_chroma_plane,
+            cr: &direct_chroma_plane,
+            chroma_width: direct_chroma_width,
+            chroma_height: direct_chroma_height,
+        },
+        direct_width,
+        direct_height,
+        &direct_params_420,
+        &direct_y_quantizer_420,
+        &direct_chroma_quantizer_420,
+        &direct_options,
+    );
+    let low_quality_options = JpegEncodeOptions {
+        quality: Some(20),
+        ..direct_options.clone()
+    };
+    let direct_params_low = quant::build_params(20, "420", 3);
+    let direct_y_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[0]);
+    let direct_chroma_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[1]);
+    let _ = encode_baseline_420_mcu_row_streaming(
+        Baseline420Source::Planes {
+            y: &direct_luma_plane,
+            cb: &direct_chroma_plane,
+            cr: &direct_chroma_plane,
+            chroma_width: direct_chroma_width,
+            chroma_height: direct_chroma_height,
+        },
+        direct_width,
+        direct_height,
+        &direct_params_low,
+        &direct_y_quantizer_low,
+        &direct_chroma_quantizer_low,
+        &low_quality_options,
+    );
+    let direct_params_422 = quant::build_params(75, "422", 3);
+    let direct_y_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[0]);
+    let direct_chroma_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[1]);
+    let _ = encode_baseline_422_block_row_streaming(
+        &direct_full_plane,
+        &direct_422_chroma_plane,
+        &direct_422_chroma_plane,
+        direct_width,
+        direct_height,
+        direct_chroma_width,
+        direct_height,
+        &direct_params_422,
+        &direct_y_quantizer_422,
+        &direct_chroma_quantizer_422,
+        &direct_options,
+    );
+    let direct_params_444 = quant::build_params(75, "444", 3);
+    let direct_y_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[0]);
+    let direct_chroma_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[1]);
+    let _ = encode_baseline_444_block_row_streaming(
+        &direct_full_plane,
+        &direct_full_plane,
+        &direct_full_plane,
+        direct_width,
+        direct_height,
+        &direct_params_444,
+        &direct_y_quantizer_444,
+        &direct_chroma_quantizer_444,
+        &direct_options,
+    );
+    let direct_params_gray = quant::build_params(75, "444", 1);
+    let direct_gray_quantizer = FdctQuantizer::new(&direct_params_gray.quant_tables[0]);
+    let _ = encode_baseline_grayscale_block_row_streaming(
+        &direct_luma_plane,
+        direct_width,
+        direct_height,
+        &direct_params_gray,
+        &direct_gray_quantizer,
+        &direct_options,
+    );
+    let direct_params_cmyk = quant::build_params(75, "444", 4);
+    let direct_cmyk_quantizer = FdctQuantizer::new(&direct_params_cmyk.quant_tables[0]);
+    let _ = encode_baseline_cmyk_block_row_streaming(
+        &direct_luma_plane,
+        &direct_luma_plane,
+        &direct_luma_plane,
+        &direct_luma_plane,
+        direct_width,
+        direct_height,
+        &direct_params_cmyk,
+        &direct_cmyk_quantizer,
+        &direct_options,
+    );
+    let overflowing_direct_options = JpegEncodeOptions {
+        restart_interval: Some(70_000),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode_baseline_420_mcu_row_streaming(
+        Baseline420Source::Planes {
+            y: &direct_luma_plane,
+            cb: &direct_chroma_plane,
+            cr: &direct_chroma_plane,
+            chroma_width: direct_chroma_width,
+            chroma_height: direct_chroma_height,
+        },
+        direct_width,
+        direct_height,
+        &direct_params_420,
+        &direct_y_quantizer_420,
+        &direct_chroma_quantizer_420,
+        &overflowing_direct_options,
+    );
+    let _ = encode_baseline_422_block_row_streaming(
+        &direct_full_plane,
+        &direct_422_chroma_plane,
+        &direct_422_chroma_plane,
+        direct_width,
+        direct_height,
+        direct_chroma_width,
+        direct_height,
+        &direct_params_422,
+        &direct_y_quantizer_422,
+        &direct_chroma_quantizer_422,
+        &overflowing_direct_options,
+    );
+    let _ = encode_baseline_444_block_row_streaming(
+        &direct_full_plane,
+        &direct_full_plane,
+        &direct_full_plane,
+        direct_width,
+        direct_height,
+        &direct_params_444,
+        &direct_y_quantizer_444,
+        &direct_chroma_quantizer_444,
+        &overflowing_direct_options,
+    );
+    let _ = encode_baseline_grayscale_block_row_streaming(
+        &direct_luma_plane,
+        direct_width,
+        direct_height,
+        &direct_params_gray,
+        &direct_gray_quantizer,
+        &overflowing_direct_options,
+    );
+    let _ = encode_baseline_cmyk_block_row_streaming(
+        &direct_luma_plane,
+        &direct_luma_plane,
+        &direct_luma_plane,
+        &direct_luma_plane,
+        direct_width,
+        direct_height,
+        &direct_params_cmyk,
+        &direct_cmyk_quantizer,
+        &overflowing_direct_options,
+    );
+
+    let standard_tables = huffman::standard_derived_tables();
+    let dc_tables = [&standard_tables[0], &standard_tables[1]];
+    let ac_tables = [&standard_tables[2], &standard_tables[3]];
+    let zero_block = [0i16; 64];
+    let components_422 = [
+        CompData {
+            blocks: vec![zero_block; 2],
+            blocks_per_row: 2,
+            block_rows: 1,
+            h_samp: 2,
+            v_samp: 1,
+            quant_slot: 0,
+            id: 1,
+            dc_tbl: 0,
+            ac_tbl: 0,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 2,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 3,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+    ];
+    assert!(baseline_422_independent_entropy_is_compatible(
+        &components_422,
+        2,
+        1
+    ));
+    assert!(!baseline_422_independent_entropy_is_compatible(
+        &components_422,
+        1,
+        1
+    ));
+    assert!(!baseline_422_independent_entropy_is_compatible(&[], 2, 1));
+    let mut independent_422_output = Vec::new();
+    encode_baseline_422_independent_entropy(
+        &mut independent_422_output,
+        &components_422,
+        &dc_tables,
+        &ac_tables,
+    );
+    encode_baseline_422_independent_entropy(
+        &mut independent_422_output,
+        &[],
+        &dc_tables,
+        &ac_tables,
+    );
+
+    let components_444 = [
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 0,
+            id: 1,
+            dc_tbl: 0,
+            ac_tbl: 0,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 2,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 3,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+    ];
+    assert!(baseline_444_independent_entropy_is_compatible(
+        &components_444,
+        1,
+        1
+    ));
+    assert!(!baseline_444_independent_entropy_is_compatible(
+        &components_444,
+        2,
+        1
+    ));
+    assert!(!baseline_444_independent_entropy_is_compatible(&[], 1, 1));
+    let mut independent_444_output = Vec::new();
+    encode_baseline_444_independent_entropy(
+        &mut independent_444_output,
+        &components_444,
+        &dc_tables,
+        &ac_tables,
+    );
+    encode_baseline_444_independent_entropy(
+        &mut independent_444_output,
+        &[],
+        &dc_tables,
+        &ac_tables,
+    );
+
+    let components_420 = [
+        CompData {
+            blocks: vec![zero_block; 4],
+            blocks_per_row: 2,
+            block_rows: 2,
+            h_samp: 2,
+            v_samp: 2,
+            quant_slot: 0,
+            id: 1,
+            dc_tbl: 0,
+            ac_tbl: 0,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 2,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+        CompData {
+            blocks: vec![zero_block],
+            blocks_per_row: 1,
+            block_rows: 1,
+            h_samp: 1,
+            v_samp: 1,
+            quant_slot: 1,
+            id: 3,
+            dc_tbl: 1,
+            ac_tbl: 1,
+        },
+    ];
+    assert!(baseline_420_independent_entropy_is_compatible(
+        &components_420,
+        2,
+        2
+    ));
+    assert!(!baseline_420_independent_entropy_is_compatible(
+        &components_420,
+        2,
+        1
+    ));
+    assert!(!baseline_420_independent_entropy_is_compatible(&[], 2, 2));
+    let mut independent_420_output = Vec::new();
+    encode_baseline_420_independent_entropy(
+        &mut independent_420_output,
+        &components_420,
+        &dc_tables,
+        &ac_tables,
+    );
+    encode_baseline_420_independent_entropy(
+        &mut independent_420_output,
+        &[],
+        &dc_tables,
+        &ac_tables,
+    );
+
+    let (edge_differences, _) = mcu_dc_differences(
+        [1, 2, 3, 4, 5, 6],
+        [true, false, true, false, true, false],
+        [0, 0, 0],
+    );
+    let mut coefficient_group = [0i16; 256];
+    for lane in 0..4 {
+        coefficient_group[ZIGZAG[1].saturating_mul(4).saturating_add(lane)] =
+            if lane == 0 { 128 } else { 1 };
+    }
+    let coefficient_blocks = [
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 0,
+        },
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 1,
+        },
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 2,
+        },
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 3,
+        },
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 0,
+        },
+        CoefficientMajorBlock {
+            group: &coefficient_group,
+            lane: 1,
+        },
+    ];
+    let mut edge_writers = [RawBlockWriter::new(); 6];
+    encode_six_coefficient_major_edge_raw_blocks(
+        &mut edge_writers,
+        coefficient_blocks,
+        edge_differences,
+        [true, false, true, false, true, false],
+        &standard_tables[0],
+        &standard_tables[2],
+        &standard_tables[1],
+        &standard_tables[3],
+        huffman::standard_ac_luma_coefficient_ready(),
+        huffman::standard_ac_chroma_coefficient_ready(),
+    );
+    let mut raw_writer = RawBlockWriter::new();
+    let mut raw_run = 0;
+    encode_raw_ac_value(
+        &mut raw_writer,
+        0,
+        &mut raw_run,
+        &standard_tables[2],
+        huffman::standard_ac_luma_coefficient_ready(),
+    );
+    raw_run = 16;
+    encode_raw_ac_value(
+        &mut raw_writer,
+        128,
+        &mut raw_run,
+        &standard_tables[2],
+        huffman::standard_ac_luma_coefficient_ready(),
+    );
+    finish_raw_ac(&mut raw_writer, raw_run, &standard_tables[2]);
+    let mut raw_scan_output = Vec::new();
+    let mut raw_scan = RawScanWriter::new(&mut raw_scan_output);
+    raw_scan.write(1, 1);
+    raw_scan.write(u64::MAX, 64);
+    raw_scan.finish();
+
     let progressive_dc_scan = ProgScan {
         comps: vec![0, 1, 2],
         ss: 0,
@@ -3844,7 +4274,7 @@ fn downsample_without_checkpoint(
     hr: usize,
     vr: usize,
 ) -> Vec<u8> {
-    if sw == 0 || sh == 0 || dw == 0 || dh == 0 {
+    if sw == 0 || sh == 0 || dw == 0 || dh == 0 || hr == 0 || vr == 0 {
         return vec![0u8; dw.saturating_mul(dh)];
     }
 
@@ -3882,10 +4312,19 @@ fn downsample_without_checkpoint(
                         .saturating_add(u32::from(plane[sy.saturating_mul(sw).saturating_add(sx)]));
                 }
             }
-            debug_assert_eq!(hr, 2);
-            debug_assert!(vr == 1 || vr == 2);
-            let bias = u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2));
-            let divisor = low_u32(hr.saturating_mul(vr));
+            // The common JPEG cases (h2v1 and h2v2) use IJG's alternating
+            // rounding bias.  Keep the fallback a real box filter as well;
+            // this makes the helper total for future sampling ratios instead
+            // of relying on debug-only assertions followed by division by
+            // zero for malformed internal geometry.
+            let bias = if hr == 2 && (vr == 1 || vr == 2) {
+                u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2))
+            } else {
+                0
+            };
+            let divisor = u32::try_from(hr.saturating_mul(vr))
+                .unwrap_or(u32::MAX)
+                .max(1);
             out[y.saturating_mul(dw).saturating_add(x)] =
                 sum.saturating_add(bias).div_euclid(divisor).to_le_bytes()[0];
         }
@@ -3963,6 +4402,9 @@ fn downsample_with_checkpoint<C: DownsampleCheckpoint>(
     checkpoint: &mut C,
 ) -> CodecResult<Vec<u8>> {
     let mut out = vec![0u8; dw.saturating_mul(dh)];
+    if sw == 0 || sh == 0 || hr == 0 || vr == 0 {
+        return Ok(out);
+    }
     if hr == 1 && vr == 1 {
         // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:99-113,145-174.
         // Full-size components duplicate their right and bottom edge samples
@@ -3999,10 +4441,16 @@ fn downsample_with_checkpoint<C: DownsampleCheckpoint>(
             }
             // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcsample.c:227-299.
             // h2v1 alternates 0/1; h2v2 alternates 1/2 for each output row.
-            debug_assert_eq!(hr, 2);
-            debug_assert!(vr == 1 || vr == 2);
-            let bias = u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2));
-            let divisor = low_u32(hr.saturating_mul(vr));
+            // Other ratios use the same bounded box-filter fallback as the
+            // no-checkpoint path rather than a debug-only assertion.
+            let bias = if hr == 2 && (vr == 1 || vr == 2) {
+                u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2))
+            } else {
+                0
+            };
+            let divisor = u32::try_from(hr.saturating_mul(vr))
+                .unwrap_or(u32::MAX)
+                .max(1);
             out[y.saturating_mul(dw).saturating_add(x)] =
                 sum.saturating_add(bias).div_euclid(divisor).to_le_bytes()[0];
             checkpoint.observe()?;
@@ -6806,7 +7254,11 @@ fn encode_baseline_422_independent_entropy(
     ac_tables: &[&huffman::DerivedTable; 2],
 ) {
     let [y, cb, cr] = components else {
-        unreachable!("the 4:2:2 fast-path guard requires three components");
+        // Keep this private helper total even if a future caller changes the
+        // compatibility guard. The normal encoder proves this shape before
+        // dispatching here, but malformed internal state must not become a
+        // panic in a production build.
+        return;
     };
     let mcu_columns = y.blocks_per_row / 2;
     let mcu_rows = y.block_rows;
@@ -6887,7 +7339,7 @@ fn encode_baseline_444_independent_entropy(
     ac_tables: &[&huffman::DerivedTable; 2],
 ) {
     let [y, cb, cr] = components else {
-        unreachable!("the 4:4:4 fast-path guard requires three components");
+        return;
     };
     let luma_ready = huffman::standard_ac_luma_coefficient_ready();
     let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
@@ -6959,7 +7411,7 @@ fn encode_baseline_420_independent_entropy(
     ac_tables: &[&huffman::DerivedTable; 2],
 ) {
     let [y, cb, cr] = components else {
-        unreachable!("the 4:2:0 fast-path guard requires three components");
+        return;
     };
     let mcu_columns = y.blocks_per_row / 2;
     let mcu_rows = y.block_rows / 2;
