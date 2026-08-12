@@ -347,9 +347,9 @@ fn decode_ico_bmp(
     match bpp {
         32 => decode_ico_bmp_32bpp(data, width, actual_height, token),
         24 => decode_ico_bmp_24bpp(data, width, actual_height, token),
-        8 => decode_ico_bmp_8bpp(data, width, actual_height, colors_used),
-        4 => decode_ico_bmp_4bpp(data, width, actual_height, colors_used),
-        1 => decode_ico_bmp_1bpp(data, width, actual_height, colors_used),
+        8 => decode_ico_bmp_8bpp(data, width, actual_height, colors_used, token),
+        4 => decode_ico_bmp_4bpp(data, width, actual_height, colors_used, token),
+        1 => decode_ico_bmp_1bpp(data, width, actual_height, colors_used, token),
         _ => Err(CodecError::Unsupported(format!(
             "unsupported ICO BMP pixel depth {bpp}"
         ))),
@@ -459,6 +459,7 @@ fn decode_ico_bmp_8bpp(
     width: u32,
     height: u32,
     colors_used: u32,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<DecodedImage> {
     let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 256 } else { colors_used }) as usize;
@@ -498,6 +499,7 @@ fn decode_ico_bmp_8bpp(
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
+        crate::codecs::error::check_cancelled(token)?;
         let row_start = y.wrapping_mul(padded_row);
         let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
@@ -523,6 +525,7 @@ fn decode_ico_bmp_4bpp(
     width: u32,
     height: u32,
     colors_used: u32,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<DecodedImage> {
     let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 16 } else { colors_used }) as usize;
@@ -565,6 +568,7 @@ fn decode_ico_bmp_4bpp(
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
+        crate::codecs::error::check_cancelled(token)?;
         let row_start = y.wrapping_mul(padded_row);
         let row_end = row_start.wrapping_add(row_bytes);
         let row = &pixels_raw[row_start..row_end];
@@ -600,6 +604,7 @@ fn decode_ico_bmp_1bpp(
     width: u32,
     height: u32,
     colors_used: u32,
+    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<DecodedImage> {
     let header_size = 40_usize;
     let color_count = (if colors_used == 0 { 2 } else { colors_used }) as usize;
@@ -642,6 +647,7 @@ fn decode_ico_bmp_1bpp(
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
     for y in (0..height as usize).rev() {
+        crate::codecs::error::check_cancelled(token)?;
         let row_start = y.wrapping_mul(padded_row);
         let row_end = row_start.wrapping_add(row_bytes);
         let row = &pixels_raw[row_start..row_end];
@@ -819,27 +825,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_ico_bmp_24bpp(&dib24, 1, 1, None).is_ok());
 
     let dib8 = indexed_dib(1, 1, 8, 3, &[0]);
-    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3).is_ok());
+    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3, None).is_ok());
     let dib8_masked = indexed_dib_with_mask(2, 1, 8, 3, &[0, 1], &[0x40]);
-    assert!(decode_ico_bmp_8bpp(&dib8_masked, 2, 1, 3).is_ok());
+    assert!(decode_ico_bmp_8bpp(&dib8_masked, 2, 1, 3, None).is_ok());
     let dib8_default_palette = indexed_dib(1, 1, 8, 256, &[0]);
-    assert!(decode_ico_bmp_8bpp(&dib8_default_palette, 1, 1, 0).is_ok());
+    assert!(decode_ico_bmp_8bpp(&dib8_default_palette, 1, 1, 0, None).is_ok());
 
     let dib4 = indexed_dib(3, 1, 4, 3, &[0x12, 0]);
-    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3).is_ok());
+    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3, None).is_ok());
     let dib4_even = indexed_dib(4, 1, 4, 3, &[0x12, 0x10]);
-    assert!(decode_ico_bmp_4bpp(&dib4_even, 4, 1, 3).is_ok());
+    assert!(decode_ico_bmp_4bpp(&dib4_even, 4, 1, 3, None).is_ok());
     let dib4_masked = indexed_dib_with_mask(2, 1, 4, 3, &[0x12], &[0x40]);
-    assert!(decode_ico_bmp_4bpp(&dib4_masked, 2, 1, 3).is_ok());
+    assert!(decode_ico_bmp_4bpp(&dib4_masked, 2, 1, 3, None).is_ok());
     let dib4_default_palette = indexed_dib(1, 1, 4, 16, &[0]);
-    assert!(decode_ico_bmp_4bpp(&dib4_default_palette, 1, 1, 0).is_ok());
+    assert!(decode_ico_bmp_4bpp(&dib4_default_palette, 1, 1, 0, None).is_ok());
 
     let dib1 = indexed_dib(1, 1, 1, 2, &[0x80]);
-    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2).is_ok());
+    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2, None).is_ok());
     let dib1_masked = indexed_dib_with_mask(2, 1, 1, 2, &[0x80], &[0x40]);
-    assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2).is_ok());
+    assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2, None).is_ok());
     let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
-    assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0).is_ok());
+    assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0, None).is_ok());
 }
 
 #[cfg(coverage)]
