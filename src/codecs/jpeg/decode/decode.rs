@@ -800,8 +800,16 @@ fn reconstruct_baseline_grayscale_direct_safe(
                         .saturating_add(row)
                         .saturating_mul(width)
                         .saturating_add(block_x);
-                    pixels[destination..destination.saturating_add(valid_width)]
-                        .copy_from_slice(&edge_block[source..source.saturating_add(valid_width)]);
+                    let destination_end = destination.saturating_add(valid_width);
+                    let source_end = source.saturating_add(valid_width);
+                    let Some(destination_slice) = pixels.get_mut(destination..destination_end)
+                    else {
+                        return Ok(None);
+                    };
+                    let Some(source_slice) = edge_block.get(source..source_end) else {
+                        return Ok(None);
+                    };
+                    destination_slice.copy_from_slice(source_slice);
                 }
             }
             if reader.insufficient_data() {
@@ -1583,12 +1591,15 @@ fn reconstruct_baseline_444_direct_safe(
                     .saturating_add(row)
                     .saturating_mul(width.saturating_mul(3))
                     .saturating_add(block_x.saturating_mul(3));
+                let output_end = output_start.saturating_add(valid_width.saturating_mul(3));
+                let Some(output) = pixels.get_mut(output_start..output_end) else {
+                    return Ok(None);
+                };
                 converter.ycc_to_rgb_batch(
                     &y_block[source_start..source_start.saturating_add(valid_width)],
                     &cb_block[source_start..source_start.saturating_add(valid_width)],
                     &cr_block[source_start..source_start.saturating_add(valid_width)],
-                    &mut pixels
-                        [output_start..output_start.saturating_add(valid_width.saturating_mul(3))],
+                    output,
                 );
             }
             check_baseline_mcu_checkpoint(
@@ -3236,14 +3247,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
             Ok(None)
         ));
 
-        let large_entropy = vec![0u8; 1_024];
+        let large_entropy = vec![0u8; 64 * 1_024];
         let large_entropy_segments = EntropySegments {
             segments: vec![(0, large_entropy.len())],
             eoi_pos: 0,
         };
         let mut checkpoint_gray = gray_info.clone();
-        checkpoint_gray.width = 1;
-        checkpoint_gray.height = 1;
+        checkpoint_gray.width = 8 * 1_024;
+        checkpoint_gray.height = 8;
         let checkpoint_token = crate::CancellationToken::new();
         checkpoint_token.cancel();
         assert!(
@@ -3260,8 +3271,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         );
 
         let mut checkpoint_444 = rgb444_info.clone();
-        checkpoint_444.width = 1;
-        checkpoint_444.height = 1;
+        checkpoint_444.width = 8 * 1_024;
+        checkpoint_444.height = 8;
         let checkpoint_token = crate::CancellationToken::new();
         checkpoint_token.cancel();
         assert!(
