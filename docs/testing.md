@@ -21,7 +21,8 @@ final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The immutable managed feature-matrix
 registration failed before execution because it invokes sandbox-blocked
 `sccache`; the exact script with `CARGO_BUILD_RUSTC_WRAPPER=` completed all
-30 native/WASI lanes locally.
+33 matrix lanes across native, `wasm32-unknown-unknown`, and
+`wasm32-wasip1` locally.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run

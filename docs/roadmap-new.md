@@ -42,8 +42,9 @@ feature claims or invent new Pillow rows.
   the strict-audit checkpoint). The registered feature-matrix wrapper
   `680a7e74-61af-4315-aee7-8a5fa09d0820` failed before test execution because
   its immutable command invokes sandbox-blocked `sccache`; the same script
-  with `CARGO_BUILD_RUSTC_WRAPPER=` completed all 30 native/WASI lanes and
-  reported matching capability tables.
+  with `CARGO_BUILD_RUSTC_WRAPPER=` completed all 33 matrix lanes across
+  native, `wasm32-unknown-unknown`, and `wasm32-wasip1`, and reported matching
+  capability tables.
 - The fixed public production comparison was run with five alternating rounds
   across 20 encode and 20 decode cases on the same macOS Arm host, using
   ordinary Cargo release Rust and TurboJPEG's release SIMD. All RGB/gray
