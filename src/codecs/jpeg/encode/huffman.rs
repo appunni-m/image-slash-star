@@ -69,7 +69,7 @@ pub(crate) const COEFFICIENT_READY_LIMIT: i32 = 127;
 
 pub(crate) const COEFFICIENT_READY_RUNS: usize = 16;
 
-const COEFFICIENT_READY_WIDTH: usize = (COEFFICIENT_READY_LIMIT as usize)
+pub(crate) const COEFFICIENT_READY_WIDTH: usize = (COEFFICIENT_READY_LIMIT as usize)
     .saturating_mul(2)
     .saturating_add(1);
 

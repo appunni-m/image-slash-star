@@ -566,6 +566,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = build_huff_table(1, &STD_AC_LUMA.0, &STD_AC_LUMA.1);
     let _ = build_huff_table(1, &STD_AC_CHROMA.0, &STD_AC_CHROMA.1);
     let _ = build_huff_table(2, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
+    let mut wrong_dc_luma_values = STD_DC_LUMA.1;
+    wrong_dc_luma_values[0] ^= 1;
+    let mut wrong_dc_chroma_values = STD_DC_CHROMA.1;
+    wrong_dc_chroma_values[0] ^= 1;
+    let mut wrong_ac_luma_values = STD_AC_LUMA.1;
+    wrong_ac_luma_values[0] ^= 1;
+    let mut wrong_ac_chroma_values = STD_AC_CHROMA.1;
+    wrong_ac_chroma_values[0] ^= 1;
+    let _ = build_huff_table(0, &STD_DC_LUMA.0, &wrong_dc_luma_values);
+    let _ = build_huff_table(0, &STD_DC_CHROMA.0, &wrong_dc_chroma_values);
+    let _ = build_huff_table(1, &STD_AC_LUMA.0, &wrong_ac_luma_values);
+    let _ = build_huff_table(1, &STD_AC_CHROMA.0, &wrong_ac_chroma_values);
 
     #[cfg(target_arch = "aarch64")]
     {
@@ -596,6 +608,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         assert!(standard_ac_general_pair_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1).is_some());
         assert!(standard_ac_general_pair_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1).is_some());
+        assert!(standard_ac_general_pair_table(&STD_AC_LUMA.0, &wrong_ac_luma_values).is_none());
+        assert!(
+            standard_ac_general_pair_table(&STD_AC_CHROMA.0, &wrong_ac_chroma_values).is_none()
+        );
         assert!(standard_ac_general_pair_table(&[0; 16], &[]).is_none());
     }
 }

@@ -806,10 +806,10 @@ fn reconstruct_baseline_grayscale_direct_safe(
                     else {
                         return Ok(None);
                     };
-                    let Some(source_slice) = edge_block.get(source..source_end) else {
-                        return Ok(None);
-                    };
-                    destination_slice.copy_from_slice(source_slice);
+                    // `source` and `source_end` are bounded by the fixed
+                    // 8x8 edge block and `valid_width <= 8`; the checked
+                    // destination slice above is the only fallible copy.
+                    destination_slice.copy_from_slice(&edge_block[source..source_end]);
                 }
             }
             if reader.insufficient_data() {
@@ -2160,6 +2160,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         super::upsample::__coverage_exercise_private_branches();
 
         let checkpoint_token = crate::CancellationToken::new();
+        assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 0).is_ok());
+        assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 1).is_ok());
         assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 1_024).is_ok());
         checkpoint_token.cancel();
         assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 1_024).is_err());
@@ -2504,6 +2506,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_start += 1),
         Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_end -= 1),
         Box::new(|candidate: &mut JpegInfo| candidate.eoi_pos -= 1),
+        Box::new(|candidate: &mut JpegInfo| {
+            candidate.eoi_pos = 0;
+            candidate.scans[0].entropy_end = 0;
+        }),
     ] {
         let mut candidate = known_info.clone();
         mutator(&mut candidate);
@@ -2879,6 +2885,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
             extract_entropy_segments(cmyk_data, cmyk_info.entropy_start, cmyk_info.eoi_pos);
         let cmyk_quant = natural_quant_tables(&cmyk_info);
         let (cmyk_mcus_x, cmyk_mcus_y) = mcu_dimensions(&cmyk_info);
+        assert!(reconstruct_image(&rgb420_info, rgb420_data, None).is_ok());
+        assert!(reconstruct_image(&rgb422_info, rgb422_data, None).is_ok());
+        assert!(reconstruct_image(&rgb444_info, rgb444_data, None).is_ok());
+        assert!(reconstruct_image(&gray_info, gray_data, None).is_ok());
+        assert!(reconstruct_image(&cmyk_info, cmyk_data, None).is_ok());
         let cmyk_none = |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
             matches!(
                 reconstruct_baseline_cmyk_direct_safe(
@@ -3008,6 +3019,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
             ),
             Ok(Some(_))
         ));
+        let _ = reconstruct_baseline_grayscale_direct_safe(
+            &gray_edge,
+            &gray_segments,
+            gray_data,
+            None,
+            17,
+            1,
+            &gray_quant,
+        );
         let empty_gray_entropy = EntropySegments {
             segments: vec![(0, 0)],
             eoi_pos: 0,
