@@ -59,10 +59,14 @@ path = "tests/build_script_tests.rs"
 
 [dependencies]
 bytemuck = "1"
+wide = { version = "1.6.1", optional = true }
 
 [features]
 default = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico"]
-jpeg = []
+jpeg = ["dep:wide"]
+# Opt-in safe SIMD RGB conversion. The default encoder keeps the scalar
+# reference because the complete-path benchmark did not admit this candidate.
+jpeg-wide-color = ["jpeg"]
 png = []
 gif = []
 bmp = []

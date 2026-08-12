@@ -303,18 +303,17 @@ pub(super) fn reconstruct_image(
         );
 
         let chroma_stride = chroma_src_w.saturating_mul(h_ratio_us);
-        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(3));
+        let mut pixels = vec![0u8; w.saturating_mul(h).saturating_mul(3)];
         for y in 0..h {
-            for x in 0..w {
-                let (r, g, b) = converter.ycc_to_rgb(
-                    y_buf[y.saturating_mul(y_w).saturating_add(x)],
-                    cb_upsampled[y.saturating_mul(chroma_stride).saturating_add(x)],
-                    cr_upsampled[y.saturating_mul(chroma_stride).saturating_add(x)],
-                );
-                pixels.push(r);
-                pixels.push(g);
-                pixels.push(b);
-            }
+            let y_start = y.saturating_mul(y_w);
+            let chroma_start = y.saturating_mul(chroma_stride);
+            let output_start = y.saturating_mul(w).saturating_mul(3);
+            converter.ycc_to_rgb_batch(
+                &y_buf[y_start..y_start.saturating_add(w)],
+                &cb_upsampled[chroma_start..chroma_start.saturating_add(w)],
+                &cr_upsampled[chroma_start..chroma_start.saturating_add(w)],
+                &mut pixels[output_start..output_start.saturating_add(w.saturating_mul(3))],
+            );
         }
         Ok(DecodedImage::new(
             u32::from(info.width),

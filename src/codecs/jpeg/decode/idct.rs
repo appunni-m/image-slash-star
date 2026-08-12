@@ -255,23 +255,35 @@ impl YccColorConverter {
         }
     }
 
+    #[allow(
+        dead_code,
+        reason = "the scalar pixel reference remains useful for focused kernel tests"
+    )]
     #[inline(always)]
     pub(crate) fn ycc_to_rgb(&self, y: u8, cb: u8, cr: u8) -> (u8, u8, u8) {
-        let y = i32::from(y);
-        let r = add(y, self.cr_r_tab[usize::from(cr)]);
-        let g = add(
+        crate::codecs::jpeg::kernels::ycc_to_rgb_pixel(
             y,
-            add(
-                self.cb_g_tab[usize::from(cb)],
-                self.cr_g_tab[usize::from(cr)],
-            )
-            .wrapping_shr(16),
-        );
-        let b = add(y, self.cb_b_tab[usize::from(cb)]);
-        (
-            r.clamp(0, 255).to_le_bytes()[0],
-            g.clamp(0, 255).to_le_bytes()[0],
-            b.clamp(0, 255).to_le_bytes()[0],
+            cb,
+            cr,
+            &self.cr_r_tab,
+            &self.cb_b_tab,
+            &self.cr_g_tab,
+            &self.cb_g_tab,
         )
+    }
+
+    /// Convert one row of YCbCr samples into interleaved RGB pixels in safe
+    /// fixed-size batches.
+    pub(crate) fn ycc_to_rgb_batch(&self, y: &[u8], cb: &[u8], cr: &[u8], output: &mut [u8]) {
+        crate::codecs::jpeg::kernels::ycc_to_rgb_batch(
+            y,
+            cb,
+            cr,
+            &self.cr_r_tab,
+            &self.cb_b_tab,
+            &self.cr_g_tab,
+            &self.cb_g_tab,
+            output,
+        );
     }
 }
