@@ -8662,6 +8662,21 @@ work-budget evidence with no new Pillow parity row; managed Coverage MCP still
 closes at `project_context`, and other ICO/CUR conversion interiors,
 allocation/peak accounting, progress, sink rollback, and cleanup remain open.
 
+The adjacent ICO 32-bit embedded-BMP row checkpoint slice is implemented at
+`306d530`. ICO's 32-bit BMP/DIB BGRA-to-RGBA conversion now polls before each
+output row. The Rust-only
+`ico_decode_work_budget_covers_embedded_32bit_bmp_rows` contract generates
+public BMP-backed ICO inputs at 64×64 and 64×128 and proves inclusive
+boundaries 68 and 132, exactly one additional checkpoint for each of the 64
+added rows. It also proves exact-boundary pixel identity and one-unit-below
+typed rejection. Native `feature_gate_tests` passes 64/64, the native parity
+matrix passes 28/28, and exact local LLVM passes 66,547/66,547 lines,
+8,654/8,654 branches, 3,354/3,354 functions, and 99,409/99,409 regions.
+This is Rust-only work-budget evidence with no new Pillow parity row; managed
+Coverage MCP still closes at `project_context`, and indexed/CUR conversion
+interiors, allocation/peak accounting, progress, sink rollback, and cleanup
+remain open.
+
 The current lossy WebP/VP8 work-budget slice is implemented at
 `a5c39499a33f06668fb145abf6d6051344f6ba3f`, with its RGB/RGBA contract test
 at `90fcc0f0ea2ee8b4ad861e6bf591d359b47d1833`: token-aware VP8 encoding now

@@ -10,9 +10,9 @@ Reviewed: 2026-08-12
   (1,449/1,449 passed at this revision)
 - Managed Coverage MCP run: `54ce9d6c-3c1f-43e5-9120-c79984bc9166`
 - Ingested Coverage MCP snapshot: `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`
-- Latest local RN-003 candidate: `edf6148` (ICO embedded BMP row
-  checkpoints); local LLVM is exact at 66,541/66,541 lines, 8,654/8,654
-  branches, 3,354/3,354 functions, and 99,405/99,405 regions, with 63/63
+- Latest local RN-003 candidate: `306d530` (ICO embedded 32-bit BMP row
+  checkpoints); local LLVM is exact at 66,547/66,547 lines, 8,654/8,654
+  branches, 3,354/3,354 functions, and 99,409/99,409 regions, with 64/64
   native feature-gate tests passing. This is local evidence only: the managed
   Coverage MCP transport still closes at `project_context` with `Transport
   closed`, so the accepted managed tuple above remains unchanged.
@@ -315,7 +315,7 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 63/63, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded BMP rows, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 64/64, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
@@ -383,7 +383,7 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 63/63 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 64/64 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
@@ -551,7 +551,7 @@ category.
 
 | Category | Status now | Evidence already in the tree | Exact remaining work |
 | --- | --- | --- | --- |
-| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 63/63, including PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded BMP rows, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,541/66,541 lines, 8,654/8,654 branches, 3,354/3,354 functions, and 99,405/99,405 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 64/64, including PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,547/66,547 lines, 8,654/8,654 branches, 3,354/3,354 functions, and 99,409/99,409 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
@@ -1211,9 +1211,10 @@ caller-control evidence and adds no Pillow parity row.
 
 **Implemented behavior:** Commit `edf6148` threads the token through the
 embedded BMP dispatch and polls before every output row in the 24-bit
-BGR-plus-alpha-mask conversion path. PNG-backed entries and the other
-embedded BMP depth implementations retain their existing behavior; the
-ordinary no-token 24-bit conversion still produces the same pixels and bytes.
+BGR-plus-alpha-mask conversion path. At that checkpoint, PNG-backed entries
+and the other embedded BMP depth implementations retained their existing
+behavior; the ordinary no-token 24-bit conversion still produced the same
+pixels and bytes.
 
 **Source/evidence:** The Rust-only
 `ico_decode_work_budget_covers_embedded_bmp_rows` contract generates 64×64 and
@@ -1232,7 +1233,48 @@ and managed snapshot remain unchanged. This local candidate is not managed
 acceptance and claims no Pillow row or diagnostic origin.
 
 **Remaining dependency:** This slice covers only 24-bit BMP-backed ICO row
-conversion; ICO 32-bit/indexed conversion, CUR DIB conversion, other codec
+conversion; ICO indexed conversion, CUR DIB conversion, other codec
+interiors, progress callbacks, allocator/peak measurement, short-write
+semantics, rollback, cleanup/error precedence, and managed same-revision
+evidence remain open. RN-003 remains partial and the complete inventory
+remains 269 active finding rows.
+
+#### Current candidate slice — API-036 ICO embedded 32-bit BMP row checkpoints
+
+**Caller problem:** ICO can also carry a 32-bit BGRA BMP/DIB inside its
+directory entry. The 24-bit path now checks the caller's token before every
+output row, but the adjacent 32-bit BGRA-to-RGBA conversion still walked all
+rows without an interior checkpoint. A large icon could therefore spend its
+most expensive conversion interval after the last container-level check.
+
+**Pillow answer:** Pillow can prove the final ICO pixels and ordinary errors,
+but it does not expose this crate's caller token, checkpoint counter, inclusive
+`DecodeWorkUnits` result, or no-partial-state behavior. This is Rust-only
+caller-control evidence and adds no Pillow parity row.
+
+**Implemented behavior:** Commit `306d530` threads the token into the
+embedded 32-bit BMP dispatch and polls before every output row while copying
+BGRA samples into the public RGBA result. The ordinary no-token conversion
+keeps its existing pixels and output behavior.
+
+**Source/evidence:** The Rust-only
+`ico_decode_work_budget_covers_embedded_32bit_bmp_rows` contract generates
+64×64 and 64×128 RGBA images through the public ICO BMP encoder, decodes them
+through the public policy API, and proves inclusive boundaries of 68 and 132.
+The 64-unit delta is exactly one additional checkpoint for each of the 64
+added embedded BMP rows. It also proves exact-boundary pixel identity and
+one-unit-below typed `DecodeWorkUnits` rejection. Native
+`feature_gate_tests` passes 64/64, the native parity matrix passes 28/28, and
+exact local LLVM passes 66,547/66,547 lines, 8,654/8,654 branches,
+3,354/3,354 functions, and 99,409/99,409 regions.
+
+**Evidence boundary:** Managed Coverage MCP remains unavailable at
+`project_context` (`Transport closed`), so the accepted claim-ledger tuple
+and managed snapshot remain unchanged. This local candidate is not managed
+acceptance and claims no Pillow row or diagnostic origin.
+
+**Remaining dependency:** This slice covers only 32-bit BMP-backed ICO row
+conversion; ICO indexed conversion, CUR DIB conversion, other codec
 interiors, progress callbacks, allocator/peak measurement, short-write
 semantics, rollback, cleanup/error precedence, and managed same-revision
 evidence remain open. RN-003 remains partial and the complete inventory
