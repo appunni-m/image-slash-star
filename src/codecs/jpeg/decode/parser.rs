@@ -46,6 +46,7 @@ pub(super) struct ScanInfo {
     pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
 }
 
+#[derive(Clone)]
 pub(super) struct JpegInfo {
     pub(super) width: u16,
     pub(super) height: u16,
@@ -279,18 +280,17 @@ pub(super) fn parse_dht(
         }
 
         let values_start = *pos;
-        let table = if let Some(values) =
-            data.get(values_start..values_start.saturating_add(total_values))
-        {
-            *pos = values_start.saturating_add(total_values);
-            build_huff_table(table_class, &counts, values)
-        } else {
-            let mut values = Vec::with_capacity(total_values);
-            for _ in 0..total_values {
-                values.push(read_u8(data, pos)?);
-            }
-            build_huff_table(table_class, &counts, &values)
+        let Some(values) = data.get(values_start..values_start.saturating_add(total_values)) else {
+            // Reading the values one byte at a time would produce the same
+            // truncation boundary, but the already-bounded slice is clearer
+            // and avoids maintaining a second parser for one contiguous DHT.
+            return Err(CodecError::NeedMore {
+                minimum: values_start.max(data.len()).saturating_add(1),
+                message: "truncated JPEG byte".to_owned(),
+            });
         };
+        *pos = values_start.saturating_add(total_values);
+        let table = build_huff_table(table_class, &counts, values);
         if table_class == 0 {
             while dc_tables.len() <= table_id {
                 dc_tables.push(None);

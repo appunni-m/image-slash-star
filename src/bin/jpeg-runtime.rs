@@ -107,4 +107,20 @@ mod tests {
     fn benchmark_workload_executes_a_small_round() -> Result<(), Box<dyn std::error::Error>> {
         time_size(8, 8, 1)
     }
+
+    #[test]
+    fn empty_summary_is_a_noop() {
+        let mut samples = [];
+        super::summarize("empty", &mut samples);
+    }
+
+    #[test]
+    fn nonempty_summary_reports_stable_statistics() {
+        let mut samples = [
+            std::time::Duration::from_nanos(2),
+            std::time::Duration::from_nanos(1),
+        ];
+        super::summarize("nonempty", &mut samples);
+        assert_eq!(samples[0], std::time::Duration::from_nanos(1));
+    }
 }

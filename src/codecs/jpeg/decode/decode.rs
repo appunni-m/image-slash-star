@@ -17,10 +17,8 @@ use wide::bytemuck::{cast, pod_read_unaligned};
 #[cfg(target_arch = "aarch64")]
 use wide::{i16x8, u8x16, u16x8};
 
-#[cfg(target_arch = "aarch64")]
 const BASELINE_MCU_CHECKPOINT: usize = 1_024;
 
-#[cfg(target_arch = "aarch64")]
 #[inline(always)]
 fn check_baseline_mcu_checkpoint(
     token: Option<&crate::CancellationToken>,
@@ -263,143 +261,6 @@ fn decode_and_store_block_fast(
 }
 
 // ── Image Reconstruction (baseline) ───────────────────────────────────────
-
-#[cfg(target_arch = "aarch64")]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the specialized MCU loop receives the validated frame state and reusable buffers"
-)]
-fn reconstruct_baseline_420_fast(
-    info: &JpegInfo,
-    entropy_segments: &EntropySegments,
-    data: &[u8],
-    num_mcus_x: u32,
-    num_mcus_y: u32,
-    component_widths: &[usize],
-    quant_tables: &[[i32; 64]],
-    component_buffers: &mut [Vec<u8>],
-    dc_predictors: &mut [i32],
-    block_natural: &mut [i32; 64],
-    workspace: &mut [i32; 64],
-) -> CodecResult<bool> {
-    if info.progressive
-        || info.num_components != 3
-        || info.restart_interval != 0
-        || info.components.len() != 3
-        || info.scan_components.len() != 3
-        || info.components[0].h_samp != 2
-        || info.components[0].v_samp != 2
-        || info.components[1].h_samp != 1
-        || info.components[1].v_samp != 1
-        || info.components[2].h_samp != 1
-        || info.components[2].v_samp != 1
-        || info.max_h_samp != 2
-        || info.max_v_samp != 2
-        || info.scan_components[0].comp_index != 0
-        || info.scan_components[1].comp_index != 1
-        || info.scan_components[2].comp_index != 2
-        || entropy_segments.segments.len() != 1
-    {
-        return Ok(false);
-    }
-
-    let y_scan = info.scan_components[0];
-    let cb_scan = info.scan_components[1];
-    let cr_scan = info.scan_components[2];
-    let y_dc = info
-        .dc_huff_tables
-        .get(usize::from(y_scan.dc_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG DC Huffman table")?;
-    let y_ac = info
-        .ac_huff_tables
-        .get(usize::from(y_scan.ac_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG AC Huffman table")?;
-    let cb_dc = info
-        .dc_huff_tables
-        .get(usize::from(cb_scan.dc_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG DC Huffman table")?;
-    let cb_ac = info
-        .ac_huff_tables
-        .get(usize::from(cb_scan.ac_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG AC Huffman table")?;
-    let cr_dc = info
-        .dc_huff_tables
-        .get(usize::from(cr_scan.dc_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG DC Huffman table")?;
-    let cr_ac = info
-        .ac_huff_tables
-        .get(usize::from(cr_scan.ac_tbl))
-        .and_then(Option::as_ref)
-        .malformed("missing JPEG AC Huffman table")?;
-
-    let (entropy_start, entropy_end) = entropy_segments.segments[0];
-    let mut reader = FastBitReader::new(data, entropy_start, entropy_end);
-    dc_predictors.fill(0);
-    let columns = bounded_usize(num_mcus_x);
-    let rows = bounded_usize(num_mcus_y);
-    'rows: for mcu_y in 0..rows {
-        for mcu_x in 0..columns {
-            let y_x = mcu_x.saturating_mul(16);
-            let y_y = mcu_y.saturating_mul(16);
-            for block_y in 0..2usize {
-                for block_x in 0..2usize {
-                    decode_and_store_block_fast(
-                        &mut reader,
-                        y_dc,
-                        y_ac,
-                        &mut dc_predictors[0],
-                        &quant_tables[0],
-                        &mut component_buffers[0],
-                        component_widths[0],
-                        y_x.saturating_add(block_x.saturating_mul(8)),
-                        y_y.saturating_add(block_y.saturating_mul(8)),
-                        block_natural,
-                        workspace,
-                    )?;
-                }
-            }
-
-            let chroma_x = mcu_x.saturating_mul(8);
-            let chroma_y = mcu_y.saturating_mul(8);
-            decode_and_store_block_fast(
-                &mut reader,
-                cb_dc,
-                cb_ac,
-                &mut dc_predictors[1],
-                &quant_tables[1],
-                &mut component_buffers[1],
-                component_widths[1],
-                chroma_x,
-                chroma_y,
-                block_natural,
-                workspace,
-            )?;
-            decode_and_store_block_fast(
-                &mut reader,
-                cr_dc,
-                cr_ac,
-                &mut dc_predictors[2],
-                &quant_tables[2],
-                &mut component_buffers[2],
-                component_widths[2],
-                chroma_x,
-                chroma_y,
-                block_natural,
-                workspace,
-            )?;
-
-            if reader.insufficient_data() {
-                break 'rows;
-            }
-        }
-    }
-    Ok(true)
-}
 
 #[cfg(target_arch = "aarch64")]
 #[allow(
@@ -1311,9 +1172,9 @@ fn reconstruct_baseline_420_direct_safe(
         let next_row = mcu_y.saturating_add(1);
         if has_next && restart_interval != 0 && next_row.is_multiple_of(rows_per_segment) {
             segment_index = segment_index.saturating_add(1);
-            let Some(&(next_start, next_end)) = entropy_segments.segments.get(segment_index) else {
-                return Ok(None);
-            };
+            // The admission check above proves that every row-aligned restart
+            // boundary has a corresponding entropy segment.
+            let (next_start, next_end) = entropy_segments.segments[segment_index];
             reader = FastBitReader::new(data, next_start, next_end);
             dc_predictors.fill(0);
         }
@@ -1890,143 +1751,119 @@ pub(super) fn reconstruct_image(
         total_mcus
     };
 
-    #[cfg(target_arch = "aarch64")]
-    let used_fast_path = reconstruct_baseline_420_fast(
-        info,
-        &entropy_segments,
-        data,
-        num_mcus_x,
-        num_mcus_y,
-        &comp_buf_width,
-        &quant_natural_by_component,
-        &mut comp_buffers,
-        &mut dc_predictors,
-        &mut block_natural,
-        &mut workspace,
-    )?;
-    #[cfg(not(target_arch = "aarch64"))]
-    let used_fast_path = false;
+    while let Some(&(seg_start, seg_end)) = segment_iter.next() {
+        crate::codecs::error::check_cancelled(token)?;
+        let mut br = BitReader::new(data, seg_start, seg_end);
+        let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
 
-    if !used_fast_path {
-        while let Some(&(seg_start, seg_end)) = segment_iter.next() {
-            crate::codecs::error::check_cancelled(token)?;
-            let mut br = BitReader::new(data, seg_start, seg_end);
-            let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
+        for mcu_idx in 0..mcus_per_seg {
+            let absolute_mcu = mcu_offset.saturating_add(mcu_idx);
+            if absolute_mcu >= total_mcus {
+                break;
+            }
+            let mcu_width = bounded_usize(num_mcus_x);
+            let mcu_y = absolute_mcu.div_euclid(mcu_width);
+            let mcu_x = absolute_mcu.rem_euclid(mcu_width);
 
-            for mcu_idx in 0..mcus_per_seg {
-                let absolute_mcu = mcu_offset.saturating_add(mcu_idx);
-                if absolute_mcu >= total_mcus {
-                    break;
-                }
-                let mcu_width = bounded_usize(num_mcus_x);
-                let mcu_y = absolute_mcu.div_euclid(mcu_width);
-                let mcu_x = absolute_mcu.rem_euclid(mcu_width);
+            for scan_comp in &info.scan_components {
+                let comp = &info.components[scan_comp.comp_index];
+                let dc_table = info
+                    .dc_huff_tables
+                    .get(usize::from(scan_comp.dc_tbl))
+                    .and_then(Option::as_ref)
+                    .malformed("missing JPEG DC Huffman table")?;
+                let ac_table = info
+                    .ac_huff_tables
+                    .get(usize::from(scan_comp.ac_tbl))
+                    .and_then(Option::as_ref)
+                    .malformed("missing JPEG AC Huffman table")?;
+                let quant_natural = &quant_natural_by_component[scan_comp.comp_index];
 
-                for scan_comp in &info.scan_components {
-                    let comp = &info.components[scan_comp.comp_index];
-                    let dc_table = info
-                        .dc_huff_tables
-                        .get(usize::from(scan_comp.dc_tbl))
-                        .and_then(Option::as_ref)
-                        .malformed("missing JPEG DC Huffman table")?;
-                    let ac_table = info
-                        .ac_huff_tables
-                        .get(usize::from(scan_comp.ac_tbl))
-                        .and_then(Option::as_ref)
-                        .malformed("missing JPEG AC Huffman table")?;
-                    let quant_natural = &quant_natural_by_component[scan_comp.comp_index];
+                for by in 0..usize::from(comp.v_samp) {
+                    for bx in 0..usize::from(comp.h_samp) {
+                        let kind = match decode_block(
+                            &mut br,
+                            dc_table,
+                            ac_table,
+                            &mut dc_predictors[scan_comp.comp_index],
+                            &mut block_natural,
+                        ) {
+                            Ok(kind) => kind,
+                            Err(error) => return Err(error.context("baseline block")),
+                        };
 
-                    for by in 0..usize::from(comp.v_samp) {
-                        for bx in 0..usize::from(comp.h_samp) {
-                            let kind = match decode_block(
-                                &mut br,
-                                dc_table,
-                                ac_table,
-                                &mut dc_predictors[scan_comp.comp_index],
-                                &mut block_natural,
-                            ) {
-                                Ok(kind) => kind,
-                                Err(error) => return Err(error.context("baseline block")),
-                            };
+                        let buf_w = comp_buf_width[scan_comp.comp_index];
+                        let block_x = mcu_x
+                            .saturating_mul(usize::from(comp.h_samp))
+                            .saturating_add(bx)
+                            .saturating_mul(8);
+                        let block_y = mcu_y
+                            .saturating_mul(usize::from(comp.v_samp))
+                            .saturating_add(by)
+                            .saturating_mul(8);
 
-                            let buf_w = comp_buf_width[scan_comp.comp_index];
-                            let block_x = mcu_x
-                                .saturating_mul(usize::from(comp.h_samp))
-                                .saturating_add(bx)
-                                .saturating_mul(8);
-                            let block_y = mcu_y
-                                .saturating_mul(usize::from(comp.v_samp))
-                                .saturating_add(by)
-                                .saturating_mul(8);
-
-                            if kind == BlockKind::DcOnly {
-                                let dequantized = block_natural[0].saturating_mul(quant_natural[0]);
-                                let value = idct::dc_only_output(dequantized);
-                                for row in 0usize..8 {
-                                    let start = block_y
-                                        .saturating_add(row)
-                                        .saturating_mul(buf_w)
-                                        .saturating_add(block_x);
-                                    comp_buffers[scan_comp.comp_index]
-                                        [start..start.saturating_add(8)]
-                                        .fill(value);
-                                }
-                                continue;
-                            }
-
-                            for (coefficient, &quantizer) in
-                                block_natural.iter_mut().zip(quant_natural)
-                            {
-                                *coefficient = coefficient.saturating_mul(quantizer);
-                            }
-                            jpeg_idct_islow(&mut block_natural, &mut workspace);
-
+                        if kind == BlockKind::DcOnly {
+                            let dequantized = block_natural[0].saturating_mul(quant_natural[0]);
+                            let value = idct::dc_only_output(dequantized);
                             for row in 0usize..8 {
-                                let source_start = row.saturating_mul(8);
-                                let destination_start = block_y
+                                let start = block_y
                                     .saturating_add(row)
                                     .saturating_mul(buf_w)
                                     .saturating_add(block_x);
-                                let destination = &mut comp_buffers[scan_comp.comp_index]
-                                    [destination_start..destination_start.saturating_add(8)];
-                                for (output, &value) in destination.iter_mut().zip(
-                                    &block_natural[source_start..source_start.saturating_add(8)],
-                                ) {
-                                    *output = value.clamp(0, 255).to_le_bytes()[0];
-                                }
+                                comp_buffers[scan_comp.comp_index][start..start.saturating_add(8)]
+                                    .fill(value);
+                            }
+                            continue;
+                        }
+
+                        for (coefficient, &quantizer) in block_natural.iter_mut().zip(quant_natural)
+                        {
+                            *coefficient = coefficient.saturating_mul(quantizer);
+                        }
+                        jpeg_idct_islow(&mut block_natural, &mut workspace);
+
+                        for row in 0usize..8 {
+                            let source_start = row.saturating_mul(8);
+                            let destination_start = block_y
+                                .saturating_add(row)
+                                .saturating_mul(buf_w)
+                                .saturating_add(block_x);
+                            let destination = &mut comp_buffers[scan_comp.comp_index]
+                                [destination_start..destination_start.saturating_add(8)];
+                            for (output, &value) in destination
+                                .iter_mut()
+                                .zip(&block_natural[source_start..source_start.saturating_add(8)])
+                            {
+                                *output = value.clamp(0, 255).to_le_bytes()[0];
                             }
                         }
                     }
                 }
-
-                // Handle RST at segment boundaries (except the last segment)
-                if mcu_idx.saturating_add(1) >= mcus_per_seg && segment_iter.peek().is_some() {
-                    for pred in dc_predictors.iter_mut() {
-                        *pred = 0;
-                    }
-                    seg_idx = seg_idx.saturating_add(1);
-                }
-
-                // ✅ FIX: Match libjpeg-turbo's `insufficient_data` handling.
-                //    C reference: jdhuff.c `decode_mcu()` completes the current
-                //    MCU from synthetic zero bits, then leaves later MCUs
-                //    initialized to gray once the current bit request cannot be
-                //    satisfied from the remaining entropy buffer. This check must
-                //    run after restart-boundary state updates.
-                if br.insufficient_data() {
-                    break;
-                }
-
-                // A no-restart baseline scan can contain many MCUs inside one
-                // entropy segment. Keep the ordinary path free of a per-MCU token
-                // branch while giving callers a bounded checkpoint after each
-                // completed 1,024-MCU batch.
-                if let Some(token) = token
-                    && absolute_mcu.saturating_add(1).is_multiple_of(1_024)
-                {
-                    crate::codecs::error::check_cancelled(Some(token))?;
-                }
             }
+
+            // Handle RST at segment boundaries (except the last segment)
+            if mcu_idx.saturating_add(1) >= mcus_per_seg && segment_iter.peek().is_some() {
+                for pred in dc_predictors.iter_mut() {
+                    *pred = 0;
+                }
+                seg_idx = seg_idx.saturating_add(1);
+            }
+
+            // ✅ FIX: Match libjpeg-turbo's `insufficient_data` handling.
+            //    C reference: jdhuff.c `decode_mcu()` completes the current
+            //    MCU from synthetic zero bits, then leaves later MCUs
+            //    initialized to gray once the current bit request cannot be
+            //    satisfied from the remaining entropy buffer. This check must
+            //    run after restart-boundary state updates.
+            if br.insufficient_data() {
+                break;
+            }
+
+            // A no-restart baseline scan can contain many MCUs inside one
+            // entropy segment. Keep the ordinary path free of a per-MCU token
+            // branch while giving callers a bounded checkpoint after each
+            // completed 1,024-MCU batch.
+            check_baseline_mcu_checkpoint(token, absolute_mcu.saturating_add(1))?;
         }
     }
 
@@ -2306,6 +2143,18 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 pub(crate) fn __coverage_exercise_private_branches() {
     use super::huffman::HuffTable;
 
+    #[cfg(target_arch = "aarch64")]
+    {
+        super::idct::__coverage_exercise_private_branches();
+        super::upsample::__coverage_exercise_private_branches();
+
+        let checkpoint_token = crate::CancellationToken::new();
+        assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 1_024).is_ok());
+        checkpoint_token.cancel();
+        assert!(check_baseline_mcu_checkpoint(Some(&checkpoint_token), 1_024).is_err());
+        assert!(check_baseline_mcu_checkpoint(None, 1_024).is_ok());
+    }
+
     let _ = metadata_bytes(b"");
     let _ = metadata_bytes(b"\xff");
 
@@ -2350,12 +2199,305 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .is_err()
     );
 
+    #[cfg(target_arch = "aarch64")]
+    {
+        let mut fast_block = [0i32; 64];
+        let mut fast_last_dc = 0;
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_cat_64,
+                &ac_eob,
+                &mut fast_last_dc,
+                &mut fast_block,
+            )
+            .is_err()
+        );
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(matches!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_zero,
+                &ac_eob,
+                &mut fast_last_dc,
+                &mut fast_block,
+            ),
+            Ok((BlockKind::DcOnly, false))
+        ));
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_zero,
+                &ac_literal,
+                &mut fast_last_dc,
+                &mut fast_block,
+            )
+            .is_ok()
+        );
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_zero,
+                &ac_run_overflow,
+                &mut fast_last_dc,
+                &mut fast_block,
+            )
+            .is_ok()
+        );
+        let ac_run_to_end =
+            HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0xF2]);
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_zero,
+                &ac_run_to_end,
+                &mut fast_last_dc,
+                &mut fast_block,
+            )
+            .is_ok()
+        );
+        let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
+        assert!(
+            decode_block_fast(
+                &mut fast_reader,
+                &dc_zero,
+                &ac_invalid_zero,
+                &mut fast_last_dc,
+                &mut fast_block,
+            )
+            .is_err()
+        );
+
+        // A valid syntax stream can still produce a coefficient/quantizer
+        // product outside i32. Exercise the checked SIMD admission fallback
+        // with a tiny deterministic block; normal JPEG ranges do not select
+        // this defensive path.
+        let dc_two = HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[2]);
+        let ac_literal_then_eob = HuffTable::build(
+            &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            &[0x01, 0x00],
+        );
+        let overflow_entropy = [0b0100_0100; 16];
+        let mut overflow_reader = FastBitReader::new(&overflow_entropy, 0, overflow_entropy.len());
+        let mut overflow_block = [0i32; 64];
+        let mut overflow_workspace = [0i32; 64];
+        let mut overflow_destination = [0u8; 64];
+        let mut overflow_last_dc = 0;
+        let overflow_quantizer = [i32::MAX; 64];
+        assert!(
+            decode_and_store_block_fast(
+                &mut overflow_reader,
+                &dc_two,
+                &ac_literal_then_eob,
+                &mut overflow_last_dc,
+                &overflow_quantizer,
+                &mut overflow_destination,
+                8,
+                0,
+                0,
+                &mut overflow_block,
+                &mut overflow_workspace,
+            )
+            .is_ok()
+        );
+
+        // Each row helper is fed a short deterministic code stream. A
+        // two-symbol DC table makes the first invalid symbol land at the
+        // requested Y, Cb, or Cr block, so every fallible SIMD admission edge
+        // is verified without manufacturing a public JPEG fixture.
+        let dc_sequence =
+            HuffTable::build(&[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0, 64]);
+        let row_quant = [[1i32; 64], [1i32; 64], [1i32; 64]];
+        let mut row_block = [0i32; 64];
+        let mut row_workspace = [0i32; 64];
+        let mut row_predictors = [0i32; 3];
+        let mut row_y = vec![128u8; 16 * 16];
+        let mut row_cb = vec![128u8; 24 * 8];
+        let mut row_cr = vec![128u8; 24 * 8];
+        let mut row_reader = FastBitReader::new(&[0, 0x20], 0, 2);
+        assert!(
+            decode_baseline_420_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &dc_sequence,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            )
+            .is_err()
+        );
+        let mut row_predictors = [0i32; 3];
+        let mut row_reader = FastBitReader::new(&[0, 0x80], 0, 2);
+        assert!(
+            decode_baseline_420_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_sequence,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            )
+            .is_err()
+        );
+        let mut row_predictors = [0i32; 3];
+        let mut row_reader = FastBitReader::new(&[], 0, 0);
+        assert!(matches!(
+            decode_baseline_420_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            ),
+            Ok(false)
+        ));
+
+        let mut row_predictors = [0i32; 3];
+        let mut row_reader = FastBitReader::new(&[0x08], 0, 1);
+        assert!(
+            decode_baseline_422_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_sequence,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            )
+            .is_err()
+        );
+        let mut row_predictors = [0i32; 3];
+        let mut row_reader = FastBitReader::new(&[0x02], 0, 1);
+        assert!(
+            decode_baseline_422_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &dc_sequence,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            )
+            .is_err()
+        );
+        let mut row_predictors = [0i32; 3];
+        let mut row_reader = FastBitReader::new(&[], 0, 0);
+        assert!(matches!(
+            decode_baseline_422_row_fast(
+                &mut row_reader,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &dc_zero,
+                &ac_eob,
+                &mut row_predictors,
+                &row_quant,
+                &mut row_y,
+                &mut row_cb,
+                &mut row_cr,
+                16,
+                24,
+                8,
+                1,
+                &mut row_block,
+                &mut row_workspace,
+            ),
+            Ok(false)
+        ));
+    }
+
     let ac_missing = HuffTable::build(&[0; 16], &[]);
     let mut br = BitReader::new(&[0; 2], 0, 2);
     assert!(decode_block(&mut br, &dc_zero, &ac_missing, &mut last_dc, &mut block,).is_err());
 
     let segments = extract_entropy_segments(&[0, 0xFF, 0xFF, 0xD9], 0, 4);
     assert_eq!(segments.eoi_pos, 1);
+    let empty_scan = extract_entropy_segments(&[0xFF, 0xD9], 0, 0);
+    assert_eq!(empty_scan.segments, vec![(0, 0)]);
+
+    let known_data =
+        include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_420.jpg");
+    let known_info = parse_jpeg(known_data).expect("coverage baseline JPEG must parse");
+    assert!(known_single_entropy_segment(&known_info, known_data).is_some());
+    for mutator in [
+        Box::new(|candidate: &mut JpegInfo| candidate.progressive = true)
+            as Box<dyn Fn(&mut JpegInfo)>,
+        Box::new(|candidate: &mut JpegInfo| {
+            candidate.scans.push(candidate.scans[0].clone());
+        }),
+        Box::new(|candidate: &mut JpegInfo| candidate.entropy_has_restart_markers = true),
+        Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_start += 1),
+        Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_end -= 1),
+        Box::new(|candidate: &mut JpegInfo| candidate.eoi_pos -= 1),
+    ] {
+        let mut candidate = known_info.clone();
+        mutator(&mut candidate);
+        assert!(known_single_entropy_segment(&candidate, known_data).is_none());
+    }
 
     let info = JpegInfo {
         width: 8,
@@ -2387,6 +2529,760 @@ pub(crate) fn __coverage_exercise_private_branches() {
         metadata: Vec::new(),
     };
     let _ = reconstruct_image(&info, &[0, 0, 0xFF, 0xD0, 0], None);
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        // The direct decoders have intentionally conservative admission
+        // predicates. Sweep each predicate's individual rejection state so a
+        // future fast-path change cannot silently remove one of the safe
+        // fallbacks. These are internal state models, not public parity rows.
+        let natural_quant_tables = |candidate: &JpegInfo| {
+            candidate
+                .components
+                .iter()
+                .map(|component| {
+                    let table = candidate
+                        .quant_tables
+                        .get(usize::from(component.quant_tbl))
+                        .and_then(Option::as_ref)
+                        .expect("coverage JPEG component must have a quantization table");
+                    let mut natural = [0i32; 64];
+                    for zigzag in 0usize..64 {
+                        natural[idct::JPEG_NATURAL_ORDER[zigzag]] = i32::from(table[zigzag]);
+                    }
+                    natural
+                })
+                .collect::<Vec<_>>()
+        };
+        let mcu_dimensions = |candidate: &JpegInfo| {
+            (
+                u32::from(candidate.width)
+                    .div_ceil(u32::from(candidate.max_h_samp).saturating_mul(8)),
+                u32::from(candidate.height)
+                    .div_ceil(u32::from(candidate.max_v_samp).saturating_mul(8)),
+            )
+        };
+        let empty_segments = EntropySegments {
+            segments: Vec::new(),
+            eoi_pos: 0,
+        };
+        let empty_quant: &[[i32; 64]] = &[];
+
+        macro_rules! guard_none {
+            ($base:expr, $mutator:expr, $segments:expr, $quant:expr, $check:expr) => {{
+                let mut candidate = $base.clone();
+                ($mutator)(&mut candidate);
+                assert!($check(&candidate, $segments, $quant));
+            }};
+        }
+
+        let converter = YccColorConverter::shared();
+        let rgb420_data =
+            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_420.jpg");
+        let rgb420_info = parse_jpeg(rgb420_data).expect("coverage 4:2:0 JPEG must parse");
+        let rgb420_segments =
+            extract_entropy_segments(rgb420_data, rgb420_info.entropy_start, rgb420_info.eoi_pos);
+        let rgb420_quant = natural_quant_tables(&rgb420_info);
+        let (rgb420_mcus_x, rgb420_mcus_y) = mcu_dimensions(&rgb420_info);
+        let rgb420_result = reconstruct_baseline_420_direct_safe(
+            &rgb420_info,
+            &rgb420_segments,
+            rgb420_data,
+            None,
+            rgb420_mcus_x,
+            rgb420_mcus_y,
+            &rgb420_quant,
+            converter,
+        );
+        assert!(matches!(rgb420_result, Ok(Some(_))));
+        let rgb420_none =
+            |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
+                matches!(
+                    reconstruct_baseline_420_direct_safe(
+                        candidate,
+                        segments,
+                        rgb420_data,
+                        None,
+                        rgb420_mcus_x,
+                        rgb420_mcus_y,
+                        quant,
+                        converter,
+                    ),
+                    Ok(None)
+                )
+            };
+        for mutator in [
+            Box::new(|candidate: &mut JpegInfo| candidate.progressive = true)
+                as Box<dyn Fn(&mut JpegInfo)>,
+            Box::new(|candidate: &mut JpegInfo| candidate.num_components = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].h_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].v_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[1].h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[1].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[2].h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[2].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_h_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_v_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[0].comp_index = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[1].comp_index = 0),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[2].comp_index = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.restart_interval = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.restart_interval = 8),
+        ] {
+            let mut candidate = rgb420_info.clone();
+            mutator(&mut candidate);
+            assert!(rgb420_none(&candidate, &rgb420_segments, &rgb420_quant));
+        }
+        assert!(rgb420_none(&rgb420_info, &empty_segments, &rgb420_quant));
+        assert!(rgb420_none(&rgb420_info, &rgb420_segments, empty_quant));
+
+        let rgb422_data =
+            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_422.jpg");
+        let rgb422_info = parse_jpeg(rgb422_data).expect("coverage 4:2:2 JPEG must parse");
+        let rgb422_segments =
+            extract_entropy_segments(rgb422_data, rgb422_info.entropy_start, rgb422_info.eoi_pos);
+        let rgb422_quant = natural_quant_tables(&rgb422_info);
+        let (rgb422_mcus_x, rgb422_mcus_y) = mcu_dimensions(&rgb422_info);
+        assert!(matches!(
+            reconstruct_baseline_422_direct_safe(
+                &rgb422_info,
+                &rgb422_segments,
+                rgb422_data,
+                None,
+                rgb422_mcus_x,
+                rgb422_mcus_y,
+                &rgb422_quant,
+                converter,
+            ),
+            Ok(Some(_))
+        ));
+        let rgb422_none =
+            |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
+                matches!(
+                    reconstruct_baseline_422_direct_safe(
+                        candidate,
+                        segments,
+                        rgb422_data,
+                        None,
+                        rgb422_mcus_x,
+                        rgb422_mcus_y,
+                        quant,
+                        converter,
+                    ),
+                    Ok(None)
+                )
+            };
+        for mutator in [
+            Box::new(|candidate: &mut JpegInfo| candidate.progressive = true)
+                as Box<dyn Fn(&mut JpegInfo)>,
+            Box::new(|candidate: &mut JpegInfo| candidate.num_components = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.restart_interval = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].h_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[1].h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[1].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[2].h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[2].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_h_samp = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[0].comp_index = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[1].comp_index = 0),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[2].comp_index = 1),
+        ] {
+            let mut candidate = rgb422_info.clone();
+            mutator(&mut candidate);
+            assert!(rgb422_none(&candidate, &rgb422_segments, &rgb422_quant));
+        }
+        assert!(rgb422_none(&rgb422_info, &empty_segments, &rgb422_quant));
+        assert!(rgb422_none(&rgb422_info, &rgb422_segments, empty_quant));
+
+        let rgb444_data =
+            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_444.jpg");
+        let rgb444_info = parse_jpeg(rgb444_data).expect("coverage 4:4:4 JPEG must parse");
+        let rgb444_segments =
+            extract_entropy_segments(rgb444_data, rgb444_info.entropy_start, rgb444_info.eoi_pos);
+        let rgb444_quant = natural_quant_tables(&rgb444_info);
+        let (rgb444_mcus_x, rgb444_mcus_y) = mcu_dimensions(&rgb444_info);
+        assert!(matches!(
+            reconstruct_baseline_444_direct_safe(
+                &rgb444_info,
+                &rgb444_segments,
+                rgb444_data,
+                None,
+                rgb444_mcus_x,
+                rgb444_mcus_y,
+                &rgb444_quant,
+                converter,
+            ),
+            Ok(Some(_))
+        ));
+        let rgb444_none =
+            |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
+                matches!(
+                    reconstruct_baseline_444_direct_safe(
+                        candidate,
+                        segments,
+                        rgb444_data,
+                        None,
+                        rgb444_mcus_x,
+                        rgb444_mcus_y,
+                        quant,
+                        converter,
+                    ),
+                    Ok(None)
+                )
+            };
+        for mutator in [
+            Box::new(|candidate: &mut JpegInfo| candidate.progressive = true)
+                as Box<dyn Fn(&mut JpegInfo)>,
+            Box::new(|candidate: &mut JpegInfo| candidate.num_components = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.restart_interval = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components.clear()),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.components[0].v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_h_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.max_v_samp = 2),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[0].comp_index = 1),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[1].comp_index = 0),
+            Box::new(|candidate: &mut JpegInfo| candidate.scan_components[2].comp_index = 1),
+        ] {
+            let mut candidate = rgb444_info.clone();
+            mutator(&mut candidate);
+            assert!(rgb444_none(&candidate, &rgb444_segments, &rgb444_quant));
+        }
+        assert!(rgb444_none(&rgb444_info, &empty_segments, &rgb444_quant));
+        assert!(rgb444_none(&rgb444_info, &rgb444_segments, empty_quant));
+
+        let gray_data =
+            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_gray.jpg");
+        let gray_info = parse_jpeg(gray_data).expect("coverage grayscale JPEG must parse");
+        let gray_segments =
+            extract_entropy_segments(gray_data, gray_info.entropy_start, gray_info.eoi_pos);
+        let gray_quant = natural_quant_tables(&gray_info);
+        let (gray_mcus_x, gray_mcus_y) = mcu_dimensions(&gray_info);
+        let gray_none = |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
+            matches!(
+                reconstruct_baseline_grayscale_direct_safe(
+                    candidate,
+                    segments,
+                    gray_data,
+                    None,
+                    gray_mcus_x,
+                    gray_mcus_y,
+                    quant,
+                ),
+                Ok(None)
+            )
+        };
+        let _ = reconstruct_baseline_grayscale_direct_safe(
+            &gray_info,
+            &gray_segments,
+            gray_data,
+            None,
+            gray_mcus_x,
+            gray_mcus_y,
+            &gray_quant,
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.progressive = true,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.num_components = 2,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.components.clear(),
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.scan_components.clear(),
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.components[0].h_samp = 2,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.components[0].v_samp = 2,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.max_h_samp = 2,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.max_v_samp = 2,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.scan_components[0].comp_index = 1,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(
+            gray_info,
+            |candidate: &mut JpegInfo| candidate.restart_interval = 1,
+            &gray_segments,
+            &gray_quant,
+            gray_none
+        );
+        guard_none!(gray_info, |_| {}, &empty_segments, &gray_quant, gray_none);
+        guard_none!(gray_info, |_| {}, &gray_segments, empty_quant, gray_none);
+
+        let cmyk_data =
+            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_cmyk.jpg");
+        let cmyk_info = parse_jpeg(cmyk_data).expect("coverage CMYK JPEG must parse");
+        let cmyk_segments =
+            extract_entropy_segments(cmyk_data, cmyk_info.entropy_start, cmyk_info.eoi_pos);
+        let cmyk_quant = natural_quant_tables(&cmyk_info);
+        let (cmyk_mcus_x, cmyk_mcus_y) = mcu_dimensions(&cmyk_info);
+        let cmyk_none = |candidate: &JpegInfo, segments: &EntropySegments, quant: &[[i32; 64]]| {
+            matches!(
+                reconstruct_baseline_cmyk_direct_safe(
+                    candidate,
+                    segments,
+                    cmyk_data,
+                    None,
+                    cmyk_mcus_x,
+                    cmyk_mcus_y,
+                    quant,
+                ),
+                Ok(None)
+            )
+        };
+        let _ = reconstruct_baseline_cmyk_direct_safe(
+            &cmyk_info,
+            &cmyk_segments,
+            cmyk_data,
+            None,
+            cmyk_mcus_x,
+            cmyk_mcus_y,
+            &cmyk_quant,
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.progressive = true,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.num_components = 3,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.components.clear(),
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.scan_components.clear(),
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.components[0].h_samp = 2,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.max_h_samp = 2,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.max_v_samp = 2,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.restart_interval = 1,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(cmyk_info, |_| {}, &empty_segments, &cmyk_quant, cmyk_none);
+        guard_none!(cmyk_info, |_| {}, &cmyk_segments, empty_quant, cmyk_none);
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.scan_components[0].comp_index = 4,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+        guard_none!(
+            cmyk_info,
+            |candidate: &mut JpegInfo| candidate.scan_components[1].comp_index =
+                candidate.scan_components[0].comp_index,
+            &cmyk_segments,
+            &cmyk_quant,
+            cmyk_none
+        );
+
+        // Error and boundary witnesses for the admitted direct decoders.
+        // These keep malformed entropy and partial-MCU behavior explicit
+        // without weakening any of the production admission predicates.
+        let mut bad_gray = gray_info.clone();
+        bad_gray.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(
+            reconstruct_baseline_grayscale_direct_safe(
+                &bad_gray,
+                &gray_segments,
+                gray_data,
+                None,
+                gray_mcus_x,
+                gray_mcus_y,
+                &gray_quant,
+            )
+            .is_err()
+        );
+        let mut gray_edge = gray_info.clone();
+        gray_edge.width = 1;
+        gray_edge.height = 8;
+        assert!(matches!(
+            reconstruct_baseline_grayscale_direct_safe(
+                &gray_edge,
+                &gray_segments,
+                gray_data,
+                None,
+                1,
+                1,
+                &gray_quant,
+            ),
+            Ok(Some(_))
+        ));
+        let empty_gray_entropy = EntropySegments {
+            segments: vec![(0, 0)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_grayscale_direct_safe(
+                &gray_info,
+                &empty_gray_entropy,
+                gray_data,
+                None,
+                gray_mcus_x,
+                gray_mcus_y,
+                &gray_quant,
+            ),
+            Ok(None)
+        ));
+
+        let mut bad_cmyk = cmyk_info.clone();
+        bad_cmyk.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(
+            reconstruct_baseline_cmyk_direct_safe(
+                &bad_cmyk,
+                &cmyk_segments,
+                cmyk_data,
+                None,
+                cmyk_mcus_x,
+                cmyk_mcus_y,
+                &cmyk_quant,
+            )
+            .is_err()
+        );
+        let empty_cmyk_entropy = EntropySegments {
+            segments: vec![(0, 0)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_cmyk_direct_safe(
+                &cmyk_info,
+                &empty_cmyk_entropy,
+                cmyk_data,
+                None,
+                cmyk_mcus_x,
+                cmyk_mcus_y,
+                &cmyk_quant,
+            ),
+            Ok(None)
+        ));
+
+        let mut bad_420 = rgb420_info.clone();
+        bad_420.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(
+            reconstruct_baseline_420_direct_safe(
+                &bad_420,
+                &rgb420_segments,
+                rgb420_data,
+                None,
+                rgb420_mcus_x,
+                rgb420_mcus_y,
+                &rgb420_quant,
+                converter,
+            )
+            .is_err()
+        );
+        let empty_420_entropy = EntropySegments {
+            segments: vec![(0, 0)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_420_direct_safe(
+                &rgb420_info,
+                &empty_420_entropy,
+                rgb420_data,
+                None,
+                rgb420_mcus_x,
+                rgb420_mcus_y,
+                &rgb420_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+
+        let mut restarted_420 = rgb420_info.clone();
+        restarted_420.restart_interval = rgb420_mcus_x as u16;
+        let restart_segments = EntropySegments {
+            segments: vec![rgb420_segments.segments[0]; usize::try_from(rgb420_mcus_y).unwrap()],
+            eoi_pos: rgb420_segments.eoi_pos,
+        };
+        let _ = reconstruct_baseline_420_direct_safe(
+            &restarted_420,
+            &restart_segments,
+            rgb420_data,
+            None,
+            rgb420_mcus_x,
+            rgb420_mcus_y,
+            &rgb420_quant,
+            converter,
+        );
+
+        let four_bit_zero =
+            HuffTable::build(&[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
+        let mut short_420 = rgb420_info.clone();
+        for table in &mut short_420.dc_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        for table in &mut short_420.ac_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        let short_420_entropy = EntropySegments {
+            segments: vec![(0, 6)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_420_direct_safe(
+                &short_420,
+                &short_420_entropy,
+                &[0; 6],
+                None,
+                rgb420_mcus_x,
+                rgb420_mcus_y,
+                &rgb420_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+
+        let mut bad_422 = rgb422_info.clone();
+        bad_422.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(
+            reconstruct_baseline_422_direct_safe(
+                &bad_422,
+                &rgb422_segments,
+                rgb422_data,
+                None,
+                rgb422_mcus_x,
+                rgb422_mcus_y,
+                &rgb422_quant,
+                converter,
+            )
+            .is_err()
+        );
+        let empty_422_entropy = EntropySegments {
+            segments: vec![(0, 0)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_422_direct_safe(
+                &rgb422_info,
+                &empty_422_entropy,
+                rgb422_data,
+                None,
+                rgb422_mcus_x,
+                rgb422_mcus_y,
+                &rgb422_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+        let mut short_422 = rgb422_info.clone();
+        for table in &mut short_422.dc_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        for table in &mut short_422.ac_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        let short_422_entropy = EntropySegments {
+            segments: vec![(0, 4)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_422_direct_safe(
+                &short_422,
+                &short_422_entropy,
+                &[0; 4],
+                None,
+                rgb422_mcus_x,
+                rgb422_mcus_y,
+                &rgb422_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+
+        let mut bad_444 = rgb444_info.clone();
+        bad_444.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(
+            reconstruct_baseline_444_direct_safe(
+                &bad_444,
+                &rgb444_segments,
+                rgb444_data,
+                None,
+                rgb444_mcus_x,
+                rgb444_mcus_y,
+                &rgb444_quant,
+                converter,
+            )
+            .is_err()
+        );
+        let empty_444_entropy = EntropySegments {
+            segments: vec![(0, 0)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_444_direct_safe(
+                &rgb444_info,
+                &empty_444_entropy,
+                rgb444_data,
+                None,
+                rgb444_mcus_x,
+                rgb444_mcus_y,
+                &rgb444_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+        let mut short_444 = rgb444_info.clone();
+        for table in &mut short_444.dc_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        for table in &mut short_444.ac_huff_tables {
+            *table = Some(four_bit_zero.clone().into());
+        }
+        let short_444_entropy = EntropySegments {
+            segments: vec![(0, 3)],
+            eoi_pos: 0,
+        };
+        assert!(matches!(
+            reconstruct_baseline_444_direct_safe(
+                &short_444,
+                &short_444_entropy,
+                &[0; 3],
+                None,
+                rgb444_mcus_x,
+                rgb444_mcus_y,
+                &rgb444_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
+
+        let large_entropy = vec![0u8; 1_024];
+        let large_entropy_segments = EntropySegments {
+            segments: vec![(0, large_entropy.len())],
+            eoi_pos: 0,
+        };
+        let mut checkpoint_gray = gray_info.clone();
+        checkpoint_gray.width = 1;
+        checkpoint_gray.height = 1;
+        let checkpoint_token = crate::CancellationToken::new();
+        checkpoint_token.cancel();
+        assert!(
+            reconstruct_baseline_grayscale_direct_safe(
+                &checkpoint_gray,
+                &large_entropy_segments,
+                &large_entropy,
+                Some(&checkpoint_token),
+                1_024,
+                1,
+                &gray_quant,
+            )
+            .is_err()
+        );
+
+        let mut checkpoint_444 = rgb444_info.clone();
+        checkpoint_444.width = 1;
+        checkpoint_444.height = 1;
+        let checkpoint_token = crate::CancellationToken::new();
+        checkpoint_token.cancel();
+        assert!(
+            reconstruct_baseline_444_direct_safe(
+                &checkpoint_444,
+                &large_entropy_segments,
+                &large_entropy,
+                Some(&checkpoint_token),
+                1_024,
+                1,
+                &rgb444_quant,
+                converter,
+            )
+            .is_err()
+        );
+
+        let mut generic_bad = info.clone();
+        generic_bad.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
+        assert!(reconstruct_image(&generic_bad, &[0, 0, 0xff, 0xd0, 0], None).is_err());
+    }
+
     let baseline = include_bytes!("../../../../tests/fixtures/input/images/jpeg/1x1.jpg");
     let progressive =
         include_bytes!("../../../../tests/fixtures/input/images/jpeg/progressive.jpg");

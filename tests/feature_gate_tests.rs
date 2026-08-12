@@ -24034,3 +24034,181 @@ fn incremental_inspection_reports_feature_state_like_legacy()
     }
     Ok(())
 }
+
+#[cfg(feature = "jpeg")]
+fn jpeg_vectorization_image(
+    width: u32,
+    height: u32,
+    color: ColorType,
+) -> Result<DecodedImage, Box<dyn std::error::Error>> {
+    let width_usize = usize::try_from(width)?;
+    let height_usize = usize::try_from(height)?;
+    let mut pixels = Vec::with_capacity(
+        width_usize
+            .saturating_mul(height_usize)
+            .saturating_mul(usize::from(color.bytes_per_pixel())),
+    );
+    for y in 0..height_usize {
+        let y_byte = u8::try_from(y % 256)?;
+        for x in 0..width_usize {
+            let x_byte = u8::try_from(x % 256)?;
+            let red = x_byte.wrapping_mul(17) ^ y_byte.wrapping_mul(31);
+            let green = x_byte.wrapping_mul(43).wrapping_add(y_byte.wrapping_mul(7));
+            let blue = x_byte.wrapping_mul(11) ^ y_byte.wrapping_mul(19);
+            match color {
+                ColorType::L8 => pixels.push(red),
+                ColorType::Rgb8 => pixels.extend_from_slice(&[red, green, blue]),
+                ColorType::Cmyk8 => pixels.extend_from_slice(&[
+                    red,
+                    green,
+                    blue,
+                    x_byte.wrapping_add(y_byte).wrapping_mul(13),
+                ]),
+                _ => return Err("JPEG vectorization witness uses an unsupported color".into()),
+            }
+        }
+    }
+    Ok(DecodedImage::new(width, height, pixels, color))
+}
+
+#[cfg(feature = "jpeg")]
+#[test]
+fn jpeg_safe_vectorized_paths_have_public_roundtrip_contract()
+-> Result<(), Box<dyn std::error::Error>> {
+    // These are caller-visible workload shapes, not direct kernel calls. They
+    // cover every baseline sampling layout, component count, edge geometry,
+    // restart-marker form, metadata branch, and the progressive/optimized
+    // fallback. The token re-run is the scalar/checkpointed reference for the
+    // same public operation; its pixels must match the tight path exactly.
+    let mut cases = Vec::new();
+
+    let mut rgb_420 = image_slash_star::JpegEncodeOptions::default();
+    rgb_420.quality = Some(75);
+    rgb_420.subsampling = Some(image_slash_star::JpegSubsampling::Cs420);
+    rgb_420.exif = Some(vec![0x45, 0x78, 0x69, 0x66, 0]);
+    cases.push((
+        "rgb-420-aligned",
+        jpeg_vectorization_image(32, 32, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_420),
+    ));
+
+    let mut rgb_420_restart = image_slash_star::JpegEncodeOptions::default();
+    rgb_420_restart.subsampling = Some(image_slash_star::JpegSubsampling::Cs420);
+    rgb_420_restart.restart_interval = Some(1);
+    cases.push((
+        "rgb-420-odd-restart",
+        jpeg_vectorization_image(33, 35, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_420_restart),
+    ));
+
+    let mut rgb_422 = image_slash_star::JpegEncodeOptions::default();
+    rgb_422.subsampling = Some(image_slash_star::JpegSubsampling::Cs422);
+    rgb_422.restart_interval = Some(1);
+    cases.push((
+        "rgb-422-edge",
+        jpeg_vectorization_image(65, 17, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_422),
+    ));
+
+    let mut rgb_444 = image_slash_star::JpegEncodeOptions::default();
+    rgb_444.subsampling = Some(image_slash_star::JpegSubsampling::Cs444);
+    rgb_444.restart_interval = Some(1);
+    cases.push((
+        "rgb-444-edge",
+        jpeg_vectorization_image(33, 35, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_444),
+    ));
+
+    let mut rgb_422_direct = image_slash_star::JpegEncodeOptions::default();
+    rgb_422_direct.subsampling = Some(image_slash_star::JpegSubsampling::Cs422);
+    cases.push((
+        "rgb-422-direct",
+        jpeg_vectorization_image(65, 17, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_422_direct),
+    ));
+
+    let mut rgb_444_direct = image_slash_star::JpegEncodeOptions::default();
+    rgb_444_direct.subsampling = Some(image_slash_star::JpegSubsampling::Cs444);
+    cases.push((
+        "rgb-444-direct",
+        jpeg_vectorization_image(33, 35, ColorType::Rgb8)?,
+        EncodeOptions::from(rgb_444_direct),
+    ));
+
+    let mut grayscale = image_slash_star::JpegEncodeOptions::default();
+    grayscale.restart_interval = Some(1);
+    grayscale.exif = Some(vec![0x45, 0x78, 0x69, 0x66, 0]);
+    cases.push((
+        "grayscale-edge",
+        jpeg_vectorization_image(33, 35, ColorType::L8)?,
+        EncodeOptions::from(grayscale),
+    ));
+
+    let grayscale_direct = image_slash_star::JpegEncodeOptions::default();
+    cases.push((
+        "grayscale-direct",
+        jpeg_vectorization_image(33, 35, ColorType::L8)?,
+        EncodeOptions::from(grayscale_direct),
+    ));
+
+    let mut cmyk = image_slash_star::JpegEncodeOptions::default();
+    cmyk.restart_interval = Some(1);
+    cmyk.exif = Some(vec![0x45, 0x78, 0x69, 0x66, 0]);
+    cases.push((
+        "cmyk-edge",
+        jpeg_vectorization_image(33, 35, ColorType::Cmyk8)?,
+        EncodeOptions::from(cmyk),
+    ));
+
+    let cmyk_direct = image_slash_star::JpegEncodeOptions::default();
+    cases.push((
+        "cmyk-direct",
+        jpeg_vectorization_image(33, 35, ColorType::Cmyk8)?,
+        EncodeOptions::from(cmyk_direct),
+    ));
+
+    let mut progressive = image_slash_star::JpegEncodeOptions::default();
+    progressive.progressive = Some(true);
+    progressive.subsampling = Some(image_slash_star::JpegSubsampling::Cs420);
+    cases.push((
+        "progressive-420",
+        jpeg_vectorization_image(33, 17, ColorType::Rgb8)?,
+        EncodeOptions::from(progressive),
+    ));
+
+    let mut optimized = image_slash_star::JpegEncodeOptions::default();
+    optimized.optimize = Some(true);
+    optimized.subsampling = Some(image_slash_star::JpegSubsampling::Cs444);
+    cases.push((
+        "optimized-444",
+        jpeg_vectorization_image(33, 17, ColorType::Rgb8)?,
+        EncodeOptions::from(optimized),
+    ));
+
+    for (name, image, options) in cases {
+        let encoded = image_slash_star::encode(&image, ImageFormat::Jpeg, &options)?;
+        let info = image_slash_star::inspect(&encoded)?;
+        assert_eq!(info.format, ImageFormat::Jpeg, "{name} format");
+        assert_eq!(
+            (info.width, info.height),
+            (image.width, image.height),
+            "{name} size"
+        );
+
+        let decoded = image_slash_star::decode(&encoded)?.content;
+        assert_eq!(decoded.color, image.color, "{name} color");
+        assert_eq!(
+            (decoded.width, decoded.height),
+            (image.width, image.height),
+            "{name} size"
+        );
+
+        let token = image_slash_star::CancellationToken::new();
+        let token_encoded =
+            image_slash_star::encode_with_token(&image, ImageFormat::Jpeg, &options, &token)?;
+        let token_decoded = image_slash_star::decode(&token_encoded)?.content;
+        assert_eq!(token_decoded.color, image.color, "{name} token color");
+        assert_eq!(token_decoded.pixels, decoded.pixels, "{name} token parity");
+    }
+    Ok(())
+}

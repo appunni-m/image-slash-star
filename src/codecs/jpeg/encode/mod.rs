@@ -1503,6 +1503,7 @@ fn jpeg_sink_output_end(written: usize, bytes: usize) -> CodecResult<usize> {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     huffman::__coverage_exercise_private_branches();
+    fdct::__coverage_exercise_private_branches();
 
     let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::L8);
     let zero_height = DecodedImage::new(1, 0, Vec::new(), crate::types::ColorType::L8);
@@ -1523,6 +1524,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ],
         crate::types::ColorType::Rgb8,
     );
+    let small_rgb = DecodedImage::new(
+        32,
+        16,
+        (0usize..(32 * 16 * 3))
+            .map(|index| index.to_le_bytes()[0].wrapping_mul(29))
+            .collect(),
+        crate::types::ColorType::Rgb8,
+    );
+    for subsampling in [
+        JpegSubsampling::Cs420,
+        JpegSubsampling::Cs422,
+        JpegSubsampling::Cs444,
+    ] {
+        let options = JpegEncodeOptions {
+            subsampling: Some(subsampling),
+            ..JpegEncodeOptions::default()
+        };
+        let _ = encode(&small_rgb, &options);
+    }
     let _ = encode(&gray, &JpegEncodeOptions::default());
     let progressive_cmyk = JpegEncodeOptions {
         progressive: Some(true),
@@ -1840,6 +1860,46 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut overflowing_restart = restart.clone();
     overflowing_restart.restart_interval = Some(u32::MAX);
     let _ = encode(&wide_rgb, &overflowing_restart);
+    let large_rgb = DecodedImage::new(
+        33,
+        35,
+        vec![128; 33 * 35 * 3],
+        crate::types::ColorType::Rgb8,
+    );
+    for subsampling in [JpegSubsampling::Cs422, JpegSubsampling::Cs444] {
+        let mut streaming = JpegEncodeOptions {
+            subsampling: Some(subsampling),
+            restart_interval: Some(1),
+            exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
+            ..JpegEncodeOptions::default()
+        };
+        let _ = encode(&large_rgb, &streaming);
+        streaming.restart_interval = Some(70_000);
+        let _ = encode(&large_rgb, &streaming);
+    }
+    let large_gray = DecodedImage::new(33, 35, vec![128; 33 * 35], crate::types::ColorType::L8);
+    let mut large_gray_options = JpegEncodeOptions {
+        restart_interval: Some(1),
+        exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&large_gray, &large_gray_options);
+    large_gray_options.restart_interval = Some(70_000);
+    let _ = encode(&large_gray, &large_gray_options);
+    let large_cmyk = DecodedImage::new(
+        33,
+        35,
+        vec![128; 33 * 35 * 4],
+        crate::types::ColorType::Cmyk8,
+    );
+    let mut large_cmyk_options = JpegEncodeOptions {
+        restart_interval: Some(1),
+        exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&large_cmyk, &large_cmyk_options);
+    large_cmyk_options.restart_interval = Some(70_000);
+    let _ = encode(&large_cmyk, &large_cmyk_options);
     let mut oversized_exif_options = JpegEncodeOptions::default();
     oversized_exif_options.exif = Some(vec![0; usize::from(u16::MAX)]);
     let _ = encode(&gray, &oversized_exif_options);
@@ -1852,6 +1912,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, None);
     let _ = downsample(&plane, 2, 2, 1, 2, 2, 1, None);
     let _ = downsample(&plane, 2, 2, 1, 1, 2, 2, None);
+    let wide_plane = vec![10u8; 32 * 2];
+    let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 1, None);
+    let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 2, None);
+    let _ = downsample(&[], 0, 0, 0, 0, 1, 1, None);
     let downsample_token = crate::CancellationToken::new();
     downsample_token.cancel_after(0);
     let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, Some(&downsample_token));

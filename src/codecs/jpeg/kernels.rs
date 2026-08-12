@@ -713,6 +713,27 @@ pub(crate) fn ycc_to_rgb_pixel(
     )
 }
 
+/// Exercise the empty-input and partially aligned tails of the fused 4:2:0
+/// color kernel. These are internal buffer contracts: public image validation
+/// rejects zero-sized images, while the kernel itself remains total for safe
+/// callers that use it as a row-building primitive.
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let (y, cb, cr) = rgb_to_ycbcr_420_batch(&[], 0, 0);
+    assert_eq!(y.len(), 0);
+    assert_eq!(cb.len(), 0);
+    assert_eq!(cr.len(), 0);
+
+    let _ = rgb_to_ycbcr_420_batch(&[], 1, 0);
+    let _ = rgb_to_ycbcr_420_batch(&[], 0, 1);
+
+    let pixels = vec![0u8; 16 * 3];
+    let (y, cb, cr) = rgb_to_ycbcr_420_batch(&pixels, 16, 1);
+    assert_eq!(y.len(), 16);
+    assert_eq!(cb.len(), 8);
+    assert_eq!(cr.len(), 8);
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
