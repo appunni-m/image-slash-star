@@ -3421,16 +3421,6 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
-fn rgb_fixed(terms: &[(i32, i32)], bias: i32) -> u8 {
-    terms
-        .iter()
-        .fold(bias, |sum, &(weight, sample)| {
-            sum.saturating_add(weight.saturating_mul(sample))
-        })
-        .wrapping_shr(16)
-        .to_le_bytes()[0]
-}
-
 // ── Color conversion (jccolor.c) ─────────────────────────────────────────
 
 fn rgb_to_ycbcr(
@@ -3447,6 +3437,16 @@ fn rgb_to_ycbcr(
     }
 }
 
+#[cfg(feature = "jpeg-wide-color")]
+fn rgb_to_ycbcr_without_checkpoint(
+    pixels: &[u8],
+    w: usize,
+    h: usize,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    crate::codecs::jpeg::kernels::rgb_to_ycbcr_batch(pixels, w, h)
+}
+
+#[cfg(not(feature = "jpeg-wide-color"))]
 fn rgb_to_ycbcr_without_checkpoint(
     pixels: &[u8],
     w: usize,
@@ -3463,13 +3463,14 @@ fn rgb_to_ycbcr_without_checkpoint(
         let row_end = npix.min(row_start.saturating_add(row_width));
         for i in row_start..row_end {
             let source = i.saturating_mul(3);
-            let r = i32::from(pixels[source]);
-            let g = i32::from(pixels[source.saturating_add(1)]);
-            let b = i32::from(pixels[source.saturating_add(2)]);
-            y[i] = rgb_fixed(&[(19_595, r), (38_470, g), (7_471, b)], 32_768);
-            let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
-            cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
-            cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
+            let (y_sample, cb_sample, cr_sample) = crate::codecs::jpeg::kernels::rgb_to_ycbcr_pixel(
+                pixels[source],
+                pixels[source.saturating_add(1)],
+                pixels[source.saturating_add(2)],
+            );
+            y[i] = y_sample;
+            cb[i] = cb_sample;
+            cr[i] = cr_sample;
         }
     }
     (y, cb, cr)
@@ -3493,17 +3494,18 @@ fn rgb_to_ycbcr_with_checkpoint<C: RgbConversionCheckpoint>(
         let row_end = npix.min(row_start.saturating_add(row_width));
         for i in row_start..row_end {
             let source = i.saturating_mul(3);
-            let r = i32::from(pixels[source]);
-            let g = i32::from(pixels[source.saturating_add(1)]);
-            let b = i32::from(pixels[source.saturating_add(2)]);
             // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jccolor.c:214-243 and
             // jccolext.c:37-73. Chroma includes CENTERJSAMPLE before descaling;
             // the prior port accidentally added 128 before, rather than after,
             // the 16-bit fixed-point scale.
-            y[i] = rgb_fixed(&[(19_595, r), (38_470, g), (7_471, b)], 32_768);
-            let chroma_bias = 128i32.wrapping_shl(16).saturating_add(32_767);
-            cb[i] = rgb_fixed(&[(-11_059, r), (-21_709, g), (32_768, b)], chroma_bias);
-            cr[i] = rgb_fixed(&[(32_768, r), (-27_439, g), (-5_329, b)], chroma_bias);
+            let (y_sample, cb_sample, cr_sample) = crate::codecs::jpeg::kernels::rgb_to_ycbcr_pixel(
+                pixels[source],
+                pixels[source.saturating_add(1)],
+                pixels[source.saturating_add(2)],
+            );
+            y[i] = y_sample;
+            cb[i] = cb_sample;
+            cr[i] = cr_sample;
             checkpoint.observe()?;
         }
     }
