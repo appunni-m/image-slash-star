@@ -10,6 +10,7 @@ use image_slash_star::{ColorType, DecodedImage, ImageFormat, decode, encode_defa
 #[cfg(feature = "jpeg")]
 use wide as _;
 
+#[cfg_attr(coverage, coverage(off))]
 fn make_rgb(width: u32, height: u32) -> Result<DecodedImage, Box<dyn Error>> {
     let width = usize::try_from(width)?;
     let height = usize::try_from(height)?;
