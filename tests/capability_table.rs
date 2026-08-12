@@ -14,6 +14,8 @@ use image_slash_star::{
 };
 
 use bytemuck as _;
+#[cfg(feature = "jpeg")]
+use wide as _;
 
 const FORMAT_FEATURES: [(&str, ImageFormat); 8] = [
     ("jpeg", ImageFormat::Jpeg),

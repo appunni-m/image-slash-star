@@ -19,6 +19,8 @@ mod sha256;
 use image_slash_star::{ColorType, DecodedImage, EncodeOptions, ImageFormat, ImageMode};
 
 use bytemuck as _;
+#[cfg(feature = "jpeg")]
+use wide as _;
 
 fn checkerboard(width: u32, height: u32) -> Vec<u8> {
     let mut pixels = Vec::with_capacity(

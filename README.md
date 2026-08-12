@@ -654,7 +654,7 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
-The generated matrix in this tree contains 1,417 active cases:
+The generated matrix in this tree contains 1,421 active cases:
 1,024 decode/inspect/verify cases and 393 encode cases, with zero
 planned or unwired rows. Expected errors are active fixture outcomes, and
 every decode-error class is catalogued in a generated, CI-checked
@@ -701,6 +701,8 @@ Native builds using default features need no external codec library. Enabling
 - [Historical roadmap audit](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Release checklist](RELEASING.md)
 - [Security policy](SECURITY.md)
 - [Third-party provenance](third_party/README.md)
 

@@ -16,6 +16,9 @@ the affected format, smallest reproducer, impact, and any suggested mitigation.
 Maintainers will acknowledge a report as soon as practical, coordinate a fix
 and disclosure with the reporter, and credit reporters who wish to be named.
 
-The pre-release API does not yet expose caller-controlled decode limits. Exact
-fixture parity, complete coverage, and strict static checks must not be treated
-as a claim that arbitrary hostile input is safe.
+The pre-release API exposes caller-controlled `DecodePolicy` limits for input
+size, inspected dimensions, decoded bytes, metadata, sequence retention, and
+work checkpoints. Use those limits when processing untrusted input; they are
+resource bounds, not a complete sandbox or a recoverable out-of-memory
+contract. Exact fixture parity, complete coverage, and strict static checks
+must not be treated as a claim that arbitrary hostile input is safe.

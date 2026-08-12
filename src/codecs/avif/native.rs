@@ -1,6 +1,16 @@
 //! Safe Rust ownership wrappers for the fixed libavif bridge.
+//!
+//! This is the one intentional unsafe boundary in the crate. The public
+//! codec paths remain safe Rust; this module translates the narrow C bridge
+//! into owned handles, borrowed-input lifetimes, checked output buffers, and
+//! matching deallocation. Every unsafe operation below has a local `SAFETY`
+//! explanation, and the C side exposes status codes rather than callbacks or
+//! Rust-owned pointers.
 
-#![allow(unsafe_code)]
+#![expect(
+    unsafe_code,
+    reason = "the optional native AVIF FFI boundary is isolated and audited here"
+)]
 
 use std::ffi::{CString, c_char};
 use std::marker::PhantomData;

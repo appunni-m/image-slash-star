@@ -1311,10 +1311,10 @@ pub(crate) fn encode_format_to_sink_with_token(
     // coverage runs.
     #[cfg(not(feature = "ico"))]
     {
-        return Err(ImageError::FeatureDisabled {
+        Err(ImageError::FeatureDisabled {
             format,
             feature: "ico",
-        });
+        })
     }
     #[cfg(feature = "ico")]
     {
@@ -1727,10 +1727,10 @@ pub(crate) fn encode_sequence_to_sink_with_token(
     // format check was an impossible false branch in the all-features build.
     #[cfg(not(feature = "webp"))]
     {
-        return Err(ImageError::FeatureDisabled {
+        Err(ImageError::FeatureDisabled {
             format,
             feature: "webp",
-        });
+        })
     }
     #[cfg(feature = "webp")]
     {

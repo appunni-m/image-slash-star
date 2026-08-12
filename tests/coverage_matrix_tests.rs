@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use bytemuck as _;
 use image_slash_star as img;
+#[cfg(feature = "jpeg")]
+use wide as _;
 
 #[path = "support/sha256.rs"]
 mod sha256;

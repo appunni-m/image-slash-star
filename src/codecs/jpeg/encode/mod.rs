@@ -14,7 +14,7 @@
 #![allow(dead_code)] // encoder wired up incrementally; tables/markers used by encode_*
 
 mod fdct;
-mod huffman;
+pub(crate) mod huffman;
 mod marker;
 mod quant;
 
@@ -26,6 +26,8 @@ use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
 #[cfg(coverage)]
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use wide::bytemuck::{cast, pod_read_unaligned};
+use wide::{i16x8, i32x4, i32x8, u8x16, u16x8};
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
 const ZIGZAG: [usize; 64] = [
@@ -33,6 +35,7 @@ const ZIGZAG: [usize; 64] = [
     13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
     52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 ];
+
 const ENTROPY_OUTPUT_CHECKPOINT_BYTES: usize = 1_024;
 const RGB_TO_YCBCR_CHECKPOINT_PIXELS: usize = 1_024;
 const DOWNSAMPLE_CHECKPOINT_PIXELS: usize = 1_024;
@@ -41,6 +44,8 @@ const BASELINE_ENTROPY_CHECKPOINT_MCUS: usize = 1_024;
 const PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS: usize = 1_024;
 const PROGRESSIVE_EVENT_CHECKPOINT_EVENTS: usize = 1_024;
 const PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS: usize = 1_024;
+
+type PreparedJpegPlanes<'a> = (Cow<'a, [u8]>, Vec<u8>, Vec<u8>, Vec<u8>, bool);
 
 #[cfg(coverage)]
 static FORCE_FDCT_FAILURE_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
@@ -490,6 +495,30 @@ struct CompData {
     ac_tbl: u8,
 }
 
+/// Per-coefficient integer division metadata shared by every block in one
+/// component. JPEG quantization divisors are fixed for an encode, so paying
+/// for division once here avoids repeating it for every transformed value.
+struct FdctQuantizer {
+    divisors: [u32; 64],
+    reciprocals: [u32; 64],
+}
+
+impl FdctQuantizer {
+    fn new(qtable: &[u16; 64]) -> Self {
+        let mut divisors = [0u32; 64];
+        let mut reciprocals = [0u32; 64];
+        for coefficient in 0usize..64 {
+            let divisor = u32::from(qtable[coefficient]).saturating_mul(8);
+            divisors[coefficient] = divisor;
+            reciprocals[coefficient] = reciprocal_divisor(divisor);
+        }
+        Self {
+            divisors,
+            reciprocals,
+        }
+    }
+}
+
 pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }
@@ -536,54 +565,101 @@ pub(crate) fn encode_with_token(
     let restart_rows = opts.restart_interval.unwrap_or(0) as usize;
 
     let params = quant::build_params(quality, subsampling, usize::from(num_components));
+    let y_quantizer = FdctQuantizer::new(&params.quant_tables[0]);
+    let chroma_quantizer =
+        (num_components == 3).then(|| FdctQuantizer::new(&params.quant_tables[1]));
+
+    // The common baseline 4:2:0 path converts one MCU row directly into its
+    // packed FDCT/entropy pipeline. This keeps large RGB inputs from making
+    // and rereading three whole-image component planes.
+    if token.is_none()
+        && num_components == 3
+        && !progressive
+        && !optimize
+        && subsampling == "420"
+        && quality > 25
+        && w != 0
+        && h != 0
+        && w.saturating_mul(h) >= 1024
+    {
+        let chroma_quantizer = chroma_quantizer
+            .as_ref()
+            .ok_or_else(|| CodecError::Malformed("missing JPEG chroma quantizer".to_owned()))?;
+        return encode_baseline_420_mcu_row_streaming(
+            Baseline420Source::Rgb(pixels),
+            w,
+            h,
+            &params,
+            &y_quantizer,
+            chroma_quantizer,
+            opts,
+        );
+    }
 
     // RGB → YCbCr (jccolor.c), Adobe CMYK inversion, or grayscale
     // pass-through. Pillow/libjpeg writes CMYK JPEG samples as 255 - CMYK and
     // advertises transform 0 in APP14; the decoder reverses that convention.
-    let (y_plane, cb_plane, cr_plane, k_plane): (Cow<'_, [u8]>, Vec<u8>, Vec<u8>, Vec<u8>) =
-        if num_components == 1 {
-            if img.mode == ImageMode::L1 {
-                let row_bytes = w.div_ceil(8);
-                let mut expanded = Vec::with_capacity(w.saturating_mul(h));
-                for y in 0..h {
-                    crate::codecs::error::check_cancelled(token)?;
-                    let row_start = y.saturating_mul(row_bytes);
-                    for x in 0..w {
-                        let packed = pixels[row_start.saturating_add(x / 8)];
-                        let bit = 0x80u8 >> (x % 8);
-                        expanded.push(if packed & bit != 0 { 255 } else { 0 });
-                    }
+    let (y_plane, mut cb_plane, mut cr_plane, k_plane, chroma_already_downsampled):
+        PreparedJpegPlanes<'_> = if num_components == 1 {
+        if img.mode == ImageMode::L1 {
+            let row_bytes = w.div_ceil(8);
+            let mut expanded = Vec::with_capacity(w.saturating_mul(h));
+            for y in 0..h {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.saturating_mul(row_bytes);
+                for x in 0..w {
+                    let packed = pixels[row_start.saturating_add(x / 8)];
+                    let bit = 0x80u8 >> (x % 8);
+                    expanded.push(if packed & bit != 0 { 255 } else { 0 });
                 }
-                (Cow::Owned(expanded), Vec::new(), Vec::new(), Vec::new())
-            } else {
-                let pixel_count = w.saturating_mul(h);
-                let copied = pixel_count.min(pixels.len());
-                let row_width = w.max(1);
-                for _row_start in (0..copied).step_by(row_width) {
-                    crate::codecs::error::check_cancelled(token)?;
-                }
-                (Cow::Borrowed(pixels), Vec::new(), Vec::new(), Vec::new())
             }
-        } else if num_components == 3 {
-            let (y, cb, cr) = rgb_to_ycbcr(pixels, w, h, token)?;
-            (Cow::Owned(y), cb, cr, Vec::new())
+            (
+                Cow::Owned(expanded),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                false,
+            )
         } else {
             let pixel_count = w.saturating_mul(h);
-            let mut c_plane = Vec::with_capacity(pixel_count);
-            let mut m_plane = Vec::with_capacity(pixel_count);
-            let mut y_plane = Vec::with_capacity(pixel_count);
-            let mut k_plane = Vec::with_capacity(pixel_count);
-            for row in pixels.chunks_exact(w.saturating_mul(4).max(1)) {
+            let copied = pixel_count.min(pixels.len());
+            let row_width = w.max(1);
+            for _row_start in (0..copied).step_by(row_width) {
                 crate::codecs::error::check_cancelled(token)?;
-                for pixel in row.chunks_exact(4) {
-                    c_plane.push(255u8.saturating_sub(pixel[0]));
-                    m_plane.push(255u8.saturating_sub(pixel[1]));
-                    y_plane.push(255u8.saturating_sub(pixel[2]));
-                    k_plane.push(255u8.saturating_sub(pixel[3]));
-                }
             }
-            (Cow::Owned(c_plane), m_plane, y_plane, k_plane)
-        };
+            (
+                Cow::Borrowed(pixels),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                false,
+            )
+        }
+    } else if num_components == 3 {
+        if token.is_none() && subsampling == "420" {
+            let (y, cb, cr) = crate::codecs::jpeg::kernels::rgb_to_ycbcr_420_batch(pixels, w, h);
+            (Cow::Owned(y), cb, cr, Vec::new(), true)
+        } else {
+            let (y, cb, cr) = rgb_to_ycbcr(pixels, w, h, token)?;
+            (Cow::Owned(y), cb, cr, Vec::new(), false)
+        }
+    } else {
+        let pixel_count = w.saturating_mul(h);
+        let mut c_plane = Vec::with_capacity(pixel_count);
+        let mut m_plane = Vec::with_capacity(pixel_count);
+        let mut y_plane = Vec::with_capacity(pixel_count);
+        let mut k_plane = Vec::with_capacity(pixel_count);
+        for row in pixels.chunks_exact(w.saturating_mul(4).max(1)) {
+            crate::codecs::error::check_cancelled(token)?;
+            for pixel in row.chunks_exact(4) {
+                c_plane.push(255u8.saturating_sub(pixel[0]));
+                m_plane.push(255u8.saturating_sub(pixel[1]));
+                y_plane.push(255u8.saturating_sub(pixel[2]));
+                k_plane.push(255u8.saturating_sub(pixel[3]));
+            }
+        }
+        (Cow::Owned(c_plane), m_plane, y_plane, k_plane, false)
+    };
 
     // Sampling factors (h, v) per component; max is the reference grid.
     let (y_hs, y_vs, cb_hs, cb_vs, cr_hs, cr_vs, max_h, max_v) = match (num_components, subsampling)
@@ -612,7 +688,9 @@ pub(crate) fn encode_with_token(
     let cr_h = cb_h;
 
     // Downsample chroma (jcsample.c h2v2 / h2v1 / identity).
-    let cb_ds = if num_components == 3 {
+    let cb_ds = if chroma_already_downsampled || (num_components == 3 && cb_w == w && cb_h == h) {
+        std::mem::take(&mut cb_plane)
+    } else if num_components == 3 {
         downsample(
             &cb_plane,
             w,
@@ -626,7 +704,9 @@ pub(crate) fn encode_with_token(
     } else {
         Vec::new()
     };
-    let cr_ds = if num_components == 3 {
+    let cr_ds = if chroma_already_downsampled || (num_components == 3 && cr_w == w && cr_h == h) {
+        std::mem::take(&mut cr_plane)
+    } else if num_components == 3 {
         downsample(
             &cr_plane,
             w,
@@ -641,11 +721,171 @@ pub(crate) fn encode_with_token(
         Vec::new()
     };
 
+    // Baseline CMYK keeps four adjacent blocks per component in safe packed
+    // FDCT form, then writes one C/M/Y/K block packet per MCU.
+    if token.is_none()
+        && num_components == 4
+        && !progressive
+        && !optimize
+        && w != 0
+        && h != 0
+        && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
+        && y_plane.len() == w.saturating_mul(h)
+        && cb_plane.len() == y_plane.len()
+        && cr_plane.len() == y_plane.len()
+        && k_plane.len() == y_plane.len()
+    {
+        return encode_baseline_cmyk_block_row_streaming(
+            &y_plane,
+            &cb_plane,
+            &cr_plane,
+            &k_plane,
+            w,
+            h,
+            &params,
+            &y_quantizer,
+            opts,
+        );
+    }
+
+    // Baseline grayscale streams four blocks from the safe packed FDCT into
+    // independent entropy reservoirs without materializing a coefficient
+    // image first. Tiny unaligned images keep the simpler generic path.
+    if token.is_none()
+        && num_components == 1
+        && !progressive
+        && !optimize
+        && w != 0
+        && h != 0
+        && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
+        && y_plane.len() == w.saturating_mul(h)
+    {
+        return encode_baseline_grayscale_block_row_streaming(
+            &y_plane,
+            w,
+            h,
+            &params,
+            &y_quantizer,
+            opts,
+        );
+    }
+
+    // Baseline 4:2:2 can stream four MCUs at a time from safe SIMD
+    // FDCT packets into entropy output, avoiding whole-image coefficient
+    // planes and their coefficient-major-to-block-major transposes.
+    if token.is_none()
+        && num_components == 3
+        && !progressive
+        && !optimize
+        && subsampling == "422"
+        && w != 0
+        && h != 0
+        && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(64) && h.is_multiple_of(8)))
+        && y_plane.len() == w.saturating_mul(h)
+        && cb_w == w.div_ceil(16).saturating_mul(8)
+        && cb_h == h
+        && cr_w == cb_w
+        && cr_h == cb_h
+        && cb_ds.len() == cb_w.saturating_mul(cb_h)
+        && cr_ds.len() == cr_w.saturating_mul(cr_h)
+    {
+        let chroma_quantizer = chroma_quantizer
+            .as_ref()
+            .ok_or_else(|| CodecError::Malformed("missing JPEG chroma quantizer".to_owned()))?;
+        return encode_baseline_422_block_row_streaming(
+            &y_plane,
+            &cb_ds,
+            &cr_ds,
+            w,
+            h,
+            cb_w,
+            cb_h,
+            &params,
+            &y_quantizer,
+            chroma_quantizer,
+            opts,
+        );
+    }
+
+    // Baseline 4:4:4 can keep each four-block SIMD packet in its
+    // native coefficient-major layout until entropy output. This avoids
+    // materializing and transposing three whole-image coefficient planes.
+    if token.is_none()
+        && num_components == 3
+        && !progressive
+        && !optimize
+        && subsampling == "444"
+        && w != 0
+        && h != 0
+        && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
+        && y_plane.len() == w.saturating_mul(h)
+        && cb_w == w
+        && cb_h == h
+        && cr_w == w
+        && cr_h == h
+        && cb_ds.len() == w.saturating_mul(h)
+        && cr_ds.len() == w.saturating_mul(h)
+    {
+        let chroma_quantizer = chroma_quantizer
+            .as_ref()
+            .ok_or_else(|| CodecError::Malformed("missing JPEG chroma quantizer".to_owned()))?;
+        return encode_baseline_444_block_row_streaming(
+            &y_plane,
+            &cb_ds,
+            &cr_ds,
+            w,
+            h,
+            &params,
+            &y_quantizer,
+            chroma_quantizer,
+            opts,
+        );
+    }
+
+    // Sparse low-quality 4:2:0 data is faster after the fused whole-plane
+    // conversion, while retaining the same packed transform/entropy backend.
+    if token.is_none()
+        && num_components == 3
+        && !progressive
+        && !optimize
+        && subsampling == "420"
+        && quality <= 25
+        && w != 0
+        && h != 0
+        && w.saturating_mul(h) >= 1024
+        && y_plane.len() == w.saturating_mul(h)
+        && cb_w == w.div_ceil(16).saturating_mul(8)
+        && cb_h == h.div_ceil(2)
+        && cr_w == cb_w
+        && cr_h == cb_h
+        && cb_ds.len() == cb_w.saturating_mul(cb_h)
+        && cr_ds.len() == cr_w.saturating_mul(cr_h)
+    {
+        let chroma_quantizer = chroma_quantizer
+            .as_ref()
+            .ok_or_else(|| CodecError::Malformed("missing JPEG chroma quantizer".to_owned()))?;
+        return encode_baseline_420_mcu_row_streaming(
+            Baseline420Source::Planes {
+                y: &y_plane,
+                cb: &cb_ds,
+                cr: &cr_ds,
+                chroma_width: cb_w,
+                chroma_height: cb_h,
+            },
+            w,
+            h,
+            &params,
+            &y_quantizer,
+            chroma_quantizer,
+            opts,
+        );
+    }
+
     // Prepare per-component quantized coefficient blocks (natural order).
     let mut comps: Vec<CompData> = Vec::with_capacity(usize::from(num_components));
 
     // Y
-    let y_blocks = fdct_quantize(&y_plane, y_w, y_h, &params.quant_tables[0], token)?;
+    let y_blocks = fdct_quantize(&y_plane, y_w, y_h, &y_quantizer, token)?;
     comps.push(CompData {
         blocks: y_blocks.0,
         blocks_per_row: y_blocks.1,
@@ -663,7 +903,10 @@ pub(crate) fn encode_with_token(
             (&cb_ds, cb_w, cb_h, cb_hs, cb_vs, 2u8),
             (&cr_ds, cr_w, cr_h, cr_hs, cr_vs, 3u8),
         ] {
-            let blk = fdct_quantize(plane, cw, ch, &params.quant_tables[1], token)?;
+            let quantizer = chroma_quantizer
+                .as_ref()
+                .ok_or_else(|| CodecError::Malformed("missing JPEG chroma quantizer".to_owned()))?;
+            let blk = fdct_quantize(plane, cw, ch, quantizer, token)?;
             comps.push(CompData {
                 blocks: blk.0,
                 blocks_per_row: blk.1,
@@ -678,7 +921,7 @@ pub(crate) fn encode_with_token(
         }
     } else if num_components == 4 {
         for (plane, id) in [(&cb_plane, b'M'), (&cr_plane, b'Y')] {
-            let blk = fdct_quantize(plane, w, h, &params.quant_tables[0], token)?;
+            let blk = fdct_quantize(plane, w, h, &y_quantizer, token)?;
             comps.push(CompData {
                 blocks: blk.0,
                 blocks_per_row: blk.1,
@@ -691,7 +934,7 @@ pub(crate) fn encode_with_token(
                 ac_tbl: 0,
             });
         }
-        let blk = fdct_quantize(&k_plane, w, h, &params.quant_tables[0], token)?;
+        let blk = fdct_quantize(&k_plane, w, h, &y_quantizer, token)?;
         comps.push(CompData {
             blocks: blk.0,
             blocks_per_row: blk.1,
@@ -719,10 +962,11 @@ pub(crate) fn encode_with_token(
     };
 
     // Derive standard Huffman tables.
-    let dc_luma = huffman::derive_table(&huffman::STD_DC_LUMA.0, &huffman::STD_DC_LUMA.1);
-    let dc_chroma = huffman::derive_table(&huffman::STD_DC_CHROMA.0, &huffman::STD_DC_CHROMA.1);
-    let ac_luma = huffman::derive_table(&huffman::STD_AC_LUMA.0, &huffman::STD_AC_LUMA.1);
-    let ac_chroma = huffman::derive_table(&huffman::STD_AC_CHROMA.0, &huffman::STD_AC_CHROMA.1);
+    let standard_tables = huffman::standard_derived_tables();
+    let dc_luma = &standard_tables[0];
+    let dc_chroma = &standard_tables[1];
+    let ac_luma = &standard_tables[2];
+    let ac_chroma = &standard_tables[3];
     let (optimized_dc, optimized_ac) = if !progressive && optimize {
         let (dc_frequencies, ac_frequencies) =
             baseline_frequencies(&comps, max_h, max_v, restart_interval, token)?;
@@ -742,18 +986,18 @@ pub(crate) fn encode_with_token(
     let dc_tables = [
         optimized_dc[0]
             .as_ref()
-            .map_or(&dc_luma, |table| &table.derived),
+            .map_or(dc_luma, |table| &table.derived),
         optimized_dc[1]
             .as_ref()
-            .map_or(&dc_chroma, |table| &table.derived),
+            .map_or(dc_chroma, |table| &table.derived),
     ];
     let ac_tables = [
         optimized_ac[0]
             .as_ref()
-            .map_or(&ac_luma, |table| &table.derived),
+            .map_or(ac_luma, |table| &table.derived),
         optimized_ac[1]
             .as_ref()
-            .map_or(&ac_chroma, |table| &table.derived),
+            .map_or(ac_chroma, |table| &table.derived),
     ];
 
     let mut out = Vec::new();
@@ -857,6 +1101,21 @@ pub(crate) fn encode_with_token(
                 Some(token),
                 &mut checkpoint,
             )?;
+        } else if !optimize
+            && restart_interval == 0
+            && baseline_420_independent_entropy_is_compatible(&comps, max_h, max_v)
+        {
+            encode_baseline_420_independent_entropy(&mut out, &comps, &dc_tables, &ac_tables);
+        } else if !optimize
+            && restart_interval == 0
+            && baseline_422_independent_entropy_is_compatible(&comps, max_h, max_v)
+        {
+            encode_baseline_422_independent_entropy(&mut out, &comps, &dc_tables, &ac_tables);
+        } else if !optimize
+            && restart_interval == 0
+            && baseline_444_independent_entropy_is_compatible(&comps, max_h, max_v)
+        {
+            encode_baseline_444_independent_entropy(&mut out, &comps, &dc_tables, &ac_tables);
         } else {
             encode_baseline_without_token(
                 &mut out,
@@ -942,8 +1201,8 @@ fn encode_baseline_without_token(
                         let brow = my.saturating_mul(vs).saturating_add(vy);
                         let bcol = mx.saturating_mul(hs).saturating_add(vx);
                         if brow >= c.block_rows || bcol >= bpr {
-                            bw.write_bits(dc_tbl.codes[0], dc_tbl.lengths[0]);
-                            bw.write_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
+                            bw.write_bounded_bits(dc_tbl.codes[0], dc_tbl.lengths[0]);
+                            bw.write_bounded_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
                             continue;
                         }
                         let blk = &c.blocks[brow.saturating_mul(bpr).saturating_add(bcol)];
@@ -3437,43 +3696,12 @@ fn rgb_to_ycbcr(
     }
 }
 
-#[cfg(feature = "jpeg-wide-color")]
 fn rgb_to_ycbcr_without_checkpoint(
     pixels: &[u8],
     w: usize,
     h: usize,
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
     crate::codecs::jpeg::kernels::rgb_to_ycbcr_batch(pixels, w, h)
-}
-
-#[cfg(not(feature = "jpeg-wide-color"))]
-fn rgb_to_ycbcr_without_checkpoint(
-    pixels: &[u8],
-    w: usize,
-    h: usize,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
-    let n = w.saturating_mul(h);
-    let mut y = vec![0u8; n];
-    let mut cb = vec![0u8; n];
-    let mut cr = vec![0u8; n];
-    let npix = n.min(pixels.len().div_euclid(3));
-    let row_width = w.max(1);
-    for row in 0..h {
-        let row_start = row.saturating_mul(row_width).min(npix);
-        let row_end = npix.min(row_start.saturating_add(row_width));
-        for i in row_start..row_end {
-            let source = i.saturating_mul(3);
-            let (y_sample, cb_sample, cr_sample) = crate::codecs::jpeg::kernels::rgb_to_ycbcr_pixel(
-                pixels[source],
-                pixels[source.saturating_add(1)],
-                pixels[source.saturating_add(2)],
-            );
-            y[i] = y_sample;
-            cb[i] = cb_sample;
-            cr[i] = cr_sample;
-        }
-    }
-    (y, cb, cr)
 }
 
 fn rgb_to_ycbcr_with_checkpoint<C: RgbConversionCheckpoint>(
@@ -3552,18 +3780,27 @@ fn downsample_without_checkpoint(
     hr: usize,
     vr: usize,
 ) -> Vec<u8> {
-    let mut out = vec![0u8; dw.saturating_mul(dh)];
+    if sw == 0 || sh == 0 || dw == 0 || dh == 0 {
+        return vec![0u8; dw.saturating_mul(dh)];
+    }
+
     if hr == 1 && vr == 1 {
+        let mut out = Vec::with_capacity(dw.saturating_mul(dh));
         for y in 0..dh {
+            let source_y = y.min(sh.saturating_sub(1));
             for x in 0..dw {
-                let source_y = y.min(sh.saturating_sub(1));
                 let source_x = x.min(sw.saturating_sub(1));
-                out[y.saturating_mul(dw).saturating_add(x)] =
-                    plane[source_y.saturating_mul(sw).saturating_add(source_x)];
+                out.push(plane[source_y.saturating_mul(sw).saturating_add(source_x)]);
             }
         }
         return out;
     }
+
+    if hr == 2 && (vr == 1 || vr == 2) {
+        return downsample_two_to_one(plane, sw, sh, dw, dh, vr);
+    }
+
+    let mut out = vec![0u8; dw.saturating_mul(dh)];
     for y in 0..dh {
         for x in 0..dw {
             let mut sum = 0u32;
@@ -3590,6 +3827,61 @@ fn downsample_without_checkpoint(
         }
     }
     out
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "validated JPEG dimensions bound two-row sums and source coordinates"
+)]
+#[inline]
+fn downsample_two_to_one(
+    plane: &[u8],
+    source_width: usize,
+    source_height: usize,
+    destination_width: usize,
+    destination_height: usize,
+    vertical_rows: usize,
+) -> Vec<u8> {
+    debug_assert!(vertical_rows == 1 || vertical_rows == 2);
+    let mut output = Vec::with_capacity(destination_width.saturating_mul(destination_height));
+    for y in 0usize..destination_height {
+        let source_y = (y * vertical_rows).min(source_height - 1);
+        let next_y = (source_y + usize::from(vertical_rows == 2)).min(source_height - 1);
+        let row0 = source_y * source_width;
+        let row1 = next_y * source_width;
+        let mut x = 0usize;
+        while x + 8 <= destination_width && x * 2 + 16 <= source_width {
+            let source_x = x * 2;
+            let source0: &[u8; 16] = plane[row0 + source_x..row0 + source_x + 16]
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("validated h2 source batch is not 16 bytes"));
+            let averaged = if vertical_rows == 2 {
+                let source1: &[u8; 16] = plane[row1 + source_x..row1 + source_x + 16]
+                    .try_into()
+                    .unwrap_or_else(|_| {
+                        unreachable!("validated h2v2 source batch is not 16 bytes")
+                    });
+                crate::codecs::jpeg::kernels::downsample_h2v2_eight(source0, source1)
+            } else {
+                crate::codecs::jpeg::kernels::downsample_h2v1_eight(source0)
+            };
+            output.extend_from_slice(&averaged);
+            x += 8;
+        }
+        while x < destination_width {
+            let source_x = (x * 2).min(source_width - 1);
+            let next_x = (source_x + 1).min(source_width - 1);
+            let mut sum = u32::from(plane[row0 + source_x]) + u32::from(plane[row0 + next_x]);
+            if vertical_rows == 2 {
+                sum += u32::from(plane[row1 + source_x]) + u32::from(plane[row1 + next_x]);
+            }
+            let bias = u32::from(x.to_le_bytes()[0] & 1) + u32::from(vertical_rows == 2);
+            let shift = u32::from(vertical_rows == 2) + 1;
+            output.push(((sum + bias) >> shift).to_le_bytes()[0]);
+            x += 1;
+        }
+    }
+    output
 }
 
 #[allow(
@@ -3655,6 +3947,1393 @@ fn downsample_with_checkpoint<C: DownsampleCheckpoint>(
     Ok(out)
 }
 
+/// Encode baseline Adobe CMYK as four packed component block rows.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "four validated component planes plus quantizer and marker options are explicit inputs"
+)]
+fn encode_baseline_cmyk_block_row_streaming(
+    c_plane: &[u8],
+    m_plane: &[u8],
+    y_plane: &[u8],
+    k_plane: &[u8],
+    width: usize,
+    height: usize,
+    params: &quant::EncodeParams,
+    quantizer: &FdctQuantizer,
+    options: &JpegEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    let pixel_count = width.saturating_mul(height);
+    debug_assert_eq!(c_plane.len(), pixel_count);
+    debug_assert_eq!(m_plane.len(), pixel_count);
+    debug_assert_eq!(y_plane.len(), pixel_count);
+    debug_assert_eq!(k_plane.len(), pixel_count);
+    debug_assert_eq!(params.quant_tables.len(), 1);
+
+    let mcu_columns = width.div_ceil(8);
+    let restart_rows = options.restart_interval.unwrap_or(0);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        let interval = usize::try_from(restart_rows)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(mcu_columns);
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
+    };
+
+    let standard_tables = huffman::standard_derived_tables();
+    let luma_dc = &standard_tables[0];
+    let luma_ac = &standard_tables[2];
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+
+    let mut output = Vec::with_capacity(
+        width
+            .saturating_mul(height)
+            .saturating_mul(2)
+            .saturating_add(512),
+    );
+    marker::write_soi(&mut output);
+    marker::write_adobe_app14(&mut output);
+    if let Some(exif) = options.exif.as_deref() {
+        marker::write_exif_app1(&mut output, exif)?;
+    }
+    marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    marker::write_sof(
+        &mut output,
+        0xC0,
+        low_u16(width),
+        low_u16(height),
+        &[
+            (b'C', 1, 1, 0),
+            (b'M', 1, 1, 0),
+            (b'Y', 1, 1, 0),
+            (b'K', 1, 1, 0),
+        ],
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        0,
+        &huffman::STD_DC_LUMA.0,
+        &huffman::STD_DC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        0,
+        &huffman::STD_AC_LUMA.0,
+        &huffman::STD_AC_LUMA.1,
+    );
+    if restart_interval != 0 {
+        marker::write_dri(&mut output, restart_interval);
+    }
+    marker::write_sos(
+        &mut output,
+        &[(b'C', 0, 0), (b'M', 0, 0), (b'Y', 0, 0), (b'K', 0, 0)],
+        0,
+        63,
+        0,
+        0,
+    );
+
+    let mcu_rows = height.div_ceil(8);
+    let mcu_groups = mcu_columns.div_ceil(4);
+    let mut coefficients = [[0i16; 256]; 4];
+    let mut samples = [i32x4::ZERO; 64];
+    let mut writers = [RawBlockWriter::new(); 4];
+    let mut scan = RawScanWriter::new(&mut output);
+    let mut previous_dc = [0i32; 4];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
+
+    for mcu_y in 0usize..mcu_rows {
+        for mcu_group in 0usize..mcu_groups {
+            if restart_interval != 0 && mcus_until_restart == 0 {
+                scan.finish();
+                marker::write_rst(&mut output, next_restart);
+                next_restart = next_restart.saturating_add(1) & 7;
+                scan = RawScanWriter::new(&mut output);
+                previous_dc = [0; 4];
+                mcus_until_restart = usize::from(restart_interval);
+            }
+
+            let first_mcu = mcu_group.saturating_mul(4);
+            for (plane, coefficient_group) in [c_plane, m_plane, y_plane, k_plane]
+                .into_iter()
+                .zip(&mut coefficients)
+            {
+                load_fdct_samples_four_into(plane, width, height, first_mcu, mcu_y, &mut samples);
+                fdct_quantize_four_coefficient_major(&mut samples, quantizer, coefficient_group);
+            }
+
+            let group_mcus = mcu_columns.saturating_sub(first_mcu).min(4);
+            for lane in 0usize..group_mcus {
+                let blocks = [
+                    CoefficientMajorBlock {
+                        group: &coefficients[0],
+                        lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficients[1],
+                        lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficients[2],
+                        lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficients[3],
+                        lane,
+                    },
+                ];
+                let dc = blocks.map(|block| block.coefficient(0));
+                encode_four_coefficient_major_raw_blocks(
+                    &mut writers,
+                    blocks,
+                    [
+                        dc[0] - previous_dc[0],
+                        dc[1] - previous_dc[1],
+                        dc[2] - previous_dc[2],
+                        dc[3] - previous_dc[3],
+                    ],
+                    luma_dc,
+                    luma_ac,
+                    luma_dc,
+                    luma_ac,
+                    luma_ready,
+                    luma_ready,
+                );
+                for writer in &writers {
+                    writer.append_to(&mut scan);
+                }
+                previous_dc = dc;
+                mcus_until_restart = mcus_until_restart.saturating_sub(1);
+            }
+        }
+    }
+    scan.finish();
+    marker::write_eoi(&mut output);
+    Ok(output)
+}
+
+/// Encode baseline grayscale as a four-block transform/entropy pipeline.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "validated planes, quantizer, and marker options are explicit inputs"
+)]
+fn encode_baseline_grayscale_block_row_streaming(
+    plane: &[u8],
+    width: usize,
+    height: usize,
+    params: &quant::EncodeParams,
+    quantizer: &FdctQuantizer,
+    options: &JpegEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    debug_assert_eq!(plane.len(), width.saturating_mul(height));
+    debug_assert_eq!(params.quant_tables.len(), 1);
+
+    let block_columns = width.div_ceil(8);
+    let restart_rows = options.restart_interval.unwrap_or(0);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        let interval = usize::try_from(restart_rows)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(block_columns);
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
+    };
+
+    let standard_tables = huffman::standard_derived_tables();
+    let luma_dc = &standard_tables[0];
+    let luma_ac = &standard_tables[2];
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+
+    let mut output = Vec::with_capacity(width.saturating_mul(height).saturating_add(512));
+    marker::write_soi(&mut output);
+    marker::write_jfif_app0(&mut output);
+    if let Some(exif) = options.exif.as_deref() {
+        marker::write_exif_app1(&mut output, exif)?;
+    }
+    marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    marker::write_sof(
+        &mut output,
+        0xC0,
+        low_u16(width),
+        low_u16(height),
+        &[(1, 1, 1, 0)],
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        0,
+        &huffman::STD_DC_LUMA.0,
+        &huffman::STD_DC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        0,
+        &huffman::STD_AC_LUMA.0,
+        &huffman::STD_AC_LUMA.1,
+    );
+    if restart_interval != 0 {
+        marker::write_dri(&mut output, restart_interval);
+    }
+    marker::write_sos(&mut output, &[(1, 0, 0)], 0, 63, 0, 0);
+
+    let block_rows = height.div_ceil(8);
+    let block_groups = block_columns.div_ceil(4);
+    let mut coefficients = [0i16; 256];
+    let mut samples = [i32x4::ZERO; 64];
+    let mut writers = [RawBlockWriter::new(); 4];
+    let mut scan = RawScanWriter::new(&mut output);
+    let mut previous_dc = 0i32;
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
+
+    for block_y in 0usize..block_rows {
+        for block_group in 0usize..block_groups {
+            if restart_interval != 0 && mcus_until_restart == 0 {
+                scan.finish();
+                marker::write_rst(&mut output, next_restart);
+                next_restart = next_restart.saturating_add(1) & 7;
+                scan = RawScanWriter::new(&mut output);
+                previous_dc = 0;
+                mcus_until_restart = usize::from(restart_interval);
+            }
+
+            let first_block = block_group.saturating_mul(4);
+            load_fdct_samples_four_into(plane, width, height, first_block, block_y, &mut samples);
+            fdct_quantize_four_coefficient_major(&mut samples, quantizer, &mut coefficients);
+            let blocks: [CoefficientMajorBlock<'_>; 4] =
+                std::array::from_fn(|lane| CoefficientMajorBlock {
+                    group: &coefficients,
+                    lane,
+                });
+            let dc = blocks.map(|block| block.coefficient(0));
+            let differences = [
+                dc[0] - previous_dc,
+                dc[1] - dc[0],
+                dc[2] - dc[1],
+                dc[3] - dc[2],
+            ];
+            encode_four_coefficient_major_raw_blocks(
+                &mut writers,
+                blocks,
+                differences,
+                luma_dc,
+                luma_ac,
+                luma_dc,
+                luma_ac,
+                luma_ready,
+                luma_ready,
+            );
+            let group_blocks = block_columns.saturating_sub(first_block).min(4);
+            for writer in &writers[..group_blocks] {
+                writer.append_to(&mut scan);
+            }
+            previous_dc = dc[group_blocks.saturating_sub(1)];
+            mcus_until_restart = mcus_until_restart.saturating_sub(group_blocks);
+        }
+    }
+    scan.finish();
+    marker::write_eoi(&mut output);
+    Ok(output)
+}
+
+/// Encode baseline RGB 4:2:2 as a block-row transform/entropy
+/// pipeline. Two four-block luma packets and one packet per chroma component
+/// form four MCUs without whole-image coefficient storage or transposes.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "validated planes, quantizers, and marker options are explicit inputs"
+)]
+fn encode_baseline_422_block_row_streaming(
+    y_plane: &[u8],
+    cb_plane: &[u8],
+    cr_plane: &[u8],
+    width: usize,
+    height: usize,
+    chroma_width: usize,
+    chroma_height: usize,
+    params: &quant::EncodeParams,
+    y_quantizer: &FdctQuantizer,
+    chroma_quantizer: &FdctQuantizer,
+    options: &JpegEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    debug_assert_eq!(chroma_width, width.div_ceil(16).saturating_mul(8));
+    debug_assert_eq!(chroma_height, height);
+    debug_assert_eq!(params.quant_tables.len(), 2);
+
+    let mcu_columns = width.div_ceil(16);
+    let restart_rows = options.restart_interval.unwrap_or(0);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        let interval = usize::try_from(restart_rows)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(mcu_columns);
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
+    };
+
+    let standard_tables = huffman::standard_derived_tables();
+    let luma_dc = &standard_tables[0];
+    let chroma_dc = &standard_tables[1];
+    let luma_ac = &standard_tables[2];
+    let chroma_ac = &standard_tables[3];
+
+    let mut output = Vec::with_capacity(width.saturating_mul(height).saturating_add(1024));
+    marker::write_soi(&mut output);
+    marker::write_jfif_app0(&mut output);
+    if let Some(exif) = options.exif.as_deref() {
+        marker::write_exif_app1(&mut output, exif)?;
+    }
+    marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    marker::write_dqt(&mut output, 1, &params.quant_tables[1]);
+    marker::write_sof(
+        &mut output,
+        0xC0,
+        low_u16(width),
+        low_u16(height),
+        &[(1, 2, 1, 0), (2, 1, 1, 1), (3, 1, 1, 1)],
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        0,
+        &huffman::STD_DC_LUMA.0,
+        &huffman::STD_DC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        0,
+        &huffman::STD_AC_LUMA.0,
+        &huffman::STD_AC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        1,
+        &huffman::STD_DC_CHROMA.0,
+        &huffman::STD_DC_CHROMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        1,
+        &huffman::STD_AC_CHROMA.0,
+        &huffman::STD_AC_CHROMA.1,
+    );
+    if restart_interval != 0 {
+        marker::write_dri(&mut output, restart_interval);
+    }
+    marker::write_sos(&mut output, &[(1, 0, 0), (2, 1, 1), (3, 1, 1)], 0, 63, 0, 0);
+
+    let mcu_rows = height.div_ceil(8);
+    let y_block_columns = width.div_ceil(8);
+    let mcu_groups_per_row = mcu_columns.div_ceil(4);
+    let mut coefficient_groups = [[0i16; 256]; 4];
+    let mut samples = [i32x4::ZERO; 64];
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let mut mcu_writers = [RawBlockWriter::new(); 4];
+    let mut scan = RawScanWriter::new(&mut output);
+    let mut previous_dc = [0i32; 3];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
+
+    for mcu_y in 0usize..mcu_rows {
+        for mcu_group in 0usize..mcu_groups_per_row {
+            let y_block_x = mcu_group.saturating_mul(8);
+            load_fdct_samples_four_into(y_plane, width, height, y_block_x, mcu_y, &mut samples);
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                y_quantizer,
+                &mut coefficient_groups[0],
+            );
+            load_fdct_samples_four_into(
+                y_plane,
+                width,
+                height,
+                y_block_x.saturating_add(4),
+                mcu_y,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                y_quantizer,
+                &mut coefficient_groups[1],
+            );
+
+            let chroma_block_x = mcu_group.saturating_mul(4);
+            load_fdct_samples_four_into(
+                cb_plane,
+                chroma_width,
+                chroma_height,
+                chroma_block_x,
+                mcu_y,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut coefficient_groups[2],
+            );
+            load_fdct_samples_four_into(
+                cr_plane,
+                chroma_width,
+                chroma_height,
+                chroma_block_x,
+                mcu_y,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut coefficient_groups[3],
+            );
+
+            let first_mcu_x = mcu_group.saturating_mul(4);
+            let group_mcus = mcu_columns.saturating_sub(first_mcu_x).min(4);
+            for mcu_lane in 0usize..group_mcus {
+                if restart_interval != 0 && mcus_until_restart == 0 {
+                    scan.finish();
+                    marker::write_rst(&mut output, next_restart);
+                    next_restart = next_restart.saturating_add(1) & 7;
+                    scan = RawScanWriter::new(&mut output);
+                    previous_dc = [0; 3];
+                    mcus_until_restart = usize::from(restart_interval);
+                }
+                let y_group = mcu_lane / 2;
+                let y_lane = (mcu_lane % 2).saturating_mul(2);
+                let blocks = [
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[y_group],
+                        lane: y_lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[y_group],
+                        lane: y_lane.saturating_add(1),
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[2],
+                        lane: mcu_lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[3],
+                        lane: mcu_lane,
+                    },
+                ];
+                let dc = blocks.map(|block| block.coefficient(0));
+                let second_luma_present = first_mcu_x
+                    .saturating_add(mcu_lane)
+                    .saturating_mul(2)
+                    .saturating_add(1)
+                    < y_block_columns;
+                let differences = [
+                    dc[0] - previous_dc[0],
+                    if second_luma_present {
+                        dc[1] - dc[0]
+                    } else {
+                        0
+                    },
+                    dc[2] - previous_dc[1],
+                    dc[3] - previous_dc[2],
+                ];
+                if second_luma_present {
+                    encode_four_coefficient_major_raw_blocks(
+                        &mut mcu_writers,
+                        blocks,
+                        differences,
+                        luma_dc,
+                        luma_ac,
+                        chroma_dc,
+                        chroma_ac,
+                        luma_ready,
+                        chroma_ready,
+                    );
+                } else {
+                    encode_four_coefficient_major_edge_raw_blocks(
+                        &mut mcu_writers,
+                        blocks,
+                        differences,
+                        luma_dc,
+                        luma_ac,
+                        chroma_dc,
+                        chroma_ac,
+                        luma_ready,
+                        chroma_ready,
+                    );
+                }
+                for writer in &mcu_writers {
+                    writer.append_to(&mut scan);
+                }
+                previous_dc = [
+                    if second_luma_present { dc[1] } else { dc[0] },
+                    dc[2],
+                    dc[3],
+                ];
+                mcus_until_restart = mcus_until_restart.saturating_sub(1);
+            }
+        }
+    }
+    scan.finish();
+    marker::write_eoi(&mut output);
+    Ok(output)
+}
+
+/// Encode baseline RGB 4:4:4 as a block-row transform/entropy
+/// pipeline. Four blocks from each component remain coefficient-major from
+/// the safe SIMD FDCT through entropy coding, so no whole-image coefficient
+/// planes or coefficient-major-to-block-major transposes are needed.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "validated planes, quantizers, and marker options are explicit inputs"
+)]
+fn encode_baseline_444_block_row_streaming(
+    y_plane: &[u8],
+    cb_plane: &[u8],
+    cr_plane: &[u8],
+    width: usize,
+    height: usize,
+    params: &quant::EncodeParams,
+    y_quantizer: &FdctQuantizer,
+    chroma_quantizer: &FdctQuantizer,
+    options: &JpegEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    debug_assert_eq!(y_plane.len(), width.saturating_mul(height));
+    debug_assert_eq!(cb_plane.len(), y_plane.len());
+    debug_assert_eq!(cr_plane.len(), y_plane.len());
+    debug_assert_eq!(params.quant_tables.len(), 2);
+
+    let mcu_columns = width.div_ceil(8);
+    let restart_rows = options.restart_interval.unwrap_or(0);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        let interval = usize::try_from(restart_rows)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(mcu_columns);
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
+    };
+
+    let standard_tables = huffman::standard_derived_tables();
+    let luma_dc = &standard_tables[0];
+    let chroma_dc = &standard_tables[1];
+    let luma_ac = &standard_tables[2];
+    let chroma_ac = &standard_tables[3];
+
+    let mut output = Vec::with_capacity(
+        width
+            .saturating_mul(height)
+            .saturating_mul(2)
+            .saturating_add(1024),
+    );
+    marker::write_soi(&mut output);
+    marker::write_jfif_app0(&mut output);
+    if let Some(exif) = options.exif.as_deref() {
+        marker::write_exif_app1(&mut output, exif)?;
+    }
+    marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    marker::write_dqt(&mut output, 1, &params.quant_tables[1]);
+    marker::write_sof(
+        &mut output,
+        0xC0,
+        low_u16(width),
+        low_u16(height),
+        &[(1, 1, 1, 0), (2, 1, 1, 1), (3, 1, 1, 1)],
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        0,
+        &huffman::STD_DC_LUMA.0,
+        &huffman::STD_DC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        0,
+        &huffman::STD_AC_LUMA.0,
+        &huffman::STD_AC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        1,
+        &huffman::STD_DC_CHROMA.0,
+        &huffman::STD_DC_CHROMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        1,
+        &huffman::STD_AC_CHROMA.0,
+        &huffman::STD_AC_CHROMA.1,
+    );
+    if restart_interval != 0 {
+        marker::write_dri(&mut output, restart_interval);
+    }
+    marker::write_sos(&mut output, &[(1, 0, 0), (2, 1, 1), (3, 1, 1)], 0, 63, 0, 0);
+
+    let block_rows = height.div_ceil(8);
+    let block_groups_per_row = mcu_columns.div_ceil(4);
+    let mut coefficient_groups = [[0i16; 256]; 3];
+    let mut samples = [i32x4::ZERO; 64];
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let mut mcu_writers = [RawBlockWriter::new(); 3];
+    let mut scan = RawScanWriter::new(&mut output);
+    let mut previous_dc = [0i32; 3];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
+
+    for block_y in 0usize..block_rows {
+        for block_group in 0usize..block_groups_per_row {
+            let block_x = block_group.saturating_mul(4);
+            load_fdct_samples_four_into(y_plane, width, height, block_x, block_y, &mut samples);
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                y_quantizer,
+                &mut coefficient_groups[0],
+            );
+            load_fdct_samples_four_into(cb_plane, width, height, block_x, block_y, &mut samples);
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut coefficient_groups[1],
+            );
+            load_fdct_samples_four_into(cr_plane, width, height, block_x, block_y, &mut samples);
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut coefficient_groups[2],
+            );
+
+            let first_mcu_x = block_group.saturating_mul(4);
+            let group_mcus = mcu_columns.saturating_sub(first_mcu_x).min(4);
+            for lane in 0usize..group_mcus {
+                if restart_interval != 0 && mcus_until_restart == 0 {
+                    scan.finish();
+                    marker::write_rst(&mut output, next_restart);
+                    next_restart = next_restart.saturating_add(1) & 7;
+                    scan = RawScanWriter::new(&mut output);
+                    previous_dc = [0; 3];
+                    mcus_until_restart = usize::from(restart_interval);
+                }
+                let blocks = [
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[0],
+                        lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[1],
+                        lane,
+                    },
+                    CoefficientMajorBlock {
+                        group: &coefficient_groups[2],
+                        lane,
+                    },
+                ];
+                let dc = blocks.map(|block| block.coefficient(0));
+                encode_three_coefficient_major_raw_blocks(
+                    &mut mcu_writers,
+                    blocks,
+                    [
+                        dc[0] - previous_dc[0],
+                        dc[1] - previous_dc[1],
+                        dc[2] - previous_dc[2],
+                    ],
+                    luma_dc,
+                    luma_ac,
+                    chroma_dc,
+                    chroma_ac,
+                    luma_ready,
+                    chroma_ready,
+                );
+                for writer in &mcu_writers {
+                    writer.append_to(&mut scan);
+                }
+                previous_dc = dc;
+                mcus_until_restart = mcus_until_restart.saturating_sub(1);
+            }
+        }
+    }
+    scan.finish();
+    marker::write_eoi(&mut output);
+    Ok(output)
+}
+
+struct Rgb420McuRowBuffers<'a> {
+    y: &'a mut [u8],
+    cb: &'a mut [u8],
+    cr: &'a mut [u8],
+}
+
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated RGB dimensions and fixed 16-pixel packets bound every source and row index"
+)]
+fn convert_rgb_420_mcu_row(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    mcu_y: usize,
+    padded_width: usize,
+    buffers: &mut Rgb420McuRowBuffers<'_>,
+) {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    debug_assert!(padded_width.is_multiple_of(16));
+    debug_assert!(padded_width >= width);
+    debug_assert_eq!(buffers.y.len(), padded_width.saturating_mul(16));
+    let chroma_width = padded_width / 2;
+    debug_assert_eq!(buffers.cb.len(), chroma_width.saturating_mul(8));
+    debug_assert_eq!(buffers.cr.len(), buffers.cb.len());
+
+    for pair in 0usize..8 {
+        let first_source_y = mcu_y
+            .saturating_mul(16)
+            .saturating_add(pair.saturating_mul(2))
+            .min(height.saturating_sub(1));
+        let second_source_y = first_source_y
+            .saturating_add(1)
+            .min(height.saturating_sub(1));
+        let first_source_row = first_source_y.saturating_mul(width).saturating_mul(3);
+        let second_source_row = second_source_y.saturating_mul(width).saturating_mul(3);
+        let first_y_output = pair.saturating_mul(2).saturating_mul(padded_width);
+        let second_y_output = first_y_output.saturating_add(padded_width);
+        let chroma_output = pair.saturating_mul(chroma_width);
+
+        for x in (0usize..padded_width).step_by(16) {
+            let (y_first, y_second, cb, cr) = if x.saturating_add(16) <= width {
+                let first_start = first_source_row.saturating_add(x.saturating_mul(3));
+                let second_start = second_source_row.saturating_add(x.saturating_mul(3));
+                let first: &[u8; 48] = pixels[first_start..first_start.saturating_add(48)]
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("validated RGB MCU packet is 48 bytes"));
+                let second: &[u8; 48] = pixels[second_start..second_start.saturating_add(48)]
+                    .try_into()
+                    .unwrap_or_else(|_| unreachable!("validated RGB MCU packet is 48 bytes"));
+                crate::codecs::jpeg::kernels::rgb_to_ycbcr_420_packet(first, second)
+            } else {
+                let mut first = [0u8; 48];
+                let mut second = [0u8; 48];
+                for lane in 0usize..16 {
+                    let source_x = x.saturating_add(lane).min(width.saturating_sub(1));
+                    let first_start = first_source_row.saturating_add(source_x.saturating_mul(3));
+                    let second_start = second_source_row.saturating_add(source_x.saturating_mul(3));
+                    let destination = lane.saturating_mul(3);
+                    first[destination..destination.saturating_add(3)]
+                        .copy_from_slice(&pixels[first_start..first_start.saturating_add(3)]);
+                    second[destination..destination.saturating_add(3)]
+                        .copy_from_slice(&pixels[second_start..second_start.saturating_add(3)]);
+                }
+                crate::codecs::jpeg::kernels::rgb_to_ycbcr_420_packet(&first, &second)
+            };
+            buffers.y[first_y_output.saturating_add(x)..first_y_output.saturating_add(x + 16)]
+                .copy_from_slice(&y_first);
+            buffers.y[second_y_output.saturating_add(x)..second_y_output.saturating_add(x + 16)]
+                .copy_from_slice(&y_second);
+            let chroma_x = x / 2;
+            buffers.cb[chroma_output.saturating_add(chroma_x)
+                ..chroma_output.saturating_add(chroma_x + 8)]
+                .copy_from_slice(&cb);
+            buffers.cr[chroma_output.saturating_add(chroma_x)
+                ..chroma_output.saturating_add(chroma_x + 8)]
+                .copy_from_slice(&cr);
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Baseline420Source<'a> {
+    Rgb(&'a [u8]),
+    Planes {
+        y: &'a [u8],
+        cb: &'a [u8],
+        cr: &'a [u8],
+        chroma_width: usize,
+        chroma_height: usize,
+    },
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "the exact six-block 4:2:0 scan packet and its image-edge geometry are explicit inputs"
+)]
+#[inline(always)]
+fn encode_baseline_420_mcu_pair(
+    pair_mcu_x: usize,
+    mcu_y: usize,
+    mcu_columns: usize,
+    y_block_columns: usize,
+    y_block_rows: usize,
+    y_top: &[i16; 256],
+    y_bottom: &[i16; 256],
+    cb_group: &[i16; 256],
+    cr_group: &[i16; 256],
+    chroma_lane: usize,
+    writers: &mut [RawBlockWriter; 6],
+    scan: &mut RawScanWriter<'_>,
+    previous_dc: [i32; 3],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+    trim_trailing_zeros: bool,
+) -> ([i32; 3], usize) {
+    let first_blocks = [
+        CoefficientMajorBlock {
+            group: y_top,
+            lane: 0,
+        },
+        CoefficientMajorBlock {
+            group: y_top,
+            lane: 1,
+        },
+        CoefficientMajorBlock {
+            group: y_bottom,
+            lane: 0,
+        },
+        CoefficientMajorBlock {
+            group: y_bottom,
+            lane: 1,
+        },
+        CoefficientMajorBlock {
+            group: cb_group,
+            lane: chroma_lane,
+        },
+        CoefficientMajorBlock {
+            group: cr_group,
+            lane: chroma_lane,
+        },
+    ];
+    let first_values = first_blocks.map(|block| block.coefficient(0));
+    let first_y_column = pair_mcu_x.saturating_mul(2);
+    let first_y_row = mcu_y.saturating_mul(2);
+    let first_present = [
+        first_y_column < y_block_columns && first_y_row < y_block_rows,
+        first_y_column.saturating_add(1) < y_block_columns && first_y_row < y_block_rows,
+        first_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
+        first_y_column.saturating_add(1) < y_block_columns
+            && first_y_row.saturating_add(1) < y_block_rows,
+        true,
+        true,
+    ];
+    let (first_differences, predictors_after_first) =
+        mcu_dc_differences(first_values, first_present, previous_dc);
+    if first_present.iter().all(|&present| present) {
+        encode_six_coefficient_major_raw_blocks(
+            writers,
+            first_blocks,
+            first_differences,
+            luma_dc,
+            luma_ac,
+            chroma_dc,
+            chroma_ac,
+            luma_ready,
+            chroma_ready,
+            trim_trailing_zeros,
+        );
+    } else {
+        encode_six_coefficient_major_edge_raw_blocks(
+            writers,
+            first_blocks,
+            first_differences,
+            first_present,
+            luma_dc,
+            luma_ac,
+            chroma_dc,
+            chroma_ac,
+            luma_ready,
+            chroma_ready,
+        );
+    }
+    for writer in &*writers {
+        writer.append_to(scan);
+    }
+
+    if pair_mcu_x.saturating_add(1) >= mcu_columns {
+        return (predictors_after_first, 1);
+    }
+
+    let second_blocks = [
+        CoefficientMajorBlock {
+            group: y_top,
+            lane: 2,
+        },
+        CoefficientMajorBlock {
+            group: y_top,
+            lane: 3,
+        },
+        CoefficientMajorBlock {
+            group: y_bottom,
+            lane: 2,
+        },
+        CoefficientMajorBlock {
+            group: y_bottom,
+            lane: 3,
+        },
+        CoefficientMajorBlock {
+            group: cb_group,
+            lane: chroma_lane.saturating_add(1),
+        },
+        CoefficientMajorBlock {
+            group: cr_group,
+            lane: chroma_lane.saturating_add(1),
+        },
+    ];
+    let second_values = second_blocks.map(|block| block.coefficient(0));
+    let second_y_column = pair_mcu_x.saturating_add(1).saturating_mul(2);
+    let second_present = [
+        second_y_column < y_block_columns && first_y_row < y_block_rows,
+        second_y_column.saturating_add(1) < y_block_columns && first_y_row < y_block_rows,
+        second_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
+        second_y_column.saturating_add(1) < y_block_columns
+            && first_y_row.saturating_add(1) < y_block_rows,
+        true,
+        true,
+    ];
+    let (second_differences, predictors_after_second) =
+        mcu_dc_differences(second_values, second_present, predictors_after_first);
+    if second_present.iter().all(|&present| present) {
+        encode_six_coefficient_major_raw_blocks(
+            writers,
+            second_blocks,
+            second_differences,
+            luma_dc,
+            luma_ac,
+            chroma_dc,
+            chroma_ac,
+            luma_ready,
+            chroma_ready,
+            trim_trailing_zeros,
+        );
+    } else {
+        encode_six_coefficient_major_edge_raw_blocks(
+            writers,
+            second_blocks,
+            second_differences,
+            second_present,
+            luma_dc,
+            luma_ac,
+            chroma_dc,
+            chroma_ac,
+            luma_ready,
+            chroma_ready,
+        );
+    }
+    for writer in &*writers {
+        writer.append_to(scan);
+    }
+    (predictors_after_second, 2)
+}
+
+/// Encode baseline RGB 4:2:0 as one transform/entropy row pipeline.
+/// Four blocks remain coefficient-major from the safe SIMD FDCT through the
+/// six-way entropy kernel, avoiding whole-image coefficient storage and the
+/// coefficient-major-to-block-major transpose.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "validated RGB pixels, quantizers, and marker options are explicit inputs"
+)]
+fn encode_baseline_420_mcu_row_streaming(
+    source: Baseline420Source<'_>,
+    width: usize,
+    height: usize,
+    params: &quant::EncodeParams,
+    y_quantizer: &FdctQuantizer,
+    chroma_quantizer: &FdctQuantizer,
+    options: &JpegEncodeOptions,
+) -> CodecResult<Vec<u8>> {
+    debug_assert!(width != 0);
+    debug_assert!(height != 0);
+    match source {
+        Baseline420Source::Rgb(pixels) => {
+            debug_assert_eq!(pixels.len(), width.saturating_mul(height).saturating_mul(3));
+        }
+        Baseline420Source::Planes {
+            y,
+            cb,
+            cr,
+            chroma_width,
+            chroma_height,
+        } => {
+            debug_assert_eq!(y.len(), width.saturating_mul(height));
+            debug_assert_eq!(chroma_width, width.div_ceil(16).saturating_mul(8));
+            debug_assert_eq!(chroma_height, height.div_ceil(2));
+            debug_assert_eq!(cb.len(), chroma_width.saturating_mul(chroma_height));
+            debug_assert_eq!(cr.len(), cb.len());
+        }
+    }
+    debug_assert_eq!(params.quant_tables.len(), 2);
+
+    let standard_tables = huffman::standard_derived_tables();
+    let luma_dc = &standard_tables[0];
+    let chroma_dc = &standard_tables[1];
+    let luma_ac = &standard_tables[2];
+    let chroma_ac = &standard_tables[3];
+    let mcu_columns = width.div_ceil(16);
+    let restart_rows = options.restart_interval.unwrap_or(0);
+    let restart_interval = if restart_rows == 0 {
+        0
+    } else {
+        let interval = usize::try_from(restart_rows)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(mcu_columns);
+        u16::try_from(interval).map_err(|_| {
+            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
+        })?
+    };
+
+    let mut output = Vec::with_capacity(width.saturating_mul(height).saturating_add(1024));
+    marker::write_soi(&mut output);
+    marker::write_jfif_app0(&mut output);
+    if let Some(exif) = options.exif.as_deref() {
+        marker::write_exif_app1(&mut output, exif)?;
+    }
+    marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    marker::write_dqt(&mut output, 1, &params.quant_tables[1]);
+    marker::write_sof(
+        &mut output,
+        0xC0,
+        low_u16(width),
+        low_u16(height),
+        &[(1, 2, 2, 0), (2, 1, 1, 1), (3, 1, 1, 1)],
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        0,
+        &huffman::STD_DC_LUMA.0,
+        &huffman::STD_DC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        0,
+        &huffman::STD_AC_LUMA.0,
+        &huffman::STD_AC_LUMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        0,
+        1,
+        &huffman::STD_DC_CHROMA.0,
+        &huffman::STD_DC_CHROMA.1,
+    );
+    marker::write_dht(
+        &mut output,
+        1,
+        1,
+        &huffman::STD_AC_CHROMA.0,
+        &huffman::STD_AC_CHROMA.1,
+    );
+    if restart_interval != 0 {
+        marker::write_dri(&mut output, restart_interval);
+    }
+    marker::write_sos(&mut output, &[(1, 0, 0), (2, 1, 1), (3, 1, 1)], 0, 63, 0, 0);
+
+    let mcu_rows = height.div_ceil(16);
+    let y_block_columns = width.div_ceil(8);
+    let y_block_rows = height.div_ceil(8);
+    let y_groups_per_row = mcu_columns.div_ceil(2);
+    let chroma_groups_per_row = mcu_columns.div_ceil(4);
+    let y_bottom_offset = y_groups_per_row;
+    let cb_offset = y_groups_per_row.saturating_mul(2);
+    let cr_offset = cb_offset.saturating_add(chroma_groups_per_row);
+    let group_count = cr_offset.saturating_add(chroma_groups_per_row);
+    let mut row_groups = vec![[0i16; 256]; group_count];
+    let padded_width = mcu_columns.saturating_mul(16);
+    let chroma_width = padded_width / 2;
+    let (mut y_strip, mut cb_strip, mut cr_strip) = match source {
+        Baseline420Source::Rgb(_) => (
+            vec![0u8; padded_width.saturating_mul(16)],
+            vec![0u8; chroma_width.saturating_mul(8)],
+            vec![0u8; chroma_width.saturating_mul(8)],
+        ),
+        Baseline420Source::Planes { .. } => (Vec::new(), Vec::new(), Vec::new()),
+    };
+    let mut samples = [i32x4::ZERO; 64];
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let trim_trailing_zeros = options.quality.unwrap_or(75) <= 25;
+    let mut mcu_writers = [RawBlockWriter::new(); 6];
+    let mut scan = RawScanWriter::new(&mut output);
+    let mut previous_dc = [0i32; 3];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut next_restart = 0u8;
+
+    for mcu_y in 0usize..mcu_rows {
+        let (
+            y_source,
+            y_source_width,
+            y_source_height,
+            y_block_row,
+            cb_source,
+            cr_source,
+            chroma_source_width,
+            chroma_source_height,
+            chroma_block_row,
+        ) = match source {
+            Baseline420Source::Rgb(pixels) => {
+                let mut buffers = Rgb420McuRowBuffers {
+                    y: &mut y_strip,
+                    cb: &mut cb_strip,
+                    cr: &mut cr_strip,
+                };
+                convert_rgb_420_mcu_row(pixels, width, height, mcu_y, padded_width, &mut buffers);
+                (
+                    &y_strip[..],
+                    padded_width,
+                    16,
+                    0,
+                    &cb_strip[..],
+                    &cr_strip[..],
+                    chroma_width,
+                    8,
+                    0,
+                )
+            }
+            Baseline420Source::Planes {
+                y,
+                cb,
+                cr,
+                chroma_width,
+                chroma_height,
+            } => (
+                y,
+                width,
+                height,
+                mcu_y.saturating_mul(2),
+                cb,
+                cr,
+                chroma_width,
+                chroma_height,
+                mcu_y,
+            ),
+        };
+        for mcu_x in (0usize..mcu_columns).step_by(2) {
+            let group_column = mcu_x / 2;
+            let y_block_x = mcu_x.saturating_mul(2);
+            load_fdct_samples_four_into(
+                y_source,
+                y_source_width,
+                y_source_height,
+                y_block_x,
+                y_block_row,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                y_quantizer,
+                &mut row_groups[group_column],
+            );
+
+            load_fdct_samples_four_into(
+                y_source,
+                y_source_width,
+                y_source_height,
+                y_block_x,
+                y_block_row.saturating_add(1),
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                y_quantizer,
+                &mut row_groups[y_bottom_offset.saturating_add(group_column)],
+            );
+        }
+
+        for chroma_group in 0usize..chroma_groups_per_row {
+            let chroma_block_x = chroma_group.saturating_mul(4);
+            load_fdct_samples_four_into(
+                cb_source,
+                chroma_source_width,
+                chroma_source_height,
+                chroma_block_x,
+                chroma_block_row,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut row_groups[cb_offset.saturating_add(chroma_group)],
+            );
+
+            load_fdct_samples_four_into(
+                cr_source,
+                chroma_source_width,
+                chroma_source_height,
+                chroma_block_x,
+                chroma_block_row,
+                &mut samples,
+            );
+            fdct_quantize_four_coefficient_major(
+                &mut samples,
+                chroma_quantizer,
+                &mut row_groups[cr_offset.saturating_add(chroma_group)],
+            );
+        }
+
+        for pair_mcu_x in (0usize..mcu_columns).step_by(2) {
+            if restart_interval != 0 && mcus_until_restart == 0 {
+                scan.finish();
+                marker::write_rst(&mut output, next_restart);
+                next_restart = next_restart.saturating_add(1) & 7;
+                scan = RawScanWriter::new(&mut output);
+                previous_dc = [0; 3];
+                mcus_until_restart = usize::from(restart_interval);
+            }
+            let y_group_column = pair_mcu_x / 2;
+            let y_top = &row_groups[y_group_column];
+            let y_bottom = &row_groups[y_bottom_offset.saturating_add(y_group_column)];
+            let chroma_group_column = pair_mcu_x / 4;
+            let cb_group = &row_groups[cb_offset.saturating_add(chroma_group_column)];
+            let cr_group = &row_groups[cr_offset.saturating_add(chroma_group_column)];
+            let chroma_lane = pair_mcu_x % 4;
+            let (predictors_after_pair, encoded_mcus) = encode_baseline_420_mcu_pair(
+                pair_mcu_x,
+                mcu_y,
+                mcu_columns,
+                y_block_columns,
+                y_block_rows,
+                y_top,
+                y_bottom,
+                cb_group,
+                cr_group,
+                chroma_lane,
+                &mut mcu_writers,
+                &mut scan,
+                previous_dc,
+                luma_dc,
+                luma_ac,
+                chroma_dc,
+                chroma_ac,
+                luma_ready,
+                chroma_ready,
+                trim_trailing_zeros,
+            );
+            previous_dc = predictors_after_pair;
+            mcus_until_restart = mcus_until_restart.saturating_sub(encoded_mcus);
+        }
+    }
+    scan.finish();
+    marker::write_eoi(&mut output);
+    Ok(output)
+}
+
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated byte samples stay in the signed i16 range after the JPEG level shift"
+)]
+#[inline(always)]
+fn store_fdct_sample_row_four(source: &[u8; 32], destination: usize, output: &mut [i32x4; 64]) {
+    const LEVEL_SHIFT: i16x8 = i16x8::new([128; 8]);
+    let first = pod_read_unaligned::<u8x16>(&source[..16]);
+    let second = pod_read_unaligned::<u8x16>(&source[16..]);
+    let blocks = [
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(first)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(first)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(second)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(second)) - LEVEL_SHIFT).to_array(),
+    ];
+    for column in 0usize..8 {
+        output[destination.saturating_add(column)] = i32x4::new([
+            blocks[0][column],
+            blocks[1][column],
+            blocks[2][column],
+            blocks[3][column],
+        ]);
+    }
+}
+
+#[inline(always)]
+fn load_fdct_samples_four_into(
+    plane: &[u8],
+    width: usize,
+    height: usize,
+    block_x: usize,
+    block_y: usize,
+    output: &mut [i32x4; 64],
+) {
+    let source_x = block_x.saturating_mul(8);
+    let source_y = block_y.saturating_mul(8);
+    if source_x.saturating_add(32) <= width {
+        for row in 0usize..8 {
+            let source_row = source_y.saturating_add(row).min(height.saturating_sub(1));
+            let source_start = source_row.saturating_mul(width).saturating_add(source_x);
+            let source = &plane[source_start..source_start.saturating_add(32)];
+            let source: &[u8; 32] = source
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("validated FDCT packet row is 32 bytes"));
+            store_fdct_sample_row_four(source, row.saturating_mul(8), output);
+        }
+        return;
+    }
+
+    for row in 0usize..8 {
+        let sample_y = source_y.saturating_add(row).min(height.saturating_sub(1));
+        let row_start = sample_y.saturating_mul(width);
+        let copy_start = source_x.min(width.saturating_sub(1));
+        let copy_count = width.saturating_sub(copy_start).min(32);
+        let edge = plane[row_start.saturating_add(width.saturating_sub(1))];
+        let mut samples = [edge; 32];
+        samples[..copy_count]
+            .copy_from_slice(&plane[row_start.saturating_add(copy_start)..][..copy_count]);
+        store_fdct_sample_row_four(&samples, row.saturating_mul(8), output);
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "four fixed lanes and 64 JPEG coefficients exactly index the output packet"
+)]
+#[inline(always)]
+fn fdct_quantize_four_coefficient_major(
+    samples: &mut [i32x4; 64],
+    quantizer: &FdctQuantizer,
+    output: &mut [i16; 256],
+) {
+    fdct::fdct_islow_four_coefficient_major_packed(samples);
+    for (coefficient, values) in samples.iter().copied().enumerate() {
+        let values = values.to_array();
+        for lane in 0usize..4 {
+            output[coefficient * 4 + lane] = quantize_coefficient(
+                values[lane],
+                quantizer.divisors[coefficient],
+                quantizer.reciprocals[coefficient],
+            );
+        }
+    }
+}
+
 // ── FDCT + quantize (jfdctint.c + jcdctmgr.c) ────────────────────────────
 
 /// Forward DCT all blocks of a component plane, then quantize with ISLOW
@@ -3681,16 +5360,16 @@ fn fdct_quantize(
     plane: &[u8],
     w: usize,
     h: usize,
-    qtable: &[u16; 64],
+    quantizer: &FdctQuantizer,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
     #[cfg(coverage)]
     coverage_cancel_fdct_call(token);
     if let Some(token) = token {
         let mut checkpoint = TokenFdctCheckpoint::new(token);
-        fdct_quantize_with_checkpoint(plane, w, h, qtable, &mut checkpoint)
+        fdct_quantize_with_checkpoint(plane, w, h, quantizer, &mut checkpoint)
     } else {
-        fdct_quantize_without_checkpoint(plane, w, h, qtable)
+        fdct_quantize_without_checkpoint(plane, w, h, quantizer)
     }
 }
 
@@ -3698,52 +5377,37 @@ fn fdct_quantize_without_checkpoint(
     plane: &[u8],
     w: usize,
     h: usize,
-    qtable: &[u16; 64],
+    quantizer: &FdctQuantizer,
 ) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
     let blocks_per_row = w.div_ceil(8);
     let block_rows = h.div_ceil(8);
     let mut blocks = vec![[0i16; 64]; blocks_per_row.saturating_mul(block_rows)];
 
     for by in 0..block_rows {
-        for bx in 0..blocks_per_row {
-            let mut samples = [0i32; 64];
-            for row in 0usize..8 {
-                for col in 0usize..8 {
-                    let py = by.saturating_mul(8).saturating_add(row);
-                    let px = bx.saturating_mul(8).saturating_add(col);
-                    let val = if py < h && px < w {
-                        i32::from(plane[py.saturating_mul(w).saturating_add(px)])
-                            .saturating_sub(128)
-                    } else {
-                        // Edge replication (jccolext / edge extension).
-                        let cpy = py.min(h.saturating_sub(1));
-                        let cpx = px.min(w.saturating_sub(1));
-                        i32::from(plane[cpy.saturating_mul(w).saturating_add(cpx)])
-                            .saturating_sub(128)
-                    };
-                    samples[row.saturating_mul(8).saturating_add(col)] = val;
-                }
+        for bx_start in (0usize..blocks_per_row).step_by(4) {
+            let block_count = blocks_per_row.saturating_sub(bx_start).min(4);
+            let mut sample_batch: [[i32; 64]; 4] = std::array::from_fn(|lane| {
+                let bx = bx_start
+                    .saturating_add(lane)
+                    .min(blocks_per_row.saturating_sub(1));
+                load_fdct_samples(plane, w, h, bx, by)
+            });
+
+            fdct::fdct_islow_four(&mut sample_batch);
+            for (lane, samples) in sample_batch.iter().take(block_count).enumerate() {
+                let quantized = std::array::from_fn(|coefficient| {
+                    quantize_coefficient(
+                        samples[coefficient],
+                        quantizer.divisors[coefficient],
+                        quantizer.reciprocals[coefficient],
+                    )
+                });
+                let block_index = by
+                    .saturating_mul(blocks_per_row)
+                    .saturating_add(bx_start)
+                    .saturating_add(lane);
+                blocks[block_index] = quantized;
             }
-            fdct::fdct_islow(&mut samples);
-            // Quantize in natural order: divisor = quantval[i] << 3.
-            let mut q = [0i16; 64];
-            for i in 0..64 {
-                let divisor = i32::from(qtable[i]).wrapping_shl(3);
-                let coef = samples[i];
-                // Round-to-nearest, away from zero on .5 (matches reciprocal path).
-                let rounded_magnitude = coef
-                    .saturating_abs()
-                    .saturating_add(divisor.wrapping_shr(1))
-                    .div_euclid(divisor);
-                let qval = if coef < 0 {
-                    rounded_magnitude.saturating_neg()
-                } else {
-                    rounded_magnitude
-                };
-                let [a, b, ..] = qval.to_le_bytes();
-                q[i] = i16::from_le_bytes([a, b]);
-            }
-            blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = q;
         }
     }
     Ok((blocks, blocks_per_row, block_rows))
@@ -3753,7 +5417,7 @@ fn fdct_quantize_with_checkpoint<C: FdctCheckpoint>(
     plane: &[u8],
     w: usize,
     h: usize,
-    qtable: &[u16; 64],
+    quantizer: &FdctQuantizer,
     checkpoint: &mut C,
 ) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
     let blocks_per_row = w.div_ceil(8);
@@ -3763,48 +5427,97 @@ fn fdct_quantize_with_checkpoint<C: FdctCheckpoint>(
     for by in 0..block_rows {
         checkpoint.row()?;
         for bx in 0..blocks_per_row {
-            let mut samples = [0i32; 64];
-            for row in 0usize..8 {
-                for col in 0usize..8 {
-                    let py = by.saturating_mul(8).saturating_add(row);
-                    let px = bx.saturating_mul(8).saturating_add(col);
-                    let val = if py < h && px < w {
-                        i32::from(plane[py.saturating_mul(w).saturating_add(px)])
-                            .saturating_sub(128)
-                    } else {
-                        // Edge replication (jccolext / edge extension).
-                        let cpy = py.min(h.saturating_sub(1));
-                        let cpx = px.min(w.saturating_sub(1));
-                        i32::from(plane[cpy.saturating_mul(w).saturating_add(cpx)])
-                            .saturating_sub(128)
-                    };
-                    samples[row.saturating_mul(8).saturating_add(col)] = val;
-                }
-            }
+            let mut samples = load_fdct_samples(plane, w, h, bx, by);
             fdct::fdct_islow(&mut samples);
             // Quantize in natural order: divisor = quantval[i] << 3.
-            let mut q = [0i16; 64];
-            for i in 0..64 {
-                let divisor = i32::from(qtable[i]).wrapping_shl(3);
-                let coef = samples[i];
-                // Round-to-nearest, away from zero on .5 (matches reciprocal path).
-                let rounded_magnitude = coef
-                    .saturating_abs()
-                    .saturating_add(divisor.wrapping_shr(1))
-                    .div_euclid(divisor);
-                let qval = if coef < 0 {
-                    rounded_magnitude.saturating_neg()
-                } else {
-                    rounded_magnitude
-                };
-                let [a, b, ..] = qval.to_le_bytes();
-                q[i] = i16::from_le_bytes([a, b]);
-            }
-            blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = q;
+            let quantized = std::array::from_fn(|coefficient| {
+                quantize_coefficient(
+                    samples[coefficient],
+                    quantizer.divisors[coefficient],
+                    quantizer.reciprocals[coefficient],
+                )
+            });
+            blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = quantized;
             checkpoint.block()?;
         }
     }
     Ok((blocks, blocks_per_row, block_rows))
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the complete-block branch and replicated edge coordinates are bounded by validated image dimensions"
+)]
+#[inline]
+fn load_fdct_samples(plane: &[u8], w: usize, h: usize, bx: usize, by: usize) -> [i32; 64] {
+    let mut samples = [0i32; 64];
+    let x = bx.saturating_mul(8);
+    let y = by.saturating_mul(8);
+
+    if x.saturating_add(8) <= w && y.saturating_add(8) <= h {
+        for row in 0usize..8 {
+            let source_start = y.saturating_add(row).saturating_mul(w).saturating_add(x);
+            let source = &plane[source_start..source_start.saturating_add(8)];
+            let destination_start = row.saturating_mul(8);
+            for (output, &sample) in samples[destination_start..destination_start + 8]
+                .iter_mut()
+                .zip(source)
+            {
+                *output = i32::from(sample) - 128;
+            }
+        }
+        return samples;
+    }
+
+    for row in 0usize..8 {
+        for column in 0usize..8 {
+            let source_y = y.saturating_add(row).min(h.saturating_sub(1));
+            let source_x = x.saturating_add(column).min(w.saturating_sub(1));
+            samples[row.saturating_mul(8).saturating_add(column)] =
+                i32::from(plane[source_y.saturating_mul(w).saturating_add(source_x)]) - 128;
+        }
+    }
+    samples
+}
+
+/// Build a fixed-point reciprocal whose high product word is exact or one
+/// correction away from division by a positive JPEG quantization divisor.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "JPEG quantization divisors are positive and at most 2040"
+)]
+#[inline]
+fn reciprocal_divisor(divisor: u32) -> u32 {
+    debug_assert!(divisor != 0);
+    let numerator = (1u64 << 32) + u64::from(divisor) - 1;
+    (numerator / u64::from(divisor)) as u32
+}
+
+/// Round one transformed coefficient exactly as libjpeg's integer quantizer,
+/// using multiply-high plus bounded correction instead of integer division.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    reason = "JPEG FDCT bounds keep the numerator, corrected quotient, and signed result in range"
+)]
+#[inline(always)]
+fn quantize_coefficient(value: i32, divisor: u32, reciprocal: u32) -> i16 {
+    debug_assert!(divisor != 0);
+    let numerator = value.unsigned_abs() + (divisor >> 1);
+    let mut quotient = ((u64::from(numerator) * u64::from(reciprocal)) >> 32) as u32;
+
+    if quotient * divisor > numerator {
+        quotient -= 1;
+    }
+    if (quotient + 1) * divisor <= numerator {
+        quotient += 1;
+    }
+
+    let magnitude = quotient as i32;
+    let signed = if value < 0 { -magnitude } else { magnitude };
+    signed as i16
 }
 
 // ── Baseline entropy coding (jchuff.c) ───────────────────────────────────
@@ -4052,8 +5765,8 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
                             // jccoefct.c:174-199. Edge dummy blocks copy the
                             // preceding DC coefficient and zero every AC, so
                             // entropy coding emits both DC category 0 and EOB.
-                            bw.write_bits(dc_tbl.codes[0], dc_tbl.lengths[0]);
-                            bw.write_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
+                            bw.write_bounded_bits(dc_tbl.codes[0], dc_tbl.lengths[0]);
+                            bw.write_bounded_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
                             continue;
                         }
                         let blk = &c.blocks[brow.saturating_mul(bpr).saturating_add(bcol)];
@@ -4072,7 +5785,1200 @@ fn encode_baseline_entropy<P: EntropyOutputCheckpoint>(
     Ok(())
 }
 
+/// Maximum complete 64-bit words emitted by one unpadded baseline block.
+/// The legal 8-bit baseline coefficient domain fits below this 2,048-bit
+/// bound, including worst-case Huffman and magnitude widths.
+const RAW_BLOCK_WORD_CAPACITY: usize = 32;
+
+/// One unstuffed, unpadded block bitstream. Six of these writers allow the
+/// processor to advance the independent Y0/Y1/Y2/Y3/Cb/Cr entropy chains in
+/// parallel before they are concatenated in exact JPEG scan order.
+#[derive(Clone, Copy)]
+struct RawBlockWriter {
+    words: [u64; RAW_BLOCK_WORD_CAPACITY],
+    word_count: usize,
+    reservoir: u64,
+    valid_bits: u8,
+}
+
+impl RawBlockWriter {
+    const fn new() -> Self {
+        Self {
+            words: [0; RAW_BLOCK_WORD_CAPACITY],
+            word_count: 0,
+            reservoir: 0,
+            valid_bits: 0,
+        }
+    }
+
+    #[inline(always)]
+    fn reset(&mut self) {
+        self.word_count = 0;
+        self.reservoir = 0;
+        self.valid_bits = 0;
+    }
+
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "validated JPEG append widths and the reservoir invariant bound every shift"
+    )]
+    #[inline(always)]
+    fn write(&mut self, code: u64, width: u8) {
+        debug_assert!((1..=32).contains(&width));
+        debug_assert!(code < 1u64.wrapping_shl(u32::from(width)));
+        let available = 64u8.saturating_sub(self.valid_bits);
+        if width <= available {
+            self.reservoir = (self.reservoir << width) | code;
+            self.valid_bits += width;
+            if self.valid_bits == 64 {
+                self.publish_word();
+            }
+            return;
+        }
+
+        let suffix_width = width.saturating_sub(available);
+        let prefix = code.wrapping_shr(u32::from(suffix_width));
+        self.reservoir = (self.reservoir << available) | prefix;
+        self.valid_bits = 64;
+        self.publish_word();
+        let suffix_mask = 1u64.wrapping_shl(u32::from(suffix_width)).saturating_sub(1);
+        self.reservoir = code & suffix_mask;
+        self.valid_bits = suffix_width;
+    }
+
+    #[inline(always)]
+    fn publish_word(&mut self) {
+        assert!(
+            self.word_count < RAW_BLOCK_WORD_CAPACITY,
+            "baseline JPEG block exceeded raw entropy capacity"
+        );
+        self.words[self.word_count] = self.reservoir;
+        self.word_count = self.word_count.saturating_add(1);
+        self.reservoir = 0;
+        self.valid_bits = 0;
+    }
+
+    #[inline(always)]
+    fn append_to(&self, scan: &mut RawScanWriter<'_>) {
+        for &word in &self.words[..self.word_count] {
+            scan.write(word, 64);
+        }
+        if self.valid_bits != 0 {
+            scan.write(self.reservoir, self.valid_bits);
+        }
+    }
+}
+
+/// Complete entropy scan. It joins the six independent block streams before
+/// applying the one scan-level pad and JPEG 0xFF byte stuffing.
+struct RawScanWriter<'a> {
+    output: &'a mut Vec<u8>,
+    reservoir: u64,
+    valid_bits: u8,
+}
+
+impl<'a> RawScanWriter<'a> {
+    fn new(output: &'a mut Vec<u8>) -> Self {
+        Self {
+            output,
+            reservoir: 0,
+            valid_bits: 0,
+        }
+    }
+
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "block streams are validated at construction and each append is at most 64 bits"
+    )]
+    #[inline(always)]
+    fn write(&mut self, code: u64, width: u8) {
+        debug_assert!((1..=64).contains(&width));
+        debug_assert!(width == 64 || code < 1u64.wrapping_shl(u32::from(width)));
+        let available = 64u8.saturating_sub(self.valid_bits);
+        if width <= available {
+            self.reservoir = if width == 64 {
+                debug_assert_eq!(self.valid_bits, 0);
+                code
+            } else {
+                (self.reservoir << width) | code
+            };
+            self.valid_bits += width;
+            if self.valid_bits == 64 {
+                self.publish_word();
+            }
+            return;
+        }
+
+        let suffix_width = width.saturating_sub(available);
+        let prefix = code.wrapping_shr(u32::from(suffix_width));
+        self.reservoir = (self.reservoir << available) | prefix;
+        self.valid_bits = 64;
+        self.publish_word();
+        let suffix_mask = 1u64.wrapping_shl(u32::from(suffix_width)).saturating_sub(1);
+        self.reservoir = code & suffix_mask;
+        self.valid_bits = suffix_width;
+    }
+
+    #[inline(always)]
+    fn publish_word(&mut self) {
+        let bytes = self.reservoir.to_be_bytes();
+        if !bytes.contains(&0xFF) {
+            self.output.extend_from_slice(&bytes);
+        } else {
+            for byte in bytes {
+                self.output.push(byte);
+                if byte == 0xFF {
+                    self.output.push(0);
+                }
+            }
+        }
+        self.reservoir = 0;
+        self.valid_bits = 0;
+    }
+
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        reason = "the final reservoir contains at most 64 bits and is padded to a byte boundary"
+    )]
+    fn finish(mut self) {
+        if self.valid_bits == 0 {
+            return;
+        }
+
+        let padding = (8 - self.valid_bits % 8) % 8;
+        self.reservoir =
+            (self.reservoir << padding) | 1u64.wrapping_shl(u32::from(padding)).saturating_sub(1);
+        self.valid_bits += padding;
+        if self.valid_bits == 64 {
+            self.publish_word();
+            return;
+        }
+
+        while self.valid_bits >= 8 {
+            self.valid_bits -= 8;
+            let byte = (self.reservoir >> self.valid_bits) as u8;
+            self.output.push(byte);
+            if byte == 0xFF {
+                self.output.push(0);
+            }
+        }
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "baseline JPEG bounds DC differences, categories, and combined symbol widths"
+)]
+#[inline(always)]
+fn encode_raw_dc(writer: &mut RawBlockWriter, difference: i32, table: &huffman::DerivedTable) {
+    let width = jpeg_nbits(difference);
+    let index = bounded_usize(width);
+    let huffman_code = table.codes[index];
+    let huffman_width = table.lengths[index];
+    if width == 0 {
+        writer.write(u64::from(huffman_code), huffman_width);
+    } else {
+        writer.write(
+            u64::from((huffman_code << width) | mag_bits(difference, width)),
+            huffman_width.saturating_add(width as u8),
+        );
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "baseline JPEG bounds zero runs, categories, and ready-table indices"
+)]
+#[inline(always)]
+fn encode_raw_ac_value(
+    writer: &mut RawBlockWriter,
+    coefficient: i32,
+    run: &mut u32,
+    table: &huffman::DerivedTable,
+    ready: &huffman::CoefficientReadyTable,
+) {
+    if coefficient == 0 {
+        *run = run.saturating_add(1);
+        return;
+    }
+
+    while *run >= 16 {
+        writer.write(u64::from(table.codes[0xF0]), table.lengths[0xF0]);
+        *run -= 16;
+    }
+
+    if (-huffman::COEFFICIENT_READY_LIMIT..=huffman::COEFFICIENT_READY_LIMIT).contains(&coefficient)
+    {
+        let value_width = huffman::COEFFICIENT_READY_LIMIT as usize * 2 + 1;
+        let index =
+            *run as usize * value_width + (coefficient + huffman::COEFFICIENT_READY_LIMIT) as usize;
+        let packed = ready.entries[index];
+        if packed != 0 {
+            writer.write(u64::from(packed >> 8), packed as u8);
+            *run = 0;
+            return;
+        }
+    }
+
+    let width = jpeg_nbits(coefficient);
+    let symbol = bounded_usize((*run << 4) | width);
+    let huffman_code = table.codes[symbol];
+    let huffman_width = table.lengths[symbol];
+    writer.write(
+        u64::from((huffman_code << width) | mag_bits(coefficient, width)),
+        huffman_width.saturating_add(width as u8),
+    );
+    *run = 0;
+}
+
+#[inline(always)]
+fn finish_raw_ac(writer: &mut RawBlockWriter, run: u32, table: &huffman::DerivedTable) {
+    if run != 0 {
+        writer.write(u64::from(table.codes[0]), table.lengths[0]);
+    }
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the six independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_six_raw_blocks(
+    writers: &mut [RawBlockWriter; 6],
+    blocks: [&[i16; 64]; 6],
+    dc_differences: [i32; 6],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2, writer3, writer4, writer5] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    writer4.reset();
+    writer5.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    encode_raw_dc(writer2, dc_differences[2], luma_dc);
+    encode_raw_dc(writer3, dc_differences[3], luma_dc);
+    encode_raw_dc(writer4, dc_differences[4], chroma_dc);
+    encode_raw_dc(writer5, dc_differences[5], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    let mut run4 = 0u32;
+    let mut run5 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            i32::from(blocks[0][coefficient_index]),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            i32::from(blocks[1][coefficient_index]),
+            &mut run1,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            i32::from(blocks[2][coefficient_index]),
+            &mut run2,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer3,
+            i32::from(blocks[3][coefficient_index]),
+            &mut run3,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer4,
+            i32::from(blocks[4][coefficient_index]),
+            &mut run4,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer5,
+            i32::from(blocks[5][coefficient_index]),
+            &mut run5,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, luma_ac);
+    finish_raw_ac(writer2, run2, luma_ac);
+    finish_raw_ac(writer3, run3, luma_ac);
+    finish_raw_ac(writer4, run4, chroma_ac);
+    finish_raw_ac(writer5, run5, chroma_ac);
+}
+
+/// One logical block viewed through a lane of the four-block FDCT's native
+/// coefficient-major output.
+#[derive(Clone, Copy)]
+struct CoefficientMajorBlock<'a> {
+    group: &'a [i16; 256],
+    lane: usize,
+}
+
+impl CoefficientMajorBlock<'_> {
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "JPEG coefficient indices are below 64 and lanes are below four"
+    )]
+    #[inline(always)]
+    fn coefficient(self, natural_index: usize) -> i32 {
+        debug_assert!(natural_index < 64);
+        debug_assert!(self.lane < 4);
+        i32::from(self.group[natural_index * 4 + self.lane])
+    }
+}
+
+#[inline(always)]
+fn mcu_dc_differences(
+    values: [i32; 6],
+    present: [bool; 6],
+    mut predictors: [i32; 3],
+) -> ([i32; 6], [i32; 3]) {
+    let mut differences = [0i32; 6];
+    for block in 0usize..4 {
+        if present[block] {
+            differences[block] = values[block].saturating_sub(predictors[0]);
+            predictors[0] = values[block];
+        }
+    }
+    for block in 4usize..6 {
+        if present[block] {
+            let component = block.saturating_sub(3);
+            differences[block] = values[block].saturating_sub(predictors[component]);
+            predictors[component] = values[block];
+        }
+    }
+    (differences, predictors)
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "partial edge MCUs require six presence flags and separate luma/chroma tables"
+)]
+#[inline(always)]
+fn encode_six_coefficient_major_edge_raw_blocks(
+    writers: &mut [RawBlockWriter; 6],
+    blocks: [CoefficientMajorBlock<'_>; 6],
+    dc_differences: [i32; 6],
+    present: [bool; 6],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2, writer3, writer4, writer5] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    writer4.reset();
+    writer5.reset();
+    for (writer, difference, is_present) in [
+        (&mut *writer0, dc_differences[0], present[0]),
+        (&mut *writer1, dc_differences[1], present[1]),
+        (&mut *writer2, dc_differences[2], present[2]),
+        (&mut *writer3, dc_differences[3], present[3]),
+    ] {
+        encode_raw_dc(writer, difference, luma_dc);
+        if !is_present {
+            writer.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
+        }
+    }
+    for (writer, difference, is_present) in [
+        (&mut *writer4, dc_differences[4], present[4]),
+        (&mut *writer5, dc_differences[5], present[5]),
+    ] {
+        encode_raw_dc(writer, difference, chroma_dc);
+        if !is_present {
+            writer.write(u64::from(chroma_ac.codes[0]), chroma_ac.lengths[0]);
+        }
+    }
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    let mut run4 = 0u32;
+    let mut run5 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        if present[0] {
+            encode_raw_ac_value(
+                writer0,
+                blocks[0].coefficient(coefficient_index),
+                &mut run0,
+                luma_ac,
+                luma_ready,
+            );
+        }
+        if present[1] {
+            encode_raw_ac_value(
+                writer1,
+                blocks[1].coefficient(coefficient_index),
+                &mut run1,
+                luma_ac,
+                luma_ready,
+            );
+        }
+        if present[2] {
+            encode_raw_ac_value(
+                writer2,
+                blocks[2].coefficient(coefficient_index),
+                &mut run2,
+                luma_ac,
+                luma_ready,
+            );
+        }
+        if present[3] {
+            encode_raw_ac_value(
+                writer3,
+                blocks[3].coefficient(coefficient_index),
+                &mut run3,
+                luma_ac,
+                luma_ready,
+            );
+        }
+        if present[4] {
+            encode_raw_ac_value(
+                writer4,
+                blocks[4].coefficient(coefficient_index),
+                &mut run4,
+                chroma_ac,
+                chroma_ready,
+            );
+        }
+        if present[5] {
+            encode_raw_ac_value(
+                writer5,
+                blocks[5].coefficient(coefficient_index),
+                &mut run5,
+                chroma_ac,
+                chroma_ready,
+            );
+        }
+    }
+    if present[0] {
+        finish_raw_ac(writer0, run0, luma_ac);
+    }
+    if present[1] {
+        finish_raw_ac(writer1, run1, luma_ac);
+    }
+    if present[2] {
+        finish_raw_ac(writer2, run2, luma_ac);
+    }
+    if present[3] {
+        finish_raw_ac(writer3, run3, luma_ac);
+    }
+    if present[4] {
+        finish_raw_ac(writer4, run4, chroma_ac);
+    }
+    if present[5] {
+        finish_raw_ac(writer5, run5, chroma_ac);
+    }
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the six independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_six_coefficient_major_raw_blocks(
+    writers: &mut [RawBlockWriter; 6],
+    blocks: [CoefficientMajorBlock<'_>; 6],
+    dc_differences: [i32; 6],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+    trim_trailing_zeros: bool,
+) {
+    let [writer0, writer1, writer2, writer3, writer4, writer5] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    writer4.reset();
+    writer5.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    encode_raw_dc(writer2, dc_differences[2], luma_dc);
+    encode_raw_dc(writer3, dc_differences[3], luma_dc);
+    encode_raw_dc(writer4, dc_differences[4], chroma_dc);
+    encode_raw_dc(writer5, dc_differences[5], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    let mut run4 = 0u32;
+    let mut run5 = 0u32;
+    let mut last_position = 63usize;
+    if trim_trailing_zeros {
+        while last_position != 0 {
+            let natural_index = ZIGZAG[last_position];
+            if blocks
+                .iter()
+                .any(|block| block.coefficient(natural_index) != 0)
+            {
+                break;
+            }
+            last_position = last_position.saturating_sub(1);
+        }
+    }
+    for &coefficient_index in &ZIGZAG[1..=last_position] {
+        encode_raw_ac_value(
+            writer0,
+            blocks[0].coefficient(coefficient_index),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            blocks[1].coefficient(coefficient_index),
+            &mut run1,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            blocks[2].coefficient(coefficient_index),
+            &mut run2,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer3,
+            blocks[3].coefficient(coefficient_index),
+            &mut run3,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer4,
+            blocks[4].coefficient(coefficient_index),
+            &mut run4,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer5,
+            blocks[5].coefficient(coefficient_index),
+            &mut run5,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    let omitted = u32::try_from(63usize.saturating_sub(last_position)).unwrap_or(0);
+    run0 = run0.saturating_add(omitted);
+    run1 = run1.saturating_add(omitted);
+    run2 = run2.saturating_add(omitted);
+    run3 = run3.saturating_add(omitted);
+    run4 = run4.saturating_add(omitted);
+    run5 = run5.saturating_add(omitted);
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, luma_ac);
+    finish_raw_ac(writer2, run2, luma_ac);
+    finish_raw_ac(writer3, run3, luma_ac);
+    finish_raw_ac(writer4, run4, chroma_ac);
+    finish_raw_ac(writer5, run5, chroma_ac);
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "a partial 4:2:2 edge MCU requires separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_four_coefficient_major_edge_raw_blocks(
+    writers: &mut [RawBlockWriter; 4],
+    blocks: [CoefficientMajorBlock<'_>; 4],
+    dc_differences: [i32; 4],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2, writer3] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    writer1.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
+    encode_raw_dc(writer2, dc_differences[2], chroma_dc);
+    encode_raw_dc(writer3, dc_differences[3], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            blocks[0].coefficient(coefficient_index),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            blocks[2].coefficient(coefficient_index),
+            &mut run2,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer3,
+            blocks[3].coefficient(coefficient_index),
+            &mut run3,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer2, run2, chroma_ac);
+    finish_raw_ac(writer3, run3, chroma_ac);
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the four independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_four_coefficient_major_raw_blocks(
+    writers: &mut [RawBlockWriter; 4],
+    blocks: [CoefficientMajorBlock<'_>; 4],
+    dc_differences: [i32; 4],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2, writer3] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    encode_raw_dc(writer2, dc_differences[2], chroma_dc);
+    encode_raw_dc(writer3, dc_differences[3], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            blocks[0].coefficient(coefficient_index),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            blocks[1].coefficient(coefficient_index),
+            &mut run1,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            blocks[2].coefficient(coefficient_index),
+            &mut run2,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer3,
+            blocks[3].coefficient(coefficient_index),
+            &mut run3,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, luma_ac);
+    finish_raw_ac(writer2, run2, chroma_ac);
+    finish_raw_ac(writer3, run3, chroma_ac);
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the three independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_three_coefficient_major_raw_blocks(
+    writers: &mut [RawBlockWriter; 3],
+    blocks: [CoefficientMajorBlock<'_>; 3],
+    dc_differences: [i32; 3],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], chroma_dc);
+    encode_raw_dc(writer2, dc_differences[2], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            blocks[0].coefficient(coefficient_index),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            blocks[1].coefficient(coefficient_index),
+            &mut run1,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            blocks[2].coefficient(coefficient_index),
+            &mut run2,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, chroma_ac);
+    finish_raw_ac(writer2, run2, chroma_ac);
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the four independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_four_raw_blocks(
+    writers: &mut [RawBlockWriter; 4],
+    blocks: [&[i16; 64]; 4],
+    dc_differences: [i32; 4],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2, writer3] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    writer3.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    encode_raw_dc(writer2, dc_differences[2], chroma_dc);
+    encode_raw_dc(writer3, dc_differences[3], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    let mut run3 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            i32::from(blocks[0][coefficient_index]),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            i32::from(blocks[1][coefficient_index]),
+            &mut run1,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            i32::from(blocks[2][coefficient_index]),
+            &mut run2,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer3,
+            i32::from(blocks[3][coefficient_index]),
+            &mut run3,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, luma_ac);
+    finish_raw_ac(writer2, run2, chroma_ac);
+    finish_raw_ac(writer3, run3, chroma_ac);
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the three independent block chains require separate luma and chroma tables"
+)]
+#[inline(always)]
+fn encode_three_raw_blocks(
+    writers: &mut [RawBlockWriter; 3],
+    blocks: [&[i16; 64]; 3],
+    dc_differences: [i32; 3],
+    luma_dc: &huffman::DerivedTable,
+    luma_ac: &huffman::DerivedTable,
+    chroma_dc: &huffman::DerivedTable,
+    chroma_ac: &huffman::DerivedTable,
+    luma_ready: &huffman::CoefficientReadyTable,
+    chroma_ready: &huffman::CoefficientReadyTable,
+) {
+    let [writer0, writer1, writer2] = writers;
+    writer0.reset();
+    writer1.reset();
+    writer2.reset();
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], chroma_dc);
+    encode_raw_dc(writer2, dc_differences[2], chroma_dc);
+
+    let mut run0 = 0u32;
+    let mut run1 = 0u32;
+    let mut run2 = 0u32;
+    for &coefficient_index in &ZIGZAG[1..] {
+        encode_raw_ac_value(
+            writer0,
+            i32::from(blocks[0][coefficient_index]),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        encode_raw_ac_value(
+            writer1,
+            i32::from(blocks[1][coefficient_index]),
+            &mut run1,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer2,
+            i32::from(blocks[2][coefficient_index]),
+            &mut run2,
+            chroma_ac,
+            chroma_ready,
+        );
+    }
+    finish_raw_ac(writer0, run0, luma_ac);
+    finish_raw_ac(writer1, run1, chroma_ac);
+    finish_raw_ac(writer2, run2, chroma_ac);
+}
+
+fn baseline_422_independent_entropy_is_compatible(
+    components: &[CompData],
+    maximum_horizontal_sampling: u8,
+    maximum_vertical_sampling: u8,
+) -> bool {
+    let [y, cb, cr] = components else {
+        return false;
+    };
+    maximum_horizontal_sampling == 2
+        && maximum_vertical_sampling == 1
+        && (y.h_samp, y.v_samp) == (2, 1)
+        && (cb.h_samp, cb.v_samp) == (1, 1)
+        && (cr.h_samp, cr.v_samp) == (1, 1)
+        && !y.blocks.is_empty()
+        && y.blocks_per_row.is_multiple_of(2)
+        && cb.blocks_per_row.saturating_mul(2) == y.blocks_per_row
+        && cb.block_rows == y.block_rows
+        && cr.blocks_per_row == cb.blocks_per_row
+        && cr.block_rows == cb.block_rows
+}
+
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "quantized JPEG DC coefficients are i16 values, so predictor deltas fit in i32"
+)]
+fn encode_baseline_422_independent_entropy(
+    output: &mut Vec<u8>,
+    components: &[CompData],
+    dc_tables: &[&huffman::DerivedTable; 2],
+    ac_tables: &[&huffman::DerivedTable; 2],
+) {
+    let [y, cb, cr] = components else {
+        unreachable!("the 4:2:2 fast-path guard requires three components");
+    };
+    let mcu_columns = y.blocks_per_row / 2;
+    let mcu_rows = y.block_rows;
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let mut writers = [RawBlockWriter::new(); 4];
+    let mut scan = RawScanWriter::new(output);
+    let mut previous_dc = [0i32; 3];
+
+    for mcu_y in 0..mcu_rows {
+        for mcu_x in 0..mcu_columns {
+            let y_base = mcu_y
+                .saturating_mul(y.blocks_per_row)
+                .saturating_add(mcu_x.saturating_mul(2));
+            let chroma_index = mcu_y
+                .saturating_mul(cb.blocks_per_row)
+                .saturating_add(mcu_x);
+            let blocks = [
+                &y.blocks[y_base],
+                &y.blocks[y_base.saturating_add(1)],
+                &cb.blocks[chroma_index],
+                &cr.blocks[chroma_index],
+            ];
+            let dc = blocks.map(|block| i32::from(block[0]));
+            encode_four_raw_blocks(
+                &mut writers,
+                blocks,
+                [
+                    dc[0] - previous_dc[0],
+                    dc[1] - dc[0],
+                    dc[2] - previous_dc[1],
+                    dc[3] - previous_dc[2],
+                ],
+                dc_tables[0],
+                ac_tables[0],
+                dc_tables[1],
+                ac_tables[1],
+                luma_ready,
+                chroma_ready,
+            );
+            for writer in &writers {
+                writer.append_to(&mut scan);
+            }
+            previous_dc = [dc[1], dc[2], dc[3]];
+        }
+    }
+    scan.finish();
+}
+
+fn baseline_444_independent_entropy_is_compatible(
+    components: &[CompData],
+    maximum_horizontal_sampling: u8,
+    maximum_vertical_sampling: u8,
+) -> bool {
+    let [y, cb, cr] = components else {
+        return false;
+    };
+    maximum_horizontal_sampling == 1
+        && maximum_vertical_sampling == 1
+        && (y.h_samp, y.v_samp) == (1, 1)
+        && (cb.h_samp, cb.v_samp) == (1, 1)
+        && (cr.h_samp, cr.v_samp) == (1, 1)
+        && !y.blocks.is_empty()
+        && cb.blocks_per_row == y.blocks_per_row
+        && cb.block_rows == y.block_rows
+        && cr.blocks_per_row == y.blocks_per_row
+        && cr.block_rows == y.block_rows
+}
+
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "quantized JPEG DC coefficients are i16 values, so predictor deltas fit in i32"
+)]
+fn encode_baseline_444_independent_entropy(
+    output: &mut Vec<u8>,
+    components: &[CompData],
+    dc_tables: &[&huffman::DerivedTable; 2],
+    ac_tables: &[&huffman::DerivedTable; 2],
+) {
+    let [y, cb, cr] = components else {
+        unreachable!("the 4:4:4 fast-path guard requires three components");
+    };
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let mut writers = [RawBlockWriter::new(); 3];
+    let mut scan = RawScanWriter::new(output);
+    let mut previous_dc = [0i32; 3];
+
+    for block_index in 0..y.blocks.len() {
+        let blocks = [
+            &y.blocks[block_index],
+            &cb.blocks[block_index],
+            &cr.blocks[block_index],
+        ];
+        let dc = blocks.map(|block| i32::from(block[0]));
+        encode_three_raw_blocks(
+            &mut writers,
+            blocks,
+            [
+                dc[0] - previous_dc[0],
+                dc[1] - previous_dc[1],
+                dc[2] - previous_dc[2],
+            ],
+            dc_tables[0],
+            ac_tables[0],
+            dc_tables[1],
+            ac_tables[1],
+            luma_ready,
+            chroma_ready,
+        );
+        for writer in &writers {
+            writer.append_to(&mut scan);
+        }
+        previous_dc = dc;
+    }
+    scan.finish();
+}
+
+fn baseline_420_independent_entropy_is_compatible(
+    components: &[CompData],
+    maximum_horizontal_sampling: u8,
+    maximum_vertical_sampling: u8,
+) -> bool {
+    let [y, cb, cr] = components else {
+        return false;
+    };
+    maximum_horizontal_sampling == 2
+        && maximum_vertical_sampling == 2
+        && (y.h_samp, y.v_samp) == (2, 2)
+        && (cb.h_samp, cb.v_samp) == (1, 1)
+        && (cr.h_samp, cr.v_samp) == (1, 1)
+        && !y.blocks.is_empty()
+        && y.blocks_per_row.is_multiple_of(2)
+        && y.block_rows.is_multiple_of(2)
+        && cb.blocks_per_row.saturating_mul(2) == y.blocks_per_row
+        && cb.block_rows.saturating_mul(2) == y.block_rows
+        && cr.blocks_per_row == cb.blocks_per_row
+        && cr.block_rows == cb.block_rows
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "i16 DC differences fit i32 and the six-block scan order is explicit"
+)]
+fn encode_baseline_420_independent_entropy(
+    output: &mut Vec<u8>,
+    components: &[CompData],
+    dc_tables: &[&huffman::DerivedTable; 2],
+    ac_tables: &[&huffman::DerivedTable; 2],
+) {
+    let [y, cb, cr] = components else {
+        unreachable!("the 4:2:0 fast-path guard requires three components");
+    };
+    let mcu_columns = y.blocks_per_row / 2;
+    let mcu_rows = y.block_rows / 2;
+    let luma_ready = huffman::standard_ac_luma_coefficient_ready();
+    let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
+    let mut mcu_writers = [RawBlockWriter::new(); 6];
+    let mut scan = RawScanWriter::new(output);
+    let mut previous_dc = [0i32; 3];
+
+    for mcu_y in 0..mcu_rows {
+        for mcu_x in 0..mcu_columns {
+            let y_row = mcu_y.saturating_mul(2);
+            let y_column = mcu_x.saturating_mul(2);
+            let y_base = y_row
+                .saturating_mul(y.blocks_per_row)
+                .saturating_add(y_column);
+            let y_next_row = y_base.saturating_add(y.blocks_per_row);
+            let y_blocks = [
+                &y.blocks[y_base],
+                &y.blocks[y_base.saturating_add(1)],
+                &y.blocks[y_next_row],
+                &y.blocks[y_next_row.saturating_add(1)],
+            ];
+            let y_values = y_blocks.map(|block| i32::from(block[0]));
+            let y_differences = [
+                y_values[0] - previous_dc[0],
+                y_values[1] - y_values[0],
+                y_values[2] - y_values[1],
+                y_values[3] - y_values[2],
+            ];
+            previous_dc[0] = y_values[3];
+
+            let chroma_index = mcu_y
+                .saturating_mul(cb.blocks_per_row)
+                .saturating_add(mcu_x);
+            let chroma_blocks = [&cb.blocks[chroma_index], &cr.blocks[chroma_index]];
+            let chroma_values = chroma_blocks.map(|block| i32::from(block[0]));
+            let chroma_differences = [
+                chroma_values[0] - previous_dc[1],
+                chroma_values[1] - previous_dc[2],
+            ];
+            previous_dc[1] = chroma_values[0];
+            previous_dc[2] = chroma_values[1];
+
+            encode_six_raw_blocks(
+                &mut mcu_writers,
+                [
+                    y_blocks[0],
+                    y_blocks[1],
+                    y_blocks[2],
+                    y_blocks[3],
+                    chroma_blocks[0],
+                    chroma_blocks[1],
+                ],
+                [
+                    y_differences[0],
+                    y_differences[1],
+                    y_differences[2],
+                    y_differences[3],
+                    chroma_differences[0],
+                    chroma_differences[1],
+                ],
+                dc_tables[0],
+                ac_tables[0],
+                dc_tables[1],
+                ac_tables[1],
+                luma_ready,
+                chroma_ready,
+            );
+            for writer in &mcu_writers {
+                writer.append_to(&mut scan);
+            }
+        }
+    }
+    scan.finish();
+}
+
 /// Encode one 8×8 block: DC difference + AC run/length in zigzag order.
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "baseline JPEG bounds coefficient categories, symbol widths, and the 63-position AC scan"
+)]
+#[inline(always)]
 fn encode_one_block(
     bw: &mut huffman::BitWriter,
     block: &[i16; 64],
@@ -4087,45 +6993,84 @@ fn encode_one_block(
     let nbits = jpeg_nbits(diff);
     // DC Huffman symbol = nbits, followed by nbits magnitude bits.
     let nbits_index = bounded_usize(nbits);
-    bw.write_bits(dc_tbl.codes[nbits_index], dc_tbl.lengths[nbits_index]);
+    let dc_code = dc_tbl.codes[nbits_index];
+    let dc_length = dc_tbl.lengths[nbits_index];
     if nbits > 0 {
-        bw.write_bits(mag_bits(diff, nbits), nbits.to_le_bytes()[0]);
+        let magnitude = mag_bits(diff, nbits);
+        bw.write_bounded_bits(
+            dc_code.wrapping_shl(nbits) | magnitude,
+            dc_length + nbits.to_le_bytes()[0],
+        );
+    } else {
+        bw.write_bounded_bits(dc_code, dc_length);
     }
 
-    // AC coefficients in zigzag order (k=1..63).
-    let mut r = 0u32; // run length of zeros
-    for k in 1..64 {
-        let coef = i32::from(block[ZIGZAG[k]]);
-        if coef == 0 {
-            r = r.saturating_add(1);
+    let mut coefficient_index = 1usize;
+    while coefficient_index < 64 {
+        let mut coefficient = i32::from(block[ZIGZAG[coefficient_index]]);
+        if coefficient != 0 {
+            loop {
+                let width = jpeg_nbits(coefficient);
+                let symbol = bounded_usize(width);
+                let code = ac_tbl.codes[symbol];
+                let length = ac_tbl.lengths[symbol];
+                let magnitude = mag_bits(coefficient, width);
+                bw.write_bounded_bits(
+                    code.wrapping_shl(width) | magnitude,
+                    length + width.to_le_bytes()[0],
+                );
+                coefficient_index += 1;
+                if coefficient_index == 64 {
+                    return;
+                }
+                coefficient = i32::from(block[ZIGZAG[coefficient_index]]);
+                if coefficient == 0 {
+                    break;
+                }
+            }
             continue;
         }
-        // Emit ZRL (0xF0) for each full 16-zero run.
-        while r >= 16 {
-            bw.write_bits(ac_tbl.codes[0xF0], ac_tbl.lengths[0xF0]);
-            r = r.saturating_sub(16);
+
+        let mut run = 1u32;
+        coefficient_index += 1;
+        while coefficient_index < 64 {
+            coefficient = i32::from(block[ZIGZAG[coefficient_index]]);
+            if coefficient != 0 {
+                break;
+            }
+            run += 1;
+            coefficient_index += 1;
         }
-        let nbits = jpeg_nbits(coef);
-        let sym = bounded_usize(r.wrapping_shl(4) | nbits);
-        bw.write_bits(ac_tbl.codes[sym], ac_tbl.lengths[sym]);
-        bw.write_bits(mag_bits(coef, nbits), nbits.to_le_bytes()[0]);
-        r = 0;
-    }
-    // If trailing zeros, emit EOB (symbol 0x00).
-    if r > 0 {
-        bw.write_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
+        if coefficient_index == 64 {
+            bw.write_bounded_bits(ac_tbl.codes[0], ac_tbl.lengths[0]);
+            return;
+        }
+
+        while run >= 16 {
+            bw.write_bounded_bits(ac_tbl.codes[0xF0], ac_tbl.lengths[0xF0]);
+            run -= 16;
+        }
+        let width = jpeg_nbits(coefficient);
+        let symbol = bounded_usize(run.wrapping_shl(4) | width);
+        let code = ac_tbl.codes[symbol];
+        let length = ac_tbl.lengths[symbol];
+        let magnitude = mag_bits(coefficient, width);
+        bw.write_bounded_bits(
+            code.wrapping_shl(width) | magnitude,
+            length + width.to_le_bytes()[0],
+        );
+        coefficient_index += 1;
     }
 }
 
 /// Number of bits needed to represent |v| (JPEG_NBITS).  nbits(0)=0.
 fn jpeg_nbits(v: i32) -> u32 {
-    let mut a = v.unsigned_abs();
-    let mut n = 0u32;
-    while a > 0 {
-        n = n.saturating_add(1);
-        a = a.wrapping_shr(1);
+    let magnitude = v.unsigned_abs();
+    if magnitude == 0 {
+        0
+    } else {
+        32u32.saturating_sub(magnitude.leading_zeros())
     }
-    n
 }
 
 /// The nbits magnitude bits to emit for a signed coefficient value (IJG
