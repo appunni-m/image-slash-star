@@ -2,12 +2,16 @@
 
 Status: current implementation reference
 
-Reviewed: 2026-08-12 against measured source/evidence revision
-`36b939696415a962285d37f9120ff389aebf0205`. Current aggregate native
-all-feature coverage is recorded in [roadmap-new.md](roadmap-new.md); the
-claim-ledger base revision is the same measured revision. The current managed
-parity run is `84716077-aee7-4396-8328-e6735202b044` and the current exact
-coverage snapshot is `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`. Historical run
+Reviewed: 2026-08-12 against source-quality checkpoint
+`2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current aggregate native
+all-feature coverage is recorded in [roadmap-new.md](roadmap-new.md):
+73,473/73,539 lines, 9,434/9,444 branches, 3,629/3,679 functions, and
+109,876/110,011 regions. This is not yet 100% metric coverage; the remaining
+source-level gaps are documented there. The accepted claim-ledger base is
+`36b939696415a962285d37f9120ff389aebf0205`, and remains separate from this
+engineering-quality checkpoint. The exact current Coverage MCP snapshot is
+`af56a0c3-5bca-4b7a-8e15-29ac36516edc` from run
+`8d3e09cb-638c-434a-b7cc-a74ea576e667` (108/108 passed). Historical run
 records elsewhere in this document retain their original revision scope.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at

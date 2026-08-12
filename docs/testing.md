@@ -2,16 +2,20 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-11 against measured source/evidence revision
-`36b939696415a962285d37f9120ff389aebf0205` and
+Reviewed: 2026-08-12 against source-quality checkpoint
+`2d3e7ecb32b5413b9683061805ff6fc8909ed82e` and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
-The claim-ledger base revision is
-`36b939696415a962285d37f9120ff389aebf0205`.
-The current managed Pillow parity run is
-`84716077-aee7-4396-8328-e6735202b044` (1,449/1,449 passed), and the current
-exact Coverage MCP snapshot is
-`05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` from run
-`54ce9d6c-3c1f-43e5-9120-c79984bc9166`.
+The accepted claim-ledger base remains
+`36b939696415a962285d37f9120ff389aebf0205`; it is kept separate from the
+newer cleanup checkpoint because changing lint, coverage hooks, or test
+scaffolding does not silently promote the product claims it records.
+The current strict Coverage MCP snapshot is
+`af56a0c3-5bca-4b7a-8e15-29ac36516edc` from run
+`8d3e09cb-638c-434a-b7cc-a74ea576e667` (108/108 passed). It records
+73,473/73,539 lines, 9,434/9,444 branches, 3,629/3,679 functions, and
+109,876/110,011 regions. The managed Pillow parity identifier below is the
+accepted claim-ledger result at its own recorded revision; the local
+all-feature parity matrix currently passes 28/28.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
@@ -33,17 +37,19 @@ branches, and 27/27 functions. The known LLVM JSON segment-normalization
 warning remains. These exact-head records are test-result and Rust coverage
 evidence, not Pillow allocator or parity metrics.
 
-Current revision acceptance:
+Accepted claim-ledger evidence (revision-bound):
 
 - Managed Pillow parity run `84716077-aee7-4396-8328-e6735202b044`: 1,449/1,449
   passed at revision `36b939696415a962285d37f9120ff389aebf0205`.
 - `cargo test --all-features --test coverage_matrix_tests`: 28/28 passed.
-- `cargo test --all-features --test feature_gate_tests`: 46/46 passed.
+- The feature-gate suite at that accepted revision passed 46/46.
 - Managed Coverage MCP run `54ce9d6c-3c1f-43e5-9120-c79984bc9166`: 86/86
   passed, with the required artifact ingested into snapshot
   `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`.
-- Aggregate native all-feature coverage: 64,909/64,909 lines, 8,464/8,464
-  branches, 3,301/3,301 functions, and 96,968/96,968 regions.
+- Aggregate native all-feature coverage at that accepted revision:
+  64,909/64,909 lines, 8,464/8,464 branches, 3,301/3,301 functions, and
+  96,968/96,968 regions. This is historical, revision-bound evidence; it is
+  not the current source-quality coverage result at the top of this document.
 - LLVM JSON segments are normalized to segment-start lines; aggregate region
   coverage is preserved from the report summaries.
 
