@@ -551,7 +551,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(table.decode_slow(&mut br, 1).is_err());
 
     table.values.push(0);
-    let mut br = BitReader::new(&[0xFF; 16], 0, 16);
+    // A leading one keeps the synthetic table on the sentinel path.  Using
+    // 0xFF here would be interpreted as a marker by BitReader's JPEG padding
+    // rules and would never reach the scalar `l > 16` compatibility branch.
+    let mut br = BitReader::new(&[0x80], 0, 1);
     assert_eq!(table.decode_slow(&mut br, 1), Ok(0));
     let empty_table = HuffTable::build(&[0; 16], &[]);
     let mut br = BitReader::new(&[0xFF; 16], 0, 16);
