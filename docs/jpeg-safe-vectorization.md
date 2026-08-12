@@ -52,8 +52,9 @@ codec is vectorized.
 ## Runtime receipt
 
 The checked-in `src/bin/jpeg-runtime.rs` runs the public JPEG encode/decode
-APIs in release mode. On the native AArch64 macOS target, with 1,000 rounds,
-the default path produced these medians:
+APIs in release mode. Its workload helper has a unit test; only the thin CLI
+environment-reading wrapper is excluded from coverage. On the native AArch64
+macOS target, with 1,000 rounds, the default path produced these medians:
 
 | RGB image | Encode | Decode |
 | --- | ---: | ---: |

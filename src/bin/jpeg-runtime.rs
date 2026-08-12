@@ -61,6 +61,11 @@ fn time_size(width: u32, height: u32, rounds: usize) -> Result<(), Box<dyn std::
     Ok(())
 }
 
+#[cfg_attr(
+    coverage,
+    coverage(off),
+    reason = "the coverage suite exercises the benchmark workload directly; this is only CLI environment plumbing"
+)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rounds = std::env::var("ROUNDS")
         .ok()
@@ -71,4 +76,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         time_size(width, height, rounds)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::time_size;
+
+    #[test]
+    fn benchmark_workload_executes_a_small_round() {
+        time_size(8, 8, 1).expect("the benchmark workload should encode and decode");
+    }
 }
