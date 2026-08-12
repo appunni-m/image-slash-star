@@ -721,16 +721,13 @@ pub(crate) fn encode_with_token(
     };
 
     // Baseline CMYK keeps four adjacent blocks per component in safe packed
-    // FDCT form, then writes one C/M/Y/K block packet per MCU.
+    // FDCT form, then writes one C/M/Y/K block packet per MCU. `validate`
+    // guarantees the four converted planes have exactly `w * h` samples.
     if token.is_none()
         && num_components == 4
         && !progressive
         && !optimize
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
-        && y_plane.len() == w.saturating_mul(h)
-        && cb_plane.len() == y_plane.len()
-        && cr_plane.len() == y_plane.len()
-        && k_plane.len() == y_plane.len()
     {
         return encode_baseline_cmyk_block_row_streaming(
             &y_plane,
@@ -747,13 +744,14 @@ pub(crate) fn encode_with_token(
 
     // Baseline grayscale streams four blocks from the safe packed FDCT into
     // independent entropy reservoirs without materializing a coefficient
-    // image first. Tiny unaligned images keep the simpler generic path.
+    // image first. `validate` guarantees the borrowed grayscale plane has
+    // exactly `w * h` samples; tiny unaligned images keep the simpler generic
+    // path.
     if token.is_none()
         && num_components == 1
         && !progressive
         && !optimize
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
-        && y_plane.len() == w.saturating_mul(h)
     {
         return encode_baseline_grayscale_block_row_streaming(
             &y_plane,
@@ -767,20 +765,15 @@ pub(crate) fn encode_with_token(
 
     // Baseline 4:2:2 can stream four MCUs at a time from safe SIMD
     // FDCT packets into entropy output, avoiding whole-image coefficient
-    // planes and their coefficient-major-to-block-major transposes.
+    // planes and their coefficient-major-to-block-major transposes. The
+    // sampling-grid dimensions and downsampled lengths are derived from the
+    // validated source and the selected 4:2:2 factors.
     if token.is_none()
         && num_components == 3
         && !progressive
         && !optimize
         && subsampling == "422"
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(64) && h.is_multiple_of(8)))
-        && y_plane.len() == w.saturating_mul(h)
-        && cb_w == w.div_ceil(16).saturating_mul(8)
-        && cb_h == h
-        && cr_w == cb_w
-        && cr_h == cb_h
-        && cb_ds.len() == cb_w.saturating_mul(cb_h)
-        && cr_ds.len() == cr_w.saturating_mul(cr_h)
     {
         let chroma_quantizer = chroma_quantizer
             .as_ref()
@@ -803,19 +796,15 @@ pub(crate) fn encode_with_token(
     // Baseline 4:4:4 can keep each four-block SIMD packet in its
     // native coefficient-major layout until entropy output. This avoids
     // materializing and transposing three whole-image coefficient planes.
+    // The width check is meaningful: the direct kernel requires an exact
+    // 8-sample chroma row, whereas the generic path pads a partial row.
     if token.is_none()
         && num_components == 3
         && !progressive
         && !optimize
         && subsampling == "444"
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
-        && y_plane.len() == w.saturating_mul(h)
-        && cb_w == w
-        && cb_h == h
-        && cr_w == w
-        && cr_h == h
-        && cb_ds.len() == w.saturating_mul(h)
-        && cr_ds.len() == w.saturating_mul(h)
+        && w.is_multiple_of(8)
     {
         let chroma_quantizer = chroma_quantizer
             .as_ref()
@@ -835,6 +824,8 @@ pub(crate) fn encode_with_token(
 
     // Sparse low-quality 4:2:0 data is faster after the fused whole-plane
     // conversion, while retaining the same packed transform/entropy backend.
+    // The 4:2:0 conversion kernel owns the derived plane dimensions and
+    // returns the exact sampling-grid lengths used by the direct writer.
     if token.is_none()
         && num_components == 3
         && !progressive
@@ -842,13 +833,6 @@ pub(crate) fn encode_with_token(
         && subsampling == "420"
         && quality <= 25
         && w.saturating_mul(h) >= 1024
-        && y_plane.len() == w.saturating_mul(h)
-        && cb_w == w.div_ceil(16).saturating_mul(8)
-        && cb_h == h.div_ceil(2)
-        && cr_w == cb_w
-        && cr_h == cb_h
-        && cb_ds.len() == cb_w.saturating_mul(cb_h)
-        && cr_ds.len() == cr_w.saturating_mul(cr_h)
     {
         let chroma_quantizer = chroma_quantizer
             .as_ref()
