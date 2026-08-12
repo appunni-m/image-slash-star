@@ -529,7 +529,7 @@ fn wrapping_usize(value: i32) -> usize {
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     let empty = [];
-    let table = HuffTable {
+    let mut table = HuffTable {
         lookup: [HUFF_LOOKAHEAD_SENTINEL; 1 << HUFF_LOOKAHEAD],
         values: Vec::new(),
         maxcode: {
@@ -550,15 +550,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&data, 0, data.len());
     assert!(table.decode_slow(&mut br, 1).is_err());
 
+    table.values.push(0);
     let mut br = BitReader::new(&[0xFF; 16], 0, 16);
     assert_eq!(table.decode_slow(&mut br, 1), Ok(0));
     let empty_table = HuffTable::build(&[0; 16], &[]);
     let mut br = BitReader::new(&[0xFF; 16], 0, 16);
     assert!(empty_table.decode_slow(&mut br, 1).is_err());
 
-    use super::super::encode::huffman::{
-        STD_AC_CHROMA, STD_AC_LUMA, STD_DC_CHROMA, STD_DC_LUMA,
-    };
+    use super::super::encode::huffman::{STD_AC_CHROMA, STD_AC_LUMA, STD_DC_CHROMA, STD_DC_LUMA};
     let _ = build_huff_table(0, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
     let _ = build_huff_table(0, &STD_DC_CHROMA.0, &STD_DC_CHROMA.1);
     let _ = build_huff_table(1, &STD_AC_LUMA.0, &STD_AC_LUMA.1);

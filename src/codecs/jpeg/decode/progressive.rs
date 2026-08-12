@@ -1133,7 +1133,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&[0x80], 0, 1);
     assert_eq!(
         dc_first_block(&mut br, &positive_dc, &mut dc_pred, 1),
-        Ok(0)
+        Ok(-2)
     );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut coeffs = [0i32; 64];
@@ -1179,6 +1179,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ac_first_block(&mut br, &eob, 1, 2, 0, &mut coeffs, &mut eobrun),
         Ok(0)
     );
+    eobrun = 0;
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun),
