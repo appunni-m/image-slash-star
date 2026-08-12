@@ -36,6 +36,14 @@ feature claims or invent new Pillow rows.
   license verifiers, and `cargo deny check` all pass. The only intentional
   Rust `unsafe` boundary is the documented AVIF C bridge; the JPEG
   vectorization path remains safe Rust.
+- Final managed Pillow parity run `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`
+  passed 1,449/1,449 with no skips at the docs-clean commit
+  `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` (the source is unchanged from
+  the strict-audit checkpoint). The registered feature-matrix wrapper
+  `680a7e74-61af-4315-aee7-8a5fa09d0820` failed before test execution because
+  its immutable command invokes sandbox-blocked `sccache`; the same script
+  with `CARGO_BUILD_RUSTC_WRAPPER=` completed all 30 native/WASI lanes and
+  reported matching capability tables.
 - The fixed public production comparison was run with five alternating rounds
   across 20 encode and 20 decode cases on the same macOS Arm host, using
   ordinary Cargo release Rust and TurboJPEG's release SIMD. All RGB/gray
