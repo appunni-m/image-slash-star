@@ -846,6 +846,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2, None).is_ok());
     let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
     assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0, None).is_ok());
+
+    // Exercise the indexed row checkpoint's cancellation edge for every
+    // palette depth; the public fixture matrix covers the successful rows.
+    let cancelled = crate::CancellationToken::new();
+    cancelled.cancel();
+    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3, Some(&cancelled)).is_err());
+    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3, Some(&cancelled)).is_err());
+    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2, Some(&cancelled)).is_err());
 }
 
 #[cfg(coverage)]
