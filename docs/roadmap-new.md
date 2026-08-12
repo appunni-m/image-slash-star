@@ -4,21 +4,60 @@ Status: canonical pending-work plan; current v1 evidence is recorded below
 
 Reviewed: 2026-08-12
 
-- Measured source/evidence revision: `36b939696415a962285d37f9120ff389aebf0205`
-- Claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`
+- Accepted claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at this revision)
-- Managed Coverage MCP run: `54ce9d6c-3c1f-43e5-9120-c79984bc9166`
-- Ingested Coverage MCP snapshot: `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`
-- Latest local RN-003 candidate: `306d530` (ICO embedded 32-bit BMP row
-  checkpoints); local LLVM is exact at 66,547/66,547 lines, 8,654/8,654
-  branches, 3,354/3,354 functions, and 99,409/99,409 regions, with 64/64
-  native feature-gate tests passing. This is local evidence only: the managed
-  Coverage MCP transport still closes at `project_context` with `Transport
-  closed`, so the accepted managed tuple above remains unchanged.
 - Project: `image-slash-star`, a Rust image-codec library with optional native
   AVIF support and a dependency-free WASM direction
 - Detailed historical audit: [the old roadmap](roadmap.md)
+
+## Current strict-audit checkpoint
+
+The current source-quality checkpoint is commit
+`2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. It is separate from the older
+claim-ledger base above: the cleanup changes do not silently promote old
+feature claims or invent new Pillow rows.
+
+- Managed Coverage MCP run `8d3e09cb-638c-434a-b7cc-a74ea576e667` passed
+  108/108 tests and ingested snapshot
+  `af56a0c3-5bca-4b7a-8e15-29ac36516edc` at this exact source revision.
+- Aggregate native all-feature coverage is 73,473/73,539 lines (99.9103%),
+  9,434/9,444 branches (99.8941%), 3,629/3,679 functions (98.6409%), and
+  109,876/110,011 regions (99.8773%). The remaining source-level gaps are
+  two JPEG encoder branch outcomes and the progressive JPEG decoder's
+  defensive short-circuit branches. The function deficit is LLVM's
+  compiler-generated SIMD/direct-path specializations: source file coverage
+  has no uncovered function-start lines, and `src/codecs/jpeg/kernels.rs` has
+  100% branch coverage. This is not claimed as 100% until the metric itself is
+  closed or the instrumentation limitation is separately accepted.
+- `cargo fmt --all -- --check`, locked all-feature check, strict workspace
+  Clippy (`-D warnings`), rustdoc (`-Dwarnings`), the full locked test suite,
+  doctests, the documentation audit, claim/provenance/unreachable/package/
+  license verifiers, and `cargo deny check` all pass. The only intentional
+  Rust `unsafe` boundary is the documented AVIF C bridge; the JPEG
+  vectorization path remains safe Rust.
+- The fixed public production comparison was run with five alternating rounds
+  across 20 encode and 20 decode cases on the same macOS Arm host, using
+  ordinary Cargo release Rust and TurboJPEG's release SIMD. All RGB/gray
+  results matched exactly. Arithmetic mean `image-slash-star / TurboJPEG`
+  was 1.150x for encode and 0.969x for decode; geometric mean was 1.096x and
+  0.938x. CMYK output hashes are intentionally not compared because the
+  public Rust/Pillow convention and direct TurboJPEG decode expose opposite
+  Adobe sample conventions. Receipt metadata and raw rounds were written by
+  `benchmarks/jpeg-production/run_matrix.py`; these are host-specific
+  observations, not universal performance claims.
+
+This checkpoint improves engineering hygiene and measurement honesty. It does
+not close the 269-item product roadmap below: format capability, metadata,
+partial-input, WASM, assurance, and lifecycle items remain pending until their
+own caller need and evidence are complete.
+
+Revision rule: the detailed candidate records below preserve the history of
+individual slices and their original evidence. A number in one of those
+records is not current merely because the record is in this file. For the
+current state, use this checkpoint, the current coverage table, and the open-ID
+inventory; an older “100%” result is valid only for the exact revision named
+beside it.
 
 ## Latest API-038 implementation candidate
 
@@ -315,16 +354,17 @@ that an entire workstream is finished because one slice passed.
 | Workstream | v1 slice actually executed | Main status | Evidence and next dependency |
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
-| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed evidence pending for the latest candidates | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 64/64, including the PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, TIFF Deflate, TIFF PackBits, TIFF LZW, predictor, sample-conversion, raw-payload, and raw-tile work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows; their local exact coverage is recorded above, while managed evidence remains unavailable. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 486 exact `cfg(coverage)` guards across 81 files, with no Pillow-parity origin assigned. Managed snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is exact for all four aggregate metrics; the next audit cycle still owns any newly introduced gaps. |
+| W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; API-038 decode-format allow-list candidate; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 65/65, including the listed codec work-budget boundaries. API-038 and the decoder checkpoints/allocation slices are Rust-only and have no Pillow rows. The current source-quality snapshot is the exact 2d3e checkpoint above; product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 490 exact `cfg(coverage)` guards across 84 files, with no Pillow-parity origin assigned. The current managed snapshot `af56a0c3-5bca-4b7a-8e15-29ac36516edc` is exact for the measured aggregate report, while the remaining gaps stay visible in the current coverage table. |
 | W4 | AVIF `iloc` item-location/source-provenance contract | Integrated in the current tree | Item extents and source locations are retained and asserted by the Rust-only feature contract. Native AVIF still depends on the pinned `libavif`/`dav1d`/`libaom` path, and portable sequence/encode support remains a product task. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
-directly. The accepted evidence tuple remains revision-bound to
-`36b939696415a962285d37f9120ff389aebf0205`; the RN-003 candidate above is
-newer but awaits managed coverage ingestion.
+directly. The accepted product-claim tuple remains revision-bound to
+`36b939696415a962285d37f9120ff389aebf0205`; the newer source-quality
+checkpoint above has its own managed coverage evidence but does not silently
+rewrite those product claims.
 
 ## Contract catalog: behavior Pillow cannot prove
 
@@ -383,8 +423,9 @@ were the same unit.
 | Active fixture rows | 1,421/1,421 wired | 1,024 decode/inspect/verify rows plus 397 encode rows exist; none is planned or unwired. The two newest rows are WebP lossy/lossless `I;16` source-normalization cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 28/28 matrix tests and 64/64 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
-| Baseline implementation state | reviewed revision `36b9396` | The exact managed coverage result is bound to this source/evidence revision. |
+| Current native all-feature ordinary contracts | 28/28 matrix tests and 65/65 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Source-quality checkpoint | reviewed revision `2d3e7ec` | Strict fmt, locked check, Clippy, rustdoc, full tests, verifiers, managed coverage, and the production JPEG comparison are recorded in the current checkpoint above. |
+| Accepted product-claim baseline | revision `36b9396` | The managed Pillow claim ledger remains bound to this source/evidence revision. |
 
 The current native all-feature feature-gated contract is green, including the
 PNG zlib-inflation/scanline and TIFF Deflate/PackBits/LZW/predictor/sample-
@@ -409,27 +450,28 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The current managed Coverage MCP snapshot is exact for the measured native
-all-feature build:
+all-feature build, but it is not yet 100%:
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines | 64,909 | 64,909 | 100% | 0 | 0% |
-| Branches | 8,464 | 8,464 | 100% | 0 | 0% |
-| Functions | 3,301 | 3,301 | 100% | 0 | 0% |
-| Regions | 96,968 | 96,968 | 100% | 0 | 0% |
+| Lines | 73,473 | 73,539 | 99.9103% | 66 | 0.0897% |
+| Branches | 9,434 | 9,444 | 99.8941% | 10 | 0.1059% |
+| Functions | 3,629 | 3,679 | 98.6409% | 50 | 1.3591% |
+| Regions | 109,876 | 110,011 | 99.8773% | 135 | 0.1227% |
 
-That snapshot is `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6`, produced by managed
-run `54ce9d6c-3c1f-43e5-9120-c79984bc9166` with 86/86 tests passing and one
+That snapshot is `af56a0c3-5bca-4b7a-8e15-29ac36516edc`, produced by managed
+run `8d3e09cb-638c-434a-b7cc-a74ea576e667` with 108/108 tests passing and one
 required artifact ingested. The LLVM JSON report carries the warning that
 segments are normalized to segment-start lines; aggregate region coverage is
-preserved from the report summaries. This closes RN-001 for the measured tree;
-it does not claim complete format support or close the product roadmap.
+preserved from the report summaries. RN-001 therefore remains open for the
+current source tree: the release target is still 100% for all four measures.
+The snapshot does not claim complete format support or close the product
+roadmap.
 
-There are no aggregate line, branch, function, or region gaps in this measured
-build. RN-002 selected and closed one real WebP behavior boundary; the next
-work item is therefore RN-003, a product/evidence boundary rather than a
-coverage-only repair. Any future source change must rerun all four coverage
-measures.
+The remaining aggregate gaps are deliberately visible. Do not close them by
+excluding files, suppressing compiler instrumentation, or adding tests that
+users cannot cause. Any future source change must rerun all four coverage
+measures at the same revision.
 
 Coverage work follows this order:
 
@@ -452,25 +494,27 @@ The following packages are the work queue. `NEXT` means work can begin after
 the preceding package's evidence is accepted. `LATER` means its prerequisites
 are not complete. `PARKED` means it is deliberately not current work.
 
-### RN-001 — Coverage baseline and honest accounting — DONE for this measured tree
+### RN-001 — Coverage baseline and honest accounting — OPEN for the current tree
 
 **Why:** We need to know which flashlight beams are missing before choosing
 new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-the current HEAD; the exact aggregate result is recorded above. Real behavior
-uses Pillow-visible fixtures or Rust-only feature contracts, private models
-remain origin-registered, and the claim ledger is bound to the same HEAD.
+the source-quality checkpoint; the exact aggregate result is recorded above.
+Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
+private models remain origin-registered, and the claim ledger remains separate
+from this cleanup checkpoint.
 
 **Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`, `DOC-005`.
 
-**Done:** the fresh snapshot reports 100% lines, branches, functions, and
-regions, with no skipped artifact and with Pillow, Rust-only, and private-model
-origins still distinct. Reopen this item on the next source revision if any
-metric falls below 100%.
+**Done:** not yet. The fresh snapshot has no skipped artifact and keeps
+Pillow, Rust-only, and private-model origins distinct, but it reports
+99.9103% lines, 99.8941% branches, 98.6409% functions, and 99.8773% regions.
+Close this item only when all four current metrics reach 100% or an explicit,
+reviewed instrumentation decision changes the release target.
 
-### RN-002 — WebP 16-bit luminance normalization boundary — DONE (selected slice)
+### RN-002 — WebP 16-bit luminance normalization boundary — DONE (selected slice; historical evidence)
 
 **Why:** Pillow accepts `I;16` grayscale images as WebP inputs. Before this
 slice, the Rust encoder rejected that real caller input as an unsupported mode.
@@ -488,10 +532,12 @@ lossy/lossless WebP references add `enc_lossy_l16` and `enc_lossless_l16`.
 **Files/evidence:** `src/codecs/webp/encode/mod.rs`,
 `scripts/generate_test_assets.py`, `manifest.yaml`, the generated matrix and
 references, plus the WebP property-map pin. Managed parity is
-`84716077-aee7-4396-8328-e6735202b044` (1,449/1,449). Managed Coverage MCP
-snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` is 100% lines, branches,
-functions, and regions. Local matrix, feature-gate, check, strict Clippy, and
-WebP structural-map verification also pass.
+`84716077-aee7-4396-8328-e6735202b044` (1,449/1,449). The historical
+Coverage MCP snapshot `05b6674e-e7d9-43f4-b62b-a63a2ca45cf6` was exact for
+that revision's measured lines, branches, functions, and regions. The current
+source-quality snapshot and its remaining gaps are recorded at the top of
+this file; local matrix, feature-gate, check, strict Clippy, and WebP
+structural-map verification also pass.
 
 **Scope:** This closes one selected `WEP-004` mode-normalization boundary and
 the supporting `API-023`/`API-036`/`QA-026` evidence path. It does not close
@@ -524,8 +570,8 @@ encoded-byte reference.
 `54097c906f6ba098e441ccd4c39cb33d5ed5a820`; managed Pillow parity
 `84716077-aee7-4396-8328-e6735202b044` passed 1,449/1,449 at the accepted
 revision, including `Encode.jpeg/enc_cmyk`. The current native matrix remains
-28/28, and the exact local LLVM build remains 100% across all four aggregate
-metrics.
+28/28. Current aggregate coverage is the source-quality result in the table
+above, not the historical selected-slice result.
 
 **Scope:** This removes only `JPG-001` from the active inventory. It does not
 close YCbCr/bilevel input as a family, progressive CMYK, JPEG source-color
@@ -551,7 +597,7 @@ category.
 
 | Category | Status now | Evidence already in the tree | Exact remaining work |
 | --- | --- | --- | --- |
-| Cooperative work checkpoints | Partial / active | `feature_gate_tests` passes 64/64, including PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries; local LLVM is exact at 66,547/66,547 lines, 8,654/8,654 branches, 3,354/3,354 functions, and 99,409/99,409 regions | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
+| Cooperative work checkpoints | Partial / active | The current `feature_gate_tests` contract passes 65/65, including PNG, GIF LZW, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and selected TIFF Deflate, PackBits, LZW, predictor, sample-conversion, raw-payload, and raw-tile boundaries. The current aggregate LLVM result is the 2d3e checkpoint above; older candidate-specific exact totals remain historical. | Add only independently enforceable long-running codec units; preserve the documented polling cadence and typed inclusive errors. |
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Not started | No public progress-event or callback contract exists; cancellation/work units are not progress reporting | Define the event unit, callback ownership/reentrancy/error policy, and native/WASM behavior before adding an API or codec plumbing. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
