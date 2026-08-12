@@ -15,6 +15,10 @@
 // (0,0), (0,1), (1,0), (1,1).
 
 use super::bit_reader::BitReader;
+#[cfg(target_arch = "aarch64")]
+use super::bit_reader::FastBitReader;
+#[cfg(target_arch = "aarch64")]
+use super::idct::jpeg_idct_islow_dequantized_to_u8_safe;
 use super::idct::{JPEG_NATURAL_ORDER, YccColorConverter, extend, jpeg_idct_islow};
 use super::implementation::extract_entropy_segments;
 use super::parser::JpegInfo;
@@ -22,41 +26,70 @@ use super::upsample::{crop_component, fancy_upsample};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ColorType, DecodedImage};
 
+trait ProgressiveEntropyReader {
+    fn decode_huffman(&mut self, table: &super::huffman::HuffTable) -> CodecResult<u8>;
+    fn read_padded(&mut self, bits: u32) -> u32;
+}
+
+impl ProgressiveEntropyReader for BitReader<'_> {
+    #[inline(always)]
+    fn decode_huffman(&mut self, table: &super::huffman::HuffTable) -> CodecResult<u8> {
+        table.decode(self)
+    }
+
+    #[inline(always)]
+    fn read_padded(&mut self, bits: u32) -> u32 {
+        self.read_padded_bits_optional(bits).unwrap_or_default()
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl ProgressiveEntropyReader for FastBitReader<'_> {
+    #[inline(always)]
+    fn decode_huffman(&mut self, table: &super::huffman::HuffTable) -> CodecResult<u8> {
+        table.decode_fast(self)
+    }
+
+    #[inline(always)]
+    fn read_padded(&mut self, bits: u32) -> u32 {
+        self.read_padded_bits(bits)
+    }
+}
+
 struct ProgressiveState {
     eobrun: u32,
-    dc_predictors: Vec<i32>,
+    dc_predictors: [i32; 4],
 }
 
 impl ProgressiveState {
     fn new(num_components: usize) -> Self {
+        debug_assert!(num_components <= 4);
         ProgressiveState {
             eobrun: 0,
-            dc_predictors: vec![0; num_components],
+            dc_predictors: [0; 4],
         }
     }
     fn reset(&mut self) {
         self.eobrun = 0;
-        for p in &mut self.dc_predictors {
-            *p = 0;
-        }
+        self.dc_predictors.fill(0);
     }
 }
 
 /// Process one DC-first block (decode_mcu_DC_first).
-fn dc_first_block(
-    br: &mut BitReader,
+fn dc_first_block<R: ProgressiveEntropyReader>(
+    br: &mut R,
     dc_table: &super::huffman::HuffTable,
     dc_pred: &mut i32,
     al: u8,
 ) -> CodecResult<i32> {
-    let dc_cat = dc_table.decode(br)?;
+    let dc_cat = br.decode_huffman(dc_table)?;
     if dc_cat > 0 {
         if dc_cat > 15 {
             return Err(CodecError::Malformed(
                 "invalid progressive JPEG DC coefficient category".to_owned(),
             ));
         }
-        let bits = br.read_padded_bits(u32::from(dc_cat));
+        let bits = br.read_padded(u32::from(dc_cat));
         *dc_pred = dc_pred.saturating_add(extend(bits, dc_cat));
     }
     Ok(dc_pred.wrapping_shl(u32::from(al)))
@@ -70,8 +103,8 @@ fn dc_refine_block(coeff: &mut i32, p1: i32) {
 
 /// Process one AC-first block (decode_mcu_AC_first).
 /// Updates eobrun.  Returns the number of coefficients decoded (for debugging).
-fn ac_first_block(
-    br: &mut BitReader,
+fn ac_first_block<R: ProgressiveEntropyReader>(
+    br: &mut R,
     ac_table: &super::huffman::HuffTable,
     ss: u8,
     se: u8,
@@ -88,7 +121,7 @@ fn ac_first_block(
     let mut k = ss;
     let mut ncoeffs = 0usize;
     while k <= se && k < 64 {
-        let sym = ac_table.decode(br)?;
+        let sym = br.decode_huffman(ac_table)?;
         let run = usize::from(sym >> 4);
         let run_bits = u32::from(sym >> 4);
         let size = sym & 0x0F;
@@ -100,7 +133,7 @@ fn ac_first_block(
             // EOB: EOBRUN = (1<<run) + extra_bits
             *eobrun = 1u32.wrapping_shl(run_bits);
             if run > 0 {
-                *eobrun = eobrun.saturating_add(br.read_padded_bits(run_bits));
+                *eobrun = eobrun.saturating_add(br.read_padded(run_bits));
             }
             *eobrun = eobrun.saturating_sub(1); // this block consumes one from the run
             break;
@@ -110,7 +143,7 @@ fn ac_first_block(
         if k > se || k >= 64 {
             break;
         }
-        let bits = br.read_padded_bits(u32::from(size));
+        let bits = br.read_padded(u32::from(size));
         coeffs[k] = extend(bits, size).wrapping_shl(u32::from(al));
         ncoeffs = ncoeffs.saturating_add(1);
         k = k.saturating_add(1);
@@ -120,8 +153,8 @@ fn ac_first_block(
 
 /// Process one AC-refinement block (decode_mcu_AC_refine).
 /// Updates eobrun.
-fn ac_refine_block(
-    br: &mut BitReader,
+fn ac_refine_block<R: ProgressiveEntropyReader>(
+    br: &mut R,
     ac_table: &super::huffman::HuffTable,
     ss: u8,
     se: u8,
@@ -138,19 +171,19 @@ fn ac_refine_block(
     // Phase 1: Huffman decode when EOBRUN == 0
     if *eobrun == 0 {
         while k <= se && k < 64 {
-            let sym = ac_table.decode(br)?;
+            let sym = br.decode_huffman(ac_table)?;
             let mut r = i32::from(sym >> 4);
             let size = sym & 0x0F;
 
             // New coefficient value
             let new_val = if size != 0 {
-                let bit = br.read_padded_bits(1);
+                let bit = br.read_padded(1);
                 Some(if bit != 0 { p1 } else { m1 })
             } else {
                 if r != 15 {
                     *eobrun = 1u32.wrapping_shl(r.cast_unsigned());
                     if r > 0 {
-                        *eobrun = eobrun.saturating_add(br.read_padded_bits(r.cast_unsigned()));
+                        *eobrun = eobrun.saturating_add(br.read_padded(r.cast_unsigned()));
                     }
                     break; // → Phase 2
                 }
@@ -163,7 +196,7 @@ fn ac_refine_block(
                     break;
                 }
                 if coeffs[k] != 0 {
-                    let bit = br.read_padded_bits(1);
+                    let bit = br.read_padded(1);
                     if bit != 0 && (coeffs[k] & p1) == 0 {
                         coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                     }
@@ -190,7 +223,7 @@ fn ac_refine_block(
     if *eobrun > 0 {
         while k <= se && k < 64 {
             if coeffs[k] != 0 {
-                let bit = br.read_padded_bits(1);
+                let bit = br.read_padded(1);
                 if bit != 0 && (coeffs[k] & p1) == 0 {
                     coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
                 }
@@ -265,7 +298,7 @@ fn smooth_dc_only_block(
     blocks_x: usize,
     blocks_y: usize,
     block_idx: usize,
-    quant_natural: &[u16; 64],
+    quant_natural: &[i32; 64],
     workspace: &mut [i32; 64],
 ) {
     workspace.fill(0);
@@ -597,48 +630,37 @@ pub(super) fn progressive_reconstruct(
     let num_mcus_x = u32::from(info.width).div_ceil(mcu_width);
     let num_mcus_y = u32::from(info.height).div_ceil(mcu_height);
 
-    // Component buffer dimensions
-    let comp_buf_width: Vec<usize> = info
-        .components
-        .iter()
-        .map(|c| {
-            bounded_usize(num_mcus_x)
-                .saturating_mul(usize::from(c.h_samp))
-                .saturating_mul(8)
-        })
-        .collect();
-    let comp_buf_height: Vec<usize> = info
-        .components
-        .iter()
-        .map(|c| {
-            bounded_usize(num_mcus_y)
-                .saturating_mul(usize::from(c.v_samp))
-                .saturating_mul(8)
-        })
-        .collect();
-    let comp_num_blocks: Vec<usize> = info
-        .components
-        .iter()
-        .enumerate()
-        .map(|(i, _)| {
-            comp_buf_width[i]
-                .div_euclid(8)
-                .saturating_mul(comp_buf_height[i].div_euclid(8))
-        })
-        .collect();
+    // JPEG frames accepted by the parser contain at most four components.
+    // Keep their small geometry and outer storage owners inline; only the
+    // image-sized coefficient and sample buffers need heap allocations.
+    let component_count = info.components.len();
+    debug_assert!(component_count <= 4);
+    let mut comp_buf_width = [0usize; 4];
+    let mut comp_buf_height = [0usize; 4];
+    let mut comp_num_blocks = [0usize; 4];
+    for (component_index, component) in info.components.iter().enumerate() {
+        comp_buf_width[component_index] = bounded_usize(num_mcus_x)
+            .saturating_mul(usize::from(component.h_samp))
+            .saturating_mul(8);
+        comp_buf_height[component_index] = bounded_usize(num_mcus_y)
+            .saturating_mul(usize::from(component.v_samp))
+            .saturating_mul(8);
+        comp_num_blocks[component_index] = comp_buf_width[component_index]
+            .div_euclid(8)
+            .saturating_mul(comp_buf_height[component_index].div_euclid(8));
+    }
 
     // Coefficient storage: [component][block_idx][64] in zigzag order
-    let mut coeff_storage: Vec<Vec<[i32; 64]>> = info
-        .components
-        .iter()
-        .enumerate()
-        .map(|(i, _)| vec![[0i32; 64]; comp_num_blocks[i]])
+    let mut coeff_storage: Vec<Vec<[i32; 64]>> = (0..component_count)
+        .map(|component_index| vec![[0i32; 64]; comp_num_blocks[component_index]])
         .collect();
-    let mut comp_buffers: Vec<Vec<u8>> = info
-        .components
-        .iter()
-        .enumerate()
-        .map(|(i, _)| vec![128u8; comp_buf_width[i].saturating_mul(comp_buf_height[i])])
+    let mut comp_buffers: Vec<Vec<u8>> = (0..component_count)
+        .map(|component_index| {
+            vec![
+                128u8;
+                comp_buf_width[component_index].saturating_mul(comp_buf_height[component_index])
+            ]
+        })
         .collect();
 
     // ── Process scans ────────────────────────────────────────────────────
@@ -650,8 +672,13 @@ pub(super) fn progressive_reconstruct(
     // these scrambles block order for subsampled components (e.g. 4:2:0 chroma).
     for scan in info.scans.iter() {
         crate::codecs::error::check_cancelled(token)?;
-        let segs = extract_entropy_segments(data, scan.entropy_start, scan.entropy_end);
-        if segs.segments.is_empty() {
+        let extracted_segments = (scan.restart_interval != 0)
+            .then(|| extract_entropy_segments(data, scan.entropy_start, scan.entropy_end));
+        let single_segment = [(scan.entropy_start, scan.entropy_end)];
+        let segments = extracted_segments
+            .as_ref()
+            .map_or(&single_segment[..], |value| &value.segments[..]);
+        if segments.is_empty() {
             continue;
         }
 
@@ -684,7 +711,10 @@ pub(super) fn progressive_reconstruct(
         // State persists across segments but resets at each restart
         let mut state = ProgressiveState::new(usize::from(info.num_components));
 
-        for (seg_idx, &(seg_start, seg_end)) in segs.segments.iter().enumerate() {
+        for (seg_idx, &(seg_start, seg_end)) in segments.iter().enumerate() {
+            #[cfg(target_arch = "aarch64")]
+            let mut br = FastBitReader::new(data, seg_start, seg_end);
+            #[cfg(not(target_arch = "aarch64"))]
             let mut br = BitReader::new(data, seg_start, seg_end);
             let mcu_offset = seg_idx.saturating_mul(mcus_per_seg);
 
@@ -708,29 +738,30 @@ pub(super) fn progressive_reconstruct(
                     // Interleaved: h_samp × v_samp blocks offset by the MCU's
                     //   top-left block (mcu_x*h_samp, mcu_y*v_samp).
                     // Non-interleaved: a single block at (mcu_x, mcu_y).
-                    let block_list: Vec<usize> = if interleaved {
-                        let mut v = Vec::with_capacity(
-                            usize::from(comp.h_samp).saturating_mul(usize::from(comp.v_samp)),
-                        );
+                    let mut block_indices = [0usize; 16];
+                    let block_count = if interleaved {
+                        let mut count = 0usize;
                         for by in 0..usize::from(comp.v_samp) {
                             for bx in 0..usize::from(comp.h_samp) {
-                                v.push(
-                                    mcu_y
-                                        .saturating_mul(usize::from(comp.v_samp))
-                                        .saturating_add(by)
-                                        .saturating_mul(blocks_per_row)
-                                        .saturating_add(
-                                            mcu_x
-                                                .saturating_mul(usize::from(comp.h_samp))
-                                                .saturating_add(bx),
-                                        ),
-                                );
+                                block_indices[count] = mcu_y
+                                    .saturating_mul(usize::from(comp.v_samp))
+                                    .saturating_add(by)
+                                    .saturating_mul(blocks_per_row)
+                                    .saturating_add(
+                                        mcu_x
+                                            .saturating_mul(usize::from(comp.h_samp))
+                                            .saturating_add(bx),
+                                    );
+                                count = count.saturating_add(1);
                             }
                         }
-                        v
+                        count
                     } else {
-                        vec![mcu_y.saturating_mul(blocks_per_row).saturating_add(mcu_x)]
+                        block_indices[0] =
+                            mcu_y.saturating_mul(blocks_per_row).saturating_add(mcu_x);
+                        1
                     };
+                    let block_list = &block_indices[..block_count];
 
                     if is_dc_first {
                         let dc_table = scan
@@ -738,7 +769,7 @@ pub(super) fn progressive_reconstruct(
                             .get(usize::from(scan_comp.dc_tbl))
                             .and_then(Option::as_ref)
                             .malformed("missing progressive JPEG DC Huffman table")?;
-                        for &block_idx in &block_list {
+                        for &block_idx in block_list {
                             coeff_storage[comp_idx][block_idx][0] = dc_first_block(
                                 &mut br,
                                 dc_table,
@@ -748,9 +779,9 @@ pub(super) fn progressive_reconstruct(
                         }
                     } else if is_dc_refine {
                         let p1 = 1i32.wrapping_shl(u32::from(scan.al));
-                        for &block_idx in &block_list {
+                        for &block_idx in block_list {
                             // DC refine: read 1 bit, OR into coefficient
-                            let bit = br.read_padded_bits(1);
+                            let bit = br.read_padded(1);
                             if bit != 0 {
                                 dc_refine_block(&mut coeff_storage[comp_idx][block_idx][0], p1);
                             }
@@ -761,7 +792,7 @@ pub(super) fn progressive_reconstruct(
                             .get(usize::from(scan_comp.ac_tbl))
                             .and_then(Option::as_ref)
                             .malformed("missing progressive JPEG AC Huffman table")?;
-                        for &block_idx in &block_list {
+                        for &block_idx in block_list {
                             ac_first_block(
                                 &mut br,
                                 ac_table,
@@ -778,7 +809,7 @@ pub(super) fn progressive_reconstruct(
                             .get(usize::from(scan_comp.ac_tbl))
                             .and_then(Option::as_ref)
                             .malformed("missing progressive JPEG AC Huffman table")?;
-                        for &block_idx in &block_list {
+                        for &block_idx in block_list {
                             ac_refine_block(
                                 &mut br,
                                 ac_table,
@@ -823,11 +854,13 @@ pub(super) fn progressive_reconstruct(
             .get(usize::from(comp.quant_tbl))
             .and_then(Option::as_ref)
             .malformed("missing JPEG quantization table")?;
-        let mut quant_natural = [0u16; 64];
+        let mut quant_natural = [0i32; 64];
         for i in 0..64 {
-            quant_natural[JPEG_NATURAL_ORDER[i]] = quant_table[i];
+            quant_natural[JPEG_NATURAL_ORDER[i]] = i32::from(quant_table[i]);
         }
         for (block_idx, coeffs) in coeff_storage[comp_idx].iter().enumerate() {
+            let block_y = block_idx.div_euclid(blocks_x).saturating_mul(8);
+            let block_x = block_idx.rem_euclid(blocks_x).saturating_mul(8);
             if smooth_dc_only {
                 smooth_dc_only_block(
                     &coeff_storage[comp_idx],
@@ -838,17 +871,38 @@ pub(super) fn progressive_reconstruct(
                     &mut block_natural,
                 );
                 for i in 0..64 {
-                    block_natural[i] = block_natural[i].saturating_mul(i32::from(quant_natural[i]));
+                    block_natural[i] = block_natural[i].saturating_mul(quant_natural[i]);
                 }
             } else {
+                #[cfg(target_arch = "aarch64")]
+                let mut high_horizontal_nonzero = false;
                 for i in 0..64 {
-                    block_natural[JPEG_NATURAL_ORDER[i]] =
-                        coeffs[i].saturating_mul(i32::from(quant_table[i]));
+                    let natural_index = JPEG_NATURAL_ORDER[i];
+                    block_natural[natural_index] = coeffs[i];
+                    #[cfg(target_arch = "aarch64")]
+                    {
+                        high_horizontal_nonzero |= coeffs[i] != 0 && natural_index & 4 != 0;
+                    }
+                }
+                #[cfg(target_arch = "aarch64")]
+                if block_natural[0].checked_mul(quant_natural[0]).is_some() {
+                    jpeg_idct_islow_dequantized_to_u8_safe(
+                        &block_natural,
+                        &quant_natural,
+                        &mut workspace,
+                        &mut comp_buffers[comp_idx],
+                        buf_w,
+                        block_x,
+                        block_y,
+                        high_horizontal_nonzero,
+                    );
+                    continue;
+                }
+                for (coefficient, &quantizer) in block_natural.iter_mut().zip(&quant_natural) {
+                    *coefficient = coefficient.saturating_mul(quantizer);
                 }
             }
             jpeg_idct_islow(&mut block_natural, &mut workspace);
-            let block_y = block_idx.div_euclid(blocks_x).saturating_mul(8);
-            let block_x = block_idx.rem_euclid(blocks_x).saturating_mul(8);
             for row in 0usize..8 {
                 for col in 0usize..8 {
                     let natural_index = row.saturating_mul(8).saturating_add(col);
@@ -866,7 +920,7 @@ pub(super) fn progressive_reconstruct(
     // ── Assemble output ──────────────────────────────────────────────────
     let w = usize::from(info.width);
     let h = usize::from(info.height);
-    let converter = YccColorConverter::new();
+    let converter = YccColorConverter::shared();
     if info.num_components == 1 {
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
@@ -1227,8 +1281,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ah,
         al,
         restart_interval: 1,
-        dc_huff_tables: vec![Some(zero.clone())],
-        ac_huff_tables: vec![Some(zero.clone())],
+        dc_huff_tables: vec![Some(zero.clone().into())],
+        ac_huff_tables: vec![Some(zero.clone().into())],
     };
     let info = JpegInfo {
         width: 8,
@@ -1236,10 +1290,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         num_components: 1,
         components: vec![component],
         quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone())],
-        ac_huff_tables: vec![Some(zero.clone())],
+        dc_huff_tables: vec![Some(zero.clone().into())],
+        ac_huff_tables: vec![Some(zero.clone().into())],
         scan_components: vec![scan_component],
         restart_interval: 0,
+        entropy_has_restart_markers: false,
         entropy_start: 0,
         eoi_pos: 0,
         max_h_samp: 1,
@@ -1265,8 +1320,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ah,
         al,
         restart_interval: 1,
-        dc_huff_tables: vec![Some(empty_table.clone())],
-        ac_huff_tables: vec![Some(empty_table.clone())],
+        dc_huff_tables: vec![Some(empty_table.clone().into())],
+        ac_huff_tables: vec![Some(empty_table.clone().into())],
     };
     let failing_info = |scans| JpegInfo {
         width: 8,
@@ -1274,10 +1329,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         num_components: 1,
         components: vec![component],
         quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone())],
-        ac_huff_tables: vec![Some(zero.clone())],
+        dc_huff_tables: vec![Some(zero.clone().into())],
+        ac_huff_tables: vec![Some(zero.clone().into())],
         scan_components: vec![scan_component],
         restart_interval: 0,
+        entropy_has_restart_markers: false,
         entropy_start: 0,
         eoi_pos: 0,
         max_h_samp: 1,
@@ -1300,7 +1356,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         al: 0,
         restart_interval: 1,
         dc_huff_tables: vec![None],
-        ac_huff_tables: vec![Some(zero.clone())],
+        ac_huff_tables: vec![Some(zero.clone().into())],
     };
     let missing_ac_first_scan = ScanInfo {
         components: vec![scan_component],
@@ -1311,7 +1367,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ah: 0,
         al: 0,
         restart_interval: 1,
-        dc_huff_tables: vec![Some(zero.clone())],
+        dc_huff_tables: vec![Some(zero.clone().into())],
         ac_huff_tables: vec![None],
     };
     let missing_ac_refine_scan = ScanInfo {
@@ -1336,10 +1392,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         num_components: 4,
         components: cmyk_components,
         quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone())],
-        ac_huff_tables: vec![Some(zero)],
+        dc_huff_tables: vec![Some(zero.clone().into())],
+        ac_huff_tables: vec![Some(zero.into())],
         scan_components: Vec::new(),
         restart_interval: 0,
+        entropy_has_restart_markers: false,
         entropy_start: 0,
         eoi_pos: 0,
         max_h_samp: 1,

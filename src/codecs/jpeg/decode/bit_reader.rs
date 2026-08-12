@@ -149,6 +149,135 @@ impl<'a> BitReader<'a> {
         debug_assert!(available);
         self.get_bits(n)
     }
+
+    #[inline(always)]
+    pub(super) fn read_padded_bits_optional(&mut self, n: u32) -> Option<u32> {
+        if !self.ensure(n) {
+            return None;
+        }
+        Some(self.get_bits(n))
+    }
+}
+
+/// Marker-aware reader for the common baseline path.
+///
+/// This has the same state and padding rules as [`BitReader`], but keeps the
+/// small hot operations inlinable across a complete MCU. All cursor and bit
+/// widths are checked before indexing or shifting; the wrapping arithmetic is
+/// used only after those bounds have been established.
+#[cfg(target_arch = "aarch64")]
+pub(super) struct FastBitReader<'a> {
+    data: &'a [u8],
+    pos: usize,
+    end: usize,
+    buf: u64,
+    bits: u32,
+    insufficient_data: bool,
+}
+
+#[cfg(target_arch = "aarch64")]
+impl<'a> FastBitReader<'a> {
+    pub(super) fn new(data: &'a [u8], start: usize, end: usize) -> Self {
+        Self {
+            data,
+            pos: start,
+            end,
+            buf: 0,
+            bits: 0,
+            insufficient_data: false,
+        }
+    }
+
+    #[inline(always)]
+    pub(super) fn bits_left(&self) -> u32 {
+        self.bits
+    }
+
+    #[inline(always)]
+    pub(super) fn insufficient_data(&self) -> bool {
+        self.insufficient_data
+    }
+
+    #[inline(always)]
+    pub(super) fn ensure(&mut self, n: u32) -> bool {
+        if self.bits < n {
+            self.fill(n);
+        }
+        self.bits >= n
+    }
+
+    #[inline(always)]
+    pub(super) fn peek_bits(&self, n: u32) -> u32 {
+        debug_assert!(n > 0 && n <= self.bits);
+        let shifted = self.buf.wrapping_shr(self.bits.wrapping_sub(n));
+        low_u32(shifted) & u32::MAX.wrapping_shr(u32::BITS.wrapping_sub(n))
+    }
+
+    #[inline(always)]
+    pub(super) fn get_bits(&mut self, n: u32) -> u32 {
+        debug_assert!(n > 0 && n <= self.bits);
+        self.bits = self.bits.wrapping_sub(n);
+        let shifted = self.buf.wrapping_shr(self.bits);
+        low_u32(shifted) & u32::MAX.wrapping_shr(u32::BITS.wrapping_sub(n))
+    }
+
+    #[inline(always)]
+    pub(super) fn drop_bits(&mut self, n: u32) {
+        debug_assert!(n <= self.bits);
+        self.bits = self.bits.wrapping_sub(n);
+    }
+
+    #[inline(always)]
+    pub(super) fn read_padded_bits(&mut self, n: u32) -> u32 {
+        debug_assert!((1..=15).contains(&n));
+        let available = self.ensure(n);
+        debug_assert!(available);
+        self.get_bits(n)
+    }
+
+    #[inline(always)]
+    fn read_entropy_byte(&mut self) -> Option<u8> {
+        if self.pos >= self.end {
+            return None;
+        }
+        let byte = self.data[self.pos];
+        self.pos = self.pos.wrapping_add(1);
+        if byte != 0xFF {
+            return Some(byte);
+        }
+
+        loop {
+            if self.pos >= self.end {
+                return None;
+            }
+            let next = self.data[self.pos];
+            self.pos = self.pos.wrapping_add(1);
+            match next {
+                0x00 => return Some(0xFF),
+                0xFF => {}
+                _ => return None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub(super) fn fill(&mut self, nbits: u32) {
+        while self.bits < MIN_GET_BITS {
+            let Some(byte) = self.read_entropy_byte() else {
+                if nbits > self.bits {
+                    let missing = MIN_GET_BITS.wrapping_sub(self.bits);
+                    self.buf = self.buf.wrapping_shl(missing);
+                    self.bits = MIN_GET_BITS;
+                    self.insufficient_data = true;
+                }
+                return;
+            };
+            self.buf = self.buf.wrapping_shl(8) | u64::from(byte);
+            // The loop guard proves bits < 49, so adding one byte stays below
+            // the 64-bit reservoir width.
+            self.bits = self.bits.wrapping_add(8);
+        }
+    }
 }
 
 fn low_u32(value: u64) -> u32 {

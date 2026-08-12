@@ -21,7 +21,8 @@ in project spaces.
   identify the exact upstream version in the source comments.
 - Read the current boundaries in
   [docs/architecture.md](docs/architecture.md) and planned work in
-  [docs/roadmap.md](docs/roadmap.md).
+  [docs/roadmap-new.md](docs/roadmap-new.md). The older
+  [roadmap audit](docs/roadmap.md) is historical context, not the work queue.
 
 ## Set up the repository
 
@@ -55,6 +56,11 @@ Codec, feature, or error behavior additionally requires:
 cargo test --locked --all-features --test coverage_matrix_tests
 scripts/test_feature_matrix.sh
 ```
+
+JPEG performance changes additionally require the fixed, same-machine
+production comparison in
+[`benchmarks/jpeg-production/README.md`](benchmarks/jpeg-production/README.md).
+Report the complete matrix, not a selected image size or a kernel-only timing.
 
 Repository agents run coverage only through Coverage MCP. Every accepted codec
 slice must retain 100% line, branch, function, and region coverage.

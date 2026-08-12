@@ -1503,13 +1503,13 @@ fn encode_to_sink_with_policy_unchecked(
             );
         }
         let encoded = encode_with_policy(img, format, opts, policy)?;
-        return write_sink_all(
+        write_sink_all(
             sink,
             &encoded,
             format,
             ImageErrorStage::StillEncode,
             budget_token.as_ref(),
-        );
+        )
     }
 }
 
@@ -1631,13 +1631,13 @@ fn encode_to_sink_with_token_and_policy_unchecked(
             );
         }
         let encoded = encode_with_token_and_policy(img, format, opts, policy, token)?;
-        return write_sink_all(
+        write_sink_all(
             sink,
             &encoded,
             format,
             ImageErrorStage::StillEncode,
             Some(effective_token),
-        );
+        )
     }
 }
 
@@ -1764,13 +1764,13 @@ fn encode_sequence_to_sink_with_policy_unchecked(
             );
         }
         let encoded = encode_sequence_with_policy(sequence, format, opts, policy)?;
-        return write_sink_all(
+        write_sink_all(
             sink,
             &encoded,
             format,
             ImageErrorStage::SequenceEncode,
             budget_token.as_ref(),
-        );
+        )
     }
 }
 
@@ -1900,13 +1900,13 @@ fn encode_sequence_to_sink_with_token_and_policy_unchecked(
             );
         }
         let encoded = encode_sequence_with_token_and_policy(sequence, format, opts, policy, token)?;
-        return write_sink_all(
+        write_sink_all(
             sink,
             &encoded,
             format,
             ImageErrorStage::SequenceEncode,
             Some(effective_token),
-        );
+        )
     }
 }
 

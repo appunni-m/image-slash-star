@@ -10,3 +10,4 @@ lcov.info
 /.vscode/
 /docs/codec-handbook/
 /target/
+benchmarks/**/target/

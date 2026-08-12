@@ -1,7 +1,7 @@
 // Modified Rust port copyright (c) 2026 Appunni M.
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
-use super::huffman::HuffTable;
+use super::huffman::{HuffTableStorage, build_huff_table};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 // ── Marker Constants ──────────────────────────────────────────────────────
 
@@ -42,8 +42,8 @@ pub(super) struct ScanInfo {
     pub(super) ah: u8,
     pub(super) al: u8,
     pub(super) restart_interval: u16,
-    pub(super) dc_huff_tables: Vec<Option<HuffTable>>,
-    pub(super) ac_huff_tables: Vec<Option<HuffTable>>,
+    pub(super) dc_huff_tables: Vec<Option<HuffTableStorage>>,
+    pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
 }
 
 pub(super) struct JpegInfo {
@@ -52,10 +52,11 @@ pub(super) struct JpegInfo {
     pub(super) num_components: u8,
     pub(super) components: Vec<FrameComponent>,
     pub(super) quant_tables: Vec<Option<[u16; 64]>>,
-    pub(super) dc_huff_tables: Vec<Option<HuffTable>>,
-    pub(super) ac_huff_tables: Vec<Option<HuffTable>>,
+    pub(super) dc_huff_tables: Vec<Option<HuffTableStorage>>,
+    pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
     pub(super) scan_components: Vec<ScanComponent>,
     pub(super) restart_interval: u16,
+    pub(super) entropy_has_restart_markers: bool,
     pub(super) entropy_start: usize,
     pub(super) eoi_pos: usize,
     pub(super) max_h_samp: u8,
@@ -124,20 +125,27 @@ pub(super) fn find_next_marker(data: &[u8], pos: &mut usize) -> CodecResult<u16>
     })
 }
 
-pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> usize {
-    while pos.saturating_add(1) < data.len() {
-        if data[pos] == 0xFF {
-            let next = data[pos.saturating_add(1)];
-            if next == 0x00 || (0xD0..=0xD7).contains(&next) {
-                pos = pos.saturating_add(2);
-            } else {
-                return pos;
-            }
+pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> (usize, bool) {
+    let mut saw_restart_marker = false;
+    while pos < data.len() {
+        let Some(offset) = data[pos..].iter().position(|&byte| byte == 0xFF) else {
+            return (data.len(), saw_restart_marker);
+        };
+        pos = pos.saturating_add(offset);
+        if pos.saturating_add(1) >= data.len() {
+            return (data.len(), saw_restart_marker);
+        }
+        let next = data[pos.saturating_add(1)];
+        if next == 0x00 {
+            pos = pos.saturating_add(2);
+        } else if (0xD0..=0xD7).contains(&next) {
+            saw_restart_marker = true;
+            pos = pos.saturating_add(2);
         } else {
-            pos = pos.saturating_add(1);
+            return (pos, saw_restart_marker);
         }
     }
-    data.len()
+    (data.len(), saw_restart_marker)
 }
 
 pub(super) fn find_eoi(data: &[u8], mut pos: usize) -> CodecResult<usize> {
@@ -247,8 +255,8 @@ pub(super) fn parse_dqt(
 pub(super) fn parse_dht(
     data: &[u8],
     pos: &mut usize,
-    dc_tables: &mut Vec<Option<HuffTable>>,
-    ac_tables: &mut Vec<Option<HuffTable>>,
+    dc_tables: &mut Vec<Option<HuffTableStorage>>,
+    ac_tables: &mut Vec<Option<HuffTableStorage>>,
 ) -> CodecResult<()> {
     let length = usize::from(read_u16(data, pos)?);
     let end = pos.saturating_add(length.saturating_sub(2));
@@ -270,12 +278,19 @@ pub(super) fn parse_dht(
             total_values = total_values.saturating_add(usize::from(*entry));
         }
 
-        let mut values = Vec::with_capacity(total_values);
-        for _ in 0..total_values {
-            values.push(read_u8(data, pos)?);
-        }
-
-        let table = HuffTable::build(&counts, &values);
+        let values_start = *pos;
+        let table = if let Some(values) =
+            data.get(values_start..values_start.saturating_add(total_values))
+        {
+            *pos = values_start.saturating_add(total_values);
+            build_huff_table(table_class, &counts, values)
+        } else {
+            let mut values = Vec::with_capacity(total_values);
+            for _ in 0..total_values {
+                values.push(read_u8(data, pos)?);
+            }
+            build_huff_table(table_class, &counts, &values)
+        };
         if table_class == 0 {
             while dc_tables.len() <= table_id {
                 dc_tables.push(None);
@@ -357,10 +372,11 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut max_h_samp = 0u8;
     let mut max_v_samp = 0u8;
     let mut quant_tables: Vec<Option<[u16; 64]>> = Vec::new();
-    let mut dc_huff_tables: Vec<Option<HuffTable>> = Vec::new();
-    let mut ac_huff_tables: Vec<Option<HuffTable>> = Vec::new();
+    let mut dc_huff_tables: Vec<Option<HuffTableStorage>> = Vec::new();
+    let mut ac_huff_tables: Vec<Option<HuffTableStorage>> = Vec::new();
     let mut scan_components: Vec<ScanComponent> = Vec::new();
     let mut restart_interval: u16 = 0;
+    let mut entropy_has_restart_markers = false;
     let mut entropy_start = 0usize;
     let mut saw_sof = false;
     let mut saw_sos = false;
@@ -414,31 +430,47 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 let se = result.3;
                 let ah = result.4;
                 let al = result.5;
-                let scan_end = find_entropy_end(data, pos);
-
-                let scan_info = ScanInfo {
-                    components: comps.clone(),
-                    entropy_start: scan_start,
-                    entropy_end: scan_end,
-                    ss,
-                    se,
-                    ah,
-                    al,
-                    restart_interval,
-                    dc_huff_tables: dc_huff_tables.clone(),
-                    ac_huff_tables: ac_huff_tables.clone(),
-                };
-                scans.push(scan_info);
+                let (scan_end, saw_restart_marker) = find_entropy_end(data, pos);
+                entropy_has_restart_markers |= saw_restart_marker;
 
                 if !progressive {
                     // Baseline JPEG has exactly one entropy-coded scan in this
                     // parser: after SOS, we require EOI and break immediately.
-                    scan_components = comps;
+                    scan_components = comps.clone();
                     entropy_start = scan_start;
+                    scans.push(ScanInfo {
+                        components: comps,
+                        entropy_start: scan_start,
+                        entropy_end: scan_end,
+                        ss,
+                        se,
+                        ah,
+                        al,
+                        restart_interval,
+                        dc_huff_tables: Vec::new(),
+                        ac_huff_tables: Vec::new(),
+                    });
                     saw_sos = true;
-                    break find_eoi(data, pos)
-                        .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
+                    break if data.get(scan_end..scan_end.saturating_add(2)) == Some(&[0xFF, 0xD9])
+                        && !saw_restart_marker
+                    {
+                        scan_end
+                    } else {
+                        find_eoi(data, pos).map_err(|error| error.at(marker_offset, "jpeg_sos"))?
+                    };
                 } else {
+                    scans.push(ScanInfo {
+                        components: comps.clone(),
+                        entropy_start: scan_start,
+                        entropy_end: scan_end,
+                        ss,
+                        se,
+                        ah,
+                        al,
+                        restart_interval,
+                        dc_huff_tables: dc_huff_tables.clone(),
+                        ac_huff_tables: ac_huff_tables.clone(),
+                    });
                     saw_sos = true;
                     if scan_components.is_empty() {
                         scan_components = comps;
@@ -537,6 +569,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         ac_huff_tables,
         scan_components,
         restart_interval,
+        entropy_has_restart_markers,
         entropy_start,
         eoi_pos,
         max_h_samp,

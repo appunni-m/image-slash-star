@@ -5,6 +5,8 @@ mod build_tool;
 
 use bytemuck as _;
 use image_slash_star as _;
+#[cfg(feature = "jpeg")]
+use wide as _;
 
 #[test]
 fn target_tool_names_match_cargo_target_environment_conventions() {

@@ -22,16 +22,20 @@
     "NOTICE.md",
     "PATENTS",
     "README.md",
+    "RELEASING.md",
     "SECURITY.md",
+    "SUPPORT.md",
     "build.rs",
     "build_tool.rs",
     "docs/architecture.md",
     "docs/avif.md",
+    "docs/jpeg-safe-vectorization.md",
     "docs/roadmap-new.md",
     "docs/roadmap.md",
     "docs/testing.md",
     "scripts/build_avif_stack.sh",
     "scripts/verify_third_party_licenses.py",
+    "src/bin/jpeg-runtime.rs",
     "src/cancel.rs",
     "src/capabilities.rs",
     "src/codecs/avif/av1/bit_reader.rs",
@@ -78,6 +82,7 @@
     "src/codecs/jpeg/encode/mod.rs",
     "src/codecs/jpeg/encode/quant.rs",
     "src/codecs/jpeg/inspect.rs",
+    "src/codecs/jpeg/kernels.rs",
     "src/codecs/jpeg/mod.rs",
     "src/codecs/mod.rs",
     "src/codecs/png/decode.rs",
@@ -167,4 +172,3 @@
     "tests/fixtures/"
   ]
 }
-

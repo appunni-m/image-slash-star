@@ -1,0 +1,24 @@
+[package]
+name = "jpeg-production-matrix-rust"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+image-slash-star = { path = "../../..", default-features = false, features = ["jpeg"] }
+
+[lints.rust]
+unsafe_code = "deny"
+future-incompatible = "deny"
+nonstandard_style = "deny"
+unused = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+unwrap_in_result = "deny"
+todo = "deny"
+panic = "deny"
+arithmetic_side_effects = "warn"
+cast_possible_truncation = "warn"
+cast_sign_loss = "warn"

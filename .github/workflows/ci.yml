@@ -60,6 +60,10 @@ jobs:
           echo "LD_LIBRARY_PATH=$RUNNER_TEMP/avif-oracle/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Lint the checked-in production benchmark harness
+        run: |
+          cargo fmt --manifest-path benchmarks/jpeg-production/rust/Cargo.toml -- --check
+          CARGO_BUILD_RUSTC_WRAPPER= cargo clippy --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked -- -D warnings
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
       - run: cargo test --locked --all-features --test coverage_matrix_tests
       - name: Test native, core-WASM, and WASI runtime feature matrix

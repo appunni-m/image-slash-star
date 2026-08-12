@@ -5,6 +5,8 @@
 //
 // Bit writer + standard Huffman tables for baseline and progressive encoding.
 
+use std::sync::OnceLock;
+
 /// Standard DC luminance/chrominance and AC luminance/chrominance Huffman
 /// tables (jcparam.c std_huff_tables).  Counts (BITS) and values (HUFFVAL).
 pub(crate) const STD_DC_LUMA: ([u8; 16], [u8; 12]) = (
@@ -56,6 +58,143 @@ pub(crate) struct DerivedTable {
     /// code[symbol] and code length len[symbol] (0 = unused).
     pub codes: [u32; 256],
     pub lengths: [u8; 256],
+}
+
+/// Largest signed quantized AC coefficient covered by the precombined
+/// standard-table lookup. Keeping the table to the common small-coefficient
+/// domain lets all sixteen JPEG zero-run states fit in the same footprint as
+/// the former run-zero-only lookup. Values outside this range use the ordinary
+/// category/magnitude path.
+pub(crate) const COEFFICIENT_READY_LIMIT: i32 = 127;
+
+pub(crate) const COEFFICIENT_READY_RUNS: usize = 16;
+
+const COEFFICIENT_READY_WIDTH: usize = (COEFFICIENT_READY_LIMIT as usize)
+    .saturating_mul(2)
+    .saturating_add(1);
+
+/// A standard AC Huffman code already followed by the coefficient magnitude
+/// bits. The low byte stores the total width and the upper bits store the
+/// combined value.
+#[allow(
+    clippy::large_stack_arrays,
+    reason = "the fixed tables live in static read-only storage"
+)]
+pub(crate) struct CoefficientReadyTable {
+    pub(crate) entries: [u32; COEFFICIENT_READY_WIDTH * COEFFICIENT_READY_RUNS],
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the bounded coefficient domain makes every conversion exact"
+)]
+const fn coefficient_category(value: i32) -> u32 {
+    let mut magnitude = if value < 0 {
+        (-value as i64) as u32
+    } else {
+        value as u32
+    };
+    let mut category = 0u32;
+    while magnitude != 0 {
+        magnitude >>= 1;
+        category += 1;
+    }
+    category
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::large_stack_arrays,
+    reason = "the bounded table builder executes at compile time over exact static domains"
+)]
+const fn build_coefficient_ready_table(
+    bits: &[u8; 16],
+    values: &[u8; 162],
+) -> CoefficientReadyTable {
+    let mut codes = [0u32; 256];
+    let mut lengths = [0u8; 256];
+    let mut code = 0u32;
+    let mut value_index = 0usize;
+    let mut code_length = 1usize;
+    while code_length <= 16 {
+        let mut count = 0usize;
+        while count < bits[code_length - 1] as usize {
+            let symbol = values[value_index] as usize;
+            codes[symbol] = code;
+            lengths[symbol] = code_length as u8;
+            code += 1;
+            value_index += 1;
+            count += 1;
+        }
+        code <<= 1;
+        code_length += 1;
+    }
+
+    let mut entries = [0u32; COEFFICIENT_READY_WIDTH * COEFFICIENT_READY_RUNS];
+    let mut run = 0usize;
+    while run < COEFFICIENT_READY_RUNS {
+        let mut value = -COEFFICIENT_READY_LIMIT;
+        while value <= COEFFICIENT_READY_LIMIT {
+            let value_index = (value + COEFFICIENT_READY_LIMIT) as usize;
+            let category = coefficient_category(value);
+            if category != 0 {
+                let symbol = run * 16 + category as usize;
+                if lengths[symbol] != 0 {
+                    let mask = (1u32 << category).wrapping_sub(1);
+                    let emitted = (if value < 0 { value - 1 } else { value }) as u32;
+                    let magnitude = emitted & mask;
+                    let combined = (codes[symbol] << category) | magnitude;
+                    let total_width = lengths[symbol] as u32 + category;
+                    let index = run * COEFFICIENT_READY_WIDTH + value_index;
+                    entries[index] = combined << 8 | total_width;
+                }
+            }
+            value += 1;
+        }
+        run += 1;
+    }
+    CoefficientReadyTable { entries }
+}
+
+#[allow(
+    clippy::large_stack_arrays,
+    reason = "the fixed tables live in static read-only storage"
+)]
+static STANDARD_AC_LUMA_COEFFICIENT_READY: CoefficientReadyTable =
+    build_coefficient_ready_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1);
+
+#[allow(
+    clippy::large_stack_arrays,
+    reason = "the fixed tables live in static read-only storage"
+)]
+static STANDARD_AC_CHROMA_COEFFICIENT_READY: CoefficientReadyTable =
+    build_coefficient_ready_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1);
+
+pub(crate) fn standard_ac_luma_coefficient_ready() -> &'static CoefficientReadyTable {
+    &STANDARD_AC_LUMA_COEFFICIENT_READY
+}
+
+pub(crate) fn standard_ac_chroma_coefficient_ready() -> &'static CoefficientReadyTable {
+    &STANDARD_AC_CHROMA_COEFFICIENT_READY
+}
+
+/// Standard derived encoder tables in DC-luma, DC-chroma, AC-luma,
+/// AC-chroma order. They are immutable for the life of the process, so warm
+/// production calls should not rebuild the canonical 256-entry maps.
+pub(crate) fn standard_derived_tables() -> &'static [DerivedTable; 4] {
+    static TABLES: OnceLock<[DerivedTable; 4]> = OnceLock::new();
+    TABLES.get_or_init(|| {
+        [
+            derive_table(&STD_DC_LUMA.0, &STD_DC_LUMA.1),
+            derive_table(&STD_DC_CHROMA.0, &STD_DC_CHROMA.1),
+            derive_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1),
+            derive_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1),
+        ]
+    })
 }
 
 /// JPEG-compliant optimal Huffman table and its derived encoder lookup.
@@ -213,7 +352,7 @@ pub(crate) fn derive_table(bits: &[u8; 16], huffval: &[u8]) -> DerivedTable {
 /// Bit writer that accumulates bits MSB-first, with 0xFF byte stuffing.
 pub(crate) struct BitWriter {
     pub out: Vec<u8>,
-    buf: u32,
+    buf: u64,
     bits: u32,
 }
 
@@ -235,31 +374,89 @@ impl BitWriter {
     }
 
     /// Write `len` bits of `code` (MSB-first).
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        reason = "JPEG bit-buffer invariants bound the shifts, pending bits, and emitted byte"
+    )]
+    #[inline(always)]
     pub(crate) fn write_bits(&mut self, code: u32, len: u8) {
-        debug_assert!(len > 0);
-        // Accumulate into a 32-bit buffer; flush bytes when ≥ 8 bits available.
+        debug_assert!((1..=32).contains(&len));
         let length = u32::from(len);
-        let mask = 1u32.wrapping_shl(length).saturating_sub(1);
-        self.buf = self.buf.wrapping_shl(length) | (code & mask);
-        self.bits = self.bits.saturating_add(length);
+        if self.bits + length > 64 {
+            self.flush_bytes();
+        }
+        let mask = 1u64.wrapping_shl(length).wrapping_sub(1);
+        self.buf = (self.buf << length) | (u64::from(code) & mask);
+        self.bits += length;
+        if self.bits == 64 {
+            self.flush_bytes();
+        }
+    }
+
+    /// Write bits whose value is already known to fit within `len` bits.
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "JPEG bit-buffer invariants bound the shifts and pending bit count"
+    )]
+    #[inline(always)]
+    pub(crate) fn write_bounded_bits(&mut self, code: u32, len: u8) {
+        debug_assert!((1..=32).contains(&len));
+        let length = u32::from(len);
+        debug_assert!(u64::from(code) < 1u64.wrapping_shl(length));
+        if self.bits + length > 64 {
+            self.flush_bytes();
+        }
+        self.buf = (self.buf << length) | u64::from(code);
+        self.bits += length;
+        if self.bits == 64 {
+            self.flush_bytes();
+        }
+    }
+
+    /// Flush complete bytes from the reservoir, applying JPEG 0xFF stuffing.
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        reason = "the accumulator contains at most 64 pending bits and emitted values are bytes"
+    )]
+    #[inline(always)]
+    fn flush_bytes(&mut self) {
+        if self.bits == 64 {
+            let bytes = self.buf.to_be_bytes();
+            if !bytes.contains(&0xFF) {
+                self.out.extend_from_slice(&bytes);
+                self.bits = 0;
+                self.buf = 0;
+                return;
+            }
+        }
+
         while self.bits >= 8 {
-            self.bits = self.bits.saturating_sub(8);
-            let byte = self.buf.wrapping_shr(self.bits).to_le_bytes()[0];
+            self.bits -= 8;
+            let byte = (self.buf >> self.bits) as u8;
             self.out.push(byte);
             if byte == 0xFF {
                 self.out.push(0x00); // byte stuffing
             }
         }
+
+        let pending_mask = 1u64.wrapping_shl(self.bits).saturating_sub(1);
+        self.buf &= pending_mask;
     }
 
     /// Flush remaining bits, padding with 1s (IJG: pad with 1 bits to byte boundary).
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "the writer maintains a bounded 64-bit reservoir and byte-aligned padding"
+    )]
     pub(crate) fn flush(&mut self) {
         if self.bits > 0 {
-            let pad = 8u32.saturating_sub(self.bits);
-            self.write_bits(
-                1u32.wrapping_shl(pad).saturating_sub(1),
-                pad.to_le_bytes()[0],
-            );
+            let pad = (8 - self.bits % 8) % 8;
+            let mask = 1u64.wrapping_shl(pad).saturating_sub(1);
+            self.buf = (self.buf << pad) | mask;
+            self.bits += pad;
+            self.flush_bytes();
         }
     }
 }
