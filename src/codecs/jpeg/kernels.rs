@@ -92,6 +92,7 @@ const YCC_BLUE_SECOND: u8x16 = u8x16::new([
 ]);
 
 /// Convert one RGB sample using the exact libjpeg fixed-point coefficients.
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 pub(crate) fn rgb_to_ycbcr_pixel(red: u8, green: u8, blue: u8) -> (u8, u8, u8) {
     let red = i32::from(red);
@@ -385,6 +386,7 @@ fn downsample_420_rows(
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn convert_eight(pixels: &[u8; 24], y: &mut [u8; 8], cb: &mut [u8; 8], cr: &mut [u8; 8]) {
     let (y_values, cb_values, cr_values) = convert_eight_values(pixels);
@@ -397,6 +399,7 @@ fn convert_eight(pixels: &[u8; 24], y: &mut [u8; 8], cb: &mut [u8; 8], cr: &mut 
     clippy::arithmetic_side_effects,
     reason = "8-bit RGB samples and libjpeg fixed-point coefficients stay within i32 lanes"
 )]
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn convert_eight_values(pixels: &[u8; 24]) -> (i32x8, i32x8, i32x8) {
     let first = pod_read_unaligned::<u8x16>(&pixels[..16]);
@@ -433,6 +436,7 @@ fn convert_eight_values(pixels: &[u8; 24]) -> (i32x8, i32x8, i32x8) {
     (y_values, cb_values, cr_values)
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn pack_two_eight(first: i32x8, second: i32x8) -> u8x16 {
     u8x16::narrow_i16x8(
@@ -441,6 +445,7 @@ fn pack_two_eight(first: i32x8, second: i32x8) -> u8x16 {
     )
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn narrow_eight(values: i32x8) -> [u8; 8] {
     let packed = u8x16::narrow_i16x8(i16x8::from_i32x8_saturate(values), i16x8::ZERO).to_array();
@@ -448,6 +453,7 @@ fn narrow_eight(values: i32x8) -> [u8; 8] {
     [a, b, c, d, e, f, g, h]
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn fixed_point(
     first_weight: i32,
@@ -473,6 +479,7 @@ fn fixed_point(
     clippy::arithmetic_side_effects,
     reason = "8-bit chroma pairs and their rounding bias fit within u16 lanes"
 )]
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 pub(crate) fn downsample_h2v1_eight(row: &[u8; 16]) -> [u8; 8] {
     let samples = pod_read_unaligned::<u8x16>(row);
@@ -482,6 +489,7 @@ pub(crate) fn downsample_h2v1_eight(row: &[u8; 16]) -> [u8; 8] {
 
 /// Average eight 2x2 sample boxes using libjpeg's alternating h2v2 rounding
 /// bias.
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 pub(crate) fn downsample_h2v2_eight(row0: &[u8; 16], row1: &[u8; 16]) -> [u8; 8] {
     let row0 = pod_read_unaligned::<u8x16>(row0);
@@ -489,6 +497,7 @@ pub(crate) fn downsample_h2v2_eight(row0: &[u8; 16], row1: &[u8; 16]) -> [u8; 8]
     downsample_h2v2_vectors(row0, row1)
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 #[expect(
     clippy::arithmetic_side_effects,
@@ -502,11 +511,13 @@ fn downsample_h2v2_vectors(row0: u8x16, row1: u8x16) -> [u8; 8] {
     narrow_u16_eight((sum + H2V2_BIAS).unbounded_shr_scalar(2))
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn widen_pair_half(samples: u8x16, mask: u8x16) -> u16x8 {
     u16x8::from_u8x16_low(samples.swizzle_relaxed(mask))
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn narrow_u16_eight(values: u16x8) -> [u8; 8] {
     let packed = u8x16::narrow_i16x8(cast(values), i16x8::ZERO).to_array();
@@ -583,6 +594,7 @@ pub(crate) fn ycc_to_rgb_batch(y: &[u8], cb: &[u8], cr: &[u8], output: &mut [u8]
     }
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn convert_ycc_to_rgb_eight(y: &[u8; 8], cb: &[u8; 8], cr: &[u8; 8], output: &mut [u8; 24]) {
     let y_values = load_eight_u8_as_i16(y);
@@ -591,6 +603,7 @@ fn convert_ycc_to_rgb_eight(y: &[u8; 8], cb: &[u8; 8], cr: &[u8; 8], output: &mu
     *output = convert_ycc_vectors_to_rgb(y_values, cb_values, cr_values);
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn convert_ycc_to_rgb_eight_padded(
     y: &[u8; 16],
@@ -612,6 +625,7 @@ fn convert_ycc_to_rgb_eight_padded(
     clippy::arithmetic_side_effects,
     reason = "YCbCr samples and the fixed-point inverse matrix fit within i32 lanes"
 )]
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn convert_ycc_vectors_to_rgb(y_values: i16x8, cb_values: i16x8, cr_values: i16x8) -> [u8; 24] {
     let y_values = y_values.widening_mul(YCC_ONE_I16);
@@ -656,11 +670,13 @@ fn convert_ycc_vectors_to_rgb(y_values: i16x8, cb_values: i16x8, cr_values: i16x
     output
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn narrow_eight_vector(values: i32x8) -> u8x16 {
     u8x16::narrow_i16x8(i16x8::from_i32x8_saturate(values), i16x8::ZERO)
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn load_eight_u8_as_i16(samples: &[u8; 8]) -> i16x8 {
     let packed = u64::from_ne_bytes(*samples);
@@ -671,6 +687,7 @@ fn load_eight_u8_as_i16(samples: &[u8; 8]) -> i16x8 {
     clippy::arithmetic_side_effects,
     reason = "the fixed-point products are bounded by centered u8 JPEG samples"
 )]
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn ycc_to_rgb_standard_pixel(y: u8, cb: u8, cr: u8) -> (u8, u8, u8) {
     let y = i32::from(y);
@@ -686,6 +703,7 @@ fn ycc_to_rgb_standard_pixel(y: u8, cb: u8, cr: u8) -> (u8, u8, u8) {
     )
 }
 
+#[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 pub(crate) fn ycc_to_rgb_pixel(
     y: u8,
