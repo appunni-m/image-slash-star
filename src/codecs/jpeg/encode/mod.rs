@@ -725,7 +725,6 @@ pub(crate) fn encode_with_token(
     // guarantees the four converted planes have exactly `w * h` samples.
     if token.is_none()
         && num_components == 4
-        && !progressive
         && !optimize
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
     {
@@ -1891,6 +1890,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&large_gray, &large_gray_progressive);
     let _ = encode(&large_gray, &large_gray_optimized);
+    // Exercise both sides of the aligned-small-image fallback used by the
+    // grayscale fast path: width-aligned/height-aligned and width-aligned
+    // with a partial final row.
+    let aligned_gray = DecodedImage::new(32, 8, vec![128; 32 * 8], crate::types::ColorType::L8);
+    let short_aligned_gray = DecodedImage::new(32, 1, vec![128; 32], crate::types::ColorType::L8);
+    let _ = encode(&aligned_gray, &JpegEncodeOptions::default());
+    let _ = encode(&short_aligned_gray, &JpegEncodeOptions::default());
     let zero_width_gray = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::L8);
     let zero_height_gray = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::L8);
     for image in [&zero_width_gray, &zero_height_gray] {
@@ -1926,6 +1932,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&large_cmyk, &large_cmyk_progressive);
     let _ = encode(&large_cmyk, &large_cmyk_optimized);
+    let aligned_cmyk =
+        DecodedImage::new(32, 8, vec![128; 32 * 8 * 4], crate::types::ColorType::Cmyk8);
+    let _ = encode(&aligned_cmyk, &JpegEncodeOptions::default());
     let zero_width_cmyk = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Cmyk8);
     let zero_height_cmyk = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Cmyk8);
     for image in [&zero_width_cmyk, &zero_height_cmyk] {
@@ -1937,6 +1946,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = encode(&truncated_cmyk, &JpegEncodeOptions::default());
     }));
+
+    // Cover the sampling-boundary matrix through the real encoder entry
+    // point. These dimensions make the size predicate evaluate both the
+    // area and alignment terms without constructing malformed planes.
+    let narrow_420_with_token =
+        DecodedImage::new(8, 17, vec![128; 8 * 17 * 3], crate::types::ColorType::Rgb8);
+    let live_token = crate::CancellationToken::new();
+    let _ = encode_with_token(
+        &narrow_420_with_token,
+        &JpegEncodeOptions::default(),
+        Some(&live_token),
+    );
+    let narrow_422 = DecodedImage::new(64, 1, vec![128; 64 * 3], crate::types::ColorType::Rgb8);
+    let aligned_422 =
+        DecodedImage::new(64, 8, vec![128; 64 * 8 * 3], crate::types::ColorType::Rgb8);
+    let aligned_422_options = JpegEncodeOptions {
+        subsampling: Some(JpegSubsampling::Cs422),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&narrow_422, &aligned_422_options);
+    let _ = encode(&aligned_422, &aligned_422_options);
+    let short_aligned_444 =
+        DecodedImage::new(32, 1, vec![128; 32 * 3], crate::types::ColorType::Rgb8);
+    let aligned_444_options = JpegEncodeOptions {
+        subsampling: Some(JpegSubsampling::Cs444),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&short_aligned_444, &aligned_444_options);
+    let low_quality_small = JpegEncodeOptions {
+        quality: Some(20),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&aligned_422, &low_quality_small);
+
     let mut oversized_exif_options = JpegEncodeOptions::default();
     oversized_exif_options.exif = Some(vec![0; usize::from(u16::MAX)]);
     let _ = encode(&gray, &oversized_exif_options);
