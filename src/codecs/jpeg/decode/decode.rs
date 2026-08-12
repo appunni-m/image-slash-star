@@ -19,7 +19,8 @@ use wide::{i16x8, u8x16, u16x8};
 
 const BASELINE_MCU_CHECKPOINT: usize = 1_024;
 
-#[inline(always)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
 fn check_baseline_mcu_checkpoint(
     token: Option<&crate::CancellationToken>,
     completed_mcus: usize,
@@ -101,7 +102,8 @@ pub(super) fn decode_block(
 }
 
 #[cfg(target_arch = "aarch64")]
-#[inline(always)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
 fn decode_block_fast(
     br: &mut FastBitReader,
     dc_table: &HuffTable,
@@ -203,7 +205,8 @@ fn decode_block_fast(
     clippy::too_many_arguments,
     reason = "the block operation receives explicit entropy, transform, and destination state"
 )]
-#[inline(always)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
 fn decode_and_store_block_fast(
     br: &mut FastBitReader,
     dc_table: &HuffTable,
@@ -714,6 +717,7 @@ fn fancy_upsample_h2v2_row_pair_safe(
     clippy::too_many_arguments,
     reason = "the direct path keeps validated JPEG state and its final output explicit"
 )]
+#[cfg_attr(coverage, inline(never))]
 fn reconstruct_baseline_grayscale_direct_safe(
     info: &JpegInfo,
     entropy_segments: &EntropySegments,
@@ -845,6 +849,7 @@ fn reconstruct_baseline_grayscale_direct_safe(
     clippy::too_many_arguments,
     reason = "the direct path keeps validated JPEG state and its four reusable component blocks explicit"
 )]
+#[cfg_attr(coverage, inline(never))]
 fn reconstruct_baseline_cmyk_direct_safe(
     info: &JpegInfo,
     entropy_segments: &EntropySegments,
@@ -1026,6 +1031,7 @@ fn reconstruct_baseline_cmyk_direct_safe(
     clippy::too_many_arguments,
     reason = "the direct path keeps validated JPEG state and its bounded row buffers explicit"
 )]
+#[cfg_attr(coverage, inline(never))]
 fn reconstruct_baseline_420_direct_safe(
     info: &JpegInfo,
     entropy_segments: &EntropySegments,
@@ -1297,6 +1303,7 @@ fn reconstruct_baseline_420_direct_safe(
     clippy::too_many_arguments,
     reason = "the direct path keeps validated JPEG state and bounded row buffers explicit"
 )]
+#[cfg_attr(coverage, inline(never))]
 fn reconstruct_baseline_422_direct_safe(
     info: &JpegInfo,
     entropy_segments: &EntropySegments,
@@ -1460,6 +1467,7 @@ fn reconstruct_baseline_422_direct_safe(
     clippy::too_many_arguments,
     reason = "the direct path keeps validated JPEG state and its bounded block buffers explicit"
 )]
+#[cfg_attr(coverage, inline(never))]
 fn reconstruct_baseline_444_direct_safe(
     info: &JpegInfo,
     entropy_segments: &EntropySegments,
@@ -1620,6 +1628,7 @@ fn reconstruct_baseline_444_direct_safe(
     )))
 }
 
+#[cfg_attr(coverage, inline(never))]
 pub(super) fn reconstruct_image(
     info: &JpegInfo,
     data: &[u8],

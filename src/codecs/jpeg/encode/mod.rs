@@ -1873,6 +1873,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..JpegEncodeOptions::default()
     };
     let _ = encode(&large_rgb, &low_quality_large_rgb);
+    // Keep each fast-path admission predicate independently witnessed. The
+    // zero-sized and truncated inputs are deliberately caught: they model a
+    // caller handing the encoder inconsistent in-memory dimensions, not a
+    // Pillow-visible file-format row.
+    let zero_width_rgb = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Rgb8);
+    let zero_height_rgb = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Rgb8);
+    for image in [&zero_width_rgb, &zero_height_rgb] {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = encode(image, &JpegEncodeOptions::default());
+            let _ = encode(image, &low_quality_large_rgb);
+        }));
+    }
+    let truncated_rgb = DecodedImage::new(33, 35, vec![128; 3], crate::types::ColorType::Rgb8);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = encode(&truncated_rgb, &JpegEncodeOptions::default());
+    }));
     for subsampling in [JpegSubsampling::Cs422, JpegSubsampling::Cs444] {
         let mut streaming = JpegEncodeOptions {
             subsampling: Some(subsampling),
@@ -1893,6 +1909,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&large_gray, &large_gray_options);
     large_gray_options.restart_interval = Some(70_000);
     let _ = encode(&large_gray, &large_gray_options);
+    let large_gray_progressive = JpegEncodeOptions {
+        progressive: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let large_gray_optimized = JpegEncodeOptions {
+        optimize: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&large_gray, &large_gray_progressive);
+    let _ = encode(&large_gray, &large_gray_optimized);
+    let zero_width_gray = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::L8);
+    let zero_height_gray = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::L8);
+    for image in [&zero_width_gray, &zero_height_gray] {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = encode(image, &JpegEncodeOptions::default());
+        }));
+    }
+    let truncated_gray = DecodedImage::new(33, 35, vec![128; 1], crate::types::ColorType::L8);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = encode(&truncated_gray, &JpegEncodeOptions::default());
+    }));
     let large_cmyk = DecodedImage::new(
         33,
         35,
@@ -1907,6 +1944,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&large_cmyk, &large_cmyk_options);
     large_cmyk_options.restart_interval = Some(70_000);
     let _ = encode(&large_cmyk, &large_cmyk_options);
+    let large_cmyk_progressive = JpegEncodeOptions {
+        progressive: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let large_cmyk_optimized = JpegEncodeOptions {
+        optimize: Some(true),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&large_cmyk, &large_cmyk_progressive);
+    let _ = encode(&large_cmyk, &large_cmyk_optimized);
+    let zero_width_cmyk = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Cmyk8);
+    let zero_height_cmyk = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Cmyk8);
+    for image in [&zero_width_cmyk, &zero_height_cmyk] {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = encode(image, &JpegEncodeOptions::default());
+        }));
+    }
+    let truncated_cmyk = DecodedImage::new(33, 35, vec![128; 4], crate::types::ColorType::Cmyk8);
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = encode(&truncated_cmyk, &JpegEncodeOptions::default());
+    }));
     let mut oversized_exif_options = JpegEncodeOptions::default();
     oversized_exif_options.exif = Some(vec![0; usize::from(u16::MAX)]);
     let _ = encode(&gray, &oversized_exif_options);
@@ -1925,6 +1983,45 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let generic_plane = [10u8, 20, 30];
     let _ = downsample(&generic_plane, 3, 1, 1, 1, 3, 1, None);
     let _ = downsample(&[], 0, 0, 0, 0, 1, 1, None);
+    for &(sw, sh, dw, dh, hr, vr) in &[
+        (0, 2, 1, 1, 2, 1),
+        (2, 0, 1, 1, 2, 1),
+        (2, 2, 0, 1, 2, 1),
+        (2, 2, 1, 0, 2, 1),
+        (2, 2, 1, 1, 0, 1),
+        (2, 2, 1, 1, 2, 0),
+    ] {
+        let _ = downsample(&plane, sw, sh, dw, dh, hr, vr, None);
+    }
+    for &(sw, sh, dw, dh, hr, vr) in &[
+        (0, 2, 1, 1, 2, 1),
+        (2, 0, 1, 1, 2, 1),
+        (2, 2, 0, 1, 2, 1),
+        (2, 2, 1, 0, 2, 1),
+        (2, 2, 1, 1, 0, 1),
+        (2, 2, 1, 1, 2, 0),
+    ] {
+        let token = crate::CancellationToken::new();
+        let mut checkpoint = TokenDownsampleCheckpoint::new(&token);
+        let _ = downsample_with_checkpoint(&plane, sw, sh, dw, dh, hr, vr, &mut checkpoint);
+    }
+    for &(source_width, source_height, destination_width, destination_height, vertical_rows) in &[
+        (0, 1, 1, 1, 1),
+        (1, 0, 1, 1, 1),
+        (1, 1, 0, 1, 1),
+        (1, 1, 1, 0, 1),
+        (1, 1, 1, 1, 0),
+        (1, 1, 1, 1, 3),
+    ] {
+        let _ = downsample_two_to_one(
+            &plane,
+            source_width,
+            source_height,
+            destination_width,
+            destination_height,
+            vertical_rows,
+        );
+    }
     let downsample_token = crate::CancellationToken::new();
     downsample_token.cancel_after(0);
     let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, Some(&downsample_token));
@@ -2082,6 +2179,27 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &direct_chroma_quantizer_low,
         &low_quality_options,
     );
+    for &(edge_width, edge_height) in &[(9usize, 9usize), (17, 9), (9, 17), (17, 17)] {
+        let edge_y = vec![128u8; edge_width.saturating_mul(edge_height)];
+        let edge_chroma_width = edge_width.div_ceil(16).saturating_mul(8);
+        let edge_chroma_height = edge_height.div_ceil(2);
+        let edge_chroma = vec![128u8; edge_chroma_width.saturating_mul(edge_chroma_height)];
+        let _ = encode_baseline_420_mcu_row_streaming(
+            Baseline420Source::Planes {
+                y: &edge_y,
+                cb: &edge_chroma,
+                cr: &edge_chroma,
+                chroma_width: edge_chroma_width,
+                chroma_height: edge_chroma_height,
+            },
+            edge_width,
+            edge_height,
+            &direct_params_420,
+            &direct_y_quantizer_420,
+            &direct_chroma_quantizer_420,
+            &JpegEncodeOptions::default(),
+        );
+    }
     let direct_params_422 = quant::build_params(75, "422", 3);
     let direct_y_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[0]);
     let direct_chroma_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[1]);
@@ -2326,6 +2444,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
         2,
         1
     ));
+    assert!(!baseline_444_independent_entropy_is_compatible(
+        &components_444,
+        1,
+        2
+    ));
     assert!(!baseline_444_independent_entropy_is_compatible(&[], 1, 1));
     macro_rules! reject_444 {
         ($mutator:expr) => {{
@@ -2521,6 +2644,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let reciprocal = reciprocal_divisor(8);
     for value in [-1_000, -9, -1, 0, 1, 7, 8, 9, 127, 128] {
         let _ = quantize_coefficient(value, 8, reciprocal);
+    }
+    for divisor in 2u32..=32 {
+        let exact = reciprocal_divisor(divisor);
+        for value in [-1_024, -100, -8, 0, 8, 100, 1_024] {
+            for reciprocal in [0, exact.saturating_sub(1), exact, exact.saturating_add(1)] {
+                let _ = quantize_coefficient(value, divisor, reciprocal);
+            }
+        }
     }
     let empty_ready = huffman::CoefficientReadyTable {
         entries: [0; huffman::COEFFICIENT_READY_WIDTH * huffman::COEFFICIENT_READY_RUNS],
@@ -4443,7 +4574,8 @@ fn downsample_without_checkpoint(
     clippy::arithmetic_side_effects,
     reason = "validated JPEG dimensions bound two-row sums and source coordinates"
 )]
-#[inline]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline)]
 fn downsample_two_to_one(
     plane: &[u8],
     source_width: usize,
@@ -5414,7 +5546,8 @@ enum Baseline420Source<'a> {
     clippy::too_many_arguments,
     reason = "the exact six-block 4:2:0 scan packet and its image-edge geometry are explicit inputs"
 )]
-#[inline(always)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
 fn encode_baseline_420_mcu_pair(
     pair_mcu_x: usize,
     mcu_y: usize,
@@ -6132,7 +6265,8 @@ fn reciprocal_divisor(divisor: u32) -> u32 {
     clippy::cast_possible_wrap,
     reason = "JPEG FDCT bounds keep the numerator, corrected quotient, and signed result in range"
 )]
-#[inline(always)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
 fn quantize_coefficient(value: i32, divisor: u32, reciprocal: u32) -> i16 {
     debug_assert!(divisor != 0);
     let numerator = value.unsigned_abs() + (divisor >> 1);
