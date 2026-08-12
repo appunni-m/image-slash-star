@@ -482,6 +482,7 @@ impl EntropyOutputCheckpoint for TokenEntropyOutputCheckpoint<'_> {
 
 /// Per-component prepared data: quantized coefficient blocks in NATURAL order,
 /// indexed by block_row * blocks_per_row + block_col.
+#[derive(Clone)]
 struct CompData {
     blocks: Vec<[i16; 64]>,
     blocks_per_row: usize,
@@ -1866,6 +1867,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![128; 33 * 35 * 3],
         crate::types::ColorType::Rgb8,
     );
+    let _ = encode(&large_rgb, &JpegEncodeOptions::default());
+    let low_quality_large_rgb = JpegEncodeOptions {
+        quality: Some(20),
+        ..JpegEncodeOptions::default()
+    };
+    let _ = encode(&large_rgb, &low_quality_large_rgb);
     for subsampling in [JpegSubsampling::Cs422, JpegSubsampling::Cs444] {
         let mut streaming = JpegEncodeOptions {
             subsampling: Some(subsampling),
@@ -1915,6 +1922,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let wide_plane = vec![10u8; 32 * 2];
     let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 1, None);
     let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 2, None);
+    let generic_plane = [10u8, 20, 30];
+    let _ = downsample(&generic_plane, 3, 1, 1, 1, 3, 1, None);
     let _ = downsample(&[], 0, 0, 0, 0, 1, 1, None);
     let downsample_token = crate::CancellationToken::new();
     downsample_token.cancel_after(0);
@@ -1974,6 +1983,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1,
         &mut downsample_mixed_checkpoint,
     ));
+    let zero_ratio_token = crate::CancellationToken::new();
+    let mut zero_ratio_checkpoint = TokenDownsampleCheckpoint::new(&zero_ratio_token);
+    let _ = downsample_with_checkpoint(&plane, 2, 2, 1, 1, 0, 0, &mut zero_ratio_checkpoint);
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let downsample_invalid_token = crate::CancellationToken::new();
         let mut downsample_invalid_checkpoint =
@@ -2010,6 +2022,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = downsample(&plane, 2, 2, 1, 1, 2, 3, None);
     }));
+    let _ = downsample(&[0u8; 8], 16, 1, 8, 1, 2, 1, None);
+    let _ = downsample(&[0u8; 16], 16, 2, 8, 1, 2, 2, None);
 
     // Exercise every production streaming layout with a genuinely partial
     // final MCU, restart markers, and an EXIF segment. These calls are kept
@@ -2234,6 +2248,25 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1
     ));
     assert!(!baseline_422_independent_entropy_is_compatible(&[], 2, 1));
+    macro_rules! reject_422 {
+        ($mutator:expr) => {{
+            let mut candidate = components_422.clone();
+            ($mutator)(&mut candidate);
+            assert!(!baseline_422_independent_entropy_is_compatible(
+                &candidate, 2, 1
+            ));
+        }};
+    }
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 1);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].blocks_per_row = 1);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
+    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
     let mut independent_422_output = Vec::new();
     encode_baseline_422_independent_entropy(
         &mut independent_422_output,
@@ -2294,6 +2327,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1
     ));
     assert!(!baseline_444_independent_entropy_is_compatible(&[], 1, 1));
+    macro_rules! reject_444 {
+        ($mutator:expr) => {{
+            let mut candidate = components_444.clone();
+            ($mutator)(&mut candidate);
+            assert!(!baseline_444_independent_entropy_is_compatible(
+                &candidate, 1, 1
+            ));
+        }};
+    }
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
+    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
     let mut independent_444_output = Vec::new();
     encode_baseline_444_independent_entropy(
         &mut independent_444_output,
@@ -2354,6 +2405,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
         1
     ));
     assert!(!baseline_420_independent_entropy_is_compatible(&[], 2, 2));
+    macro_rules! reject_420 {
+        ($mutator:expr) => {{
+            let mut candidate = components_420.clone();
+            ($mutator)(&mut candidate);
+            assert!(!baseline_420_independent_entropy_is_compatible(
+                &candidate, 2, 2
+            ));
+        }};
+    }
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 1);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 1);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].blocks_per_row = 1);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].block_rows = 1);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
+    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
     let mut independent_420_output = Vec::new();
     encode_baseline_420_independent_entropy(
         &mut independent_420_output,
@@ -2417,6 +2488,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         huffman::standard_ac_luma_coefficient_ready(),
         huffman::standard_ac_chroma_coefficient_ready(),
     );
+    encode_six_coefficient_major_edge_raw_blocks(
+        &mut edge_writers,
+        coefficient_blocks,
+        edge_differences,
+        [false, true, false, true, false, true],
+        &standard_tables[0],
+        &standard_tables[2],
+        &standard_tables[1],
+        &standard_tables[3],
+        huffman::standard_ac_luma_coefficient_ready(),
+        huffman::standard_ac_chroma_coefficient_ready(),
+    );
     let mut raw_writer = RawBlockWriter::new();
     let mut raw_run = 0;
     encode_raw_ac_value(
@@ -2435,6 +2518,32 @@ pub(crate) fn __coverage_exercise_private_branches() {
         huffman::standard_ac_luma_coefficient_ready(),
     );
     finish_raw_ac(&mut raw_writer, raw_run, &standard_tables[2]);
+    let reciprocal = reciprocal_divisor(8);
+    for value in [-1_000, -9, -1, 0, 1, 7, 8, 9, 127, 128] {
+        let _ = quantize_coefficient(value, 8, reciprocal);
+    }
+    let empty_ready = huffman::CoefficientReadyTable {
+        entries: [0; huffman::COEFFICIENT_READY_WIDTH * huffman::COEFFICIENT_READY_RUNS],
+    };
+    let mut packed_fallback_writer = RawBlockWriter::new();
+    let mut packed_fallback_run = 0;
+    encode_raw_ac_value(
+        &mut packed_fallback_writer,
+        1,
+        &mut packed_fallback_run,
+        &standard_tables[2],
+        &empty_ready,
+    );
+    finish_raw_ac(
+        &mut packed_fallback_writer,
+        packed_fallback_run,
+        &standard_tables[2],
+    );
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut invalid_output = Vec::new();
+        let mut invalid_scan = RawScanWriter::new(&mut invalid_output);
+        invalid_scan.write(3, 1);
+    }));
     let mut raw_scan_output = Vec::new();
     let mut raw_scan = RawScanWriter::new(&mut raw_scan_output);
     raw_scan.write(1, 1);
@@ -4317,11 +4426,9 @@ fn downsample_without_checkpoint(
             // this makes the helper total for future sampling ratios instead
             // of relying on debug-only assertions followed by division by
             // zero for malformed internal geometry.
-            let bias = if hr == 2 && (vr == 1 || vr == 2) {
-                u32::from(x.to_le_bytes()[0] & 1).saturating_add(u32::from(vr == 2))
-            } else {
-                0
-            };
+            // h2v1/h2v2 return through the dedicated IJG-compatible path
+            // above. All other ratios use the ordinary box-filter average.
+            let bias = 0;
             let divisor = u32::try_from(hr.saturating_mul(vr))
                 .unwrap_or(u32::MAX)
                 .max(1);
@@ -4345,7 +4452,14 @@ fn downsample_two_to_one(
     destination_height: usize,
     vertical_rows: usize,
 ) -> Vec<u8> {
-    debug_assert!(vertical_rows == 1 || vertical_rows == 2);
+    if source_width == 0
+        || source_height == 0
+        || destination_width == 0
+        || destination_height == 0
+        || !(1..=2).contains(&vertical_rows)
+    {
+        return vec![0u8; destination_width.saturating_mul(destination_height)];
+    }
     let mut output = Vec::with_capacity(destination_width.saturating_mul(destination_height));
     for y in 0usize..destination_height {
         let source_y = (y * vertical_rows).min(source_height - 1);
@@ -4355,15 +4469,19 @@ fn downsample_two_to_one(
         let mut x = 0usize;
         while x + 8 <= destination_width && x * 2 + 16 <= source_width {
             let source_x = x * 2;
-            let source0: &[u8; 16] = plane[row0 + source_x..row0 + source_x + 16]
-                .try_into()
-                .unwrap_or_else(|_| unreachable!("validated h2 source batch is not 16 bytes"));
+            let Some(source0) = plane
+                .get(row0.saturating_add(source_x)..row0.saturating_add(source_x + 16))
+                .and_then(|slice| slice.try_into().ok())
+            else {
+                return vec![0u8; destination_width.saturating_mul(destination_height)];
+            };
             let averaged = if vertical_rows == 2 {
-                let source1: &[u8; 16] = plane[row1 + source_x..row1 + source_x + 16]
-                    .try_into()
-                    .unwrap_or_else(|_| {
-                        unreachable!("validated h2v2 source batch is not 16 bytes")
-                    });
+                let Some(source1) = plane
+                    .get(row1.saturating_add(source_x)..row1.saturating_add(source_x + 16))
+                    .and_then(|slice| slice.try_into().ok())
+                else {
+                    return vec![0u8; destination_width.saturating_mul(destination_height)];
+                };
                 crate::codecs::jpeg::kernels::downsample_h2v2_eight(source0, source1)
             } else {
                 crate::codecs::jpeg::kernels::downsample_h2v1_eight(source0)

@@ -33,6 +33,7 @@ fn make_rgb(width: u32, height: u32) -> Result<DecodedImage, Box<dyn Error>> {
     ))
 }
 
+#[cfg_attr(coverage, coverage(off))]
 fn summarize(label: &str, samples: &mut [Duration]) {
     if samples.is_empty() {
         println!("{label:24} no samples");

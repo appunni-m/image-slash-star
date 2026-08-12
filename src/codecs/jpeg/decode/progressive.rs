@@ -1126,6 +1126,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut dc_pred = 0;
     assert!(dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0).is_err());
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    assert_eq!(dc_first_block(&mut br, &zero, &mut dc_pred, 0), Ok(0));
     let positive_dc = super::huffman::HuffTable::build(
         &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 1],
@@ -1410,6 +1412,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut fast_info = info.clone();
     fast_info.scans = vec![base_scan(1, 1, 0, 0, 0, 1)];
     let _ = progressive_reconstruct(&fast_info, &[0], None);
+    let progressive_data =
+        include_bytes!("../../../../tests/fixtures/input/images/jpeg/progressive.jpg");
+    let progressive_info =
+        super::parser::parse_jpeg(progressive_data).expect("coverage progressive JPEG must parse");
+    assert!(progressive_reconstruct(&progressive_info, progressive_data, None).is_ok());
 
     let failing_scan = |ss, se, ah, al| ScanInfo {
         components: vec![scan_component],
