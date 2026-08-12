@@ -2269,6 +2269,28 @@ pub(crate) fn __coverage_exercise_private_branches() {
             )
             .is_ok()
         );
+        // Thirteen compact (run=3, size=1) / (run=0, size=1) AC pairs move
+        // the coefficient cursor to the end of the block. The next pair is
+        // still syntactically present, so the pair fast path must reject its
+        // out-of-range positions and fall back to the ordinary decoder.
+        let standard_ac = HuffTable::build(
+            &super::super::encode::huffman::STD_AC_LUMA.0,
+            &super::super::encode::huffman::STD_AC_LUMA.1,
+        );
+        let pair_overflow_entropy = [
+            0x74, 0x1d, 0x07, 0x41, 0xd0, 0x74, 0x1d, 0x07, 0x41, 0xd0, 0x74, 0x1d, 0x07, 0x41,
+            0xd0, 0x74, 0x00, 0x00,
+        ];
+        let mut pair_overflow_reader =
+            FastBitReader::new(&pair_overflow_entropy, 0, pair_overflow_entropy.len());
+        let pair_overflow_result = decode_block_fast(
+            &mut pair_overflow_reader,
+            &dc_zero,
+            &standard_ac,
+            &mut fast_last_dc,
+            &mut fast_block,
+        );
+        assert!(matches!(pair_overflow_result, Ok((BlockKind::Full, true))));
         let ac_run_to_end =
             HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0xF2]);
         let mut fast_reader = FastBitReader::new(&entropy, 0, entropy.len());
@@ -2661,6 +2683,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             mutator(&mut candidate);
             assert!(rgb420_none(&candidate, &rgb420_segments, &rgb420_quant));
         }
+        let mut zero_column_restart = rgb420_info.clone();
+        zero_column_restart.restart_interval = 1;
+        assert!(matches!(
+            reconstruct_baseline_420_direct_safe(
+                &zero_column_restart,
+                &rgb420_segments,
+                rgb420_data,
+                None,
+                0,
+                rgb420_mcus_y,
+                &rgb420_quant,
+                converter,
+            ),
+            Ok(None)
+        ));
         assert!(rgb420_none(&rgb420_info, &empty_segments, &rgb420_quant));
         assert!(rgb420_none(&rgb420_info, &rgb420_segments, empty_quant));
 
