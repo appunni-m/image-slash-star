@@ -345,7 +345,7 @@ fn decode_ico_bmp(
     }
 
     match bpp {
-        32 => decode_ico_bmp_32bpp(data, width, actual_height),
+        32 => decode_ico_bmp_32bpp(data, width, actual_height, token),
         24 => decode_ico_bmp_24bpp(data, width, actual_height, token),
         8 => decode_ico_bmp_8bpp(data, width, actual_height, colors_used),
         4 => decode_ico_bmp_4bpp(data, width, actual_height, colors_used),
@@ -357,7 +357,12 @@ fn decode_ico_bmp(
 }
 
 /// Decode a 32-bit BGRA ICO BMP entry (4 bytes/pixel).
-fn decode_ico_bmp_32bpp(data: &[u8], width: u32, height: u32) -> CodecResult<DecodedImage> {
+fn decode_ico_bmp_32bpp(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<DecodedImage> {
     let header_size = 40_usize;
     let row_size = (width as usize).wrapping_mul(4);
     // Each row is padded to a multiple of 4 bytes
@@ -374,6 +379,7 @@ fn decode_ico_bmp_32bpp(data: &[u8], width: u32, height: u32) -> CodecResult<Dec
 
     // ICO BMP stores rows bottom-up; we flip to top-down
     for y in (0..height as usize).rev() {
+        crate::codecs::error::check_cancelled(token)?;
         let row_start = y.wrapping_mul(padded_row);
         let row_end = row_start.wrapping_add(row_size);
         let row = &pixels_raw[row_start..row_end];
