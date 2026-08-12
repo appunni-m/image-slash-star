@@ -618,6 +618,40 @@ fn smooth_dc_only_block(
     );
 }
 
+#[cfg(target_arch = "aarch64")]
+#[inline(never)]
+// Keep the hot IDCT operands explicit so this wrapper remains allocation-free
+// and matches the vectorized kernel's calling convention.
+#[allow(clippy::too_many_arguments)]
+fn progressive_dequantize_block(
+    block_natural: &mut [i32; 64],
+    quant_natural: &[i32; 64],
+    workspace: &mut [i32; 64],
+    destination: &mut [u8],
+    stride: usize,
+    block_x: usize,
+    block_y: usize,
+    high_horizontal_nonzero: bool,
+) -> bool {
+    if block_natural[0].checked_mul(quant_natural[0]).is_some() {
+        jpeg_idct_islow_dequantized_to_u8_safe(
+            block_natural,
+            quant_natural,
+            workspace,
+            destination,
+            stride,
+            block_x,
+            block_y,
+            high_horizontal_nonzero,
+        );
+        return true;
+    }
+    for (coefficient, &quantizer) in block_natural.iter_mut().zip(quant_natural) {
+        *coefficient = coefficient.saturating_mul(quantizer);
+    }
+    false
+}
+
 // Progressive scan parsing validates tables and uses a zero-padding bit reader.
 pub(super) fn progressive_reconstruct(
     info: &JpegInfo,
@@ -885,21 +919,17 @@ pub(super) fn progressive_reconstruct(
                     }
                 }
                 #[cfg(target_arch = "aarch64")]
-                if block_natural[0].checked_mul(quant_natural[0]).is_some() {
-                    jpeg_idct_islow_dequantized_to_u8_safe(
-                        &block_natural,
-                        &quant_natural,
-                        &mut workspace,
-                        &mut comp_buffers[comp_idx],
-                        buf_w,
-                        block_x,
-                        block_y,
-                        high_horizontal_nonzero,
-                    );
+                if progressive_dequantize_block(
+                    &mut block_natural,
+                    &quant_natural,
+                    &mut workspace,
+                    &mut comp_buffers[comp_idx],
+                    buf_w,
+                    block_x,
+                    block_y,
+                    high_horizontal_nonzero,
+                ) {
                     continue;
-                }
-                for (coefficient, &quantizer) in block_natural.iter_mut().zip(&quant_natural) {
-                    *coefficient = coefficient.saturating_mul(quantizer);
                 }
             }
             jpeg_idct_islow(&mut block_natural, &mut workspace);
@@ -1035,6 +1065,36 @@ pub(super) fn progressive_reconstruct(
 pub(crate) fn __coverage_exercise_private_branches() {
     use super::parser::{FrameComponent, ScanComponent, ScanInfo};
 
+    #[cfg(target_arch = "aarch64")]
+    {
+        let mut block = [0i32; 64];
+        let mut quant = [1i32; 64];
+        let mut workspace = [0i32; 64];
+        let mut output = [0u8; 64];
+        assert!(progressive_dequantize_block(
+            &mut block,
+            &quant,
+            &mut workspace,
+            &mut output,
+            8,
+            0,
+            0,
+            false,
+        ));
+        block[0] = i32::MAX;
+        quant[0] = i32::MAX;
+        assert!(!progressive_dequantize_block(
+            &mut block,
+            &quant,
+            &mut workspace,
+            &mut output,
+            8,
+            0,
+            0,
+            false,
+        ));
+    }
+
     assert_eq!(smooth_pred(1, 0, 0), 0);
     assert_eq!(smooth_pred(1, 1, 0), 0);
     assert_eq!(smooth_pred(1, 1, 2), 0);
@@ -1066,9 +1126,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut dc_pred = 0;
     assert!(dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0).is_err());
+    let positive_dc = super::huffman::HuffTable::build(
+        &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 1],
+    );
+    let mut br = BitReader::new(&[0x80], 0, 1);
+    assert_eq!(
+        dc_first_block(&mut br, &positive_dc, &mut dc_pred, 1),
+        Ok(0)
+    );
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     let mut coeffs = [0i32; 64];
-    let mut eobrun = 0;
+    let mut eobrun = 1;
+    assert_eq!(
+        ac_first_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun),
+        Ok(0)
+    );
     assert_eq!(
         ac_first_block(&mut br, &zero, 64, 63, 0, &mut coeffs, &mut eobrun),
         Ok(0)
@@ -1092,6 +1165,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     eobrun = 0;
 
+    let zrl = super::huffman::HuffTable::build(
+        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0xF0],
+    );
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    assert_eq!(
+        ac_first_block(&mut br, &zrl, 1, 17, 0, &mut coeffs, &mut eobrun),
+        Ok(0)
+    );
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    assert_eq!(
+        ac_first_block(&mut br, &eob, 1, 2, 0, &mut coeffs, &mut eobrun),
+        Ok(0)
+    );
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    assert_eq!(
+        ac_first_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun),
+        Ok(1)
+    );
+
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert_eq!(
         ac_first_block(&mut br, &overflow, 63, 63, 0, &mut coeffs, &mut eobrun),
@@ -1109,6 +1202,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_ok());
     let mut br = BitReader::new(&entropy, 0, entropy.len());
     assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
+    let mut br = BitReader::new(&entropy, 0, entropy.len());
+    eobrun = 0;
+    assert!(ac_refine_block(&mut br, &eob, 1, 2, 0, &mut coeffs, &mut eobrun).is_ok());
     let entropy_ones = [0xff; 16];
     let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
     coeffs[1] = 2;
@@ -1310,6 +1406,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         metadata: Vec::new(),
     };
     let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0], None);
+    let mut fast_info = info.clone();
+    fast_info.scans = vec![base_scan(1, 1, 0, 0, 0, 1)];
+    let _ = progressive_reconstruct(&fast_info, &[0], None);
 
     let failing_scan = |ss, se, ah, al| ScanInfo {
         components: vec![scan_component],

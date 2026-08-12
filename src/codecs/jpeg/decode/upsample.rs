@@ -179,6 +179,20 @@ pub(super) fn fancy_upsample(
     }
 }
 
+/// Exercise one-sample edge rows in the scalar triangle filters. A real JPEG
+/// can reach these dimensions, but the ordinary fixture corpus mostly has
+/// wider chroma planes; keeping the tiny edge contract explicit prevents a
+/// future SIMD rewrite from dropping the replicated edge sample.
+#[cfg(coverage)]
+pub(crate) fn __coverage_exercise_private_branches() {
+    assert_eq!(h2v1_fancy_upsample(&[42], 1, 1), vec![42, 42]);
+    assert_eq!(h2v2_fancy_upsample(&[42], 1, 1), vec![42, 42, 42, 42]);
+    let fallback = fancy_upsample(&[1, 2], 2, 1, 3, 1, 6, 1);
+    assert_eq!(fallback.len(), 6);
+    assert_eq!(&fallback[..3], &[1, 1, 1]);
+    assert_eq!(&fallback[3..], &[2, 2, 2]);
+}
+
 fn vertical_sum(primary: u8, adjacent: u8) -> i32 {
     i32::from(primary)
         .saturating_mul(3)

@@ -657,6 +657,43 @@ fn idct_pass2_four_rows_safe(
     );
 }
 
+/// Exercise the safe vector transform's fixed-shape contract in the managed
+/// coverage build. These inputs model valid initialized DCT blocks and cover
+/// both the low-frequency-only and full horizontal-pass forms; they are not a
+/// production escape hatch or a public codec input.
+#[cfg(all(coverage, target_arch = "aarch64"))]
+pub(crate) fn __coverage_exercise_private_branches() {
+    let block = [0i32; DCTSIZE2];
+    let quant_table = [1i32; DCTSIZE2];
+    let mut workspace = [0i32; DCTSIZE2];
+    let mut output = vec![0u8; DCTSIZE2];
+
+    jpeg_idct_islow_to_u8_safe(&block, &mut workspace, &mut output, DCTSIZE, 0, 0);
+    assert!(output.iter().all(|&value| value == 128));
+
+    jpeg_idct_islow_dequantized_to_u8_safe(
+        &block,
+        &quant_table,
+        &mut workspace,
+        &mut output,
+        DCTSIZE,
+        0,
+        0,
+        false,
+    );
+    jpeg_idct_islow_dequantized_to_u8_safe(
+        &block,
+        &quant_table,
+        &mut workspace,
+        &mut output,
+        DCTSIZE,
+        0,
+        0,
+        true,
+    );
+    assert!(output.iter().all(|&value| value == 128));
+}
+
 // ── JPEG Utilities ────────────────────────────────────────────────────────
 
 /// Exact output of [`jpeg_idct_islow`] when only the natural-order DC

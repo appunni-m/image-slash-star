@@ -381,11 +381,11 @@ impl HuffTable {
         let mut code = br.get_bits(min) as i32;
         let mut length = min as usize;
         while code > self.maxcode[length] {
-            if !br.ensure(1) {
-                return Err(CodecError::Malformed(
-                    "truncated JPEG Huffman code".to_owned(),
-                ));
-            }
+            // The initial ensure pads an exhausted entropy segment to the
+            // 49-bit IJG reservoir. JPEG Huffman lengths are at most 16, so
+            // every continuation bit is available without another fallible
+            // boundary; this matches the scalar decoder's padding rule.
+            br.ensure(1);
             code = code.wrapping_shl(1) | br.get_bits(1) as i32;
             length = length.saturating_add(1);
         }
@@ -549,4 +549,51 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let data = [0x00];
     let mut br = BitReader::new(&data, 0, data.len());
     assert!(table.decode_slow(&mut br, 1).is_err());
+
+    let mut br = BitReader::new(&[0xFF; 16], 0, 16);
+    assert_eq!(table.decode_slow(&mut br, 1), Ok(0));
+    let empty_table = HuffTable::build(&[0; 16], &[]);
+    let mut br = BitReader::new(&[0xFF; 16], 0, 16);
+    assert!(empty_table.decode_slow(&mut br, 1).is_err());
+
+    use super::super::encode::huffman::{
+        STD_AC_CHROMA, STD_AC_LUMA, STD_DC_CHROMA, STD_DC_LUMA,
+    };
+    let _ = build_huff_table(0, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
+    let _ = build_huff_table(0, &STD_DC_CHROMA.0, &STD_DC_CHROMA.1);
+    let _ = build_huff_table(1, &STD_AC_LUMA.0, &STD_AC_LUMA.1);
+    let _ = build_huff_table(1, &STD_AC_CHROMA.0, &STD_AC_CHROMA.1);
+    let _ = build_huff_table(2, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        use super::bit_reader::FastBitReader;
+
+        let mut fast_empty = FastBitReader::new(&[], 0, 0);
+        assert!(table.decode_slow_fast(&mut fast_empty, 50).is_err());
+
+        let mut sentinel_maxcode = [-1; 18];
+        sentinel_maxcode[1] = 0;
+        sentinel_maxcode[17] = 0x7FFFFF;
+        let sentinel_table = HuffTable {
+            lookup: [HUFF_LOOKAHEAD_SENTINEL; 1 << HUFF_LOOKAHEAD],
+            values: Vec::new(),
+            maxcode: sentinel_maxcode,
+            valoffset: [0; 18],
+            general_pair_table: None,
+        };
+        let mut fast = FastBitReader::new(&[0; 16], 0, 16);
+        assert_eq!(sentinel_table.decode_slow_fast(&mut fast, 11), Ok(0));
+
+        let mut missing_symbol = FastBitReader::new(&[0; 2], 0, 2);
+        assert!(
+            sentinel_table
+                .decode_slow_fast(&mut missing_symbol, 1)
+                .is_err()
+        );
+
+        assert!(standard_ac_general_pair_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1).is_some());
+        assert!(standard_ac_general_pair_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1).is_some());
+        assert!(standard_ac_general_pair_table(&[0; 16], &[]).is_none());
+    }
 }

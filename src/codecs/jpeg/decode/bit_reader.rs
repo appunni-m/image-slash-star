@@ -304,4 +304,29 @@ pub(crate) fn __coverage_exercise_private_branches() {
     br.fill(1);
     assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(0))).is_err());
     assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(br.bits_left() + 1))).is_err());
+
+    let mut optional = BitReader::new(&[], 0, 0);
+    assert_eq!(optional.read_padded_bits_optional(50), None);
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        let mut fast = FastBitReader::new(&data, 0, data.len());
+        fast.fill(1);
+        let _ = fast.peek_bits(1);
+        let _ = fast.get_bits(1);
+        fast.drop_bits(0);
+        assert!(catch_unwind(AssertUnwindSafe(|| fast.peek_bits(0))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| fast.peek_bits(fast.bits_left() + 1))).is_err());
+
+        let mut fast = FastBitReader::new(&data, 0, data.len());
+        fast.fill(1);
+        assert!(catch_unwind(AssertUnwindSafe(|| fast.get_bits(0))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| fast.get_bits(fast.bits_left() + 1))).is_err());
+        fast.drop_bits(0);
+
+        let mut stuffed = FastBitReader::new(&[0xFF, 0xFF, 0x00], 0, 3);
+        assert_eq!(stuffed.read_entropy_byte(), Some(0xFF));
+        let mut marker = FastBitReader::new(&[0xFF, 0xD9], 0, 2);
+        assert_eq!(marker.read_entropy_byte(), None);
+    }
 }

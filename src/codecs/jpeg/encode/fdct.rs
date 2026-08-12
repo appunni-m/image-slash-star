@@ -260,6 +260,11 @@ fn fdct_descale_four(value: i32x4, shift: u32) -> i32x4 {
     (value + bias).unbounded_shr_scalar(shift)
 }
 
+#[cfg(coverage)]
+pub(super) fn __coverage_exercise_private_branches() {
+    let _ = fdct_descale_four(i32x4::ZERO, 0);
+}
+
 #[inline(always)]
 fn load_four(data: &[[i32; 64]; 4], coefficient: usize) -> i32x4 {
     i32x4::new([
