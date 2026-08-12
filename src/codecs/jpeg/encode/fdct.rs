@@ -28,16 +28,11 @@ const FIX_3_072711026: i32 = 25172;
 
 const FOUR: i32x4 = i32x4::new([4; 4]);
 const FIX_0_298631336_X4: i32x4 = i32x4::new([FIX_0_298631336; 4]);
-const FIX_0_390180644_X4: i32x4 = i32x4::new([FIX_0_390180644; 4]);
 const FIX_0_541196100_X4: i32x4 = i32x4::new([FIX_0_541196100; 4]);
 const FIX_0_765366865_X4: i32x4 = i32x4::new([FIX_0_765366865; 4]);
-const FIX_0_899976223_X4: i32x4 = i32x4::new([FIX_0_899976223; 4]);
 const FIX_1_175875602_X4: i32x4 = i32x4::new([FIX_1_175875602; 4]);
 const FIX_1_501321110_X4: i32x4 = i32x4::new([FIX_1_501321110; 4]);
-const FIX_1_847759065_X4: i32x4 = i32x4::new([FIX_1_847759065; 4]);
-const FIX_1_961570560_X4: i32x4 = i32x4::new([FIX_1_961570560; 4]);
 const FIX_2_053119869_X4: i32x4 = i32x4::new([FIX_2_053119869; 4]);
-const FIX_2_562915447_X4: i32x4 = i32x4::new([FIX_2_562915447; 4]);
 const FIX_3_072711026_X4: i32x4 = i32x4::new([FIX_3_072711026; 4]);
 const NEG_FIX_0_390180644_X4: i32x4 = i32x4::new([-FIX_0_390180644; 4]);
 const NEG_FIX_0_899976223_X4: i32x4 = i32x4::new([-FIX_0_899976223; 4]);

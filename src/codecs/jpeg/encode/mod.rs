@@ -11,8 +11,6 @@
 // Huffman tables; quantization uses ISLOW divisors (quantval<<3) with
 // round-to-nearest division matching jcdctmgr.c's reciprocal quantize path.
 
-#![allow(dead_code)] // encoder wired up incrementally; tables/markers used by encode_*
-
 mod fdct;
 pub(crate) mod huffman;
 mod marker;
@@ -520,7 +518,8 @@ impl FdctQuantizer {
     }
 }
 
-pub(crate) fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResult<Vec<u8>> {
+#[cfg(coverage)]
+fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(img, opts, None)
 }
 
@@ -565,7 +564,7 @@ pub(crate) fn encode_with_token(
     // `usize`, so every public `u32` row interval is representable here.
     let restart_rows = opts.restart_interval.unwrap_or(0) as usize;
 
-    let params = quant::build_params(quality, subsampling, usize::from(num_components));
+    let params = quant::build_params(quality, usize::from(num_components));
     let y_quantizer = FdctQuantizer::new(&params.quant_tables[0]);
     let chroma_quantizer =
         (num_components == 3).then(|| FdctQuantizer::new(&params.quant_tables[1]));
@@ -2162,7 +2161,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         exif: Some(vec![b'E', b'x', b'i', b'f', 0]),
         ..JpegEncodeOptions::default()
     };
-    let direct_params_420 = quant::build_params(75, "420", 3);
+    let direct_params_420 = quant::build_params(75, 3);
     let direct_y_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[0]);
     let direct_chroma_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[1]);
     let _ = encode_baseline_420_mcu_row_streaming(
@@ -2184,7 +2183,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         quality: Some(20),
         ..direct_options.clone()
     };
-    let direct_params_low = quant::build_params(20, "420", 3);
+    let direct_params_low = quant::build_params(20, 3);
     let direct_y_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[0]);
     let direct_chroma_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[1]);
     let _ = encode_baseline_420_mcu_row_streaming(
@@ -2223,7 +2222,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &JpegEncodeOptions::default(),
         );
     }
-    let direct_params_422 = quant::build_params(75, "422", 3);
+    let direct_params_422 = quant::build_params(75, 3);
     let direct_y_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[0]);
     let direct_chroma_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[1]);
     let _ = encode_baseline_422_block_row_streaming(
@@ -2239,7 +2238,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &direct_chroma_quantizer_422,
         &direct_options,
     );
-    let direct_params_444 = quant::build_params(75, "444", 3);
+    let direct_params_444 = quant::build_params(75, 3);
     let direct_y_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[0]);
     let direct_chroma_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[1]);
     let _ = encode_baseline_444_block_row_streaming(
@@ -2253,7 +2252,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &direct_chroma_quantizer_444,
         &direct_options,
     );
-    let direct_params_gray = quant::build_params(75, "444", 1);
+    let direct_params_gray = quant::build_params(75, 1);
     let direct_gray_quantizer = FdctQuantizer::new(&direct_params_gray.quant_tables[0]);
     let _ = encode_baseline_grayscale_block_row_streaming(
         &direct_luma_plane,
@@ -2263,7 +2262,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &direct_gray_quantizer,
         &direct_options,
     );
-    let direct_params_cmyk = quant::build_params(75, "444", 4);
+    let direct_params_cmyk = quant::build_params(75, 4);
     let direct_cmyk_quantizer = FdctQuantizer::new(&direct_params_cmyk.quant_tables[0]);
     let _ = encode_baseline_cmyk_block_row_streaming(
         &direct_luma_plane,
@@ -2711,7 +2710,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 0,
         ah: 0,
         al: 1,
-        is_dc: true,
     };
     let mut y_component = CompData {
         blocks: vec![[0i16; 64]; 9],
@@ -2754,7 +2752,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 0,
         ah: 0,
         al: 0,
-        is_dc: true,
     };
     let noninterleaved_dc_components = [CompData {
         blocks: vec![[0i16; 64]; 2],
@@ -2814,7 +2811,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 1,
         ah: 1,
         al: 0,
-        is_dc: false,
     };
     let progressive_token_refine_token = crate::CancellationToken::new();
     progressive_token_refine_token.cancel_after(0);
@@ -2842,7 +2838,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 1,
         ah: 0,
         al: 0,
-        is_dc: false,
     };
     for checks in [1, 2] {
         let token = crate::CancellationToken::new();
@@ -3270,7 +3265,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut checkpoint,
         );
     }
-    let progressive_params = quant::build_params(75, "420", 3);
+    let progressive_params = quant::build_params(75, 3);
     let mut progressive_scan_error_output = Vec::new();
     let mut progressive_scan_error_entropy = NoopEntropyOutputCheckpoint;
     let mut progressive_scan_error_checkpoint = CoverageFailingProgressiveScanCheckpoint {
@@ -3554,7 +3549,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 0,
         ah: 0,
         al: 0,
-        is_dc: true,
     };
     let mut noninterleaved_row_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
         coefficient_calls: usize::MAX,
@@ -3581,7 +3575,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 1,
         ah: 0,
         al: 0,
-        is_dc: false,
     };
     let mut noninterleaved_ac_row_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
         coefficient_calls: usize::MAX,
@@ -3623,7 +3616,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 0,
         ah: 0,
         al: 0,
-        is_dc: true,
     };
     let single_dc_token = crate::CancellationToken::new();
     single_dc_token.cancel_after(0);
@@ -3679,7 +3671,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 1,
         ah: 1,
         al: 0,
-        is_dc: false,
     };
     let table = 0;
     let mut events = Vec::new();
@@ -3735,7 +3726,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 5,
         ah: 1,
         al: 0,
-        is_dc: false,
     };
     let mut refine_block = [0i16; 64];
     refine_block[ZIGZAG[1]] = 1;
@@ -3807,7 +3797,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 5,
         ah: 0,
         al: 0,
-        is_dc: false,
     };
     let mut first_block = [0i16; 64];
     first_block[ZIGZAG[1]] = 1;
@@ -3885,7 +3874,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 20,
         ah: 0,
         al: 0,
-        is_dc: false,
     };
     let mut long_ac_first_block = [0i16; 64];
     long_ac_first_block[ZIGZAG[17]] = -3;
@@ -3933,7 +3921,6 @@ pub(crate) fn __coverage_exercise_private_branches() {
         se: 20,
         ah: 1,
         al: 0,
-        is_dc: false,
     };
     let mut long_ac_refine_block = [0i16; 64];
     long_ac_refine_block[ZIGZAG[1]] = 2;
@@ -4424,18 +4411,6 @@ fn bounded_usize(value: u32) -> usize {
 fn low_u16(value: usize) -> u16 {
     let [a, b, ..] = value.to_le_bytes();
     u16::from_le_bytes([a, b])
-}
-
-fn low_u32(value: usize) -> u32 {
-    #[cfg(target_pointer_width = "64")]
-    {
-        let [a, b, c, d, ..] = value.to_le_bytes();
-        u32::from_le_bytes([a, b, c, d])
-    }
-    #[cfg(target_pointer_width = "32")]
-    {
-        u32::from_le_bytes(value.to_le_bytes())
-    }
 }
 
 // ── Color conversion (jccolor.c) ─────────────────────────────────────────
@@ -7885,7 +7860,6 @@ struct ProgScan {
     se: u8,
     ah: u8,
     al: u8,
-    is_dc: bool,
 }
 
 /// Build the default progressive scan script (jpeg_simple_progression, YCbCr).
@@ -7898,7 +7872,6 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
         se: 0,
         ah: 0,
         al: 1,
-        is_dc: true,
     };
     let dc_refine = |comps: Vec<usize>, ah, al| ProgScan {
         comps,
@@ -7906,7 +7879,6 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
         se: 0,
         ah,
         al,
-        is_dc: true,
     };
     let ac = |comps: Vec<usize>, ss, se, ah, al| ProgScan {
         comps,
@@ -7914,7 +7886,6 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
         se,
         ah,
         al,
-        is_dc: false,
     };
 
     if ncomp == 3 {

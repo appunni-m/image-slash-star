@@ -28,8 +28,6 @@ pub(crate) struct EncodeParams {
     /// (libjpeg stores quantval[] in natural order; emit_dqt reorders to
     /// zigzag at marker-write time.)
     pub quant_tables: Vec<[u16; 64]>,
-    /// Quant slot assigned to each component (Y/Cb/Cr).
-    pub comp_quant: Vec<u8>,
 }
 
 /// Build encode params for a given quality / subsampling / component count.
@@ -37,7 +35,7 @@ pub(crate) struct EncodeParams {
 /// Mirrors jcparam.c jpeg_set_quality → jpeg_quality_scaling →
 /// jpeg_add_quant_table.  Tables are kept in natural order (the order the
 /// std tables are defined in and the order quantval[] is filled in).
-pub(crate) fn build_params(quality: u8, subsampling: &str, num_components: usize) -> EncodeParams {
+pub(crate) fn build_params(quality: u8, num_components: usize) -> EncodeParams {
     let q = i32::from(quality.clamp(1, 100));
 
     // IJG: if quality < 50, scale = 5000/quality; else scale = 200 - 2*quality.
@@ -75,18 +73,5 @@ pub(crate) fn build_params(quality: u8, subsampling: &str, num_components: usize
         quant_tables.push(chroma);
     }
 
-    // Component→quant slot. CMYK → 0; RGB Y → 0 and Cb,Cr → 1.
-    let mut comp_quant = vec![0u8];
-    if num_components == 3 {
-        comp_quant.push(1);
-        comp_quant.push(1);
-    } else if num_components == 4 {
-        comp_quant.extend([0, 0, 0]);
-    }
-    let _ = subsampling;
-
-    EncodeParams {
-        quant_tables,
-        comp_quant,
-    }
+    EncodeParams { quant_tables }
 }
