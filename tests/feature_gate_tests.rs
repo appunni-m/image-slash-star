@@ -7212,6 +7212,132 @@ fn ico_decode_work_budget_covers_embedded_bmp_rows() -> Result<(), Box<dyn std::
 }
 
 #[test]
+fn ico_decode_work_budget_covers_embedded_32bit_bmp_rows() -> Result<(), Box<dyn std::error::Error>>
+{
+    if !cfg!(feature = "ico") {
+        return Ok(());
+    }
+
+    // RN-003/API-023/API-036/QA-026: the 32-bit embedded BMP path has the
+    // same long row conversion problem as the 24-bit path, but preserves an
+    // explicit alpha byte instead of reading an AND-mask plane.
+    let make_bmp_ico = |width: u32, height: u32| -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let image = DecodedImage::new(
+            width,
+            height,
+            vec![128; usize::try_from(width)? * usize::try_from(height)? * 4],
+            ColorType::Rgba8,
+        );
+        let mut options = EncodeOptions::for_format(ImageFormat::Ico);
+        if let EncodeOptions::Ico(options) = &mut options {
+            options.entry_type = image_slash_star::IcoEntryType::Bmp;
+        }
+        Ok(image_slash_star::encode(
+            &image,
+            ImageFormat::Ico,
+            &options,
+        )?)
+    };
+    let small_data = make_bmp_ico(64, 64)?;
+    let large_data = make_bmp_ico(64, 128)?;
+    let small_expected = image_slash_star::decode(&small_data)?;
+    let large_expected = image_slash_star::decode(&large_data)?;
+    let unlimited = image_slash_star::DecodePolicy::new();
+
+    let discover_boundary = |data: &[u8], expected: &[u8]| {
+        let mut lower = 0_u64;
+        let mut upper = 1_u64;
+        loop {
+            let maximum = upper;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    break;
+                }
+                Err(error) => assert!(matches!(
+                    error,
+                    ImageError::LimitExceeded {
+                        format: Some(ImageFormat::Ico),
+                        operation: image_slash_star::CodecOperation::StillDecode,
+                        resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                        maximum: reported,
+                        observed,
+                    } if reported == maximum && observed == maximum.saturating_add(1)
+                )),
+            }
+            if upper == 8_192 {
+                return Err(std::io::Error::other(
+                    "ICO embedded 32-bit BMP work-budget boundary exceeded probe",
+                ));
+            }
+            upper = upper.saturating_mul(2);
+        }
+        while lower < upper {
+            let maximum = lower + (upper - lower) / 2;
+            match image_slash_star::decode_with_policy(
+                data,
+                &unlimited.with_max_work_units(maximum),
+            ) {
+                Ok(decoded) => {
+                    assert_eq!(decoded.content.pixels, expected);
+                    upper = maximum;
+                }
+                Err(error) => {
+                    assert!(matches!(
+                        error,
+                        ImageError::LimitExceeded {
+                            format: Some(ImageFormat::Ico),
+                            operation: image_slash_star::CodecOperation::StillDecode,
+                            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+                            maximum: reported,
+                            observed,
+                        } if reported == maximum && observed == maximum.saturating_add(1)
+                    ));
+                    lower = maximum.saturating_add(1);
+                }
+            }
+        }
+        Ok::<u64, std::io::Error>(lower)
+    };
+
+    let small_boundary = discover_boundary(&small_data, &small_expected.content.pixels)?;
+    let large_boundary = discover_boundary(&large_data, &large_expected.content.pixels)?;
+    assert_eq!(small_boundary, 68);
+    assert_eq!(large_boundary, 132);
+    assert_eq!(
+        large_boundary,
+        small_boundary.saturating_add(64),
+        "doubling the embedded 32-bit BMP height must add one checkpoint per row"
+    );
+    assert_eq!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary),
+        )?
+        .content
+        .pixels,
+        large_expected.content.pixels
+    );
+    assert!(matches!(
+        image_slash_star::decode_with_policy(
+            &large_data,
+            &unlimited.with_max_work_units(large_boundary - 1),
+        ),
+        Err(ImageError::LimitExceeded {
+            format: Some(ImageFormat::Ico),
+            operation: image_slash_star::CodecOperation::StillDecode,
+            resource: image_slash_star::ResourceLimit::DecodeWorkUnits,
+            maximum,
+            observed,
+        }) if maximum == large_boundary - 1 && observed == large_boundary
+    ));
+    Ok(())
+}
+
+#[test]
 fn tiff_decode_work_budget_covers_deflate_inflation() -> Result<(), Box<dyn std::error::Error>> {
     if !cfg!(feature = "tiff") {
         return Ok(());
