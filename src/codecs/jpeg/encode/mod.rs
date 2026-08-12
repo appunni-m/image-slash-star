@@ -1935,6 +1935,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let aligned_cmyk =
         DecodedImage::new(32, 8, vec![128; 32 * 8 * 4], crate::types::ColorType::Cmyk8);
     let _ = encode(&aligned_cmyk, &JpegEncodeOptions::default());
+    let narrow_cmyk_width =
+        DecodedImage::new(31, 8, vec![128; 31 * 8 * 4], crate::types::ColorType::Cmyk8);
+    let narrow_cmyk_height =
+        DecodedImage::new(32, 7, vec![128; 32 * 7 * 4], crate::types::ColorType::Cmyk8);
+    let _ = encode(&narrow_cmyk_width, &JpegEncodeOptions::default());
+    let _ = encode(&narrow_cmyk_height, &JpegEncodeOptions::default());
     let zero_width_cmyk = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Cmyk8);
     let zero_height_cmyk = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Cmyk8);
     for image in [&zero_width_cmyk, &zero_height_cmyk] {
@@ -1974,6 +1980,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ..JpegEncodeOptions::default()
     };
     let _ = encode(&short_aligned_444, &aligned_444_options);
+    let narrow_444 = DecodedImage::new(31, 8, vec![128; 31 * 8 * 3], crate::types::ColorType::Rgb8);
+    let _ = encode(&narrow_444, &aligned_444_options);
     let low_quality_small = JpegEncodeOptions {
         quality: Some(20),
         ..JpegEncodeOptions::default()
@@ -2668,6 +2676,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             }
         }
     }
+    let _ = quantize_coefficient(i32::MAX, 3, reciprocal_divisor(3));
     let empty_ready = huffman::CoefficientReadyTable {
         entries: [0; huffman::COEFFICIENT_READY_WIDTH * huffman::COEFFICIENT_READY_RUNS],
     };
@@ -5614,9 +5623,12 @@ fn encode_baseline_420_mcu_pair(
     let first_values = first_blocks.map(|block| block.coefficient(0));
     let first_y_column = pair_mcu_x.saturating_mul(2);
     let first_y_row = mcu_y.saturating_mul(2);
+    // `mcu_y` comes from `0..height.div_ceil(16)`, so the first row of each
+    // two-row MCU pair is always inside `height.div_ceil(8)`. Only the
+    // second row needs an edge-presence check.
     let first_present = [
-        first_y_column < y_block_columns && first_y_row < y_block_rows,
-        first_y_column.saturating_add(1) < y_block_columns && first_y_row < y_block_rows,
+        first_y_column < y_block_columns,
+        first_y_column.saturating_add(1) < y_block_columns,
         first_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
         first_y_column.saturating_add(1) < y_block_columns
             && first_y_row.saturating_add(1) < y_block_rows,
@@ -5689,8 +5701,8 @@ fn encode_baseline_420_mcu_pair(
     let second_values = second_blocks.map(|block| block.coefficient(0));
     let second_y_column = pair_mcu_x.saturating_add(1).saturating_mul(2);
     let second_present = [
-        second_y_column < y_block_columns && first_y_row < y_block_rows,
-        second_y_column.saturating_add(1) < y_block_columns && first_y_row < y_block_rows,
+        second_y_column < y_block_columns,
+        second_y_column.saturating_add(1) < y_block_columns,
         second_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
         second_y_column.saturating_add(1) < y_block_columns
             && first_y_row.saturating_add(1) < y_block_rows,
