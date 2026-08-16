@@ -225,12 +225,259 @@ fn portable_still(
     }
 }
 
-fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
-    if !extracted.grid_item_ids.is_empty() || extracted.grid_properties.is_some() {
+fn assembled_leaf(
+    width: u32,
+    height: u32,
+    planes: [block::ReconstructedPlane; 3],
+) -> block::FirstLeaf {
+    block::FirstLeaf {
+        width,
+        height,
+        planes,
+        luma_predictor: block::LumaPredictor::Dc,
+        luma_context: 0x40,
+        chroma_contexts: [0x40; 2],
+        chroma_right_contexts: [[0x40; 8]; 2],
+        chroma_bottom_contexts: [[0x40; 8]; 2],
+        tx_context_width: 0,
+        tx_context_height: 0,
+        luma_transform_split: false,
+        luma_right_contexts: [0x40; 8],
+        luma_bottom_contexts: [0x40; 8],
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
+    }
+}
+
+/// Validate and assemble a bounded AVIF `grid` item.
+///
+/// Each derived item is decoded as an independent still image. The complete
+/// coded cell is retained, then only the declared top-left visible rectangle
+/// is copied into a checked output canvas. This keeps grid composition free of
+/// native state and makes malformed overlap, gaps, and auxiliary geometry
+/// explicit errors rather than partially published pixels.
+fn validate_grid(
+    extracted: &ExtractedAvif<'_>,
+    still: &super::samples::StillPayload,
+) -> Av1Result<Option<PortableStill>> {
+    let Some(properties) = extracted.grid_properties else {
+        return Ok(None);
+    };
+    let rows = usize::try_from(properties.rows())
+        .map_err(|_| malformed("AVIF grid row count exceeds usize"))?;
+    let columns = usize::try_from(properties.columns())
+        .map_err(|_| malformed("AVIF grid column count exceeds usize"))?;
+    let cell_count = rows
+        .checked_mul(columns)
+        .ok_or_else(|| malformed("AVIF grid cell count overflows usize"))?;
+    if cell_count == 0
+        || extracted.grid_item_ids.len() != cell_count
+        || still.color.samples.len() != cell_count
+    {
         return Ok(None);
     }
+    if let Some(alpha) = &still.alpha
+        && alpha.samples.len() != cell_count
+    {
+        return Ok(None);
+    }
+
+    let mut cells = Vec::with_capacity(cell_count);
+    for (index, sample) in still.color.samples.iter().enumerate() {
+        let color = validate_plane(
+            extracted.input,
+            &super::samples::EncodedPlane {
+                samples: vec![sample.clone()],
+            },
+        )?;
+        let Some(color_leaf) = color.first_leaf else {
+            return Ok(None);
+        };
+        if color.frame_dimensions != Some((color_leaf.width, color_leaf.height)) {
+            return Ok(None);
+        }
+        let alpha_plane = if let Some(alpha) = &still.alpha {
+            let alpha = validate_plane(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![alpha.samples[index].clone()],
+                },
+            )?;
+            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
+                return Ok(None);
+            };
+            if !(alpha.sequence.monochrome
+                && alpha.sequence.bit_depth == color.sequence.bit_depth
+                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
+                && usize::try_from(color_leaf.width).ok().and_then(|width| {
+                    usize::try_from(color_leaf.height)
+                        .ok()
+                        .and_then(|height| width.checked_mul(height))
+                }) == Some(alpha_plane.samples.len()))
+            {
+                return Ok(None);
+            }
+            Some(alpha_plane)
+        } else {
+            None
+        };
+        cells.push(portable_still(color_leaf, color.sequence, alpha_plane));
+    }
+
+    let first = cells
+        .first()
+        .ok_or_else(|| malformed("AVIF grid has no cells"))?;
+    if cells.iter().any(|cell| {
+        cell.bit_depth != first.bit_depth
+            || cell.monochrome != first.monochrome
+            || cell.color_primaries != first.color_primaries
+            || cell.transfer_characteristics != first.transfer_characteristics
+            || cell.matrix_coefficients != first.matrix_coefficients
+            || cell.color_range != first.color_range
+            || cell.subsampling_x != first.subsampling_x
+            || cell.subsampling_y != first.subsampling_y
+            || cell.alpha_plane.is_some() != first.alpha_plane.is_some()
+    }) {
+        return Ok(None);
+    }
+    let cell_width = cells
+        .iter()
+        .map(|cell| cell.width)
+        .max()
+        .ok_or_else(|| malformed("AVIF grid has no cell width"))?;
+    let cell_height = cells
+        .iter()
+        .map(|cell| cell.height)
+        .max()
+        .ok_or_else(|| malformed("AVIF grid has no cell height"))?;
+    let output_width = properties.output_width();
+    let output_height = properties.output_height();
+    let mut canvas = FrameCanvas::new(
+        output_width,
+        output_height,
+        first.subsampling_x,
+        first.subsampling_y,
+    )?;
+    let mut alpha_canvas = if first.alpha_plane.is_some() {
+        Some(raster::MonochromeFrameCanvas::new(
+            output_width,
+            output_height,
+        )?)
+    } else {
+        None
+    };
+
+    for (index, cell) in cells.iter().enumerate() {
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "cell_count is nonzero above, so the validated grid column count cannot be zero"
+        )]
+        let (row, column) = (index / columns, index % columns);
+        let x = u32::try_from(
+            column
+                .checked_mul(
+                    usize::try_from(cell_width)
+                        .map_err(|_| malformed("AVIF grid cell width exceeds usize"))?,
+                )
+                .ok_or_else(|| malformed("AVIF grid x origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF grid x origin exceeds u32"))?;
+        let y = u32::try_from(
+            row.checked_mul(
+                usize::try_from(cell_height)
+                    .map_err(|_| malformed("AVIF grid cell height exceeds usize"))?,
+            )
+            .ok_or_else(|| malformed("AVIF grid y origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF grid y origin exceeds u32"))?;
+        let visible_width = output_width.saturating_sub(x).min(cell.width);
+        let visible_height = output_height.saturating_sub(y).min(cell.height);
+        if visible_width == 0 || visible_height == 0 {
+            return Ok(None);
+        }
+        canvas.place_cropped_cell(
+            cell.width,
+            cell.height,
+            visible_width,
+            visible_height,
+            x,
+            y,
+            &cell.planes,
+        )?;
+        if let (Some(alpha_canvas), Some(alpha_plane)) =
+            (alpha_canvas.as_mut(), cell.alpha_plane.as_ref())
+        {
+            alpha_canvas.place_cropped_plane(
+                cell.width,
+                cell.height,
+                visible_width,
+                visible_height,
+                x,
+                y,
+                alpha_plane,
+            )?;
+        }
+    }
+
+    let planes = canvas.finish()?;
+    let alpha_plane = alpha_canvas
+        .map(raster::MonochromeFrameCanvas::finish)
+        .transpose()?;
+    Ok(Some(portable_still(
+        assembled_leaf(output_width, output_height, planes),
+        sequence::SequenceHeader {
+            profile: 0,
+            still_picture: true,
+            reduced_still_picture_header: true,
+            timing: None,
+            decoder_model_present: false,
+            display_model_present: false,
+            operating_points: Vec::new(),
+            width_bits: 0,
+            height_bits: 0,
+            max_width: 0,
+            max_height: 0,
+            frame_id_numbers_present: false,
+            delta_frame_id_bits: 0,
+            frame_id_bits: 0,
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            screen_content_tools: 0,
+            force_integer_mv: 0,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            bit_depth: first.bit_depth,
+            monochrome: first.monochrome,
+            color_primaries: first.color_primaries,
+            transfer_characteristics: first.transfer_characteristics,
+            matrix_coefficients: first.matrix_coefficients,
+            color_range: first.color_range,
+            subsampling_x: first.subsampling_x,
+            subsampling_y: first.subsampling_y,
+            chroma_sample_position: 0,
+            separate_uv_delta_q: false,
+            film_grain_present: false,
+        },
+        alpha_plane,
+    )))
+}
+
+fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
     let mut portable = None;
     if let Some(still) = &extracted.still {
+        if extracted.grid_properties.is_some() || !extracted.grid_item_ids.is_empty() {
+            return validate_grid(extracted, still);
+        }
         let color = validate_plane(extracted.input, &still.color)?;
         let Some(color_leaf) = color.first_leaf.as_ref() else {
             return Ok(None);
@@ -842,6 +1089,37 @@ mod tests {
             .ok_or_else(|| malformed("safe production path omitted complete alpha plane"))?;
         assert_eq!(plane.samples.len(), 64 * 64);
         assert!(plane.samples.iter().any(|&sample| sample != 0));
+        Ok(())
+    }
+
+    #[test]
+    fn grid_fixture_production_validation_retains_complete_cells() -> Av1Result<()> {
+        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/grid.avif");
+        let extracted = super::super::samples::validated(bytes)?;
+        let still = extracted
+            .still
+            .as_ref()
+            .ok_or_else(|| malformed("grid fixture has no still payload"))?;
+        for sample in &still.color.samples {
+            validate_plane(
+                bytes,
+                &super::super::samples::EncodedPlane {
+                    samples: vec![sample.clone()],
+                },
+            )?;
+        }
+        if let Some(alpha) = &still.alpha {
+            for sample in &alpha.samples {
+                validate_plane(
+                    bytes,
+                    &super::super::samples::EncodedPlane {
+                        samples: vec![sample.clone()],
+                    },
+                )?;
+            }
+        }
+        let validated = validate_first(&extracted)?;
+        assert!(validated.portable_still.is_some());
         Ok(())
     }
 }
