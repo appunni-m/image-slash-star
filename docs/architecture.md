@@ -1,12 +1,17 @@
 # Architecture and public contract
 
-Status: current implementation reference
+Status: current implementation reference; AVIF uses the safe Rust path on every target
 
-Reviewed: 2026-08-12 against source-quality checkpoint
-`2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current aggregate native
-all-feature coverage is recorded in [roadmap-new.md](roadmap-new.md):
-73,473/73,539 lines, 9,434/9,444 branches, 3,629/3,679 functions, and
-109,876/110,011 regions. This is not yet 100% metric coverage; the remaining
+Reviewed: 2026-08-14 against the pure-Rust AVIF cutover working tree. The
+older coverage and native-AVIF failure records in this opening block are
+historical pre-cutover evidence; the current AVIF contract is in
+[avif.md](avif.md), the canonical roadmap data in
+[roadmap.json](../roadmap.json), and its human rendering in
+[roadmap-new.md](roadmap-new.md). The prior source-quality checkpoint was
+`2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current local nightly LLVM
+all-feature coverage is recorded in [roadmap.json](../roadmap.json):
+73,615/74,323 lines, 9,464/9,600 branches, 3,635/3,748 functions, and
+110,174/111,446 regions. This is not yet 100% metric coverage; the remaining
 source-level gaps are documented there. The accepted claim-ledger base is
 `36b939696415a962285d37f9120ff389aebf0205`, and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
@@ -423,6 +428,7 @@ translation cannot be bypassed.
 | `decode_sequence_prefix`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame/page cancellation |
 | `CancellationToken` | Dependency-free cooperative cancellation: `Rc<Cell>` state shared by clones, `cancel()` fires every clone, single-threaded by design |
+| `CancellationToken::with_progress` | Observe accepted checkpoints synchronously through monotonic `ProgressEvent` values; return `ProgressDecision::Cancel` to produce typed cancellation. Native and WASM use the same callback contract, and callback panics are not caught |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply one caller-selected format restriction and resource policy before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
@@ -462,7 +468,7 @@ translation cannot be bypassed.
 | Lossy WebP VP8 filter-edge adjustment checkpoints | Token-aware filter-edge adjustment polls after each 1,024 selected macroblocks; the no-token path retains the original tight adjustment pass |
 | Lossy WebP VP8 coefficient-statistics checkpoints | Token-aware coefficient-statistics collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight traversal |
 | Lossy WebP VP8 segment-probability prepass checkpoints | Token-aware first-partition segment-probability collection polls after each 1,024 selected macroblocks; the no-token path retains the original tight count pass |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, or WebP; AVIF sequence encoding is planned |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Sequence encode with frame/coalescing/page/finalization cancellation where the target exposes those checkpoints; still fallbacks retain the public boundary only |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the complete-result cap before an admitted buffer or structural segment reaches a caller-owned sink |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode exact output into a caller-owned `OutputSink`; return APIs remain whole-buffer, while every current codec sink writer emits validated structural header/payload boundaries, then every path calls `OutputSink::flush` once |
@@ -613,16 +619,25 @@ partial results; codec state is per-call, so a fresh token can retry the same
 input. The token is `Rc<Cell>` based and neither `Send` nor `Sync`, matching
 the single-threaded execution model.
 
+`CancellationToken::with_progress` adds an observation hook to the same
+checkpoint stream. Each accepted poll emits a one-based monotonic
+`ProgressEvent::checkpoint()` value; returning `ProgressDecision::Cancel`
+sets the shared cancellation state and preserves the existing typed
+`ImageError::Cancelled` result. The callback is synchronous on the calling
+thread and has the same behavior on native and WASM targets. Callback panics
+are intentionally not caught or converted into image errors.
+
 Capability discovery mirrors this dispatch without parsing input.
 `Capability::ManifestBounded` means the operation can be attempted within the
 fixture-defined codec contract; `Restricted` names a narrower target subset;
 and `Unavailable` distinguishes a disabled feature, unavailable target, or
 unimplemented operation. Detection remains manifest-bounded for every format.
 Sequence capability means genuine multi-image retention or emission, not the
-common one-frame fallback. Enabled native PNG reports sequence decode only;
-GIF, TIFF, WebP, and AVIF report sequence decode and encode; JPEG, BMP, and ICO
-report neither. Enabled `wasm32` AVIF reports restricted portable still decode
-and target-unavailable encode and sequence operations.
+common one-frame fallback. Enabled PNG reports sequence decode only; GIF, TIFF,
+and WebP report sequence decode and encode; AVIF exposes a supported still as a
+one-frame sequence while multi-frame decode and all encode remain explicit
+planned gaps. JPEG, BMP, and ICO report neither. Native and WASM AVIF use the
+same restricted safe-Rust contract.
 
 Every `EncodeOptions` value contains exactly one codec-specific record and
 reports that target through `EncodeOptions::format()`. The explicit
@@ -708,7 +723,7 @@ the policy-aware sink wrappers apply it before the first sink write. An
 oversized result returns `ImageError::LimitExceeded` with
 `ResourceLimit::EncodedOutputBytes`, and the sink remains untouched. The
 The whole-buffer codecs construct the complete buffer before this check. Every
-current still sink path—JPEG, PNG, GIF, BMP, ICO, TIFF, WebP, and native AVIF—
+current still sink path—JPEG, PNG, GIF, BMP, ICO, TIFF, and WebP—
 and the supported one-frame or multi-frame sequence sink paths instead
 preflight their complete lengths before emitting validated structures. ICO
 still delivery splits a fixed 22-byte directory header from its complete
@@ -1561,7 +1576,7 @@ filter and all-level token-aware compression subsegments, and between emitted
 structural segments in their sink paths. ICO still delivery has the same
 source-size, payload, and directory boundaries; TIFF sink delivery checks
 between its header, strip/padding, and IFD/value segments. GIF, TIFF, WebP,
-and native AVIF sequence encoders
+and supported sequence encoders
 additionally poll at their retained-frame, coalescing/page, and finalization
 checkpoints. A structural sink cancellation may leave the already-written
 prefix because no rollback contract exists. A sink flush/finalization failure
@@ -1736,8 +1751,8 @@ input offset and container identity are `None` because the failure is on the
 destination side. This boundary defines one post-delivery `OutputSink::flush`
 call; a flush failure is also `ImageError::OutputWrite` and may follow a
 complete prefix. The Rust-only partial-write contract additionally proves that
-every available still codec and each supported multi-frame GIF/TIFF/WebP/native-
-AVIF sequence writer may reject after accepting a partial structural prefix: the
+every available still codec and each supported multi-frame GIF/TIFF/WebP
+sequence writer may reject after accepting a partial structural prefix: the
 delivered prefix remains observable, the error stage is `StillEncode` or
 `SequenceEncode`, and `flush` is not called. Test revision
 `d5f7e416b30862819dbddb38f8b6027cc4219076` reinforces the same boundary in the
@@ -1895,7 +1910,7 @@ either representation.
 | `tiff` | Rust still/multipage decode and encode | Build-verified Rust path |
 | `webp` | Rust still/sequence decode and still/keyframe-sequence encode | Build-verified Rust path |
 | `ico` | Rust inspect/decode and source-sized encode | Build-verified Rust path |
-| `avif` | Fixed native inspect/decode/sequence/encode stack | Portable inspect and a manifest-bounded still-decode subset; sequence decode and encode unsupported |
+| `avif` | Safe Rust inspect and manifest-bounded still-decode subset; sequence/encode gaps are explicit | Same safe Rust contract; no native fallback |
 
 The compatibility guarantee is limited to active manifest cases. Default
 native and WASM builds select the same Rust codec code, but the complete
@@ -1904,7 +1919,7 @@ also executes feature-gate and capability-table evidence on `wasm32-wasip1`
 under Node's WASI preview1; `wasm32-unknown-unknown` remains
 build/rustdoc-verified.
 
-See [AVIF support](avif.md) for the native dependency and portable boundary.
+See [AVIF support](avif.md) for the portable boundary and exact planned gaps.
 
 ## Internal source organization
 
@@ -1918,8 +1933,7 @@ See [AVIF support](avif.md) for the native dependency and portable boundary.
 | `src/codecs/error.rs` | private codec failures and public error translation |
 | `src/codecs/compression/` | DEFLATE/zlib behavior shared by PNG and TIFF |
 | `src/codecs/<format>/` | format-local inspection, decoding, and encoding |
-| `src/codecs/avif/native.rs` | safe ownership model around the opt-in unsafe FFI calls |
-| `src/codecs/avif/native/bridge.c` | narrow libavif C bridge |
+| `src/codecs/avif/` | safe Rust AVIF container, inspection, bounded decode, and planned encode boundaries |
 | `src/codecs/avif/av1/` | portable AV1 parsing, entropy, partition, and reconstruction work |
 
 The folder `src/codecs/webp/native/` is a Rust port organized around upstream
@@ -1930,11 +1944,9 @@ algorithm boundaries. It does not link a native WebP library.
 `bytemuck` is the only Cargo dependency. Default codecs do not link native
 codec libraries.
 
-Crate-wide unsafe Rust is denied. The only module-level exception is
-`src/codecs/avif/native.rs`, which owns the optional libavif handles and
-documents pointer, buffer, and deallocation invariants adjacent to each unsafe
-operation. The separately compiled C bridge is enabled only for native builds
-with the `avif` feature.
+Crate-wide unsafe Rust is denied and there is no AVIF exception. The AVIF
+feature contains only safe Rust; pinned libavif/dav1d/libaom material is used
+for oracle and source provenance, never as a linked runtime library.
 
 ## Resource behavior and current limit
 
@@ -1957,7 +1969,8 @@ return or the first sink write. The current crate should still not be
 described as hardened for arbitrary hostile inputs: whole-buffer encoders and
 PNG's filtered/compressed working state remain infallible allocations, and no
 recoverable out-of-memory contract is promised. Resource limits and this
-remaining gap are tracked in the [canonical roadmap](roadmap-new.md).
+remaining gap is tracked in the canonical [roadmap.json](../roadmap.json),
+with [roadmap-new.md](roadmap-new.md) as its human rendering.
 
 ## Retained and removed scope
 
@@ -1967,7 +1980,7 @@ Retained by design:
 - source-derived codec implementations with complete provenance;
 - private coverage hooks for defensive states no valid fixture can reach;
 - explicit target formats for encoding; and
-- the fixed native AVIF path until portable parity replaces it.
+- the bounded safe-Rust AVIF still path and explicit planned gaps.
 
 Removed from earlier iterations:
 

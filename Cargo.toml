@@ -2,7 +2,7 @@
 name = "image-slash-star"
 version = "0.1.0"
 edition = "2024"
-description = "Bit-exact image codecs with Rust defaults and optional native AVIF"
+description = "Bit-exact image codecs with Rust defaults and a portable Rust AVIF subset"
 authors = ["Appunni M"]
 license = "(MIT OR Apache-2.0) AND BSD-2-Clause AND BSD-3-Clause AND Zlib AND IJG AND MIT-CMU"
 repository = "https://github.com/appunni-m/image-slash-star"
@@ -14,9 +14,6 @@ categories = ["multimedia::images", "encoding", "wasm"]
 include = [
     "/src/**/*",
     "/third_party/**/*",
-    "/build.rs",
-    "/build_tool.rs",
-    "/tests/build_script_tests.rs",
     "/CHANGELOG.md",
     "/CODE_OF_CONDUCT.md",
     "/CONTRIBUTING.md",
@@ -24,12 +21,13 @@ include = [
     "/SECURITY.md",
     "/SUPPORT.md",
     "/docs/*.md",
+    "/examples/package_smoke.rs",
     "/LICENSE-APACHE",
     "/LICENSE-MIT",
     "/NOTICE.md",
     "/PATENTS",
     "/README.md",
-    "/scripts/build_avif_stack.sh",
+    "/roadmap.json",
     "/scripts/verify_third_party_licenses.py",
 ]
 
@@ -54,10 +52,6 @@ path = "tests/capability_table.rs"
 [[test]]
 name = "determinism_tests"
 path = "tests/determinism_tests.rs"
-
-[[test]]
-name = "build_script_tests"
-path = "tests/build_script_tests.rs"
 
 [dependencies]
 bytemuck = "1"

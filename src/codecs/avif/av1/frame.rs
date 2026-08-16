@@ -357,7 +357,12 @@ pub(super) struct FrameState {
     pending: Option<FrameHeader>,
     next_tile: u32,
     current_frame_id: Option<u32>,
+    frame_dimensions: Option<(u32, u32)>,
+    multi_tile: bool,
     first_leaf: Option<super::block::FirstLeaf>,
+    complete_color_leaf: Option<super::block::FirstLeaf>,
+    complete_color_tiles: Vec<ReconstructedColorTile>,
+    complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
 }
 
 impl FrameState {
@@ -368,7 +373,12 @@ impl FrameState {
             pending: None,
             next_tile: 0,
             current_frame_id: None,
+            frame_dimensions: None,
+            multi_tile: false,
             first_leaf: None,
+            complete_color_leaf: None,
+            complete_color_tiles: Vec::new(),
+            complete_monochrome_plane: None,
         }
     }
 
@@ -405,6 +415,22 @@ impl FrameState {
 
     pub(super) fn first_leaf(&self) -> Option<&super::block::FirstLeaf> {
         self.first_leaf.as_ref()
+    }
+
+    pub(super) fn complete_color_leaf(&self) -> Option<&super::block::FirstLeaf> {
+        self.complete_color_leaf.as_ref()
+    }
+
+    pub(super) const fn frame_dimensions(&self) -> Option<(u32, u32)> {
+        self.frame_dimensions
+    }
+
+    pub(super) const fn has_multiple_tiles(&self) -> bool {
+        self.multi_tile
+    }
+
+    pub(super) fn complete_monochrome_plane(&self) -> Option<&super::block::ReconstructedPlane> {
+        self.complete_monochrome_plane.as_ref()
     }
 
     pub(super) fn frame_obu(
@@ -514,8 +540,13 @@ impl FrameState {
             self.invalidate_old_references(header.frame_id);
             self.current_frame_id = Some(header.frame_id);
         }
+        self.frame_dimensions = Some((header.frame_width, header.frame_height));
         self.pending = Some(header);
         self.next_tile = 0;
+        self.first_leaf = None;
+        self.complete_color_leaf = None;
+        self.complete_color_tiles.clear();
+        self.complete_monochrome_plane = None;
         Ok(())
     }
 
@@ -613,12 +644,15 @@ impl FrameState {
             end,
             tiling.tile_size_bytes,
         )?;
-        let first_leaf =
+        let validation =
             validate_tile_entropy_prefixes(data, &tile_ranges, start, header, sequence, tiling)?;
         Ok(TileGroup {
             start,
             end,
-            first_leaf,
+            first_leaf: validation.first_leaf,
+            complete_color_leaf: validation.complete_color_leaf,
+            complete_color_tiles: validation.complete_color_tiles,
+            complete_monochrome_plane: validation.complete_monochrome_plane,
         })
     }
 
@@ -630,14 +664,34 @@ impl FrameState {
         if group.start != self.next_tile {
             return Err(malformed("frame syntax validation failed"));
         }
-        self.next_tile = group.end.saturating_add(1);
-        self.first_leaf = self.first_leaf.take().or(group.first_leaf);
         let tile_count = header
             .tiling
             .as_ref()
             .ok_or(malformed("pending frame has no tile layout"))?
             .tile_count();
+        self.multi_tile |= tile_count > 1;
+        self.next_tile = group.end.saturating_add(1);
+        self.first_leaf = self.first_leaf.take().or(group.first_leaf);
+        self.complete_color_leaf = self
+            .complete_color_leaf
+            .take()
+            .or(group.complete_color_leaf);
+        self.complete_color_tiles.extend(group.complete_color_tiles);
+        self.complete_monochrome_plane = self
+            .complete_monochrome_plane
+            .take()
+            .or(group.complete_monochrome_plane);
         if self.next_tile == tile_count {
+            if tile_count > 1
+                && self.complete_color_tiles.len() == usize::try_from(tile_count).unwrap_or(0)
+            {
+                let sequence = self
+                    .sequence
+                    .as_ref()
+                    .ok_or(malformed("assembled tile frame has no sequence"))?;
+                self.complete_color_leaf =
+                    assemble_color_tiles(&self.complete_color_tiles, header, sequence)?;
+            }
             // `header` was borrowed from `pending` above, so the value cannot
             // disappear before this synchronous completion step.
             let completed = header.clone();
@@ -649,6 +703,7 @@ impl FrameState {
                 }
             }
             self.next_tile = 0;
+            self.complete_color_tiles.clear();
         }
         Ok(())
     }
@@ -658,6 +713,192 @@ struct TileGroup {
     start: u32,
     end: u32,
     first_leaf: Option<super::block::FirstLeaf>,
+    complete_color_leaf: Option<super::block::FirstLeaf>,
+    complete_color_tiles: Vec<ReconstructedColorTile>,
+    complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+}
+
+struct TileValidation {
+    first_leaf: Option<super::block::FirstLeaf>,
+    complete_color_leaf: Option<super::block::FirstLeaf>,
+    complete_color_tiles: Vec<ReconstructedColorTile>,
+    complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+}
+
+struct ReconstructedColorTile {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    reconstruction: entropy::Lossy420Reconstruction,
+}
+
+fn assemble_color_tiles(
+    tiles: &[ReconstructedColorTile],
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+) -> Av1Result<Option<super::block::FirstLeaf>> {
+    if tiles.is_empty() {
+        return Ok(None);
+    }
+    let frame_width = usize::try_from(header.frame_width)
+        .map_err(|_| malformed("assembled frame width exceeds usize"))?;
+    let frame_height = usize::try_from(header.frame_height)
+        .map_err(|_| malformed("assembled frame height exceeds usize"))?;
+    let active_width = frame_width.div_ceil(8);
+    let active_height = frame_height.div_ceil(8);
+    let region_width = frame_width.div_ceil(64);
+    let region_height = frame_height.div_ceil(64);
+    let mut canvas = super::raster::FrameCanvas::new(
+        header.frame_width,
+        header.frame_height,
+        sequence.subsampling_x,
+        sequence.subsampling_y,
+    )?;
+    let mut filter_blocks = Vec::new();
+    let mut cdef_indices = vec![None; region_width.saturating_mul(region_height)];
+    let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
+    let mut loop_parameters: Option<super::filter::Parameters> = None;
+    let mut cdef_parameters: Option<super::cdef::FrameParameters> = None;
+    for tile in tiles {
+        let tile_x = usize::try_from(tile.x)
+            .map_err(|_| malformed("assembled tile x origin exceeds usize"))?;
+        let tile_y = usize::try_from(tile.y)
+            .map_err(|_| malformed("assembled tile y origin exceeds usize"))?;
+        let tile_width = usize::try_from(tile.width)
+            .map_err(|_| malformed("assembled tile width exceeds usize"))?;
+        let tile_height = usize::try_from(tile.height)
+            .map_err(|_| malformed("assembled tile height exceeds usize"))?;
+        if loop_parameters.is_none() {
+            loop_parameters = tile.reconstruction.loop_parameters;
+        }
+        if cdef_parameters.is_none() {
+            cdef_parameters = tile.reconstruction.cdef_parameters;
+        }
+        canvas.place_planes(
+            tile.width,
+            tile.height,
+            &tile.reconstruction.leaf.planes,
+            tile.x,
+            tile.y,
+        )?;
+
+        for block in &tile.reconstruction.filter_blocks {
+            filter_blocks.push(super::filter::Block {
+                x: tile_x
+                    .checked_add(block.x)
+                    .ok_or_else(|| malformed("assembled loop-filter x overflows"))?,
+                y: tile_y
+                    .checked_add(block.y)
+                    .ok_or_else(|| malformed("assembled loop-filter y overflows"))?,
+                ..*block
+            });
+        }
+
+        let local_active_width = tile_width.div_ceil(8);
+        let local_active_height = tile_height.div_ceil(8);
+        if tile.reconstruction.cdef_active.len()
+            != local_active_width.saturating_mul(local_active_height)
+        {
+            return Err(malformed("tile CDEF active map has an invalid extent"));
+        }
+        for local_y in 0..local_active_height {
+            for local_x in 0..local_active_width {
+                let local_index = local_y
+                    .checked_mul(local_active_width)
+                    .and_then(|row| row.checked_add(local_x))
+                    .ok_or_else(|| malformed("tile CDEF active index overflows"))?;
+                if !tile.reconstruction.cdef_active[local_index] {
+                    continue;
+                }
+                let x = tile_x
+                    .checked_add(local_x.saturating_mul(8))
+                    .ok_or_else(|| malformed("assembled CDEF x overflows"))?;
+                let y = tile_y
+                    .checked_add(local_y.saturating_mul(8))
+                    .ok_or_else(|| malformed("assembled CDEF y overflows"))?;
+                if x >= frame_width || y >= frame_height {
+                    continue;
+                }
+                let global_index = (y / 8)
+                    .checked_mul(active_width)
+                    .and_then(|row| row.checked_add(x / 8))
+                    .ok_or_else(|| malformed("assembled CDEF active index overflows"))?;
+                let Some(slot) = cdef_active.get_mut(global_index) else {
+                    return Err(malformed("assembled CDEF active index exceeds frame"));
+                };
+                *slot = true;
+            }
+        }
+
+        let local_region_width = tile_width.div_ceil(64);
+        let local_region_height = tile_height.div_ceil(64);
+        if tile.reconstruction.cdef_indices.len()
+            != local_region_width.saturating_mul(local_region_height)
+        {
+            return Err(malformed("tile CDEF index map has an invalid extent"));
+        }
+        for local_y in 0..local_region_height {
+            for local_x in 0..local_region_width {
+                let local_index = local_y
+                    .checked_mul(local_region_width)
+                    .and_then(|row| row.checked_add(local_x))
+                    .ok_or_else(|| malformed("tile CDEF index overflows"))?;
+                let Some(cdef_index) = tile.reconstruction.cdef_indices[local_index] else {
+                    continue;
+                };
+                let x = tile_x
+                    .checked_add(local_x.saturating_mul(64))
+                    .ok_or_else(|| malformed("assembled CDEF region x overflows"))?;
+                let y = tile_y
+                    .checked_add(local_y.saturating_mul(64))
+                    .ok_or_else(|| malformed("assembled CDEF region y overflows"))?;
+                if x >= frame_width || y >= frame_height {
+                    continue;
+                }
+                let global_index = (y / 64)
+                    .checked_mul(region_width)
+                    .and_then(|row| row.checked_add(x / 64))
+                    .ok_or_else(|| malformed("assembled CDEF region index overflows"))?;
+                let Some(slot) = cdef_indices.get_mut(global_index) else {
+                    return Err(malformed("assembled CDEF region exceeds frame"));
+                };
+                if let Some(existing) = *slot {
+                    if existing != cdef_index {
+                        return Err(malformed("assembled CDEF regions disagree"));
+                    }
+                } else {
+                    *slot = Some(cdef_index);
+                }
+            }
+        }
+    }
+    let planes = canvas.finish_with_filters(
+        loop_parameters,
+        &filter_blocks,
+        None,
+        None,
+        cdef_parameters,
+        &cdef_indices,
+        &cdef_active,
+    )?;
+    Ok(Some(super::block::FirstLeaf {
+        width: header.frame_width,
+        height: header.frame_height,
+        planes,
+        luma_predictor: super::block::LumaPredictor::Dc,
+        luma_context: 0x40,
+        chroma_contexts: [0x40; 2],
+        chroma_right_contexts: [[0x40; 8]; 2],
+        chroma_bottom_contexts: [[0x40; 8]; 2],
+        tx_context_width: 0,
+        tx_context_height: 0,
+        luma_transform_split: false,
+        luma_right_contexts: [0x40; 8],
+        luma_bottom_contexts: [0x40; 8],
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
+    }))
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:3149-3181 and libaom 3.13.2
@@ -730,7 +971,7 @@ fn validate_tile_entropy_prefixes(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     tiling: &Tiling,
-) -> Av1Result<Option<super::block::FirstLeaf>> {
+) -> Av1Result<TileValidation> {
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
     // sequence/frame headers, so these private unit conversions are total.
@@ -781,6 +1022,12 @@ fn validate_tile_entropy_prefixes(
             bits: cdef.bits,
             y_strength_count: cdef.y_strengths.len(),
             uv_strength_count: cdef.uv_strengths.len(),
+            y_strengths: std::array::from_fn(|index| {
+                cdef.y_strengths.get(index).copied().unwrap_or(0)
+            }),
+            uv_strengths: std::array::from_fn(|index| {
+                cdef.uv_strengths.get(index).copied().unwrap_or(0)
+            }),
             first_y_strength: cdef.y_strengths.first().copied(),
             first_uv_strength: cdef.uv_strengths.first().copied(),
         }),
@@ -791,7 +1038,13 @@ fn validate_tile_entropy_prefixes(
     };
 
     let mut first_leaf = None;
+    let mut complete_color_leaf = None;
+    let mut complete_color_tiles = Vec::new();
+    let mut complete_monochrome_plane = None;
     for (range_index, range) in ranges.iter().enumerate() {
+        if range.is_empty() {
+            return Err(malformed("tile payload is empty"));
+        }
         if header.primary_ref_frame != PRIMARY_REF_NONE {
             // Inter tiles inherit CDF state from their primary reference.
             // Their first syntax symbol cannot be checked until that retained
@@ -845,12 +1098,80 @@ fn validate_tile_entropy_prefixes(
             allow_intrabc: header.allow_intrabc,
             allow_screen_content_tools: header.allow_screen_content_tools,
             enable_filter_intra: sequence.enable_filter_intra,
+            enable_intra_edge_filter: sequence.enable_intra_edge_filter,
             frame_tools,
         };
         let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
         first_leaf = first_leaf.or(reconstructed);
+        let next_column = column.saturating_add(1) as usize;
+        let next_row = row.saturating_add(1) as usize;
+        let tile_block_end_x = tiling
+            .column_starts
+            .get(next_column)
+            .copied()
+            .ok_or(malformed("frame syntax validation failed"))?
+            .wrapping_shl(block_shift)
+            .min(block_width);
+        let tile_block_end_y = tiling
+            .row_starts
+            .get(next_row)
+            .copied()
+            .ok_or(malformed("frame syntax validation failed"))?
+            .wrapping_shl(block_shift)
+            .min(block_height);
+        let tile_block_width = tile_block_end_x.saturating_sub(block_x);
+        let tile_block_height = tile_block_end_y.saturating_sub(block_y);
+        let tile_origin_x = block_x.wrapping_mul(4);
+        let tile_origin_y = block_y.wrapping_mul(4);
+        // Tile boundaries are coded-superblock boundaries, so the final tile
+        // can extend beyond a cropped visible frame. Keep reconstruction's
+        // local canvas visible rather than handing the padded extent to the
+        // block walker (a 4x4 image otherwise masquerades as a 64x64 tile).
+        let tile_width = header
+            .frame_width
+            .saturating_sub(tile_origin_x)
+            .min(tile_block_width.wrapping_mul(4));
+        let tile_height = header
+            .frame_height
+            .saturating_sub(tile_origin_y)
+            .min(tile_block_height.wrapping_mul(4));
+        let mut tile_context = context;
+        tile_context.block_width = tile_block_width;
+        tile_context.block_height = tile_block_height;
+        tile_context.block_x = 0;
+        tile_context.block_y = 0;
+        tile_context.frame_width = tile_width;
+        tile_context.frame_height = tile_height;
+        tile_context.upscaled_width = tile_width;
+        let complete =
+            entropy::validate_complete_lossy_420_partition(data, range.clone(), &tile_context)?;
+        if let Some(reconstruction) = complete {
+            if tiling.tile_count() == 1 && ranges.len() == 1 {
+                complete_color_leaf = Some(reconstruction.into_filtered_leaf()?);
+            } else {
+                complete_color_tiles.push(ReconstructedColorTile {
+                    x: tile_origin_x,
+                    y: tile_origin_y,
+                    width: tile_width,
+                    height: tile_height,
+                    reconstruction,
+                });
+            }
+        }
+        if tiling.tile_count() == 1 && ranges.len() == 1 {
+            complete_monochrome_plane = entropy::validate_complete_monochrome_partition(
+                data,
+                range.clone(),
+                &tile_context,
+            )?;
+        }
     }
-    Ok(first_leaf)
+    Ok(TileValidation {
+        first_leaf,
+        complete_color_leaf,
+        complete_color_tiles,
+        complete_monochrome_plane,
+    })
 }
 
 // ✅ VERIFIED: AV1 specification section 5.9; dav1d 1.5.3
@@ -2201,6 +2522,9 @@ fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
         start,
         end,
         first_leaf: None,
+        complete_color_leaf: None,
+        complete_color_tiles: Vec::new(),
+        complete_monochrome_plane: None,
     }
 }
 
@@ -2840,7 +3164,11 @@ fn coverage_state_paths() {
         split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, true),
         Ok(())
     );
-    assert_eq!(split.tile_group_obu(&header_data, 0, 0), Ok(()));
+    assert!(matches!(
+        split.tile_group_obu(&header_data, 0, 0),
+        Err(crate::codecs::CodecError::Malformed(message))
+            if message.contains("tile payload is empty")
+    ));
 
     let mut illegal_show = FrameState::new();
     illegal_show.accept_sequence(coverage_sequence()).unwrap();

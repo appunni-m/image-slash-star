@@ -132,6 +132,17 @@ separate non-portable control.
 | `portable_lossy_420_q99_eob_bin_control.avif` | gray-126 AV1 item offset 24, `0x72` to `0x73` | `0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea` |
 | `portable_lossy_420_q99_eob_base_control.avif` | gray-126 AV1 item offset 25, `0xe1` to `0x1e` | `ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5` |
 
+These three legal lossy controls exercise the first non-DC 8×8 coefficient
+classes admitted by the safe Rust decoder. They are deliberately different
+from the rejected byte mutations above: each has an independent Pillow pixel
+oracle and remains a normal active matrix row.
+
+| Fixture | Source pattern | SHA-256 |
+| --- | --- | --- |
+| `portable_lossy_420_q99_rampx_eob5.avif` | 4×4 luma ramp, `96 + 8*x`, EOB-bin five | `24ad87c6b33fc5178d3ff662bcb84d5893dfef0fd46ed738d59663153a866262` |
+| `portable_lossy_420_q99_rampy_eob6.avif` | 4×4 luma ramp, `96 + 8*y`, EOB-bin six | `581705cc684dc5154896387dd9bbaac6b3c407af3ad46bf21ae505196a23c73c` |
+| `portable_lossy_420_q99_8x8_diag_eob6.avif` | 8×8 diagonal impulse, `129` on the diagonal and `127` elsewhere, EOB-bin six | `006c41743bcf6b1990981cabc01f301b97ea8424c13e6c9e837375ab2792eb3c` |
+
 The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
 and Pillow RGB hashes are pinned in `docs/avif.md` and
 `tests/fixtures/outputs/av1_reconstruction.json`.

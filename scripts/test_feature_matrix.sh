@@ -28,7 +28,7 @@ matrix_target_root=${MATRIX_TARGET_ROOT:-${CARGO_TARGET_DIR:-target}/feature-mat
 # the fast warm path.
 matrix_source_signature() {
     matrix_source_files=$(git ls-files --cached --others --exclude-standard -- \
-        Cargo.lock Cargo.toml build.rs src tests \
+        Cargo.lock Cargo.toml src tests \
         scripts/test_feature_matrix.sh scripts/wasm_test_runner.js 2>/dev/null) || return 1
     if [ -z "$matrix_source_files" ]; then
         return 1
@@ -38,12 +38,18 @@ matrix_source_signature() {
     # signature itself a measurable part of every warm matrix invocation.
     # `git ls-files` emits paths in stable order; retain the path names in
     # cksum's output so additions, removals, and content changes all alter the
-    # marker. Missing paths remain represented by the changed output even
-    # though cksum reports their read error.
-    git ls-files --cached --others --exclude-standard -z -- \
-        Cargo.lock Cargo.toml build.rs src tests \
+    # marker. A deleted tracked path is intentionally omitted from the checksum
+    # input: its disappearance still changes the aggregate path/content list,
+    # while avoiding noisy checksum errors during native-to-Rust cutovers.
+    git ls-files --cached --others --exclude-standard -- \
+        Cargo.lock Cargo.toml src tests \
         scripts/test_feature_matrix.sh scripts/wasm_test_runner.js 2>/dev/null |
-        xargs -0 -n 200 cksum |
+        while IFS= read -r path; do
+            if [ -f "$path" ]; then
+                printf '%s\n' "$path"
+            fi
+        done |
+        xargs -n 200 cksum |
         cksum
 }
 

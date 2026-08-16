@@ -441,6 +441,7 @@ impl DecodePolicy {
             || self.limits.max_pixels.is_some()
             || self.limits.max_primary_decoded_bytes.is_some()
             || self.limits.max_frames.is_some()
+            || self.limits.max_frame_decoded_bytes.is_some()
             || self.limits.max_sequence_decoded_bytes.is_some()
     }
 
@@ -578,10 +579,13 @@ fn check_limit(
 pub(crate) struct SequenceDecodeBudget {
     format: ImageFormat,
     #[cfg_attr(
-        all(
-            not(any(feature = "gif", feature = "png", feature = "webp", feature = "tiff")),
-            any(not(feature = "avif"), target_arch = "wasm32")
-        ),
+        not(any(
+            feature = "gif",
+            feature = "png",
+            feature = "webp",
+            feature = "tiff",
+            feature = "avif"
+        )),
         allow(dead_code)
     )]
     max_frame_bytes: Option<u64>,
@@ -591,7 +595,11 @@ pub(crate) struct SequenceDecodeBudget {
 
 impl SequenceDecodeBudget {
     /// Create the unlimited budget used by convenience and still paths.
-    #[cfg(any(feature = "gif", coverage))]
+    #[cfg(any(feature = "gif", feature = "avif", coverage))]
+    #[cfg_attr(
+        all(feature = "avif", not(feature = "gif"), not(coverage)),
+        allow(dead_code)
+    )]
     pub(crate) fn default_for(format: ImageFormat) -> Self {
         Self {
             format,
@@ -629,10 +637,7 @@ impl SequenceDecodeBudget {
 
     /// Reserve one later frame's decoded byte length before its pixel work.
     #[cfg_attr(
-        all(
-            not(any(feature = "gif", feature = "png", feature = "webp", feature = "tiff")),
-            any(not(feature = "avif"), target_arch = "wasm32")
-        ),
+        not(any(feature = "gif", feature = "png", feature = "webp", feature = "tiff")),
         allow(dead_code)
     )]
     pub(crate) fn reserve_later_frame(

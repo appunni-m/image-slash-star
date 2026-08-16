@@ -29,6 +29,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -79,6 +81,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -104,6 +108,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -154,6 +160,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -179,6 +187,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4d319cc51aee3d79d5fb8a7c1fba1b42b42303ffa8baef1f7a1511fa4ec031ee",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -229,6 +239,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -254,6 +266,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "640d19800ff27dbd1cd28e881736e923a48eb46e8223bed9d52bfb624b85e6a7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -304,6 +318,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -329,6 +345,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "bd6427ce4848cb4d65f83b1621ffda46a4614e6a8b316998b69234298077ffba",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -379,6 +397,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -404,6 +424,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "21d453da436be1bbb47238e35d919499c7814a2a8073550b9ae958cafe78d15e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -454,6 +476,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -479,6 +503,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "311de615cc4f0f7cbd9f6c136170c383f5263659c07dcaa8fabb1877f87f415e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -529,6 +555,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -554,6 +582,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f82b264295ffb7ea9e357a352e674200ed89138a182b0de7c4002fbc55fade4d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -604,6 +634,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -629,6 +661,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "90d415cfd1292d211e6b3874837853f8a7690f27de93c28a133e18f4af986ad1",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -679,6 +713,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -704,6 +740,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c232a943aef1ec71422567e9c00a137a70576c63a383621a4417a9637ee08732",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -754,6 +792,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -779,6 +819,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "947d6326cc09f88e50e0aba60d9cb468970d793ac323003a5d2452934998dcf1",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -829,6 +871,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -854,6 +898,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "79e3d72995eb382d5462e4309fec24e37111cd039a10bc9b28bd370b9b26fa64",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -904,6 +950,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -929,6 +977,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ca48aaddde1310eecde25c24c24314089a5e62164c8dbd36b0c64b2ef9812507",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -979,6 +1029,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1004,6 +1056,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "cf98497c2b678d67bbb9327f7816b9ef9d3d186ffee51b24ee10ec50e8e8d776",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1054,6 +1108,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1079,6 +1135,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "a579a6a3f85a4b5574d237c3c06f1cff79404bb565ece13e099c3611bac7b39f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1129,6 +1187,245 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "portable_lossy_420_q99_rampx_eob5",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "24ad87c6b33fc5178d3ff662bcb84d5893dfef0fd46ed738d59663153a866262",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_rampx_eob5_avif.bin",
+      "ref_bytes": 48,
+      "ref_sha256": "621b8705a59b3237ee3eb923c3be4ea549a6ddef32a3f21b3acfc06f0cc924fe",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "portable_lossy_420_q99_rampy_eob6",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "581705cc684dc5154896387dd9bbaac6b3c407af3ad46bf21ae505196a23c73c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_rampy_eob6_avif.bin",
+      "ref_bytes": 48,
+      "ref_sha256": "b9abca023ba91d066e136ac90331b3d1039152b285af07f8de06143a7b97d060",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        4
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "portable_lossy_420_q99_8x8_diag_eob6",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "006c41743bcf6b1990981cabc01f301b97ea8424c13e6c9e837375ab2792eb3c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossy_420_q99_8x8_diag_eob6_avif.bin",
+      "ref_bytes": 192,
+      "ref_sha256": "e501f6dd39df38bcfb30e4b9cdd49d155dd51b53b248e34fe3d1c03acd6a0045",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        8,
+        8
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1154,6 +1451,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1204,6 +1503,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1229,6 +1530,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "75df02eb1a44eb478b17910a79179dcc563a4b1b72db2b6b25d229ba377320eb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1279,6 +1582,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1304,6 +1609,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6f4d9be7282279fdaaf38c1a464c49e44fb1373be0cfb83bb632f85167d1022e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1354,6 +1661,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1379,6 +1688,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "350a8eca70ae23d2e4981c3a4f0e31c5edf060e6da940c56750fa5b4dbed3ff8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1429,6 +1740,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1454,6 +1767,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "17c312d10c6cd7ecd6a1bf1fb6b1bfff07aa970ff2ff3e722f2dd984c714a80a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1504,6 +1819,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1529,6 +1846,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "7163cc6aee6597f1792a6b963fb2777758fdbe7096bcfe5712df0e150f5c4d49",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1579,6 +1898,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1604,6 +1925,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1e0f1f2ae4da78ca2cee5af734916106bb822d2d780f44111f257beed7c05890",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1654,6 +1977,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1679,6 +2004,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "842883fdf557bb56f02454da1f5e5fe91a87f4afa21b87ba4155abd51396687f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1729,6 +2056,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1754,6 +2083,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f2c1d46376a93d91baa784dfd69615bb1d334471ac997515612366085e2cb781",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1804,6 +2135,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1829,6 +2162,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4d1fc957ddb0e368fe179d7f93c8d64afb01bb24f3b876bd6c8cc7d2b337c033",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1879,6 +2214,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1904,6 +2241,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "43e09f9447cb94aaa979956887dad091ec1f630f6dab5e33eb68dfbc989537fa",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -1954,6 +2293,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1979,6 +2320,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "70b97a8ecfdca48dadf67624fe03db3fa4672dfd921f11f7da1396c393c0b7be",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2029,6 +2372,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2054,6 +2399,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "9c89f8ca4506897154f40d89c62cd7beb5b810f2d70b0381c419142f19a7f02f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2104,6 +2451,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2129,6 +2478,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ff49a749f44a139b697671a2c21032ff0a3298a0fb749ed7d9a7c193fbbeacfb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2179,6 +2530,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2204,6 +2557,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f238b91f4c6b225691933fc5a46a1c2b42dd2460bdc3567a92dcd907fb8ac7bb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2254,6 +2609,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2279,6 +2636,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "98ee27816a74ee14b345e4a3c39856a328f18d77c7bbba95e40630b335bf44dd",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2329,6 +2688,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2354,6 +2715,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "adeca8ec9e6cbe47fc2a7a046d631be33772e385f868d7d943d99175e6535c32",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2404,6 +2767,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2429,6 +2794,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "536cd711fe24a5c63489ecefc3f53d3a732aa606ebb3cb94a00789a5b4d9798d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2479,6 +2846,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2504,6 +2873,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6abbf10ccf33392f217a6db1e1b9a66cd6b0cea9e95d06845252a0389beaa029",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2554,6 +2925,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2579,6 +2952,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "88a3a51f1107ca20a77bd70db89891e9431dd932914a2e4494d017e11018ca68",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2629,6 +3004,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2654,6 +3031,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "65fe71943e62a346b20249a420f323dab9601ba99cbb5bf9782074d0d16a6331",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2704,6 +3083,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2729,6 +3110,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "8b517a977c091cbe56ec1997907c27706ba9bdd6c660e646d49df8a6dd16677f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2779,6 +3162,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2804,6 +3189,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5edccf35d44da2f17d41b106681b7535f264863d44e26c0c1e16d1a67bd6e8f9",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2854,6 +3241,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2879,6 +3268,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "e1c3b423417b18795071054196ce1f95e6cf19a841a632c616ab3a96969d6e3f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -2929,6 +3320,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2954,6 +3347,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "cf7660907939a12972c8ba2def48cb0b8b6014cc24bd75ab82cd0ffe1162f6c5",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3004,6 +3399,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3029,6 +3426,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1097067dca85e499768a40e15232dce3602afbb1cabcbf485e8a14bf83e9bb73",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3079,6 +3478,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3104,6 +3505,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "bc97b1f2ca96f6072239101e096e1b18fe87cb6ecf13b48188b37b52a50d761e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3154,6 +3557,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3179,6 +3584,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "0153d56609f86e637159836af94d103523853c9002c92dc7411925d97a919250",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3229,6 +3636,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3254,6 +3663,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "503ca52689395ec769b5453f7a30b4340f4234132338b1dd16e6a945ab34c37a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3304,6 +3715,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3329,6 +3742,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "15822dfb32fea6432adf1c7ddb9ea648dd6d2e028b12c9f117c6031420760367",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3379,6 +3794,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3404,6 +3821,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d492c364655cad1f950bd37fbf63b1b9eecc42dff0bae3f95d2d15d8f0f86f63",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3454,172 +3873,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "portable_lossy_420_q99_eob_bin_control",
-      "status": "error",
-      "error_type": "builtins.RuntimeError",
-      "error_message": "Failed to decode frame 0: Decoding of color planes failed",
-      "error_kind": "malformed",
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.RuntimeError",
-          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
-          "rust_kind": "malformed",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.RuntimeError",
-          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
-          "rust_kind": "malformed",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_sha256": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "ref_frame_count": null,
-      "ref_is_animated": null,
-      "inspect_palette": null,
-      "decoded_palette": null,
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "portable_lossy_420_q99_eob_base_control",
-      "status": "error",
-      "error_type": "builtins.RuntimeError",
-      "error_message": "Failed to decode frame 0: Decoding of color planes failed",
-      "error_kind": "malformed",
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.RuntimeError",
-          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
-          "rust_kind": "malformed",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.RuntimeError",
-          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
-          "rust_kind": "malformed",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_sha256": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "ref_frame_count": null,
-      "ref_is_animated": null,
-      "inspect_palette": null,
-      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3645,6 +3900,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "31aae6e6395da7d749786b00c339ace12d29af7acbfa7d9710bca10d9d92346e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3695,6 +3952,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3720,6 +3979,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "7108ddc6197b99e99d89f1327108cf070ff051d32cac02b82eae1531feb0daf7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3770,6 +4031,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3795,6 +4058,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d8bf37e044015315531fa44a412619bba0eede149b2caae9baeae3e0175d9b3f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3845,6 +4110,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3870,6 +4137,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "bf3bc36ebd94d157ea028e41d12077ffec574d5b9ca6e115b3947a55f81f7580",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3920,6 +4189,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3945,6 +4216,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b58a1b66e5dcd33c1686f072634c0e5f0662eb67dd0a8e3833303d4d7ad57808",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -3995,6 +4268,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4020,6 +4295,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ae83d9122ffad59a687f03e74e4dd2d78a08b6a5693cae0e67e299545584fe2b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4070,6 +4347,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4095,6 +4374,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1020c7340e5d9079777e7522229f30b1058817138acefc83330ad3e22c6a9010",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4145,6 +4426,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4170,6 +4453,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "8f5adda734549c4e0f7b88055f3819c553cb62f4ce902c5bb4e4a952cdf1f2d4",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4220,6 +4505,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4245,6 +4532,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ad7c2d567edfa34b7988a64a18b19efe129c4f19ae67ab0265d58fecb654a10c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4295,6 +4584,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4320,6 +4611,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "076d56c74ee714f01d26d21177c95c88be85157ad0a5d612ab94c3365f3a8520",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4370,6 +4663,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4395,6 +4690,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5fadea5fcf4a48c7b77ea0a89761263516a6fde5472f1ab1b42d85e4a8bc1782",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4445,6 +4742,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4470,6 +4769,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c262f88b8bae4ee384b69c705dfbe42d2dae6601c61b23b1d64b1e59db25be73",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4520,6 +4821,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4545,6 +4848,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "25ab515d0bdde387c97d6bf9b44b33e8327bf8642c4738c3ba424297b5a41ccb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4595,6 +4900,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4620,6 +4927,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "325a6e737bd018076105cd3a22cc48d6b9c1d7b9dc0d9b29d6d749e6295de0b8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4670,6 +4979,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4695,6 +5006,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "633040bba8ebb2c38a0201783869474b2867a79c19759eb70e8930ffb517c2cd",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4745,6 +5058,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4770,6 +5085,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fc8ad1c44445df13afee7f176501fa754b1ea094cef9734ea8258281897b795b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4820,6 +5137,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4845,6 +5164,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "539783b6e6c6ad4b54ef8e0f1f445c5f6e38b82b37529ab88a891c86958d17fd",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4895,6 +5216,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4920,6 +5243,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "995ac2a192f5e08af7535ee8151cb98386e82bb696abd99afd0204665b0b1da0",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -4970,6 +5295,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4995,6 +5322,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d1f328bb548b6d0911ed6c2125fa8d26ed2a72738c081040a9e64990c916adf3",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5045,6 +5374,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5070,6 +5401,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "9b93917ebc8120ce0d3f7ed5c8e9b41f1d5dc4afb248647c694ff1b634d4623b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5120,6 +5453,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5145,6 +5480,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1124115b0edb90a5b751e11b502f07788d03edf0bc3305ca6fb3f1a018ce4f9e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5195,6 +5532,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5220,6 +5559,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "bde1f73324f6b1bd1ec41ed68ecf9a15d0ada9d7e3508ef70e54fe9216ebd73a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5270,6 +5611,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5295,6 +5638,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "9cb30c2c2391c414c5dfef0a0ed27d9409089f88cdd05aad45103e720b6b12f7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5345,6 +5690,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5370,6 +5717,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "7e66769bff63133cbab59a6d93aa143f4d2f0982fa142567dfc4727783c3330a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5420,6 +5769,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5445,6 +5796,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f57c5df28dc28add5b9913c9d3cc0c0aae2e69e0087e7a8614674c8658987875",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5495,6 +5848,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5520,6 +5875,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "40de5aecb3fb4c8b6ad9e242beda63204aae00f6be34694c14554aab91c330f8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5570,6 +5927,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5595,6 +5954,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "26713256cc2769ab320d6017dca8b0f822dbdb03e66351e8ebc37bda64e440dc",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5645,6 +6006,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5670,6 +6033,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "649c4e452a350a51a9230070d768e432ff03bf7b3fb5700a50653f5f2887fc7a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5720,6 +6085,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5745,6 +6112,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b7f758da88a2a9835bcda1a709b1de1ce47e232113d7d67f027ec430bb089714",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5795,6 +6164,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5820,6 +6191,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1b6a333257e226a63b6b33b34da54917a02518cf91864618222f60c160a883b7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5870,6 +6243,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5895,6 +6270,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6a4f26af5a873630c21a85fa1b7a1337026991acac0a305ecd6dd059a84fba63",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -5945,6 +6322,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5970,6 +6349,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "43ab3fc61b01b3b173323da584abe8a07c06eb4fcf4254cf8e04f3333f654237",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6020,6 +6401,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6045,6 +6428,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "cb0b3da2e8a31551ba34dc01d126a69aa9db266f5403a035291df0dac6c6e618",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6095,6 +6480,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6120,6 +6507,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ce82141d38ba572468c4ca15dec6e34f21a95597e58c37ffc48eefd941f9b24d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6170,6 +6559,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6195,6 +6586,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4f4617e81863740af3f2342f115263e403318540e6766832956fd465a95bc832",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6245,6 +6638,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6270,6 +6665,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "0445afe75c7fdf364f93977071cca852eac150689c6cee27caa3756d77349736",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6320,6 +6717,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6345,6 +6744,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1a63667e7dc169346398a887b7e058e35908001823c5e2f88e591b292f9b15e8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6395,6 +6796,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6420,6 +6823,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5bab699fbac28f885286c88d9dfc89c7211851fa508466ad1983400281c3bffe",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6470,6 +6875,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6495,6 +6902,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fbe50a5bede60325dc8d41f980167c44085d6d4a4bcfbd7c8773eb36693aaef8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6545,6 +6954,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6570,6 +6981,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1a42be7e964815aea58848948cf8b79272f48161449319f57d2ad49b928a68e9",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6620,6 +7033,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6645,6 +7060,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "daccd674b98dc26baad851ef95d75e6099c0397db5d8e28fb7f5f1f6eef9ac6c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6695,6 +7112,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6720,6 +7139,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6120db571a64651ce6a3579863b808a9f68d60474235fb80d32c53448990ab0b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6770,6 +7191,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6795,6 +7218,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fd155de27375f8569d97e0e0934d3f287b7ad41a18933dd98b4c9c95647e483a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6845,6 +7270,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6870,6 +7297,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1e9c6b6a39e1fe7b73686fe6d1ac75770abaef9e28b173ec938a1937de02bb78",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6920,6 +7349,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6945,6 +7376,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "04de5e1b6e056c08fdb33131d04dec6708b1ee4912c515fda6d973a29e592381",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -6995,6 +7428,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7020,6 +7455,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "db4305845c2773ff873835b6d401f77635e6f5aafab08204486caf602945fd49",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7070,6 +7507,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7095,6 +7534,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "eca269fc4be5813d9865a0b8c0db9fd652c58474cc583a208e15bcbaab0bd7cf",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7145,6 +7586,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7170,6 +7613,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "543643938a746a7e68daf23c118fab0673dcbc36de80eddf8d1603940814015c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7220,6 +7665,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7245,6 +7692,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b61f62f12306af9744ea06ac8c68bfd86f8b10f27caca820405b295756a3f194",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7295,6 +7744,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7320,6 +7771,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d10972f944777129121ef100ee66903959138ae946295bb5fe271cef8035b258",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7370,6 +7823,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7395,6 +7850,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fbc5e3cec5da21a1c1095ecf82525dac5d6ae60ff4a71b101502392de754cc45",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7445,6 +7902,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7470,6 +7929,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b8b703ee9e1f2d8200fea338ee85f7ada1b905539bb163712209f60d83af0713",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7520,6 +7981,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7545,6 +8008,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "db9102a9b302387df2214814ac2cd02c8414beaf4751f3f374370237a210e9bc",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7595,6 +8060,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7620,6 +8087,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "89842483e159b7d9d98f58282679f9b6d09f4e164576270e9546b13df176c986",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7670,6 +8139,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7695,6 +8166,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "307512d55df127d8546273a57dedd182fbdb5282aa830191f7fe201b8eff419f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7745,6 +8218,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7770,6 +8245,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "90583dd6d88fce42d0cfdb8f9e7217d02d5a711f873955a04526dd99f5886efa",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7820,6 +8297,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7845,6 +8324,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d57ddb0c7dbcdfc63aa77f3bdbd64a793246451528dfec553c0bf800f8137d4b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7895,6 +8376,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7920,6 +8403,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "2cb6cfd94fb6cfaf62375d0c7c9dd51b9193d4b3740b31a62750b14ddc39e072",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -7970,6 +8455,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7995,6 +8482,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "52293589be5deed92756c5e11447b571686381ec3c873dbb9e5a221b91eb820c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8045,6 +8534,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8070,6 +8561,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "3265cf40613523eab69cba5ae73af453f781a29ab3b36f13c21b6720a4d42d7a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8120,6 +8613,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8145,6 +8640,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4a8703a56c56a2d6cbcdbec90e12d266fc28603db1f84e725f7f1a75f504fed7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8195,6 +8692,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8220,6 +8719,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1fcdc276a8521a7d248fa9382aca518c880921615a392d6116e3fff28320032d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8270,6 +8771,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8295,6 +8798,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fe7610630b212d87a5b9b9650fa156be9729e1bd49d8c01df5df416e5e524898",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8345,6 +8850,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8370,6 +8877,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4085fdb230e1bcc93a3a3be408d5fbbf0a5c740590df3983c07b191d3b59ba08",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8420,6 +8929,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8445,6 +8956,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "67e0005a989d761d36df0ddb12e53f1535a6a04e3606b97dfd33829949bc30ca",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8495,6 +9008,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8520,6 +9035,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4597c81363e602580e94625c7a01b029201a533489f404465698a194b9531e31",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8570,6 +9087,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8595,6 +9114,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "3406413b66b7f10d4d760a26b62f5f74c9f13d7a245557b8ba79fd340614b7a4",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8645,6 +9166,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8670,6 +9193,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "eac42af171713fab4c6535de7f3c1874b5c9f14669bcb36b8c5df53b927bfa9f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8720,6 +9245,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8745,6 +9272,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "423d91243ff4e7d42bb9b77cf255dab869e31e3e12a306f139c2c73a3df9a807",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8795,6 +9324,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8820,6 +9351,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5df228fa447ee7f788c5bf486520f1d51ecaff4db147dbc86c7d9a804b40b60a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8870,6 +9403,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8895,6 +9430,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f5873bf081f14f72dad784bf4c2835d42ee4a68482da4f964a0d4ea7902d8a12",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -8945,6 +9482,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8970,6 +9509,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ca46b221a159dc66999b184e1655f696ad4ef05512d200591f9769ef0851424b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9020,6 +9561,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9045,6 +9588,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "0aa4e381b6412dd1ffa92a51e5bd4519ce038261485f59d1decd7ef5777690f8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9095,6 +9640,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9120,6 +9667,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "0a20cbc9fca468a631f0ccee83080296e8ce51813eb97430fc686ccc6700d218",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9170,6 +9719,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9195,6 +9746,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ad3e35211dccfcefeff87fccb96319573a32d92f2d42c7564c39fbc88a9aee9c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9245,6 +9798,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9270,6 +9825,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "a64e56b075bd724e0eeb25f29913010ff9fa3bd89fbfc3ba27eaa121fac0746f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9320,6 +9877,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9345,6 +9904,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d2c62b8197dd5080a461202ff18b4c218e47f436eef05cc9856e6e7c1fec0245",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9395,6 +9956,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9420,6 +9983,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "a5e8c50931fdb5cf94f7d2d1a4edf114f23ea9fc83f782fb24a30f793035b7a0",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9470,6 +10035,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9495,6 +10062,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "0e6cbfb32ea49625e8e43b221cc57f47cacbd9594a79786185b78ea4336253ed",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9545,6 +10114,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9570,6 +10141,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "498c54f6c31f6b2ff0620da37b1e3fdd56760c7951fd1281c7c2baf21ade0bb8",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9620,6 +10193,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9645,6 +10220,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d368148298780e652a20fbbf3a77d671bc72cf67d38f88b91b4a20ff4bcbdc9a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9695,6 +10272,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9720,6 +10299,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b11a0b802bddcb8654978d53395afef62afce9adc571a94f87b820c4f128da7d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9770,6 +10351,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9795,6 +10378,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "003d1203ec343319da24875b1c66d3be4626804300d36cff089f1efeb9145dae",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9845,6 +10430,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9870,6 +10457,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "967f4e6c4d216cea64514c7de72ccb5b81b800ca62f928cb4e043fe06736982f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9920,6 +10509,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9945,6 +10536,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "fe5069db1c23f0335fcc9855de689932e3b1d195e16250f97ea6c07004394954",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -9995,6 +10588,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10020,6 +10615,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "631fe6bf1c2f72cc60acdbb5e682d8195c512f67a5c8f38bd6ae10fdb7a8c59d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10070,6 +10667,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10095,6 +10694,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b2d4d2b81939374c9e11cc4a57b3ec0cc9212e2e1eb8d199c6c411cf41d5360b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10145,6 +10746,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10170,6 +10773,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f0e1f0effed11bfde68129920f87590ee7af0962aca855272cbf1a1c586b9f62",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10220,6 +10825,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10245,6 +10852,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "8050ba2808d418cb39c1462a71d061e261582b2f4dffc255a5cfc65cf26e1fd2",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10295,6 +10904,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10320,6 +10931,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1d6bd1273fb2890b27dd1999e0766220059d99cd3973da859a0d13070b068dc4",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10370,6 +10983,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10395,6 +11010,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5603b8d4ff018f442ca8c2008a5f4d75b1877094f65adc121d8a634059ba359e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10445,6 +11062,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10470,6 +11089,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "065ca6683c44348263bb922862a2dfd459650b2929464acc3e71a56b09cafa85",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10520,6 +11141,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10545,6 +11168,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "3c84461626938d85b0b51798f18666e9476c881d5a0f1289b583cd6ed691a7bf",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10595,6 +11220,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10620,6 +11247,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "1ec10cc4930d5934d77ffda0fceef577daae0c3e003f08ad315b8ada4a9d6f26",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10670,6 +11299,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10695,6 +11326,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "a1ade0b1491bfbb45a220dabe3dd7199df0d7c43d0bac44b538fa88e78e74b3b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10745,6 +11378,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10770,6 +11405,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ed6197a68ca5ce65a447217beddfd5c4ef89e3e370579727f75b364263c5cd56",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10820,6 +11457,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10845,6 +11484,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b46eac4615030f89bf2e9027d3763e7059cf9c80788c4a3e0fd32cbdef85cb8a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10895,6 +11536,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10920,6 +11563,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "d39d76dad2e9a3c939db591ade9c6e655a06d8e6ada0ddc42c49a13089244840",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -10970,6 +11615,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10995,6 +11642,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4c8481a5800bcd2a54314d6fef24544240f601e818396b420495d5d84d623101",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11045,6 +11694,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11070,6 +11721,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "be3773c9d0cc723661c3275d786b4c3e5928bdc5db7cba32c1bf9c063f7885d6",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11120,6 +11773,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11145,6 +11800,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "bb70428bb33c88bb106d407da50bd9358b2ea2db05f00164a3300abe80be9873",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11195,6 +11852,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11220,6 +11879,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "a3949ecc8e13ffdea49ae02e58ef42876db36062b5ee194dac7ec6b0eaba737f",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11270,6 +11931,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11295,6 +11958,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "e329d7d9e35a6674dc8badffd19e2ef6812af3914c9c6701569b16a94a6efba0",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11345,6 +12010,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11370,6 +12037,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "55c0aaab5f00ea3d2c39703d4914c7a5bc1a59e73232c9771be551396fef2ebf",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11420,6 +12089,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11445,6 +12116,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6918691db9f48f4c94cf42b75c61897f17b504043ccab34e25698bb9d971993e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11495,6 +12168,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11520,6 +12195,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c7af47b14d2b54c9a4eae925f77723627f26f79c6e1fdb5012c9e1599ed91f5c",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11570,6 +12247,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11595,6 +12274,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "91125e2b485b356da5284cb4112d57dd5509628137c203406d48c47153a63e13",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11645,6 +12326,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11670,6 +12353,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "691c0a4b301177f935791b4b5cc404f749096536d38128c7ab983e31dae0f65b",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11720,6 +12405,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11745,6 +12432,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "97594ae3755cb1579095ab520fc986fb94d8de1782e67cd73db99ef48ffae9d7",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11795,6 +12484,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11820,6 +12511,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "eb1fcc1d6176aae147183e8d292209c24431f6d45b2a63b5cb8710f9979ec79a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11870,6 +12563,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11895,6 +12590,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6d3be68bfdc174208f172e20bd309b352d9789b704249c34aba11eb96e3f5c31",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -11945,6 +12642,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11970,6 +12669,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "eeebe03575aa80c8be38b65671619d1a81f1be96dfcde917c47a7d602fe5bf51",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12020,6 +12721,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12045,6 +12748,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ff4d86a80c112eb02fd81848ee5107b82d55f95817511189a15558517a1a047e",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12095,6 +12800,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12120,6 +12827,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4e181377befea58e23cd989fdeffaeffd8d45ca08fe9ebb5d7cfa262eddf5678",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12170,6 +12879,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12195,6 +12906,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "dcb0bd66d21c10ebc035dd4d598c24b6d92bf7cd19fc2b779678478820acf616",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12245,6 +12958,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12270,6 +12985,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "dd06b06c8cc9fa8416ce8debc24f7374c4f682f9aaf11b57cf9ce70af3e5a03a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12320,6 +13037,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12345,6 +13064,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "6b0e87f423614d87d5c30200327cb1960d9f34f11d499a6f61fe0dfd15bbe5df",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12395,6 +13116,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12420,6 +13143,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5596cf6f0e74c0dee066142ce6c1906a044c307d0cacdbba676e47d22d9d4487",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12470,6 +13195,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12495,6 +13222,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c2606f2088bdffafe58340d972bca033935e418144eb6b697ba06e27e968ed1a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12545,6 +13274,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12570,6 +13301,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "907501fb1471801f5ef669630fcc9ec55932ecdd7df350624dcfd52058e31d66",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12620,6 +13353,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12645,6 +13380,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c1d9d3dd4532845f4fe5f337afaa768fcc54d57e1a69448950cce21a00175a06",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12695,6 +13432,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12720,6 +13459,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "49f4f000e4670bbe3069871e5114e6f26531a7157d50a6c98907ee19f7bb4f88",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12770,6 +13511,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12795,6 +13538,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "89a2e559311b51e2e334f60a8026470991651af2466d051eff77d1b992708e0d",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12845,6 +13590,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12870,6 +13617,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c19f188da8ac6c2cdd160090038471363c949798fddb9586fb11a680ef8fb66a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -12920,6 +13669,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12927,236 +13678,6 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null
-    },
-    {
-      "id": "high_bitdepth",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture",
-        "sequence_canvas": "pillow_fixture",
-        "sequence_source": "independent_implementation",
-        "sequence_pixels": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 12,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif.bin",
-      "ref_bytes": 16384,
-      "ref_sha256": "cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57",
-      "ref_mode": "Rgba8",
-      "ref_size": [
-        64,
-        64
-      ],
-      "ref_frame_count": 5,
-      "ref_is_animated": true,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "sequence": {
-        "canvas_size": [
-          64,
-          64
-        ],
-        "canvas_origin": "pillow_fixture",
-        "loop_count": null,
-        "loop_origin": "pillow_fixture",
-        "background": null,
-        "frames": [
-          {
-            "index": 0,
-            "source_rect": [
-              0,
-              0,
-              64,
-              64
-            ],
-            "duration_num": 1,
-            "duration_den": 1,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_0.bin",
-            "ref_bytes": 16384,
-            "ref_mode": "Rgba8",
-            "ref_size": [
-              64,
-              64
-            ],
-            "ref_sha256": "cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 1,
-            "source_rect": [
-              0,
-              0,
-              64,
-              64
-            ],
-            "duration_num": 1,
-            "duration_den": 1,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_1.bin",
-            "ref_bytes": 16384,
-            "ref_mode": "Rgba8",
-            "ref_size": [
-              64,
-              64
-            ],
-            "ref_sha256": "a526b8f55554f37e72a092738c1ea964ea3b6d529a0fc24f036fabed3c8cb51f",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 2,
-            "source_rect": [
-              0,
-              0,
-              64,
-              64
-            ],
-            "duration_num": 1,
-            "duration_den": 1,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_2.bin",
-            "ref_bytes": 16384,
-            "ref_mode": "Rgba8",
-            "ref_size": [
-              64,
-              64
-            ],
-            "ref_sha256": "e5adf69a2e6c5e5912b0083b87dc2b12b9113c36653483da3461bfb64db51061",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 3,
-            "source_rect": [
-              0,
-              0,
-              64,
-              64
-            ],
-            "duration_num": 1,
-            "duration_den": 1,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_3.bin",
-            "ref_bytes": 16384,
-            "ref_mode": "Rgba8",
-            "ref_size": [
-              64,
-              64
-            ],
-            "ref_sha256": "2de187c245387de0486104c8e51653d6277268dacf32ee0e3f7f888d521b2e55",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 4,
-            "source_rect": [
-              0,
-              0,
-              64,
-              64
-            ],
-            "duration_num": 1,
-            "duration_den": 1,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_10bit_avif_frame_4.bin",
-            "ref_bytes": 16384,
-            "ref_mode": "Rgba8",
-            "ref_size": [
-              64,
-              64
-            ],
-            "ref_sha256": "97baa972654b05a76b3e53bf221106a6cd7f85394b8e4f918066466b08b4b89f",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          }
-        ]
-      }
     },
     {
       "id": "with_alpha",
@@ -13175,6 +13696,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "b19f57d9421bbd3d0b0706c8fe79cef802aebf106afefa6bddde9de1a07509c9",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13225,6 +13748,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13250,6 +13775,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ddaeb0074459c55f7462beca436a4ee356b183be2af730e49efd4673254b1ed1",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13300,6 +13827,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13325,6 +13854,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "24b861790d87efb292fda4c25b610cedee5c9752268d8a2702cf7e1898318cd6",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13375,6 +13906,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13400,6 +13933,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "5599de606418fc35b1d39e0fd23480e306db77ad07c3ada7218da1e32fc50acb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13450,6 +13985,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13475,6 +14012,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "7feaf5c2b50971ce02018d1813290ca8ac2fc917a3125f712d5915ec86bf33c4",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13557,6 +14096,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13582,6 +14123,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "dc511af6da5cbafd38c439f51e1dde27da08c75bade99d464ace9ccbe26706fb",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13664,6 +14207,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13689,6 +14234,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "4849437c3e397301e0a291a8c1549e88d1415151e08102811ec0ec16155af56a",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13771,6 +14318,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13796,6 +14345,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "ccf7b06989d99f48ae0ed6bbbb76bc9aedd3e81726a78701d4fcf6f2ed320a95",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13878,6 +14429,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13903,6 +14456,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "662ca034cdd60fba46a747cbdbd98d3f0370e54b4dd358bc6d2c8376b6556b22",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -13985,620 +14540,12 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
       "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "hdr",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "9980e58ddf718a923f1738c34aad1c72f8e5795ec07e68f1a5f9bd216ca19740",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 10,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_hdr_avif.bin",
-      "ref_bytes": 120000,
-      "ref_sha256": "296d4d89b29bf9f5c33a297efbb82ca9b51fb617dd6d9742f4626a22b2d30f36",
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        200,
-        200
-      ],
-      "ref_frame_count": 1,
-      "ref_is_animated": false,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "grid",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin",
-      "ref_bytes": 25600,
-      "ref_sha256": "4ede0d909351b9b09c7e3e9475bfd3baf458141dbdd08f08aee19c11d2ec2983",
-      "ref_mode": "Rgba8",
-      "ref_size": [
-        80,
-        80
-      ],
-      "ref_frame_count": 1,
-      "ref_is_animated": false,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "animated",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture",
-        "sequence_canvas": "pillow_fixture",
-        "sequence_source": "independent_implementation",
-        "sequence_pixels": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif.bin",
-      "ref_bytes": 67500,
-      "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        150,
-        150
-      ],
-      "ref_frame_count": 5,
-      "ref_is_animated": true,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "sequence": {
-        "canvas_size": [
-          150,
-          150
-        ],
-        "canvas_origin": "pillow_fixture",
-        "loop_count": null,
-        "loop_origin": "pillow_fixture",
-        "background": null,
-        "frames": [
-          {
-            "index": 0,
-            "source_rect": [
-              0,
-              0,
-              150,
-              150
-            ],
-            "duration_num": 1,
-            "duration_den": 30,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_0.bin",
-            "ref_bytes": 67500,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              150,
-              150
-            ],
-            "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 1,
-            "source_rect": [
-              0,
-              0,
-              150,
-              150
-            ],
-            "duration_num": 1,
-            "duration_den": 30,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_1.bin",
-            "ref_bytes": 67500,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              150,
-              150
-            ],
-            "ref_sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 2,
-            "source_rect": [
-              0,
-              0,
-              150,
-              150
-            ],
-            "duration_num": 1,
-            "duration_den": 30,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_2.bin",
-            "ref_bytes": 67500,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              150,
-              150
-            ],
-            "ref_sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 3,
-            "source_rect": [
-              0,
-              0,
-              150,
-              150
-            ],
-            "duration_num": 1,
-            "duration_den": 30,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_3.bin",
-            "ref_bytes": 67500,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              150,
-              150
-            ],
-            "ref_sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 4,
-            "source_rect": [
-              0,
-              0,
-              150,
-              150
-            ],
-            "duration_num": 1,
-            "duration_den": 30,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_avif_frame_4.bin",
-            "ref_bytes": 67500,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              150,
-              150
-            ],
-            "ref_sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          }
-        ]
-      }
-    },
-    {
-      "id": "animated_error_resilient",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture",
-        "sequence_canvas": "pillow_fixture",
-        "sequence_source": "independent_implementation",
-        "sequence_pixels": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif.bin",
-      "ref_bytes": 768,
-      "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "ref_frame_count": 2,
-      "ref_is_animated": true,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "sequence": {
-        "canvas_size": [
-          16,
-          16
-        ],
-        "canvas_origin": "pillow_fixture",
-        "loop_count": null,
-        "loop_origin": "pillow_fixture",
-        "background": null,
-        "frames": [
-          {
-            "index": 0,
-            "source_rect": [
-              0,
-              0,
-              16,
-              16
-            ],
-            "duration_num": 100,
-            "duration_den": 1000,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif_frame_0.bin",
-            "ref_bytes": 768,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              16,
-              16
-            ],
-            "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          },
-          {
-            "index": 1,
-            "source_rect": [
-              0,
-              0,
-              16,
-              16
-            ],
-            "duration_num": 100,
-            "duration_den": 1000,
-            "duration_origin": "independent_implementation",
-            "disposal": "unspecified",
-            "blend": "unspecified",
-            "interlaced": false,
-            "is_default_image": false,
-            "pixel_layout": "rendered_canvas",
-            "source_origin": "independent_implementation",
-            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif_frame_1.bin",
-            "ref_bytes": 768,
-            "ref_mode": "Rgb8",
-            "ref_size": [
-              16,
-              16
-            ],
-            "ref_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
-            "pixel_assertion": "exact",
-            "pixel_origin": "pillow_fixture"
-          }
-        ]
-      }
-    },
-    {
-      "id": "error_animated_repeated_frame_id",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "asset_sha256": "34ba8322879102ee291f9ec06703f20973c16475a0ebafb1c763e89ee9c73427",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode_sequence": {
-          "pillow_type": "builtins.RuntimeError",
-          "pillow_message": "Failed to decode frame 1: Decoding of color planes failed",
-          "rust_kind": "malformed",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_repeated_frame_id_avif.bin",
-      "ref_bytes": 768,
-      "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        16,
-        16
-      ],
-      "ref_frame_count": 2,
-      "ref_is_animated": true,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "sequence_status": "error",
-      "sequence_error_type": "builtins.RuntimeError",
-      "sequence_error_message": "Failed to decode frame 1: Decoding of color planes failed",
-      "sequence_error_kind": "malformed",
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null
@@ -14620,6 +14567,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "45c85bd7d08261cfcb1a4563150e993d606b5e309b4767d922988ce700587fe4",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -14694,6 +14643,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -14719,6 +14670,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "c2c79687dd6697b20e60c140021f5e1bfa7a18e9cdc79f055cb60bca837d0698",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -14793,6 +14746,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -14818,6 +14773,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "29b186e0931b1edae7e0b2e463c5311f22cc1b211b10001a91dcead466f9c723",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -14892,6 +14849,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -14917,6 +14876,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "28bd09d7f17a15fcf3457eb21d2bebc36054718b20338191793e2d5faa61f253",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -14967,6 +14928,8 @@
         "state": "absent",
         "origin": "pillow_fixture"
       },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -14992,6 +14955,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "82a07a29a8631d60a2d83bd9973afac0e494882580d3542bb953875817eb0f67",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15050,6 +15015,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -15075,6 +15042,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "03203e35905a79b9556e19f2e3925abc1c1f7541c431eee556637d59cfee1f52",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15133,6 +15102,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -15158,6 +15129,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "de34b2dc5855166b32e61aadffbead4989db3787e6db26fab77ae7129ec93381",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15216,6 +15189,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -15241,6 +15216,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "140e9ae0aad1ee0ba346bb25ca02f0d55d0a24991a66f7e4c61e5ef72affb274",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15323,6 +15300,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -15348,6 +15327,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": null,
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "83bfce62c7a89e14468f9b1c1eeaca41056311f169a492e137570c668bc3fa07",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15430,6 +15411,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -15455,6 +15438,8 @@
       "verification_scope": "header_only",
       "inspect_container_format": "AVIF",
       "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
       "asset_sha256": "f703bf3972da13367ec04f71401c150fd0df45bc1e1587eb064485cbb35b5be9",
       "execution": {
         "target": "aarch64-apple-darwin",
@@ -15513,6 +15498,8 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,

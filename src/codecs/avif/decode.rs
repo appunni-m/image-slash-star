@@ -4,10 +4,6 @@ use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
 use crate::types::{ColorType, DecodedImage, ImageMode, SourceColor};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::types::{
-    DecodedFrame, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration, FrameRect,
-};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(
@@ -36,13 +32,11 @@ pub fn decode(
     let transform = extracted.transform;
     let validated = super::av1::validate_first(&extracted)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let image = match decode_portable(&validated) {
-        Some(image) => image,
-        None => {
-            crate::codecs::error::check_cancelled(token)?;
-            decode_native(data)?
-        }
-    };
+    let image = decode_portable(&validated).ok_or_else(|| {
+        CodecError::NotImplemented(
+            "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
+        )
+    })?;
     let image = {
         let source = image.source.clone().with_avif_file_type(file_type);
         image.with_source_descriptor(source)
@@ -166,169 +160,34 @@ pub fn decode(
     ))
 }
 
-/// Decode every AVIF frame with its Pillow-observable presentation duration.
+/// Decode an AVIF sequence with the pure-Rust backend.
+///
+/// Still-image decoding is available for the closed portable subset below,
+/// while sequence timing, track references, and multi-frame presentation are
+/// not implemented yet. A supported still is therefore exposed as a single
+/// frame, and an input outside the pure-Rust subset returns the same explicit
+/// gap rather than reaching for a foreign codec stack.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
-    let file_type = read_avif_file_type(data)?;
-    let mut extracted = extract_av1(data)?;
-    let consumed = extracted.consumed;
-    let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
-    let metadata = std::mem::take(&mut extracted.metadata);
-    let source_color = std::mem::take(&mut extracted.source_color);
-    let auxiliary_relationship = extracted.auxiliary_relationship;
-    let auxiliary_relationships = std::mem::take(&mut extracted.auxiliary_relationships);
-    let item_relationships = std::mem::take(&mut extracted.item_relationships);
-    let premultiplied_relationships = std::mem::take(&mut extracted.premultiplied_relationships);
-    let item_color_properties = std::mem::take(&mut extracted.item_color_properties);
-    let item_icc_profiles = std::mem::take(&mut extracted.item_icc_profiles);
-    let item_properties = std::mem::take(&mut extracted.item_properties);
-    let item_plane_properties = std::mem::take(&mut extracted.item_plane_properties);
-    let item_codec_properties = std::mem::take(&mut extracted.item_codec_properties);
-    let item_locations = std::mem::take(&mut extracted.item_locations);
-    let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
-    let grid_properties = extracted.grid_properties;
-    let transform = extracted.transform;
-    let validated = super::av1::validate(&extracted)
-        .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let (mut sequence, consumed) =
-        decode_sequence_native(data, &validated, budget, consumed, token)?;
-    for frame in &mut sequence.frames {
-        let source = frame
-            .image
-            .source
-            .clone()
-            .with_avif_file_type(file_type.clone());
-        frame.image.source = source;
+    let extracted = extract_av1(data)?;
+    reserve_sequence_frames(data, &extracted, budget)?;
+    super::av1::validate_sequence(&extracted)
+        .map_err(|error| error.context("AVIF sequence validation failed"))?;
+    if extracted.sequence.is_some() {
+        return Err(CodecError::NotImplemented(
+            "AVIF sequence rendering is not implemented in the pure-Rust backend".to_owned(),
+        ));
     }
-    if let Some(transform) = transform {
-        for frame in &mut sequence.frames {
-            let source = frame.image.source.clone().with_avif_transform(transform);
-            frame.image.source = source;
-        }
-    }
-    if !auxiliary_relationships.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_auxiliary_relationships(auxiliary_relationships.clone());
-            frame.image.source = source;
-        }
-    }
-    if let Some(relationship) = auxiliary_relationship {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_auxiliary_relationship(relationship);
-            frame.image.source = source;
-        }
-    }
-    if !item_relationships.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_relationships(item_relationships.clone());
-            frame.image.source = source;
-        }
-    }
-    if !premultiplied_relationships.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_premultiplied_relationships(premultiplied_relationships.clone());
-            frame.image.source = source;
-        }
-    }
-    if !item_color_properties.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_color_properties(item_color_properties.clone());
-            frame.image.source = source;
-        }
-    }
-    if !item_icc_profiles.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_icc_profiles(item_icc_profiles.clone());
-            frame.image.source = source;
-        }
-    }
-    if !item_properties.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_properties(item_properties.clone());
-            frame.image.source = source;
-        }
-    }
-    if !item_plane_properties.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_plane_properties(item_plane_properties.clone());
-            frame.image.source = source;
-        }
-    }
-    if !item_codec_properties.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_item_codec_properties(item_codec_properties.clone());
-            frame.image.source = source;
-        }
-    }
-    for frame in &mut sequence.frames {
-        let source = frame
-            .image
-            .source
-            .clone()
-            .with_avif_item_locations(item_locations.clone());
-        frame.image.source = source;
-    }
-    if !grid_item_ids.is_empty() {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_grid_item_ids(grid_item_ids.clone());
-            frame.image.source = source;
-        }
-    }
-    if let Some(grid_properties) = grid_properties {
-        for frame in &mut sequence.frames {
-            let source = frame
-                .image
-                .source
-                .clone()
-                .with_avif_grid_properties(grid_properties);
-            frame.image.source = source;
-        }
-    }
-    sequence.opaque_blocks = retained_boxes;
+    let (mut image, consumed) = decode(data, token)?;
+    let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+    let metadata = std::mem::take(&mut image.metadata);
+    let source_color = std::mem::take(&mut image.source_color);
+    let mut sequence = crate::types::DecodedSequence::from_image(image);
+    sequence.opaque_blocks = opaque_blocks;
     sequence.metadata = metadata;
     sequence.source_color = source_color;
     Ok((sequence, consumed))
@@ -337,6 +196,27 @@ pub fn decode_sequence(
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
     super::samples::validated(data)
         .map_err(|error| error.context("AVIF container validation failed"))
+}
+
+/// Reserve every later AVIF frame before validating or eventually presenting
+/// the sequence. The portable renderer is still a planned gap, but policy
+/// limits must not disappear merely because presentation is not implemented.
+fn reserve_sequence_frames(
+    data: &[u8],
+    extracted: &super::samples::ExtractedAvif<'_>,
+    budget: &mut SequenceDecodeBudget,
+) -> CodecResult<()> {
+    if extracted.sequence.is_none() {
+        return Ok(());
+    }
+    let info = super::inspect::inspect(data)?;
+    let frame_count = info.frame_count.unwrap_or(1);
+    for _ in 1..frame_count {
+        budget
+            .reserve_later_frame(info.mode, info.width, info.height)
+            .map_err(CodecError::LimitExceeded)?;
+    }
+    Ok(())
 }
 
 fn read_avif_file_type(data: &[u8]) -> CodecResult<crate::types::AvifFileTypeProperties> {
@@ -352,25 +232,9 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
-    let (plane_length, width, height): (usize, usize, usize) = match (still.width, still.height) {
-        (4, 4) => (16, 4, 4),
-        (4, 8) => (32, 4, 8),
-        (8, 4) => (32, 8, 4),
-        (12, 4) => (48, 12, 4),
-        (4, 12) => (48, 4, 12),
-        (8, 8) => (64, 8, 8),
-        (16, 4) => (64, 16, 4),
-        (4, 16) => (64, 4, 16),
-        (12, 8) => (96, 12, 8),
-        (8, 12) => (96, 8, 12),
-        (16, 8) => (128, 16, 8),
-        (8, 16) => (128, 8, 16),
-        (12, 12) => (144, 12, 12),
-        (12, 16) => (192, 12, 16),
-        (16, 12) => (192, 16, 12),
-        (16, 16) => (256, 16, 16),
-        _ => return None,
-    };
+    let width = usize::try_from(still.width).ok()?;
+    let height = usize::try_from(still.height).ok()?;
+    let plane_length = width.checked_mul(height)?;
     if !(still.bit_depth == 8
         && !still.monochrome
         && still.color_primaries == 1
@@ -385,28 +249,37 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         (true, true) => true,
         _ => return None,
     };
-    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
-    let chroma_height = if subsampled {
-        height.div_ceil(2)
+    let mut canvas = super::av1::FrameCanvas::new(
+        still.width,
+        still.height,
+        still.subsampling_x,
+        still.subsampling_y,
+    )
+    .ok()?;
+    if still.width.is_multiple_of(4) && still.height.is_multiple_of(4) {
+        canvas
+            .place_partition_leaf(0, 0, still.width / 4, still.height / 4, &still.planes)
+            .ok()?;
     } else {
-        height
-    };
-    // Chroma extents are at most half the validated image dimensions, so the
-    // product fits `usize`; plain multiplication avoids exposing the
-    // never-taken saturating intrinsic branch to coverage instrumentation.
-    #[allow(clippy::arithmetic_side_effects)]
-    let chroma_length = chroma_width * chroma_height;
-
-    let [y_plane, u_plane, v_plane] = &still.planes;
-    if !(y_plane.samples.len() == plane_length
-        && u_plane.samples.len() == chroma_length
-        && v_plane.samples.len() == chroma_length)
+        canvas
+            .place_planes(still.width, still.height, &still.planes, 0, 0)
+            .ok()?;
+    }
+    let planes = canvas.finish().ok()?;
+    let [y_plane, u_plane, v_plane] = &planes;
+    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
+    if still
+        .alpha_plane
+        .as_ref()
+        .is_some_and(|plane| plane.samples.len() != plane_length)
     {
         return None;
     }
-    let mut pixels = Vec::with_capacity(plane_length.wrapping_mul(3));
-    for (index, &y) in y_plane.samples.iter().enumerate() {
-        let (u, v) = if subsampled {
+    let has_alpha = still.alpha_plane.is_some();
+    let channel_count = if has_alpha { 4 } else { 3 };
+    let mut pixels = Vec::with_capacity(plane_length.wrapping_mul(channel_count));
+    for (index, &y_sample) in y_plane.samples.iter().enumerate() {
+        let (u_sample, v_sample) = if subsampled {
             #[allow(clippy::arithmetic_side_effects)]
             let row = index.wrapping_div(width);
             // `width` is validated nonzero; remainder matches euclidean
@@ -434,41 +307,49 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         } else {
             (u_plane.samples[index], v_plane.samples[index])
         };
+        let y = super::av1::normalize_full_range(y_sample, still.bit_depth)?;
+        let u = super::av1::normalize_full_range(u_sample, still.bit_depth)?;
+        let v = super::av1::normalize_full_range(v_sample, still.bit_depth)?;
         pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
+        if let Some(alpha_plane) = &still.alpha_plane {
+            pixels.push(super::av1::normalize_full_range(
+                alpha_plane.samples[index],
+                still.bit_depth,
+            )?);
+        }
     }
     Some(DecodedImage {
         width: still.width,
         height: still.height,
         pixels,
-        color: ColorType::Rgb8,
-        mode: ImageMode::Rgb8,
+        color: if has_alpha {
+            ColorType::Rgba8
+        } else {
+            ColorType::Rgb8
+        },
+        mode: if has_alpha {
+            ImageMode::Rgba8
+        } else {
+            ImageMode::Rgb8
+        },
         palette: None,
         cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
+        source: if has_alpha {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Auxiliary)
+        } else {
+            crate::types::SourceDescriptor::new()
+        },
         opaque_blocks: Vec::new(),
         metadata: Vec::new(),
         source_color: SourceColor::new(),
     })
 }
 
-fn libyuv_bilinear_axis(index: usize, length: usize) -> [(usize, u32); 2] {
-    if index == 0 {
-        [(0, 4), (0, 0)]
-    } else if index == length.saturating_sub(1) {
-        [(index.div_euclid(2), 4), (index.div_euclid(2), 0)]
-    } else if index.rem_euclid(2) == 1 {
-        let first = index.div_euclid(2);
-        [(first, 3), (first.saturating_add(1), 1)]
-    } else {
-        let second = index.div_euclid(2);
-        [(second.saturating_sub(1), 1), (second, 3)]
-    }
-}
-
 // ✅ VERIFIED: libyuv 1922 commit 6067afde, source/convert_argb.cc:6799-6927
 // (`I420ToRGB24MatrixBilinear`) and source/scale_common.cc:572-621. The
-// boundary wrappers clamp the first and last sample; interior output samples
-// use the exact separable 3:1 bilinear weights and one combined rounding.
+// first and last output rows use horizontal 3:1 interpolation. Interior rows
+// are produced in pairs using libyuv's four-tap 3:1/1:3 vertical and
+// horizontal weights with one combined rounding operation.
 fn libyuv_420_bilinear_sample(
     plane: &[u16],
     chroma_width: usize,
@@ -477,30 +358,94 @@ fn libyuv_420_bilinear_sample(
     column: usize,
     row: usize,
 ) -> u16 {
-    let horizontal = libyuv_bilinear_axis(column, width);
-    let vertical = libyuv_bilinear_axis(row, height);
-    let weighted = vertical
-        .iter()
-        .fold(0_u32, |sum, &(source_row, row_weight)| {
-            horizontal
-                .iter()
-                .fold(sum, |sum, &(source_column, column_weight)| {
-                    let source_index = source_row
-                        .saturating_mul(chroma_width)
-                        .saturating_add(source_column);
-                    sum.saturating_add(
-                        u32::from(plane[source_index])
-                            .saturating_mul(row_weight)
-                            .saturating_mul(column_weight),
-                    )
-                })
-        });
+    let chroma_height = height.div_ceil(2);
+    if plane.is_empty() || chroma_width == 0 || chroma_height == 0 || width == 0 {
+        return 0;
+    }
+
+    let sample = |source_row: usize, source_column: usize| {
+        let source_row = source_row.min(chroma_height.saturating_sub(1));
+        let source_column = source_column.min(chroma_width.saturating_sub(1));
+        plane
+            .get(
+                source_row
+                    .saturating_mul(chroma_width)
+                    .saturating_add(source_column),
+            )
+            .copied()
+            .unwrap_or_default()
+    };
+    let source_column = column.saturating_sub(1).div_euclid(2);
+    let next_source_column = source_column.saturating_add(1);
+    // libyuv's two-row scaler starts the interpolated stream at output
+    // column one. Column zero is the vertically filtered source sample at
+    // column zero; thereafter odd output columns use 3:1 and even output
+    // columns use 1:3 horizontal weights. Keeping that phase is observable
+    // at chroma edges (and is different from a generic centered 2x filter).
+    let (left_weight, right_weight) = if column == 0 {
+        (4_u32, 0_u32)
+    } else if column.is_multiple_of(2) {
+        (1_u32, 3_u32)
+    } else {
+        (3_u32, 1_u32)
+    };
+
+    // `I420ToRGB24MatrixBilinear` starts with ScaleRowUp2_Linear and uses the
+    // same horizontal-only operation for the final row of an even-height
+    // image. This is intentionally not the generic separable boundary rule.
+    if row == 0 || (height.is_multiple_of(2) && row == height.saturating_sub(1)) {
+        let source_row = if row == 0 {
+            0
+        } else {
+            chroma_height.saturating_sub(1)
+        };
+        let weighted = u32::from(sample(source_row, source_column))
+            .saturating_mul(left_weight)
+            .saturating_add(
+                u32::from(sample(source_row, next_source_column)).saturating_mul(right_weight),
+            );
+        return u16::try_from(weighted.saturating_add(2).wrapping_shr(2)).unwrap_or(u16::MAX);
+    }
+
+    let (source_row, next_source_row, top_weight, bottom_weight) = if row.is_multiple_of(2) {
+        (
+            row.div_euclid(2).saturating_sub(1),
+            row.div_euclid(2),
+            1_u32,
+            3_u32,
+        )
+    } else {
+        (
+            row.div_euclid(2),
+            row.div_euclid(2).saturating_add(1),
+            3_u32,
+            1_u32,
+        )
+    };
+    let weighted = u32::from(sample(source_row, source_column))
+        .saturating_mul(top_weight)
+        .saturating_mul(left_weight)
+        .saturating_add(
+            u32::from(sample(source_row, next_source_column))
+                .saturating_mul(top_weight)
+                .saturating_mul(right_weight),
+        )
+        .saturating_add(
+            u32::from(sample(next_source_row, source_column))
+                .saturating_mul(bottom_weight)
+                .saturating_mul(left_weight),
+        )
+        .saturating_add(
+            u32::from(sample(next_source_row, next_source_column))
+                .saturating_mul(bottom_weight)
+                .saturating_mul(right_weight),
+        );
     u16::try_from(weighted.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX)
 }
 
 // ✅ VERIFIED: Pillow's libavif 1.4.1 uses libyuv 1922's JPEG-range BT.601
 // I444/I420-to-RGB24 integer path for this exact output declaration.
-fn libyuv_bt601_full_range_rgb(y: u16, u: u16, v: u16) -> [u8; 3] {
+fn libyuv_bt601_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
     let y_scaled = u32::from(y)
         .wrapping_mul(0x0101)
         .wrapping_mul(16_320)
@@ -535,157 +480,29 @@ fn libyuv_rgb8(value: i32) -> u8 {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn decode_native(data: &[u8]) -> CodecResult<DecodedImage> {
-    let mut decoder = super::native::Decoder::new(data)?;
-    let info = decoder.info();
-    decoded_first_frame(info, decoder.decode_frame(0))
-}
-
-#[cfg(target_arch = "wasm32")]
-fn decode_native(_data: &[u8]) -> CodecResult<DecodedImage> {
-    Err(CodecError::Unsupported(
-        "AVIF input is outside the portable WASM decode subset".to_owned(),
-    ))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn decode_sequence_native(
+#[cfg(coverage)]
+fn decode_sequence_rust_unavailable(
     data: &[u8],
     validated: &super::av1::ValidatedAv1,
     budget: &mut SequenceDecodeBudget,
     consumed: usize,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<(DecodedSequence, usize)> {
-    crate::codecs::error::check_cancelled(token)?;
-    let _ = validated.portable_still.as_ref();
-    let mut decoder = super::native::Decoder::new(data)?;
-    let info = decoder.info();
-    decoded_sequence(info, budget, consumed, token, &mut |frame_index| {
-        decoder.decode_frame(frame_index)
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn decoded_first_frame(
-    info: super::native::DecodeInfo,
-    decoded: CodecResult<(Vec<u8>, super::native::FrameTiming)>,
-) -> CodecResult<DecodedImage> {
-    let (pixels, _) = decoded?;
-    Ok(decoded_image(
-        info.width,
-        info.height,
-        info.has_alpha,
-        pixels,
-    ))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn decoded_sequence(
-    info: super::native::DecodeInfo,
-    budget: &mut SequenceDecodeBudget,
-    consumed: usize,
-    token: Option<&crate::CancellationToken>,
-    decode_frame: &mut dyn FnMut(u32) -> CodecResult<(Vec<u8>, super::native::FrameTiming)>,
-) -> CodecResult<(DecodedSequence, usize)> {
-    crate::codecs::error::check_cancelled(token)?;
-    let mut frames = Vec::with_capacity(info.frame_count as usize);
-    let mode = if info.has_alpha {
-        ImageMode::Rgba8
-    } else {
-        ImageMode::Rgb8
-    };
-    for frame_index in 0..info.frame_count {
-        crate::codecs::error::check_cancelled(token)?;
-        if frame_index != 0 {
-            budget
-                .reserve_later_frame(mode, info.width, info.height)
-                .map_err(CodecError::LimitExceeded)?;
-        }
-        let (pixels, timing) = decode_frame(frame_index)?;
-        frames.push(DecodedFrame::rendered_canvas(
-            decoded_image(info.width, info.height, info.has_alpha, pixels),
-            FrameRect {
-                left: 0,
-                top: 0,
-                width: info.width,
-                height: info.height,
-            },
-            FrameDuration {
-                numerator: timing.duration_in_timescales,
-                denominator: info.timescale.get(),
-            },
-            FrameDisposal::Unspecified,
-            FrameBlend::Unspecified,
-        ));
-    }
-    Ok((
-        DecodedSequence {
-            width: info.width,
-            height: info.height,
-            frames,
-            loop_count: None,
-            background: None,
-            kind: crate::types::SequenceKind::TimedAnimation,
-            opaque_blocks: Vec::new(),
-            metadata: Vec::new(),
-            source_color: SourceColor::new(),
-        },
-        consumed,
-    ))
-}
-
-#[cfg(target_arch = "wasm32")]
-fn decode_sequence_native(
-    _data: &[u8],
-    validated: &super::av1::ValidatedAv1,
-    _budget: &mut SequenceDecodeBudget,
-    _consumed: usize,
-    token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
+    let _ = data;
     let _ = validated.portable_still.as_ref();
-    Err(CodecError::TargetUnavailable(
-        "AVIF sequence decoding requires the native AVIF stack".to_owned(),
+    let _ = budget;
+    let _ = consumed;
+    Err(CodecError::NotImplemented(
+        "AVIF sequence decoding is not implemented in the pure-Rust backend".to_owned(),
     ))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn decoded_image(width: u32, height: u32, has_alpha: bool, pixels: Vec<u8>) -> DecodedImage {
-    let (color, mode) = if has_alpha {
-        (ColorType::Rgba8, ImageMode::Rgba8)
-    } else {
-        (ColorType::Rgb8, ImageMode::Rgb8)
-    };
-    let source_descriptor = if has_alpha {
-        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Auxiliary)
-    } else {
-        crate::types::SourceDescriptor::new()
-    };
-    DecodedImage {
-        width,
-        height,
-        pixels,
-        color,
-        mode,
-        palette: None,
-        cursor_hotspot: None,
-        source: source_descriptor,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: SourceColor::new(),
-    }
 }
 
 #[cfg(coverage)]
 #[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use std::num::NonZeroU64;
-
     use super::av1::{PortableStill, ValidatedAv1};
-    use super::native::{DecodeInfo, FrameTiming};
 
-    let one = NonZeroU64::new(1).unwrap();
     let _ = decode_sequence(
         b"not an AVIF container",
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
@@ -749,61 +566,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         })
         .is_some()
     );
-    let _ = decode_native(b"not an AVIF container");
     let _ = metadata_bytes(b"");
-    let _ = decode_sequence_native(
+    let _ = decode_sequence_rust_unavailable(
         b"not an AVIF container",
         &validated,
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
         0,
         None,
     );
-
-    let info = DecodeInfo {
-        width: 1,
-        height: 1,
-        frame_count: 1,
-        has_alpha: false,
-        timescale: one,
-        pixel_len: 3,
-    };
-    let _ = decoded_first_frame(
-        info,
-        Err(CodecError::Malformed(
-            "coverage native frame failure".to_owned(),
-        )),
-    );
-    let _ = decoded_first_frame(
-        info,
-        Ok((
-            vec![0; 3],
-            FrameTiming {
-                duration_in_timescales: 1,
-            },
-        )),
-    );
-    let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Avif);
-    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
-        Err(CodecError::Malformed(
-            "coverage native frame failure".to_owned(),
-        ))
-    });
-    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
-        Ok((
-            vec![0; 3],
-            FrameTiming {
-                duration_in_timescales: u64::MAX,
-            },
-        ))
-    });
-    let _ = decoded_sequence(info, &mut budget, 0, None, &mut |_| {
-        Ok((
-            vec![0; 3],
-            FrameTiming {
-                duration_in_timescales: 1,
-            },
-        ))
-    });
     let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
     let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
     let mut malformed_file_type = baseline.to_vec();
@@ -832,5 +602,100 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
             Some(&token),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod sha256 {
+        include!("../../../tests/support/sha256.rs");
+    }
+
+    use super::decode_portable;
+    use crate::codecs::avif::av1::{PortableStill, ReconstructedPlane, ValidatedAv1};
+    use crate::codecs::{CodecError, CodecResult};
+    use crate::types::{ColorType, ImageMode, SourceAlpha};
+
+    fn portable_still(alpha_plane: Option<Vec<u16>>) -> PortableStill {
+        PortableStill {
+            width: 4,
+            height: 4,
+            bit_depth: 8,
+            monochrome: false,
+            color_primaries: 1,
+            transfer_characteristics: 13,
+            matrix_coefficients: 6,
+            color_range: true,
+            subsampling_x: false,
+            subsampling_y: false,
+            planes: std::array::from_fn(|_| ReconstructedPlane {
+                samples: vec![128; 16],
+            }),
+            alpha_plane: alpha_plane.map(|samples| ReconstructedPlane { samples }),
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn portable_alpha_is_composed_as_unassociated_rgba() {
+        let image = decode_portable(&ValidatedAv1 {
+            portable_still: Some(portable_still(Some(vec![64; 16]))),
+        });
+        assert!(
+            image.is_some(),
+            "the closed portable alpha class must materialize"
+        );
+        let Some(image) = image else { return };
+        assert_eq!(image.color, ColorType::Rgba8);
+        assert_eq!(image.mode, ImageMode::Rgba8);
+        assert_eq!(image.source.alpha(), Some(SourceAlpha::Auxiliary));
+        assert_eq!(image.pixels.get(..4), Some([128, 128, 128, 64].as_slice()));
+        assert_eq!(image.pixels.len(), 64);
+    }
+
+    #[test]
+    fn portable_alpha_requires_a_plane_for_every_color_sample() {
+        let still = portable_still(Some(vec![64; 15]));
+        assert!(
+            decode_portable(&ValidatedAv1 {
+                portable_still: Some(still),
+            })
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn alpha_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
+        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
+        let extracted = super::super::samples::validated(bytes)?;
+        let validated = super::super::av1::validate_first(&extracted)?;
+        let still = validated
+            .portable_still
+            .as_ref()
+            .ok_or_else(|| CodecError::NotImplemented("alpha fixture did not close".to_owned()))?;
+        assert_eq!(still.width, 64);
+        assert_eq!(still.height, 64);
+        assert!(still.alpha_plane.as_ref().is_some_and(|plane| {
+            plane.samples.len() == 64 * 64 && plane.samples.iter().any(|&sample| sample != 0)
+        }));
+        let image = decode_portable(&validated).ok_or_else(|| {
+            CodecError::NotImplemented("color primary did not materialize".to_owned())
+        })?;
+        assert_eq!(image.color, ColorType::Rgba8);
+        assert_eq!(image.mode, ImageMode::Rgba8);
+        assert_eq!(image.source.alpha(), Some(SourceAlpha::Auxiliary));
+        assert_eq!(image.pixels.len(), 64 * 64 * 4);
+        assert_eq!(
+            sha256::digest_hex(&image.pixels),
+            "7b62ff36a098d8bdea49e0b72c834b6fd3e4e04f70d884eee274fc69ed869ddd"
+        );
+        assert_eq!(
+            &image.pixels[..16],
+            &[
+                255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255
+            ]
+        );
+        Ok(())
     }
 }

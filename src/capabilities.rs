@@ -46,7 +46,7 @@ pub enum CapabilityUnavailableReason {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CapabilityRestriction {
-    /// The in-tree WASM AVIF decoder supports only its documented portable subset.
+    /// The in-tree Rust AVIF decoder supports only its documented portable subset.
     PortableAvif,
 }
 
@@ -286,8 +286,6 @@ const fn capabilities_for(
     let manifest = Capability::ManifestBounded;
     let disabled = Capability::Unavailable(CapabilityUnavailableReason::FeatureDisabled);
     let not_implemented = Capability::Unavailable(CapabilityUnavailableReason::NotImplemented);
-    let target_unavailable =
-        Capability::Unavailable(CapabilityUnavailableReason::TargetUnavailable);
 
     if !enabled {
         return FormatCapabilities {
@@ -303,13 +301,7 @@ const fn capabilities_for(
         };
     }
 
-    if matches!(
-        (format, target),
-        (
-            ImageFormat::Avif,
-            CapabilityTarget::Wasm32Wasi | CapabilityTarget::Wasm32Unknown
-        )
-    ) {
+    if matches!(format, ImageFormat::Avif) {
         return FormatCapabilities {
             format,
             target,
@@ -317,17 +309,16 @@ const fn capabilities_for(
             detection: manifest,
             inspection: manifest,
             still_decode: Capability::Restricted(CapabilityRestriction::PortableAvif),
-            still_encode: target_unavailable,
-            sequence_decode: target_unavailable,
-            sequence_encode: target_unavailable,
+            still_encode: not_implemented,
+            sequence_decode: not_implemented,
+            sequence_encode: not_implemented,
         };
     }
 
     let (sequence_decode, sequence_encode) = match format {
         ImageFormat::Png => (manifest, not_implemented),
-        ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Tiff | ImageFormat::Avif => {
-            (manifest, manifest)
-        }
+        ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Tiff => (manifest, manifest),
+        ImageFormat::Avif => (not_implemented, not_implemented),
         ImageFormat::Jpeg | ImageFormat::Bmp | ImageFormat::Ico => {
             (not_implemented, not_implemented)
         }

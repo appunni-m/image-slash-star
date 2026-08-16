@@ -2,8 +2,9 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-12 against source-quality checkpoint
-`2d3e7ecb32b5413b9683061805ff6fc8909ed82e` and
+Reviewed: 2026-08-14 against the current safe-Rust AVIF cutover working tree;
+the historical pre-cutover checkpoint is
+`2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The accepted claim-ledger base remains
 `36b939696415a962285d37f9120ff389aebf0205`; it is kept separate from the
@@ -15,14 +16,26 @@ The current strict Coverage MCP snapshot is
 73,473/73,539 lines, 9,434/9,444 branches, 3,629/3,679 functions, and
 109,876/110,011 regions. The managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
-all-feature parity matrix currently passes 28/28.
+all-feature matrix integration tests currently pass 32/32.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The immutable managed feature-matrix
 registration failed before execution because it invokes sandbox-blocked
-`sccache`; the exact script with `CARGO_BUILD_RUSTC_WRAPPER=` completed all
+`sccache` configured in the user's Cargo config; the exact script completed all
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
+The current working tree also passes the complete all-feature test set plus one
+doctest in the local nightly LLVM run. It measures 73,615/74,323 lines
+(99.0474%), 9,464/9,600 branches (98.5833%), 3,635/3,748 functions
+(96.9851%), and 110,174/111,446 regions (98.8586%). The strict four-metric
+verifier remains red because the release target is 100%; this is not a fresh
+managed Coverage MCP claim, and the managed snapshot remains bound to its
+recorded revision until a new artifact is ingested.
+Important: historical records below that say “native AVIF” describe the
+pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
+script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
+current manifest statuses for today's contract.
+
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
@@ -66,6 +79,12 @@ format support, production readiness, or security.
 
 ## Sources of truth
 
+The roadmap source of truth is the repository-root [`roadmap.json`](../roadmap.json).
+It owns status, dependencies, open IDs, planned AVIF gaps, acceptance commands,
+and evidence requirements. [`roadmap-new.md`](roadmap-new.md) is the human
+rendering; update the JSON first and run `scripts/verify_roadmap.py` after
+changing code, fixtures, or roadmap status.
+
 Use these sources in order:
 
 1. `pillow-oracle.lock.yaml` fixes the Python, platform, wheel, extension, and
@@ -83,6 +102,16 @@ Use these sources in order:
 7. `tests/fixtures/outputs/` contains exact expected metadata, pixels, frames,
    entropy traces, and encoded files.
 8. The Rust integration harnesses execute those contracts.
+
+The progress-callback contract is Rust-only and is covered by
+`progress_callbacks_report_checkpoints_and_can_cancel` in
+`tests/feature_gate_tests.rs`. `CancellationToken::with_progress` reports
+one-based monotonic `ProgressEvent::checkpoint()` values for accepted polls;
+the callback may return `ProgressDecision::Continue` or
+`ProgressDecision::Cancel`. The callback is synchronous on the calling thread
+on native and WASM targets, and panics are deliberately not converted into
+image errors. This test proves both continued progress and typed cancellation;
+it does not claim that every codec has identical checkpoint density.
 
 Implementation comments and prose do not override the generated fixture
 contract.
@@ -305,8 +334,8 @@ format-specific structural paths for every enabled still and supported
 sequence encoder. The generic whole-buffer fallback remains only as defensive
 dispatcher behavior for a future or unassigned path; no current enabled format
 uses it. JPEG still and one-frame sequence, TIFF still and multi-page sequence,
-GIF still and GIF sequence, WebP still and sequence, ICO still, native AVIF
-still and sequence, and the other one-frame sequence deliveries use the
+GIF still and GIF sequence, WebP still and sequence, ICO still, and the other
+one-frame sequence deliveries use the
 structural paths described below. Each real public
 call must normalize a rejecting destination to
 `OutputWrite` with the selected format and corresponding `StillEncode` or
@@ -541,14 +570,12 @@ interruption result, so `encode_cancellation_is_a_non_parity_contract` and
 the structural assertions in `output_sinks_receive_the_exact_encoded_bytes`
 are ordinary fixture-backed Rust contracts rather than generated parity rows.
 They check byte identity for uncancelled JPEG/PNG/BMP/TIFF/GIF/WebP/ICO still,
-native AVIF still and sequence, GIF-sequence output, and one-frame
+GIF-sequence output, and one-frame
 JPEG/BMP/WebP/ICO sequence sink output;
 stable pre-cancelled errors, successful token-aware sink writes, and
-JPEG/PNG/BMP/GIF/WebP/ICO/TIFF/native AVIF still and sequence sinks plus the
+JPEG/PNG/BMP/GIF/WebP/ICO/TIFF still and sequence sinks plus the
 one-frame JPEG, WebP, and multi-page TIFF sequence sinks that can cancel
-between structural writes while retaining only the delivered prefix. Native AVIF
-still and sequence
-sink delivery polls between validated top-level ISO-BMFF box segments. JPEG's
+between structural writes while retaining only the delivered prefix. JPEG's
 codec-local coverage
 drill fires deterministic
 internal RGB-to-YCbCr conversion, chroma-downsample output, row/block/scan,
@@ -612,17 +639,14 @@ histogram-merge scans after each 64 symbols, histogram/Huffman, token-stream, 8-
 metadata-assembly, and RIFF/chunk delivery boundaries; JPEG still encoding
 additionally polls after each 1,024 progressive scan block slots, each 1,024
 progressive scan-event frequency items, each 1,024 progressive scan coefficient
-items, and emitted entropy bytes; native AVIF
-still
-encoding polls its preparation,
-frame, and finalization checkpoints; GIF, TIFF, WebP, and native AVIF sequence
-paths poll their implemented frame/coalescing/page/finalization checkpoints,
-with native AVIF sequence delivery additionally polling between validated
-top-level box segments.
+items, and emitted entropy bytes; GIF, TIFF, and WebP sequence paths poll
+their implemented frame/coalescing/page/finalization checkpoints. AVIF still
+and sequence encoding are planned pure-Rust gaps and therefore have no sink
+delivery or cancellation claim today.
 ICO still encoding polls source-size validation, embedded PNG work or BMP row
 assembly, and directory finalization.
-The AVIF assertion is native-only because portable WASM AVIF encoding remains
-target-unavailable. This slice does not claim universal interior interruption
+The AVIF assertion is currently planned because pure-Rust AVIF encoding is not
+implemented yet. There is no target-specific fallback, and this slice does not claim universal interior interruption
 beyond the implemented JPEG 1,024-pixel RGB-to-YCbCr conversion, 1,024-pixel
 chroma-downsample output, baseline entropy traversal after each 1,024 MCUs,
 optimized baseline Huffman frequency gathering after
@@ -692,7 +716,8 @@ This is Rust source-provenance and defensive-parser evidence, not Pillow
 parity: Pillow has no equivalent result, so no parity row, fixture-manifest
 row, diagnostic origin, coverage-only hook, new test function, or unit test was
 added. The descriptor does not promise item-level decoder capability; that
-decision remains an open slice in the [canonical roadmap](roadmap-new.md).
+decision remains an open slice in the canonical [roadmap.json](../roadmap.json);
+the current human rendering is [roadmap-new.md](roadmap-new.md).
 
 Exact-head managed Pillow parity run
 `49d95968-7a17-4a9d-9002-c6504922610b` passed 1,445/1,445 checks in 584 ms.
@@ -5501,11 +5526,11 @@ and a non-empty diagnostic, and the never-provided `FullPixels` boundary.
 
 The sequence-kind contract is also table-driven rather than manifest rows:
 one animated or multipage fixture per sequence-capable format plus every still
-fallback asserts `DecodedSequence::kind` (`TimedAnimation` for GIF, APNG,
-animated WebP, and AVIF; `UntimedPages` for TIFF; `SingleFrame` for still
-fallbacks), and TIFF pages additionally assert exact zero durations so they
-are never described as timed animation. AVIF sequence decode is native-only,
-so its row is skipped on `wasm32` targets.
+fallback asserts `DecodedSequence::kind` (`TimedAnimation` for GIF, APNG, and
+animated WebP; `UntimedPages` for TIFF; `SingleFrame` for still fallbacks).
+AVIF currently exposes a supported still as `SingleFrame`; animated AVIF is an
+explicit pure-Rust planned gap and is not target-skipped or native-fallback
+covered.
 
 The source-alpha contract is table-driven as well: inspect and decode must
 agree on `SourceDescriptor::alpha()` for GIF transparency (`BinaryMask`),
@@ -7043,14 +7068,14 @@ out-of-range indices must fail with `Parameter`, and still formats must report
 exactly one frame.
 
 The output-sink contract is table-driven: `encode_to_sink` and
-`encode_sequence_to_sink` over JPEG/PNG/BMP/GIF/WebP/ICO/TIFF/native AVIF
+`encode_sequence_to_sink` over JPEG/PNG/BMP/GIF/WebP/ICO/TIFF
 still and sequence, one-frame JPEG/BMP/WebP/ICO sequence, multi-page TIFF
 sequence,
 GIF sequence, and multi-frame WebP sequence
 fixtures must write bytes
 identical to `encode`/`encode_sequence` with matching lengths for both `Vec<u8>`
 and `&mut Vec<u8>` sinks. JPEG, PNG, BMP, GIF, WebP, ICO, and TIFF still, GIF
-sequence, native AVIF still and sequence, one-frame JPEG/WebP sequence, and
+sequence, one-frame JPEG/WebP sequence, and
 multi-frame WebP sequence additionally
 prove
 multiple structural writes, policy preflight before the first write, and
@@ -7064,16 +7089,15 @@ header followed by each validated chunk header and payload/padding span. ICO's
 structural split is a fixed 22-byte directory header followed by the complete
 embedded PNG/DIB payload. TIFF's split is its header, strip/padding span, and
 IFD/value tail. JPEG's split is its validated marker segments, SOS headers,
-entropy-coded scan spans, restart markers, and EOI. Native AVIF's split is
-each validated ISO-BMFF top-level box header followed by its non-empty payload
-span; the complete native encoder buffer remains working state. A deterministic
+entropy-coded scan spans, restart markers, and EOI. AVIF has no active sink
+writer while its pure-Rust encoder is planned. A deterministic
 failing write or flush must be reported as `ImageError::OutputWrite` with the
 selected format and encode stage. The current contract proves one
 post-delivery flush call and explicitly preserves
 the delivered prefix on flush failure. The Rust-only
 `partial_structural_sink_write_preserves_prefix_across_available_encoders`
 contract also proves that every available still writer and each supported
-multi-frame GIF/TIFF/WebP/native-AVIF sequence writer can accept a partial
+multi-frame GIF/TIFF/WebP sequence writer can accept a partial
 prefix of a structural segment, reject the write as `OutputWrite`, preserve the
 exact delivered prefix, report the selected `StillEncode` or `SequenceEncode`
 stage, and avoid `flush`. Pillow has no caller-owned `OutputSink`, so this is
@@ -11316,9 +11340,9 @@ being user-facing behavior.
 `tests/fixtures/webp_vp8l_property_map.json` is the compact property map for
 the active lossless WebP corpus. It is pinned to implementation revision
 `aeab9d6c3b18c6159a16da9d50c0fc900469ed4a`, manifest SHA-256
-`d3771d65557429ef4fcca730ddb11a30ffa4513dbf882aebd694107a0e601f8e`, and
+`18a12a6267458c14ccc749dee58167c1f441ad3b3a2220dbba525397e10e4973`, and
 generated-matrix SHA-256
-`81bcff2c751c791958abecb7a249e3f7c50e968b4069aa548625401ca60e4326`.
+`1b534bfe65ab3fb2cb72e4047688c5aae9ff0ec84facf7a0295cd8fc856de3c2`.
 The map also pins the independent inspector SHA-256
 `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 `python3 scripts/verify_webp_vp8l_property_map.py` currently verifies 16
@@ -11466,12 +11490,10 @@ parity. The `wasm32-wasip1` lanes are real runtime evidence for feature-gate
 and capability-table behavior; full semantic manifest execution in a WASM
 runtime remains planned.
 
-When the optional native AVIF bridge is enabled, `build.rs` declares Cargo
-rerun triggers for every compiler and archiver variable it consults:
-`CC_<target>`, `TARGET_CC`, `CC`, and the corresponding `AR` names. The
-`build_script_tests` target checks target-name normalization and the specific
-to-target-wide-to-host precedence. This is build invalidation evidence, not
-Pillow parity or implementation coverage for the codec itself.
+The AVIF feature has no build script, C compiler/linker variables, or native
+stack setup. Its target-independent status is checked by the capability table
+and feature-gate lanes; planned decode/encode cases remain explicit in
+`manifest.yaml` and `coverage_matrix.json`.
 
 ### Coverage
 
@@ -11480,11 +11502,11 @@ branch, function, and region metrics. CI independently runs `cargo llvm-cov`
 and `scripts/verify_llvm_coverage.py`.
 
 The coverage-origin inventory is a static source check, not a Rust test and not
-a coverage hook. It currently accounts for 222 exact `#[cfg(coverage)]` guards
-across 74 Rust files. Each guard is assigned to `defensive_model`,
+a coverage hook. It currently accounts for 495 exact `#[cfg(coverage)]` guards
+across 85 Rust files. Each guard is assigned to `defensive_model`,
 `independent_implementation`, or `specification_reference`; the verifier
 rejects a Pillow-parity origin. This keeps aggregate LLVM execution evidence
-separate from the 1,417-row Pillow manifest and from ordinary Rust-only
+separate from the 1,424-row Pillow manifest and from ordinary Rust-only
 diagnostic contracts.
 
 The test targets have separate evidence roles:
@@ -11563,21 +11585,23 @@ Verify:
 cargo package --allow-dirty --locked
 python3 scripts/verify_third_party_licenses.py
 python3 scripts/verify_package_surface.py
+python3 scripts/verify_package_consumer.py
 cargo deny check
 ```
 
 The test targets are repository-only because their exact fixture corpus is not
 shipped to downstream users. Cargo currently reports that exclusion while
-preparing the package; the packaged library must still compile successfully.
+preparing the package; the separate consumer check then compiles the extracted
+archive and runs a real PNG decode through its public API.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Check or recovery |
 | --- | --- | --- |
 | Oracle generator refuses to run | Python, platform, wheel, extension, or codec identity differs | Compare the environment with `pillow-oracle.lock.yaml`; do not overwrite references |
-| Native AVIF fails to link | Exact libavif stack is unavailable | Set `IMAGE_SLASH_STAR_AVIF_LIB_DIR` or follow `docs/avif.md` |
+| AVIF returns `Unsupported` | The operation or AV1 class is a planned pure-Rust gap | Use an active manifest class or implement the documented safe-Rust stage |
 | A codec returns `FeatureDisabled` | The matching Cargo feature is off | Enable only the required format feature |
-| WASM AVIF returns `Unsupported` | The operation or AV1 class is outside the portable subset | Use a proven manifest class or a native build |
+| WASM AVIF returns `Unsupported` | The operation or AV1 class is outside the portable subset | Use a proven manifest class; native fallback is intentionally unavailable |
 | Matrix count changed unexpectedly | Generated matrix and manifest differ | Regenerate with the pinned oracle and review the full diff |
 | Coverage falls below 100% | New executable paths lack retained evidence | Query Coverage MCP, reverse-map missing branches, and prefer complete fixtures |
 

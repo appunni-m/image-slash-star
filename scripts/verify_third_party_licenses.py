@@ -42,9 +42,6 @@ EXPECTED_SHA256 = {
     "third_party/libavif/LICENSE": (
         "165abf92cc04b39e80d29cadea7a6a7e8fddf59407d4ad2616507a7ebe8216f9"
     ),
-    "third_party/libavif/include/avif/avif.h": (
-        "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e"
-    ),
     "third_party/libjpeg-turbo/LICENSE.md": (
         "e10114e6e40f3d0311c401ca25245ac5ef459a43c20f976fd63f03e816f5741f"
     ),
@@ -137,7 +134,6 @@ def main() -> int:
         path
         for path in EXPECTED_SHA256
         if path.startswith("third_party/")
-        and path != "third_party/libavif/include/avif/avif.h"
     }
     untracked = tracked_legal_files() - expected_legal
     if untracked:

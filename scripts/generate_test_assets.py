@@ -4824,16 +4824,13 @@ def gen_avif():
         raise RuntimeError("repeated-frame-ID AVIF mutation differs")
     (d / "animated_repeated_frame_id.avif").write_bytes(repeated_frame_id)
 
-    def write_portable(
+    def write_portable_image(
         name,
-        color,
-        size=(4, 4),
+        image,
         quality=100,
         speed=8,
         subsampling="4:4:4",
     ):
-        image = Image.new("RGB", size, color)
-
         def encode():
             output = BytesIO()
             image.save(
@@ -4852,6 +4849,36 @@ def gen_avif():
         if first != second:
             raise RuntimeError(f"AVIF fixture {name} is not deterministic")
         (d / name).write_bytes(first)
+
+    def write_portable(
+        name,
+        color,
+        size=(4, 4),
+        quality=100,
+        speed=8,
+        subsampling="4:4:4",
+    ):
+        write_portable_image(
+            name,
+            Image.new("RGB", size, color),
+            quality=quality,
+            speed=speed,
+            subsampling=subsampling,
+        )
+
+    def write_portable_luma_pattern(name, size, sample):
+        pixels = bytes(
+            channel
+            for y in range(size[1])
+            for x in range(size[0])
+            for channel in (sample(x, y),) * 3
+        )
+        write_portable_image(
+            name,
+            Image.frombytes("RGB", size, pixels),
+            quality=99,
+            subsampling="4:2:0",
+        )
 
     def write_portable_lossless(
         name,
@@ -4984,6 +5011,26 @@ def gen_avif():
             quality=99,
             subsampling="4:2:0",
         )
+
+    # These are the first independent legal AC coefficient classes admitted
+    # by the portable decoder. Keep the source patterns deliberately simple:
+    # they exercise EOB-bin five, EOB-bin six, and the 8x8 moving level-context
+    # plane without relying on a payload mutation or a native decoder.
+    write_portable_luma_pattern(
+        "portable_lossy_420_q99_rampx_eob5.avif",
+        (4, 4),
+        lambda x, _y: 96 + 8 * x,
+    )
+    write_portable_luma_pattern(
+        "portable_lossy_420_q99_rampy_eob6.avif",
+        (4, 4),
+        lambda _x, y: 96 + 8 * y,
+    )
+    write_portable_luma_pattern(
+        "portable_lossy_420_q99_8x8_diag_eob6.avif",
+        (8, 8),
+        lambda x, y: 129 if x == y else 127,
+    )
 
     token_boundary_source = d / "portable_lossy_420_q99_gray_0.avif"
     token_boundary_bytes = bytearray(token_boundary_source.read_bytes())

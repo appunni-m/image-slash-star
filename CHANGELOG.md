@@ -24,15 +24,16 @@ All notable changes will be documented in this file. This project follows
   `ImageError::Cancelled` without publishing partial state.
 - Manifest-driven Pillow 12.2.0 parity suite with exact decoded-pixel and
   encoded-file comparisons.
-- Feature-gated JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF codec
-  modules.
-- Exact AVIF parity through libavif 1.4.1, dav1d 1.5.3, and libaom 3.13.2,
-  including still images, animations, metadata, color modes, and save options.
-- Manifest fixtures with zero planned or skipped rows and 100% LLVM line,
-  function, branch, and region coverage.
-- Pinned native oracle identities, a checksummed third-party provenance
-  inventory, complete upstream license texts, and the AOM patent notice at the
-  source-package root.
+- Feature-gated JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and pure-Rust AVIF
+  container/still-decoder modules.
+- Pinned AVIF oracle identities from libavif 1.4.1, dav1d 1.5.3, and libaom
+  3.13.2, with the supported safe-Rust subset and explicit planned gaps for
+  the remaining still, sequence, and encode work.
+- Manifest fixtures whose supported rows are distinguished from explicit
+  planned rows; coverage claims remain tied to the exact measured revision.
+- Pinned oracle identities, a checksummed third-party provenance inventory,
+  complete upstream license texts, and the AOM patent notice at the
+  source-package root. The oracle libraries are not runtime dependencies.
 - Structured `ImageResult` failures across the canonical detect, inspect,
   decode, sequence, and encode APIs.
 - A shared `DecodePolicy` with inclusive limits for pre-detection encoded

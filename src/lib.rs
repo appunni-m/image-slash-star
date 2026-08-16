@@ -71,10 +71,9 @@
 //!
 //! Default features enable the Rust-only `jpeg`, `png`, `gif`, `bmp`, `tiff`,
 //! `webp`, and `ico` codecs. `ico` also enables `png` and `bmp`. The `avif`
-//! feature is opt-in: native builds use a version-locked libavif stack, while
-//! `wasm32-unknown-unknown` currently supports portable inspection and a
-//! documented, manifest-bounded still-decode subset. Portable AVIF sequence
-//! decode and encoding are not complete.
+//! feature is opt-in and exposes the same safe, portable still-decode subset
+//! on every target. AVIF encoding and sequence decoding remain explicit
+//! pure-Rust implementation gaps; there is no native fallback.
 //!
 //! # Errors
 //!
@@ -96,7 +95,7 @@ pub mod encode_policy;
 pub mod source;
 pub mod types;
 
-pub use cancel::CancellationToken;
+pub use cancel::{CancellationToken, ProgressDecision, ProgressEvent};
 pub use capabilities::{
     CODEC_OPERATIONS, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, CodecOperation, FormatCapabilities, all_capabilities,
@@ -1137,9 +1136,8 @@ pub fn encode_with_policy(
 /// pixels, codec-result, and
 /// metadata-assembly boundaries, including lossy WebP VP8/ALPH RIFF payload,
 /// lossless VP8L candidate-trial suffix and RIFF frame, and WebP
-/// container/metadata copies after each 1,024 output bytes; native
-/// AVIF still encoding polls preparation,
-/// frame, and finalization checkpoints; ICO still encoding polls source-size
+/// container/metadata copies after each 1,024 output bytes; AVIF planned-gap
+/// validation and cancellation checkpoints; ICO still encoding polls source-size
 /// validation, embedded PNG/BMP work, and directory finalization. The sequence
 /// API additionally checks at retained-frame boundaries and codec-specific
 /// checkpoints. The no-token WebP selection path remains tight; token-aware
@@ -1186,9 +1184,9 @@ pub fn encode_with_token_and_policy(
 
 /// Encode a still image or animation while retaining every source frame.
 ///
-/// Multi-frame output is currently supported for GIF, TIFF, WebP, and native
-/// AVIF. Other formats accept a one-frame sequence and reject additional
-/// retained frames.
+/// Multi-frame output is currently supported for GIF, TIFF, and WebP. AVIF
+/// sequence encoding is a documented pure-Rust planned gap. Other formats
+/// accept a one-frame sequence and reject additional retained frames.
 ///
 /// # Errors
 ///
@@ -1241,7 +1239,7 @@ pub fn encode_sequence_with_policy(
 /// VP8/ALPH and lossless VP8L frame-copy, and container-copy boundaries.
 /// One-frame sequence encodes reuse their still encoder's
 /// checkpoints, while their sink paths reuse the corresponding validated
-/// structural writers; multi-frame GIF, TIFF, WebP, and native AVIF encodes
+/// structural writers; multi-frame GIF, TIFF, and WebP encodes
 /// poll their sequence/container boundaries.
 ///
 /// # Errors
@@ -1280,9 +1278,10 @@ pub fn encode_sequence_with_token_and_policy(
 ///
 /// Codecs may retain complete encoded working state before the first write.
 /// Current sink writers additionally emit validated container structures
-/// through separate writes: JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native
-/// AVIF still paths, plus one-frame JPEG/PNG/BMP/ICO sequences and supported
-/// GIF/TIFF/WebP/AVIF sequences. A sink that does not opt into checkpointing
+/// through separate writes: JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and the
+/// supported AVIF still path, plus one-frame JPEG/PNG/BMP/ICO sequences and
+/// supported GIF/TIFF/WebP sequences. AVIF sequence encoding remains a
+/// documented pure-Rust planned gap. A sink that does not opt into checkpointing
 /// may therefore retain a prefix after a write failure, cancellation, or
 /// `flush` failure. Sinks that return a checkpoint have their prefix restored
 /// through [`OutputSink::rollback`] by the public sink APIs when delivery
@@ -2015,7 +2014,7 @@ pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Ve
 }
 
 /// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Av1EntropyTraceState {
@@ -2038,7 +2037,7 @@ pub struct Av1EntropyTraceState {
 }
 
 /// Produce scalar AV1 entropy states for the pinned fixture operation sequence.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 pub fn __coverage_av1_entropy_reference_trace() -> ImageResult<Vec<Av1EntropyTraceState>> {
     codecs::into_image_result(
@@ -2049,7 +2048,7 @@ pub fn __coverage_av1_entropy_reference_trace() -> ImageResult<Vec<Av1EntropyTra
 }
 
 /// Codec-private Y/U/V samples reconstructed by the first supported AV1 leaf.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Av1ReconstructionTrace {
@@ -2080,7 +2079,7 @@ pub struct Av1ReconstructionTrace {
 }
 
 /// One scalar range-decoder operation from a reconstructed AV1 leaf.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Av1EntropyOperationState {
@@ -2105,7 +2104,7 @@ pub struct Av1EntropyOperationState {
 }
 
 /// Return the retained production-path AV1 reconstruction for a fixture.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 pub fn __coverage_av1_reconstruction(data: &[u8]) -> ImageResult<Option<Av1ReconstructionTrace>> {
     codecs::into_image_result(
@@ -2116,7 +2115,7 @@ pub fn __coverage_av1_reconstruction(data: &[u8]) -> ImageResult<Option<Av1Recon
 }
 
 /// Exercise unsupported closed-leaf syntax by mutating one fixture's AV1 item.
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]
 pub fn __coverage_sweep_av1_first_leaf(data: &[u8]) {
     codecs::__coverage_sweep_av1_first_leaf(data);

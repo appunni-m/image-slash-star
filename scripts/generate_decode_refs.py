@@ -261,6 +261,7 @@ def sync_decode_rows(manifest, matrix):
                         "rust_sequence_error_reason": case.get(
                             "rust_sequence_error_reason"
                         ),
+                        "pure_rust_work_item": case.get("pure_rust_work_item"),
                         "status": case_status,
                     }
                 )
@@ -272,8 +273,25 @@ def sync_decode_rows(manifest, matrix):
                     )
                     if not row["gap"]:
                         raise RuntimeError(f"planned decode row has no gap reason: {fmt_name}/{row_id}")
+                    row["pure_rust_work_item"] = case.get("pure_rust_work_item")
+                    if not row["pure_rust_work_item"]:
+                        raise RuntimeError(
+                            f"planned decode row has no pure-Rust work item: {fmt_name}/{row_id}"
+                        )
+                    row["former_native_only"] = bool(
+                        case.get(
+                            "former_native_only",
+                            fmt_manifest.get("former_native_only", False),
+                        )
+                    )
+                    if not row["former_native_only"] and fmt_name == "avif":
+                        raise RuntimeError(
+                            f"planned AVIF row is missing former_native_only: {fmt_name}/{row_id}"
+                        )
                 else:
                     row.pop("gap", None)
+                    row.pop("pure_rust_work_item", None)
+                    row.pop("former_native_only", None)
                 if row["status"] == "planned" or row["expect_error"]:
                     clear_pixel_ref(row)
                 synchronized.append(row)
@@ -2113,7 +2131,9 @@ def sync_encode_rows(manifest, matrix):
                 row.pop("rust_expect_error", None)
                 row.pop("rust_error_kind", None)
                 row.pop("rust_error_reason", None)
-            row["status"] = specification.get("status", "active")
+            row["status"] = specification.get(
+                "status", fmt_manifest.get("encode_status", "active")
+            )
             if row["status"] == "planned":
                 row["gap"] = (
                     specification.get("oracle_gap")
@@ -2122,10 +2142,30 @@ def sync_encode_rows(manifest, matrix):
                 )
                 if not row["gap"]:
                     raise RuntimeError(f"planned encode row has no gap reason: {fmt_name}/{case_id}")
+                row["pure_rust_work_item"] = specification.get(
+                    "pure_rust_work_item",
+                    fmt_manifest.get("planned_pure_rust_work_item"),
+                )
+                if not row["pure_rust_work_item"]:
+                    raise RuntimeError(
+                        f"planned encode row has no pure-Rust work item: {fmt_name}/{case_id}"
+                    )
+                row["former_native_only"] = bool(
+                    specification.get(
+                        "former_native_only",
+                        fmt_manifest.get("former_native_only", False),
+                    )
+                )
+                if not row["former_native_only"] and fmt_name == "avif":
+                    raise RuntimeError(
+                        f"planned AVIF encoder row is missing former_native_only: {fmt_name}/{case_id}"
+                    )
                 clear_pixel_ref(row)
                 clear_encoded_ref(row)
             else:
                 row.pop("gap", None)
+                row.pop("pure_rust_work_item", None)
+                row.pop("former_native_only", None)
             row["source_format"] = specification.get(
                 "source_format", default_source_format or fmt_name
             )
@@ -2328,6 +2368,10 @@ def validate_generated_outputs(matrix, target_format=None):
             if row.get("status") == "planned":
                 if not row.get("gap"):
                     failures.append(f"{case_name}: planned decode row has no gap reason")
+                if not row.get("pure_rust_work_item"):
+                    failures.append(
+                        f"{case_name}: planned decode row has no pure-Rust work item"
+                    )
                 if row.get("ref_path"):
                     failures.append(f"{case_name}: planned decode row retains a reference")
                 continue
@@ -2542,6 +2586,10 @@ def validate_generated_outputs(matrix, target_format=None):
             if row.get("status") == "planned":
                 if not row.get("gap"):
                     failures.append(f"{case_name}: planned encode row has no gap reason")
+                if not row.get("pure_rust_work_item"):
+                    failures.append(
+                        f"{case_name}: planned encode row has no pure-Rust work item"
+                    )
                 if row.get("ref_path") or row.get("encoded_ref_path"):
                     failures.append(f"{case_name}: planned encode row retains oracle evidence")
                 continue
@@ -2686,22 +2734,6 @@ def generate_decode(manifest, matrix, target_format=None):
                 continue
             for asset_name in case.get("test_assets", []):
                 row = ensure_decode_row(matrix, fmt_name, fmt_data, case, asset_name)
-                if fmt_data.get("status") == "planned" or case.get("status") == "planned":
-                    row["status"] = "planned"
-                    clear_pixel_ref(row)
-                    row.pop("verify_status", None)
-                    row.pop("verify_error_type", None)
-                    row.pop("verify_error_message", None)
-                    row.pop("verify_error_kind", None)
-                    row.pop("inspect_status", None)
-                    row.pop("inspect_error_type", None)
-                    row.pop("inspect_error_message", None)
-                    row.pop("inspect_error_kind", None)
-                    row.pop("ref_bit_depth", None)
-                    row.pop("ref_bit_depth_origin", None)
-                    row.pop("inspect_source_byte_order", None)
-                    row.pop("inspect_source_byte_order_origin", None)
-                    continue
                 img_path = ASSETS_DIR / fmt_name / asset_name
                 if not img_path.exists():
                     continue
@@ -2709,6 +2741,58 @@ def generate_decode(manifest, matrix, target_format=None):
                 row["asset_sha256"] = sha256(asset_bytes)
                 row["execution"] = execution_contract()
                 row["oracle_detects_format"] = oracle_detects_format(fmt_name, asset_bytes)
+                is_planned = fmt_data.get("status") == "planned" or case.get("status") == "planned"
+                if is_planned:
+                    row["status"] = "planned"
+                    # Planned rows still retain the independently observed
+                    # Pillow inspection/verification lifecycle. Only pixel
+                    # and encoded-byte evidence is withheld until Rust closes
+                    # the named work item.
+                    write_inspect_ref(row, img_path, fmt_name)
+                    write_verify_ref(row, img_path)
+                    if row.get("expect_error"):
+                        clear_pixel_ref(row)
+                        try:
+                            from PIL import Image
+
+                            with pillow_open_asset(img_path) as image:
+                                image.load()
+                        except Exception as error:
+                            row["oracle_status"] = "error"
+                            row["oracle_error_type"] = (
+                                f"{type(error).__module__}.{type(error).__name__}"
+                            )
+                            row["oracle_error_message"] = stable_error_message(error)
+                            row["oracle_error_kind"] = decode_error_kind(
+                                row["oracle_detects_format"], error
+                            )
+                        else:
+                            row["oracle_status"] = "ok"
+                            row.pop("oracle_error_type", None)
+                            row.pop("oracle_error_message", None)
+                            row.pop("oracle_error_kind", None)
+                    else:
+                        try:
+                            from PIL import Image
+
+                            with pillow_open_asset(img_path) as image:
+                                image.load()
+                        except Exception as error:
+                            row["oracle_status"] = "error"
+                            row["oracle_error_type"] = (
+                                f"{type(error).__module__}.{type(error).__name__}"
+                            )
+                            row["oracle_error_message"] = stable_error_message(error)
+                            row["oracle_error_kind"] = decode_error_kind(
+                                row["oracle_detects_format"], error
+                            )
+                        else:
+                            row["oracle_status"] = "ok"
+                            row.pop("oracle_error_type", None)
+                            row.pop("oracle_error_message", None)
+                            row.pop("oracle_error_kind", None)
+                    clear_pixel_ref(row)
+                    continue
                 write_inspect_ref(row, img_path, fmt_name)
                 write_verify_ref(row, img_path)
                 if row.get("expect_error"):

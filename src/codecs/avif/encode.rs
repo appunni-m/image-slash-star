@@ -1,24 +1,25 @@
-//! Pillow-compatible AVIF encoding through libavif 1.4.1 and libaom 3.13.2.
+//! AVIF encoding boundary for the pure-Rust implementation.
+//!
+//! The container writer and AV1 encoder are deliberately not represented by a
+//! foreign-codec fallback. Until the Rust encoder is complete, every target reports a
+//! stable unsupported result after normal input validation and cancellation
+//! checks. Keeping this boundary in place lets the public API, capability
+//! table, and future encoder share one target-independent contract.
 
 use crate::codecs::{CodecError, CodecResult};
-#[cfg(all(coverage, not(target_arch = "wasm32")))]
-use crate::encode_options::AvifAdvancedOption;
 use crate::encode_options::AvifEncodeOptions;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::encode_options::{AvifCodec, AvifRange, AvifSubsampling};
 use crate::encode_policy::EncodePolicy;
-use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, FrameDuration};
-use crate::{CodecOperation, ImageFormat, OutputSink};
+use crate::types::{DecodedImage, DecodedSequence};
+use crate::{CodecOperation, OutputSink};
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::borrow::Cow;
-#[cfg(not(target_arch = "wasm32"))]
-use std::ffi::CString;
+const PURE_RUST_ENCODER_UNAVAILABLE: &str =
+    "AVIF encoding is not implemented in the pure-Rust backend";
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::types::ImageMode;
-
-/// Encode one image with Pillow's AVIF defaults and option mapping.
+/// Encode one image with the pure-Rust AVIF backend.
+///
+/// The validation and cancellation behavior is already part of the codec
+/// boundary. Actual ISO-BMFF and AV1 emission is tracked as the next Rust-only
+/// implementation stage rather than delegated to a C library.
 pub fn encode(image: &DecodedImage, options: &AvifEncodeOptions) -> CodecResult<Vec<u8>> {
     encode_with_token(image, options, None)
 }
@@ -26,217 +27,29 @@ pub fn encode(image: &DecodedImage, options: &AvifEncodeOptions) -> CodecResult<
 /// Encode one image while polling an optional cooperative cancellation token.
 pub fn encode_with_token(
     image: &DecodedImage,
-    options: &AvifEncodeOptions,
+    _options: &AvifEncodeOptions,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     image.validate().map_err(CodecError::from_image_error)?;
-    encode_images(
-        std::slice::from_ref(image),
-        std::slice::from_ref(&FrameDuration::from_milliseconds(0)),
-        options,
-        token,
-    )
+    Err(CodecError::NotImplemented(
+        PURE_RUST_ENCODER_UNAVAILABLE.to_owned(),
+    ))
 }
 
-/// Encode AVIF into validated ISO-BMFF top-level box segments owned by the
-/// caller's sink. The native encoder retains its complete working buffer; this
-/// boundary makes container delivery and cancellation observable without
-/// claiming AV1 interior streaming or destination rollback. WASM encoding
-/// remains target-unavailable and therefore never reaches box delivery.
+/// Encode one image into a caller-owned sink.
 pub(crate) fn encode_to_sink(
     image: &DecodedImage,
     options: &AvifEncodeOptions,
-    policy: EncodePolicy,
-    operation: CodecOperation,
+    _policy: EncodePolicy,
+    _operation: CodecOperation,
     token: Option<&crate::CancellationToken>,
-    sink: &mut dyn OutputSink,
+    _sink: &mut dyn OutputSink,
 ) -> CodecResult<usize> {
-    let encoded = encode_with_token(image, options, token)?;
-    policy
-        .check_output_len(encoded.len(), ImageFormat::Avif, operation)
-        .map_err(CodecError::from_image_error)?;
-    write_bmff_to_sink(&encoded, token, sink)
+    encode_with_token(image, options, token).map(|encoded| encoded.len())
 }
 
-/// Encode an AVIF sequence into validated ISO-BMFF top-level box segments
-/// owned by the caller's sink. The native encoder retains its complete
-/// working buffer; this boundary makes sequence-container delivery and
-/// cancellation observable without claiming AV1 interior streaming or
-/// destination rollback. WASM encoding remains target-unavailable and never
-/// reaches box delivery.
-pub(crate) fn encode_sequence_to_sink(
-    sequence: &DecodedSequence,
-    options: &AvifEncodeOptions,
-    policy: EncodePolicy,
-    operation: CodecOperation,
-    token: Option<&crate::CancellationToken>,
-    sink: &mut dyn OutputSink,
-) -> CodecResult<usize> {
-    let encoded = encode_sequence_with_token(sequence, options, token)?;
-    policy
-        .check_output_len(encoded.len(), ImageFormat::Avif, operation)
-        .map_err(CodecError::from_image_error)?;
-    write_bmff_to_sink(&encoded, token, sink)
-}
-
-fn write_bmff_to_sink(
-    encoded: &[u8],
-    token: Option<&crate::CancellationToken>,
-    sink: &mut dyn OutputSink,
-) -> CodecResult<usize> {
-    let mut offset = 0usize;
-    let mut written = 0usize;
-    while offset < encoded.len() {
-        #[cfg(not(coverage))]
-        let header_end = avif_extended_header_end(offset, 8)?;
-        #[cfg(coverage)]
-        let header_end = avif_extended_header_end(offset, 8).unwrap_or(encoded.len());
-        let header = encoded.get(offset..header_end).ok_or_else(|| {
-            CodecError::Malformed("AVIF box header extends beyond the encoded output".to_owned())
-        })?;
-        let small_size = u32::from_be_bytes([header[0], header[1], header[2], header[3]]);
-        let header_len = if small_size == 1 { 16usize } else { 8usize };
-        #[cfg(not(coverage))]
-        let header_end = avif_extended_header_end(offset, header_len)?;
-        #[cfg(coverage)]
-        let header_end = avif_extended_header_end(offset, header_len).unwrap_or(encoded.len());
-        let header = encoded.get(offset..header_end).ok_or_else(|| {
-            CodecError::Malformed("AVIF extended box size is unavailable".to_owned())
-        })?;
-        let (box_size, box_end) = if small_size == 0 {
-            (encoded.len().saturating_sub(offset), encoded.len())
-        } else if small_size == 1 {
-            #[cfg(not(coverage))]
-            let size_bytes = avif_extended_size_bytes(header)?;
-            #[cfg(coverage)]
-            let size_bytes = avif_extended_size_bytes(header).unwrap_or(header);
-            let size = u64::from_be_bytes([
-                size_bytes[0],
-                size_bytes[1],
-                size_bytes[2],
-                size_bytes[3],
-                size_bytes[4],
-                size_bytes[5],
-                size_bytes[6],
-                size_bytes[7],
-            ]);
-            #[cfg(not(coverage))]
-            let size = avif_box_size_from_u64(size)?;
-            #[cfg(coverage)]
-            let size = avif_box_size_from_u64(size).unwrap_or_default();
-            #[cfg(not(coverage))]
-            let end = avif_box_end(offset, size)?;
-            #[cfg(coverage)]
-            let end = avif_box_end(offset, size).unwrap_or(encoded.len());
-            (size, end)
-        } else {
-            #[cfg(not(coverage))]
-            let size = avif_box_size_from_u32(small_size)?;
-            #[cfg(coverage)]
-            let size = avif_box_size_from_u32(small_size).unwrap_or_default();
-            #[cfg(not(coverage))]
-            let end = avif_box_end(offset, size)?;
-            #[cfg(coverage)]
-            let end = avif_box_end(offset, size).unwrap_or(encoded.len());
-            (size, end)
-        };
-        if box_size < header_len {
-            return Err(CodecError::Malformed(
-                "AVIF box size is smaller than its header".to_owned(),
-            ));
-        }
-        if box_end > encoded.len() {
-            return Err(CodecError::Malformed(
-                "AVIF box extends beyond the encoded output".to_owned(),
-            ));
-        }
-        write_avif_sink_segment(sink, header, token, &mut written)?;
-        if box_end > header_end {
-            write_avif_sink_segment(sink, &encoded[header_end..box_end], token, &mut written)?;
-        }
-        offset = box_end;
-    }
-    #[cfg(not(coverage))]
-    ensure_avif_box_delivery_complete(offset, written, encoded.len())?;
-    #[cfg(coverage)]
-    let _ = ensure_avif_box_delivery_complete(offset, written, encoded.len());
-    Ok(written)
-}
-
-// The validated encoder always hands this writer an addressable `Vec`; the
-// checked arithmetic and slice bounds below are retained for defensive
-// malformed-buffer callers. Their failure states require an allocation or
-// target-width condition that the all-features native coverage lane cannot
-// materialize, so keep the narrow guards out of the aggregate denominator.
-#[cfg_attr(coverage, coverage(off))]
-fn avif_extended_header_end(offset: usize, header_len: usize) -> CodecResult<usize> {
-    offset
-        .checked_add(header_len)
-        .ok_or_else(|| CodecError::Dimensions("AVIF extended box header overflows".to_owned()))
-}
-
-#[cfg_attr(coverage, coverage(off))]
-fn avif_extended_size_bytes(header: &[u8]) -> CodecResult<&[u8]> {
-    header
-        .get(8..16)
-        .ok_or_else(|| CodecError::Malformed("AVIF extended box size is unavailable".to_owned()))
-}
-
-#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
-fn avif_box_size_from_u64(size: u64) -> CodecResult<usize> {
-    usize::try_from(size)
-        .map_err(|_| CodecError::Dimensions("AVIF box size exceeds usize".to_owned()))
-}
-
-#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
-fn avif_box_size_from_u32(size: u32) -> CodecResult<usize> {
-    usize::try_from(size)
-        .map_err(|_| CodecError::Dimensions("AVIF box size exceeds usize".to_owned()))
-}
-
-#[cfg_attr(coverage, coverage(off))]
-fn ensure_avif_box_delivery_complete(
-    offset: usize,
-    written: usize,
-    encoded_len: usize,
-) -> CodecResult<()> {
-    if offset != encoded_len || written != encoded_len {
-        return Err(CodecError::Malformed(
-            "AVIF box delivery did not cover the encoded output".to_owned(),
-        ));
-    }
-    Ok(())
-}
-
-fn write_avif_sink_segment(
-    sink: &mut dyn OutputSink,
-    bytes: &[u8],
-    token: Option<&crate::CancellationToken>,
-    written: &mut usize,
-) -> CodecResult<()> {
-    crate::codecs::error::check_cancelled(token)?;
-    sink.write_all(bytes)
-        .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
-    *written = avif_sink_output_end(*written, bytes.len())?;
-    Ok(())
-}
-
-#[cfg_attr(coverage, coverage(off))]
-fn avif_box_end(offset: usize, size: usize) -> CodecResult<usize> {
-    offset
-        .checked_add(size)
-        .ok_or_else(|| CodecError::Dimensions("AVIF box size overflows".to_owned()))
-}
-
-#[cfg_attr(coverage, coverage(off))]
-fn avif_sink_output_end(written: usize, bytes: usize) -> CodecResult<usize> {
-    written
-        .checked_add(bytes)
-        .ok_or_else(|| CodecError::Dimensions("AVIF sink output length overflows".to_owned()))
-}
-
-/// Encode all frames in an AVIF image sequence.
+/// Encode an AVIF sequence with the pure-Rust backend.
 pub fn encode_sequence(
     sequence: &DecodedSequence,
     options: &AvifEncodeOptions,
@@ -244,625 +57,66 @@ pub fn encode_sequence(
     encode_sequence_with_token(sequence, options, None)
 }
 
-/// Encode an AVIF sequence while polling an optional cancellation token at
-/// frame and native-container finalization boundaries.
+/// Encode an AVIF sequence while polling an optional cooperative cancellation
+/// token.
 pub fn encode_sequence_with_token(
     sequence: &DecodedSequence,
-    options: &AvifEncodeOptions,
+    _options: &AvifEncodeOptions,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     sequence.validate().map_err(CodecError::from_image_error)?;
-    for frame in &sequence.frames {
-        if frame.source.rect.left != 0
-            || frame.source.rect.top != 0
-            || frame.source.rect.width != sequence.width
-            || frame.source.rect.height != sequence.height
-        {
-            return Err(CodecError::Unsupported(
-                "AVIF cannot retain partial or offset source frames".to_owned(),
-            ));
-        }
-        if frame.source.disposal != FrameDisposal::Unspecified
-            || frame.source.blend != FrameBlend::Unspecified
-            || frame.source.interlaced
-            || frame.source.is_default_image
-        {
-            return Err(CodecError::Unsupported(
-                "AVIF cannot retain GIF/APNG presentation metadata".to_owned(),
-            ));
-        }
-    }
-    let images = sequence
-        .frames
-        .iter()
-        .map(|frame| &frame.image)
-        .collect::<Vec<_>>();
-    let durations = sequence
-        .frames
-        .iter()
-        .map(|frame| frame.source.duration)
-        .collect::<Vec<_>>();
-    encode_image_refs(&images, &durations, options, token)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn encode_images(
-    images: &[DecodedImage],
-    durations: &[FrameDuration],
-    options: &AvifEncodeOptions,
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    let references = images.iter().collect::<Vec<_>>();
-    encode_image_refs(&references, durations, options, token)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn encode_images(
-    _images: &[DecodedImage],
-    _durations: &[FrameDuration],
-    _options: &AvifEncodeOptions,
-    _token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    Err(CodecError::TargetUnavailable(
-        "AVIF encoding requires the native extra module".to_owned(),
+    Err(CodecError::NotImplemented(
+        PURE_RUST_ENCODER_UNAVAILABLE.to_owned(),
     ))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn encode_image_refs(
-    images: &[&DecodedImage],
-    durations: &[FrameDuration],
+/// Encode an AVIF sequence into a caller-owned sink.
+pub(crate) fn encode_sequence_to_sink(
+    sequence: &DecodedSequence,
     options: &AvifEncodeOptions,
+    _policy: EncodePolicy,
+    _operation: CodecOperation,
     token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    crate::codecs::error::check_cancelled(token)?;
-    let first = *images
-        .first()
-        .ok_or_else(|| CodecError::Dimensions("AVIF sequence has no frames".to_owned()))?;
-    if images.len() != durations.len() {
-        return Err(CodecError::Parameter(
-            "AVIF frame and duration counts differ".to_owned(),
-        ));
-    }
-    for image in images {
-        if image.width != first.width || image.height != first.height {
-            return Err(CodecError::Dimensions(
-                "AVIF frames must share one canvas size".to_owned(),
-            ));
-        }
-    }
-    let parsed = ParsedOptions::new(options)?;
-    let frame_durations = durations
-        .iter()
-        .copied()
-        .map(FrameDuration::milliseconds_rounded)
-        .map(|duration| {
-            duration
-                .map(u64::from)
-                .map_err(CodecError::from_image_error)
-        })
-        .collect::<CodecResult<Vec<_>>>()?;
-    // Pillow's AVIF save surface quantizes source timing to milliseconds even
-    // when the decoded AVIF track retained a more precise rational duration.
-    let encoder = create_encoder(first, &parsed, 1_000)?;
-    encode_frames(encoder, images, &frame_durations, images.len() == 1, token)
+    _sink: &mut dyn OutputSink,
+) -> CodecResult<usize> {
+    encode_sequence_with_token(sequence, options, token).map(|encoded| encoded.len())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn create_encoder(
-    first: &DecodedImage,
-    parsed: &ParsedOptions,
-    timescale: u64,
-) -> CodecResult<super::native::Encoder> {
-    let config = super::native::EncodeConfig {
-        width: first.width,
-        height: first.height,
-        yuv_format: parsed.yuv_format,
-        yuv_range: parsed.yuv_range,
-        quality: parsed.quality,
-        speed: parsed.speed,
-        max_threads: parsed.max_threads,
-        tile_rows_log2: parsed.tile_rows_log2,
-        tile_cols_log2: parsed.tile_cols_log2,
-        alpha_premultiplied: parsed.alpha_premultiplied,
-        auto_tiling: parsed.auto_tiling,
-        timescale,
-        creation_time: parsed.sequence_time,
-        modification_time: parsed.sequence_time,
-        icc: &parsed.icc,
-        exif: &parsed.exif,
-        exif_orientation: parsed.exif_orientation,
-        xmp: &parsed.xmp,
-        advanced: &parsed.advanced,
-    };
-    super::native::Encoder::new(&config).map_err(|error| error.context("create AVIF encoder"))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn encode_frames(
-    mut encoder: super::native::Encoder,
-    images: &[&DecodedImage],
-    durations: &[u64],
-    single: bool,
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    for (image, &duration) in images.iter().zip(durations) {
-        crate::codecs::error::check_cancelled(token)?;
-        let prepared = prepare_pixels(image)?;
-        encoder
-            .add_frame(
-                prepared.bytes.as_ref(),
-                image.width,
-                image.height,
-                prepared.channels,
-                duration,
-                single,
-            )
-            .map_err(|error| error.context("encode AVIF frame"))?;
-        crate::codecs::error::check_cancelled(token)?;
-    }
-    crate::codecs::error::check_cancelled(token)?;
-    encoder
-        .finish()
-        .map_err(|error| error.context("finalize AVIF encoder"))
-}
-
-#[cfg(target_arch = "wasm32")]
-fn encode_image_refs(
-    _images: &[&DecodedImage],
-    _durations: &[FrameDuration],
-    _options: &AvifEncodeOptions,
-    _token: Option<&crate::CancellationToken>,
-) -> CodecResult<Vec<u8>> {
-    Err(CodecError::TargetUnavailable(
-        "AVIF encoding requires the native extra module".to_owned(),
-    ))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-struct PreparedPixels<'image> {
-    bytes: Cow<'image, [u8]>,
-    channels: u32,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn prepare_pixels(image: &DecodedImage) -> CodecResult<PreparedPixels<'_>> {
-    let prepared = match image.mode {
-        ImageMode::Rgb8 => PreparedPixels {
-            bytes: Cow::Borrowed(&image.pixels),
-            channels: 3,
-        },
-        ImageMode::Rgba8 => PreparedPixels {
-            bytes: Cow::Borrowed(&image.pixels),
-            channels: 4,
-        },
-        ImageMode::L8 => PreparedPixels {
-            bytes: Cow::Owned(image.pixels.iter().flat_map(|&value| [value; 3]).collect()),
-            channels: 3,
-        },
-        ImageMode::La8 => PreparedPixels {
-            bytes: Cow::Owned(
-                image
-                    .pixels
-                    .chunks_exact(2)
-                    .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
-                    .collect(),
-            ),
-            channels: 4,
-        },
-        ImageMode::P8 => prepare_palette_pixels(image)?,
-        ImageMode::Cmyk8 => PreparedPixels {
-            bytes: Cow::Owned(cmyk_to_rgb(&image.pixels)),
-            channels: 3,
-        },
-        ImageMode::L1 => PreparedPixels {
-            bytes: Cow::Owned(unpack_l1_to_rgb(image)?),
-            channels: 3,
-        },
-        _ => {
-            return Err(CodecError::Unsupported(
-                "AVIF cannot encode this image mode".to_owned(),
-            ));
-        }
-    };
-    Ok(prepared)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn prepare_palette_pixels(image: &DecodedImage) -> CodecResult<PreparedPixels<'static>> {
-    prepare_palette_pixels_with_capacity(image, palette_capacity)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn prepare_palette_pixels_with_capacity(
-    image: &DecodedImage,
-    capacity_for: fn(usize, usize) -> CodecResult<usize>,
-) -> CodecResult<PreparedPixels<'static>> {
-    let palette = image
-        .palette
-        .as_ref()
-        .ok_or_else(|| CodecError::Parameter("indexed AVIF input requires a palette".to_owned()))?;
-    let has_alpha = palette.alpha.iter().any(|&alpha| alpha != u8::MAX);
-    let channels = if has_alpha { 4 } else { 3 };
-    let capacity = capacity_for(image.pixels.len(), channels)?;
-    let mut pixels = Vec::with_capacity(capacity);
-    for &index in &image.pixels {
-        let index = usize::from(index);
-        let offset = index.saturating_mul(3);
-        let end = offset.saturating_add(3);
-        pixels.extend_from_slice(palette.rgb.get(offset..end).ok_or_else(|| {
-            CodecError::Parameter("AVIF palette index is out of bounds".to_owned())
-        })?);
-        if has_alpha {
-            pixels.push(palette.alpha.get(index).copied().unwrap_or(u8::MAX));
-        }
-    }
-    Ok(PreparedPixels {
-        bytes: Cow::Owned(pixels),
-        channels: if has_alpha { 4 } else { 3 },
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn palette_capacity(pixel_count: usize, channels: usize) -> CodecResult<usize> {
-    pixel_count.checked_mul(channels).ok_or_else(|| {
-        CodecError::Dimensions("AVIF expanded palette buffer is too large".to_owned())
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn unpack_l1_to_rgb(image: &DecodedImage) -> CodecResult<Vec<u8>> {
-    let width = image.width as usize;
-    let source_stride = width.div_ceil(8);
-    let product = u64::from(image.width).saturating_mul(u64::from(image.height));
-    #[cfg(target_pointer_width = "64")]
-    let pixel_count = usize::from_ne_bytes(product.to_ne_bytes());
-    #[cfg(not(target_pointer_width = "64"))]
-    let pixel_count = usize::try_from(product)
-        .map_err(|_| CodecError::Dimensions("AVIF pixel count is unrepresentable".to_owned()))?;
-    let capacity = pixel_count.checked_mul(3).ok_or_else(|| {
-        CodecError::Dimensions("AVIF expanded bilevel buffer is too large".to_owned())
-    })?;
-    let mut pixels = Vec::with_capacity(capacity);
-    for row in image.pixels.chunks_exact(source_stride) {
-        for x in 0..width {
-            let bit = 7usize.saturating_sub(x.rem_euclid(8));
-            let byte_index = x.div_euclid(8);
-            let value = if row[byte_index] & (1 << bit) == 0 {
-                0
-            } else {
-                u8::MAX
-            };
-            pixels.extend_from_slice(&[value; 3]);
-        }
-    }
-    if pixels.len() != capacity {
-        return Err(CodecError::Parameter(
-            "AVIF bilevel pixel buffer is truncated".to_owned(),
-        ));
-    }
-    Ok(pixels)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn cmyk_to_rgb(pixels: &[u8]) -> Vec<u8> {
-    pixels
-        .chunks_exact(4)
-        .flat_map(|pixel| {
-            let black = u16::from(u8::MAX.saturating_sub(pixel[3]));
-            std::array::from_fn::<_, 3, _>(|channel| {
-                let ink = u16::from(u8::MAX.saturating_sub(pixel[channel]));
-                let scaled = ink
-                    .saturating_mul(black)
-                    .saturating_add(127)
-                    .div_euclid(u16::from(u8::MAX));
-                scaled.to_le_bytes()[0]
-            })
-        })
-        .collect()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-struct ParsedOptions {
-    yuv_format: i32,
-    yuv_range: i32,
-    quality: i32,
-    speed: i32,
-    max_threads: i32,
-    tile_rows_log2: i32,
-    tile_cols_log2: i32,
-    alpha_premultiplied: bool,
-    auto_tiling: bool,
-    icc: Vec<u8>,
-    exif: Vec<u8>,
-    exif_orientation: i32,
-    xmp: Vec<u8>,
-    advanced: Vec<(CString, CString)>,
-    sequence_time: u64,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl ParsedOptions {
-    fn new(options: &AvifEncodeOptions) -> CodecResult<Self> {
-        let _codec = options.codec.unwrap_or(AvifCodec::Auto);
-        let yuv_format = match options.subsampling.unwrap_or(AvifSubsampling::Cs420) {
-            AvifSubsampling::Cs444 => 1,
-            AvifSubsampling::Cs422 => 2,
-            AvifSubsampling::Cs420 => 3,
-            AvifSubsampling::Cs400 => 4,
-        };
-        let yuv_range = match options.range.unwrap_or(AvifRange::Full) {
-            AvifRange::Full => 1,
-            AvifRange::Limited => 0,
-        };
-        let speed = options.speed.unwrap_or(6);
-        let max_threads = options
-            .max_threads
-            .unwrap_or_else(super::native::default_max_threads);
-        let tile_rows_log2 = options.tile_rows.unwrap_or(0);
-        let tile_cols_log2 = options.tile_cols.unwrap_or(0);
-        let alpha_premultiplied = options.alpha_premultiplied.unwrap_or(false);
-        let auto_tiling = options
-            .autotiling
-            .unwrap_or(tile_rows_log2 == 0 && tile_cols_log2 == 0);
-        let icc = options.icc.clone().unwrap_or_default();
-        let exif = options.exif.clone().unwrap_or_default();
-        let xmp = options.xmp.clone().unwrap_or_default();
-        let exif_orientation = options.exif_orientation.unwrap_or(1);
-        let sequence_time = options.sequence_time.unwrap_or(0);
-        let mut advanced = Vec::with_capacity(options.advanced.len());
-        for option in &options.advanced {
-            advanced.push((
-                CString::new(option.key.as_str()).map_err(|_| {
-                    CodecError::Parameter("AVIF advanced key contains NUL".to_owned())
-                })?,
-                CString::new(option.value.as_str()).map_err(|_| {
-                    CodecError::Parameter("AVIF advanced value contains NUL".to_owned())
-                })?,
-            ));
-        }
-        let quality = options.quality.unwrap_or(75);
-        if quality > 100 {
-            return Err(CodecError::Parameter(
-                "AVIF quality must be between 0 and 100".to_owned(),
-            ));
-        }
-        Ok(Self {
-            yuv_format,
-            yuv_range,
-            quality: i32::from(quality),
-            speed,
-            max_threads,
-            tile_rows_log2,
-            tile_cols_log2,
-            alpha_premultiplied,
-            auto_tiling,
-            icc,
-            exif,
-            exif_orientation,
-            xmp,
-            advanced,
-            sequence_time,
-        })
-    }
-}
-
-#[cfg(all(coverage, not(target_arch = "wasm32")))]
+#[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use crate::types::{
-        ColorType, DecodedFrame, FrameBlend, FrameDisposal, FrameDuration, ImagePalette,
-    };
+    use crate::types::{ColorType, DecodedSequence};
 
-    // BMFF delivery is a Rust-owned sink boundary. Pillow does not expose
-    // malformed encoder output, extended-size boxes, or caller-owned sinks,
-    // so keep those defensive states in the existing private-origin drill.
-    let mut bmff_sink = Vec::new();
-    for malformed in [
-        vec![0; 4],
-        vec![0, 0, 0, 4, b'f', b'r', b'e', b'e'],
-        vec![0, 0, 0, 20, b'f', b'r', b'e', b'e'],
-        vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'],
-        vec![0, 0, 0, 1, b'f', b'r', b'e', b'e', 0, 0, 0, 0, 0, 0, 0, 8],
-    ] {
-        let _ = write_bmff_to_sink(&malformed, None, &mut bmff_sink);
-        bmff_sink.clear();
-    }
-    let small_box = vec![0, 0, 0, 8, b'f', b'r', b'e', b'e'];
-    let _ = write_bmff_to_sink(&small_box, None, &mut bmff_sink);
-    bmff_sink.clear();
-    let zero_box = vec![0, 0, 0, 0, b'f', b'r', b'e', b'e'];
-    let _ = write_bmff_to_sink(&zero_box, None, &mut bmff_sink);
-    bmff_sink.clear();
-    let mut extended_box = vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'];
-    extended_box.extend_from_slice(&16u64.to_be_bytes());
-    let _ = write_bmff_to_sink(&extended_box, None, &mut bmff_sink);
-    bmff_sink.clear();
-    let mut overflowing_box = vec![0, 0, 0, 1, b'f', b'r', b'e', b'e'];
-    overflowing_box.extend_from_slice(&u64::MAX.to_be_bytes());
-    let _ = write_bmff_to_sink(&overflowing_box, None, &mut bmff_sink);
-    let mut overflowing_written = usize::MAX;
-    let _ = write_avif_sink_segment(&mut bmff_sink, &[0], None, &mut overflowing_written);
-
-    let one = DecodedImage::new(1, 1, vec![0], ColorType::L8);
-    let two = DecodedImage::new(2, 1, vec![0, 0], ColorType::L8);
-    let tall = DecodedImage::new(1, 2, vec![0, 0], ColorType::L8);
-    // Pillow cannot supply a caller token. These native-only calls exercise
-    // each AVIF sequence/frame/finalization cancellation checkpoint without
-    // adding a synthetic Pillow parity row.
-    let still_sequence = DecodedSequence::from_image(one.clone());
+    let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
+    let options = AvifEncodeOptions::default();
+    let _ = encode(&image, &options);
     let token = crate::CancellationToken::new();
     token.cancel_after(0);
-    let _ =
-        encode_sequence_with_token(&still_sequence, &AvifEncodeOptions::default(), Some(&token));
-    for checks in [0, 1, 2, 3] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_image_refs(
-            &[&one],
-            &[FrameDuration::ZERO],
-            &AvifEncodeOptions::default(),
-            Some(&token),
-        );
-    }
-    let _ = encode_image_refs(&[], &[], &AvifEncodeOptions::default(), None);
-    let _ = encode_image_refs(&[&one], &[], &AvifEncodeOptions::default(), None);
-    let _ = encode_image_refs(
-        &[&one],
-        &[FrameDuration {
-            numerator: 1,
-            denominator: 0,
-        }],
-        &AvifEncodeOptions::default(),
+    let _ = encode_with_token(&image, &options, Some(&token));
+    let _ = encode_to_sink(
+        &image,
+        &options,
+        EncodePolicy::default(),
+        CodecOperation::StillEncode,
         None,
+        &mut Vec::new(),
     );
-    let _ = encode_image_refs(
-        &[&one, &two],
-        &[FrameDuration::ZERO; 2],
-        &AvifEncodeOptions::default(),
+
+    let sequence = DecodedSequence::from_image(image.clone());
+    let _ = encode_sequence(&sequence, &options);
+    let _ = encode_sequence_to_sink(
+        &sequence,
+        &options,
+        EncodePolicy::default(),
+        CodecOperation::SequenceEncode,
         None,
+        &mut Vec::new(),
     );
-    let _ = encode_image_refs(
-        &[&one, &tall],
-        &[FrameDuration::ZERO; 2],
-        &AvifEncodeOptions::default(),
-        None,
-    );
-    let invalid_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: Vec::new(),
-        loop_count: None,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = encode_sequence(&invalid_sequence, &AvifEncodeOptions::default());
     let invalid_image = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
-    let _ = encode(&invalid_image, &AvifEncodeOptions::default());
-    let zero_width = DecodedImage::new(0, 1, Vec::new(), ColorType::L8);
-    let _ = encode_image_refs(
-        &[&zero_width],
-        &[FrameDuration::ZERO],
-        &AvifEncodeOptions::default(),
-        None,
-    );
-
-    let offset_sequence = DecodedSequence {
-        width: 2,
-        height: 1,
-        frames: vec![DecodedFrame::source_rectangle(
-            one.clone(),
-            1,
-            0,
-            FrameDuration::ZERO,
-            FrameDisposal::Unspecified,
-            FrameBlend::Unspecified,
-            false,
-        )],
-        loop_count: None,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
+    let _ = encode(&invalid_image, &options);
+    let invalid_sequence = DecodedSequence {
+        frames: Vec::new(),
+        ..sequence
     };
-    let _ = encode_sequence(&offset_sequence, &AvifEncodeOptions::default());
-    let top_offset_sequence = DecodedSequence {
-        width: 1,
-        height: 2,
-        frames: vec![DecodedFrame::source_rectangle(
-            one.clone(),
-            0,
-            1,
-            FrameDuration::ZERO,
-            FrameDisposal::Unspecified,
-            FrameBlend::Unspecified,
-            false,
-        )],
-        loop_count: None,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = encode_sequence(&top_offset_sequence, &AvifEncodeOptions::default());
-
-    let unsupported = DecodedImage::new(1, 1, vec![0, 0], ColorType::L16);
-    let palette_without_table = DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8);
-    let _ = prepare_pixels(&unsupported);
-    let _ = encode(&unsupported, &AvifEncodeOptions::default());
-    let _ = prepare_pixels(&palette_without_table);
-    let short_alpha = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8)
-        .with_palette(ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0]).unwrap());
-    let invalid_palette = DecodedImage {
-        width: 1,
-        height: 1,
-        pixels: vec![0],
-        color: ColorType::L8,
-        mode: ImageMode::P8,
-        palette: Some(ImagePalette::default()),
-        cursor_hotspot: None,
-        source: crate::types::SourceDescriptor::new(),
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = prepare_palette_pixels(&short_alpha);
-    let _ = prepare_palette_pixels(&invalid_palette);
-    let _ = prepare_palette_pixels_with_capacity(&short_alpha, |_, _| {
-        Err(CodecError::Dimensions(
-            "forced AVIF palette capacity failure".to_owned(),
-        ))
-    });
-    let delayed_alpha = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8)
-        .with_palette(ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![u8::MAX, 0]).unwrap());
-    let _ = prepare_palette_pixels(&delayed_alpha);
-    let _ = palette_capacity(usize::MAX, 4);
-    let _ = palette_capacity(1, 4);
-    let huge_l1 = DecodedImage::with_mode(u32::MAX, u32::MAX, Vec::new(), ImageMode::L1);
-    let short_l1 = DecodedImage::with_mode(8, 2, vec![0], ImageMode::L1);
-    let _ = unpack_l1_to_rgb(&huge_l1);
-    let _ = unpack_l1_to_rgb(&short_l1);
-    let _ = prepare_pixels(&huge_l1);
-    let _ = prepare_pixels(&short_l1);
-
-    let parsed = ParsedOptions::new(&AvifEncodeOptions::default()).unwrap();
-    let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[&unsupported], &[0], true, None);
-    let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[&two], &[0], true, None);
-    let encoder = create_encoder(&one, &parsed, 1).unwrap();
-    let _ = encode_frames(encoder, &[], &[], false, None);
-
-    let mut advanced = AvifEncodeOptions {
-        codec: Some(AvifCodec::Aom),
-        subsampling: Some(AvifSubsampling::Cs444),
-        range: Some(AvifRange::Limited),
-        speed: Some(1),
-        max_threads: Some(1),
-        tile_rows: Some(1),
-        tile_cols: Some(1),
-        alpha_premultiplied: Some(false),
-        autotiling: Some(true),
-        icc: Some(vec![0]),
-        exif: Some(vec![0]),
-        exif_orientation: Some(1),
-        xmp: Some(vec![0]),
-        sequence_time: Some(1),
-        ..AvifEncodeOptions::default()
-    };
-    advanced.advanced.push(AvifAdvancedOption {
-        key: "tune".to_owned(),
-        value: "psnr".to_owned(),
-    });
-    let _ = ParsedOptions::new(&advanced);
-    advanced.advanced[0].key.push('\0');
-    let _ = ParsedOptions::new(&advanced);
-    advanced.advanced[0].key = "tune".to_owned();
-    advanced.advanced[0].value.push('\0');
-    let _ = ParsedOptions::new(&advanced);
+    let _ = encode_sequence(&invalid_sequence, &options);
 }

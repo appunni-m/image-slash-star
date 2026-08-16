@@ -3304,19 +3304,28 @@ formats:
     - 118
     - 105
     - 102
-    decoder: Optional native bridge matching libavif 1.4.1 and dav1d 1.5.3 observable behavior
-    encoder: Optional native bridge matching libavif 1.4.1 and libaom 3.13.2 deterministic bytes
-    status: parity-active
+    decoder: Safe Rust container parser plus a manifest-bounded pure-Rust AV1 still-decoder subset
+    encoder: Pure-Rust AV1/AVIF encoder planned; no foreign-codec fallback
+    status: in-progress
     verification_scope: header_only
     encode_source:
       format: png
       asset: 2x3.png
     optional: true
+    planned_gap_defaults:
+      decode: Pure Rust AV1 still decoding is not yet complete for this declared AVIF case.
+      encode: Pure Rust AVIF encoding is not implemented yet; no encoder is a runtime dependency.
+    # The removed native bridge used to make these cases appear supported.
+    # Keep that provenance explicit until each has pure safe-Rust evidence.
+    former_native_only: true
+    planned_pure_rust_work_item: AVF-ENCODE-001
+    encode_status: planned
     edge_cases:
     - id: baseline
       description: Baseline AVIF (8-bit, 4:2:0)
       test_assets:
       - baseline.avif
+      status: active
     - id: portable_lossless_a
       description: Minimal 4x4 lossless 4:4:4 key frame for portable AV1 reconstruction
       test_assets:
@@ -3373,6 +3382,18 @@ formats:
       description: 8x8 lossy 4:2:0 key frame proving the complete positive DC-only luma reconstruction
       test_assets:
       - portable_lossy_420_q99_8x8_gray_130.avif
+    - id: portable_lossy_420_q99_rampx_eob5
+      description: 4x4 lossy 4:2:0 horizontal luma ramp proving the first legal EOB-bin-five AC class
+      test_assets:
+      - portable_lossy_420_q99_rampx_eob5.avif
+    - id: portable_lossy_420_q99_rampy_eob6
+      description: 4x4 lossy 4:2:0 vertical luma ramp proving the first legal EOB-bin-six AC class
+      test_assets:
+      - portable_lossy_420_q99_rampy_eob6.avif
+    - id: portable_lossy_420_q99_8x8_diag_eob6
+      description: 8x8 lossy 4:2:0 diagonal luma impulse proving the moving 8x8 coefficient-context scratch plane
+      test_assets:
+      - portable_lossy_420_q99_8x8_diag_eob6.avif
     - id: portable_lossy_420_q99_gray_0
       description: 4x4 negative endpoint of the exhaustive quality-99 constant-gray DC domain
       test_assets:
@@ -3422,7 +3443,7 @@ formats:
       test_assets:
       - portable_lossy_420_q99_8x8_gray_125_control.avif
     - id: portable_lossy_420_q99_gray_128_control
-      description: Pillow-decodable adjacent lossy DC-predictor control retained outside the current portable reconstruction class
+      description: 4x4 lossy 4:2:0 key frame proving the adjacent DC luma predictor class
       test_assets:
       - portable_lossy_420_q99_gray_128_control.avif
     - id: portable_lossy_420_q99_gray_131_control
@@ -3502,11 +3523,17 @@ formats:
       test_assets:
       - portable_lossy_420_q99_eob_bin_control.avif
       expect_error: true
+      status: planned
+      gap: Pure Rust AV1 entropy decoding does not yet implement this EOB-bin syntax; keep it as an explicit unsupported feature gap.
+      pure_rust_work_item: AVF-ENTROPY-001
     - id: portable_lossy_420_q99_eob_base_control
       description: One-byte coded-tile mutation retaining EOB-bin zero before selecting unsupported EOB-base zero
       test_assets:
       - portable_lossy_420_q99_eob_base_control.avif
       expect_error: true
+      status: planned
+      gap: Pure Rust AV1 entropy decoding does not yet implement this EOB-base syntax; keep it as an explicit unsupported feature gap.
+      pure_rust_work_item: AVF-ENTROPY-001
     - id: portable_lossless_420_leaf_4x8_a
       description: 4x8 visible lossless 4:2:0 frame cropped from one coded 8x8 leaf
       test_assets:
@@ -4007,6 +4034,9 @@ formats:
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
       - 10bit.avif
+      status: planned
+      gap: Pure Rust AV1 still decoding does not yet cover 10/12-bit sample reconstruction and conversion.
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: with_alpha
       description: AVIF with alpha channel
       test_assets:
@@ -4017,6 +4047,7 @@ formats:
       - major_brand_mif1.avif
       - major_brand_msf1.avif
       - major_brand_mif1_late_avif.avif
+      status: active
     - id: error_generic_heif_brands
       description: Complete generic HEIF containers whose mif1/msf1 major brand has no avif/avis compatible brand
       test_assets:
@@ -4042,23 +4073,41 @@ formats:
       description: HDR AVIF (PQ/HLG transfer)
       test_assets:
       - hdr.avif
+      status: planned
+      gap: Pure Rust AVIF still decoding does not yet apply HDR transfer, primaries, and matrix conversion.
+      pure_rust_work_item: AVF-COLOR-001
     - id: grid
       description: AVIF with a 1x2 color grid and per-cell alpha items
       test_assets:
       - grid.avif
+      status: planned
+      gap: Pure Rust AVIF still decoding does not yet compose grid items into one output image.
+      pure_rust_work_item: AVF-COMPOSE-001
     - id: animated
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
       - animated.avif
+      status: planned
+      gap: Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_error_resilient
-      description: Two-frame libaom sequence with AV1 frame ID numbers enabled
+      description: Two-frame pinned AV1-oracle sequence with frame ID numbers enabled
       test_assets:
       - animated_error_resilient.avif
+      status: planned
+      gap: Pure Rust AVIF sequence decoding does not yet implement animated tracks, including error-resilient flags.
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: error_animated_repeated_frame_id
       description: Error-resilient sequence whose second frame repeats the previous current frame ID
       test_assets:
       - animated_repeated_frame_id.avif
+      status: planned
+      gap: Pure Rust AV1 sequence validation now rejects the repeated current frame ID, but first-frame materialization and full sequence presentation remain planned.
+      pure_rust_work_item: AVF-SEQUENCE-001
       expect_sequence_error: true
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: malformed
+      rust_sequence_error_reason: Pure Rust AV1 sequence validation rejects a repeated current frame ID before sequence presentation.
     - id: animated_track_only
       description: Five-frame avis track sequence whose required top-level meta box is replaced by a same-size free box
       test_assets:
@@ -4106,7 +4155,7 @@ formats:
       expect_error: true
     encode_edge_cases:
     - id: enc_error_public_mode_contract
-      description: Every unsupported native AVIF public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      description: Every unsupported AVIF public ImageMode and one inconsistent color/mode state return structured errors without panicking
       source_format: png
       source_asset: 1x1.png
       params:
@@ -4114,7 +4163,7 @@ formats:
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: Native AVIF directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8
+      rust_error_reason: The pure-Rust AVIF boundary currently accepts L1, P8, L8, La8, Rgb8, Rgba8, and Cmyk8
     - id: enc_error_retained_sequence_left
       description: AVIF sequence encoding cannot retain a horizontally offset source frame
       params: {'sequence_canvas_padding': [1, 0], 'sequence_frame_offset': [1, 0]}
@@ -4273,7 +4322,7 @@ formats:
         autotiling: false
         max_threads: 1
     - id: enc_metadata
-      description: ICC, EXIF, and XMP metadata copied through libavif
+      description: ICC, EXIF, and XMP metadata copied through AVIF container items
       source_format: png
       source_asset: 2x3.png
       params:
@@ -4293,7 +4342,7 @@ formats:
         exif_orientation: 6
         max_threads: 1
     - id: enc_advanced_tune
-      description: Ordered libaom codec-specific options matching Pillow advanced
+      description: Ordered AV1 codec-specific options matching Pillow advanced
       source_format: png
       source_asset: 2x3.png
       params:
@@ -4343,7 +4392,7 @@ formats:
         color_type: RGB
         range: invalid
     - id: enc_decoder_only_codec
-      description: Reject dav1d as an AVIF encoder exactly as Pillow does
+      description: Reject the decoder-only AV1 codec exactly as Pillow does
       source_format: png
       source_asset: 2x3.png
       expect_error: true
@@ -4361,7 +4410,7 @@ formats:
         color_type: RGB
         quality: 101
     - id: enc_invalid_advanced
-      description: Reject an unknown libaom codec-specific option
+      description: Reject an unknown AV1 codec-specific option
       source_format: png
       source_asset: 2x3.png
       expect_error: true

@@ -85,7 +85,6 @@ def parse_report(output: str) -> dict[str, str]:
 def build(prefix: Path) -> dict[str, object]:
     TARGET.mkdir(parents=True, exist_ok=True)
     cargo_env = os.environ.copy()
-    cargo_env["CARGO_BUILD_RUSTC_WRAPPER"] = ""
     cargo_env["CARGO_TARGET_DIR"] = str(TARGET)
     cargo_command = [
         "cargo",

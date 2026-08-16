@@ -1,5 +1,4 @@
-//! Minimal test-only SHA-256 used to verify committed fixture provenance.
-
+/// Minimal test-only SHA-256 used to verify committed fixture provenance.
 const INITIAL: [u32; 8] = [
     0x6a09_e667,
     0xbb67_ae85,
