@@ -464,13 +464,13 @@ pub struct IcoEncodeOptions {
     pub sizes: Vec<IcoSize>,
 }
 
-/// Native AVIF encoder backend.
+/// AVIF encoder backend requested by the compatibility option surface.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AvifCodec {
-    /// Let libavif select its available backend.
+    /// Select the default Rust backend.
     Auto,
-    /// Require the AOM backend.
+    /// Select the AOM-compatible encoding profile.
     Aom,
 }
 
@@ -498,7 +498,7 @@ pub enum AvifRange {
     Limited,
 }
 
-/// One ordered libavif codec-specific option.
+/// One ordered AVIF codec-specific option.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AvifAdvancedOption {
     /// Backend option name.
@@ -513,15 +513,17 @@ pub struct AvifAdvancedOption {
 pub struct AvifEncodeOptions {
     /// Quality override in the Pillow `0..=100` scale.
     pub quality: Option<u8>,
-    /// Native encoder backend selection.
+    /// Encoder backend selection retained for compatibility with the typed
+    /// option surface. The pure-Rust encoder will interpret this value when
+    /// AVIF encoding is implemented.
     pub codec: Option<AvifCodec>,
     /// YUV subsampling override.
     pub subsampling: Option<AvifSubsampling>,
     /// YUV range override.
     pub range: Option<AvifRange>,
-    /// Native encoder speed.
+    /// Encoder speed preference.
     pub speed: Option<i32>,
-    /// Maximum native encoder thread count.
+    /// Maximum encoder thread count.
     pub max_threads: Option<i32>,
     /// Log2 tile-row count.
     pub tile_rows: Option<i32>,
@@ -529,7 +531,7 @@ pub struct AvifEncodeOptions {
     pub tile_cols: Option<i32>,
     /// Mark alpha as premultiplied in the AVIF container.
     pub alpha_premultiplied: Option<bool>,
-    /// Let libavif choose tile layout automatically.
+    /// Let the encoder choose tile layout automatically.
     pub autotiling: Option<bool>,
     /// Exact ICC profile bytes.
     pub icc: Option<Vec<u8>>,
@@ -541,7 +543,7 @@ pub struct AvifEncodeOptions {
     pub xmp: Option<Vec<u8>>,
     /// Ordered codec-specific backend settings.
     pub advanced: Vec<AvifAdvancedOption>,
-    /// Native sequence timescale override.
+    /// Sequence timescale override retained for future pure-Rust sequence encoding.
     pub sequence_time: Option<u64>,
 }
 

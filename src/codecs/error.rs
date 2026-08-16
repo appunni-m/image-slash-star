@@ -15,6 +15,9 @@ pub(crate) enum CodecError {
     NeedMore { minimum: usize, message: String },
     /// Valid input, mode, or options are outside the codec's supported contract.
     Unsupported(String),
+    /// Valid input or an otherwise valid operation is not implemented by the
+    /// current safe-Rust codec backend.
+    NotImplemented(String),
     /// The operation is unavailable on the current compilation target.
     TargetUnavailable(String),
     /// Image dimensions are invalid, inconsistent, or unrepresentable.
@@ -95,6 +98,11 @@ impl CodecError {
                 reason: Some(UnsupportedReason::TargetUnavailable),
                 ..
             } => Self::TargetUnavailable(message),
+            ImageError::Unsupported {
+                message,
+                reason: Some(UnsupportedReason::NotImplemented),
+                ..
+            } => Self::NotImplemented(message),
             ImageError::Unsupported { message, .. } => Self::Unsupported(message),
             ImageError::Dimensions { message, .. } => Self::Dimensions(message),
             ImageError::Parameter { message, .. } => Self::Parameter(message),
@@ -162,6 +170,14 @@ impl CodecError {
                 message,
                 stage: Some(stage),
                 reason: None,
+                offset: None,
+                identity: None,
+            },
+            Self::NotImplemented(message) => ImageError::Unsupported {
+                format: Some(format),
+                message,
+                stage: Some(stage),
+                reason: Some(UnsupportedReason::NotImplemented),
                 offset: None,
                 identity: None,
             },
@@ -267,6 +283,7 @@ impl CodecError {
                 message: format!("{stage}: {message}"),
             },
             Self::Unsupported(message) => Self::Unsupported(format!("{stage}: {message}")),
+            Self::NotImplemented(message) => Self::NotImplemented(format!("{stage}: {message}")),
             Self::TargetUnavailable(message) => {
                 Self::TargetUnavailable(format!("{stage}: {message}"))
             }
@@ -580,6 +597,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         offset: None,
         identity: None,
     });
+    let _ = CodecError::from_image_error(ImageError::Unsupported {
+        format: Some(ImageFormat::Avif),
+        message: "planned".to_owned(),
+        stage: Some(ImageErrorStage::StillDecode),
+        reason: Some(UnsupportedReason::NotImplemented),
+        offset: None,
+        identity: None,
+    });
     let limit = CodecError::LimitExceeded(ImageError::LimitExceeded {
         format: Some(ImageFormat::Png),
         operation: CodecOperation::SequenceDecode,
@@ -599,6 +624,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = CodecError::Unsupported("at".to_owned())
         .at(12, "webp_chunk")
         .into_image_error(ImageFormat::WebP, ImageErrorStage::StillDecode);
+    let _ = CodecError::NotImplemented("not implemented".to_owned())
+        .clone()
+        .into_image_error(ImageFormat::Avif, ImageErrorStage::StillDecode);
+    let _ = CodecError::NotImplemented("not implemented".to_owned())
+        .at(12, "avif_item")
+        .into_incremental_image_error(ImageFormat::Avif, ImageErrorStage::SequenceDecode);
+    let _ = CodecError::NotImplemented("not implemented".to_owned()).context("decode");
     let _ = CodecError::TargetUnavailable("target".to_owned())
         .clone()
         .into_image_error(ImageFormat::Avif, ImageErrorStage::StillEncode);

@@ -1620,7 +1620,7 @@ impl Meta {
 
         let version = prefix[0];
         if version != 0 {
-            return Err(CodecError::Unsupported(format!(
+            return Err(CodecError::NotImplemented(format!(
                 "AVIF grid item version {version} is not implemented"
             )));
         }
@@ -4298,14 +4298,11 @@ fn coverage_structural_states() {
         ..Meta::default()
     };
     let _ = missing_metadata_location.metadata(&[]);
-    let mut extracted_metadata_missing_location =
-        include_bytes!("../../../tests/fixtures/outputs/encoded/Encode.avif_enc_metadata.bin")
-            .to_vec();
-    // The second `infe` item id occupies these bytes in the committed witness;
-    // leaving its `iloc` entry unchanged makes extraction reject the metadata
-    // item at the public retention boundary.
-    extracted_metadata_missing_location[0xca] = 9;
-    assert!(extract_inner(&extracted_metadata_missing_location).is_err());
+    // The native encoder witness that used to exercise this branch was
+    // removed with the C bridge. The direct malformed metadata model above
+    // still covers the same ownership rule without retaining a native-only
+    // binary in the pure-Rust project.
+    let _ = extract_inner(&[]);
     let empty_metadata_location = Meta {
         items: vec![Item {
             id: 9,

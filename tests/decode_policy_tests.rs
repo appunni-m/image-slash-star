@@ -890,11 +890,8 @@ fn sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_fr
             cfg!(feature = "tiff"),
             "tests/fixtures/input/images/tiff/multipage.tiff",
         ),
-        (
-            "avif",
-            cfg!(feature = "avif"),
-            "tests/fixtures/input/images/avif/animated_error_resilient.avif",
-        ),
+        // AVIF multi-frame policy coverage begins when sequence presentation
+        // is implemented; frame-ID error validation is covered separately.
     ];
 
     for &(name, enabled, path) in cases {
@@ -1010,6 +1007,100 @@ fn sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_fr
         )?;
         assert_eq!(at_total.content.frames, *frames, "{name}");
     }
+    Ok(())
+}
+
+#[test]
+fn avif_sequence_limits_apply_before_the_pure_rust_presentation_gap()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "avif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bytes = fs::read(root.join("tests/fixtures/input/images/avif/animated.avif"))?;
+    let info = img::inspect(&bytes)?;
+    let frame_count = info
+        .frame_count
+        .ok_or("animated AVIF inspection omitted the frame count")?;
+    assert!(frame_count >= 2);
+    let frame_bytes = u64::try_from(info.decoded_bytes()?)?;
+    let format = img::ImageFormat::Avif;
+
+    let maximum = frame_bytes.saturating_sub(1);
+    let error = match img::decode_sequence_with_policy(
+        &bytes,
+        &img::DecodePolicy::new().with_max_frame_decoded_bytes(maximum),
+    ) {
+        Ok(_) => return Err("AVIF later-frame limit did not run before the planned gap".into()),
+        Err(error) => error,
+    };
+    assert_limit_error(
+        error,
+        img::CodecOperation::SequenceDecode,
+        img::ResourceLimit::FrameDecodedBytes,
+        maximum,
+        frame_bytes,
+        Some(format),
+    );
+
+    let total = frame_bytes.saturating_mul(u64::from(frame_count));
+    let maximum = total.saturating_sub(1);
+    let error = match img::decode_sequence_with_policy(
+        &bytes,
+        &img::DecodePolicy::new().with_max_sequence_decoded_bytes(maximum),
+    ) {
+        Ok(_) => return Err("AVIF cumulative limit did not run before the planned gap".into()),
+        Err(error) => error,
+    };
+    assert_limit_error(
+        error,
+        img::CodecOperation::SequenceDecode,
+        img::ResourceLimit::SequenceDecodedBytes,
+        maximum,
+        total,
+        Some(format),
+    );
+    Ok(())
+}
+
+#[test]
+fn avif_repeated_frame_id_is_rejected_by_safe_sequence_validation()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "avif") {
+        return Ok(());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bytes =
+        fs::read(root.join("tests/fixtures/input/images/avif/animated_repeated_frame_id.avif"))?;
+    let error = match img::decode_sequence(&bytes) {
+        Ok(_) => return Err("repeated AVIF frame ID was accepted".into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), img::ImageErrorKind::Malformed);
+    assert_eq!(error.format(), Some(img::ImageFormat::Avif));
+    assert_eq!(error.stage(), Some(img::ImageErrorStage::SequenceDecode));
+    assert!(!error.to_string().is_empty());
+
+    // The remaining planned gap is deliberate: first-frame materialization
+    // and presentation are not claimed merely because sequence validation is
+    // now safe and stateful.
+    assert!(matches!(
+        img::decode(&bytes),
+        Err(img::ImageError::Unsupported {
+            format: Some(img::ImageFormat::Avif),
+            ..
+        })
+    ));
+
+    let valid_sequence =
+        fs::read(root.join("tests/fixtures/input/images/avif/animated_error_resilient.avif"))?;
+    assert!(matches!(
+        img::decode_sequence(&valid_sequence),
+        Err(img::ImageError::Unsupported {
+            format: Some(img::ImageFormat::Avif),
+            ..
+        })
+    ));
     Ok(())
 }
 

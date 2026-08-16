@@ -133,6 +133,9 @@ struct DecodeRow {
     format: String,
     category: String,
     status: String,
+    gap: Option<String>,
+    pure_rust_work_item: Option<String>,
+    former_native_only: bool,
     asset: Option<String>,
     asset_path: Option<String>,
     asset_sha256: Option<String>,
@@ -262,6 +265,9 @@ struct EncodeRow {
     params: HashMap<String, Value>,
     description: Option<String>,
     status: String,
+    gap: Option<String>,
+    pure_rust_work_item: Option<String>,
+    former_native_only: bool,
     expect_error: bool,
     rust_expect_error: bool,
     rust_error_kind: Option<String>,
@@ -450,6 +456,9 @@ impl FromJson for DecodeRow {
             format: object.take("format")?,
             category: object.take("category")?,
             status: object.take("status")?,
+            gap: object.take("gap")?,
+            pure_rust_work_item: object.take("pure_rust_work_item")?,
+            former_native_only: object.take_or_default("former_native_only")?,
             asset: object.take("asset")?,
             asset_path: object.take("asset_path")?,
             asset_sha256: object.take("asset_sha256")?,
@@ -571,6 +580,9 @@ impl FromJson for EncodeRow {
             params: object.take("params")?,
             description: object.take("description")?,
             status: object.take("status")?,
+            gap: object.take("gap")?,
+            pure_rust_work_item: object.take("pure_rust_work_item")?,
+            former_native_only: object.take_or_default("former_native_only")?,
             expect_error: object.take_or_default("expect_error")?,
             rust_expect_error: object.take_or_default("rust_expect_error")?,
             rust_error_kind: object.take("rust_error_kind")?,
@@ -2619,6 +2631,278 @@ fn test_decode_matrix_avif() {
     run_decode_matrix(Some("avif"));
 }
 
+#[test]
+fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
+    if !cfg!(feature = "avif") {
+        return;
+    }
+
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let matrix = require_some(
+        coverage_matrix(),
+        "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
+    );
+    let avif = require_some(
+        matrix.formats.get("avif"),
+        "the coverage matrix must contain the AVIF format",
+    );
+    let former_native_decode = avif
+        .decode
+        .iter()
+        .filter(|row| row.former_native_only)
+        .collect::<Vec<_>>();
+    let planned = avif
+        .decode
+        .iter()
+        .filter(|row| row.status == "planned")
+        .collect::<Vec<_>>();
+    assert_eq!(
+        former_native_decode.len(),
+        8,
+        "the AVIF former-native decode census changed"
+    );
+    assert!(
+        former_native_decode
+            .iter()
+            .all(|row| row.status == "planned"),
+        "a former-native AVIF decode row cannot become active without pure-Rust evidence"
+    );
+    assert_eq!(
+        former_native_decode.len(),
+        planned.len(),
+        "every former-native AVIF decode row must remain an explicit planned gap"
+    );
+    assert_eq!(planned.len(), 8, "the AVIF planned-gap ledger changed");
+    assert_eq!(
+        planned.len(),
+        matrix.summary.decode_planned,
+        "all current planned decode rows must be AVIF rows"
+    );
+
+    let assets_dir = manifest_dir
+        .join("tests")
+        .join("fixtures")
+        .join("input")
+        .join("images")
+        .join("avif");
+    for row in planned {
+        assert_eq!(row.format, "avif", "planned row has the wrong format");
+        assert!(
+            row.former_native_only,
+            "planned AVIF row {} must explicitly identify former native-only provenance",
+            row.id
+        );
+        assert!(
+            row.gap.as_deref().is_some_and(|gap| !gap.trim().is_empty()),
+            "planned AVIF row {} needs a concrete safe-Rust gap reason",
+            row.id
+        );
+        let expected_work_item = match row.id.as_str() {
+            "portable_lossy_420_q99_eob_bin_control"
+            | "portable_lossy_420_q99_eob_base_control" => "AVF-ENTROPY-001",
+            "high_bitdepth" => "AVF-SAMPLE-001",
+            "with_alpha" => "AVF-ALPHA-001",
+            "partitioned_square_12x12_g96_direct_tokens"
+            | "partitioned_square_12x12_midpoint_g96_ac"
+            | "partitioned_square_12x12_top_left_luma_eob4"
+            | "partitioned_square_12x12_top_left_luma_eob12_control"
+            | "partitioned_square_12x12_luma_eob1"
+            | "partitioned_square_12x12_luma_eob2_control"
+            | "partitioned_square_12x12_luma_eob4_control"
+            | "partitioned_square_12x12_luma_eob6_control"
+            | "partitioned_square_12x12_luma_eob9_control"
+            | "partitioned_square_12x12_luma_eob10_control"
+            | "partitioned_square_12x12_luma_eob12_control"
+            | "partitioned_square_12x12_luma_eob15_control"
+            | "partitioned_square_16x16_g64"
+            | "partitioned_square_16x16_g96_direct_tokens"
+            | "partitioned_square_16x16_r64"
+            | "partitioned_square_16x16_g127" => "AVF-STILL-001",
+            "hdr" => "AVF-COLOR-001",
+            "grid" => "AVF-COMPOSE-001",
+            "animated" | "animated_error_resilient" | "error_animated_repeated_frame_id" => {
+                "AVF-SEQUENCE-001"
+            }
+            "multitile" => "AVF-TILE-001",
+            unexpected => panic!("unexpected planned AVIF decode row: {unexpected}"),
+        };
+        assert_eq!(
+            row.pure_rust_work_item.as_deref(),
+            Some(expected_work_item),
+            "planned AVIF row {} must name its pure-Rust deliverable",
+            row.id
+        );
+        assert!(
+            matches!(row.oracle_status.as_deref(), Some("ok" | "error")),
+            "planned AVIF row {} must retain a Pillow-visible oracle status",
+            row.id
+        );
+        assert_eq!(
+            row.operations.get("decode").map(String::as_str),
+            row.oracle_status.as_deref(),
+            "planned AVIF row {} must retain its Pillow operation status",
+            row.id
+        );
+        assert!(
+            row.ref_path.is_none() && row.ref_bytes.is_none() && row.ref_sha256.is_none(),
+            "planned AVIF row {} must not claim pixel evidence",
+            row.id
+        );
+
+        let asset = require_some(
+            row.asset.as_deref(),
+            "planned AVIF rows must name their fixture asset",
+        );
+        let data = fs::read(assets_dir.join(asset))
+            .unwrap_or_else(|error| panic!("planned AVIF fixture {asset} is readable: {error}"));
+        let decoded = img::decode(&data);
+        assert!(
+            matches!(
+                &decoded,
+                Err(img::ImageError::Unsupported {
+                    format: Some(img::ImageFormat::Avif),
+                    message,
+                    reason: Some(img::UnsupportedReason::NotImplemented),
+                    ..
+                }) if !message.trim().is_empty()
+            ),
+            "planned AVIF row {} must remain a typed safe-Rust Unsupported gap: {decoded:?}",
+            row.id
+        );
+
+        let sequence = img::decode_sequence(&data);
+        if row.rust_expect_sequence_error {
+            assert_eq!(
+                row.rust_sequence_error_kind.as_deref(),
+                Some("malformed"),
+                "the Rust sequence-error contract must name malformed input"
+            );
+            assert!(
+                matches!(
+                    &sequence,
+                    Err(img::ImageError::Malformed {
+                        format: img::ImageFormat::Avif,
+                        message,
+                        ..
+                    }) if !message.trim().is_empty()
+                ),
+                "planned AVIF row {} must enforce its typed sequence-validation error: {sequence:?}",
+                row.id
+            );
+        } else {
+            assert!(
+                matches!(
+                    &sequence,
+                    Err(img::ImageError::Unsupported {
+                        format: Some(img::ImageFormat::Avif),
+                        message,
+                        reason: Some(img::UnsupportedReason::NotImplemented),
+                        ..
+                    }) if !message.trim().is_empty()
+                ),
+                "planned AVIF row {} must remain a typed safe-Rust sequence gap: {sequence:?}",
+                row.id
+            );
+        }
+    }
+
+    let planned_encodes = avif
+        .encode
+        .iter()
+        .filter(|row| row.status == "planned")
+        .collect::<Vec<_>>();
+    let former_native_encode = avif
+        .encode
+        .iter()
+        .filter(|row| row.former_native_only)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        former_native_encode.len(),
+        32,
+        "the AVIF former-native encode census changed"
+    );
+    assert!(
+        former_native_encode
+            .iter()
+            .all(|row| row.status == "planned"),
+        "a former-native AVIF encode row cannot become active without a pure-Rust encoder"
+    );
+    assert_eq!(
+        former_native_encode.len(),
+        planned_encodes.len(),
+        "every former-native AVIF encode row must remain an explicit planned gap"
+    );
+    assert_eq!(
+        former_native_decode.len() + former_native_encode.len(),
+        40,
+        "the complete former-native AVIF census changed"
+    );
+    assert_eq!(
+        planned_encodes.len(),
+        32,
+        "the AVIF planned encoder ledger changed"
+    );
+    assert_eq!(
+        planned_encodes.len(),
+        matrix.summary.encode_not_wired,
+        "all current planned encoder rows must be AVIF rows"
+    );
+    let image = img::DecodedImage::new(2, 3, vec![0; 18], img::ColorType::Rgb8);
+    let sequence = img::DecodedSequence::from_image(image.clone());
+    let options = img::EncodeOptions::for_format(img::ImageFormat::Avif);
+    for row in planned_encodes {
+        assert_eq!(
+            row.format, "avif",
+            "planned encoder row has the wrong format"
+        );
+        assert!(
+            row.former_native_only,
+            "planned AVIF encoder row {} must explicitly identify former native-only provenance",
+            row.id
+        );
+        assert!(
+            row.gap.as_deref().is_some_and(|gap| !gap.trim().is_empty()),
+            "planned AVIF encoder row {} needs a concrete safe-Rust gap reason",
+            row.id
+        );
+        assert_eq!(
+            row.pure_rust_work_item.as_deref(),
+            Some("AVF-ENCODE-001"),
+            "planned AVIF encoder row {} must name the pure-Rust encoder deliverable",
+            row.id
+        );
+        assert!(
+            row.ref_path.is_none()
+                && row.ref_bytes.is_none()
+                && row.ref_sha256.is_none()
+                && row.encoded_ref_path.is_none()
+                && row.encoded_ref_bytes.is_none()
+                && row.encoded_ref_sha256.is_none(),
+            "planned AVIF encoder row {} must not claim output evidence",
+            row.id
+        );
+        let operation = row.operations.get("encode").map(String::as_str);
+        let encoded = if operation == Some("not_applicable") {
+            img::encode_sequence(&sequence, img::ImageFormat::Avif, &options)
+        } else {
+            img::encode(&image, img::ImageFormat::Avif, &options)
+        };
+        assert!(
+            matches!(
+                &encoded,
+                Err(img::ImageError::Unsupported {
+                    format: Some(img::ImageFormat::Avif),
+                    message,
+                    reason: Some(img::UnsupportedReason::NotImplemented),
+                    ..
+                }) if !message.trim().is_empty()
+            ),
+            "planned AVIF encoder row {} must remain a typed safe-Rust gap: {encoded:?}",
+            row.id
+        );
+    }
+}
+
 #[allow(clippy::arithmetic_side_effects)]
 fn run_decode_matrix(format_filter: Option<&str>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -4332,6 +4616,49 @@ fn test_av1_entropy_trace_matches_pinned_dav1d_fixture() {
 }
 
 #[cfg(coverage)]
+fn avif_reconstruction_fixture_is_planned(fixture: &str) -> bool {
+    coverage_matrix()
+        .and_then(|matrix| matrix.formats.get("avif"))
+        .is_some_and(|format| {
+            format
+                .decode
+                .iter()
+                .any(|row| row.status == "planned" && row.asset.as_deref() == Some(fixture))
+        })
+}
+
+#[cfg(coverage)]
+#[test]
+fn test_partitioned_square_444_fixtures_materialize() {
+    let fixtures = [
+        "partitioned_square_12x12_g96_direct_tokens.avif",
+        "partitioned_square_12x12_midpoint_g96_ac.avif",
+        "partitioned_square_12x12_top_left_luma_eob4.avif",
+        "partitioned_square_12x12_top_left_luma_eob12_control.avif",
+        "partitioned_square_12x12_luma_eob1.avif",
+        "partitioned_square_12x12_luma_eob2_control.avif",
+        "partitioned_square_12x12_luma_eob4_control.avif",
+        "partitioned_square_12x12_luma_eob6_control.avif",
+        "partitioned_square_12x12_luma_eob9_control.avif",
+        "partitioned_square_12x12_luma_eob10_control.avif",
+        "partitioned_square_12x12_luma_eob12_control.avif",
+        "partitioned_square_12x12_luma_eob15_control.avif",
+    ];
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/input/images/avif");
+    for fixture in fixtures {
+        let input = require_ok(fs::read(root.join(fixture)), "partitioned-square fixture");
+        let actual = require_ok(
+            img::__coverage_av1_reconstruction(&input),
+            "partitioned-square reconstruction",
+        );
+        assert!(
+            actual.is_some(),
+            "partitioned 12x12 4:4:4 fixture must materialize: {fixture}"
+        );
+    }
+}
+
+#[cfg(coverage)]
 #[test]
 fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
     let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -4431,13 +4758,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         let actual = require_ok(
             img::__coverage_av1_reconstruction(&input),
             "production AV1 reconstruction validation must succeed",
-        )
-        .unwrap_or_else(|| {
-            panic!(
-                "production AV1 path must retain the reconstructed first leaf for {}",
+        );
+        let Some(actual) = actual else {
+            assert!(
+                avif_reconstruction_fixture_is_planned(&case.fixture),
+                "unexpected AV1 reconstruction gap for {}",
                 case.fixture
-            )
-        });
+            );
+            continue;
+        };
         assert_eq!(
             (
                 actual.width,
@@ -5203,12 +5532,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
     assert_eq!(masked_decoded.content.pixels, masked_reference);
 
     for fixture in [
-        "baseline.avif",
-        "alpha.avif",
         "animated.avif",
         "10bit.avif",
-        "multitile.avif",
-        "portable_lossy_420_q99_gray_128_control.avif",
         "portable_lossy_420_q99_eob_bin_control.avif",
         "portable_lossy_420_q99_eob_base_control.avif",
     ] {

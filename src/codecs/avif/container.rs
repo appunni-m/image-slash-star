@@ -912,7 +912,7 @@ fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
 
 fn parse_mdcv(payload: &[u8]) -> ParseResult<Property> {
     // Public AVIF inspection validates the same property through the bounded
-    // sample parser before this independent native projection is reached, so
+    // sample parser before this independent source-property projection is reached, so
     // the payload has already been proven to contain exactly 24 bytes. Read
     // the fixed-width fields directly so the redundant native error paths do
     // not masquerade as independently reachable public parser behavior.
@@ -1246,7 +1246,7 @@ impl Meta {
             source_color = source_color.with_avif_content_light_level(content_light_level);
         }
         // The bounded sample parser has already rejected duplicate primary
-        // `mdcv` associations before this independent native projection runs.
+        // `mdcv` associations before this independent source-property projection runs.
         if let Some(mastering_display_color_volume) =
             self.associated(primary)
                 .find_map(|property| match property {

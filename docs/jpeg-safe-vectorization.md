@@ -107,7 +107,6 @@ To audit the production safety boundary again:
 rg -n "\\bunsafe\\b" src/codecs/jpeg src/bin/jpeg-runtime.rs
 ```
 
-The expected result is empty. The only intentional unsafe Rust in the project
-is the separately documented native AVIF bridge at
-`src/codecs/avif/native.rs`; third-party dependency internals are outside the
-repository's Rust source and are not counted as project unsafe code.
+The expected result is empty. The repository contains no intentional unsafe
+Rust: the AVIF oracle/provenance material is not compiled or linked, and
+third-party dependency internals are outside the repository's Rust source.

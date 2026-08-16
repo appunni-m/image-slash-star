@@ -106,6 +106,39 @@ use std::rc::Rc;
 
 use crate::ResourceLimit;
 
+/// A decision returned by a progress observer after a checkpoint event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ProgressDecision {
+    /// Continue the operation.
+    Continue,
+    /// Stop the operation before the next unit of codec work is published.
+    Cancel,
+}
+
+/// One cooperative work checkpoint observed by a progress callback.
+///
+/// The event count is monotonic for the lifetime of the token and counts
+/// accepted polls, not CPU time, bytes, pixels, or allocations. A codec may
+/// therefore use different structural units while preserving a deterministic
+/// callback contract. The callback is invoked on both native and WASM
+/// targets, synchronously on the calling thread, before the next unit of work
+/// begins.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ProgressEvent {
+    checkpoint: u64,
+}
+
+impl ProgressEvent {
+    /// Return the one-based checkpoint number represented by this event.
+    #[must_use]
+    pub const fn checkpoint(self) -> u64 {
+        self.checkpoint
+    }
+}
+
+type ProgressObserver = Rc<dyn Fn(ProgressEvent) -> ProgressDecision>;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct WorkBudget {
     maximum: u64,
@@ -132,6 +165,8 @@ pub(crate) enum PollResult {
 pub struct CancellationToken {
     cancelled: Rc<Cell<bool>>,
     work_budget: Rc<Cell<Option<WorkBudget>>>,
+    progress_checkpoint: Rc<Cell<u64>>,
+    progress_observer: Option<ProgressObserver>,
     #[cfg(coverage)]
     cancel_after: Rc<Cell<Option<usize>>>,
 }
@@ -141,6 +176,24 @@ impl CancellationToken {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Create an uncancelled token that reports each accepted work checkpoint.
+    ///
+    /// The observer runs synchronously on the operation's calling thread. It
+    /// may return [`ProgressDecision::Cancel`] to stop the operation, or call
+    /// [`Self::cancel`] through a token captured by the closure. Observer
+    /// panics are not caught or converted; callers that need a fallible
+    /// boundary should return `Cancel` and store their own error state.
+    #[must_use]
+    pub fn with_progress<F>(observer: F) -> Self
+    where
+        F: Fn(ProgressEvent) -> ProgressDecision + 'static,
+    {
+        Self {
+            progress_observer: Some(Rc::new(observer)),
+            ..Self::new()
+        }
     }
 
     /// Cancel the token; every clone observes the cancellation.
@@ -197,6 +250,8 @@ impl CancellationToken {
                 consumed: 0,
                 resource,
             }))),
+            progress_checkpoint: source.progress_checkpoint.clone(),
+            progress_observer: source.progress_observer.clone(),
             #[cfg(coverage)]
             cancel_after: source.cancel_after.clone(),
         }
@@ -219,18 +274,28 @@ impl CancellationToken {
                 None => {}
             }
         }
-        let Some(mut budget) = self.work_budget.get() else {
-            return PollResult::Continue;
-        };
-        if budget.consumed >= budget.maximum {
-            return PollResult::WorkBudgetExceeded {
-                maximum: budget.maximum,
-                observed: budget.consumed.saturating_add(1),
-                resource: budget.resource,
-            };
+        if let Some(mut budget) = self.work_budget.get() {
+            if budget.consumed >= budget.maximum {
+                return PollResult::WorkBudgetExceeded {
+                    maximum: budget.maximum,
+                    observed: budget.consumed.saturating_add(1),
+                    resource: budget.resource,
+                };
+            }
+            budget.consumed = budget.consumed.saturating_add(1);
+            self.work_budget.set(Some(budget));
         }
-        budget.consumed = budget.consumed.saturating_add(1);
-        self.work_budget.set(Some(budget));
+        let checkpoint = self.progress_checkpoint.get().saturating_add(1);
+        self.progress_checkpoint.set(checkpoint);
+        if self.progress_observer.as_ref().is_some_and(|observer| {
+            matches!(
+                observer(ProgressEvent { checkpoint }),
+                ProgressDecision::Cancel
+            )
+        }) {
+            self.cancelled.set(true);
+            return PollResult::Cancelled;
+        }
         PollResult::Continue
     }
 

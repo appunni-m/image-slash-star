@@ -105,10 +105,10 @@
             "operations": {
               "detection": "manifest_bounded",
               "inspection": "manifest_bounded",
-              "sequence_decode": "manifest_bounded",
-              "sequence_encode": "manifest_bounded",
-              "still_decode": "manifest_bounded",
-              "still_encode": "manifest_bounded"
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "restricted:portable_avif",
+              "still_encode": "unavailable:not_implemented"
             }
           }
         ],
@@ -210,10 +210,10 @@
             "operations": {
               "detection": "manifest_bounded",
               "inspection": "manifest_bounded",
-              "sequence_decode": "manifest_bounded",
-              "sequence_encode": "manifest_bounded",
-              "still_decode": "manifest_bounded",
-              "still_encode": "manifest_bounded"
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
+              "still_decode": "restricted:portable_avif",
+              "still_encode": "unavailable:not_implemented"
             }
           }
         ],
@@ -1278,10 +1278,10 @@
             "operations": {
               "detection": "manifest_bounded",
               "inspection": "manifest_bounded",
-              "sequence_decode": "unavailable:target_unavailable",
-              "sequence_encode": "unavailable:target_unavailable",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
               "still_decode": "restricted:portable_avif",
-              "still_encode": "unavailable:target_unavailable"
+              "still_encode": "unavailable:not_implemented"
             }
           }
         ],
@@ -1383,10 +1383,10 @@
             "operations": {
               "detection": "manifest_bounded",
               "inspection": "manifest_bounded",
-              "sequence_decode": "unavailable:target_unavailable",
-              "sequence_encode": "unavailable:target_unavailable",
+              "sequence_decode": "unavailable:not_implemented",
+              "sequence_encode": "unavailable:not_implemented",
               "still_decode": "restricted:portable_avif",
-              "still_encode": "unavailable:target_unavailable"
+              "still_encode": "unavailable:not_implemented"
             }
           }
         ],

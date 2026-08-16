@@ -2,12 +2,23 @@
 
 mod bit_reader;
 mod block;
+mod cdef;
 mod entropy;
+mod filter;
 mod frame;
+mod quantization;
+mod raster;
+pub(super) mod sample_depth;
 mod sequence;
+mod transform;
+
+pub(super) use sample_depth::normalize_full_range;
 
 use self::bit_reader::SegmentedData;
+#[cfg(test)]
+pub(super) use self::block::ReconstructedPlane;
 use self::frame::FrameState;
+pub(super) use self::raster::FrameCanvas;
 #[cfg(coverage)]
 use super::samples::ByteSpan;
 use super::samples::{EncodedPlane, EncodedSample, ExtractedAvif};
@@ -39,6 +50,9 @@ pub(super) struct PortableStill {
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
     pub(super) planes: [block::ReconstructedPlane; 3],
+    /// A validated monochrome auxiliary plane for the narrow composition
+    /// class. Unsupported alpha syntax never becomes a silent RGB decode.
+    pub(super) alpha_plane: Option<block::ReconstructedPlane>,
     #[cfg(coverage)]
     pub(super) entropy_operations: Vec<crate::Av1EntropyOperationState>,
 }
@@ -51,7 +65,9 @@ pub(super) struct ValidatedAv1 {
 
 struct ValidatedPlane {
     first_leaf: Option<block::FirstLeaf>,
+    complete_monochrome_plane: Option<block::ReconstructedPlane>,
     sequence: sequence::SequenceHeader,
+    frame_dimensions: Option<(u32, u32)>,
 }
 
 // ✅ VERIFIED: AV1 specification sections 5.3.2-5.3.3; dav1d 1.5.3
@@ -172,12 +188,25 @@ fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlan
     }
     let sequence = state.finish()?.clone();
     Ok(ValidatedPlane {
-        first_leaf: state.first_leaf().cloned(),
+        first_leaf: if state.has_multiple_tiles() {
+            state.complete_color_leaf().cloned()
+        } else {
+            state
+                .complete_color_leaf()
+                .cloned()
+                .or_else(|| state.first_leaf().cloned())
+        },
+        complete_monochrome_plane: state.complete_monochrome_plane().cloned(),
         sequence,
+        frame_dimensions: state.frame_dimensions(),
     })
 }
 
-fn portable_still(leaf: block::FirstLeaf, sequence: sequence::SequenceHeader) -> PortableStill {
+fn portable_still(
+    leaf: block::FirstLeaf,
+    sequence: sequence::SequenceHeader,
+    alpha_plane: Option<block::ReconstructedPlane>,
+) -> PortableStill {
     PortableStill {
         width: leaf.width,
         height: leaf.height,
@@ -190,25 +219,51 @@ fn portable_still(leaf: block::FirstLeaf, sequence: sequence::SequenceHeader) ->
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
         planes: leaf.planes,
+        alpha_plane,
         #[cfg(coverage)]
         entropy_operations: leaf.entropy_operations,
     }
 }
 
 fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
+    if !extracted.grid_item_ids.is_empty() || extracted.grid_properties.is_some() {
+        return Ok(None);
+    }
     let mut portable = None;
     if let Some(still) = &extracted.still {
         let color = validate_plane(extracted.input, &still.color)?;
-        if let Some(alpha) = &still.alpha {
-            validate_plane(extracted.input, alpha)?;
+        let Some(color_leaf) = color.first_leaf.as_ref() else {
+            return Ok(None);
+        };
+        if color.frame_dimensions != Some((color_leaf.width, color_leaf.height)) {
+            return Ok(None);
         }
+        let alpha_plane = if let Some(alpha) = &still.alpha {
+            let alpha = validate_plane(extracted.input, alpha)?;
+            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
+                return Ok(None);
+            };
+            if !(alpha.sequence.monochrome
+                && alpha.sequence.bit_depth == color.sequence.bit_depth
+                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
+                && usize::try_from(color_leaf.width).ok().and_then(|width| {
+                    usize::try_from(color_leaf.height)
+                        .ok()
+                        .and_then(|height| width.checked_mul(height))
+                }) == Some(alpha_plane.samples.len()))
+            {
+                return Ok(None);
+            }
+            Some(alpha_plane)
+        } else {
+            None
+        };
         portable = match (
             &extracted.sequence,
-            &still.alpha,
             still.color.samples.as_slice(),
             color.first_leaf,
         ) {
-            (None, None, [_], Some(leaf)) => Some(portable_still(leaf, color.sequence)),
+            (None, [_], Some(leaf)) => Some(portable_still(leaf, color.sequence, alpha_plane)),
             _ => None,
         };
     }
@@ -216,10 +271,35 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
 }
 
 pub(super) fn validate_first(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
-    let portable_still = validate_still(extracted)?;
+    let portable_still = if extracted.still.is_some() {
+        validate_still(extracted)?
+    } else {
+        None
+    };
     Ok(ValidatedAv1 { portable_still })
 }
 
+/// Validate every AV1 sample in a sequence without promising that the
+/// sequence can be rendered yet.
+///
+/// Keeping this separate from [`validate_first`] matters for Pillow parity:
+/// decoding the first frame of an animated AVIF may succeed even when a later
+/// frame is malformed, while sequence decoding must report that later-frame
+/// failure.  The same stateful validator is used for all samples so AV1
+/// frame-ID continuity and reference-state rules are checked across sample
+/// boundaries in safe Rust.
+pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> {
+    let Some(sequence) = &extracted.sequence else {
+        return Ok(());
+    };
+    validate_plane(extracted.input, &sequence.color)?;
+    if let Some(alpha) = &sequence.alpha {
+        validate_plane(extracted.input, alpha)?;
+    }
+    Ok(())
+}
+
+#[cfg(coverage)]
 pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
     let portable_still = validate_still(extracted)?;
     if let Some(sequence) = &extracted.sequence {
@@ -300,6 +380,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     block::__coverage_exercise_private_branches();
     entropy::__coverage_exercise_private_branches();
     frame::__coverage_exercise_private_branches();
+    raster::__coverage_exercise_private_branches();
     sequence::__coverage_exercise_private_branches();
 
     let valid = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0\x32\x0d\x10\x00\x93\x80\x00\x08\x00\x00\x01\x48\x1a\x7a\xa0";
@@ -313,7 +394,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut split = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
     split.extend_from_slice(&[0x1a, u8::try_from(header.len()).unwrap()]);
     split.extend_from_slice(&header);
-    split.extend_from_slice(&[0x22, 0]);
+    split.extend_from_slice(&[0x22, 1, 0]);
     let (input, sample) = coverage_sample(&split, valid_config);
     assert_eq!(
         validate_sample(&input, &sample, &mut FrameState::new()),
@@ -328,7 +409,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         redundant.extend_from_slice(&[obu_type, u8::try_from(header.len()).unwrap()]);
         redundant.extend_from_slice(&header);
     }
-    redundant.extend_from_slice(&[0x22, 0]);
+    redundant.extend_from_slice(&[0x22, 1, 0]);
     let (input, sample) = coverage_sample(&redundant, valid_config);
     assert_eq!(
         validate_sample(&input, &sample, &mut FrameState::new()),
@@ -586,7 +667,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             grid_properties: None,
             transform: None,
         })
-        .is_err()
+        .is_ok_and(|validated| validated.portable_still.is_none())
     );
     assert!(
         validate(&ExtractedAvif {
@@ -697,6 +778,7 @@ pub(super) fn __coverage_portable_still() -> PortableStill {
         planes: std::array::from_fn(|_| block::ReconstructedPlane {
             samples: vec![128; 16],
         }),
+        alpha_plane: None,
         entropy_operations: Vec::new(),
     }
 }
@@ -735,5 +817,31 @@ pub(crate) fn __coverage_sweep_first_leaf(input: &[u8]) {
                 validate_mutation(&mutated);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alpha_fixture_production_validation_retains_complete_plane() -> Av1Result<()> {
+        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let extracted = super::super::samples::validated(bytes)?;
+        let still = extracted
+            .still
+            .as_ref()
+            .ok_or_else(|| malformed("alpha fixture has no still payload"))?;
+        let alpha = still
+            .alpha
+            .as_ref()
+            .ok_or_else(|| malformed("alpha fixture has no auxiliary payload"))?;
+        let validated = validate_plane(bytes, alpha)?;
+        let plane = validated
+            .complete_monochrome_plane
+            .ok_or_else(|| malformed("safe production path omitted complete alpha plane"))?;
+        assert_eq!(plane.samples.len(), 64 * 64);
+        assert!(plane.samples.iter().any(|&sample| sample != 0));
+        Ok(())
     }
 }

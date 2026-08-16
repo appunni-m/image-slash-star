@@ -106,7 +106,7 @@ Default features enable every codec except AVIF.
 | `tiff` | yes | Rust still/multipage decode and encode | Build-verified Rust path |
 | `webp` | yes | Rust still/sequence decode and still/keyframe-sequence encode | Build-verified Rust path |
 | `ico` | yes | Rust ICO/CUR inspect/decode and source-sized ICO encode | Build-verified Rust path |
-| `avif` | no | Fixed native inspect/decode/sequence/encode stack | Portable inspect and restricted still decode; sequence decode and encode unsupported |
+| `avif` | no | Safe Rust inspect and restricted still decode; sequence/encode gaps are explicit | Same safe Rust contract; no native fallback |
 
 The `ico` feature recognizes both ICO and CUR signatures and accepts `.ico`
 and `.cur` aliases. Inspection and decode retain the selected CUR hotspot in
@@ -129,10 +129,11 @@ capability-table suites also execute in a real WASM runtime
 codec, default features, and all features. Executing the complete semantic
 fixture matrix in a WASM runtime remains planned.
 
-AVIF is the remaining portability boundary. Native parity uses fixed
-libavif 1.4.1, dav1d 1.5.3, and libaom 3.13.2 builds. The WASM path has a
-growing in-tree AV1 subset. See [AVIF support](docs/avif.md) for exact
-capabilities and setup.
+AVIF is the remaining codec-completeness boundary, not a native-linking
+boundary. The runtime uses the growing in-tree safe-Rust AV1 subset on every
+target. Pinned libavif/dav1d/libaom outputs remain fixture-oracle provenance
+only. See [AVIF support](docs/avif.md) for the exact active rows and planned
+gaps.
 
 ## API and data model
 
@@ -151,6 +152,7 @@ capabilities and setup.
 | `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
 | `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
 | `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
+| `CancellationToken::with_progress`, `ProgressEvent`, `ProgressDecision` | Observe accepted cooperative checkpoints synchronously; the callback receives a monotonic checkpoint number and may continue or return typed cancellation. The contract is the same on native and WASM, and callback panics are not caught |
 | `Decoded<T>::diagnostics` | Stable non-fatal recovery records returned beside successful decode |
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled format restrictions and limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
@@ -161,7 +163,7 @@ capabilities and setup.
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
 | `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG RGB-to-YCbCr conversion after each 1,024 pixels, rows/blocks/scans, baseline entropy after each 1,024 MCUs, and 1,024-byte entropy-output intervals, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion, required padded Y/U/V edge-replication after each 1,024 padded items, analysis and segment-assignment macroblocks after each 1,024 items, filter-edge adjustment, coefficient-statistics collection, and the first-partition segment-probability prepass after each 1,024 selected macroblocks, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection subsegments plus VP8 analysis, coefficient-probability adaptation, bitstream, and lossless VP8L 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream and 1,024-byte output stages, and each format's documented boundaries |
 | `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, WebP, or native AVIF |
+| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, or WebP; AVIF sequence encoding is planned |
 | `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
 | `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
 | `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; write or flush rejection is reported as `ImageError::OutputWrite`; JPEG, PNG, BMP, and TIFF still plus one-frame JPEG/BMP and multi-page TIFF sequence output cross structural write boundaries |
@@ -228,12 +230,18 @@ subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit,
 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals and 1,024-byte output intervals, and each
 writer's structural segments.
-GIF, TIFF, WebP, and native AVIF sequence paths poll at their
-frame/coalescing/page/finalization boundaries. A structural sink cancellation
+GIF, TIFF, and WebP sequence paths poll at their
+frame/coalescing/page/finalization boundaries. AVIF sequence encoding is a
+planned pure-Rust gap. A structural sink cancellation
 may leave its delivered prefix; successful sink delivery calls the sink's
 finalization hook once, and a flush failure is reported as `OutputWrite`
-without rollback. Progress callbacks and universal structural writing remain
-roadmap work. An
+without rollback. `CancellationToken::with_progress` is the implemented progress
+surface: it reports a monotonic `ProgressEvent::checkpoint()` value after each
+accepted poll, and `ProgressDecision::Cancel` produces the existing typed
+`ImageError::Cancelled` result. The callback is synchronous and
+single-threaded on native and WASM targets; callback panics are intentionally
+not caught. Broader codec coverage and managed target evidence remain roadmap
+work. An
 `EncodePolicy::max_work_units` budget counts those documented encode
 checkpoints, including GIF LZW input-symbol intervals and progressive JPEG
 scan batches, and reports a typed
@@ -654,12 +662,13 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
-The generated matrix in this tree contains 1,421 active cases:
-1,024 decode/inspect/verify cases and 393 encode cases, with zero
-planned or unwired rows. Expected errors are active fixture outcomes, and
-every decode-error class is catalogued in a generated, CI-checked
-malformed-class ledger with Pillow outcome, Rust error contract, evidence
-origin, and specification status.
+The generated matrix in this tree contains 1,424 total rows: 1,027 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,019 decode rows and
+365 encode rows are active; 8 AVIF decode rows and all 32 AVIF encode rows
+are explicit planned pure-Rust gaps. Expected errors that remain active are
+fixture outcomes, and every decode-error class is catalogued in the generated,
+CI-checked malformed-class ledger with Pillow outcome, Rust error contract,
+evidence origin, and specification status.
 
 Runtime capability tables for every feature lane are emitted per target and
 committed as `tests/fixtures/capability_tables.json`; CI regenerates them in
@@ -689,15 +698,16 @@ cargo check --locked
 ```
 
 Native builds using default features need no external codec library. Enabling
-`avif` requires the exact native stack described in
-[AVIF support](docs/avif.md#native-setup).
+`avif` also uses only the in-tree safe-Rust implementation; unsupported AVIF
+classes return the documented typed gap until their Rust implementation lands.
 
 ## Documentation
 
 - [Architecture and public contract](docs/architecture.md)
 - [Oracle, fixtures, tests, and coverage](docs/testing.md)
 - [AVIF support and portability boundary](docs/avif.md)
-- [Canonical roadmap](docs/roadmap-new.md)
+- [Canonical roadmap data](roadmap.json)
+- [Human-readable roadmap](docs/roadmap-new.md)
 - [Historical roadmap audit](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
@@ -707,7 +717,8 @@ Native builds using default features need no external codec library. Enabling
 - [Third-party provenance](third_party/README.md)
 
 Current behavior belongs in the README, architecture reference, rustdoc, and
-testing contract. Planned work belongs only in the [canonical roadmap](docs/roadmap-new.md).
+testing contract. Planned work is tracked in the [canonical roadmap data](roadmap.json)
+and its [human rendering](docs/roadmap-new.md).
 Historical investigation logs remain available through Git history rather than
 the active documentation tree.
 

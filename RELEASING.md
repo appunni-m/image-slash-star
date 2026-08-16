@@ -7,8 +7,9 @@ describe the same tree.
 ## Before tagging
 
 1. Read the open inventory and dependency order in
-   [docs/roadmap-new.md](docs/roadmap-new.md). Do not call a planned or
-   evidence-pending slice complete.
+   [roadmap.json](roadmap.json); use [docs/roadmap-new.md](docs/roadmap-new.md)
+   as its human rendering. Do not call a planned or evidence-pending slice
+   complete.
 2. Update [CHANGELOG.md](CHANGELOG.md) and the README for user-visible
    behavior, supported targets, and known limitations.
 3. Run the pinned toolchain checks:
@@ -39,8 +40,9 @@ describe the same tree.
 - Tag only the reviewed commit after the checks above are complete.
 - Publish the generated package and source release together with the matching
   changelog entry and legal notices.
-- Do not publish native AVIF binaries as if they were part of the dependency-
-  free Rust/WASM artifact; document the separately pinned native stack.
+- Do not publish stale native AVIF binaries or build instructions. The
+  dependency-free Rust/WASM artifact contains the only AVIF runtime path;
+  pinned native projects are documented as oracle/provenance material only.
 - Keep the release artifacts, benchmark receipt, and evidence identifiers
   recoverable from the release notes.
 

@@ -39,9 +39,11 @@ HASHED_FILES = {
     "unreachable_contract": "tests/fixtures/unreachable_contract_manifest.json",
     "webp_property_map": "tests/fixtures/webp_vp8l_property_map.json",
     "webp_property_inspector": "scripts/inspect_webp_vp8l_structure.py",
+    "roadmap": "roadmap.json",
 }
 
 DOCS = [
+    "roadmap.json",
     "docs/roadmap.md",
     "docs/roadmap-new.md",
     "docs/testing.md",
@@ -79,6 +81,15 @@ def failures() -> list[str]:
         )
         if check.returncode != 0:
             errors.append(f"base_revision {revision} is not a commit in this repository")
+
+    roadmap_path = ROOT / "roadmap.json"
+    try:
+        roadmap = json.loads(roadmap_path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        errors.append(f"cannot read {roadmap_path}: {error}")
+    else:
+        if roadmap.get("claim_ledger_base_revision") != revision:
+            errors.append("roadmap.json claim_ledger_base_revision does not match base_revision")
 
     fixture_manifests = ledger.get("fixture_manifests")
     if not isinstance(fixture_manifests, dict):

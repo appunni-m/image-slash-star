@@ -10,9 +10,10 @@ in project spaces.
 ## Before opening a change
 
 - Discuss large API or parity changes in an issue first.
-- Keep default runtime code safe Rust and free of native-library dependencies.
-  AVIF changes must stay inside its opt-in bridge, preserve exact version
-  gates, and document every unsafe invariant.
+- Keep runtime code safe Rust and free of native-library dependencies. AVIF
+  changes must extend the in-tree pure-Rust implementation and document the
+  planned-gap or completed capability they change. Do not add an FFI bridge or
+  an unsafe exception.
 - Preserve `bytemuck` as the only runtime utility dependency unless a proposal
   explains why a new dependency is necessary.
 - Keep format-specific code under `src/codecs/<format>/` and gate it with the
@@ -21,7 +22,8 @@ in project spaces.
   identify the exact upstream version in the source comments.
 - Read the current boundaries in
   [docs/architecture.md](docs/architecture.md) and planned work in
-  [docs/roadmap-new.md](docs/roadmap-new.md). The older
+  [roadmap.json](roadmap.json), using
+  [docs/roadmap-new.md](docs/roadmap-new.md) as the human rendering. The older
   [roadmap audit](docs/roadmap.md) is historical context, not the work queue.
 
 ## Set up the repository
@@ -35,8 +37,9 @@ cd image-slash-star
 cargo check --locked
 ```
 
-Default codecs need no native library. Native all-feature work requires the
-fixed stack in [docs/avif.md](docs/avif.md#native-setup).
+All codecs, including the opt-in `avif` feature, build without a native codec
+library. AVIF's pinned upstream projects are oracle/provenance references;
+see [docs/avif.md](docs/avif.md) for the safe-Rust plan.
 
 ## Verification
 
@@ -48,6 +51,7 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps --locked
 cargo test --doc --all-features --locked
 python3 scripts/verify_third_party_licenses.py
+python3 scripts/verify_roadmap.py
 ```
 
 Codec, feature, or error behavior additionally requires:

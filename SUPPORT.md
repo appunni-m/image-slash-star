@@ -10,7 +10,7 @@ sensitive material. A useful report includes:
 
 - the crate revision or release version;
 - target triple, operating system, Rust version, enabled Cargo features, and
-  whether the native AVIF stack is involved;
+  whether the `avif` feature is enabled and which planned AVIF class is involved;
 - the smallest non-sensitive input or a way to regenerate it;
 - the public API call and policy/options used; and
 - the expected result, actual result, and the first failing verification

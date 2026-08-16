@@ -15,7 +15,7 @@ original terms. The exact revisions and source hashes are recorded in
 | VP8 quantization tables in `src/codecs/webp/encode/vp8/quant.rs` | libvpx 1.15.2 | BSD-3-Clause and the WebM patent grant; `third_party/libvpx/` |
 | `src/codecs/jpeg/` | libjpeg-turbo 3.1.4.1 and IJG libjpeg | IJG and BSD-style terms; `third_party/libjpeg-turbo/` |
 | `src/codecs/compression/zlib_ng.rs` and marked related DEFLATE code | zlib-ng 2.3.3 | Zlib; `third_party/zlib-ng/LICENSE.md` |
-| AVIF container and sample-table ports under `src/codecs/avif/`, the copied public header, and copied libavif fixtures | libavif 1.4.1 | BSD-2-Clause and the complete upstream notice bundle; `third_party/libavif/` |
+| AVIF container and sample-table ports under `src/codecs/avif/`, plus copied libavif fixtures | libavif 1.4.1 | BSD-2-Clause and the complete upstream notice bundle; `third_party/libavif/` |
 | Portable AV1 implementation under `src/codecs/avif/av1/` | dav1d 1.5.3 and libaom 3.13.2 | BSD-2-Clause; `third_party/dav1d/COPYING`, `third_party/libaom/LICENSE`, and the root `PATENTS` |
 | Explicitly marked Pillow/libImaging source-derived portions and copied Pillow AVIF fixtures | Pillow 12.2.0 | MIT-CMU; `third_party/pillow/LICENSE` |
 | GIF RGBA FASTOCTREE quantization in `src/codecs/gif/encode.rs` | Pillow 12.2.0 `QuantOctree.c`, Oliver Tonnhofer / Omniscale | MIT; `third_party/pillow/QUANT-OCTREE-LICENSE` |
@@ -32,10 +32,11 @@ Zlib OR Apache-2.0 OR MIT. Exact license texts are retained in
 `third_party/bytemuck/`, and the package checksum is pinned in `Cargo.lock` and
 `third_party/README.md`.
 
-## Optional native AVIF stack
+## AVIF oracle and source provenance
 
-The `avif` feature can link a separately built native stack. The pinned build
-script uses these components:
+The `avif` feature is implemented in safe Rust and has no native build or
+linking path. The following pinned projects identify the oracle and
+source-derived reference material:
 
 | Component | Fixed revision | Terms |
 | --- | --- | --- |
@@ -45,11 +46,11 @@ script uses these components:
 | libyuv | commit `6067afde563c3946eebd94f146b3824ab7a97a9c` | BSD-3-Clause in `third_party/libyuv/LICENSE` |
 | libwebp SharpYUV | 1.6.0 | BSD-3-Clause and the WebM patent grant in `third_party/libwebp/` |
 
-These native components are not Cargo dependencies and are not part of the
-core WASM build. A source distribution retains the AOM patent license at its
-root. Distributors of an AV1 implementation in another form should retain that
-license in the documentation, legal notices, or other written materials
-provided with the implementation, as specified by `PATENTS`.
+These projects are not Cargo dependencies and are not linked by the crate.
+A source distribution retains the AOM patent license at its root. Distributors
+of an AV1 implementation in another form should retain that license in the
+documentation, legal notices, or other written materials provided with the
+implementation, as specified by `PATENTS`.
 
 ## Fixtures, attribution, and names
 

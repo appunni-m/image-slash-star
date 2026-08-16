@@ -3622,6 +3622,7 @@ impl DecodedSequence {
     pub fn from_image(image: DecodedImage) -> Self {
         let width = image.width;
         let height = image.height;
+        let source_color = image.source_color.clone();
         Self {
             width,
             height,
@@ -3642,7 +3643,7 @@ impl DecodedSequence {
             kind: SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
             metadata: Vec::new(),
-            source_color: SourceColor::new(),
+            source_color,
         }
     }
 

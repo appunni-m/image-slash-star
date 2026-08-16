@@ -39,7 +39,7 @@
 ## Dependencies And Features
 
 - Keep the runtime dependency policy unchanged: `bytemuck` remains allowed;
-  default codecs stay Rust-only; AVIF uses the pinned optional native stack.
+  default codecs stay Rust-only; AVIF is an opt-in safe Rust implementation.
 - Every image format remains independently feature-gated. ICO intentionally
   enables PNG and BMP.
 - Test no-feature, each individual feature, default-feature, all-feature, and

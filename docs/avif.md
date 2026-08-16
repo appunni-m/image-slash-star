@@ -1,311 +1,277 @@
-# AVIF support and portability boundary
+# AVIF: the Rust-only plan
 
-Status: native manifest parity retained; portable implementation incomplete
+Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
-Reviewed: 2026-08-11 against measured source/evidence revision
-`36b939696415a962285d37f9120ff389aebf0205`. Current coverage and pending-work
-status are authoritative in [roadmap-new.md](roadmap-new.md); the claim-ledger
-base revision is the same measured revision. Historical AVIF parity and
-target-lane records below retain their original revision scope.
+Reviewed: 2026-08-14
 
-AVIF is the only codec feature with different native and
-`wasm32-unknown-unknown` capabilities. The WASM behavior below executes at
-runtime on `wasm32-wasip1` (Node's WASI preview1) in every feature lane;
-`wasm32-unknown-unknown` remains build/rustdoc-verified.
+Historical claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`.
+The current cutover is a new, locally verified working-tree change until its
+revision-bound managed evidence is refreshed.
 
-## Current behavior
+AVIF is a picture box with three jobs inside it:
 
-| Operation | Native `avif` feature | `wasm32-unknown-unknown` |
-| --- | --- | --- |
-| Signature detection | Portable Rust | Portable Rust |
-| Container inspection | Portable parser with native-compatible results | Portable Rust |
-| Still decode | Fixed libavif/dav1d path | Closed, manifest-bounded portable AV1 subset |
-| Sequence decode | Fixed libavif/dav1d path | Unsupported |
-| Still encode | Fixed libavif/libaom path | Unsupported |
-| Sequence encode | Fixed libavif/libaom path | Unsupported |
+1. The **box** (ISO-BMFF) says what the file contains and where its pieces are.
+2. The **AV1 picture** is the compressed image data.
+3. Optional **metadata and extra pictures** describe color, alpha, grids, or
+   animation.
 
-The generated matrix is the exact supported-case inventory. In the current
-working tree, AVIF has 197 decode/inspect/error cases and 32 encode/error cases.
-In a repository checkout, list them directly:
+The runtime in this repository is now Rust-only. It does not compile C, link
+libavif/dav1d/libaom, call `pkg-config`, run a build script, or cross an FFI
+boundary. `unsafe_code = "deny"` remains a workspace rule.
 
-```bash
-jq '.formats.avif' tests/fixtures/coverage_matrix.json
-```
+## The five-year-old explanation
 
-This is a case inventory, not a claim of complete AVIF or AV1 specification
-support.
+The old implementation hired a C helper to open the hard part of the picture
+box. That was useful for getting broad Pillow-like behavior quickly, but it
+made a native build depend on a compiler and three external codec libraries.
+It also required an unsafe Rust-to-C doorway. A browser, embedded device, or
+minimal Rust build should not need that doorway just to read an image.
 
-Callers that accept untrusted bytes may include `ImageFormat::Avif` in a
-`DecodeFormatSet` allow-list, or exclude it, without changing AVIF detection or
-the native-versus-WASI capability table. Policy-aware paths report a typed
-`UnsupportedReason::PolicyDenied` when the detected AVIF format is excluded;
-portable AVIF support remains governed by the target capability above.
+Pillow does not require this crate to use C. Pillow is our observable behavior
+oracle: it tells us what pixels, sizes, modes, errors, and encoded bytes to
+match when those things are visible to Pillow. Its own AVIF build happens to
+use libavif, dav1d, and libaom; those identities remain fixture and provenance
+information only. They are not runtime dependencies here.
 
-## Why native output is version-locked
+Pure Rust is harder because AV1 is a large algorithm, and encoding needs many
+choices about prediction, transforms, quantization, entropy coding, tiles,
+color, and timing. The bridge was built early because it covered more cases
+before the Rust algorithm existed. The correct long-term answer is to build
+those parts in small, testable safe-Rust stages—not to keep the bridge hidden.
 
-The Pillow 12.2.0 wheel used as the oracle selects:
+## Current public contract
 
-| Layer | Fixed implementation |
+| Operation | All supported targets with `avif` enabled |
 | --- | --- |
-| Container and RGB/YUV behavior | libavif 1.4.1 |
-| Decoder | dav1d 1.5.3 |
-| Encoder | libaom 3.13.2 |
-| Color helpers | fixed libyuv and SharpYUV revisions recorded in provenance |
+| Detection | Safe Rust signature detection |
+| Inspection | Safe Rust bounded container inspection and source facts |
+| Still decode | Safe Rust, manifest-bounded AV1 subset |
+| Still decode outside that subset | Typed `Unsupported`, never a partial image or native fallback |
+| Sequence decode | A supported still may be exposed as one frame; multi-frame tracks are an explicit planned gap |
+| Still encode | Typed `Unsupported`: pure-Rust encoder not implemented yet |
+| Sequence encode | Typed `Unsupported`: pure-Rust sequence encoder not implemented yet |
 
-Different AV1 encoders can produce valid but byte-different files. Exact
-Pillow-encoded output therefore requires the same encoder and configuration.
-The native bridge is retained as an intermediate compatibility path while the
-repository-owned portable implementation is developed.
+Every valid AVIF operation that is not implemented by the current safe-Rust
+backend carries `UnsupportedReason::NotImplemented`. Malformed or forbidden
+container input keeps its own `Malformed`/plain `Unsupported` classification;
+the runtime never uses a native decoder to turn a planned gap into a success.
 
-Runtime checks reject incompatible native codec versions rather than silently
-weakening parity.
+The capability table intentionally reports still decode as restricted and
+still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
+and `wasm32-wasip1` do not get different AVIF implementations.
 
-## Native setup
+The checked-in matrix currently contains 200 AVIF decode rows and 32 encode
+rows:
 
-Native AVIF requires a C11 compiler, archiver, and the exact library stack.
-The build script searches in this order:
+- 187 decode rows are active: portable still reconstruction and structural
+  error contracts.
+- 13 decode rows are planned pure-Rust gaps; the empty-tile malformed-input,
+  lossy DC-predictor, and all sixteen partitioned-square contracts are active.
+- 0 encode rows are active; all 32 are explicit planned gaps.
 
-1. `IMAGE_SLASH_STAR_AVIF_LIB_DIR`, optionally with
-   `IMAGE_SLASH_STAR_AVIF_LIB_NAME`;
-2. an exact `pkg-config` libavif 1.4.1 installation; or
-3. the pinned `.oracle-venv` used for references.
+One narrow internal regression contract now consumes six terminal blocks of
+the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
+decoded in AV1 payload order, then two following top-row 8×8 blocks consume
+shared adaptive CDF state, mode-zero filter-intra prediction, safe
+luma/chroma prediction including Smooth chroma, scalar DCT-DCT, H-DCT, ADST-DCT,
+DCT-ADST, and ADST-ADST transforms, the general 4×4 subsampled chroma
+coefficient sentence, and the legal EOB-bin-three/four branch. The production
+path exercises the exact closed square plus this bounded top-row continuation,
+while the baseline row remains planned. This is still bounded leaf evidence,
+not a full-frame claim:
+the complete baseline needs all partition/block state, every filter-intra
+mode and edge case, loop filtering, raster assembly, color conversion, and
+independent full-frame pixel evidence.
 
-Linux contributors can build the pinned stack:
+The permanent entropy contract also walks to the next partition terminal and
+records its exact geometry: an 8×16 coded block at block coordinates `(6, 0)`.
+A focused safe-Rust contract now consumes that terminal's exact rectangular
+coefficient/CDF sentence, reconstructs its Z2/angle-154 DCT-ADST 8×16 luma
+plane and skipped 4:2:0 R4×8 chroma planes, and checks the following terminal
+boundary `(0, 4, 4, 4)`. This is bounded syntax/leaf evidence, not a full
+baseline claim: the production walker still stops before this terminal, and
+full-frame above/left state, loop filtering, raster assembly, and independent
+raw-frame pixel evidence remain explicit pure-Rust gaps. It is not a native
+fallback and must not be “fixed” by decoding two 8×8 blocks.
+
+The transform groundwork for that deliverable is now in
+`src/codecs/avif/av1/transform.rs`: a safe scalar 16-point inverse DCT pass and
+the AV1-scaled 8×16 DCT-ADST wrapper, with zero, bounded-input, and
+non-repeated-8×8 regression tests. The focused contract uses these helpers and
+proves exact rectangular skip/transform/EOB/coefficient CDF consumption and
+checked plane dimensions. They are deliberately not wired into the full-frame
+production walker yet; persistent frame state, complete 4:2:0 chroma geometry,
+neighbor windows, and independent pixel evidence remain planned.
+
+The sample-depth boundary is also isolated in
+`src/codecs/avif/av1/sample_depth.rs`. It uses checked rounded normalization
+for nominal full-range 8-, 10-, and 12-bit samples and rejects an invalid depth
+or out-of-range `u16` value. The current materializer exercises it for its
+8-bit color and auxiliary-alpha samples; this is a reusable conversion
+prerequisite, not support for the 12-bit animated fixture. Full high-bit-depth
+AV1 reconstruction, HDR range/transfer handling, and sequence presentation
+remain planned.
+
+The alpha prerequisite now has an explicit safe-Rust frame boundary: the AV1
+block parser distinguishes monochrome lossless syntax from 4:4:4 color syntax,
+walks all 37 terminal leaves in the committed `alpha.avif` auxiliary item, and
+places them into a checked 64×64 one-plane canvas. The production sample
+validator retains that complete auxiliary plane using the logical tile span
+and parsed frame context; it does not use a fixture byte offset or a native
+decoder. Tests cover the full leaf order, geometry-derived above/left neighbor
+state, exact plane extent, and production retention. The paired `with_alpha`
+fixture is now active: the 64×64 primary color frame and auxiliary plane
+compose to exact RGBA8 bytes with the recorded independent reference. Broader
+dimensions, high depth, and premultiplied relationships remain planned.
+
+Regenerate or inspect the authoritative status with:
 
 ```bash
-scripts/build_avif_stack.sh /tmp/image-star-avif /tmp/image-star-avif-build
+jq '.formats.avif, .summary' tests/fixtures/coverage_matrix.json
 ```
 
-Then select it:
+The active rows do not mean “all AVIF works.” They mean only that each listed
+case has a checked-in contract that the current safe Rust implementation can
+prove.
 
-```bash
-export IMAGE_SLASH_STAR_AVIF_LIB_DIR=/tmp/image-star-avif/lib
-cargo test --locked --all-features --test coverage_matrix_tests
-```
+The planned rows are executable contracts too: the matrix test checks every
+decode and encode row for a concrete gap reason, a named pure-Rust work item,
+`former_native_only: true` provenance for every row previously covered by the
+removed bridge, no claimed pixel or encoded-output reference, and a typed
+safe-Rust `Unsupported` result (with the named repeated-frame-ID sequence case
+intentionally returning `Malformed`). The generated matrix drops that marker
+as soon as a row becomes active, so it cannot silently survive a real closure.
 
-The script clones fixed upstream sources and verifies the libavif commit and
-installed version. It requires `cmake`, `git`, `meson`, `ninja`, and
-`pkg-config`.
+The current matrix contains 45 former-native AVIF rows: 13 decode gaps and 32
+encode gaps. Every remaining row is explicitly planned until pure safe Rust and
+independent compatibility evidence exist.
 
-## Portable implementation
+## Exact planned gaps
 
-The WASM path contains repository-owned:
+These are the 13 decode rows that must become real safe-Rust behavior before
+they can move from `planned` to `active` in `manifest.yaml` and
+`coverage_matrix.json`:
 
-- ISO-BMFF brand and box parsing;
-- bounded FileTypeBox retention of major/minor and ordered compatible-brand
-  declarations;
-- item, extent, property, grid, alpha, and sample extraction;
-- bounded retention of recognized AVIF EXIF and XMP item extents as raw
-  `OpaqueMetadata` records;
-- AV1 sequence and frame-header parsing;
-- tile-boundary validation;
-- scalar entropy decoding with adaptive CDF state;
-- partition and block traversal;
-- prediction, residual reconstruction, and required color conversion for
-  accepted classes; and
-- exact independent entropy/reconstruction references generated from pinned
-  upstream behavior.
+| Category | Planned rows | Why it is missing |
+| --- | --- | --- |
+| General baseline payload | `baseline`; `accepted_still_major_brands`; `accepted_still_major_brands_major_brand_msf1`; `accepted_still_major_brands_major_brand_mif1_late_avif` | The container brands are understood, but the 128×128 8-bit lossy 4:2:0 payload still needs syntax-driven multi-block partitioning, residual reconstruction, loop filtering, and the complete frame raster. Safe Rust now has a focused R8×16 terminal parser/reconstructor, but the production frame walker still stops before this terminal and no full-frame pixel evidence exists. |
+| Partitioned-square raster | `partitioned_square_12x12_g96_direct_tokens`; `partitioned_square_12x12_midpoint_g96_ac`; `partitioned_square_12x12_top_left_luma_eob4`; `partitioned_square_12x12_top_left_luma_eob12_control`; `partitioned_square_12x12_luma_eob1`; `partitioned_square_12x12_luma_eob2_control`; `partitioned_square_12x12_luma_eob4_control`; `partitioned_square_12x12_luma_eob6_control`; `partitioned_square_12x12_luma_eob9_control`; `partitioned_square_12x12_luma_eob10_control`; `partitioned_square_12x12_luma_eob12_control`; `partitioned_square_12x12_luma_eob15_control` | The four 16×16 4:4:4 square fixtures now have exact safe-Rust plane and entropy evidence. These 12×12 cases still need their cropped-edge and coefficient-class proof. |
+| Adjacent entropy syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | Safe Rust now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes, including moving coefficient-context lookup, matrix-10 dequantization, and independent pixel fixtures. These two byte mutations are rejected by the independent Pillow oracle, so they remain explicit negative planned controls rather than being widened into successful decoding. |
+| Sample depth and auxiliary images | `high_bitdepth` | `high_bitdepth` needs 12-bit reconstruction and conversion. The 64×64 `with_alpha` primary/auxiliary pair is active with exact RGBA8 evidence; broader alpha dimensions, depths, and relationships remain future work. |
+| Color and image composition | `hdr`; `grid` | HDR transfer/primaries/matrix application and grid-cell composition are not implemented. |
+| Animation and tracks | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | Track references, timing, and sequence presentation are not implemented; the safe validator now rejects the repeated current frame ID in the named error fixture. |
+| Multiple AV1 tiles | `multitile` | Multi-tile frame reconstruction is not implemented. |
 
-The accepted still-decode subset includes the closed manifest classes for:
+The remaining active AVIF error rows prove that the safe parser rejects
+malformed or forbidden structure with a stable typed result. They are not
+claims that the corresponding valid feature is supported.
 
-- lossless full-range YUV 4:4:4 and 4:2:0;
-- selected single-, two-, and four-leaf geometries from 4×4 through 16×16;
-- supported DC, vertical, and horizontal prediction paths;
-- zero, direct-token, and accepted token-15 Golomb DC-only residual paths; and
-- initial 4×4 and 8×8 lossy 4:2:0 directional-predictor cases.
+All 32 encode rows are planned, including RGB/RGBA and luminance conversion,
+quality and subsampling, alpha, monochrome, tiles, metadata, orientation,
+advanced options, animation, and option-error behavior. Option parsing remains
+a public API contract; producing an AVIF file remains a planned codec task.
 
-The manifest and independent reconstruction JSON are authoritative when this
-summary becomes too coarse. Inputs outside a proven class return a structured
-`Unsupported` or `Malformed` error; they must not fall through to a partial
-decode. On every `wasm32` target the unavailable operations return staged,
-codec-level `Unsupported` errors ("AVIF sequence decoding requires the native
-AVIF stack" for sequence decode, "AVIF encoding requires the native extra
-module" for still and sequence encode) that match the capability table;
-out-of-subset still decode returns "AVIF input is outside the portable WASM
-decode subset" at the `StillDecode` stage. When an AVIF item declares an
-alpha auxiliary item, `SourceDescriptor::alpha()` reports `Auxiliary`,
-identifying that the alpha samples are carried by a separate image.
-`SourceDescriptor::avif_auxiliary_relationship()` additionally retains the
-direct source-local `auxl` relationship for `alpha.avif` (auxiliary item `2`
-targets primary item `1`) while
-`SourceDescriptor::avif_auxiliary_relationships()` retains the bounded alpha
-links for the supported grid fixture (`5`→`2` and `6`→`3`). Both are present
-on inspection, still decode, and the still-sequence fallback. Decoded transfer
-bytes remain the documented normalized unassociated layout; these relationships
-are source provenance only.
-When an AVIF `prem` `iref` edge declares that an alpha item qualifies a color
-item, `SourceDescriptor::avif_premultiplied_relationships()` retains that
-source-local edge alongside the auxiliary relationship. The field reports
-container provenance only; it does not premultiply or unpremultiply decoded
-transfer bytes.
-For the same grid, `SourceDescriptor::avif_grid_item_ids()` retains the ordered
-derived color-item list (`[2, 3]`) on those three surfaces. The primary grid's
-validated payload topology is also retained through
-`SourceDescriptor::avif_grid_properties()`: the committed fixture reports
-version `0`, raw flags `0`, `2` rows, `1` column, and an `80 × 80` output canvas.
-These fields are source provenance only; they do not expose tile placement or
-compose the grid.
+## What has already been built in safe Rust
 
-The AVIF `ftyp` FileTypeBox is retained as
-`SourceDescriptor::avif_file_type()` with its major brand, minor version, and
-ordered compatible-brand list. Both bounded parsers reject more than 1,024
-compatible-brand entries, and the existing feature-gated fixture contract
-exercises that overflow on inspection, still decode, and sequence parsing. The
-committed alpha, baseline, grid, animated, and portable RGB fixtures assert the
-available `avif`/`avis` records across their applicable surfaces. This is Rust
-source provenance only: Pillow has no equivalent FileTypeBox/source-descriptor
-result, and the descriptor does not promise item-level decoder capability, so
-no Pillow parity row represents it.
+- AVIF brand detection and bounded ISO-BMFF inspection.
+- FileTypeBox, item locations, property associations, color declarations,
+  codec declarations, alpha relationships, and raw metadata retention as
+  source facts.
+- AV1 sequence/frame-header validation, tile-boundary checks, scalar entropy
+  decoding, and a bounded safe-Rust partition walker with adaptive CDF and
+  above/left context state that reaches checked terminal block footprints in
+  AV1 payload order for every legal partition shape. Because block syntax is
+  interleaved between sibling partition symbols, the production walker stops
+  at the first unsupported terminal block; it does not claim a full baseline
+  tree or image decode. The documented portable partition/reconstruction
+  classes also include a
+  scalar safe-Rust 8×8 DCT-DCT inverse transform, the checked eight-bit luma
+  dequantization table and legal 8×8 EOB-bin-five/six AC reconstruction, a
+  safe rectangular R8×16 coefficient sentence, DCT-ADST reconstruction, and
+  skipped 4:2:0 R4×8 chroma reconstruction in the focused baseline terminal
+  contract,
+  checked scalar CDEF block kernel, and RGB conversion
+  for the active subset. The
+  transform and table are reusable prerequisites; they do not by themselves
+  widen the accepted EOB syntax or make the 128×128 baseline a full-frame
+  decode, and the CDEF hook remains disabled until per-block selection syntax
+  is retained by the frame walker.
+- A checked safe-Rust frame canvas now places reconstructed luma/chroma planes
+  with overflow, subsampling-alignment, bounds, overlap, and completeness
+  checks, converts the entropy walker's four-by-four-unit leaf coordinates to
+  pixel origins, can crop a coded cell to a checked top-left visible rectangle,
+  and validates a complete grid/tile cell batch before copying any sample. This is
+  the reusable atomic assembly primitive for baseline stills, tiles, grids,
+  and auxiliary images; it does not by itself claim that those AV1 syntax
+  classes are decoded.
+- A checked pure-Rust auxiliary-alpha composition boundary for the portable
+  class: alpha must be monochrome, match color dimensions and bit depth, and
+  have exactly one decoded sample per color pixel. Unsupported alpha never
+  silently degrades to RGB; the `with_alpha` fixture now proves the primary
+  color payload, auxiliary plane, RGBA pairing, and raw RGBA parity.
+- Cancellation, limits, destination-buffer, source-lifecycle, and typed-error
+  boundaries shared with the other codecs.
+- A capability table that is the same architecture on native and WASM.
 
-The bounded `iloc` declarations are retained as
-`SourceDescriptor::avif_item_locations()`. Each source-order record preserves
-the item ID, its construction source (`File` or `Idat`), and its ordered
-source-local extent offsets and lengths; file extents are checked against the
-encoded file and `idat` extents against the enclosing payload with checked
-range arithmetic. These records describe container provenance only: they do
-not expose bytes, select auxiliary content, compose grid tiles, or imply that
-an item is decodable. The existing feature-gated contract asserts the exact
-alpha-fixture locations on inspection, native still/sequence decode when the
-native stack is available, and portable still-decode propagation on WASI. This
-is Rust-only source-provenance evidence because Pillow exposes no equivalent
-`iloc` location result, so it has no Pillow parity row.
+Source facts are not pixel processing. For example, retaining a `grid` box
+proves that the parser saw a grid; it does not mean that the Rust decoder has
+composed the grid into one image. The feature-gated source-contract tests keep
+that distinction explicit.
 
-The primary item's `colr`/`nclx` CICP declaration, `av1C` chroma sample position,
-`clli` content-light-level
-property, `mdcv` mastering-display color volume, and `colr`/`prof` or `rICC` ICC
-profile are retained as source provenance in `SourceColor` on inspection, still
-decode, and the still-sequence fallback. The record contains color primaries,
-chroma sample position, transfer characteristics, matrix coefficients, the full-range flag, maxCLL,
-maxPALL, exact mastering-display coordinates/luminance fields, and the exact
-ICC profile kind and bytes; it never applies color conversion or tone mapping.
-This is a bounded specification/defensive-model contract rather than Pillow
-parity evidence, because Pillow's observable result has no equivalent item-level
-structured color field. The test uses a committed Pillow-generated encoded
-metadata output only as a source witness for ICC and does not add a parity row.
-Typed non-primary `colr`/`nclx` declarations are retained separately through
-`SourceDescriptor::avif_item_color_properties()` as source-local item ID/CICP
-records on inspection, still decode, and the still-sequence fallback. They do
-not merge into the primary `SourceColor`, perform conversion, or change
-decoded pixels. The contract uses the in-memory `alpha.avif` association
-mutation described in [testing](testing.md); Pillow exposes no equivalent
-item-level field, so it remains Rust source-provenance evidence with no parity
-row. Raw non-primary `prof`/`rICC` profiles are retained through
-`SourceDescriptor::avif_item_icc_profiles()` as source-local item ID and exact
-profile-kind/bytes records, without replacing primary `SourceColor` or changing
-decoded pixels. Other known item color/property forms beyond these six raw
-declarations remain open. Unknown and known associated non-primary
-`clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties are retained separately through
-`SourceDescriptor::avif_item_properties()` as source-local item ID, four-byte
-property kind, and exact raw payload records. They are not interpreted,
-replayed, or applied to decoded samples. The existing feature-gated contract
-mutates `alpha.avif` only in memory and checks all six declarations across
-inspection, still decode, and sequence-frame decode; Pillow exposes no
-equivalent item-property result, so this is Rust source-provenance evidence
-with no parity row.
-Non-alpha `auxC`/`auxi` declarations are retained through the same
-`SourceDescriptor::avif_item_properties()` records with their original
-source-local kind and exact full-box payload. This is auxiliary-type
-provenance only; it does not select or decode auxiliary payloads or change
-normalized samples. The existing contract reaches the inspection assertion
-before the known native AVIF status-5 failure; its still and sequence
-assertions remain the Rust contract when that native lane is available.
-The raw non-primary records also retain the source `ipma` essential bit
-through `AvifItemProperty::is_essential()` in association order. This is
-container intent provenance only; it does not make an unknown property
-executable, select auxiliary content, or change decoded pixels.
-Both bounded AVIF parsers independently cap the `ipco` property table at
-2,048 entries. The existing feature-gated source/container contract rejects
-the 2,049th unassociated property during inspection, still decode, and
-sequence parsing. Pillow has no item-property table-budget result, so this is
-Rust parser-resource evidence with no parity row, fixture-manifest row,
-diagnostic origin, coverage-only hook, new test function, or unit test.
-Known non-primary and auxiliary `ispe`/`pixi` declarations are retained
-separately through `SourceDescriptor::avif_item_plane_properties()` as
-source-local item ID, optional width/height, and optional uniform channel depth.
-The committed `alpha.avif` and `grid.avif` fixtures assert these records on
-inspection, still decode, and sequence-frame decode; duplicate declarations
-are mutated only in memory and rejected by the same feature-gated contract.
-Pillow exposes no item-level plane declaration result, so this remains Rust
-source-provenance evidence with no parity row, fixture file, diagnostic origin,
-new test function, or coverage-only hook. The descriptor does not expose plane
-buffers, compose grid tiles, infer range/quality, or transform pixels.
-Known non-primary and auxiliary `av1C` declarations are retained separately
-through `SourceDescriptor::avif_item_codec_properties()` as source-local item
-ID, exact raw payload, declared AV1 bit depth, and chroma sample position. The
-committed `alpha.avif` and `grid.avif` fixtures assert these records on
-inspection, still decode, and sequence-frame decode; a duplicate `av1C`
-association is mutated only in memory and rejected by the same feature-gated
-contract. Pillow exposes no item-level codec-configuration result, so this is
-Rust source-provenance evidence with no parity row, fixture file, diagnostic
-origin, new test function, or coverage-only hook. The descriptor does not
-select a decoder, expose planes, compose grid tiles, infer range/quality, or
-transform pixels.
-Recognized `Exif` items and `mime` items with content type exactly
-`application/rdf+xml` now follow the same raw-retention boundary as the decoded
-metadata records. The EXIF record preserves the item payload exactly, including
-the four-byte AVIF TIFF-header offset prefix; the XMP record uses kind `XMP `.
-Other non-primary profiles beyond raw ICC, track-only auxiliary payload
-selection/decoded content, non-alpha auxiliary semantics beyond exact
-`auxC`/`auxi` declaration retention, item color/property forms beyond typed CICP, raw ICC, raw
-unknown properties, the six known raw declarations, plane declarations, and
-codec declarations, plus plane
-range/quality semantics, remain future slices. Direct and
-supported grid-derived item and auxiliary-alpha provenance is represented
-through `SourceAlpha::Auxiliary`, the scalar
-`SourceDescriptor::avif_auxiliary_relationship()` getter, and the bounded
-`SourceDescriptor::avif_auxiliary_relationships()`,
-`SourceDescriptor::avif_premultiplied_relationships()`, and
-`SourceDescriptor::avif_grid_item_ids()` lists.
+## Pure-Rust implementation order
 
-The primary item's `irot`, `imir`, `pasp`, and `clap` properties are retained
-in `SourceDescriptor::avif_transform()` as `AvifTransformProperties`;
-`AvifTransformProperties::order()` returns their source association order
-using `AvifTransformKind`. `irot`
-accepts the four legal counter-clockwise quarter-turn values, `imir` accepts
-the top/bottom or left/right axis, and `pasp` retains its positive horizontal
-and vertical spacing values through `AvifPixelAspectRatio`. `clap` retains its
-positive width/height fractions and signed horizontal/vertical offsets through
-`AvifCleanAperture`. These declarations are source provenance only: decoded
-pixels are never rotated, mirrored, rescaled, or cropped. Other non-primary
-item-level color/properties beyond the six known raw declarations, non-alpha
-auxiliary payload selection/decoded content and relationships beyond exact
-`auxC`/`auxi` declaration retention, grid tile placement/composition, plane
-range/quality, and other item metadata remain open;
-bounded direct/grid item,
-auxiliary-alpha, and
-premultiplication provenance is represented through `SourceAlpha::Auxiliary`
-plus the source-local item relationships.
+1. **Finish still AV1 syntax.** Connect the new partition tree to block
+   prediction and residual decoding, then add the missing transform,
+   loop-filter/restoration, multi-tile, 4:2:2/4:0:0, and 10/12-bit classes.
+   Each class gets an independent fixture and a bounded work/cancellation
+   contract.
+2. **Finish still-image composition.** Decode and combine alpha items and
+   grids; implement the declared color pipeline for HDR and other supported
+   sample layouts; preserve metadata without accidentally changing pixels.
+3. **Implement sequences.** Add track/sample-table parsing, frame IDs,
+   references, timing, default-image rules, disposal/blend semantics, random
+   access, and limits. The validator already rejects the repeated-ID error
+   case safely; first-frame materialization and full presentation remain
+   planned. A single-frame fallback is not sequence completion.
+4. **Implement encoding.** Write the AVIF container in Rust; convert RGB/RGBA
+   safely to the supported YUV layouts; add an intra AV1 encoder, transforms,
+   quantization, entropy/CDF coding, tiles, alpha, metadata, and sequences.
+   Determinism and Pillow-visible output are release gates, not assumptions.
+5. **Verify and release.** Activate one manifest category at a time only after
+   native and WASM semantic tests pass, active rows match Pillow where visible,
+   independently decode emitted bytes, strict checks pass, and line/branch/
+   function/region coverage is 100% for the measured release surface.
 
-## Native FFI boundary
+The work is intentionally ordered this way: a container writer without a
+correct AV1 payload is not an encoder, and a sequence API without timing and
+frame-reference semantics is not an animation decoder.
 
-`src/codecs/avif/native.rs` is the only Rust module allowed to use unsafe code.
-It owns libavif handles, retains input bytes for the required lifetime, checks
-frame and buffer bounds, pairs bridge allocations with the matching free
-function, and prevents unwinding across a foreign callback boundary.
+## Oracle and third-party policy
 
-`src/codecs/avif/native/bridge.c` exposes a narrow status-code API. Other codec
-modules do not call C or expose the FFI surface publicly.
+Pinned Pillow/libavif/dav1d/libaom outputs and the independent AV1 traces in
+`tests/fixtures/` are reproducible reference material. The copies under
+`third_party/` supply license/provenance information and source-derived
+algorithm references where documented. They are not compiled, linked, or
+loaded by the crate.
 
-Licenses and patent grants for libavif, dav1d, libaom, libyuv, libwebp, and
-copied/translated sources are retained under `third_party/`, `NOTICE.md`, and
-the root `PATENTS` file.
+When a future Rust encoder emits bytes, validation must include an independent
+AVIF decoder and the pinned Pillow observable result. Byte identity is claimed
+only when the algorithm and parameters genuinely match; a valid but different
+AVIF file is not falsely reported as Pillow byte parity.
 
-## Completion criteria
+## Acceptance rule for every gap
 
-Portable AVIF is complete only when:
+A planned row becomes active only when all of these are true:
 
-1. every retained native AVIF manifest success and error has an equivalent
-   portable result;
-2. still and sequence decode retain exact format, mode, metadata, timing, and
-   pixels;
-3. still and sequence encode match the pinned output contract where exact bytes
-   are required;
-4. native and WASM semantic tests execute, not merely compile;
-5. line, branch, function, and region coverage remain 100%;
-6. no Cargo dependency is added beyond `bytemuck`; and
-7. the native stack can be removed from the published runtime contract without
-   weakening any active case.
+- the implementation is pure safe Rust;
+- no native build/link/environment path is needed;
+- the public result is correct for the declared case;
+- a fixture or Rust-only contract exercises the real behavior;
+- Pillow parity is used only for fields Pillow can observe;
+- the same behavior is tested on the claimed native/WASM targets; and
+- strict formatting, Clippy, rustdoc, tests, and managed coverage are fresh at
+  the same source revision.
 
-Progress should update this document's current boundary, the manifest, and the
-[canonical roadmap](roadmap-new.md). Run-by-run exploration belongs in commits and Coverage
-MCP artifacts rather than another permanent progress log.
+The roadmap and manifest are the source of truth. A native oracle result,
+fixture presence, or successful container inspection never silently closes a
+planned decoder or encoder gap.

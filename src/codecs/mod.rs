@@ -174,16 +174,6 @@ fn decode_codec(
 
 /// Dispatch decoding to the enabled format implementation.
 pub(crate) fn decode_format(data: &[u8], format: ImageFormat) -> ImageDecodedResult<DecodedImage> {
-    #[cfg(all(target_arch = "wasm32", feature = "avif"))]
-    if format == ImageFormat::Avif {
-        let (image, consumed) = into_image_result(
-            avif::decode::decode(data, None),
-            format,
-            ImageErrorStage::StillDecode,
-        )?;
-        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
-    }
-
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -221,16 +211,6 @@ pub(crate) fn decode_prefix_format(
     data: &[u8],
     format: ImageFormat,
 ) -> ImageDecodedResult<DecodedImage> {
-    #[cfg(all(target_arch = "wasm32", feature = "avif"))]
-    if format == ImageFormat::Avif {
-        let (image, consumed) = into_incremental_image_result(
-            avif::decode::decode(data, None),
-            format,
-            ImageErrorStage::StillDecode,
-        )?;
-        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
-    }
-
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -288,17 +268,6 @@ fn decode_token_format_with_mode(
     token: &crate::CancellationToken,
     incremental: bool,
 ) -> ImageDecodedResult<DecodedImage> {
-    #[cfg(all(target_arch = "wasm32", feature = "avif"))]
-    if format == ImageFormat::Avif {
-        let decoded = avif::decode::decode(data, Some(token));
-        let (image, consumed) = if incremental {
-            into_incremental_image_result(decoded, format, ImageErrorStage::StillDecode)?
-        } else {
-            into_image_result(decoded, format, ImageErrorStage::StillDecode)?
-        };
-        return validate_decoded_image(image).map(|image| (image, Some(consumed), Vec::new()));
-    }
-
     #[cfg(any(
         not(all(
             feature = "jpeg",
@@ -2473,14 +2442,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &EncodeOptions::for_format(ImageFormat::Gif),
         Some(&crate::CancellationToken::new()),
     );
-    #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
+    #[cfg(feature = "avif")]
     let _ = encode_sequence_format_with_token(
         &two_frame_sequence,
         ImageFormat::Avif,
         &EncodeOptions::for_format(ImageFormat::Avif),
         Some(&crate::CancellationToken::new()),
     );
-    #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
+    #[cfg(feature = "avif")]
     {
         // The public dispatcher consumes the first poll before entering the
         // AVIF still encoder. Cancel after that poll to exercise the codec's
@@ -2557,20 +2526,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     webp::__coverage_exercise_private_branches();
 }
 
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn __coverage_av1_entropy_reference_trace()
 -> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     avif::__coverage_entropy_reference_trace()
 }
 
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn __coverage_av1_reconstruction(
     data: &[u8],
 ) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
     avif::__coverage_reconstruction(data)
 }
 
-#[cfg(all(coverage, feature = "avif", not(target_arch = "wasm32")))]
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn __coverage_sweep_av1_first_leaf(data: &[u8]) {
     avif::__coverage_sweep_first_leaf(data);
 }
