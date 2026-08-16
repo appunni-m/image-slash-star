@@ -1661,6 +1661,7 @@ impl Meta {
     }
 }
 
+#[derive(Clone)]
 pub(super) struct EncodedSample {
     pub(super) spans: Vec<ByteSpan>,
     pub(super) config: ByteSpan,
@@ -1668,6 +1669,7 @@ pub(super) struct EncodedSample {
     pub(super) duration: u32,
 }
 
+#[derive(Clone)]
 pub(super) struct EncodedPlane {
     pub(super) samples: Vec<EncodedSample>,
 }

@@ -2295,14 +2295,12 @@ pub(super) fn inverse_identity4x4(coefficients: &[i32; 16]) -> [i32; 16] {
 
 /// Apply the AV1 4×4 horizontal-identity/vertical-DCT inverse transform.
 pub(super) fn inverse_identity_dct4x4(coefficients: &[i32; 16]) -> [i32; 16] {
-    let output = inverse_4x4_with_passes(coefficients, inverse_identity4, inverse_dct4);
-    output
+    inverse_4x4_with_passes(coefficients, inverse_identity4, inverse_dct4)
 }
 
 /// Apply the AV1 4×4 horizontal-DCT/vertical-identity inverse transform.
 pub(super) fn inverse_dct_identity4x4(coefficients: &[i32; 16]) -> [i32; 16] {
-    let output = inverse_4x4_with_passes(coefficients, inverse_dct4, inverse_identity4);
-    output
+    inverse_4x4_with_passes(coefficients, inverse_dct4, inverse_identity4)
 }
 
 fn inverse_4x4_with_passes(

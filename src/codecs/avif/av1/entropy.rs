@@ -1055,7 +1055,10 @@ fn clip_partition_geometry(
     geometry: PartitionGeometry,
     frame_width: u32,
     frame_height: u32,
-) -> Av1Result<PartitionGeometry> {
+) -> Av1Result<Option<PartitionGeometry>> {
+    if geometry.x >= frame_width || geometry.y >= frame_height {
+        return Ok(None);
+    }
     let width = frame_width
         .checked_sub(geometry.x)
         .ok_or_else(|| malformed("partition child escapes the frame horizontally"))?
@@ -1067,11 +1070,11 @@ fn clip_partition_geometry(
     if width == 0 || height == 0 {
         return Err(malformed("partition child has no visible samples"));
     }
-    Ok(PartitionGeometry {
+    Ok(Some(PartitionGeometry {
         width,
         height,
         ..geometry
-    })
+    }))
 }
 
 /// One syntax node visited by the bounded partition walker.
@@ -1139,16 +1142,15 @@ const PARTITION_CDFS: [[[u16; 10]; 4]; 5] = [
     ],
 ];
 
-// The value written into dav1d's above/left partition context after a node.
-// The first table is for 64x64 root superblocks (the current baseline path);
-// the second is retained for the future 128x128 root class.
+// The values written into dav1d's above and left partition contexts after a
+// node. The two tables are edge orientations, not superblock sizes.
 const AL_PARTITION_CONTEXT: [[[u8; 10]; 5]; 2] = [
     [
         [0x00, 0x00, 0x10, 0xff, 0x00, 0x10, 0x10, 0x10, 0xff, 0xff],
         [0x10, 0x10, 0x18, 0xff, 0x10, 0x18, 0x18, 0x18, 0x10, 0x1c],
         [0x18, 0x18, 0x1c, 0xff, 0x18, 0x1c, 0x1c, 0x1c, 0x18, 0x1e],
         [0x1c, 0x1c, 0x1e, 0xff, 0x1c, 0x1e, 0x1e, 0x1e, 0x1c, 0x1f],
-        [0x1e, 0x1f, 0x1e, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
+        [0x1e, 0x1e, 0x1f, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
     ],
     [
         [0x00, 0x10, 0x00, 0xff, 0x10, 0x10, 0x00, 0x10, 0xff, 0xff],
@@ -1162,8 +1164,8 @@ const AL_PARTITION_CONTEXT: [[[u8; 10]; 5]; 2] = [
 struct PartitionContexts {
     origin_x: u32,
     origin_y: u32,
-    cells: [[u8; 32]; 32],
-    use_128x128_superblock: bool,
+    above: [u8; 32],
+    left: [u8; 32],
 }
 
 impl PartitionContexts {
@@ -1171,8 +1173,8 @@ impl PartitionContexts {
         Self {
             origin_x: context.block_x,
             origin_y: context.block_y,
-            cells: [[0; 32]; 32],
-            use_128x128_superblock: context.level == 0,
+            above: [0; 32],
+            left: [0; 32],
         }
     }
 
@@ -1189,7 +1191,7 @@ impl PartitionContexts {
             .map_err(|_| malformed("partition context coordinate overflows"))?;
         let y = usize::try_from(relative_y)
             .map_err(|_| malformed("partition context coordinate overflows"))?;
-        if x >= self.cells[0].len() || y >= self.cells.len() {
+        if x >= self.above.len() || y >= self.left.len() {
             return Err(malformed("partition context exceeds the coded superblock"));
         }
         Ok((x, y))
@@ -1200,12 +1202,8 @@ impl PartitionContexts {
             return Err(malformed("partition level exceeds four"));
         }
         let (cell_x, cell_y) = self.cell(x, y)?;
-        let above = cell_y
-            .checked_sub(1)
-            .map_or(0, |row| self.cells[row][cell_x]);
-        let left = cell_x
-            .checked_sub(1)
-            .map_or(0, |column| self.cells[cell_y][column]);
+        let above = self.above[cell_x];
+        let left = self.left[cell_y];
         let shift = 4_u32.saturating_sub(level);
         let above = (above >> shift) & 1;
         let left = (left >> shift) & 1;
@@ -1224,28 +1222,25 @@ impl PartitionContexts {
         if level > 4 {
             return Ok(());
         }
-        let table = &AL_PARTITION_CONTEXT[usize::from(self.use_128x128_superblock)];
-        let value = table[level as usize][kind.symbol()];
-        if value == 0xff {
+        let above_value = AL_PARTITION_CONTEXT[0][level as usize][kind.symbol()];
+        let left_value = AL_PARTITION_CONTEXT[1][level as usize][kind.symbol()];
+        if above_value == 0xff || left_value == 0xff {
             return Err(malformed("partition context has no AV1 value"));
         }
         let start_x = self.cell(x, y)?.0;
-        let start_y = self.cell(x, y)?.1;
         let end_x = self
             .cell(x.saturating_add(width.saturating_sub(1)), y)?
             .0
             .saturating_add(1)
-            .min(self.cells[0].len());
+            .min(self.above.len());
+        let start_y = self.cell(x, y)?.1;
         let end_y = self
             .cell(x, y.saturating_add(height.saturating_sub(1)))?
             .1
             .saturating_add(1)
-            .min(self.cells.len());
-        for row in &mut self.cells[start_y..end_y] {
-            for cell in &mut row[start_x..end_x] {
-                *cell = value;
-            }
-        }
+            .min(self.left.len());
+        self.above[start_x..end_x].fill(above_value);
+        self.left[start_y..end_y].fill(left_value);
         Ok(())
     }
 }
@@ -1378,7 +1373,11 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         let child_level = level.saturating_add(1);
         let context_level = child_level.min(4);
         for geometry in children.into_iter().take(count) {
-            let geometry = clip_partition_geometry(geometry, self.frame_width, self.frame_height)?;
+            let Some(geometry) =
+                clip_partition_geometry(geometry, self.frame_width, self.frame_height)?
+            else {
+                continue;
+            };
             let context = self
                 .contexts
                 .context(context_level, geometry.x, geometry.y)?;
@@ -1429,6 +1428,9 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         let horizontal_split = self.frame_width > x.saturating_add(half_size);
         let vertical_split = self.frame_height > y.saturating_add(half_size);
         if !horizontal_split && !vertical_split {
+            if x >= self.frame_width || y >= self.frame_height {
+                return Ok(PartitionVisitControl::Continue);
+            }
             if level < 4 {
                 return self.walk(level.saturating_add(1), x, y, visit);
             }
@@ -1465,7 +1467,7 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         self.push(parent)?;
 
         if kind == PartitionKind::None {
-            let geometry = clip_partition_geometry(
+            let Some(geometry) = clip_partition_geometry(
                 PartitionGeometry {
                     x,
                     y,
@@ -1474,7 +1476,10 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
                 },
                 self.frame_width,
                 self.frame_height,
-            )?;
+            )?
+            else {
+                return Ok(PartitionVisitControl::Continue);
+            };
             if let Some(node) = self.nodes.last_mut() {
                 node.x = geometry.x;
                 node.y = geometry.y;
@@ -1591,9 +1596,9 @@ where
     walker.walk(context.level, context.block_x, context.block_y, &mut visit)
 }
 
-/// Reconstruct the complete alpha tile for the one monochrome class whose
-/// block syntax is currently closed: an 8-bit, lossless, 64×64, single-tile
-/// intra frame with no restoration or inter-frame tools.
+/// Reconstruct the complete alpha tile for the bounded monochrome class whose
+/// block syntax is currently closed: an 8-bit, lossless, intra frame with no
+/// restoration or inter-frame tools.
 ///
 /// The callback order is the AV1 block-payload order. Neighbor references are
 /// selected from already reconstructed leaves by their checked pixel
@@ -1612,66 +1617,74 @@ pub(super) fn validate_complete_monochrome_partition(
     if !decode_restoration_prefix(&mut decoder, context) {
         return Ok(None);
     }
+    let root_level = context.level;
+    let root_size = 32_u32
+        .checked_shr(root_level)
+        .filter(|&size| size != 0)
+        .ok_or_else(|| malformed("monochrome superblock root size is invalid"))?;
+    let root_step =
+        usize::try_from(root_size).map_err(|_| malformed("monochrome root size exceeds usize"))?;
     let mut walker = PartitionWalker::new(&mut decoder, context);
     let mut block_decoder = super::block::MonochromeLosslessDecoder::new();
     let mut canvas =
         super::raster::MonochromeFrameCanvas::new(context.frame_width, context.frame_height)?;
     let mut leaves = Vec::<super::block::MonochromeLeaf>::new();
     let mut unsupported = false;
-    let control = walker.walk(
-        context.level,
-        context.block_x,
-        context.block_y,
-        &mut |decoder, node| {
-            let Some((transform_grid, width, height)) = monochrome_transform_geometry(node) else {
-                unsupported = true;
-                return Ok(PartitionVisitControl::Stop);
-            };
-            let origin_x = node
-                .x
-                .checked_mul(4)
-                .ok_or_else(|| malformed("monochrome leaf x coordinate overflows"))?;
-            let origin_y = node
-                .y
-                .checked_mul(4)
-                .ok_or_else(|| malformed("monochrome leaf y coordinate overflows"))?;
-            let geometry = super::block::MonochromeBlockGeometry {
-                origin_x,
-                origin_y,
-                width,
-                height,
-                transform_grid,
-            };
-            let tools = super::block::BlockTools {
-                allow_screen_content_tools: context.allow_screen_content_tools,
-                enable_filter_intra: context.enable_filter_intra,
-                enable_intra_edge_filter: context.enable_intra_edge_filter,
-                transform_mode: context.frame_tools.transform_mode,
-                transform_context: 0,
-            };
-            let decoded = if leaves.is_empty() {
-                block_decoder.decode_origin(decoder, geometry, tools)
-            } else {
-                let neighbors = monochrome_neighbors(&leaves, geometry)?;
-                block_decoder.decode_following(decoder, geometry, neighbors, tools)
-            };
-            let Ok(decoded) = decoded else {
-                unsupported = true;
-                return Ok(PartitionVisitControl::Stop);
-            };
-            canvas.place_partition_leaf(
-                node.x,
-                node.y,
-                node.width,
-                node.height,
-                decoded.plane(),
-            )?;
-            leaves.push(decoded);
-            Ok(PartitionVisitControl::Continue)
-        },
-    )?;
-    if unsupported || matches!(control, PartitionVisitControl::Stop) {
-        return Ok(None);
+    for root_y in (context.block_y..context.block_height).step_by(root_step) {
+        for root_x in (context.block_x..context.block_width).step_by(root_step) {
+            walker.reset_root();
+            let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
+                let Some((transform_grid, width, height)) = monochrome_transform_geometry(node)
+                else {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                };
+                let origin_x = node
+                    .x
+                    .checked_mul(4)
+                    .ok_or_else(|| malformed("monochrome leaf x coordinate overflows"))?;
+                let origin_y = node
+                    .y
+                    .checked_mul(4)
+                    .ok_or_else(|| malformed("monochrome leaf y coordinate overflows"))?;
+                let geometry = super::block::MonochromeBlockGeometry {
+                    origin_x,
+                    origin_y,
+                    width,
+                    height,
+                    transform_grid,
+                };
+                let tools = super::block::BlockTools {
+                    allow_screen_content_tools: context.allow_screen_content_tools,
+                    enable_filter_intra: context.enable_filter_intra,
+                    enable_intra_edge_filter: context.enable_intra_edge_filter,
+                    transform_mode: context.frame_tools.transform_mode,
+                    transform_context: 0,
+                };
+                let decoded = if leaves.is_empty() {
+                    block_decoder.decode_origin(decoder, geometry, tools)
+                } else {
+                    let neighbors = monochrome_neighbors(&leaves, geometry)?;
+                    block_decoder.decode_following(decoder, geometry, neighbors, tools)
+                };
+                let Ok(decoded) = decoded else {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                };
+                canvas.place_partition_leaf(
+                    node.x,
+                    node.y,
+                    node.width,
+                    node.height,
+                    decoded.plane(),
+                )?;
+                leaves.push(decoded);
+                Ok(PartitionVisitControl::Continue)
+            })?;
+            if unsupported || matches!(control, PartitionVisitControl::Stop) {
+                return Ok(None);
+            }
+        }
     }
     if leaves.is_empty() {
         return Ok(None);
@@ -1680,6 +1693,15 @@ pub(super) fn validate_complete_monochrome_partition(
 }
 
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 128
+        && context.frame_height <= 128
+        && context.frame_width.is_multiple_of(4)
+        && context.frame_height.is_multiple_of(4)
+        && context.block_width == context.frame_width / 4
+        && context.block_height == context.frame_height / 4
+        && context.upscaled_width == context.frame_width;
     context.bit_depth == 8
         && context.monochrome
         && context.all_lossless
@@ -1691,11 +1713,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && context.block_x == 0
         && context.block_y == 0
         && context.level == 1
-        && context.frame_width == 64
-        && context.frame_height == 64
-        && context.upscaled_width == 64
-        && context.block_width == 16
-        && context.block_height == 16
+        && dimensions_are_supported
         && context.restoration_types == [None; 3]
 }
 
@@ -1708,6 +1726,8 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
 /// layout.
 pub(super) struct Lossy420Reconstruction {
     pub(super) leaf: super::block::FirstLeaf,
+    pub(super) subsampling_x: bool,
+    pub(super) subsampling_y: bool,
     pub(super) filter_blocks: Vec<super::filter::Block>,
     pub(super) cdef_indices: Vec<Option<usize>>,
     pub(super) cdef_active: Vec<bool>,
@@ -1720,13 +1740,16 @@ impl Lossy420Reconstruction {
     pub(super) fn into_filtered_leaf(self) -> Av1Result<super::block::FirstLeaf> {
         let Lossy420Reconstruction {
             mut leaf,
+            subsampling_x,
+            subsampling_y,
             filter_blocks,
             cdef_indices,
             cdef_active,
             loop_parameters,
             cdef_parameters,
         } = self;
-        let mut canvas = super::raster::FrameCanvas::new(leaf.width, leaf.height, true, true)?;
+        let mut canvas =
+            super::raster::FrameCanvas::new(leaf.width, leaf.height, subsampling_x, subsampling_y)?;
         canvas.place_planes(leaf.width, leaf.height, &leaf.planes, 0, 0)?;
         leaf.planes = canvas.finish_with_filters(
             loop_parameters,
@@ -1843,18 +1866,33 @@ pub(super) fn validate_complete_lossy_420_partition(
                     };
                     let standalone_tiny_frame =
                         context.frame_width == 4 && context.frame_height == 4;
-                    let has_chroma = standalone_tiny_frame
-                        || (node.width > 1 || node.x % 2 != 0)
-                            && (node.height > 1 || node.y % 2 != 0);
+                    let has_chroma = if !context.subsampling_x && !context.subsampling_y {
+                        !context.monochrome
+                    } else {
+                        standalone_tiny_frame
+                            || (node.width > 1 || node.x % 2 != 0)
+                                && (node.height > 1 || node.y % 2 != 0)
+                    };
                     if has_chroma {
-                        block_decoder.decode_origin_with_grid(
-                            decoder,
-                            width,
-                            height,
-                            transform_grid,
-                            quantization,
-                            tools,
-                        )
+                        if !context.subsampling_x && !context.subsampling_y {
+                            block_decoder.decode_origin_full(
+                                decoder,
+                                width,
+                                height,
+                                transform_grid,
+                                quantization,
+                                tools,
+                            )
+                        } else {
+                            block_decoder.decode_origin_with_grid(
+                                decoder,
+                                width,
+                                height,
+                                transform_grid,
+                                quantization,
+                                tools,
+                            )
+                        }
                     } else {
                         block_decoder.decode_origin_without_chroma(
                             decoder,
@@ -1866,8 +1904,11 @@ pub(super) fn validate_complete_lossy_420_partition(
                         )
                     }
                 } else {
-                    let has_chroma =
-                        (node.width > 1 || node.x % 2 != 0) && (node.height > 1 || node.y % 2 != 0);
+                    let has_chroma = if !context.subsampling_x && !context.subsampling_y {
+                        !context.monochrome
+                    } else {
+                        (node.width > 1 || node.x % 2 != 0) && (node.height > 1 || node.y % 2 != 0)
+                    };
                     let above_left = leaves.iter().rev().find(|(prior, _)| {
                         prior.x.saturating_add(prior.width) > node.x
                             && prior.x <= node.x
@@ -1921,7 +1962,10 @@ pub(super) fn validate_complete_lossy_420_partition(
                         None
                     };
                     let above_chroma = leaves.iter().rev().find(|(prior, _)| {
-                        prior.x <= node.x.saturating_add(node.width.saturating_sub(1))
+                        let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
+                            && (prior.height > 1 || prior.y % 2 != 0);
+                        has_chroma
+                            && prior.x <= node.x.saturating_add(node.width.saturating_sub(1))
                             && node.x.saturating_add(node.width.saturating_sub(1))
                                 < prior.x.saturating_add(prior.width)
                             && prior.y.saturating_add(prior.height) == chroma_above_y
@@ -1950,7 +1994,41 @@ pub(super) fn validate_complete_lossy_420_partition(
                             &neighbors, 16, true,
                         )
                     };
-                    let above_chroma_contexts = if node.width == 4 && node.height == 4 {
+                    let above_chroma_contexts = if !context.subsampling_x && !context.subsampling_y
+                    {
+                        std::array::from_fn(|plane| {
+                            let mut candidates: Vec<_> = leaves
+                                .iter()
+                                .filter(|(prior, _)| {
+                                    let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
+                                        && (prior.height > 1 || prior.y % 2 != 0);
+                                    has_chroma
+                                        && prior.y.saturating_add(prior.height) == chroma_above_y
+                                        && prior.x < node.x.saturating_add(node.width)
+                                        && prior.x.saturating_add(prior.width) > node.x
+                                })
+                                .collect();
+                            candidates.sort_by_key(|(prior, _)| prior.x);
+                            let neighbors: Vec<_> = candidates
+                                .iter()
+                                .map(|&(prior, leaf)| {
+                                    (
+                                        leaf,
+                                        usize::try_from(
+                                            node.x.max(prior.x).saturating_sub(prior.x),
+                                        )
+                                        .unwrap_or(0),
+                                    )
+                                })
+                                .collect();
+                            super::block::combined_chroma_edge_contexts_from_positioned_neighbors(
+                                &neighbors,
+                                plane,
+                                usize::try_from(node.width).unwrap_or(0).min(8),
+                                true,
+                            )
+                        })
+                    } else if node.width == 4 && node.height == 4 {
                         std::array::from_fn(|plane| {
                             let mut candidates: Vec<_> = leaves
                                 .iter()
@@ -2199,7 +2277,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                             {
                                                 Some(
                                                     super::block::right_edge_at::<1>(
-                                                        &leaf.planes[plane + 1],
+                                                        &leaf.planes[plane.saturating_add(1)],
                                                         leaf.width.div_ceil(2).max(4),
                                                         leaf.height.div_ceil(2).max(4),
                                                         sample_y.saturating_sub(prior_y),
@@ -2295,7 +2373,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             let chroma_height = prior.height.div_ceil(2).max(4);
                             (row_offset.saturating_add(4) <= chroma_height).then(|| {
                                 super::block::right_edge_at::<4>(
-                                    &leaf.planes[plane + 1],
+                                    &leaf.planes[plane.saturating_add(1)],
                                     prior.width.div_ceil(2).max(4),
                                     chroma_height,
                                     row_offset,
@@ -2426,8 +2504,13 @@ pub(super) fn validate_complete_lossy_420_partition(
                     &mut cdef_indices,
                     &mut cdef_active,
                 )?;
-                let has_chroma = (context.frame_width == 4 && context.frame_height == 4)
-                    || (node.width > 1 || node.x % 2 != 0) && (node.height > 1 || node.y % 2 != 0);
+                let has_chroma = if !context.subsampling_x && !context.subsampling_y {
+                    !context.monochrome
+                } else {
+                    (context.frame_width == 4 && context.frame_height == 4)
+                        || (node.width > 1 || node.x % 2 != 0)
+                            && (node.height > 1 || node.y % 2 != 0)
+                };
                 canvas.place_av1_partition_leaf(
                     node.x,
                     node.y,
@@ -2500,6 +2583,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     Ok(Some(Lossy420Reconstruction {
         leaf,
+        subsampling_x: context.subsampling_x,
+        subsampling_y: context.subsampling_y,
         filter_blocks,
         cdef_indices,
         cdef_active,
@@ -2511,8 +2596,8 @@ pub(super) fn validate_complete_lossy_420_partition(
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     closed_base_reconstruction_context(context)
         && !context.all_lossless
-        && context.subsampling_x
-        && context.subsampling_y
+        && ((context.subsampling_x && context.subsampling_y)
+            || (!context.subsampling_x && !context.subsampling_y))
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.restoration_present
@@ -2605,9 +2690,7 @@ fn record_cdef_metadata(
 }
 
 fn cdef_frame_parameters(context: &FirstBlockContext) -> Option<super::cdef::FrameParameters> {
-    let Some(cdef) = context.frame_tools.cdef else {
-        return None;
-    };
+    let cdef = context.frame_tools.cdef?;
 
     Some(super::cdef::FrameParameters {
         damping: cdef.damping,
@@ -2637,18 +2720,15 @@ fn loop_filter_parameters(context: &FirstBlockContext) -> Option<super::filter::
             u32::try_from(adjusted).unwrap_or_default()
         }
     };
-    let parameters =
-        (loop_filter.level_y != [0, 0] || loop_filter.level_u != 0 || loop_filter.level_v != 0)
-            .then_some(super::filter::Parameters {
-                luma_vertical: intra_level(loop_filter.level_y[0]),
-                luma_horizontal: intra_level(loop_filter.level_y[1]),
-                chroma_u: intra_level(loop_filter.level_u),
-                chroma_v: intra_level(loop_filter.level_v),
-                sharpness: loop_filter.sharpness,
-                bit_depth: context.bit_depth,
-            });
-
-    parameters
+    (loop_filter.level_y != [0, 0] || loop_filter.level_u != 0 || loop_filter.level_v != 0)
+        .then_some(super::filter::Parameters {
+            luma_vertical: intra_level(loop_filter.level_y[0]),
+            luma_horizontal: intra_level(loop_filter.level_y[1]),
+            chroma_u: intra_level(loop_filter.level_u),
+            chroma_v: intra_level(loop_filter.level_v),
+            sharpness: loop_filter.sharpness,
+            bit_depth: context.bit_depth,
+        })
 }
 
 /// Reconstruct the first complete color-frame class: an 8-bit, lossless,
@@ -2827,6 +2907,15 @@ pub(super) fn validate_complete_lossless_444_partition(
 }
 
 fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 128
+        && context.frame_height <= 128
+        && context.frame_width.is_multiple_of(4)
+        && context.frame_height.is_multiple_of(4)
+        && context.block_width == context.frame_width / 4
+        && context.block_height == context.frame_height / 4
+        && context.upscaled_width == context.frame_width;
     context.bit_depth == 8
         && !context.superres_enabled
         && !context.segmentation_enabled
@@ -2840,16 +2929,7 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && context.block_x == 0
         && context.block_y == 0
         && context.level == 1
-        && matches!(
-            (
-                context.frame_width,
-                context.frame_height,
-                context.block_width,
-                context.block_height,
-                context.upscaled_width,
-            ),
-            (64, 64, 16, 16, 64)
-        )
+        && dimensions_are_supported
         && context.all_lossless
         && context.restoration_types == [None; 3]
 }
@@ -2902,6 +2982,7 @@ fn monochrome_transform_geometry(
         (2, 4) => Some((super::block::TransformGrid::Vertical8x16, 8, 16)),
         (4, 4) => Some((super::block::TransformGrid::Square16, 16, 16)),
         (4, 8) => Some((super::block::TransformGrid::Vertical16x32, 16, 32)),
+        (4, 16) => Some((super::block::TransformGrid::Vertical16x64, 16, 64)),
         (8, 4) => Some((super::block::TransformGrid::Horizontal32x16, 32, 16)),
         (8, 2) => Some((super::block::TransformGrid::Horizontal32x8, 32, 8)),
         (2, 8) => Some((super::block::TransformGrid::Vertical8x32, 8, 32)),
@@ -3007,8 +3088,8 @@ fn coverage_partition_walker_paths() {
     let mut contexts = PartitionContexts {
         origin_x: 1,
         origin_y: 1,
-        cells: [[0; 32]; 32],
-        use_128x128_superblock: false,
+        above: [0; 32],
+        left: [0; 32],
     };
     let _ = contexts.cell(0, 1);
     let _ = contexts.cell(100, 1);
@@ -4325,7 +4406,7 @@ mod tests {
     }
 
     #[test]
-    fn partition_geometry_clips_only_the_visible_edge() {
+    fn partition_geometry_clips_only_the_visible_edge() -> Av1Result<()> {
         let geometry = clip_partition_geometry(
             PartitionGeometry {
                 x: 8,
@@ -4335,13 +4416,8 @@ mod tests {
             },
             12,
             10,
-        )
-        .unwrap_or(PartitionGeometry {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        });
+        )?
+        .ok_or_else(|| malformed("geometry is outside the frame"))?;
         assert_eq!(
             geometry,
             PartitionGeometry {
@@ -4351,19 +4427,18 @@ mod tests {
                 height: 6,
             }
         );
-        assert!(
-            clip_partition_geometry(
-                PartitionGeometry {
-                    x: 12,
-                    y: 0,
-                    width: 4,
-                    height: 4,
-                },
-                12,
-                4,
-            )
-            .is_err()
-        );
+        let clipped = clip_partition_geometry(
+            PartitionGeometry {
+                x: 12,
+                y: 0,
+                width: 4,
+                height: 4,
+            },
+            12,
+            4,
+        )?;
+        assert!(clipped.is_none());
+        Ok(())
     }
 
     #[test]

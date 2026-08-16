@@ -131,6 +131,89 @@ impl MonochromeFrameCanvas {
         Ok(())
     }
 
+    /// Place the visible top-left rectangle of one independently decoded
+    /// monochrome grid cell.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "checked cell placement keeps the source and destination geometry explicit"
+    )]
+    pub(super) fn place_cropped_plane(
+        &mut self,
+        source_width: u32,
+        source_height: u32,
+        visible_width: u32,
+        visible_height: u32,
+        x: u32,
+        y: u32,
+        plane: &ReconstructedPlane,
+    ) -> Av1Result<()> {
+        let source_width = usize::try_from(source_width)
+            .map_err(|_| malformed("alpha cell width exceeds usize"))?;
+        let source_height = usize::try_from(source_height)
+            .map_err(|_| malformed("alpha cell height exceeds usize"))?;
+        let visible_width = usize::try_from(visible_width)
+            .map_err(|_| malformed("visible alpha width exceeds usize"))?;
+        let visible_height = usize::try_from(visible_height)
+            .map_err(|_| malformed("visible alpha height exceeds usize"))?;
+        let x = usize::try_from(x).map_err(|_| malformed("alpha cell x exceeds usize"))?;
+        let y = usize::try_from(y).map_err(|_| malformed("alpha cell y exceeds usize"))?;
+        if source_width == 0
+            || source_height == 0
+            || visible_width == 0
+            || visible_height == 0
+            || visible_width > source_width
+            || visible_height > source_height
+            || plane.samples.len() != source_width.saturating_mul(source_height)
+        {
+            return Err(malformed("alpha cell has the wrong extent"));
+        }
+        let end_x = x
+            .checked_add(visible_width)
+            .ok_or_else(|| malformed("alpha cell x extent overflows"))?;
+        let end_y = y
+            .checked_add(visible_height)
+            .ok_or_else(|| malformed("alpha cell y extent overflows"))?;
+        if end_x > self.width || end_y > self.height {
+            return Err(malformed("alpha cell exceeds the frame canvas"));
+        }
+        for row in 0..visible_height {
+            let destination_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(self.width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("alpha cell destination offset overflows"))?;
+            let destination_end = destination_start
+                .checked_add(visible_width)
+                .ok_or_else(|| malformed("alpha cell destination end overflows"))?;
+            if self.written[destination_start..destination_end]
+                .iter()
+                .any(|written| *written)
+            {
+                return Err(malformed("alpha grid cells overlap"));
+            }
+        }
+        for row in 0..visible_height {
+            let source_start = row
+                .checked_mul(source_width)
+                .ok_or_else(|| malformed("alpha cell source offset overflows"))?;
+            let source_end = source_start
+                .checked_add(visible_width)
+                .ok_or_else(|| malformed("alpha cell source end overflows"))?;
+            let destination_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(self.width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("alpha cell destination offset overflows"))?;
+            let destination_end = destination_start
+                .checked_add(visible_width)
+                .ok_or_else(|| malformed("alpha cell destination end overflows"))?;
+            self.samples[destination_start..destination_end]
+                .copy_from_slice(&plane.samples[source_start..source_end]);
+            self.written[destination_start..destination_end].fill(true);
+        }
+        Ok(())
+    }
+
     pub(super) fn finish(self) -> Av1Result<ReconstructedPlane> {
         if self.written.iter().any(|written| !written) {
             return Err(malformed("alpha canvas is missing reconstructed samples"));
@@ -413,6 +496,34 @@ impl FrameCanvas {
         self.place_cells(std::slice::from_ref(&placement))
     }
 
+    /// Place one independently decoded grid cell, cropping only its visible
+    /// top-left rectangle. The complete coded source extent is validated
+    /// before any destination plane is mutated.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "checked cell placement keeps the source and destination geometry explicit"
+    )]
+    pub(super) fn place_cropped_cell(
+        &mut self,
+        source_width: u32,
+        source_height: u32,
+        visible_width: u32,
+        visible_height: u32,
+        x: u32,
+        y: u32,
+        planes: &[ReconstructedPlane; 3],
+    ) -> Av1Result<()> {
+        self.place_cropped_planes(CellPlacement {
+            source_width,
+            source_height,
+            visible_width,
+            visible_height,
+            planes,
+            x,
+            y,
+        })
+    }
+
     /// Place several coded cells as one checked operation.
     ///
     /// The AVIF grid and multi-tile paths eventually need to assemble many
@@ -573,6 +684,10 @@ impl FrameCanvas {
         )
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "filter application needs the independent loop-filter, CDEF, and block metadata inputs"
+    )]
     pub(super) fn finish_with_filters(
         mut self,
         loop_parameters: Option<filter::Parameters>,
