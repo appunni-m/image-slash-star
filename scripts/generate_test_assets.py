@@ -4935,6 +4935,280 @@ def gen_avif():
             raise RuntimeError(f"AVIF fixture {name} is not deterministic")
         (d / name).write_bytes(first)
 
+    def clamp_channel(value):
+        return max(0, min(255, int(value)))
+
+    def image_from_pixels(size, pixel):
+        width, height = size
+        pixels = bytes(
+            component
+            for y in range(height)
+            for x in range(width)
+            for component in pixel(x, y)
+        )
+        return Image.frombytes("RGB", size, pixels)
+
+    def write_campaign_image(name, image, subsampling):
+        write_portable_image(
+            f"{name}.avif",
+            image,
+            quality=99,
+            speed=8,
+            subsampling=subsampling,
+        )
+
+    def write_campaign_family(prefix, count, make_image, subsampling):
+        for index in range(count):
+            write_campaign_image(
+                f"{prefix}_{index + 1:02d}",
+                make_image(index),
+                subsampling,
+            )
+
+    # Coverage campaign candidates are intentionally declarative and generated
+    # through the same pinned Pillow/libaom path as the rest of this file. The
+    # manifest decides which candidates become parity rows after public Rust
+    # decode and AV1 trace inspection; none of these inputs are private hooks.
+    write_campaign_family(
+        "coverage_r4x16_band",
+        10,
+        lambda index: image_from_pixels(
+            (4, 32),
+            lambda x, y: (
+                clamp_channel(118 + index + 8 * (y >= 16) + 2 * (x == 3)),
+            )
+            * 3,
+        ),
+        "4:2:0",
+    )
+    write_campaign_family(
+        "coverage_r4x16_grid",
+        10,
+        lambda index: image_from_pixels(
+            (8, 32),
+            lambda x, y: (
+                clamp_channel(112 + 2 * index + 7 * (x >= 4) + 5 * (y >= 16)),
+                clamp_channel(126 + index - 5 * (x >= 4) + 7 * (y >= 16)),
+                clamp_channel(140 - index + 3 * (x >= 4) - 4 * (y >= 16)),
+            ),
+        ),
+        "4:2:0",
+    )
+
+    def directional_band(index):
+        patterns = (
+            lambda x, _y: 104 + 3 * x,
+            lambda _x, y: 96 + 2 * y,
+            lambda x, y: 100 + 2 * (x + y),
+            lambda x, y: 100 + 2 * (7 - x + y),
+            lambda x, y: 112 if ((x // 4) + (y // 4)) % 2 else 136,
+        )
+        pattern = patterns[index // 2]
+        offset = -2 if index % 2 == 0 else 2
+        return image_from_pixels(
+            (8, 32),
+            lambda x, y: (clamp_channel(pattern(x, y) + offset),) * 3,
+        )
+
+    write_campaign_family(
+        "coverage_r8x16_band", 10, directional_band, "4:2:0"
+    )
+
+    def positioned_mosaic(index):
+        base = (120 + index, 128, 136 - index)
+        deltas = ((0, 0, 0), (6, -4, 3), (-5, 7, -3), (9, 5, -7))
+        rotation = index % 3
+
+        def pixel(x, y):
+            quadrant = (2 if y >= 16 else 0) + (1 if x >= 8 else 0)
+            delta = deltas[quadrant]
+            rotated = tuple(delta[(channel + rotation) % 3] for channel in range(3))
+            return tuple(
+                clamp_channel(base[channel] + rotated[channel]) for channel in range(3)
+            )
+
+        return image_from_pixels((16, 32), pixel)
+
+    write_campaign_family(
+        "coverage_r8x16_neighbor", 10, positioned_mosaic, "4:2:0"
+    )
+    write_campaign_family(
+        "coverage_r16x8_band",
+        10,
+        lambda index: image_from_pixels(
+            (16, 16),
+            lambda x, y: (
+                clamp_channel(
+                    116
+                    + index
+                    + 8 * (y >= 8)
+                    + ((x + index) % 4)
+                    + (x // 3 if index % 2 else 0)
+                ),
+            )
+            * 3,
+        ),
+        "4:2:0",
+    )
+
+    def upper_context_mosaic(index):
+        luma = (0, 5 + index % 3, -4 - index % 2, 8 + index)
+        chroma = ((0, 0), (4, -3), (-3, 5), (6, 4))
+
+        def pixel(x, y):
+            quadrant = (2 if y >= 8 else 0) + (1 if x >= 16 else 0)
+            u, v = chroma[quadrant]
+            y_value = 124 + luma[quadrant]
+            return (
+                clamp_channel(y_value + u + v),
+                clamp_channel(128 + luma[quadrant] - u),
+                clamp_channel(128 + luma[quadrant] - v),
+            )
+
+        return image_from_pixels((32, 16), pixel)
+
+    write_campaign_family(
+        "coverage_r16x8_neighbor", 10, upper_context_mosaic, "4:2:0"
+    )
+
+    def full_chroma_square(index):
+        def pixel(x, y):
+            if index == 0:
+                return (clamp_channel(96 + 4 * x), 128, 128)
+            if index == 1:
+                return (128, clamp_channel(96 + 4 * y), 128)
+            if index == 2:
+                return (128, 128, clamp_channel(96 + 2 * (x + y)))
+            if index == 3:
+                return (
+                    clamp_channel(96 + 2 * (15 - x + y)),
+                    clamp_channel(96 + 2 * (x + 15 - y)),
+                    128,
+                )
+            if index == 4:
+                value = 104 if ((x // 4) + (y // 4)) % 2 else 152
+                return (value, 128, 160 - value // 4)
+            if index == 5:
+                inside = 4 <= x < 12 and 4 <= y < 12
+                return (152 if inside else 104, 128, 128)
+            if index == 6:
+                return (152, 104, 128) if y < 4 else (104, 152, 128)
+            if index == 7:
+                return (152, 128, 104) if x < 4 else (104, 128, 152)
+            if index == 8:
+                cross = x in range(6, 10) or y in range(6, 10)
+                return (152, 104, 152) if cross else (104, 152, 104)
+            quadrant = (2 if y >= 8 else 0) + (1 if x >= 8 else 0)
+            return ((104, 128, 152), (152, 104, 128), (128, 152, 104), (152, 152, 104))[quadrant]
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_family(
+        "coverage_i444_square8", 10, full_chroma_square, "4:4:4"
+    )
+
+    def full_chroma_rect(index):
+        geometries = (
+            ((16, 16), "vertical"),
+            ((16, 16), "horizontal"),
+            ((16, 24), "diagonal"),
+            ((16, 24), "checker"),
+            ((16, 32), "vertical"),
+            ((24, 16), "horizontal"),
+            ((24, 16), "diagonal"),
+            ((32, 16), "checker"),
+            ((8, 32), "vertical"),
+            ((32, 8), "horizontal"),
+        )
+        size, pattern = geometries[index]
+        width, height = size
+
+        def pixel(x, y):
+            if pattern == "vertical":
+                phase = x * 40 // max(1, width - 1) - 20
+            elif pattern == "horizontal":
+                phase = y * 40 // max(1, height - 1) - 20
+            elif pattern == "diagonal":
+                phase = (x + y) * 40 // max(1, width + height - 2) - 20
+            else:
+                phase = 20 if ((x // 4) + (y // 4)) % 2 else -20
+            return (
+                clamp_channel(128 + phase),
+                clamp_channel(128 - phase),
+                clamp_channel(128 + (phase // 2)),
+            )
+
+        return image_from_pixels(size, pixel)
+
+    write_campaign_family("coverage_i444_rect", 10, full_chroma_rect, "4:4:4")
+
+    def entropy_mosaic(index):
+        rectangles = (
+            (4, 4, 8, 16),
+            (8, 4, 16, 8),
+            (12, 4, 8, 16),
+            (4, 8, 16, 8),
+            (8, 8, 8, 16),
+            (16, 8, 8, 16),
+            (8, 12, 16, 8),
+            (4, 16, 16, 8),
+            (12, 16, 8, 12),
+            (16, 16, 12, 8),
+        )
+        x0, y0, width, height = rectangles[index]
+        second = (
+            (x0, min(31, y0 + height), width, min(32 - (y0 + height), height))
+            if index % 2 == 0
+            else (min(31, x0 + width), y0, min(32 - (x0 + width), width), height)
+        )
+        x1, y1, width1, height1 = second
+
+        def inside(x, y, left, top, rect_width, rect_height):
+            return left <= x < left + rect_width and top <= y < top + rect_height
+
+        def pixel(x, y):
+            rgb = [120, 128, 136]
+            if inside(x, y, x0, y0, width, height):
+                for channel, delta in enumerate((8, -5, 6)):
+                    rgb[channel] += delta
+            if inside(x, y, x1, y1, width1, height1):
+                for channel, delta in enumerate((-4, 7, -3)):
+                    rgb[channel] += delta
+            return tuple(clamp_channel(value) for value in rgb)
+
+        return image_from_pixels((32, 32), pixel)
+
+    write_campaign_family(
+        "coverage_entropy_mosaic", 10, entropy_mosaic, "4:2:0"
+    )
+
+    def public_adst(index):
+        width, height = (
+            (4, 8),
+            (8, 4),
+            (4, 16),
+            (16, 4),
+            (8, 16),
+            (16, 8),
+            (8, 32),
+            (32, 8),
+            (16, 16),
+            (32, 16),
+        )[index]
+        denominator = max(1, width + 2 * height - 3)
+        transposed_denominator = max(1, height + 2 * width - 3)
+
+        def pixel(x, y):
+            red = 112 + (32 * (x + 2 * y)) // denominator
+            green = 112 + (32 * (y + 2 * x)) // transposed_denominator
+            blue = 255 - red
+            return tuple(clamp_channel(value) for value in (red, green, blue))
+
+        return image_from_pixels((width, height), pixel)
+
+    write_campaign_family("coverage_adst_public", 10, public_adst, "4:4:4")
+    print("  AVIF coverage campaign: wrote 100 deterministic candidate files")
+
     write_portable_lossless("portable_lossless_a.avif", (17, 91, 203))
     write_portable_lossless("portable_lossless_b.avif", (199, 37, 83))
     write_portable_lossless(
