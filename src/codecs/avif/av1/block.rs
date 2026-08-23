@@ -1210,17 +1210,18 @@ fn full_resolution_chroma_top_left(neighbors: &VerticalNeighbors<'_>, plane: usi
                 )[0],
             );
         }
-        if let Some(left_top) = neighbors.left_top {
-            if left_top.width > 0 && left_top.height > 0 {
-                return Some(
-                    right_edge_at::<1>(
-                        &left_top.planes[plane],
-                        left_top.width,
-                        left_top.height,
-                        left_top.height.saturating_sub(1),
-                    )[0],
-                );
-            }
+        if let Some(left_top) = neighbors.left_top
+            && left_top.width > 0
+            && left_top.height > 0
+        {
+            return Some(
+                right_edge_at::<1>(
+                    &left_top.planes[plane],
+                    left_top.width,
+                    left_top.height,
+                    left_top.height.saturating_sub(1),
+                )[0],
+            );
         }
     }
 
@@ -4054,8 +4055,7 @@ fn decode_luma_eob_base_coefficients(
     let eob_high_token = eob_base == 2;
     let eob_token = if eob_high_token {
         let high_context = if (eob_x | eob_y) > 1 { 14 } else { 7 };
-        let token = decode_high_token(decoder, cdfs.high_luma.get_mut(high_context).portable()?);
-        token
+        decode_high_token(decoder, cdfs.high_luma.get_mut(high_context).portable()?)
     } else {
         eob_base.saturating_add(1)
     };
@@ -4084,8 +4084,7 @@ fn decode_luma_eob_base_coefficients(
         let token = if base_token == 3 {
             let high_context = ac_high_context(x, y, high_magnitude);
             let cdf = cdfs.high_luma.get_mut(high_context);
-            let token = decode_high_token(decoder, cdf.portable()?);
-            token
+            decode_high_token(decoder, cdf.portable()?)
         } else {
             base_token
         };
@@ -12568,7 +12567,7 @@ fn decode_syntax_with_cdef(
             && matches!(chroma_sampling, ChromaSampling::Subsampled420)
             && plane_grid_width == 1
             && plane_grid_height == 1;
-        let result = match coefficient_policy {
+        match coefficient_policy {
             CoefficientPolicy::DcOrSkipped => decode_dc_coefficients(
                 decoder,
                 plane,
@@ -13793,8 +13792,7 @@ fn decode_syntax_with_cdef(
                     Ok([[0_i32; 16]; 64])
                 }
             }
-        };
-        result
+        }
     };
     let coefficients = if skip {
         [[[0_i32; 16]; 64]; 3]
@@ -25701,6 +25699,13 @@ fn reconstruct_following_lossy_420_vertical_4x16_leaf(
     })
 }
 
+// The AV1 walker keeps each positioned upper and left neighbor tuple explicit
+// so the optional edge samples cannot be detached from the current R8x16
+// block's checked geometry.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R8x16 reconstruction keeps independently positioned AV1 neighbor geometry explicit"
+)]
 fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     syntax: BlockSyntax,
     above_left: &ClosedLeaf,
@@ -26001,6 +26006,12 @@ fn reconstruct_following_lossy_420_vertical_8x32_leaf(
     reconstruct_leaf(syntax, predictors)
 }
 
+// The upper width/offset pairs describe the original positioned leaves, while
+// `above_right_is_above_left` preserves their identity after leaf cloning.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R16x8 reconstruction carries validated upper-neighbor geometry explicitly"
+)]
 fn reconstruct_following_lossy_420_vertical_16x8_leaf(
     syntax: BlockSyntax,
     above_left: &ClosedLeaf,
@@ -27532,10 +27543,6 @@ fn reconstruct_following_lossy_full_vertical_32x16_leaf(
     Ok(leaf)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "full-sampling chroma prediction carries the coded mode, edges, angle, and transform sentence"
-)]
 #[derive(Clone, Copy)]
 struct FullSquare4Edges {
     top: [u16; 4],
@@ -28166,6 +28173,12 @@ fn reconstruct_following_lossy_full_square4_horizontal_leaf(
     reconstruct_lossy_full_square4_leaf(syntax, edges, enable_intra_edge_filter, smooth_edges)
 }
 
+// Every edge, availability flag, coefficient sentence, and predictor state in
+// this kernel describes the same checked 8x8 chroma plane.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "8x8 chroma reconstruction carries one plane's complete AV1 edge and transform state"
+)]
 fn reconstruct_lossy_full_8x8_chroma(
     luma: &ReconstructedPlane,
     predictor: ChromaPredictor,
@@ -29095,6 +29108,12 @@ fn reconstruct_lossy_full_8x16_chroma(
     )
 }
 
+// The fixed-size edges and transform state are deliberately passed together:
+// `top_left` and `bottom_left` are valid only for this same R8x16 plane.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R8x16 chroma reconstruction carries one plane's complete AV1 edge and transform state"
+)]
 fn reconstruct_lossy_full_8x16_chroma_with_edges(
     predictor: ChromaPredictor,
     angle: Option<i32>,
@@ -38030,7 +38049,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn reconstruct_lossy_luma_8x16_diagonal_filters_zone2_edges() {
+    fn reconstruct_lossy_luma_8x16_diagonal_filters_zone2_edges() -> PortableResult<()> {
         // This is the prepared edge from the dav1d R8x16 angle-110 vector:
         // the last two left samples are 56 and 79, while the top edge and
         // top-left sample are zero. With no residual, the two non-zero
@@ -38043,19 +38062,27 @@ mod tests {
             true,
             [0; 128],
             LossyTransformKind::DctDct,
-        )
-        .expect("the angle-110 R8x16 predictor is supported");
+        )?;
 
         let mut expected = [0_u16; 128];
         expected[14 * 8] = 2;
         expected[15 * 8] = 11;
         assert_eq!(plane.samples, expected);
+        Ok(())
     }
 
     #[test]
     fn reconstruct_lossy_luma_16x8_dc_uses_both_edges() {
-        let top: [u16; 16] = std::array::from_fn(|index| index as u16);
-        let left: [u16; 8] = std::array::from_fn(|index| 200_u16.saturating_add(index as u16));
+        let top: [u16; 16] = std::array::from_fn(|index| match u16::try_from(index) {
+            Ok(index) => index,
+            Err(_) => unreachable!("fixed test-array index fits in u16"),
+        });
+        let left: [u16; 8] = std::array::from_fn(|index| {
+            200_u16.saturating_add(match u16::try_from(index) {
+                Ok(index) => index,
+                Err(_) => unreachable!("fixed test-array index fits in u16"),
+            })
+        });
         let predictor = rectangular_dc_predictor(&top, &left);
         let plane = reconstruct_lossy_luma_16x8(predictor, None, Lossy4x8TransformKind::DctDct);
 
@@ -38065,7 +38092,10 @@ mod tests {
 
     #[test]
     fn reconstruct_lossy_luma_16x8_dc_uses_top_only_at_boundary() {
-        let top: [u16; 16] = std::array::from_fn(|index| index as u16);
+        let top: [u16; 16] = std::array::from_fn(|index| match u16::try_from(index) {
+            Ok(index) => index,
+            Err(_) => unreachable!("fixed test-array index fits in u16"),
+        });
         let predictor = one_sided_dc_predictor_16(top);
         let plane = reconstruct_lossy_luma_16x8(predictor, None, Lossy4x8TransformKind::DctDct);
 
@@ -38089,7 +38119,7 @@ mod tests {
     }
 
     #[test]
-    fn reconstruct_lossy_full_8x8_paeth_uses_true_top_left() {
+    fn reconstruct_lossy_full_8x8_paeth_uses_true_top_left() -> PortableResult<()> {
         let luma = ReconstructedPlane {
             samples: vec![0; 64],
         };
@@ -38111,8 +38141,7 @@ mod tests {
             None,
             false,
             false,
-        )
-        .expect("Paeth accepts complete edges");
+        )?;
         let from_left_edge = reconstruct_lossy_full_8x8_chroma(
             &luma,
             ChromaPredictor::Paeth,
@@ -38128,10 +38157,10 @@ mod tests {
             None,
             false,
             false,
-        )
-        .expect("Paeth accepts complete edges");
+        )?;
 
         assert_eq!(from_true_top_left.samples, vec![59; 64]);
         assert_eq!(from_left_edge.samples, vec![58; 64]);
+        Ok(())
     }
 }

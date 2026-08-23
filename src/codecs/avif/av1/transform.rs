@@ -2036,9 +2036,6 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     let mut t14a = clamp_intermediate(t6.wrapping_sub(t14));
     let mut t15a = clamp_intermediate(t7.wrapping_sub(t15));
 
-    #[cfg(test)]
-    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
-
     t8 = rounded_dot(&[(4017 - 4096, t8a), (799, t9a)], 12).wrapping_add(t8a);
     t9 = rounded_dot(&[(799, t8a), (-(4017 - 4096), t9a)], 12).wrapping_sub(t9a);
     t10 = rounded_dot(&[(2276, t10a), (3406 - 4096, t11a)], 12).wrapping_add(t11a);
@@ -2047,9 +2044,6 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     t13 = rounded_dot(&[(799, t13a), (4017 - 4096, t12a)], 12).wrapping_add(t12a);
     t14 = rounded_dot(&[(2276, t15a), (-(3406 - 4096), t14a)], 12).wrapping_sub(t14a);
     t15 = rounded_dot(&[(3406 - 4096, t15a), (2276, t14a)], 12).wrapping_add(t15a);
-
-    #[cfg(test)]
-    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
 
     t0 = clamp_intermediate(t0a.wrapping_add(t4a));
     t1 = clamp_intermediate(t1a.wrapping_add(t5a));
@@ -2077,9 +2071,6 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     t14 = rounded_dot(&[(3784 - 4096, t15a), (-1567, t14a)], 12).wrapping_add(t15a);
     t15 = rounded_dot(&[(1567, t15a), (3784 - 4096, t14a)], 12).wrapping_add(t14a);
 
-    #[cfg(test)]
-    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
-
     let output0 = clamp_intermediate(t0.wrapping_add(t2));
     let output15 = clamp_intermediate(t1.wrapping_add(t3)).wrapping_neg();
     t2a = clamp_intermediate(t0.wrapping_sub(t2));
@@ -2096,9 +2087,6 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     let output13 = clamp_intermediate(t13.wrapping_add(t15)).wrapping_neg();
     t14a = clamp_intermediate(t12.wrapping_sub(t14));
     t15a = clamp_intermediate(t13.wrapping_sub(t15));
-
-    #[cfg(test)]
-    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
 
     [
         output0,

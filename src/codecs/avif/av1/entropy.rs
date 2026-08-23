@@ -2206,8 +2206,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         } else {
                             None
                         };
-                        let luma_edge_16 = if (width == 8 && height == 16)
-                            || (width == 16 && height == 16)
+                        let luma_edge_16 = if (width == 8 || width == 16) && height == 16
                         {
                             let mut complete = true;
                             let edge = std::array::from_fn(|index| {
