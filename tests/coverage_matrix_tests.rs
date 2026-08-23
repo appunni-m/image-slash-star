@@ -2658,7 +2658,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_decode.len(),
-        8,
+        7,
         "the AVIF former-native decode census changed"
     );
     assert!(
@@ -2672,7 +2672,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         planned.len(),
         "every former-native AVIF decode row must remain an explicit planned gap"
     );
-    assert_eq!(planned.len(), 8, "the AVIF planned-gap ledger changed");
+    assert_eq!(planned.len(), 7, "the AVIF planned-gap ledger changed");
     assert_eq!(
         planned.len(),
         matrix.summary.decode_planned,
@@ -2834,7 +2834,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     );
     assert_eq!(
         former_native_decode.len() + former_native_encode.len(),
-        40,
+        39,
         "the complete former-native AVIF census changed"
     );
     assert_eq!(

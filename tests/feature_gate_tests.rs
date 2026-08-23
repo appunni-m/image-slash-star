@@ -2797,14 +2797,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             "grid inspect codec declarations"
         );
 
-        let decoded = match image_slash_star::decode(&bytes) {
-            Ok(decoded) => decoded,
-            Err(_) => {
-                // Grid/alpha materialization is a planned pure-Rust decode
-                // gap; the inspection assertions above remain active.
-                return Ok(());
-            }
-        };
+        let decoded = image_slash_star::decode(&bytes)?;
         assert_eq!(
             decoded.content.source.avif_auxiliary_relationships(),
             expected.as_slice(),

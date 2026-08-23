@@ -887,6 +887,7 @@ fn assemble_color_tiles(
         height: header.frame_height,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
+        chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
         chroma_right_contexts: [[0x40; 8]; 2],

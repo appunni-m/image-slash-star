@@ -33,19 +33,19 @@
       "total_rows": 1424,
       "decode_rows": 1027,
       "encode_rows": 397,
-      "decode_active": 1019,
-      "decode_planned": 8,
+      "decode_active": 1020,
+      "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
       "decode_rows": 200,
-      "decode_active": 192,
-      "decode_planned": 8,
+      "decode_active": 193,
+      "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
       "encode_planned": 32,
-      "former_native_remaining": 40
+      "former_native_remaining": 39
     },
     "tests": {
       "coverage_matrix_tests": "33/33 matrix tests",
@@ -86,7 +86,7 @@
         "note": "The JSON report completed the full test workload; the verifier is intentionally red until every metric reaches 100%."
       },
       "coverage_origin_inventory": {
-        "guards": 499,
+        "guards": 500,
         "files": 85
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -299,10 +299,10 @@
         "AVF-035"
       ],
       "remaining": [
-        "8 decode rows",
+        "7 decode rows",
         "32 encode rows",
         "sequence presentation",
-        "grid/tile composition",
+        "broader grid/tile composition",
         "10/12-bit and HDR",
         "independent decoder/browser checks"
       ]
@@ -631,13 +631,6 @@
         "status": "planned"
       },
       {
-        "id": "grid",
-        "work_item": "AVF-COMPOSE-001",
-        "gap": "Pure Rust AVIF still decoding does not yet compose grid items into one output image.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
         "id": "animated",
         "work_item": "AVF-SEQUENCE-001",
         "gap": "Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.",
@@ -933,13 +926,11 @@
         "next": "Implement declared HDR/limited-range conversion and independent pixel references."
       },
       "AVF-COMPOSE-001": {
-        "status": "partial",
-        "depends_on": [
-          "grid"
-        ],
+        "status": "implemented_for_fixture",
+        "depends_on": [],
         "deliverable": "Decode referenced cells, validate geometry, place them in a bounded canvas, and apply relationships without confusing inspection with composition.",
-        "current_evidence": "FrameCanvas atomically validates complete cell batches and checked cropping; child decode and final grid pixels remain open.",
-        "next": "Wire child item decode, alpha pairing, and final grid output."
+        "current_evidence": "The safe-Rust path decodes both 80x64 color cells and their monochrome auxiliary alpha cells, validates fixed row-major stride and complete 80x80 coverage, crops the second row to 80x16, and emits the exact 25,600-byte RGBA8 grid reference.",
+        "next": "Broaden grid counts, dimensions, tile-boundary contexts, auxiliary relationships, and independent full-frame references beyond the committed fixture."
       },
       "AVF-SEQUENCE-001": {
         "status": "planned",

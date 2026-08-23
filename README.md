@@ -663,8 +663,8 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 ## Correctness evidence
 
 The generated matrix in this tree contains 1,424 total rows: 1,027 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,019 decode rows and
-365 encode rows are active; 8 AVIF decode rows and all 32 AVIF encode rows
+inspect / verify rows and 397 encode rows. Of those, 1,020 decode rows and
+365 encode rows are active; 7 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
 CI-checked malformed-class ledger with Pillow outcome, Rust error contract,

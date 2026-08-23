@@ -4080,9 +4080,6 @@ formats:
       description: AVIF with a 1x2 color grid and per-cell alpha items
       test_assets:
       - grid.avif
-      status: planned
-      gap: Pure Rust AVIF still decoding does not yet compose grid items into one output image.
-      pure_rust_work_item: AVF-COMPOSE-001
     - id: animated
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:

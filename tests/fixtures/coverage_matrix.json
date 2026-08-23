@@ -14057,7 +14057,7 @@
           "expect_error": false,
           "format": "avif",
           "id": "grid",
-          "status": "planned",
+          "status": "active",
           "type": "decode",
           "oracle_status": "ok",
           "oracle_detects_format": true,
@@ -14098,15 +14098,32 @@
             "decode_sequence": "ok"
           },
           "error_contracts": {},
-          "gap": "Pure Rust AVIF still decoding does not yet compose grid items into one output image.",
-          "pure_rust_work_item": "AVF-COMPOSE-001",
-          "former_native_only": true,
           "ref_bit_depth": 8,
           "ref_bit_depth_origin": "independent_implementation",
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
           "inspect_status": "ok",
-          "verify_status": "ok"
+          "verify_status": "ok",
+          "ref_sha256": "4ede0d909351b9b09c7e3e9475bfd3baf458141dbdd08f08aee19c11d2ec2983",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin",
+          "ref_bytes": 25600,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            80,
+            80
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          }
         },
         {
           "asset": "animated.avif",
@@ -111415,8 +111432,8 @@
     "encode_rows": 397,
     "formats": 8,
     "assets_available": 1026,
-    "decode_active": 1019,
-    "decode_planned": 8,
+    "decode_active": 1020,
+    "decode_planned": 7,
     "encode_not_wired": 32
   }
 }

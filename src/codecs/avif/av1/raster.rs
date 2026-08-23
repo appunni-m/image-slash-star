@@ -712,8 +712,15 @@ impl FrameCanvas {
                 self.plane_dimensions(1),
                 self.plane_dimensions(2),
             ];
-            filter::apply(&mut self.planes, dimensions, filter_blocks, parameters)
-                .ok_or_else(|| malformed("loop filter geometry exceeds its source planes"))?;
+            filter::apply(
+                &mut self.planes,
+                dimensions,
+                filter_blocks,
+                parameters,
+                self.subsampling_x,
+                self.subsampling_y,
+            )
+            .ok_or_else(|| malformed("loop filter geometry exceeds its source planes"))?;
         }
 
         if frame_parameters.is_some() || luma_parameters.is_some() || chroma_parameters.is_some() {
@@ -751,14 +758,23 @@ impl FrameCanvas {
                 continue;
             }
             let dimensions = self.plane_dimensions(plane);
-            let block_size = if plane == 0 { 8 } else { 4 };
-            for y in (0..dimensions.1).step_by(block_size) {
-                for x in (0..dimensions.0).step_by(block_size) {
+            let block_width = if plane == 0 || !self.subsampling_x {
+                8
+            } else {
+                4
+            };
+            let block_height = if plane == 0 || !self.subsampling_y {
+                8
+            } else {
+                4
+            };
+            for y in (0..dimensions.1).step_by(block_height) {
+                for x in (0..dimensions.0).step_by(block_width) {
                     let block = CdefBlock {
                         x,
                         y,
-                        width: dimensions.0.saturating_sub(x).min(block_size),
-                        height: dimensions.1.saturating_sub(y).min(block_size),
+                        width: dimensions.0.saturating_sub(x).min(block_width),
+                        height: dimensions.1.saturating_sub(y).min(block_height),
                     };
                     let luma_x = if plane == 0 || !self.subsampling_x {
                         x

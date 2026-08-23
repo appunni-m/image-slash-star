@@ -1272,12 +1272,12 @@ pub(super) fn inverse_dct16x8(coefficients: &[i32; 128]) -> [i32; 128] {
 
 /// Apply the AV1 R16x8 DCT-ADST inverse transform.
 pub(super) fn inverse_dct_adst16x8(coefficients: &[i32; 128]) -> [i32; 128] {
-    inverse_rectangular_16x8(coefficients, inverse_dct16, inverse_adst8)
+    inverse_rectangular_16x8(coefficients, inverse_adst16, inverse_dct8)
 }
 
 /// Apply the AV1 R16x8 ADST-DCT inverse transform.
 pub(super) fn inverse_adst_dct16x8(coefficients: &[i32; 128]) -> [i32; 128] {
-    inverse_rectangular_16x8(coefficients, inverse_adst16, inverse_dct8)
+    inverse_rectangular_16x8(coefficients, inverse_dct16, inverse_adst8)
 }
 
 /// Apply the AV1 R16x8 ADST-ADST inverse transform.
@@ -1703,6 +1703,16 @@ pub(super) fn inverse_dct_identity8x16(coefficients: &[i32; 128]) -> [i32; 128] 
     inverse_rectangular_8x16(coefficients, inverse_dct8, inverse_identity16)
 }
 
+/// Apply the AV1 R8x16 identity/identity inverse transform.
+pub(super) fn inverse_identity8x16(coefficients: &[i32; 128]) -> [i32; 128] {
+    inverse_rectangular_8x16(coefficients, inverse_identity8, inverse_identity16)
+}
+
+/// Apply the AV1 R8x16 identity/DCT inverse transform.
+pub(super) fn inverse_identity_dct8x16(coefficients: &[i32; 128]) -> [i32; 128] {
+    inverse_rectangular_8x16(coefficients, inverse_identity8, inverse_dct16)
+}
+
 /// Apply the AV1 R8x16 DCT-DCT inverse transform.
 pub(super) fn inverse_dct8x16(coefficients: &[i32; 128]) -> [i32; 128] {
     inverse_rectangular_8x16(coefficients, inverse_dct8, inverse_dct16)
@@ -2026,6 +2036,9 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     let mut t14a = clamp_intermediate(t6.wrapping_sub(t14));
     let mut t15a = clamp_intermediate(t7.wrapping_sub(t15));
 
+    #[cfg(test)]
+    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
+
     t8 = rounded_dot(&[(4017 - 4096, t8a), (799, t9a)], 12).wrapping_add(t8a);
     t9 = rounded_dot(&[(799, t8a), (-(4017 - 4096), t9a)], 12).wrapping_sub(t9a);
     t10 = rounded_dot(&[(2276, t10a), (3406 - 4096, t11a)], 12).wrapping_add(t11a);
@@ -2033,7 +2046,10 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     t12 = rounded_dot(&[(4017 - 4096, t13a), (-799, t12a)], 12).wrapping_add(t13a);
     t13 = rounded_dot(&[(799, t13a), (4017 - 4096, t12a)], 12).wrapping_add(t12a);
     t14 = rounded_dot(&[(2276, t15a), (-(3406 - 4096), t14a)], 12).wrapping_sub(t14a);
-    t15 = rounded_dot(&[(3406 - 4096, t15a), (2276, t14a)], 12).wrapping_add(t14a);
+    t15 = rounded_dot(&[(3406 - 4096, t15a), (2276, t14a)], 12).wrapping_add(t15a);
+
+    #[cfg(test)]
+    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
 
     t0 = clamp_intermediate(t0a.wrapping_add(t4a));
     t1 = clamp_intermediate(t1a.wrapping_add(t5a));
@@ -2061,6 +2077,9 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     t14 = rounded_dot(&[(3784 - 4096, t15a), (-1567, t14a)], 12).wrapping_add(t15a);
     t15 = rounded_dot(&[(1567, t15a), (3784 - 4096, t14a)], 12).wrapping_add(t14a);
 
+    #[cfg(test)]
+    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
+
     let output0 = clamp_intermediate(t0.wrapping_add(t2));
     let output15 = clamp_intermediate(t1.wrapping_add(t3)).wrapping_neg();
     t2a = clamp_intermediate(t0.wrapping_sub(t2));
@@ -2077,6 +2096,9 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
     let output13 = clamp_intermediate(t13.wrapping_add(t15)).wrapping_neg();
     t14a = clamp_intermediate(t12.wrapping_sub(t14));
     t15a = clamp_intermediate(t13.wrapping_sub(t15));
+
+    #[cfg(test)]
+    if input[0] == 66 && input[1] == -79 && input[2..].iter().all(|&value| value == 0) {}
 
     [
         output0,
@@ -2656,11 +2678,11 @@ pub(super) fn inverse_adst_adst8x8(coefficients: &[i32; 64]) -> [i32; 64] {
 #[cfg(test)]
 mod tests {
     use super::{
-        inverse_adst_adst4x4, inverse_adst_adst4x8, inverse_adst_adst8x8, inverse_adst_dct4x4,
-        inverse_adst_dct4x8, inverse_adst_dct8x8, inverse_dct_adst4x4, inverse_dct_adst4x8,
-        inverse_dct_adst8x8, inverse_dct_adst8x16, inverse_dct_identity4x8,
-        inverse_dct_identity8x8, inverse_dct4x4, inverse_dct4x8, inverse_dct8x8, inverse_dct16x64,
-        inverse_dct32x16, inverse_dct32x32, inverse_dct64x64,
+        inverse_adst_adst4x4, inverse_adst_adst4x8, inverse_adst_adst8x8, inverse_adst_adst16x8,
+        inverse_adst_dct4x4, inverse_adst_dct4x8, inverse_adst_dct8x8, inverse_adst16,
+        inverse_dct_adst4x4, inverse_dct_adst4x8, inverse_dct_adst8x8, inverse_dct_adst8x16,
+        inverse_dct_identity4x8, inverse_dct_identity8x8, inverse_dct4x4, inverse_dct4x8,
+        inverse_dct8x8, inverse_dct16x64, inverse_dct32x16, inverse_dct32x32, inverse_dct64x64,
     };
 
     #[test]
@@ -2772,6 +2794,39 @@ mod tests {
     fn zero_rectangular_transform_is_zero() {
         assert_eq!(inverse_dct_adst8x16(&[0; 128]), [0; 128]);
         assert_eq!(inverse_dct4x8(&[0; 32]), [0; 32]);
+    }
+
+    #[test]
+    fn adst16_matches_dav1d_sparse_reference_vector() {
+        // Reference: dav1d 1.5.3 inverse ADST16 butterfly in src/itx_1d.c
+        // for input [66, -79, 0, ...].
+        let input = [66, -79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        assert_eq!(
+            inverse_adst16(input),
+            [
+                -9, -23, -38, -45, -48, -45, -35, -19, 2, 25, 54, 78, 103, 122, 137, 144
+            ]
+        );
+    }
+
+    #[test]
+    fn adst_adst16x8_matches_dav1d_sparse_reference_vector() {
+        // Reference: dav1d 1.5.3 rectangular 16x8 inverse-transform path
+        // for coefficients [0] = 93 and [8] = -112.
+        let mut coefficients = [0_i32; 128];
+        coefficients[0] = 93;
+        coefficients[8] = -112;
+        assert_eq!(
+            inverse_adst_adst16x8(&coefficients),
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+                1, 1, 1, 1, 0, 0, -1, -1, -1, -1, 0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, -1, -1, -1,
+                -1, -1, 0, 0, 1, 1, 2, 2, 2, 3, 3, 0, 0, -1, -1, -1, -1, -1, 0, 0, 1, 1, 2, 3, 3,
+                3, 4, 0, -1, -1, -1, -1, -1, -1, 0, 0, 1, 2, 2, 3, 3, 4, 4, 0, -1, -1, -1, -1, -1,
+                -1, -1, 0, 1, 2, 2, 3, 4, 4, 4, 0, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, 2, 3, 4, 4,
+                5
+            ]
+        );
     }
 
     #[test]
