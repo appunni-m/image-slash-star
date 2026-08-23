@@ -4030,6 +4030,130 @@ formats:
       description: 4x12 vertical one-axis leaf with a DC-only luma residual
       test_assets:
       - portable_rect_4x12_gray_32_speed0.avif
+    - id: coverage_r4x16_band_01
+      description: 4x32 4:2:0 quality-99 luma bands for following 4x16 and entropy context coverage
+      test_assets:
+      - coverage_r4x16_band_01.avif
+    - id: coverage_r4x16_band_03
+      description: 4x32 4:2:0 quality-99 luma bands for following 4x16 and entropy context coverage
+      test_assets:
+      - coverage_r4x16_band_03.avif
+    - id: coverage_r4x16_band_04
+      description: 4x32 4:2:0 quality-99 luma bands for following 4x16 and entropy context coverage
+      test_assets:
+      - coverage_r4x16_band_04.avif
+    - id: coverage_r4x16_band_05
+      description: 4x32 4:2:0 quality-99 luma bands for following 4x16 and entropy context coverage
+      test_assets:
+      - coverage_r4x16_band_05.avif
+    - id: coverage_r4x16_band_06
+      description: 4x32 4:2:0 quality-99 luma bands for following 4x16 and entropy context coverage
+      test_assets:
+      - coverage_r4x16_band_06.avif
+    - id: coverage_r4x16_grid_09
+      description: 8x32 4:2:0 quality-99 asymmetric RGB grid for 4x16 neighbor contexts
+      test_assets:
+      - coverage_r4x16_grid_09.avif
+    - id: coverage_r4x16_grid_10
+      description: 8x32 4:2:0 quality-99 asymmetric RGB grid for 4x16 neighbor contexts
+      test_assets:
+      - coverage_r4x16_grid_10.avif
+    - id: coverage_r8x16_band_01
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_01.avif
+    - id: coverage_r8x16_band_02
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_02.avif
+    - id: coverage_r8x16_band_03
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_03.avif
+    - id: coverage_r8x16_band_04
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_04.avif
+    - id: coverage_r8x16_band_09
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_09.avif
+    - id: coverage_r8x16_band_10
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_10.avif
+    - id: coverage_r8x16_neighbor_03
+      description: 16x32 4:2:0 quality-99 quadrant mosaics for positioned 8x16 neighbors
+      test_assets:
+      - coverage_r8x16_neighbor_03.avif
+    - id: coverage_r8x16_neighbor_06
+      description: 16x32 4:2:0 quality-99 quadrant mosaics for positioned 8x16 neighbors
+      test_assets:
+      - coverage_r8x16_neighbor_06.avif
+    - id: coverage_r8x16_neighbor_09
+      description: 16x32 4:2:0 quality-99 quadrant mosaics for positioned 8x16 neighbors
+      test_assets:
+      - coverage_r8x16_neighbor_09.avif
+    - id: coverage_r16x8_band_01
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_01.avif
+    - id: coverage_r16x8_band_02
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_02.avif
+    - id: coverage_r16x8_band_03
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_03.avif
+    - id: coverage_r16x8_band_04
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_04.avif
+    - id: coverage_r16x8_band_05
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_05.avif
+    - id: coverage_r16x8_band_06
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_06.avif
+    - id: coverage_r16x8_band_07
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_07.avif
+    - id: coverage_r16x8_band_08
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_08.avif
+    - id: coverage_r16x8_band_09
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_09.avif
+    - id: coverage_r16x8_band_10
+      description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
+      test_assets:
+      - coverage_r16x8_band_10.avif
+    - id: coverage_r16x8_neighbor_02
+      description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
+      test_assets:
+      - coverage_r16x8_neighbor_02.avif
+    - id: coverage_r16x8_neighbor_04
+      description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
+      test_assets:
+      - coverage_r16x8_neighbor_04.avif
+    - id: coverage_r16x8_neighbor_06
+      description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
+      test_assets:
+      - coverage_r16x8_neighbor_06.avif
+    - id: coverage_r16x8_neighbor_08
+      description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
+      test_assets:
+      - coverage_r16x8_neighbor_08.avif
+    - id: coverage_r16x8_neighbor_10
+      description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
+      test_assets:
+      - coverage_r16x8_neighbor_10.avif
     - id: high_bitdepth
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
