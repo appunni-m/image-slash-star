@@ -45,6 +45,8 @@ pub(crate) fn apply(
     dimensions: [(usize, usize); 3],
     blocks: &[Block],
     parameters: Parameters,
+    subsampling_x: bool,
+    subsampling_y: bool,
 ) -> Option<()> {
     if !(8..=16).contains(&parameters.bit_depth)
         || dimensions
@@ -57,8 +59,8 @@ pub(crate) fn apply(
         return None;
     }
 
-    let luma_mask = build_masks(dimensions[0], blocks, false)?;
-    let chroma_mask = build_masks(dimensions[1], blocks, true)?;
+    let luma_mask = build_masks(dimensions[0], blocks, false, false, false)?;
+    let chroma_mask = build_masks(dimensions[1], blocks, true, subsampling_x, subsampling_y)?;
     let luma_lut = thresholds(parameters.luma_vertical, parameters.sharpness);
     let luma_horizontal_lut = thresholds(parameters.luma_horizontal, parameters.sharpness);
     let chroma_u_lut = thresholds(parameters.chroma_u, parameters.sharpness);
@@ -122,7 +124,13 @@ struct Masks {
     height_units: usize,
 }
 
-fn build_masks(dimensions: (usize, usize), blocks: &[Block], chroma: bool) -> Option<Masks> {
+fn build_masks(
+    dimensions: (usize, usize),
+    blocks: &[Block],
+    chroma: bool,
+    subsampling_x: bool,
+    subsampling_y: bool,
+) -> Option<Masks> {
     let (width, height) = dimensions;
     let width_units = width.div_ceil(4);
     let height_units = height.div_ceil(4);
@@ -138,10 +146,18 @@ fn build_masks(dimensions: (usize, usize), blocks: &[Block], chroma: bool) -> Op
     for block in blocks {
         let (x, y, block_width, block_height, tx_width, tx_height) = if chroma {
             (
-                block.x / 2,
-                block.y / 2,
-                block.width.div_ceil(2),
-                block.height.div_ceil(2),
+                if subsampling_x { block.x / 2 } else { block.x },
+                if subsampling_y { block.y / 2 } else { block.y },
+                if subsampling_x {
+                    block.width.div_ceil(2)
+                } else {
+                    block.width
+                },
+                if subsampling_y {
+                    block.height.div_ceil(2)
+                } else {
+                    block.height
+                },
                 block.chroma_tx_width,
                 block.chroma_tx_height,
             )
@@ -769,6 +785,8 @@ mod tests {
                     sharpness: 0,
                     bit_depth: 8,
                 },
+                true,
+                true,
             )
             .is_some()
         );

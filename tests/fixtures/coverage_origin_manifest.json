@@ -13,7 +13,7 @@
     {"path": "src/codecs/avif/av1/block.rs", "guard_count": 10, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/entropy.rs", "guard_count": 25, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/frame.rs", "guard_count": 23, "origin": "independent_implementation"},
-    {"path": "src/codecs/avif/av1/mod.rs", "guard_count": 14, "origin": "independent_implementation"},
+    {"path": "src/codecs/avif/av1/mod.rs", "guard_count": 15, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/av1/raster.rs", "guard_count": 2, "origin": "defensive_model"},
     {"path": "src/codecs/avif/av1/sequence.rs", "guard_count": 8, "origin": "independent_implementation"},
     {"path": "src/codecs/avif/container.rs", "guard_count": 18, "origin": "defensive_model"},

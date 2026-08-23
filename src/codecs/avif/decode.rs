@@ -12,7 +12,15 @@ pub fn decode(
 ) -> CodecResult<(DecodedImage, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
-    let mut extracted = extract_av1(data)?;
+    let extracted = extract_av1(data)?;
+    let validated = super::av1::validate_first(&extracted)
+        .map_err(|error| error.context("AVIF AV1 validation failed"))?;
+    let image = decode_portable(&validated).ok_or_else(|| {
+        CodecError::NotImplemented(
+            "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
+        )
+    })?;
+    let mut extracted = extracted;
     let consumed = extracted.consumed;
     let retained_boxes = std::mem::take(&mut extracted.retained_boxes);
     let metadata = std::mem::take(&mut extracted.metadata);
@@ -30,13 +38,6 @@ pub fn decode(
     let grid_item_ids = std::mem::take(&mut extracted.grid_item_ids);
     let grid_properties = extracted.grid_properties;
     let transform = extracted.transform;
-    let validated = super::av1::validate_first(&extracted)
-        .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let image = decode_portable(&validated).ok_or_else(|| {
-        CodecError::NotImplemented(
-            "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
-        )
-    })?;
     let image = {
         let source = image.source.clone().with_avif_file_type(file_type);
         image.with_source_descriptor(source)
@@ -277,7 +278,8 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     }
     let has_alpha = still.alpha_plane.is_some();
     let channel_count = if has_alpha { 4 } else { 3 };
-    let mut pixels = Vec::with_capacity(plane_length.wrapping_mul(channel_count));
+    let pixel_capacity = plane_length.checked_mul(channel_count)?;
+    let mut pixels = Vec::with_capacity(pixel_capacity);
     for (index, &y_sample) in y_plane.samples.iter().enumerate() {
         let (u_sample, v_sample) = if subsampled {
             #[allow(clippy::arithmetic_side_effects)]
@@ -695,6 +697,87 @@ mod tests {
             &[
                 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255
             ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn grid_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
+        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let extracted = super::super::samples::validated(bytes)?;
+        let validated = super::super::av1::validate_first(&extracted)?;
+        let still = validated
+            .portable_still
+            .as_ref()
+            .ok_or_else(|| CodecError::NotImplemented("grid fixture did not close".to_owned()))?;
+        assert_eq!((still.width, still.height), (80, 80));
+        assert_eq!(still.bit_depth, 8);
+        assert!(!still.monochrome);
+        assert_eq!(
+            (still.color_primaries, still.transfer_characteristics),
+            (1, 13)
+        );
+        assert_eq!(still.matrix_coefficients, 6);
+        assert!(still.color_range);
+        assert!(!still.subsampling_x && !still.subsampling_y);
+        assert!(still.alpha_plane.as_ref().is_some_and(|plane| {
+            plane.samples.len() == 80 * 80 && plane.samples.iter().any(|&sample| sample != 0)
+        }));
+        let expected_raw =
+            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+        let alpha = still
+            .alpha_plane
+            .as_ref()
+            .ok_or_else(|| CodecError::NotImplemented("grid alpha did not close".to_owned()))?;
+        assert!(
+            alpha
+                .samples
+                .iter()
+                .zip(expected_raw.chunks_exact(4))
+                .all(|(&actual, rgba)| actual == u16::from(rgba[3]))
+        );
+        let image = decode_portable(&validated).ok_or_else(|| {
+            CodecError::NotImplemented("grid pixels did not materialize".to_owned())
+        })?;
+        assert_eq!(image.color, ColorType::Rgba8);
+        assert_eq!(image.mode, ImageMode::Rgba8);
+        assert_eq!(image.pixels.len(), 80 * 80 * 4);
+        assert_eq!(image.pixels.as_slice(), &expected_raw[..]);
+        assert_eq!(
+            sha256::digest_hex(&image.pixels),
+            "4ede0d909351b9b09c7e3e9475bfd3baf458141dbdd08f08aee19c11d2ec2983"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_grid_decode_preserves_validation_inputs() -> CodecResult<()> {
+        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let (image, _) = super::decode(bytes, None)?;
+        let expected =
+            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+        assert_eq!(image.color, ColorType::Rgba8);
+        assert_eq!(image.mode, ImageMode::Rgba8);
+        assert_eq!(image.pixels.as_slice(), &expected[..]);
+        assert_eq!(
+            sha256::digest_hex(&image.pixels),
+            "4ede0d909351b9b09c7e3e9475bfd3baf458141dbdd08f08aee19c11d2ec2983"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn public_multitile_decode_materializes_exact_rgb() -> CodecResult<()> {
+        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/multitile.avif");
+        let (image, _) = super::decode(bytes, None)?;
+        let expected =
+            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_multitile_avif.bin");
+        assert_eq!(image.color, ColorType::Rgb8);
+        assert_eq!(image.mode, ImageMode::Rgb8);
+        assert_eq!(image.pixels.as_slice(), &expected[..]);
+        assert_eq!(
+            sha256::digest_hex(&image.pixels),
+            "8fddfd016bbc17e2f00a5154ee6e50c8f1d9d6a8254279ddf57be490ecdf9e44"
         );
         Ok(())
     }

@@ -1251,6 +1251,8 @@ struct PartitionWalker<'decoder, 'data, 'input, 'spans> {
     contexts: PartitionContexts,
     frame_width: u32,
     frame_height: u32,
+    root_end_x: u32,
+    root_end_y: u32,
     monochrome: bool,
     subsampling_x: bool,
     subsampling_y: bool,
@@ -1268,6 +1270,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             contexts: PartitionContexts::new(context),
             frame_width: context.block_width,
             frame_height: context.block_height,
+            root_end_x: context.block_width,
+            root_end_y: context.block_height,
             monochrome: context.monochrome,
             subsampling_x: context.subsampling_x,
             subsampling_y: context.subsampling_y,
@@ -1283,6 +1287,21 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         // erase the left neighbor needed by the next horizontal root and the
         // above neighbor needed by the next root row.
         self.nodes.clear();
+    }
+
+    fn set_root_bounds(&mut self, x: u32, y: u32, root_size: u32) -> Av1Result<()> {
+        self.root_end_x = x
+            .checked_add(root_size)
+            .ok_or_else(|| malformed("partition root x extent overflows"))?
+            .min(self.frame_width);
+        self.root_end_y = y
+            .checked_add(root_size)
+            .ok_or_else(|| malformed("partition root y extent overflows"))?
+            .min(self.frame_height);
+        if x >= self.root_end_x || y >= self.root_end_y {
+            return Err(malformed("partition root has no visible samples"));
+        }
+        Ok(())
     }
 
     fn decode_kind(
@@ -1374,7 +1393,7 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         let context_level = child_level.min(4);
         for geometry in children.into_iter().take(count) {
             let Some(geometry) =
-                clip_partition_geometry(geometry, self.frame_width, self.frame_height)?
+                clip_partition_geometry(geometry, self.root_end_x, self.root_end_y)?
             else {
                 continue;
             };
@@ -1425,8 +1444,11 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         if half_size == 0 {
             return Err(malformed("partition block has zero size"));
         }
-        let horizontal_split = self.frame_width > x.saturating_add(half_size);
-        let vertical_split = self.frame_height > y.saturating_add(half_size);
+        if x >= self.root_end_x || y >= self.root_end_y {
+            return Ok(PartitionVisitControl::Continue);
+        }
+        let horizontal_split = self.root_end_x > x.saturating_add(half_size);
+        let vertical_split = self.root_end_y > y.saturating_add(half_size);
         if !horizontal_split && !vertical_split {
             if x >= self.frame_width || y >= self.frame_height {
                 return Ok(PartitionVisitControl::Continue);
@@ -1474,8 +1496,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
                     width: full_width,
                     height: full_height,
                 },
-                self.frame_width,
-                self.frame_height,
+                self.root_end_x,
+                self.root_end_y,
             )?
             else {
                 return Ok(PartitionVisitControl::Continue);
@@ -1633,6 +1655,7 @@ pub(super) fn validate_complete_monochrome_partition(
     for root_y in (context.block_y..context.block_height).step_by(root_step) {
         for root_x in (context.block_x..context.block_width).step_by(root_step) {
             walker.reset_root();
+            walker.set_root_bounds(root_x, root_y, root_size)?;
             let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
                 let Some((transform_grid, width, height)) = monochrome_transform_geometry(node)
                 else {
@@ -1840,6 +1863,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 delta_q_at_root,
             );
             walker.reset_root();
+            walker.set_root_bounds(root_x, root_y, root_size)?;
             let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
                 let width = node.width.saturating_mul(4);
                 let height = node.height.saturating_mul(4);
@@ -1947,12 +1971,18 @@ pub(super) fn validate_complete_lossy_420_partition(
                     } else {
                         None
                     };
-                    let chroma_above_y = node.y.saturating_sub(node.y % 2);
+                    let full_resolution = !context.subsampling_x && !context.subsampling_y;
+                    let chroma_above_y = if full_resolution {
+                        node.y
+                    } else {
+                        node.y.saturating_sub(node.y % 2)
+                    };
                     let above_chroma_extension = if node.width == 2 {
                         let extension_x = node.x.saturating_add(node.width);
                         leaves.iter().rev().find(|(prior, _)| {
-                            let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                                && (prior.height > 1 || prior.y % 2 != 0);
+                            let has_chroma = full_resolution
+                                || ((prior.width > 1 || prior.x % 2 != 0)
+                                    && (prior.height > 1 || prior.y % 2 != 0));
                             has_chroma
                                 && prior.x <= extension_x
                                 && extension_x < prior.x.saturating_add(prior.width)
@@ -1962,8 +1992,9 @@ pub(super) fn validate_complete_lossy_420_partition(
                         None
                     };
                     let above_chroma = leaves.iter().rev().find(|(prior, _)| {
-                        let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                            && (prior.height > 1 || prior.y % 2 != 0);
+                        let has_chroma = full_resolution
+                            || ((prior.width > 1 || prior.x % 2 != 0)
+                                && (prior.height > 1 || prior.y % 2 != 0));
                         has_chroma
                             && prior.x <= node.x.saturating_add(node.width.saturating_sub(1))
                             && node.x.saturating_add(node.width.saturating_sub(1))
@@ -1994,16 +2025,12 @@ pub(super) fn validate_complete_lossy_420_partition(
                             &neighbors, 16, true,
                         )
                     };
-                    let above_chroma_contexts = if !context.subsampling_x && !context.subsampling_y
-                    {
+                    let above_chroma_contexts = if full_resolution {
                         std::array::from_fn(|plane| {
                             let mut candidates: Vec<_> = leaves
                                 .iter()
                                 .filter(|(prior, _)| {
-                                    let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                                        && (prior.height > 1 || prior.y % 2 != 0);
-                                    has_chroma
-                                        && prior.y.saturating_add(prior.height) == chroma_above_y
+                                    prior.y.saturating_add(prior.height) == node.y
                                         && prior.x < node.x.saturating_add(node.width)
                                         && prior.x.saturating_add(prior.width) > node.x
                                 })
@@ -2021,7 +2048,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                     )
                                 })
                                 .collect();
-                            super::block::combined_chroma_edge_contexts_from_positioned_neighbors(
+                            super::block::combined_full_chroma_edge_contexts_from_positioned_neighbors(
                                 &neighbors,
                                 plane,
                                 usize::try_from(node.width).unwrap_or(0).min(8),
@@ -2092,8 +2119,16 @@ pub(super) fn validate_complete_lossy_420_partition(
                             && prior.y <= bottom_unit
                             && bottom_unit < prior.y.saturating_add(prior.height)
                     });
-                    let chroma_left_x = node.x.saturating_sub(node.x % 2);
-                    let chroma_left_y = node.y.saturating_sub(node.y % 2).saturating_add(1);
+                    let chroma_left_x = if full_resolution {
+                        node.x
+                    } else {
+                        node.x.saturating_sub(node.x % 2)
+                    };
+                    let chroma_left_y = if full_resolution {
+                        node.y
+                    } else {
+                        node.y.saturating_sub(node.y % 2).saturating_add(1)
+                    };
                     let left_chroma = leaves.iter().rev().find(|(prior, _)| {
                         prior.x.saturating_add(prior.width) == chroma_left_x
                             && prior.y <= chroma_left_y
@@ -2106,6 +2141,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         luma_left_edge_8,
                         luma_left_edge_16,
                         luma_left_edge_32,
+                        chroma_left_edges_16,
                         chroma_left_edges_8,
                     ) = {
                         let mut candidates: Vec<_> = leaves
@@ -2131,7 +2167,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                             super::block::combined_luma_edge_contexts_from_positioned_neighbors(
                                 &neighbors, 16, false,
                             );
-                        let luma_edge_8 = if width == 8 && height == 8 && !candidates.is_empty() {
+                        let luma_edge_8 = if height == 8 && !candidates.is_empty() {
+                            let mut complete = true;
                             let edge = std::array::from_fn(|index| {
                                 let sample_y = node
                                     .y
@@ -2159,14 +2196,20 @@ pub(super) fn validate_complete_lossy_420_partition(
                                         } else {
                                             None
                                         }
+                                        })
+                                    .unwrap_or_else(|| {
+                                        complete = false;
+                                        128
                                     })
-                                    .unwrap_or(128)
                             });
-                            Some(edge)
+                            complete.then_some(edge)
                         } else {
                             None
                         };
-                        let luma_edge_16 = if width == 16 && height == 16 {
+                        let luma_edge_16 = if (width == 8 && height == 16)
+                            || (width == 16 && height == 16)
+                        {
+                            let mut complete = true;
                             let edge = std::array::from_fn(|index| {
                                 let sample_y = node
                                     .y
@@ -2195,12 +2238,56 @@ pub(super) fn validate_complete_lossy_420_partition(
                                             None
                                         }
                                     })
-                                    .unwrap_or(128)
+                                    .unwrap_or_else(|| {
+                                        complete = false;
+                                        128
+                                    })
                             });
 
-                            Some(edge)
+                            complete.then_some(edge)
                         } else {
                             None
+                        };
+                        let chroma_edges_16 = if full_resolution && width == 8 && height == 16 {
+                            std::array::from_fn(|plane| {
+                                let mut complete = true;
+                                let edge = std::array::from_fn(|index| {
+                                    let sample_y = node
+                                        .y
+                                        .saturating_mul(4)
+                                        .saturating_add(u32::try_from(index).unwrap_or(0));
+                                    candidates
+                                        .iter()
+                                        .find_map(|candidate| {
+                                            let candidate = &**candidate;
+                                            let prior = &candidate.0;
+                                            let leaf = &candidate.1;
+                                            let prior_y = prior.y.saturating_mul(4);
+                                            let prior_height = prior.height.saturating_mul(4);
+                                            if prior_y <= sample_y
+                                                && sample_y < prior_y.saturating_add(prior_height)
+                                            {
+                                                Some(
+                                                    super::block::right_edge_at::<1>(
+                                                        &leaf.planes[plane.saturating_add(1)],
+                                                        leaf.width,
+                                                        leaf.height,
+                                                        sample_y.saturating_sub(prior_y),
+                                                    )[0],
+                                                )
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or_else(|| {
+                                            complete = false;
+                                            128
+                                        })
+                                });
+                                complete.then_some(edge)
+                            })
+                        } else {
+                            [None; 2]
                         };
                         let luma_edge_32 = if width == 32 && height == 32 {
                             let edge = std::array::from_fn(|index| {
@@ -2237,7 +2324,48 @@ pub(super) fn validate_complete_lossy_420_partition(
                         } else {
                             None
                         };
-                        let chroma_edges = if width == 16 && height == 16 {
+                        let chroma_edges = if full_resolution && height == 8 {
+                            let mut chroma_candidates: Vec<_> = candidates.clone();
+                            chroma_candidates.sort_by_key(|(prior, _)| prior.y);
+
+                            std::array::from_fn(|plane| {
+                                let mut complete = true;
+                                let edge = std::array::from_fn(|index| {
+                                    let sample_y = node
+                                        .y
+                                        .saturating_mul(4)
+                                        .saturating_add(u32::try_from(index).unwrap_or(0));
+                                    chroma_candidates
+                                        .iter()
+                                        .find_map(|candidate| {
+                                            let candidate = &**candidate;
+                                            let prior = &candidate.0;
+                                            let leaf = &candidate.1;
+                                            let prior_y = prior.y.saturating_mul(4);
+                                            let prior_height = prior.height.saturating_mul(4);
+                                            if prior_y <= sample_y
+                                                && sample_y < prior_y.saturating_add(prior_height)
+                                            {
+                                                Some(
+                                                    super::block::right_edge_at::<1>(
+                                                        &leaf.planes[plane.saturating_add(1)],
+                                                        leaf.width,
+                                                        leaf.height,
+                                                        sample_y.saturating_sub(prior_y),
+                                                    )[0],
+                                                )
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or_else(|| {
+                                            complete = false;
+                                            128
+                                        })
+                                });
+                                complete.then_some(edge)
+                            })
+                        } else if width == 16 && height == 16 {
                             let chroma_left_x = node.x.saturating_sub(node.x % 2);
                             let mut chroma_candidates: Vec<_> = leaves
                                 .iter()
@@ -2297,54 +2425,93 @@ pub(super) fn validate_complete_lossy_420_partition(
                             contexts,
                             top,
                             luma_edge_8,
-                            luma_edge_16,
-                            luma_edge_32,
-                            chroma_edges,
+                        luma_edge_16,
+                        luma_edge_32,
+                        chroma_edges_16,
+                        chroma_edges,
                         )
                     };
 
-                    let left_chroma_contexts = std::array::from_fn(|plane| {
-                        let mut candidates: Vec<_> = leaves
-                            .iter()
-                            .filter(|(prior, _)| {
-                                prior.x.saturating_add(prior.width) == chroma_left_x
-                                    && prior.y < node.y.saturating_add(node.height)
-                                    && prior.y.saturating_add(prior.height) > chroma_left_y
-                            })
-                            .collect();
-                        candidates.sort_by_key(|(prior, _)| prior.y);
-                        let neighbors: Vec<_> = candidates
-                            .iter()
-                            .map(|&(prior, leaf)| {
-                                (
-                                    leaf,
-                                    usize::try_from(chroma_left_y.saturating_sub(prior.y) / 2)
-                                        .unwrap_or(0),
-                                )
-                            })
-                            .collect();
-                        super::block::combined_chroma_edge_contexts_from_positioned_neighbors(
-                            &neighbors,
-                            plane,
-                            usize::try_from(node.height).unwrap_or(0).div_ceil(2),
-                            false,
-                        )
-                    });
+                    let left_chroma_contexts = if full_resolution {
+                        std::array::from_fn(|plane| {
+                            let mut candidates: Vec<_> = leaves
+                                .iter()
+                                .filter(|(prior, _)| {
+                                    prior.x.saturating_add(prior.width) == node.x
+                                        && prior.y < node.y.saturating_add(node.height)
+                                        && prior.y.saturating_add(prior.height) > node.y
+                                })
+                                .collect();
+                            candidates.sort_by_key(|(prior, _)| prior.y);
+                            let neighbors: Vec<_> = candidates
+                                .iter()
+                                .map(|&(prior, leaf)| {
+                                    (
+                                        leaf,
+                                        usize::try_from(node.y.saturating_sub(prior.y))
+                                            .unwrap_or(0),
+                                    )
+                                })
+                                .collect();
+                            super::block::combined_full_chroma_edge_contexts_from_positioned_neighbors(
+                                &neighbors,
+                                plane,
+                                usize::try_from(node.height).unwrap_or(0).min(8),
+                                false,
+                            )
+                        })
+                    } else {
+                        std::array::from_fn(|plane| {
+                            let mut candidates: Vec<_> = leaves
+                                .iter()
+                                .filter(|(prior, _)| {
+                                    prior.x.saturating_add(prior.width) == chroma_left_x
+                                        && prior.y < node.y.saturating_add(node.height)
+                                        && prior.y.saturating_add(prior.height) > chroma_left_y
+                                })
+                                .collect();
+                            candidates.sort_by_key(|(prior, _)| prior.y);
+                            let neighbors: Vec<_> = candidates
+                                .iter()
+                                .map(|&(prior, leaf)| {
+                                    (
+                                        leaf,
+                                        usize::try_from(chroma_left_y.saturating_sub(prior.y) / 2)
+                                            .unwrap_or(0),
+                                    )
+                                })
+                                .collect();
+                            super::block::combined_chroma_edge_contexts_from_positioned_neighbors(
+                                &neighbors,
+                                plane,
+                                usize::try_from(node.height).unwrap_or(0).div_ceil(2),
+                                false,
+                            )
+                        })
+                    };
 
                     let left_y_offset = left.map_or(0, |(prior, _)| {
                         node.y.saturating_sub(prior.y).saturating_mul(4)
                     });
                     let left_chroma_y_offset = left_chroma.map_or(0, |(prior, _)| {
-                        node.y
-                            .saturating_div(2)
-                            .saturating_sub(prior.y.saturating_div(2))
-                            .saturating_mul(4)
+                        let row_delta = if full_resolution {
+                            node.y.saturating_sub(prior.y)
+                        } else {
+                            node.y
+                                .saturating_div(2)
+                                .saturating_sub(prior.y.saturating_div(2))
+                        };
+                        row_delta.saturating_mul(4)
                     });
                     let above_chroma_x_offset = above_chroma.map_or(0, |(prior, _)| {
-                        node.x
-                            .saturating_div(2)
-                            .saturating_sub(prior.x.saturating_div(2))
-                            .saturating_mul(4)
+                        let column_delta = if full_resolution {
+                            node.x.saturating_sub(prior.x)
+                        } else {
+                            node.x
+                                .saturating_div(2)
+                                .saturating_sub(prior.x.saturating_div(2))
+                        };
+                        column_delta.saturating_mul(4)
                     });
 
                     let left_luma_bottom = left_below.and_then(|(prior, leaf)| {
@@ -2381,6 +2548,51 @@ pub(super) fn validate_complete_lossy_420_partition(
                             })
                         })
                     });
+                    let left_full_chroma_bottom_8 = if full_resolution
+                        && width == 8
+                        && (height == 8 || height == 16)
+                    {
+                        std::array::from_fn(|plane| {
+                            let mut complete = true;
+                            let edge = std::array::from_fn(|index| {
+                                let sample_y = node
+                                    .y
+                                    .saturating_add(node.height)
+                                    .saturating_mul(4)
+                                    .saturating_add(u32::try_from(index).unwrap_or(0));
+                                leaves
+                                    .iter()
+                                    .filter(|(prior, _)| {
+                                        prior.x.saturating_add(prior.width) == node.x
+                                            && prior.y.saturating_mul(4) <= sample_y
+                                            && sample_y
+                                                < prior
+                                                    .y
+                                                    .saturating_add(prior.height)
+                                                    .saturating_mul(4)
+                                    })
+                                    .find_map(|(prior, leaf)| {
+                                        let row_offset = sample_y
+                                            .checked_sub(prior.y.saturating_mul(4))?;
+                                        (row_offset < leaf.height).then(|| {
+                                            super::block::right_edge_at::<1>(
+                                                &leaf.planes[plane.saturating_add(1)],
+                                                leaf.width,
+                                                leaf.height,
+                                                row_offset,
+                                            )[0]
+                                        })
+                                    })
+                                    .unwrap_or_else(|| {
+                                        complete = false;
+                                        128
+                                    })
+                            });
+                            complete.then_some(edge)
+                        })
+                    } else {
+                        [None; 2]
+                    };
 
                     if let Some((above_prior, above)) = above_left {
                         let above_left_width = above.width;
@@ -2414,11 +2626,18 @@ pub(super) fn validate_complete_lossy_420_partition(
                             above_chroma_extension_x_offset: above_chroma_extension.map_or(
                                 0,
                                 |(prior, _)| {
-                                    node.x
-                                        .saturating_add(node.width)
-                                        .saturating_div(2)
-                                        .saturating_sub(prior.x.saturating_div(2))
-                                        .saturating_mul(4)
+                                    if full_resolution {
+                                        node.x
+                                            .saturating_add(node.width)
+                                            .saturating_sub(prior.x)
+                                            .saturating_mul(4)
+                                    } else {
+                                        node.x
+                                            .saturating_add(node.width)
+                                            .saturating_div(2)
+                                            .saturating_sub(prior.x.saturating_div(2))
+                                            .saturating_mul(4)
+                                    }
                                 },
                             ),
                             above_luma_contexts,
@@ -2430,13 +2649,16 @@ pub(super) fn validate_complete_lossy_420_partition(
                             left: left.map(|(_, leaf)| leaf),
                             left_luma_contexts,
                             left_luma_edge_8: luma_left_edge_8,
+                            left_luma_edge_16: luma_left_edge_16,
                             left_luma_edge_32: luma_left_edge_32,
                             left_chroma_contexts,
                             left_chroma: left_chroma.map(|(_, leaf)| leaf),
+                            left_chroma_edges_16: chroma_left_edges_16,
                             left_y_offset,
                             left_chroma_y_offset,
                             left_luma_bottom,
                             left_chroma_bottom,
+                            left_full_chroma_bottom_8,
                         };
                         if has_chroma {
                             block_decoder.decode_following_vertical(
@@ -2467,8 +2689,12 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 tools,
                                 left,
                                 luma_top_neighbor,
+                                luma_left_edge_8,
+                                left_luma_bottom,
                                 luma_left_edge_16,
+                                chroma_left_edges_16,
                                 chroma_left_edges_8,
+                                left_full_chroma_bottom_8,
                                 left_luma_contexts,
                                 left_chroma_contexts,
                             )
@@ -2520,7 +2746,13 @@ pub(super) fn validate_complete_lossy_420_partition(
                     &decoded.planes,
                 )?;
                 let Some((luma_tx, chroma_tx)) =
-                    super::block::filter_transform_dimensions(width, height, &decoded)
+                    super::block::filter_transform_dimensions(
+                        width,
+                        height,
+                        &decoded,
+                        context.subsampling_x,
+                        context.subsampling_y,
+                    )
                 else {
                     unsupported = true;
                     return Ok(PartitionVisitControl::Stop);
@@ -2569,6 +2801,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         height: context.frame_height,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
+        chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
         chroma_right_contexts: [[0x40; 8]; 2],
@@ -2892,6 +3125,7 @@ pub(super) fn validate_complete_lossless_444_partition(
         height: context.frame_height,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
+        chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
         chroma_right_contexts: [[0x40; 8]; 2],

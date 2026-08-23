@@ -235,6 +235,7 @@ fn assembled_leaf(
         height,
         planes,
         luma_predictor: block::LumaPredictor::Dc,
+        chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
         chroma_right_contexts: [[0x40; 8]; 2],
@@ -307,6 +308,7 @@ fn validate_grid(
                 return Ok(None);
             };
             if !(alpha.sequence.monochrome
+                && alpha.sequence.color_range
                 && alpha.sequence.bit_depth == color.sequence.bit_depth
                 && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
                 && usize::try_from(color_leaf.width).ok().and_then(|width| {
@@ -327,8 +329,19 @@ fn validate_grid(
     let first = cells
         .first()
         .ok_or_else(|| malformed("AVIF grid has no cells"))?;
+    let cell_width = first.width;
+    let cell_height = first.height;
+    if cell_width == 0
+        || cell_height == 0
+        || properties.output_width() == 0
+        || properties.output_height() == 0
+    {
+        return Err(malformed("AVIF grid has an empty cell or output canvas"));
+    }
     if cells.iter().any(|cell| {
-        cell.bit_depth != first.bit_depth
+        cell.width != cell_width
+            || cell.height != cell_height
+            || cell.bit_depth != first.bit_depth
             || cell.monochrome != first.monochrome
             || cell.color_primaries != first.color_primaries
             || cell.transfer_characteristics != first.transfer_characteristics
@@ -338,20 +351,40 @@ fn validate_grid(
             || cell.subsampling_y != first.subsampling_y
             || cell.alpha_plane.is_some() != first.alpha_plane.is_some()
     }) {
-        return Ok(None);
+        return Err(malformed(
+            "AVIF grid cells disagree on decoded geometry or format",
+        ));
     }
-    let cell_width = cells
-        .iter()
-        .map(|cell| cell.width)
-        .max()
-        .ok_or_else(|| malformed("AVIF grid has no cell width"))?;
-    let cell_height = cells
-        .iter()
-        .map(|cell| cell.height)
-        .max()
-        .ok_or_else(|| malformed("AVIF grid has no cell height"))?;
     let output_width = properties.output_width();
     let output_height = properties.output_height();
+    let total_width = cell_width
+        .checked_mul(properties.columns())
+        .ok_or_else(|| malformed("AVIF grid width overflows"))?;
+    let total_height = cell_height
+        .checked_mul(properties.rows())
+        .ok_or_else(|| malformed("AVIF grid height overflows"))?;
+    if total_width < output_width || total_height < output_height {
+        return Err(malformed("AVIF grid cells do not cover the output canvas"));
+    }
+    let last_column = properties
+        .columns()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF grid has no columns"))?;
+    let last_row = properties
+        .rows()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF grid has no rows"))?;
+    if cell_width
+        .checked_mul(last_column)
+        .ok_or_else(|| malformed("AVIF grid last column overflows"))?
+        >= output_width
+        || cell_height
+            .checked_mul(last_row)
+            .ok_or_else(|| malformed("AVIF grid last row overflows"))?
+            >= output_height
+    {
+        return Err(malformed("AVIF grid has an invisible final row or column"));
+    }
     let mut canvas = FrameCanvas::new(
         output_width,
         output_height,
@@ -390,10 +423,16 @@ fn validate_grid(
             .ok_or_else(|| malformed("AVIF grid y origin overflows usize"))?,
         )
         .map_err(|_| malformed("AVIF grid y origin exceeds u32"))?;
-        let visible_width = output_width.saturating_sub(x).min(cell.width);
-        let visible_height = output_height.saturating_sub(y).min(cell.height);
+        let visible_width = output_width
+            .checked_sub(x)
+            .ok_or_else(|| malformed("AVIF grid cell starts outside the output width"))?
+            .min(cell.width);
+        let visible_height = output_height
+            .checked_sub(y)
+            .ok_or_else(|| malformed("AVIF grid cell starts outside the output height"))?
+            .min(cell.height);
         if visible_width == 0 || visible_height == 0 {
-            return Ok(None);
+            return Err(malformed("AVIF grid cell has no visible samples"));
         }
         canvas.place_cropped_cell(
             cell.width,
