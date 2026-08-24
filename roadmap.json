@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "82c9a304fae159096aa3ec13d81985f1c199d0c7",
+  "claim_ledger_base_revision": "11559fb63009977d77f12a94990a9c5ac8d17d51",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -54,10 +54,10 @@
     },
     "coverage": {
       "line": {
-        "covered": 96362,
-        "total": 106985,
-        "percent": 90.0706,
-        "uncovered": 10623
+        "covered": 96361,
+        "total": 106982,
+        "percent": 90.0722,
+        "uncovered": 10621
       },
       "branch": {
         "covered": 12281,
@@ -72,35 +72,35 @@
         "uncovered": 724
       },
       "region": {
-        "covered": 145019,
-        "total": 162554,
-        "percent": 89.2128,
-        "uncovered": 17535
+        "covered": 145018,
+        "total": 162551,
+        "percent": 89.2138,
+        "uncovered": 17533
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "82c9a304fae159096aa3ec13d81985f1c199d0c7",
-        "run_id": "0c05e36b-dd23-47b2-8d6f-a00700bd6638",
-        "snapshot_id": "bc3ddb1f-e7af-496d-ae36-9f393c1eef1d",
+        "commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
+        "run_id": "50f55d49-bb37-457b-abdc-46a1bb83234e",
+        "snapshot_id": "cf72703d-9322-4587-8b03-f39bc2129183",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 162754,
+        "duration_ms": 173291,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full all-feature workload at code-bearing commit 82c9a304 and automatically ingested the required LLVM JSON artifact as snapshot bc3ddb1f. It records 90.0706% lines, 90.1556% branches, 87.1380% functions, and 89.2128% regions; the four-metric release target remains open until all reach 100%. The new coverage_r32x32_following_01.avif fixture adds exact dav1d topology, 1,163 entropy operations, reconstructed Y/U/V planes, and Pillow RGB evidence for the following 32x32 4:2:0 frame with an R16x8 chroma leaf and corrected transposed quantization matrices. AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
+        "note": "The managed command passed the full all-feature workload at code-bearing commit 11559fb6 and automatically ingested the required LLVM JSON artifact as snapshot cf72703d. It records 90.0722% lines, 90.1556% branches, 87.1380% functions, and 89.2138% regions; the four-metric release target remains open until all reach 100%. This slice replaces the rectangular chroma transform's impossible intermediate identity arms with the exhaustive AV1 predictor-to-transform mapping and adds a private test for all 14 predictor variants, including nonzero Cfl. The cleanup changes the instrumented denominator by removing three impossible executable arms; it does not claim new runtime-state coverage. AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "4971404d0292cee72ac4d8663dd92f2830439da0",
-          "baseline_snapshot_id": "051dd400-36a6-4236-8a36-2693ddc1bc6a",
-          "line_covered_delta": 413,
-          "line_total_delta": 243,
-          "branch_covered_delta": 17,
-          "branch_total_delta": 20,
-          "function_covered_delta": 25,
-          "function_total_delta": 1,
-          "region_covered_delta": 481,
-          "region_total_delta": 378,
-          "interpretation": "The current managed run is measured at the exact code-bearing commit and improves covered lines by 413, branches by 17, functions by 25, and regions by 481 while adding 243 lines, 20 branches, 1 function, and 378 regions to the instrumented tree. The R16x8 chroma slice adds exact parity evidence and the release target remains open: 10,623 lines, 1,341 branches, 724 functions, and 17,535 regions are uncovered."
+          "baseline_commit": "82c9a304fae159096aa3ec13d81985f1c199d0c7",
+          "baseline_snapshot_id": "bc3ddb1f-e7af-496d-ae36-9f393c1eef1d",
+          "line_covered_delta": -1,
+          "line_total_delta": -3,
+          "branch_covered_delta": 0,
+          "branch_total_delta": 0,
+          "function_covered_delta": 0,
+          "function_total_delta": 0,
+          "region_covered_delta": -1,
+          "region_total_delta": -3,
+          "interpretation": "Compared with the previous valid managed snapshot at 82c9a304, this exact-head run removes three impossible rectangular-chroma identity arms. The instrumented denominator falls by three lines and three regions; no new runtime state is claimed as covered. The release target remains open: 10,621 lines, 1,341 branches, 724 functions, and 17,533 regions are uncovered."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 0c05e36b-dd23-47b2-8d6f-a00700bd6638 passed at code-bearing commit 82c9a304 and ingested snapshot bc3ddb1f-e7af-496d-ae36-9f393c1eef1d. It reports 10,623 lines, 1,341 branches, 724 functions, and 17,535 regions uncovered. The R16x8 chroma quantization-matrix fixture is covered by the current matrix, but AVIF STILL-001 remains partial and the four-metric release target remains open."
+      "llvm_coverage": "Managed Coverage MCP run 50f55d49-bb37-457b-abdc-46a1bb83234e passed at code-bearing commit 11559fb6 and ingested snapshot cf72703d-9322-4587-8b03-f39bc2129183. It reports 10,621 lines, 1,341 branches, 724 functions, and 17,533 regions uncovered. The chroma transform mapping cleanup is covered by the current matrix, but it adds no new runtime-state claim; AVIF STILL-001 remains partial and the four-metric release target remains open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -187,7 +187,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run c98e4065-eea9-4be9-97da-d457f9a5c165 at commit 88fd39ed reports 89.5995% lines (11,078 uncovered), 89.8761% branches (1,373 uncovered), 86.4788% functions (758 uncovered), and 88.8373% regions (18,063 uncovered); the ingested snapshot is 7791ec29-3bfb-4454-8ad7-6f5f2c26a7de. The checked sample-depth and odd-width 4:2:2 geometry prerequisites add no public high-depth/4:2:2 capability or aggregate closure, so the four-metric release target remains open until all reach 100%."
+      "evidence": "Managed Coverage MCP run 50f55d49-bb37-457b-abdc-46a1bb83234e at commit 11559fb6 reports 90.0722% lines (10,621 uncovered), 90.1556% branches (1,341 uncovered), 87.1380% functions (724 uncovered), and 89.2138% regions (17,533 uncovered); the ingested snapshot is cf72703d-9322-4587-8b03-f39bc2129183. The exhaustive rectangular chroma transform mapping removes three impossible executable arms and adds a private all-variant contract, but no new runtime-state coverage is claimed. The four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
