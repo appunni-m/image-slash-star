@@ -885,6 +885,41 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b",
         "size": [16, 16],
     },
+    "coverage_adst_public_03.avif": {
+        "file_sha256": "b6d15fa1ceb3eedcd3636ed660c0ed6755ce3a2af3ff6a3b2dcf6fa0b1adcc25",
+        "rgb_sha256": "c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9",
+        "size": [4, 16],
+    },
+    "coverage_adst_public_05.avif": {
+        "file_sha256": "b398d1af52e414bee7e6d2a5ff071b8dd8d9af16d84dc301765f7fd05968537e",
+        "rgb_sha256": "ccf631ee65a05977a2020995f5dc442905ad0c21450f3e3e0df3bd0f0d2b8e11",
+        "size": [8, 16],
+    },
+    "coverage_adst_public_06.avif": {
+        "file_sha256": "d4dc8bcf2e10acc54d24712def595d16a1550b7eacb44eefb58089a50a6b8ce8",
+        "rgb_sha256": "988aef43dcf1c4eeaa0cffee66f3ba32e9c127c0b07996830900b4a79ed07cd6",
+        "size": [16, 8],
+    },
+    "coverage_adst_public_07.avif": {
+        "file_sha256": "0afade55d9a04a29af287c04e2f16a0cfc05758e3531658fd3be569948abe8d0",
+        "rgb_sha256": "a40858233036b25f36900bd39be40e6eda843493ac27b767448b891ac8437492",
+        "size": [8, 32],
+    },
+    "coverage_adst_public_08.avif": {
+        "file_sha256": "0f59e5943381edf9361311a39d6e73a726cb028f9003fed675835104392abe5a",
+        "rgb_sha256": "8b308e80e0a1a904072657a1f8b3472b5b89e37dc01238c8dc6066689a9ebf6a",
+        "size": [32, 8],
+    },
+    "coverage_adst_public_09.avif": {
+        "file_sha256": "866fc5bee5d19bf06df56b90c7b92d72c7725a1ed8aa7384a0cadb931c945a5e",
+        "rgb_sha256": "e0e5a1ae7b7aef892258e7f7f2332f13f959b419ba0f9b14c8edcc9a298e487d",
+        "size": [16, 16],
+    },
+    "coverage_adst_public_10.avif": {
+        "file_sha256": "018eecce2e1f068cfe6ae022bd5e0f48f4a547c736bd946edb6ba45bc6663bcf",
+        "rgb_sha256": "93047df7e452ceca5c0cf243100db0b2e1508e7db35d86dc00ad34b70069db4e",
+        "size": [32, 16],
+    },
 }
 DEBUG_BLOCK_PATTERN = re.compile(
     r"^poc=(?P<poc>-?\d+),y=(?P<y>-?\d+),x=(?P<x>-?\d+),"
