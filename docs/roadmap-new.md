@@ -103,10 +103,10 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `a9c072fe-0fd9-4f59-b975-00c6475fb2c4` passed the
+Managed Coverage MCP run `079fbf19-cb39-4b0a-95ab-32a4418f0fe0` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`2182e314` in 221,640 ms. The required LLVM JSON artifact was ingested
-automatically as snapshot `f006833d-bd93-495e-a4d9-04c40aeff2cb`. It measured
+`4971404d` in 186,015 ms. The required LLVM JSON artifact was ingested
+automatically as snapshot `051dd400-36a6-4236-8a36-2693ddc1bc6a`. It measured
 95,949/106,742 lines (89.8887%), 12,264/13,602 branches (90.1632%), 4,880/5,628 functions (86.7093%), and 144,538/162,176 regions (89.1242%).
 The pinned `coverage_r32x16_origin_01.avif` and
 `coverage_r16x64_grid_01.avif` fixtures now exercise safe-Rust Horizontal32x16
@@ -114,10 +114,10 @@ and Vertical16x64 4:2:0 reconstruction boundaries with exact dav1d topology,
 entropy, plane, matrix, and Pillow RGB evidence. They do not close AVIF
 STILL-001:
 broader partition/block states and the explicit planned gaps remain open.
-Compared with the immediately preceding compatible source-quality snapshot
-`a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5` at commit `f1bfd58b`, covered/total
-deltas are 0/0 for lines, branches, functions, and regions because the second
-commit in this slice only refreshed roadmap and claim-ledger documentation.
+Compared with the immediately preceding compatible snapshot
+`f006833d-bd93-495e-a4d9-04c40aeff2cb` at commit `2182e314`, covered/total
+deltas are 0/0 for lines, branches, functions, and regions: this slice adds
+parity evidence without adding uncovered production regions.
 The strict four-metric release target remains open: 10,793 lines, 1,338
 branches, 748 functions, and 17,638 regions are uncovered. The remaining
 misses are visible in the report, with the largest concentration in the
