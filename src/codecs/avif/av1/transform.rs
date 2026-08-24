@@ -403,28 +403,13 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
 fn inverse_dct4_tx64(input: [i32; 4]) -> [i32; 4] {
     let mut c = input.map(clamp_intermediate);
     let clip = |v: i32| clamp_intermediate(v);
-    let tx64 = true;
     let in0 = c[0];
     let in1 = c[1];
 
-    let t0;
-    let t1;
-    let t2;
-    let t3;
-    if tx64 {
-        t1 = in0 * 181 + 128 >> 8;
-        t0 = t1;
-        t2 = in1 * 1567 + 2048 >> 12;
-        t3 = in1 * 3784 + 2048 >> 12;
-    } else {
-        let in2 = c[2];
-        let in3 = c[3];
-
-        t0 = (in0 + in2) * 181 + 128 >> 8;
-        t1 = (in0 - in2) * 181 + 128 >> 8;
-        t2 = (in1 * 1567 - in3 * (3784 - 4096) + 2048 >> 12) - in3;
-        t3 = (in1 * (3784 - 4096) + in3 * 1567 + 2048 >> 12) + in1;
-    }
+    let t1 = in0 * 181 + 128 >> 8;
+    let t0 = t1;
+    let t2 = in1 * 1567 + 2048 >> 12;
+    let t3 = in1 * 3784 + 2048 >> 12;
 
     c[0] = clip(t0 + t3);
     c[1] = clip(t1 + t2);
@@ -436,7 +421,6 @@ fn inverse_dct4_tx64(input: [i32; 4]) -> [i32; 4] {
 
 fn inverse_dct8_tx64(input: [i32; 8]) -> [i32; 8] {
     let clip = |v: i32| clamp_intermediate(v);
-    let tx64 = true;
     let even = inverse_dct4_tx64(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
@@ -446,24 +430,10 @@ fn inverse_dct8_tx64(input: [i32; 8]) -> [i32; 8] {
     let in1 = c[1];
     let in3 = c[3];
 
-    let t4a;
-    let mut t5a;
-    let mut t6a;
-    let t7a;
-    if tx64 {
-        t4a = in1 * 799 + 2048 >> 12;
-        t5a = in3 * -2276 + 2048 >> 12;
-        t6a = in3 * 3406 + 2048 >> 12;
-        t7a = in1 * 4017 + 2048 >> 12;
-    } else {
-        let in5 = c[5];
-        let in7 = c[7];
-
-        t4a = (in1 * 799 - in7 * (4017 - 4096) + 2048 >> 12) - in7;
-        t5a = in5 * 1703 - in3 * 1138 + 1024 >> 11;
-        t6a = in5 * 1138 + in3 * 1703 + 1024 >> 11;
-        t7a = (in1 * (4017 - 4096) + in7 * 799 + 2048 >> 12) + in1;
-    }
+    let t4a = in1 * 799 + 2048 >> 12;
+    let mut t5a = in3 * -2276 + 2048 >> 12;
+    let mut t6a = in3 * 3406 + 2048 >> 12;
+    let t7a = in1 * 4017 + 2048 >> 12;
 
     let t4 = clip(t4a + t5a);
     t5a = clip(t4a - t5a);
@@ -492,7 +462,6 @@ fn inverse_dct8_tx64(input: [i32; 8]) -> [i32; 8] {
 
 fn inverse_dct16_tx64(input: [i32; 16]) -> [i32; 16] {
     let clip = |v: i32| clamp_intermediate(v);
-    let tx64 = true;
     let even = inverse_dct8_tx64(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
@@ -504,38 +473,14 @@ fn inverse_dct16_tx64(input: [i32; 16]) -> [i32; 16] {
     let in5 = c[5];
     let in7 = c[7];
 
-    let mut t8a;
-    let mut t9a;
-    let mut t10a;
-    let mut t11a;
-    let mut t12a;
-    let mut t13a;
-    let mut t14a;
-    let mut t15a;
-    if tx64 {
-        t8a = in1 * 401 + 2048 >> 12;
-        t9a = in7 * -2598 + 2048 >> 12;
-        t10a = in5 * 1931 + 2048 >> 12;
-        t11a = in3 * -1189 + 2048 >> 12;
-        t12a = in3 * 3920 + 2048 >> 12;
-        t13a = in5 * 3612 + 2048 >> 12;
-        t14a = in7 * 3166 + 2048 >> 12;
-        t15a = in1 * 4076 + 2048 >> 12;
-    } else {
-        let in9 = c[9];
-        let in11 = c[11];
-        let in13 = c[13];
-        let in15 = c[15];
-
-        t8a = (in1 * 401 - in15 * (4076 - 4096) + 2048 >> 12) - in15;
-        t9a = in9 * 1583 - in7 * 1299 + 1024 >> 11;
-        t10a = (in5 * 1931 - in11 * (3612 - 4096) + 2048 >> 12) - in11;
-        t11a = (in13 * (3920 - 4096) - in3 * 1189 + 2048 >> 12) + in13;
-        t12a = (in13 * 1189 + in3 * (3920 - 4096) + 2048 >> 12) + in3;
-        t13a = (in5 * (3612 - 4096) + in11 * 1931 + 2048 >> 12) + in5;
-        t14a = in9 * 1299 + in7 * 1583 + 1024 >> 11;
-        t15a = (in1 * (4076 - 4096) + in15 * 401 + 2048 >> 12) + in1;
-    }
+    let mut t8a = in1 * 401 + 2048 >> 12;
+    let mut t9a = in7 * -2598 + 2048 >> 12;
+    let mut t10a = in5 * 1931 + 2048 >> 12;
+    let mut t11a = in3 * -1189 + 2048 >> 12;
+    let mut t12a = in3 * 3920 + 2048 >> 12;
+    let mut t13a = in5 * 3612 + 2048 >> 12;
+    let mut t14a = in7 * 3166 + 2048 >> 12;
+    let mut t15a = in1 * 4076 + 2048 >> 12;
 
     let t8 = clip(t8a + t9a);
     let mut t9 = clip(t8a - t9a);
@@ -595,7 +540,6 @@ fn inverse_dct16_tx64(input: [i32; 16]) -> [i32; 16] {
 
 fn inverse_dct32_tx64(input: [i32; 32]) -> [i32; 32] {
     let clip = |v: i32| clamp_intermediate(v);
-    let tx64 = true;
     let even = inverse_dct16_tx64(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
@@ -611,66 +555,22 @@ fn inverse_dct32_tx64(input: [i32; 32]) -> [i32; 32] {
     let in13 = c[13];
     let in15 = c[15];
 
-    let mut t16a;
-    let mut t17a;
-    let mut t18a;
-    let mut t19a;
-    let mut t20a;
-    let mut t21a;
-    let mut t22a;
-    let mut t23a;
-    let mut t24a;
-    let mut t25a;
-    let mut t26a;
-    let mut t27a;
-    let mut t28a;
-    let mut t29a;
-    let mut t30a;
-    let mut t31a;
-    if tx64 {
-        t16a = in1 * 201 + 2048 >> 12;
-        t17a = in15 * -2751 + 2048 >> 12;
-        t18a = in9 * 1751 + 2048 >> 12;
-        t19a = in7 * -1380 + 2048 >> 12;
-        t20a = in5 * 995 + 2048 >> 12;
-        t21a = in11 * -2106 + 2048 >> 12;
-        t22a = in13 * 2440 + 2048 >> 12;
-        t23a = in3 * -601 + 2048 >> 12;
-        t24a = in3 * 4052 + 2048 >> 12;
-        t25a = in13 * 3290 + 2048 >> 12;
-        t26a = in11 * 3513 + 2048 >> 12;
-        t27a = in5 * 3973 + 2048 >> 12;
-        t28a = in7 * 3857 + 2048 >> 12;
-        t29a = in9 * 3703 + 2048 >> 12;
-        t30a = in15 * 3035 + 2048 >> 12;
-        t31a = in1 * 4091 + 2048 >> 12;
-    } else {
-        let in17 = c[17];
-        let in19 = c[19];
-        let in21 = c[21];
-        let in23 = c[23];
-        let in25 = c[25];
-        let in27 = c[27];
-        let in29 = c[29];
-        let in31 = c[31];
-
-        t16a = (in1 * 201 - in31 * (4091 - 4096) + 2048 >> 12) - in31;
-        t17a = (in17 * (3035 - 4096) - in15 * 2751 + 2048 >> 12) + in17;
-        t18a = (in9 * 1751 - in23 * (3703 - 4096) + 2048 >> 12) - in23;
-        t19a = (in25 * (3857 - 4096) - in7 * 1380 + 2048 >> 12) + in25;
-        t20a = (in5 * 995 - in27 * (3973 - 4096) + 2048 >> 12) - in27;
-        t21a = (in21 * (3513 - 4096) - in11 * 2106 + 2048 >> 12) + in21;
-        t22a = in13 * 1220 - in19 * 1645 + 1024 >> 11;
-        t23a = (in29 * (4052 - 4096) - in3 * 601 + 2048 >> 12) + in29;
-        t24a = (in29 * 601 + in3 * (4052 - 4096) + 2048 >> 12) + in3;
-        t25a = in13 * 1645 + in19 * 1220 + 1024 >> 11;
-        t26a = (in21 * 2106 + in11 * (3513 - 4096) + 2048 >> 12) + in11;
-        t27a = (in5 * (3973 - 4096) + in27 * 995 + 2048 >> 12) + in5;
-        t28a = (in25 * 1380 + in7 * (3857 - 4096) + 2048 >> 12) + in7;
-        t29a = (in9 * (3703 - 4096) + in23 * 1751 + 2048 >> 12) + in9;
-        t30a = (in17 * 2751 + in15 * (3035 - 4096) + 2048 >> 12) + in15;
-        t31a = (in1 * (4091 - 4096) + in31 * 201 + 2048 >> 12) + in1;
-    }
+    let mut t16a = in1 * 201 + 2048 >> 12;
+    let mut t17a = in15 * -2751 + 2048 >> 12;
+    let mut t18a = in9 * 1751 + 2048 >> 12;
+    let mut t19a = in7 * -1380 + 2048 >> 12;
+    let mut t20a = in5 * 995 + 2048 >> 12;
+    let mut t21a = in11 * -2106 + 2048 >> 12;
+    let mut t22a = in13 * 2440 + 2048 >> 12;
+    let mut t23a = in3 * -601 + 2048 >> 12;
+    let mut t24a = in3 * 4052 + 2048 >> 12;
+    let mut t25a = in13 * 3290 + 2048 >> 12;
+    let mut t26a = in11 * 3513 + 2048 >> 12;
+    let mut t27a = in5 * 3973 + 2048 >> 12;
+    let mut t28a = in7 * 3857 + 2048 >> 12;
+    let mut t29a = in9 * 3703 + 2048 >> 12;
+    let mut t30a = in15 * 3035 + 2048 >> 12;
+    let mut t31a = in1 * 4091 + 2048 >> 12;
 
     let mut t16 = clip(t16a + t17a);
     let mut t17 = clip(t16a - t17a);
