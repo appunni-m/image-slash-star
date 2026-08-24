@@ -102,14 +102,14 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `41ef68db-5a11-425b-8164-e3af5cc82ac9` passed the
+Managed Coverage MCP run `555702e2-fae4-4849-9209-98002f57a069` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`dbb76385`. The required LLVM JSON artifact was ingested automatically as
-snapshot `7fbbb019-e71b-4004-b015-6468e3004a49`. It measured 95,454/106,588 lines
-(89.5542%), 12,192/13,566 branches (89.8717%), 4,848/5,606 functions
-(86.4788%), and 143,730/161,871 regions (88.7929%). The strict four-metric
-verifier remains red because the release target is 100%: 11,134 lines, 1,374
-branches, 758 functions, and 18,141 regions remain uncovered.
+`a06084c2`. The required LLVM JSON artifact was ingested automatically as
+snapshot `667dce48-113b-488d-97d2-d8c2163913ca`. It measured 95,454/106,588 lines
+(89.5542%), 12,193/13,566 branches (89.8791%), 4,848/5,606 functions
+(86.4788%), and 143,731/161,871 regions (88.7935%). The strict four-metric
+verifier remains red because the release target is 100%: 11,134 lines, 1,373
+branches, 758 functions, and 18,140 regions remain uncovered.
 This managed snapshot replaces the stale local current-state baseline, but it
 does not replace the accepted claim-ledger tuple. Compared with the preceding
 final-head snapshot `0b1c4bee-eeef-47c5-8121-9010df2f50ce` at `2df3b39f`, the
@@ -137,7 +137,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 and diff checks. The two gates that remain intentionally open are:
 
-- LLVM coverage: 11,134 lines, 1,374 branches, 758 functions, and 18,141 regions
+- LLVM coverage: 11,134 lines, 1,373 branches, 758 functions, and 18,140 regions
   remain below the 100% release target.
 - The revision-bound claim ledger: its manifest, matrix, coverage-origin, and
   roadmap hashes must be refreshed only on a clean accepted revision with new
@@ -660,17 +660,17 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `dbb76385`, run `41ef68db-5a11-425b-8164-e3af5cc82ac9`, and snapshot
-`7fbbb019-e71b-4004-b015-6468e3004a49`. It replaces the stale local baseline
+commit `a06084c2`, run `555702e2-fae4-4849-9209-98002f57a069`, and snapshot
+`667dce48-113b-488d-97d2-d8c2163913ca`. It replaces the stale local baseline
 for current source-quality accounting; the accepted claim ledger remains
 revision-bound to its own clean release revision.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Lines (managed Coverage MCP) | 95,454 | 106,588 | 89.5542% | 11,134 | 10.4458% |
-| Branches (managed Coverage MCP) | 12,192 | 13,566 | 89.8717% | 1,374 | 10.1283% |
+| Branches (managed Coverage MCP) | 12,193 | 13,566 | 89.8791% | 1,373 | 10.1209% |
 | Functions (managed Coverage MCP) | 4,848 | 5,606 | 86.4788% | 758 | 13.5212% |
-| Regions (managed Coverage MCP) | 143,730 | 161,871 | 88.7929% | 18,141 | 11.2071% |
+| Regions (managed Coverage MCP) | 143,731 | 161,871 | 88.7935% | 18,140 | 11.2065% |
 
 That historical snapshot is `af56a0c3-5bca-4b7a-8e15-29ac36516edc`, produced
 by managed run `8d3e09cb-638c-434a-b7cc-a74ea576e667` with 108/108 tests
@@ -679,8 +679,8 @@ passing and one required artifact ingested. Its original totals were
 109,876/110,011 regions. The current managed LLVM JSON report carries the
 warning that segments are normalized to segment-start lines; aggregate region
 coverage is preserved from its report summary. Compared with the preceding
-final-head snapshot, this slice adds +440 covered lines (total +464), +64
-branches (total +86), +21 functions (total +22), and +641 regions (total +735).
+final-head snapshot, this slice adds +0 covered lines (total +0), +1 branch
+(total +0), +0 functions (total +0), and +1 region (total +0).
 RN-001 therefore remains open for the current source tree: the release target
 is still 100% for all four measures.
 The snapshot does not claim complete format support or close the product
@@ -719,9 +719,9 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-code-bearing commit `dbb76385`; the exact aggregate result and
+code-bearing commit `a06084c2`; the exact aggregate result and
 automatic-ingestion provenance are recorded above. It includes the AV1
-palette2 4:4:4 fixture and safe decoder path.
+palette2 4:4:4 path and the seven public asymmetric-gradient AVIF fixtures.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -730,7 +730,7 @@ from this cleanup checkpoint.
 
 **Done:** not yet. The managed report has no skipped artifact and keeps
 Pillow, Rust-only, and private-model origins distinct, but it reports
-89.5542% lines, 89.8717% branches, 86.4788% functions, and 88.7929% regions.
+89.5542% lines, 89.8791% branches, 86.4788% functions, and 88.7935% regions.
 Close this item only when all four current metrics reach 100% or an explicit,
 reviewed instrumentation decision changes the release target.
 
