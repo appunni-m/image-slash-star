@@ -4170,6 +4170,10 @@ formats:
       description: 32x16 4:2:0 quality-76 speed-0 origin Horizontal32x16 leaf with pinned non-skipped luma and 16x8 chroma reconstruction
       test_assets:
       - coverage_r32x16_origin_01.avif
+    - id: coverage_r32x32_following_01
+      description: 32x32 4:2:0 quality-76 speed-0 horizontal split with pinned following Horizontal32x16 luma and 16x8 chroma reconstruction
+      test_assets:
+      - coverage_r32x32_following_01.avif
     - id: coverage_r16x64_grid_01
       description: 16x64 4:2:0 quality-76 speed-0 standalone Vertical16x64 block with pinned depth-two TX16x16 luma split and nonconstant chroma
       test_assets:

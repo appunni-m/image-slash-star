@@ -2301,6 +2301,12 @@ const QCAT2_LUMA_64X64_SKIP: [u16; 2] = [4_195, 0];
 const QCAT2_LUMA_16X16_EOB_BIN: [u16; 9] = [
     29_679, 28_848, 26_730, 23_308, 18_502, 12_887, 7_002, 3_592, 0,
 ];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_bin_512[0]`,
+// complemented for the portable range decoder. R32x16 and R16x64 share
+// this 512-coefficient EOB sentence.
+const QCAT2_LUMA_16X64_EOB_BIN: [u16; 10] = [
+    30_144, 28_832, 26_288, 23_082, 18_789, 15_042, 9_501, 4_358, 1_690, 0,
+];
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_bin_128[0][1]`,
 // complemented for the portable range decoder. R8x16 uses the one-
 // dimensional row when its selected transform is in the H/V class.
@@ -2368,6 +2374,71 @@ const QCAT2_LUMA_16X16_BASE: [[u16; 4]; 41] = [
     [18_021, 4_653, 1_365, 0],
     [24_223, 11_526, 5_290, 0],
     [28_194, 19_987, 13_701, 0],
+];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2]` transform context three.
+// R32x16 and R16x64 use this context for the EOB-high and coefficient-base
+// sentences; values are complemented for the portable range decoder.
+const QCAT2_LUMA_32X32_EOB_HIGH: [[u16; 2]; 11] = [
+    [9_456, 0],
+    [11_161, 0],
+    [16_242, 0],
+    [13_811, 0],
+    [14_734, 0],
+    [13_834, 0],
+    [8_521, 0],
+    [15_847, 0],
+    [15_688, 0],
+    [16_384, 0],
+    [16_384, 0],
+];
+const QCAT2_LUMA_32X32_EOB_BASE: [[u16; 3]; 4] = [
+    [29_959, 13_467, 0],
+    [563, 146, 0],
+    [430, 38, 0],
+    [982, 152, 0],
+];
+const QCAT2_LUMA_32X32_BASE: [[u16; 4]; 41] = [
+    [28_312, 21_494, 17_235, 0],
+    [11_549, 3_689, 1_152, 0],
+    [21_595, 8_994, 4_201, 0],
+    [25_486, 14_475, 8_505, 0],
+    [27_878, 19_482, 13_653, 0],
+    [30_878, 27_260, 24_109, 0],
+    [6_117, 632, 121, 0],
+    [18_138, 4_514, 1_313, 0],
+    [24_052, 11_481, 5_373, 0],
+    [27_153, 17_437, 10_760, 0],
+    [30_093, 25_068, 20_618, 0],
+    [2_814, 242, 78, 0],
+    [16_642, 3_786, 1_135, 0],
+    [23_738, 11_407, 5_416, 0],
+    [27_357, 17_975, 11_497, 0],
+    [29_825, 24_346, 19_605, 0],
+    [3_229, 167, 38, 0],
+    [14_643, 2_383, 567, 0],
+    [22_346, 8_678, 3_300, 0],
+    [26_300, 15_281, 8_330, 0],
+    [29_798, 24_115, 19_237, 0],
+    [1_856, 53, 20, 0],
+    [12_102, 1_395, 271, 0],
+    [20_259, 6_128, 1_851, 0],
+    [24_710, 12_139, 5_478, 0],
+    [28_537, 20_762, 14_716, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
+    [24_576, 16_384, 8_192, 0],
 ];
 const QCAT2_SUBSAMPLED_CHROMA_SKIP: [[[u16; 2]; 6]; 5] = [
     [
@@ -3756,6 +3827,7 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x8_base_1d = QCAT2_LUMA_8X8_BASE_1D;
                 cdfs.lossy_luma_8x8_high_tokens = QCAT2_LUMA_8X8_HIGH;
                 cdfs.lossy_luma_16x16_eob_bin = QCAT2_LUMA_16X16_EOB_BIN;
+                cdfs.lossy_luma_16x64_eob_bin = QCAT2_LUMA_16X64_EOB_BIN;
                 cdfs.lossy_luma_8x16_eob_bin_1d = QCAT2_LUMA_8X16_EOB_BIN_1D;
                 cdfs.lossy_luma_8x16_eob_high = QCAT2_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_high = QCAT2_LUMA_16X16_EOB_HIGH;
@@ -3763,6 +3835,12 @@ impl BlockCdfs {
                 cdfs.lossy_luma_16x16_base = QCAT2_LUMA_16X16_BASE;
                 cdfs.lossy_luma_8x16_base_1d = QCAT2_LUMA_16X16_BASE;
                 cdfs.lossy_luma_16x16_high_tokens = cdfs.lossy_luma_8x16_high_tokens;
+                cdfs.lossy_luma_32x32_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
+                cdfs.lossy_luma_32x32_eob_base = QCAT2_LUMA_32X32_EOB_BASE;
+                cdfs.lossy_luma_32x32_base = QCAT2_LUMA_32X32_BASE;
+                // dav1d caps `br_tok` at transform context three, so the
+                // 32x32 and 64x64 luma paths share this high-token table.
+                cdfs.lossy_luma_32x32_high_tokens = QCAT2_LUMA_64X64_HIGH;
                 cdfs.lossy_chroma_8x8_eob_bin = QCAT2_CHROMA_8X8_EOB_BIN;
                 cdfs.lossy_chroma_8x8_eob_high = QCAT2_CHROMA_8X8_EOB_HIGH;
                 cdfs.lossy_chroma_8x8_eob_base = QCAT2_CHROMA_8X8_EOB_BASE;
@@ -6938,7 +7016,8 @@ fn decode_lossy_luma_32x32_coefficients(
         };
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
         let mut coefficients = [0_i32; 1024];
-        coefficients[0] = dequantize_lossy_coefficient(decoder, token, negative, 0, quantization)?;
+        coefficients[0] =
+            dequantize_lossy_coefficient_with_shift(decoder, token, negative, 0, quantization, 1)?;
         return Ok(coefficients);
     }
 
@@ -7066,17 +7145,24 @@ fn decode_lossy_luma_32x32_coefficients(
     let mut coefficients = [0_i32; 1024];
     if dc_token != 0 {
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
-        coefficients[0] =
-            dequantize_lossy_coefficient(decoder, dc_token, negative, 0, quantization)?;
+        coefficients[0] = dequantize_lossy_coefficient_with_shift(
+            decoder,
+            dc_token,
+            negative,
+            0,
+            quantization,
+            1,
+        )?;
     }
     for &position in nonzero_positions[..nonzero_count].iter().rev() {
         let negative = decoder.equal();
-        coefficients[position] = dequantize_lossy_coefficient(
+        coefficients[position] = dequantize_lossy_coefficient_with_shift(
             decoder,
             tokens[position],
             negative,
             position,
             quantization,
+            1,
         )?;
     }
     Ok(coefficients)
@@ -10043,6 +10129,7 @@ fn decode_lossy_chroma_4x4_coefficients(
 enum LossyLargeCdfSet {
     Luma4x16,
     Luma16x16,
+    Luma32x16,
     Luma32x32,
     Luma64x64,
     Luma8x16,
@@ -10117,6 +10204,16 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             26,
         ),
+        LossyLargeCdfSet::Luma32x16 => (
+            &[
+                [0, 16, 6, 6, 21],
+                [16, 16, 6, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+            ],
+            41,
+        ),
         LossyLargeCdfSet::Chroma16x16 | LossyLargeCdfSet::Chroma32x32 => (
             &[
                 [0, 1, 6, 6, 21],
@@ -10184,7 +10281,7 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_16x16_base[..],
             &mut cdfs.lossy_luma_16x16_high_tokens[..],
         ),
-        LossyLargeCdfSet::Luma32x32 => (
+        LossyLargeCdfSet::Luma32x16 | LossyLargeCdfSet::Luma32x32 => (
             &mut cdfs.lossy_luma_32x32_eob_high[..],
             &mut cdfs.lossy_luma_32x32_eob_base[..],
             &mut cdfs.lossy_luma_32x32_base[..],
@@ -10239,10 +10336,20 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_chroma_8x4_high_tokens[..],
         ),
     };
-    let chroma_matrix_values = if matches!(cdf_set, LossyLargeCdfSet::Chroma8x16) {
-        chroma_8x16_matrix(quantization, plane)?
+    let chroma_matrix_values = match cdf_set {
+        LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
+        LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
+        _ => None,
+    };
+    let luma_matrix_values = if matches!(cdf_set, LossyLargeCdfSet::Luma32x16) {
+        luma_32x16_matrix(quantization)?
     } else {
         None
+    };
+    let dequant_shift = match cdf_set {
+        LossyLargeCdfSet::Luma32x16 | LossyLargeCdfSet::Luma32x32 => 1,
+        LossyLargeCdfSet::Luma64x64 => 2,
+        _ => 0,
     };
     let dequantize = |decoder: &mut RangeDecoder<'_, '_, '_>,
                       token: u32,
@@ -10261,7 +10368,16 @@ fn decode_lossy_large_two_d_coefficients(
             )
             .map(|(coefficient, _)| coefficient)
         } else {
-            dequantize_lossy_coefficient(decoder, token, negative, index, quantization)
+            dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+                decoder,
+                token,
+                negative,
+                index,
+                quantization,
+                luma_matrix_values,
+                dequant_shift,
+            )
+            .map(|(coefficient, _)| coefficient)
         }
     };
     if eob_bin == 0 {
@@ -10517,6 +10633,7 @@ fn decode_lossy_luma_32x16_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy32x16TransformCoefficients> {
     // R32x16 has the same 512-coefficient EOB family and coefficient-context
     // three sentence as the existing R16x64 path; its scan and level stride
@@ -10527,7 +10644,7 @@ fn decode_lossy_luma_32x16_coefficients(
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_32X16_SCAN,
@@ -10537,7 +10654,7 @@ fn decode_lossy_luma_32x16_coefficients(
             levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X16_LEVELS,
             eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma32x32,
+            cdf_set: LossyLargeCdfSet::Luma32x16,
         },
     )?;
 
@@ -11017,6 +11134,7 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal8x4
         | TransformGrid::Square8
         | TransformGrid::Square16
+        | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
         | TransformGrid::Vertical16x64 => 7,
         _ => 10,
@@ -11902,6 +12020,26 @@ fn dequantize_lossy_coefficient_with_token_using_matrix(
     quantization: LossyQuantization,
     matrix_values: Option<&[u8]>,
 ) -> PortableResult<(i32, u32)> {
+    dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+        decoder,
+        token,
+        negative,
+        index,
+        quantization,
+        matrix_values,
+        0,
+    )
+}
+
+fn dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    token: u32,
+    negative: bool,
+    index: usize,
+    quantization: LossyQuantization,
+    matrix_values: Option<&[u8]>,
+    dequant_shift: u32,
+) -> PortableResult<(i32, u32)> {
     let token = if token == 15 {
         read_golomb(decoder).wrapping_add(15)
     } else {
@@ -11932,7 +12070,7 @@ fn dequantize_lossy_coefficient_with_token_using_matrix(
     // arithmetic used by the reference decoder.
     let dequantized = quantizer.wrapping_mul(token) & 0x00ff_ffff;
     let coefficient_max = 32_767_u32.wrapping_add(u32::from(negative));
-    let magnitude = dequantized.min(coefficient_max) as i32;
+    let magnitude = (dequantized >> dequant_shift).min(coefficient_max) as i32;
     let coefficient = if negative {
         magnitude.wrapping_neg()
     } else {
@@ -11985,6 +12123,17 @@ fn luma_16x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
     }
 }
 
+fn luma_32x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        9 => Ok(Some(&quantization::Y_32X16_MATRIX_9)),
+        10 => Ok(Some(&quantization::Y_32X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn chroma_8x16_matrix(
     quantization: LossyQuantization,
     plane: usize,
@@ -11995,6 +12144,20 @@ fn chroma_8x16_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_8X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_8X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
+fn chroma_16x8_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X8_MATRIX_9)),
+        (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X8_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
 }
@@ -12044,6 +12207,26 @@ fn dequantize_lossy_coefficient(
 ) -> PortableResult<i32> {
     dequantize_lossy_coefficient_with_token(decoder, token, negative, index, quantization)
         .map(|(coefficient, _)| coefficient)
+}
+
+fn dequantize_lossy_coefficient_with_shift(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    token: u32,
+    negative: bool,
+    index: usize,
+    quantization: LossyQuantization,
+    dequant_shift: u32,
+) -> PortableResult<i32> {
+    dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+        decoder,
+        token,
+        negative,
+        index,
+        quantization,
+        None,
+        dequant_shift,
+    )
+    .map(|(coefficient, _)| coefficient)
 }
 
 fn dequantize_lossy_chroma_coefficient_with_token(
@@ -13618,6 +13801,11 @@ fn decode_syntax_with_cdef(
                                 decoder,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_grid(
+                                    transform_grid,
+                                    &above_luma_contexts,
+                                    &left_luma_contexts,
+                                ),
                             );
 
                             lossy_luma_32x16_coefficients = Some(result?);
@@ -13650,6 +13838,10 @@ fn decode_syntax_with_cdef(
                             );
 
                             lossy_chroma_16x8_coefficients[plane.saturating_sub(1)] = Some(result?);
+                            lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
+                                .last_lossy_chroma_residual_context
+                                .take()
+                                .unwrap_or(0x40);
                         }
                     }
                     return Ok([[0_i32; 16]; 64]);
@@ -14394,21 +14586,18 @@ fn decode_syntax_with_cdef(
                 return Err(error);
             }
         };
-
         let plane1 = match decode_plane(decoder, 1, cdfs) {
             Ok(plane) => plane,
             Err(error) => {
                 return Err(error);
             }
         };
-
         let plane2 = match decode_plane(decoder, 2, cdfs) {
             Ok(plane) => plane,
             Err(error) => {
                 return Err(error);
             }
         };
-
         [plane0, plane1, plane2]
     };
     let lossy_luma_residual_context = cdfs.last_lossy_luma_residual_context.take();
@@ -16777,6 +16966,170 @@ fn reconstruct_lossy_luma_32x16_from_prediction(
     let coefficients = coefficients.unwrap_or([0_i32; 512]);
     let residual = transform::inverse_dct32x16(&coefficients);
     reconstruct_lossy_predicted_plane(&prediction, &residual)
+}
+
+fn reconstruct_lossy_luma_32x16_diagonal_z2(
+    top: [u16; 32],
+    left: [u16; 16],
+    angle: i32,
+    coefficients: Option<Lossy32x16TransformCoefficients>,
+) -> PortableResult<ReconstructedPlane> {
+    const DR_INTRA_DERIVATIVE: [i32; 44] = [
+        0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71,
+        64, 0, 57, 51, 0, 45, 0, 40, 35, 0, 31, 27, 0, 23, 19, 0, 15, 0, 11, 0, 7, 3,
+    ];
+    (90 < angle && angle < 180).then_some(()).portable()?;
+    let dy_index =
+        usize::try_from(angle.saturating_sub(90) >> 1).map_err(|_| PortableUnavailable)?;
+    let dx_index =
+        usize::try_from(180_i32.saturating_sub(angle) >> 1).map_err(|_| PortableUnavailable)?;
+    let mut dy = *DR_INTRA_DERIVATIVE.get(dy_index).portable()?;
+    let mut dx = *DR_INTRA_DERIVATIVE.get(dx_index).portable()?;
+    let upsample_above = angle.saturating_sub(90) < 40;
+    let upsample_left = 180_i32.saturating_sub(angle) < 40;
+
+    const WIDTH: usize = 32;
+    const HEIGHT: usize = 16;
+    const TOP_LEFT: usize = 256;
+    let mut edge = [0_u16; WIDTH * HEIGHT];
+    edge[TOP_LEFT] = top[0];
+    if upsample_above {
+        let mut source = [0_u16; 33];
+        source[0] = top[0];
+        source[1..].copy_from_slice(&top);
+        let mut upsampled = [0_u16; 65];
+        const KERNEL: [i32; 4] = [-1, 9, 9, -1];
+        for index in 0_usize..32 {
+            upsampled[index.saturating_mul(2)] = source[index];
+            let mut sum = 0_i32;
+            for (tap, weight) in KERNEL.into_iter().enumerate() {
+                let source_index = index
+                    .saturating_add(tap)
+                    .saturating_sub(1)
+                    .min(source.len().saturating_sub(1));
+                sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
+            }
+            #[expect(
+                clippy::cast_sign_loss,
+                reason = "the upsampled angular edge is explicitly clamped"
+            )]
+            {
+                upsampled[index.saturating_mul(2).saturating_add(1)] =
+                    ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16;
+            }
+        }
+        upsampled[64] = source[32];
+        edge[TOP_LEFT..TOP_LEFT.saturating_add(65)].copy_from_slice(&upsampled);
+        dx = dx.saturating_mul(2);
+    } else {
+        edge[TOP_LEFT.saturating_add(1)..TOP_LEFT.saturating_add(33)].copy_from_slice(&top);
+    }
+
+    if upsample_left {
+        let mut source = [0_u16; 17];
+        source[..16].copy_from_slice(&[
+            left[15], left[14], left[13], left[12], left[11], left[10], left[9], left[8], left[7],
+            left[6], left[5], left[4], left[3], left[2], left[1], left[0],
+        ]);
+        source[16] = top[0];
+        let mut upsampled = [0_u16; 33];
+        const KERNEL: [i32; 4] = [-1, 9, 9, -1];
+        for index in 0_usize..16 {
+            upsampled[index.saturating_mul(2)] = source[index];
+            let mut sum = 0_i32;
+            for (tap, weight) in KERNEL.into_iter().enumerate() {
+                let source_index = index
+                    .saturating_add(tap)
+                    .saturating_sub(1)
+                    .min(source.len().saturating_sub(1));
+                sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
+            }
+            #[expect(
+                clippy::cast_sign_loss,
+                reason = "the upsampled angular edge is explicitly clamped"
+            )]
+            {
+                upsampled[index.saturating_mul(2).saturating_add(1)] =
+                    ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16;
+            }
+        }
+        upsampled[32] = source[16];
+        edge[TOP_LEFT.saturating_sub(32)..=TOP_LEFT].copy_from_slice(&upsampled);
+        dy = dy.saturating_mul(2);
+    } else {
+        for (index, sample) in left.into_iter().enumerate() {
+            edge[TOP_LEFT.saturating_sub(1).saturating_sub(index)] = sample;
+        }
+    }
+
+    let base_increment = if upsample_above { 2_i32 } else { 1_i32 };
+    let left_index = TOP_LEFT.saturating_sub(if upsample_left { 2 } else { 1 });
+    let mut prediction = [0_u16; WIDTH * HEIGHT];
+    for y_index in 0_usize..HEIGHT {
+        let y = i32::try_from(y_index).map_err(|_| PortableUnavailable)?;
+        let xpos = (if upsample_above { 2_i32 } else { 1_i32 })
+            .saturating_mul(64)
+            .saturating_sub(dx.saturating_mul(y.saturating_add(1)));
+        let base_x = xpos >> 6;
+        let frac_x = xpos & 0x3e;
+        for x_index in 0_usize..WIDTH {
+            let x = i32::try_from(x_index).map_err(|_| PortableUnavailable)?;
+            let base_x = base_x.saturating_add(base_increment.saturating_mul(x));
+            let ypos = y
+                .saturating_mul(if upsample_left { 128 } else { 64 })
+                .saturating_sub(dy.saturating_mul(x.saturating_add(1)));
+            let sample = if base_x >= 0 {
+                let first_index = usize::try_from(
+                    i32::try_from(TOP_LEFT)
+                        .map_err(|_| PortableUnavailable)?
+                        .saturating_add(base_x),
+                )
+                .map_err(|_| PortableUnavailable)?;
+                let second_index = first_index.saturating_add(1);
+                let first = i32::from(*edge.get(first_index).portable()?);
+                let second = i32::from(*edge.get(second_index).portable()?);
+                first
+                    .saturating_mul(64_i32.saturating_sub(frac_x))
+                    .saturating_add(second.saturating_mul(frac_x))
+                    .saturating_add(32)
+                    >> 6
+            } else {
+                let base_y = ypos >> 6;
+                let frac_y = ypos & 0x3e;
+                let first_index = usize::try_from(
+                    i32::try_from(left_index)
+                        .map_err(|_| PortableUnavailable)?
+                        .saturating_sub(base_y),
+                )
+                .map_err(|_| PortableUnavailable)?;
+                let second_index = usize::try_from(
+                    i32::try_from(left_index)
+                        .map_err(|_| PortableUnavailable)?
+                        .saturating_sub(base_y.saturating_add(1)),
+                )
+                .map_err(|_| PortableUnavailable)?;
+                let first = i32::from(*edge.get(first_index).portable()?);
+                let second = i32::from(*edge.get(second_index).portable()?);
+                first
+                    .saturating_mul(64_i32.saturating_sub(frac_y))
+                    .saturating_add(second.saturating_mul(frac_y))
+                    .saturating_add(32)
+                    >> 6
+            };
+            #[expect(
+                clippy::cast_sign_loss,
+                reason = "the directional predictor is explicitly clamped to eight-bit range"
+            )]
+            let sample = sample.clamp(0, 255) as u16;
+            *prediction
+                .get_mut(y_index.saturating_mul(WIDTH).saturating_add(x_index))
+                .portable()? = sample;
+        }
+    }
+    Ok(reconstruct_lossy_luma_32x16_from_prediction(
+        prediction,
+        coefficients,
+    ))
 }
 
 fn reconstruct_lossy_luma_32x16_diagonal_z3(
@@ -27363,6 +27716,8 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
     above_left: &ClosedLeaf,
     above_right: &ClosedLeaf,
     left_neighbor: Option<&ClosedLeaf>,
+    above_right_is_above_left: bool,
+    neighbors: &VerticalNeighbors<'_>,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
         luma_predictor,
@@ -27377,19 +27732,21 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
         ..
     } = syntax;
 
-    let luma_top: [u16; 32] = if std::ptr::eq(above_left, above_right) {
-        let edge = bottom_edge_16(&above_left.planes[0]);
-        std::array::from_fn(|index| edge[index % edge.len()])
+    let luma_top: [u16; 32] = if above_right_is_above_left {
+        bottom_edge_at::<32>(
+            &above_left.planes[0],
+            neighbors.above_left_width,
+            neighbors.above_left_x_offset,
+        )
     } else {
-        let left = bottom_edge_16(&above_left.planes[0]);
-        let right = bottom_edge_16(&above_right.planes[0]);
-        std::array::from_fn(|index| {
-            if index < 16 {
-                left[index]
-            } else {
-                right[index - 16]
-            }
-        })
+        combined_bottom_edge::<32>(
+            &above_left.planes[0],
+            neighbors.above_left_width,
+            neighbors.above_left_x_offset,
+            &above_right.planes[0],
+            neighbors.above_right_width,
+            neighbors.above_right_x_offset,
+        )
     };
     let luma_left = left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
         right_edge_16(&neighbor.planes[0])
@@ -27419,9 +27776,14 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
 
         result?
     } else {
+        let luma_dc = if left_neighbor.is_some() {
+            rectangular_dc_predictor(&luma_top, &luma_left)
+        } else {
+            one_sided_dc_predictor_32(luma_top)
+        };
         match luma_predictor {
             LumaPredictor::Dc => reconstruct_lossy_luma_32x16_from_prediction(
-                [rectangular_dc_predictor(&luma_top, &luma_left); 512],
+                [luma_dc; 512],
                 lossy_luma_32x16_coefficients,
             ),
             LumaPredictor::Vertical => reconstruct_lossy_luma_32x16_from_prediction(
@@ -27438,6 +27800,14 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
                 }),
                 lossy_luma_32x16_coefficients,
             ),
+            LumaPredictor::DiagonalDownRight
+            | LumaPredictor::Diagonal113
+            | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_32x16_diagonal_z2(
+                luma_top,
+                luma_left,
+                luma_angle.ok_or(PortableUnavailable)?,
+                lossy_luma_32x16_coefficients,
+            )?,
             LumaPredictor::Diagonal203 => reconstruct_lossy_luma_32x16_diagonal_z3(
                 luma_left,
                 luma_top[0],
@@ -27449,19 +27819,21 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
     };
 
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
-        let top: [u16; 16] = if std::ptr::eq(above_left, above_right) {
-            let edge = bottom_edge(&above_left.planes[plane]);
-            std::array::from_fn(|index| edge[index % edge.len()])
+        let top: [u16; 16] = if above_right_is_above_left {
+            bottom_edge_at::<16>(
+                &above_left.planes[plane],
+                neighbors.above_left_width.div_ceil(2).max(4),
+                neighbors.above_left_x_offset.div_ceil(2),
+            )
         } else {
-            let left = bottom_edge(&above_left.planes[plane]);
-            let right = bottom_edge(&above_right.planes[plane]);
-            std::array::from_fn(|index| {
-                if index < 8 {
-                    left[index]
-                } else {
-                    right[index - 8]
-                }
-            })
+            combined_bottom_edge::<16>(
+                &above_left.planes[plane],
+                neighbors.above_left_width.div_ceil(2).max(4),
+                neighbors.above_left_x_offset.div_ceil(2),
+                &above_right.planes[plane],
+                neighbors.above_right_width.div_ceil(2).max(4),
+                neighbors.above_right_x_offset.div_ceil(2),
+            )
         };
         let left =
             left_neighbor.map_or([top[0]; 8], |neighbor| right_edge(&neighbor.planes[plane]));
@@ -27478,11 +27850,18 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
                     coefficients,
                 )?)
             }
-            ChromaPredictor::Dc => Ok(reconstruct_lossy_chroma_16x8_from_prediction(
-                [rectangular_dc_predictor(&top, &left); 128],
-                coefficients,
-                transform_kind,
-            )),
+            ChromaPredictor::Dc => {
+                let predictor = if left_neighbor.is_some() {
+                    rectangular_dc_predictor(&top, &left)
+                } else {
+                    one_sided_dc_predictor_16(top)
+                };
+                Ok(reconstruct_lossy_chroma_16x8_from_prediction(
+                    [predictor; 128],
+                    coefficients,
+                    transform_kind,
+                ))
+            }
             ChromaPredictor::Vertical => Ok(reconstruct_lossy_chroma_16x8_from_prediction(
                 std::array::from_fn(|index| top[index % 16]),
                 coefficients,
@@ -36881,10 +37260,7 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         );
-        let syntax = match syntax {
-            Ok(syntax) => syntax,
-            Err(_) => return Err(PortableUnavailable),
-        };
+        let syntax = syntax.map_err(|_| PortableUnavailable)?;
         self.remember_qindex(&syntax, decoder);
 
         let luma_context = lossy_luma_context(&syntax);
@@ -37532,6 +37908,8 @@ impl Lossy420Decoder {
                 &above_left,
                 &above_right,
                 left_neighbor.as_ref(),
+                above_right_is_above_left,
+                &neighbors,
             );
 
             return result.map(visible);

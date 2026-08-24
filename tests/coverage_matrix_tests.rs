@@ -4693,7 +4693,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 182);
+    assert_eq!(expected.cases.len(), 183);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5184,6 +5184,52 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 Horizontal32x16 origin witness must decode both 16x8 chroma planes"
             );
         }
+        if case.fixture == "coverage_r32x32_following_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 1,
+                    range: 38_976,
+                }],
+                "AV1 following Horizontal32x16 witness partition topology"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let leaf_state_lines = debug_lines
+                .iter()
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .copied()
+                .collect::<Vec<_>>();
+            assert_eq!(
+                leaf_state_lines,
+                vec![
+                    "Post-skip[0]: r=37680",
+                    "Post-tx[10]: r=45544",
+                    "Post-y-cf-blk[tx=10,txtp=0,eob=503]: r=62216",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=35]: r=38152 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=64776 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=62748",
+                    "Post-tx[10]: r=41838",
+                    "Post-y-cf-blk[tx=10,txtp=0,eob=272]: r=43016",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=35]: r=36360 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=40200 [x=0,cbx4=0]",
+                ],
+                "AV1 following Horizontal32x16 witness leaf states"
+            );
+        }
         assert_eq!(case.decoded_planes.len(), 3);
         for (plane_index, (actual, expected)) in
             actual.planes.iter().zip(&case.decoded_planes).enumerate()
@@ -5671,6 +5717,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x16_origin_01.avif" => {
                 "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328"
+            }
+            "coverage_r32x32_following_01.avif" => {
+                "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
