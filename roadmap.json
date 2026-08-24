@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 95014,
-        "total": 106124,
-        "percent": 89.5311,
-        "uncovered": 11110
+        "covered": 95454,
+        "total": 106588,
+        "percent": 89.5542,
+        "uncovered": 11134
       },
       "branch": {
-        "covered": 12128,
-        "total": 13480,
-        "percent": 89.9703,
-        "uncovered": 1352
+        "covered": 12192,
+        "total": 13566,
+        "percent": 89.8717,
+        "uncovered": 1374
       },
       "function": {
-        "covered": 4827,
-        "total": 5584,
-        "percent": 86.4434,
-        "uncovered": 757
+        "covered": 4848,
+        "total": 5606,
+        "percent": 86.4788,
+        "uncovered": 758
       },
       "region": {
-        "covered": 143089,
-        "total": 161136,
-        "percent": 88.8001,
-        "uncovered": 18047
+        "covered": 143730,
+        "total": 161871,
+        "percent": 88.7929,
+        "uncovered": 18141
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "2df3b39fb57d05f9e6c7f4435acd97af41015e1d",
-        "run_id": "37bc6572-4b2f-4236-85cd-3d6c713faacc",
-        "snapshot_id": "0b1c4bee-eeef-47c5-8121-9010df2f50ce",
+        "commit_sha": "dbb763857e5e2635e2c12e749887daf979b8c449",
+        "run_id": "41ef68db-5a11-425b-8164-e3af5cc82ac9",
+        "snapshot_id": "7fbbb019-e71b-4004-b015-6468e3004a49",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 157152,
+        "duration_ms": 156709,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at this exact commit and automatically ingested the required LLVM JSON artifact. The verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full test workload at this exact code-bearing commit and automatically ingested the required LLVM JSON artifact. The verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "dc4009a06da9d88286c325ad8d82276d73a20340",
-          "baseline_snapshot_id": "735c8895-72d3-44b6-b641-1c6de07ff14c",
-          "line_covered_delta": 0,
-          "line_total_delta": 0,
-          "branch_covered_delta": 0,
-          "branch_total_delta": 0,
-          "function_covered_delta": 0,
-          "function_total_delta": 0,
-          "region_covered_delta": 0,
-          "region_total_delta": 0,
-          "interpretation": "The final 2df3b39f commit changes only README.md, docs/roadmap-new.md, and roadmap.json after the code-bearing dc4009a0 snapshot; Coverage MCP reports identical aggregate counters and no executable changed-code coverage delta."
+          "baseline_commit": "2df3b39fb57d05f9e6c7f4435acd97af41015e1d",
+          "baseline_snapshot_id": "0b1c4bee-eeef-47c5-8121-9010df2f50ce",
+          "line_covered_delta": 440,
+          "line_total_delta": 464,
+          "branch_covered_delta": 64,
+          "branch_total_delta": 86,
+          "function_covered_delta": 21,
+          "function_total_delta": 22,
+          "region_covered_delta": 641,
+          "region_total_delta": 735,
+          "interpretation": "The AV1 palette2 4:4:4 fixture and safe decoder path add measured executable surface. Coverage MCP reports +440 covered lines (+464 total), +64 covered branches (+86 total), +21 covered functions (+22 total), and +641 covered regions (+735 total) versus the preceding final-head snapshot; the four-metric release target remains open."
         }
       },
       "coverage_origin_inventory": {
@@ -135,7 +135,7 @@
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 37bc6572-4b2f-4236-85cd-3d6c713faacc at 2df3b39f reports 11,110 lines, 1,352 branches, 757 functions, and 18,047 regions uncovered in snapshot 0b1c4bee-eeef-47c5-8121-9010df2f50ce; the required artifact ingested automatically and the four-metric release target remains 100%.",
+      "llvm_coverage": "Managed Coverage MCP run 41ef68db-5a11-425b-8164-e3af5cc82ac9 at dbb76385 reports 11,134 lines, 1,374 branches, 758 functions, and 18,141 regions uncovered in snapshot 7fbbb019-e71b-4004-b015-6468e3004a49; the required artifact ingested automatically and the four-metric release target remains 100%.",
       "claim_ledger": "Revision-bound hashes for manifest.yaml, coverage_matrix.json, coverage_origin_manifest.json, and roadmap.json intentionally remain stale until a clean accepted revision has fresh managed evidence; the verifier is not weakened."
     },
     "next_json_ordered_work": "AVF-STILL-001"
@@ -186,7 +186,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run 37bc6572-4b2f-4236-85cd-3d6c713faacc at commit 2df3b39f reports 89.5311% lines (11,110 uncovered), 89.9703% branches (1,352 uncovered), 86.4434% functions (757 uncovered), and 88.8001% regions (18,047 uncovered); the ingested snapshot is 0b1c4bee-eeef-47c5-8121-9010df2f50ce and the four-metric release target remains open until all reach 100%."
+        "evidence": "Managed Coverage MCP run 41ef68db-5a11-425b-8164-e3af5cc82ac9 at commit dbb76385 reports 89.5542% lines (11,134 uncovered), 89.8717% branches (1,374 uncovered), 86.4788% functions (758 uncovered), and 88.7929% regions (18,141 uncovered); the ingested snapshot is 7fbbb019-e71b-4004-b015-6468e3004a49 and the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
