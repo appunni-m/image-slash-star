@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1458,
-      "decode_rows": 1061,
+      "total_rows": 1459,
+      "decode_rows": 1062,
       "encode_rows": 397,
-      "decode_active": 1054,
+      "decode_active": 1055,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 234,
-      "decode_active": 227,
+      "decode_rows": 235,
+      "decode_active": 228,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -54,50 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 95025,
-        "total": 106104,
-        "percent": 89.5584,
-        "uncovered": 11079
+        "covered": 95014,
+        "total": 106124,
+        "percent": 89.5311,
+        "uncovered": 11110
       },
       "branch": {
-        "covered": 12130,
-        "total": 13478,
-        "percent": 89.9985,
-        "uncovered": 1348
+        "covered": 12128,
+        "total": 13480,
+        "percent": 89.9703,
+        "uncovered": 1352
       },
       "function": {
-        "covered": 4828,
-        "total": 5582,
-        "percent": 86.4923,
-        "uncovered": 754
+        "covered": 4827,
+        "total": 5584,
+        "percent": 86.4434,
+        "uncovered": 757
       },
       "region": {
-        "covered": 143100,
-        "total": 161107,
-        "percent": 88.823,
-        "uncovered": 18007
+        "covered": 143089,
+        "total": 161136,
+        "percent": 88.8001,
+        "uncovered": 18047
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "cc8d67e96b5911927a49d71d7db2e05fb02feca7",
-        "run_id": "aab2ac3e-c017-4625-8906-eff40ef4f4e7",
-        "snapshot_id": "56f1a7e2-3548-4758-9fed-93581c4679df",
+        "commit_sha": "dc4009a06da9d88286c325ad8d82276d73a20340",
+        "run_id": "4eb6fb24-e98c-438a-8703-4a343298f9af",
+        "snapshot_id": "735c8895-72d3-44b6-b641-1c6de07ff14c",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 181534,
+        "duration_ms": 154179,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at this exact commit; automatic ingestion hit a transient DuckDB timeout, then Coverage MCP imported the unchanged repository-relative report as the recorded snapshot. The verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full test workload at this exact commit and automatically ingested the required LLVM JSON artifact. The verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "eb0945aefd22c69b7e9dd6204d41af4480629609",
-          "baseline_snapshot_id": "bd5fbf94-e50a-4d02-9e0b-03fde5e04ad3",
-          "line_covered_delta": 0,
-          "line_total_delta": 0,
-          "branch_covered_delta": 0,
-          "function_covered_delta": 0,
-          "region_covered_delta": 0,
-          "interpretation": "The new fixture and raster contract do not change the compiled production denominator or aggregate counters; Coverage MCP changed-code review reports the committed documentation/manifest additions as unmeasured and the source coverage as unchanged."
+          "baseline_commit": "cc8d67e96b5911927a49d71d7db2e05fb02feca7",
+          "baseline_snapshot_id": "56f1a7e2-3548-4758-9fed-93581c4679df",
+          "line_covered_delta": -11,
+          "line_total_delta": 20,
+          "branch_covered_delta": -2,
+          "branch_total_delta": 2,
+          "function_covered_delta": -1,
+          "function_total_delta": 2,
+          "region_covered_delta": -11,
+          "region_total_delta": 29,
+          "interpretation": "The promoted full-chroma AVIF fixture adds one active decode row and new AV1 reconstruction code. The managed aggregate remains below the 100% release target; Coverage MCP changed-code review identifies the new block reconstruction path as the next coverage work rather than treating the fixture as complete coverage."
         }
       },
       "coverage_origin_inventory": {
@@ -132,7 +135,7 @@
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run aab2ac3e-c017-4625-8906-eff40ef4f4e7 at cc8d67e reports 11,079 lines, 1,348 branches, 754 functions, and 18,007 regions uncovered; its report was imported as snapshot 56f1a7e2-3548-4758-9fed-93581c4679df after an automatic DuckDB ingest timeout, and the four-metric release target remains 100%.",
+      "llvm_coverage": "Managed Coverage MCP run 4eb6fb24-e98c-438a-8703-4a343298f9af at dc4009a0 reports 11,110 lines, 1,352 branches, 757 functions, and 18,047 regions uncovered in snapshot 735c8895-72d3-44b6-b641-1c6de07ff14c; the required artifact ingested automatically and the four-metric release target remains 100%.",
       "claim_ledger": "Revision-bound hashes for manifest.yaml, coverage_matrix.json, coverage_origin_manifest.json, and roadmap.json intentionally remain stale until a clean accepted revision has fresh managed evidence; the verifier is not weakened."
     },
     "next_json_ordered_work": "AVF-STILL-001"
@@ -183,7 +186,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run aab2ac3e-c017-4625-8906-eff40ef4f4e7 at commit cc8d67e reports 89.5584% lines (11,079 uncovered), 89.9985% branches (1,348 uncovered), 86.4923% functions (754 uncovered), and 88.8230% regions (18,007 uncovered); the imported snapshot is 56f1a7e2-3548-4758-9fed-93581c4679df and the four-metric release target remains open until all reach 100%."
+        "evidence": "Managed Coverage MCP run 4eb6fb24-e98c-438a-8703-4a343298f9af at commit dc4009a0 reports 89.5311% lines (11,110 uncovered), 89.9703% branches (1,352 uncovered), 86.4434% functions (757 uncovered), and 88.8001% regions (18,047 uncovered); the ingested snapshot is 735c8895-72d3-44b6-b641-1c6de07ff14c and the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
