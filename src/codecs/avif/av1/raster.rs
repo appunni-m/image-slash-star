@@ -1255,6 +1255,18 @@ mod tests {
     }
 
     #[test]
+    fn crops_bottom_edge_of_padded_partition_leaf() -> Av1Result<()> {
+        let mut canvas = FrameCanvas::new(8, 4, false, false)?;
+        let planes = [plane(8, 8, 11), plane(8, 8, 22), plane(8, 8, 33)];
+        canvas.place_partition_leaf(0, 0, 2, 2, &planes)?;
+        let [luma, u, v] = canvas.finish()?;
+        assert_eq!(luma.samples, vec![11; 32]);
+        assert_eq!(u.samples, vec![22; 32]);
+        assert_eq!(v.samples, vec![33; 32]);
+        Ok(())
+    }
+
+    #[test]
     fn validates_a_cell_batch_before_copying_any_cell() -> Av1Result<()> {
         let first = [plane(2, 2, 1), plane(2, 2, 10), plane(2, 2, 20)];
         let second = [plane(2, 2, 2), plane(2, 2, 30), plane(2, 2, 40)];
