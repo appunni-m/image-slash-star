@@ -309,12 +309,12 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         } else {
             (u_plane.samples[index], v_plane.samples[index])
         };
-        let y = super::av1::normalize_full_range(y_sample, still.bit_depth)?;
-        let u = super::av1::normalize_full_range(u_sample, still.bit_depth)?;
-        let v = super::av1::normalize_full_range(v_sample, still.bit_depth)?;
+        let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
+        let u = super::av1::truncate_to_u8(u_sample, still.bit_depth)?;
+        let v = super::av1::truncate_to_u8(v_sample, still.bit_depth)?;
         pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
         if let Some(alpha_plane) = &still.alpha_plane {
-            pixels.push(super::av1::normalize_full_range(
+            pixels.push(super::av1::truncate_to_u8(
                 alpha_plane.samples[index],
                 still.bit_depth,
             )?);

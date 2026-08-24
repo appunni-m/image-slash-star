@@ -8,23 +8,21 @@
 //! prove reconstruction first and then call this boundary without unchecked
 //! shifts or narrowing casts.
 
-/// Normalize one full-range nominal AVIF sample to an 8-bit transfer sample.
+/// Truncate one validated AVIF sample to the crate's 8-bit transfer boundary.
 ///
-/// The conversion is rounded to nearest over the nominal `[0, 2^depth - 1]`
-/// range. A sample outside that range is rejected instead of being silently
-/// clipped; clipping belongs to a codec-defined reconstruction stage, not to
-/// this public representation boundary.
-pub(crate) fn normalize_full_range(value: u16, bit_depth: u32) -> Option<u8> {
+/// High-bit-depth AVIF conversion for the target Pillow-compatible path is a
+/// bit truncation, not a rounded full-range rescale. Keeping that distinction
+/// explicit prevents a later decoder stage from accidentally changing the
+/// requested conversion semantics while still rejecting samples outside the
+/// declared nominal range.
+pub(crate) fn truncate_to_u8(value: u16, bit_depth: u32) -> Option<u8> {
     let maximum = maximum_sample(bit_depth)?;
     let value = u32::from(value);
     if value > maximum {
         return None;
     }
-    let scaled = value
-        .checked_mul(255)?
-        .checked_add(maximum / 2)?
-        .checked_div(maximum)?;
-    u8::try_from(scaled).ok()
+    let shift = bit_depth.checked_sub(8)?;
+    u8::try_from(value.checked_shr(shift)?).ok()
 }
 
 fn maximum_sample(bit_depth: u32) -> Option<u32> {
@@ -36,28 +34,31 @@ fn maximum_sample(bit_depth: u32) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_full_range;
+    use super::truncate_to_u8;
 
     #[test]
-    fn normalizes_the_endpoints_for_each_avif_depth() {
+    fn truncates_the_endpoints_for_each_avif_depth() {
         for bit_depth in [8, 10, 12] {
             let maximum = (1_u16 << bit_depth) - 1;
-            assert_eq!(normalize_full_range(0, bit_depth), Some(0));
-            assert_eq!(normalize_full_range(maximum, bit_depth), Some(255));
+            assert_eq!(truncate_to_u8(0, bit_depth), Some(0));
+            assert_eq!(truncate_to_u8(maximum, bit_depth), Some(255));
         }
     }
 
     #[test]
-    fn rounds_a_high_depth_midpoint() {
-        assert_eq!(normalize_full_range(512, 10), Some(128));
-        assert_eq!(normalize_full_range(2_048, 12), Some(128));
+    fn truncates_high_depth_samples_at_the_declared_boundary() {
+        assert_eq!(truncate_to_u8(0, 10), Some(0));
+        assert_eq!(truncate_to_u8(1_023, 10), Some(255));
+        assert_eq!(truncate_to_u8(2_048, 12), Some(128));
+        assert_eq!(truncate_to_u8(4_095, 12), Some(255));
+        assert_eq!(truncate_to_u8(255, 8), Some(255));
     }
 
     #[test]
     fn rejects_invalid_depths_and_out_of_range_samples() {
-        assert_eq!(normalize_full_range(0, 7), None);
-        assert_eq!(normalize_full_range(0, 13), None);
-        assert_eq!(normalize_full_range(256, 8), None);
-        assert_eq!(normalize_full_range(4_096, 12), None);
+        assert_eq!(truncate_to_u8(0, 7), None);
+        assert_eq!(truncate_to_u8(0, 13), None);
+        assert_eq!(truncate_to_u8(256, 8), None);
+        assert_eq!(truncate_to_u8(4_096, 12), None);
     }
 }
