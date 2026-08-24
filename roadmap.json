@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-24",
-  "claim_ledger_base_revision": "79e0786cf779ed7c9b4ff1684f35d8601d40ee31",
+  "claim_ledger_base_revision": "06bb14ae7cf716cf4556b3d75bf2a03946c69758",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
