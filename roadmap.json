@@ -82,16 +82,16 @@
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "2182e314487743b701a4dd054230d46429395d47",
-        "run_id": "a9c072fe-0fd9-4f59-b975-00c6475fb2c4",
-        "snapshot_id": "f006833d-bd93-495e-a4d9-04c40aeff2cb",
+        "commit_sha": "4971404d0292cee72ac4d8663dd92f2830439da0",
+        "run_id": "079fbf19-cb39-4b0a-95ab-32a4418f0fe0",
+        "snapshot_id": "051dd400-36a6-4236-8a36-2693ddc1bc6a",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 221640,
+        "duration_ms": 186015,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full all-feature workload at code-bearing commit 2182e314 and automatically ingested the required LLVM JSON artifact as snapshot f006833d. It records 89.8887% lines, 90.1632% branches, 86.7093% functions, and 89.1242% regions; the four-metric release target remains open until all reach 100%. The pinned Horizontal32x16 and Vertical16x64 4:2:0 reconstruction fixtures are covered by the matrix and exact dav1d/Pillow checks, but AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
+        "note": "The managed command passed the full all-feature workload at code-bearing commit 4971404d and automatically ingested the required LLVM JSON artifact as snapshot 051dd400. It records 89.8887% lines, 90.1632% branches, 86.7093% functions, and 89.1242% regions; the four-metric release target remains open until all reach 100%. The pinned Horizontal32x16 and Vertical16x64 4:2:0 reconstruction fixtures are covered by the matrix and exact dav1d/Pillow checks, but AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "f1bfd58b1518f58f2003145654e1439f51f149e1",
-          "baseline_snapshot_id": "a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5",
+          "baseline_commit": "2182e314487743b701a4dd054230d46429395d47",
+          "baseline_snapshot_id": "f006833d-bd93-495e-a4d9-04c40aeff2cb",
           "line_covered_delta": 0,
           "line_total_delta": 0,
           "branch_covered_delta": 0,
@@ -100,7 +100,7 @@
           "function_total_delta": 0,
           "region_covered_delta": 0,
           "region_total_delta": 0,
-          "interpretation": "The current managed run is measured at the exact current commit and is unchanged from the immediately preceding compatible source-quality snapshot because the second commit in this slice only refreshed roadmap and claim-ledger documentation. The release target remains open: 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions are uncovered."
+          "interpretation": "The current managed run is measured at the exact code-bearing commit and is unchanged from the immediately preceding compatible snapshot: the new Horizontal32x16 fixture adds parity evidence but does not add uncovered production regions. The release target remains open: 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions are uncovered."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run a9c072fe-0fd9-4f59-b975-00c6475fb2c4 passed at code-bearing commit 2182e314 and ingested snapshot f006833d-bd93-495e-a4d9-04c40aeff2cb. It reports 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions uncovered. The pinned Vertical16x64 AVIF fixture is covered by the current matrix, but AVIF STILL-001 remains partial and the four-metric release target remains 100%."
+      "llvm_coverage": "Managed Coverage MCP run 079fbf19-cb39-4b0a-95ab-32a4418f0fe0 passed at code-bearing commit 4971404d and ingested snapshot 051dd400-36a6-4236-8a36-2693ddc1bc6a. It reports 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions uncovered. The pinned Horizontal32x16 and Vertical16x64 AVIF fixtures are covered by the current matrix, but AVIF STILL-001 remains partial and the four-metric release target remains open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
