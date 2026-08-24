@@ -103,22 +103,22 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309` passed the
+Managed Coverage MCP run `953da2c7-5d0b-4150-9725-2b291b18b87f` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`79e0786c` in 159,610 ms. The required LLVM JSON artifact was ingested
-automatically as snapshot `8870928a-8cdd-411f-b5ce-f976b7ef06e0`. It measured
-95,454/106,588 lines (89.5542%), 12,193/13,566 branches (89.8791%), 4,848/5,606 functions (86.4788%), and 143,730/161,871 regions (88.7929%).
-The two promoted R8x16 fixtures add exact independent reconstruction evidence
-but no aggregate executable line, branch, or function coverage; the strict
+`c687cf4f` in 157,181 ms. The required LLVM JSON artifact was ingested
+automatically as snapshot `5f6a7869-beae-411d-9760-5896e35d31b2`. It measured
+95,451/106,585 lines (89.5539%), 12,193/13,566 branches (89.8791%), 4,848/5,606 functions (86.4788%), and 143,729/161,870 regions (88.7929%).
+The primary-item/sequence validation boundary and corrected luma-table oracle
+add no aggregate executable line, branch, or function coverage; the strict
 four-metric verifier remains red because the release target is 100%: 11,134
 lines, 1,373 branches, 758 functions, and 18,141 regions remain uncovered.
-This managed snapshot replaces the stale local current-state baseline and is
-bound into the current claim-ledger refresh. Compared with the immediately
-preceding snapshot `667dce48-113b-488d-97d2-d8c2163913ca`, line, branch, and
-function counters are unchanged and the covered-region counter is one lower.
-This fixture-only slice receives no aggregate coverage credit; the remaining
-misses are visible in the report, and the largest AVIF-specific concentration
-is the intentionally unimplemented decode and encode surface listed below.
+This managed snapshot is the current source-quality accounting; the accepted
+claim ledger remains bound to its own clean release revision. Compared with
+the immediately preceding snapshot `26e35242-86ab-4b83-b0e4-5e06edfd2709`,
+line, branch, and function counters are unchanged and the covered-region
+counter is one lower. The remaining misses are visible in the report, and
+the largest AVIF-specific concentration is the intentionally unimplemented
+decode and encode surface listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
@@ -655,24 +655,23 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `79e0786c`, run `f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309`, and snapshot
-`8870928a-8cdd-411f-b5ce-f976b7ef06e0`. It replaces the stale local baseline
+commit `c687cf4f`, run `953da2c7-5d0b-4150-9725-2b291b18b87f`, and snapshot
+`5f6a7869-beae-411d-9760-5896e35d31b2`. It replaces the stale local baseline
 for current source-quality accounting; the accepted claim ledger remains
 revision-bound to its own clean release revision.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 95,454 | 106,588 | 89.5542% | 11,134 | 10.4458% |
+| Lines (managed Coverage MCP) | 95,451 | 106,585 | 89.5539% | 11,134 | 10.4461% |
 | Branches (managed Coverage MCP) | 12,193 | 13,566 | 89.8791% | 1,373 | 10.1209% |
 | Functions (managed Coverage MCP) | 4,848 | 5,606 | 86.4788% | 758 | 13.5212% |
-| Regions (managed Coverage MCP) | 143,730 | 161,871 | 88.7929% | 18,141 | 11.2071% |
+| Regions (managed Coverage MCP) | 143,729 | 161,870 | 88.7929% | 18,141 | 11.2071% |
 
 The immediately preceding comparison snapshot is
-`667dce48-113b-488d-97d2-d8c2163913ca`, produced by managed run
-`555702e2-fae4-4849-9209-98002f57a069`. The new managed run passed with one
+`26e35242-86ab-4b83-b0e4-5e06edfd2709`. The new managed run passed with one
 required artifact ingested. Coverage MCP reports unchanged line, branch, and
-function counters and one fewer covered region; this fixture-only slice gets
-no aggregate coverage credit. The current managed LLVM JSON report carries
+function counters and one fewer covered region; this validation-boundary and
+test-oracle slice gets no aggregate coverage credit. The current managed LLVM JSON report carries
 the warning that segments are normalized to segment-start lines; aggregate
 region coverage is preserved from its report summary. RN-001 therefore
 remains open for the current source tree: the release target is still 100% for
@@ -713,10 +712,10 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-code-bearing commit `79e0786c`; the exact aggregate result and
-automatic-ingestion provenance are recorded above. It includes the two
-promoted R8x16 4:2:0 reconstruction fixtures and their exact pinned dav1d and
-Pillow evidence.
+code-bearing commit `c687cf4f`; the exact aggregate result and
+automatic-ingestion provenance are recorded above. This slice records the
+primary-item/sequence validation boundary and the corrected luma-table oracle;
+it does not claim aggregate coverage improvement.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -1604,7 +1603,7 @@ the decoder, not an excuse to route around Rust.
 | Adjacent entropy and tile syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | These are nearby AV1 bitstream sentences. The safe decoder now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes with independent ramp/diagonal fixtures; these two byte mutations are rejected by the independent decoder and remain explicit negative planned controls. Empty-tile malformed input and the adjacent lossy DC predictor are active. |
 | Sample depth and future alpha variants | `high_bitdepth` (the committed `with_alpha` row is active) | A picture may use more than 8 bits or carry a second transparency picture. Pure safe Rust now decodes the committed 64×64 alpha pair to exact RGBA8 pixels; 10/12-bit reconstruction and broader alpha relationships/depths remain explicit future work. |
 | Color | `hdr` | HDR changes how numbers become colors. It needs explicit safe-Rust bounds, declared color conversion, and metadata rules. |
-| Sequences and frame identity | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | A movie is many pictures plus timing and frame IDs. Safe Rust now rejects the repeated current-ID error case; first-frame materialization, track presentation, and partial-state rules remain. |
+| Sequences and frame identity | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | A movie is many pictures plus timing and frame IDs. Safe Rust now rejects the repeated current-ID error case and keeps a primary item independently eligible from a later movie track; first-frame materialization, track presentation, and partial-state rules remain. |
 | Multi-tile frame payloads | Closed: `multitile` | Large AV1 frames can split work into independently sized tiles. The committed 256×128 two-column fixture now proves checked tile-size parsing, tile-local reconstruction, one-time canvas placement, frame-global deblocking/CDEF, and exact independent pixels; broader tile shapes remain in the implementation work item. |
 
 All 32 AVIF encode rows are also planned: still conversion/modes, quality and
@@ -1683,7 +1682,7 @@ planes.
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
 | `AVF-COLOR-001` declared color pipeline | `hdr` | Implement transfer, primaries, matrix, range, and sample-position conversion with bounded arithmetic and explicit source metadata. | Planned; current RGB conversion is the narrow 8-bit BT.601 full-range class. |
 | `AVF-COMPOSE-001` grid canvas | broader grid counts, dimensions, and relationships | Decode each referenced color/alpha cell, validate cell geometry, place cells in a bounded canvas, and apply relationships without treating metadata inspection as pixel composition. | Implemented for the committed `grid.avif` fixture: safe Rust decodes both 80×64 color cells and their monochrome auxiliary alpha cells, validates complete 80×80 coverage, crops the second row to 80×16, and matches the exact 25,600-byte RGBA8 reference. Broader grid counts, dimensions, tile-boundary contexts, and relationships remain open. |
-| `AVF-SEQUENCE-001` track presentation | `animated`; `animated_error_resilient`; repeated-ID case | Parse sample tables, retain frame state and references, enforce IDs/timing/limits, and present frames with default-image and disposal/blend rules. | Planned; stateful validation rejects the named repeated-ID error, but no multi-frame presentation exists. |
+| `AVF-SEQUENCE-001` track presentation | `animated`; `animated_error_resilient`; repeated-ID case | Parse sample tables, retain frame state and references, enforce IDs/timing/limits, and present frames with default-image and disposal/blend rules. | Planned; stateful validation rejects the named repeated-ID error and primary-item validation is independent from a later movie track, but no multi-frame presentation exists. |
 | `AVF-TILE-001` tile raster | broader tile counts/shapes | Decode independently sized tile payloads into one frame canvas with tile-local bounds and shared state only where the AV1 syntax requires it. | Implemented for the committed 256×128 two-column `multitile.avif` fixture: safe Rust decodes and places both tile payloads exactly once, applies frame-global deblocking/CDEF, and matches the independent 98,304-byte RGB reference; the focused reconstruction proof also matches real dav1d all-filter YUV byte-for-byte. Broader tile counts, size combinations, boundary contexts, and full-frame references remain open. |
 | `AVF-ENCODE-001` encoder | all 32 encode rows | Write the AVIF container and a safe Rust AV1 intra encoder, then round-trip emitted bytes through an independent decoder. | Planned; no native or pure-Rust encoder is currently wired. |
 
