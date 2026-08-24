@@ -4170,6 +4170,10 @@ formats:
       description: 16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace
       test_assets:
       - coverage_i444_square8_four_leaves.avif
+    - id: coverage_i444_palette2_square8_four_leaves
+      description: 16x16 lossy 4:4:4 quality-99 frame with paired Y/UV size-2 palettes, four terminal 8x8 leaves, and spatial cache reuse; pinned dav1d topology and entropy trace
+      test_assets:
+      - coverage_i444_palette2_square8_four_leaves.avif
     - id: high_bitdepth
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:

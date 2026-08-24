@@ -345,7 +345,6 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
 
     // ✅ VERIFIED: dav1d 1.5.3 src/msac.h:101-108
     // (`dav1d_msac_decode_uniform`).
-    #[cfg(coverage)]
     pub(super) fn uniform(&mut self, count: u32) -> u32 {
         let bit_width = u32::BITS.wrapping_sub(count.leading_zeros());
         let boundary = (1_u64 << bit_width).wrapping_sub(u64::from(count));
@@ -1683,6 +1682,7 @@ pub(super) fn validate_complete_monochrome_partition(
                     enable_intra_edge_filter: context.enable_intra_edge_filter,
                     transform_mode: context.frame_tools.transform_mode,
                     transform_context: 0,
+                    palette_context: Default::default(),
                 };
                 let decoded = if leaves.is_empty() {
                     block_decoder.decode_origin(decoder, geometry, tools)
@@ -1816,6 +1816,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         enable_intra_edge_filter: context.enable_intra_edge_filter,
         transform_mode: context.frame_tools.transform_mode,
         transform_context: 0,
+        palette_context: Default::default(),
     };
     let root_level = context.level;
     let root_size = 32_u32
@@ -1867,6 +1868,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
                 let width = node.width.saturating_mul(4);
                 let height = node.height.saturating_mul(4);
+                let mut tools = tools;
+                tools.palette_context =
+                    super::block::PaletteNeighborContext::from_neighbors(node.y, None, None);
 
                 let decoded = if leaves.is_empty() {
                     // A standalone 4x4 image is the one cropped-frame case in
@@ -2108,6 +2112,12 @@ pub(super) fn validate_complete_lossy_420_partition(
                             && prior.y <= bottom_unit
                             && bottom_unit < prior.y.saturating_add(prior.height)
                     });
+                    tools.palette_context =
+                        super::block::PaletteNeighborContext::from_neighbors(
+                            node.y,
+                            above_left.map(|(_, leaf)| leaf),
+                            left.map(|(_, leaf)| leaf),
+                        );
                     let left_luma_top = leaves.iter().rev().find(|(prior, _)| {
                         prior.x.saturating_add(prior.width) == node.x
                             && prior.y <= node.y
@@ -2810,6 +2820,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),
     };
@@ -3036,6 +3047,7 @@ pub(super) fn validate_complete_lossless_444_partition(
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
                 transform_mode: context.frame_tools.transform_mode,
                 transform_context: 0,
+                palette_context: Default::default(),
             };
             let above = std::array::from_fn(|segment| {
                 let segment_x = geometry
@@ -3134,6 +3146,7 @@ pub(super) fn validate_complete_lossless_444_partition(
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),
     }))
@@ -3582,6 +3595,7 @@ fn decode_closed_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            palette_context: Default::default(),
         },
     );
     finish_closed_leaf(decoder, reconstructed)
@@ -3603,6 +3617,7 @@ fn decode_closed_420_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            palette_context: Default::default(),
         },
     );
     finish_closed_leaf(decoder, reconstructed)
@@ -3624,6 +3639,7 @@ fn decode_closed_lossy_420_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            palette_context: Default::default(),
         },
     );
     finish_closed_leaf(decoder, reconstructed)
@@ -3687,6 +3703,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                     );
                     visited = visited.saturating_add(1);
@@ -3728,6 +3745,7 @@ pub(super) fn validate_first_partition(
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
                 transform_mode: context.frame_tools.transform_mode,
                 transform_context: 0,
+                palette_context: Default::default(),
             };
             let origin_x = node
                 .x
@@ -3900,6 +3918,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         |decoder| {
                             {
@@ -3936,6 +3955,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         |decoder| {
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
@@ -3970,6 +3990,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         |decoder| {
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
@@ -4050,6 +4071,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         |decoder| {
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
@@ -4085,6 +4107,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         |decoder| {
                             (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
@@ -4116,6 +4139,7 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            palette_context: Default::default(),
                         },
                         super::block::SplitOrientation::Horizontal,
                         |decoder| {
@@ -4811,6 +4835,7 @@ mod tests {
                 enable_intra_edge_filter: true,
                 transform_mode: 0,
                 transform_context: 0,
+                palette_context: Default::default(),
             };
             let decoded = if leaves.is_empty() {
                 block_decoder
@@ -4887,6 +4912,7 @@ mod tests {
                     enable_intra_edge_filter: true,
                     transform_mode: 1,
                     transform_context: 0,
+                    palette_context: Default::default(),
                 },
             );
             let reconstructed =

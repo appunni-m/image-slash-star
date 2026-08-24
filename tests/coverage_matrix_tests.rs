@@ -4691,7 +4691,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 169);
+    assert_eq!(expected.cases.len(), 170);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4858,6 +4858,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "partitioned_square_420_16x16_rgb_delta.avif"
             | "partitioned_square_420_16x16_g96.avif" => {
                 Some([34_880, 40_768, 43_750, 52_892, 59_618])
+            }
+            "coverage_i444_palette2_square8_four_leaves.avif" => {
+                Some([34_880, 40_768, 45_302, 45_386, 40_125])
             }
             _ => None,
         };
@@ -5436,6 +5439,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_adst_public_04.avif" => {
                 "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8"
+            }
+            "coverage_i444_palette2_square8_four_leaves.avif" => {
+                "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

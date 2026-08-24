@@ -51,6 +51,61 @@ type LossyLuma8x8SplitCoefficients = [Option<LossyTransformCoefficients>; 4];
 type LossyLuma8x8GridSplitCoefficients = [Option<LossyTransformCoefficients>; 8];
 type LossyLuma16x16SplitCoefficients = [Option<Lossy16x16TransformCoefficients>; 4];
 
+const PALETTE_CAPACITY: usize = 8;
+const PALETTE_MAP_SAMPLES: usize = 64;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct PalettePlane {
+    size: u8,
+    colors: [u16; PALETTE_CAPACITY],
+}
+
+impl PalettePlane {
+    const fn is_present(self) -> bool {
+        self.size != 0
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct PaletteCacheState {
+    y: PalettePlane,
+    u: PalettePlane,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct PaletteSyntax {
+    y: PalettePlane,
+    u: PalettePlane,
+    v: PalettePlane,
+    y_indices: [u8; PALETTE_MAP_SAMPLES],
+    uv_indices: [u8; PALETTE_MAP_SAMPLES],
+}
+
+impl Default for PaletteSyntax {
+    fn default() -> Self {
+        Self {
+            y: PalettePlane::default(),
+            u: PalettePlane::default(),
+            v: PalettePlane::default(),
+            y_indices: [0; PALETTE_MAP_SAMPLES],
+            uv_indices: [0; PALETTE_MAP_SAMPLES],
+        }
+    }
+}
+
+impl PaletteSyntax {
+    const fn is_present(self) -> bool {
+        self.y.is_present() || self.u.is_present() || self.v.is_present()
+    }
+
+    const fn cache_state(self) -> PaletteCacheState {
+        PaletteCacheState {
+            y: self.y,
+            u: self.u,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct LossyLuma4x4Split {
     coefficients: LossyLuma4x4SplitCoefficients,
@@ -177,6 +232,7 @@ struct BlockSyntax {
     lossy_quantization: LossyQuantization,
     transform_grid: TransformGrid,
     chroma_sampling: ChromaSampling,
+    palette: PaletteSyntax,
     reconstruction: ReconstructionPolicy,
 }
 
@@ -785,6 +841,24 @@ pub(super) struct BlockTools {
     pub(super) transform_mode: u32,
     /// `get_tx_ctx` result from already decoded above/left transform state.
     pub(super) transform_context: usize,
+    /// Tile-local palette metadata from the immediate above and left leaves.
+    pub(super) palette_context: PaletteNeighborContext,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct PaletteNeighborContext {
+    above: PaletteCacheState,
+    left: PaletteCacheState,
+    above_available: bool,
+    left_available: bool,
+}
+
+#[derive(Clone, Copy)]
+struct PalettePlaneContext {
+    above: PalettePlane,
+    above_available: bool,
+    left: PalettePlane,
+    left_available: bool,
 }
 
 /// Orientation of the smallest admitted two-child recursive split.
@@ -863,8 +937,28 @@ pub(in crate::codecs::avif) struct FirstLeaf {
     /// coefficient-skip sentence.
     pub(in crate::codecs::avif) luma_right_contexts: [u8; 8],
     pub(in crate::codecs::avif) luma_bottom_contexts: [u8; 8],
+    /// Tile-local palette metadata retained for the next spatial leaves.
+    pub(super) palette_cache: PaletteCacheState,
     #[cfg(coverage)]
     pub(in crate::codecs::avif) entropy_operations: Vec<crate::Av1EntropyOperationState>,
+}
+
+impl PaletteNeighborContext {
+    pub(super) fn from_neighbors(
+        by4: u32,
+        above: Option<&FirstLeaf>,
+        left: Option<&FirstLeaf>,
+    ) -> Self {
+        let above_available = above.is_some() && by4 & 15 != 0;
+        Self {
+            above: above
+                .filter(|_| above_available)
+                .map_or_else(PaletteCacheState::default, |leaf| leaf.palette_cache),
+            left: left.map_or_else(PaletteCacheState::default, |leaf| leaf.palette_cache),
+            above_available,
+            left_available: left.is_some(),
+        }
+    }
 }
 
 /// Return the transform dimensions needed by the frame-level loop filter.
@@ -1072,6 +1166,7 @@ impl MonochromeLeaf {
             luma_transform_split: false,
             luma_right_contexts: std::array::from_fn(|index| self.right_contexts[index]),
             luma_bottom_contexts: std::array::from_fn(|index| self.bottom_contexts[index]),
+            palette_cache: PaletteCacheState::default(),
             #[cfg(coverage)]
             entropy_operations: Vec::new(),
         }
@@ -1262,8 +1357,10 @@ struct BlockCdfs {
     subsampled_chroma_mode: [[u16; 14]; 13],
     cfl_sign: [u16; 8],
     cfl_alpha: [[u16; 16]; 6],
-    palette_y: [u16; 2],
-    palette_uv: [u16; 2],
+    palette_y: [[u16; 2]; 3],
+    palette_uv: [[u16; 2]; 2],
+    palette_size: [[[u16; 7]; 7]; 2],
+    color_map: [[[u16; 8]; 5]; 2],
     use_filter_intra: [[u16; 2]; 22],
     filter_intra: [u16; 5],
     coefficient_skip: [[u16; 2]; 2],
@@ -3135,8 +3232,44 @@ impl BlockCdfs {
                     146, 112, 108, 0,
                 ],
             ],
-            palette_y: [1_092, 0],
-            palette_uv: [307, 0],
+            palette_y: [[1_092, 0], [29_349, 0], [31_507, 0]],
+            palette_uv: [[307, 0], [11_280, 0]],
+            palette_size: [
+                [
+                    [24_816, 19_768, 14_619, 11_290, 7_241, 3_527, 0],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                ],
+                [
+                    [24_055, 12_789, 5_640, 3_159, 1_437, 496, 0],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                    [0; 7],
+                ],
+            ],
+            color_map: [
+                [
+                    [4_058, 0, 0, 0, 0, 0, 0, 0],
+                    [16_384, 0, 0, 0, 0, 0, 0, 0],
+                    [22_215, 0, 0, 0, 0, 0, 0, 0],
+                    [5_732, 0, 0, 0, 0, 0, 0, 0],
+                    [1_165, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                [
+                    [3_679, 0, 0, 0, 0, 0, 0, 0],
+                    [16_384, 0, 0, 0, 0, 0, 0, 0],
+                    [24_055, 0, 0, 0, 0, 0, 0, 0],
+                    [3_511, 0, 0, 0, 0, 0, 0, 0],
+                    [1_158, 0, 0, 0, 0, 0, 0, 0],
+                ],
+            ],
             use_filter_intra: [
                 [16_384, 0],
                 [16_384, 0],
@@ -12034,6 +12167,333 @@ fn decode_cfl_chroma_predictor(
     Ok(ChromaPredictor::Cfl { alpha_u, alpha_v })
 }
 
+fn palette_cache_entries(
+    above: PalettePlane,
+    above_available: bool,
+    left: PalettePlane,
+    left_available: bool,
+) -> ([u16; PALETTE_CAPACITY * 2], usize) {
+    let mut entries = [0_u16; PALETTE_CAPACITY * 2];
+    let mut count = 0_usize;
+    for palette in [
+        above_available.then_some(above),
+        left_available.then_some(left),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        for color in palette.colors.into_iter().take(usize::from(palette.size)) {
+            if !entries[..count].contains(&color)
+                && let Some(slot) = entries.get_mut(count)
+            {
+                *slot = color;
+                count = count.saturating_add(1);
+            }
+        }
+    }
+    entries[..count].sort_unstable();
+    (entries, count)
+}
+
+fn decode_palette_plane(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    plane: usize,
+    size_context: usize,
+    neighbors: PalettePlaneContext,
+) -> PortableResult<PalettePlane> {
+    let size_symbol = decoder.adaptive_symbol(
+        cdfs.palette_size
+            .get_mut(plane)
+            .and_then(|contexts| contexts.get_mut(size_context))
+            .ok_or(PortableUnavailable)?,
+        6,
+    );
+    let size = usize::try_from(size_symbol.saturating_add(2)).map_err(|_| PortableUnavailable)?;
+    (size == 2).then_some(()).portable()?;
+
+    let (cache, cache_count) = palette_cache_entries(
+        neighbors.above,
+        neighbors.above_available,
+        neighbors.left,
+        neighbors.left_available,
+    );
+    let mut used_cache = [0_u16; PALETTE_CAPACITY];
+    let mut used_count = 0_usize;
+    for &color in cache.iter().take(cache_count) {
+        if used_count >= size {
+            break;
+        }
+        if decoder.equal()
+            && let Some(slot) = used_cache.get_mut(used_count)
+        {
+            *slot = color;
+            used_count = used_count.saturating_add(1);
+        }
+    }
+
+    let mut new_colors = [0_u16; PALETTE_CAPACITY];
+    let mut new_count = used_count;
+    if new_count < size {
+        let mut previous = u16::try_from(decoder.bits(8)).unwrap_or(u16::MAX);
+        new_colors[new_count] = previous;
+        new_count = new_count.saturating_add(1);
+        if new_count < size {
+            let delta_bits = 5_u32.saturating_add(decoder.bits(2));
+            let delta = decoder.bits(delta_bits);
+            let increment = u32::from(plane == 0);
+            let value = u32::from(previous)
+                .saturating_add(delta)
+                .saturating_add(increment)
+                .min(u32::from(u8::MAX));
+            previous = u16::try_from(value).unwrap_or(u16::from(u8::MAX));
+            new_colors[new_count] = previous;
+            new_count = new_count.saturating_add(1);
+        }
+    }
+
+    let mut colors = [0_u16; PALETTE_CAPACITY];
+    let mut cache_index = 0_usize;
+    let mut new_index = used_count;
+    for color in colors.iter_mut().take(size) {
+        let use_cached = cache_index < used_count
+            && (new_index >= new_count || used_cache[cache_index] <= new_colors[new_index]);
+        if use_cached {
+            *color = used_cache[cache_index];
+            cache_index = cache_index.saturating_add(1);
+        } else {
+            *color = *new_colors.get(new_index).ok_or(PortableUnavailable)?;
+            new_index = new_index.saturating_add(1);
+        }
+    }
+    Ok(PalettePlane {
+        size: u8::try_from(size).map_err(|_| PortableUnavailable)?,
+        colors,
+    })
+}
+
+fn decode_palette_v_plane(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    size: u8,
+) -> PortableResult<PalettePlane> {
+    let size = usize::from(size);
+    let delta_coded = decoder.equal();
+    let mut colors = [0_u16; PALETTE_CAPACITY];
+    if delta_coded {
+        let delta_bits = 4_u32.saturating_add(decoder.bits(2));
+        let mut previous = i32::try_from(decoder.bits(8)).unwrap_or(i32::MAX);
+        colors[0] = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
+        for color in colors.iter_mut().take(size).skip(1) {
+            let magnitude = i32::try_from(decoder.bits(delta_bits)).unwrap_or(i32::MAX);
+            let delta = if magnitude != 0 && decoder.equal() {
+                magnitude.saturating_neg()
+            } else {
+                magnitude
+            };
+            previous = previous.saturating_add(delta) & i32::from(u8::MAX);
+            *color = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
+        }
+    } else {
+        for color in colors.iter_mut().take(size) {
+            *color = u16::try_from(decoder.bits(8)).unwrap_or(u16::MAX);
+        }
+    }
+    Ok(PalettePlane {
+        size: u8::try_from(size).map_err(|_| PortableUnavailable)?,
+        colors,
+    })
+}
+
+fn palette_index_order(
+    indices: &[u8; PALETTE_MAP_SAMPLES],
+    row: usize,
+    column: usize,
+    palette_size: usize,
+) -> (usize, [u8; PALETTE_CAPACITY]) {
+    let mut order = [0_u8; PALETTE_CAPACITY];
+    let mut order_len = 0_usize;
+    let mut add = |value: u8| {
+        if !order[..order_len].contains(&value)
+            && let Some(slot) = order.get_mut(order_len)
+        {
+            *slot = value;
+            order_len = order_len.saturating_add(1);
+        }
+    };
+    let top = row
+        .checked_sub(1)
+        .and_then(|top_row| indices.get(top_row.saturating_mul(8).saturating_add(column)))
+        .copied();
+    let left = column
+        .checked_sub(1)
+        .and_then(|left_column| indices.get(row.saturating_mul(8).saturating_add(left_column)))
+        .copied();
+    let top_left = row
+        .checked_sub(1)
+        .zip(column.checked_sub(1))
+        .and_then(|(top_row, left_column)| {
+            indices.get(top_row.saturating_mul(8).saturating_add(left_column))
+        })
+        .copied();
+    let context = match (top, left, top_left) {
+        (None, Some(left), _) | (Some(left), None, _) => {
+            add(left);
+            0
+        }
+        (Some(top), Some(left), Some(top_left)) if top == left && top == top_left => {
+            add(top);
+            4
+        }
+        (Some(top), Some(left), Some(top_left)) if top == left => {
+            add(top);
+            add(top_left);
+            3
+        }
+        (Some(top), Some(left), Some(top_left)) if top == top_left => {
+            add(top_left);
+            add(left);
+            2
+        }
+        (Some(top), Some(left), Some(top_left)) if left == top_left => {
+            add(top_left);
+            add(top);
+            2
+        }
+        (Some(top), Some(left), Some(top_left)) => {
+            add(top.min(left));
+            add(top.max(left));
+            add(top_left);
+            1
+        }
+        _ => 0,
+    };
+    for index in 0..palette_size {
+        let index = u8::try_from(index).unwrap_or(u8::MAX);
+        add(index);
+    }
+    (context, order)
+}
+
+fn decode_palette_indices(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    plane: usize,
+    palette_size: u8,
+    width: u32,
+    height: u32,
+) -> PortableResult<[u8; PALETTE_MAP_SAMPLES]> {
+    (width == 8 && height == 8).then_some(()).portable()?;
+    let palette_size = usize::from(palette_size);
+    (palette_size == 2).then_some(()).portable()?;
+    let mut indices = [0_u8; PALETTE_MAP_SAMPLES];
+    indices[0] = u8::try_from(decoder.uniform(u32::try_from(palette_size).unwrap_or(0)))
+        .map_err(|_| PortableUnavailable)?;
+    for diagonal in 1..(8_usize.saturating_mul(2).saturating_sub(1)) {
+        let first_column = diagonal.min(7);
+        let last_column = diagonal.saturating_sub(7);
+        for column in (last_column..=first_column).rev() {
+            let row = diagonal.saturating_sub(column);
+            let (context, order) = palette_index_order(&indices, row, column, palette_size);
+            let symbol = decoder.adaptive_symbol(
+                cdfs.color_map
+                    .get_mut(plane)
+                    .and_then(|maps| maps.get_mut(context))
+                    .ok_or(PortableUnavailable)?,
+                palette_size.saturating_sub(1),
+            );
+            let symbol = usize::try_from(symbol).map_err(|_| PortableUnavailable)?;
+            let value = *order.get(symbol).ok_or(PortableUnavailable)?;
+            let index = row.saturating_mul(8).saturating_add(column);
+            *indices.get_mut(index).ok_or(PortableUnavailable)? = value;
+        }
+    }
+    Ok(indices)
+}
+
+fn decode_palette_syntax(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
+    luma_predictor: LumaPredictor,
+    chroma_predictor: ChromaPredictor,
+    tools: BlockTools,
+) -> PortableResult<PaletteSyntax> {
+    if !tools.allow_screen_content_tools {
+        return Ok(PaletteSyntax::default());
+    }
+    let palette_context = tools.palette_context;
+    // The admitted palette geometry is Square8; its palette-size CDF context is zero.
+    let size_context = 0_usize;
+    let use_y = if matches!(luma_predictor, LumaPredictor::Dc) {
+        let context =
+            usize::from(palette_context.above_available && palette_context.above.y.is_present())
+                .saturating_add(usize::from(
+                    palette_context.left_available && palette_context.left.y.is_present(),
+                ));
+        decoder.adaptive_bool(cdfs.palette_y.get_mut(context).ok_or(PortableUnavailable)?)
+    } else {
+        false
+    };
+
+    let y = if use_y {
+        decode_palette_plane(
+            decoder,
+            cdfs,
+            0,
+            size_context,
+            PalettePlaneContext {
+                above: palette_context.above.y,
+                above_available: palette_context.above_available,
+                left: palette_context.left.y,
+                left_available: palette_context.left_available,
+            },
+        )?
+    } else {
+        PalettePlane::default()
+    };
+    let use_uv = if !matches!(chroma_sampling, ChromaSampling::Monochrome)
+        && matches!(chroma_predictor, ChromaPredictor::Dc)
+    {
+        decoder.adaptive_bool(&mut cdfs.palette_uv[usize::from(y.is_present())])
+    } else {
+        false
+    };
+    if !use_y && !use_uv {
+        return Ok(PaletteSyntax::default());
+    }
+    (matches!(transform_grid, TransformGrid::Square8)
+        && matches!(chroma_sampling, ChromaSampling::Full)
+        && use_y
+        && use_uv)
+        .then_some(())
+        .portable()?;
+
+    let u = decode_palette_plane(
+        decoder,
+        cdfs,
+        1,
+        size_context,
+        PalettePlaneContext {
+            above: palette_context.above.u,
+            above_available: palette_context.above_available,
+            left: palette_context.left.u,
+            left_available: palette_context.left_available,
+        },
+    )?;
+    let v = decode_palette_v_plane(decoder, u.size)?;
+    let y_indices = decode_palette_indices(decoder, cdfs, 0, y.size, 8, 8)?;
+    let uv_indices = decode_palette_indices(decoder, cdfs, 1, u.size, 8, 8)?;
+    let palette = PaletteSyntax {
+        y,
+        u,
+        v,
+        y_indices,
+        uv_indices,
+    };
+    Ok(palette)
+}
+
 fn decode_syntax(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
@@ -12462,17 +12922,19 @@ fn decode_syntax_with_cdef(
         }
     };
 
-    if tools.allow_screen_content_tools {
-        if matches!(luma_predictor, LumaPredictor::Dc) {
-            (!decoder.adaptive_bool(&mut cdfs.palette_y))
-                .then_some(())
-                .portable()?;
-        }
-        (!decoder.adaptive_bool(&mut cdfs.palette_uv))
-            .then_some(())
-            .portable()?;
-    }
-    if matches!(luma_predictor, LumaPredictor::Dc) && tools.enable_filter_intra {
+    let palette = decode_palette_syntax(
+        decoder,
+        cdfs,
+        transform_grid,
+        chroma_sampling,
+        luma_predictor,
+        chroma_predictor,
+        tools,
+    )?;
+    if matches!(luma_predictor, LumaPredictor::Dc)
+        && tools.enable_filter_intra
+        && !palette.y.is_present()
+    {
         let filter_intra_cdf_index = transform_grid.filter_intra_cdf_index();
         let use_filter_intra =
             decoder.adaptive_bool(&mut cdfs.use_filter_intra[filter_intra_cdf_index]);
@@ -13892,6 +14354,7 @@ fn decode_syntax_with_cdef(
             lossy_quantization,
             transform_grid,
             chroma_sampling,
+            palette,
             reconstruction: if matches!(quantization_syntax, QuantizationSyntax::Lossless) {
                 ReconstructionPolicy::LosslessWht4x4
             } else {
@@ -21018,6 +21481,57 @@ struct ClosedLeaf {
     planes: [ReconstructedPlane; 3],
 }
 
+fn palette_prediction(
+    palette: PalettePlane,
+    indices: [u8; PALETTE_MAP_SAMPLES],
+) -> Option<[u16; PALETTE_MAP_SAMPLES]> {
+    (palette.size == 2).then_some(())?;
+    let mut prediction = [0_u16; PALETTE_MAP_SAMPLES];
+    for (index, sample) in prediction.iter_mut().enumerate() {
+        let palette_index = usize::from(*indices.get(index)?);
+        *sample = *palette.colors.get(palette_index)?;
+    }
+    Some(prediction)
+}
+
+fn reconstruct_palette_square8_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> {
+    if !syntax.palette.is_present()
+        || !matches!(syntax.transform_grid, TransformGrid::Square8)
+        || !matches!(syntax.chroma_sampling, ChromaSampling::Full)
+        || !matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
+    {
+        return None;
+    }
+    let luma_prediction = palette_prediction(syntax.palette.y, syntax.palette.y_indices)?;
+    let chroma_u_prediction = palette_prediction(syntax.palette.u, syntax.palette.uv_indices)?;
+    let chroma_v_prediction = palette_prediction(syntax.palette.v, syntax.palette.uv_indices)?;
+    let luma = syntax.lossy_luma_4x4_split.map_or_else(
+        || {
+            reconstruct_lossy_luma_8x8_from_prediction(
+                luma_prediction,
+                syntax.lossy_luma_coefficients,
+                syntax.lossy_luma_transform,
+            )
+        },
+        |split| reconstruct_lossy_luma_8x8_split_from_prediction(luma_prediction, split),
+    );
+    let chroma_transform = chroma_transform_kind(syntax.chroma_predictor);
+    let chroma_u = reconstruct_lossy_luma_8x8_from_prediction(
+        chroma_u_prediction,
+        syntax.lossy_chroma_8x8_coefficients[0],
+        chroma_transform,
+    );
+    let chroma_v = reconstruct_lossy_luma_8x8_from_prediction(
+        chroma_v_prediction,
+        syntax.lossy_chroma_8x8_coefficients[1],
+        chroma_transform,
+    );
+    Some(ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes: [luma, chroma_u, chroma_v],
+    })
+}
+
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
     reconstruct_leaf_with_luma_override(syntax, predictors, None)
 }
@@ -21027,6 +21541,11 @@ fn reconstruct_leaf_with_luma_override(
     predictors: [u16; 3],
     luma_override: Option<ReconstructedPlane>,
 ) -> ClosedLeaf {
+    if luma_override.is_none()
+        && let Some(leaf) = reconstruct_palette_square8_leaf(syntax)
+    {
+        return leaf;
+    }
     let BlockSyntax {
         luma_predictor,
         luma_angle,
@@ -21077,6 +21596,7 @@ fn reconstruct_leaf_with_luma_override(
         lossy_quantization: _,
         transform_grid,
         chroma_sampling,
+        palette: _,
         reconstruction,
     } = syntax;
     let planes = match reconstruction {
@@ -23202,6 +23722,7 @@ fn reconstruct_following_square_leaf(
         lossy_quantization: _,
         transform_grid,
         chroma_sampling: _,
+        palette: _,
         reconstruction: _,
     } = syntax;
     let edges = neighbor
@@ -24763,6 +25284,11 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
     luma_edge_override: Option<[u16; 8]>,
     luma_bottom_left_override: Option<[u16; 8]>,
 ) -> PortableResult<ClosedLeaf> {
+    if syntax.palette.is_present()
+        && let Some(leaf) = reconstruct_palette_square8_leaf(syntax)
+    {
+        return Ok(leaf);
+    }
     if matches!(syntax.transform_grid, TransformGrid::Square64) {
         return Ok(reconstruct_following_lossy_420_vertical_64x64_leaf(
             syntax, neighbor, neighbor,
@@ -32622,9 +33148,15 @@ fn visible_leaf(
         luma_transform_split,
         luma_right_contexts: luma_edge_contexts.0,
         luma_bottom_contexts: luma_edge_contexts.1,
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     }
+}
+
+fn with_palette_cache(mut leaf: FirstLeaf, palette_cache: PaletteCacheState) -> FirstLeaf {
+    leaf.palette_cache = palette_cache;
+    leaf
 }
 
 fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 8], [u8; 8]) {
@@ -35409,16 +35941,19 @@ impl Lossy420Decoder {
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_contexts(
-                visible_leaf(
-                    leaf,
-                    None,
-                    transform_grid,
-                    width,
-                    height,
-                    ChromaSampling::Monochrome,
-                    tx_context,
-                    syntax.lossy_luma_4x4_split.is_some(),
-                    luma_edge_contexts,
+                with_palette_cache(
+                    visible_leaf(
+                        leaf,
+                        None,
+                        transform_grid,
+                        width,
+                        height,
+                        ChromaSampling::Monochrome,
+                        tx_context,
+                        syntax.lossy_luma_4x4_split.is_some(),
+                        luma_edge_contexts,
+                    ),
+                    syntax.palette.cache_state(),
                 ),
                 [0x40; 2],
             ),
@@ -35589,16 +36124,19 @@ impl Lossy420Decoder {
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_contexts(
-                visible_leaf(
-                    leaf,
-                    None,
-                    transform_grid,
-                    width,
-                    height,
-                    ChromaSampling::Monochrome,
-                    tx_context,
-                    syntax.lossy_luma_4x4_split.is_some(),
-                    luma_edge_contexts,
+                with_palette_cache(
+                    visible_leaf(
+                        leaf,
+                        None,
+                        transform_grid,
+                        width,
+                        height,
+                        ChromaSampling::Monochrome,
+                        tx_context,
+                        syntax.lossy_luma_4x4_split.is_some(),
+                        luma_edge_contexts,
+                    ),
+                    syntax.palette.cache_state(),
                 ),
                 [0x40; 2],
             ),
@@ -35739,7 +36277,11 @@ impl Lossy420Decoder {
             luma_predictor: neighbor.luma_predictor,
             planes: neighbor.planes.clone(),
         });
-        let leaf_result = if matches!(transform_grid, TransformGrid::Horizontal16x8) {
+        let leaf_result = if syntax.palette.is_present()
+            && matches!(transform_grid, TransformGrid::Square8)
+        {
+            reconstruct_palette_square8_leaf(syntax).ok_or(PortableUnavailable)
+        } else if matches!(transform_grid, TransformGrid::Horizontal16x8) {
             reconstruct_following_lossy_420_horizontal_16x8_leaf(
                 syntax,
                 &neighbor,
@@ -35966,20 +36508,23 @@ impl Lossy420Decoder {
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_edge_contexts(
-                visible_leaf(
-                    leaf,
-                    Some(syntax.chroma_predictor),
-                    transform_grid,
-                    width,
-                    height,
-                    self.chroma_sampling,
-                    tx_context,
-                    syntax.lossy_luma_4x4_split.is_some()
-                        || syntax.lossy_luma_8x8_split.is_some()
-                        || syntax.lossy_luma_8x8_grid_split.is_some()
-                        || syntax.lossy_luma_16x16_split.is_some()
-                        || syntax.lossy_luma_16x16_vertical_split.is_some(),
-                    luma_edge_contexts,
+                with_palette_cache(
+                    visible_leaf(
+                        leaf,
+                        Some(syntax.chroma_predictor),
+                        transform_grid,
+                        width,
+                        height,
+                        self.chroma_sampling,
+                        tx_context,
+                        syntax.lossy_luma_4x4_split.is_some()
+                            || syntax.lossy_luma_8x8_split.is_some()
+                            || syntax.lossy_luma_8x8_grid_split.is_some()
+                            || syntax.lossy_luma_16x16_split.is_some()
+                            || syntax.lossy_luma_16x16_vertical_split.is_some(),
+                        luma_edge_contexts,
+                    ),
+                    syntax.palette.cache_state(),
                 ),
                 chroma_contexts,
                 chroma_edge_contexts.0,
@@ -36091,19 +36636,22 @@ impl Lossy420Decoder {
         let visible = |leaf| {
             with_lossy_luma_context(
                 with_lossy_chroma_edge_contexts(
-                    visible_leaf(
-                        leaf,
-                        Some(syntax.chroma_predictor),
-                        transform_grid,
-                        width,
-                        height,
-                        self.chroma_sampling,
-                        tx_context,
-                        syntax.lossy_luma_4x4_split.is_some()
-                            || syntax.lossy_luma_8x8_split.is_some()
-                            || syntax.lossy_luma_8x8_grid_split.is_some()
-                            || syntax.lossy_luma_16x16_vertical_split.is_some(),
-                        luma_edge_contexts,
+                    with_palette_cache(
+                        visible_leaf(
+                            leaf,
+                            Some(syntax.chroma_predictor),
+                            transform_grid,
+                            width,
+                            height,
+                            self.chroma_sampling,
+                            tx_context,
+                            syntax.lossy_luma_4x4_split.is_some()
+                                || syntax.lossy_luma_8x8_split.is_some()
+                                || syntax.lossy_luma_8x8_grid_split.is_some()
+                                || syntax.lossy_luma_16x16_vertical_split.is_some(),
+                            luma_edge_contexts,
+                        ),
+                        syntax.palette.cache_state(),
                     ),
                     chroma_contexts,
                     chroma_edge_contexts.0,
@@ -36112,6 +36660,10 @@ impl Lossy420Decoder {
                 luma_context,
             )
         };
+        if syntax.palette.is_present() && matches!(transform_grid, TransformGrid::Square8) {
+            let leaf = reconstruct_palette_square8_leaf(syntax).ok_or(PortableUnavailable)?;
+            return Ok(visible(leaf));
+        }
         if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Square4)
         {
@@ -37203,6 +37755,7 @@ impl Lossy420Decoder {
         let luma_override = if matches!(transform_grid, TransformGrid::Square8)
             && syntax.filter_intra_mode.is_none()
             && matches!(syntax.luma_predictor, LumaPredictor::Dc)
+            && !syntax.palette.is_present()
         {
             syntax
                 .lossy_luma_4x4_split
@@ -37226,21 +37779,24 @@ impl Lossy420Decoder {
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_contexts(
-                visible_leaf(
-                    leaf,
-                    (!matches!(syntax_chroma_sampling, ChromaSampling::Monochrome))
-                        .then_some(syntax.chroma_predictor),
-                    transform_grid,
-                    width,
-                    height,
-                    syntax_chroma_sampling,
-                    tx_context,
-                    syntax.lossy_luma_4x4_split.is_some()
-                        || syntax.lossy_luma_8x8_split.is_some()
-                        || syntax.lossy_luma_8x8_grid_split.is_some()
-                        || syntax.lossy_luma_16x16_split.is_some()
-                        || syntax.lossy_luma_16x16_vertical_split.is_some(),
-                    luma_edge_contexts,
+                with_palette_cache(
+                    visible_leaf(
+                        leaf,
+                        (!matches!(syntax_chroma_sampling, ChromaSampling::Monochrome))
+                            .then_some(syntax.chroma_predictor),
+                        transform_grid,
+                        width,
+                        height,
+                        syntax_chroma_sampling,
+                        tx_context,
+                        syntax.lossy_luma_4x4_split.is_some()
+                            || syntax.lossy_luma_8x8_split.is_some()
+                            || syntax.lossy_luma_8x8_grid_split.is_some()
+                            || syntax.lossy_luma_16x16_split.is_some()
+                            || syntax.lossy_luma_16x16_vertical_split.is_some(),
+                        luma_edge_contexts,
+                    ),
+                    syntax.palette.cache_state(),
                 ),
                 chroma_contexts,
             ),
@@ -37308,6 +37864,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
@@ -37451,6 +38008,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
@@ -37616,6 +38174,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
@@ -37728,6 +38287,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
@@ -37893,6 +38453,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
@@ -38058,6 +38619,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 8],
         luma_bottom_contexts: [0x40; 8],
+        palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     })
