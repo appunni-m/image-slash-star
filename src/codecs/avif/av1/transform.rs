@@ -341,7 +341,7 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
     let t16 = clamp_intermediate(t16a.wrapping_add(t23a));
     let t17a = clamp_intermediate(t17.wrapping_add(t22));
     let t18 = clamp_intermediate(t18a.wrapping_add(t21a));
-    let t19 = clamp_intermediate(t19.wrapping_add(t20));
+    let t19a = clamp_intermediate(t19.wrapping_add(t20));
     let t20a = clamp_intermediate(t19.wrapping_sub(t20));
     let t21 = clamp_intermediate(t18a.wrapping_sub(t21a));
     let t22a = clamp_intermediate(t17.wrapping_sub(t22));
@@ -349,8 +349,8 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
     let t24 = clamp_intermediate(t31a.wrapping_sub(t24a));
     let t25a = clamp_intermediate(t30.wrapping_sub(t25));
     let t26 = clamp_intermediate(t29a.wrapping_sub(t26a));
-    let t27 = clamp_intermediate(t28.wrapping_sub(t27));
-    let _t28 = clamp_intermediate(t28.wrapping_add(t27));
+    let t27a = clamp_intermediate(t28.wrapping_sub(t27));
+    let t28a = clamp_intermediate(t28.wrapping_add(t27));
     let t29 = clamp_intermediate(t29a.wrapping_add(t26a));
     let t30a = clamp_intermediate(t30.wrapping_add(t25));
     let t31 = clamp_intermediate(t31a.wrapping_add(t24a));
@@ -358,11 +358,11 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
     let t20 = rounded_linear(t27a, 181, t20a, -181, 128, 8);
     let t27 = rounded_linear(t27a, 181, t20a, 181, 128, 8);
     let t21a = rounded_linear(t26, 181, t21, -181, 128, 8);
-    let t26 = rounded_linear(t26, 181, t21, 181, 128, 8);
+    let t26a = rounded_linear(t26, 181, t21, 181, 128, 8);
     let t22 = rounded_linear(t25a, 181, t22a, -181, 128, 8);
     let t25 = rounded_linear(t25a, 181, t22a, 181, 128, 8);
     let t23a = rounded_linear(t24, 181, t23, -181, 128, 8);
-    let _t24 = rounded_linear(t24, 181, t23, 181, 128, 8);
+    let t24a = rounded_linear(t24, 181, t23, 181, 128, 8);
 
     [
         clamp_intermediate(even[0].wrapping_add(t31)),
@@ -370,7 +370,7 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
         clamp_intermediate(even[2].wrapping_add(t29)),
         clamp_intermediate(even[3].wrapping_add(t28a)),
         clamp_intermediate(even[4].wrapping_add(t27)),
-        clamp_intermediate(even[5].wrapping_add(t26)),
+        clamp_intermediate(even[5].wrapping_add(t26a)),
         clamp_intermediate(even[6].wrapping_add(t25)),
         clamp_intermediate(even[7].wrapping_add(t24a)),
         clamp_intermediate(even[8].wrapping_add(t23a)),
@@ -391,7 +391,7 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
         clamp_intermediate(even[8].wrapping_sub(t23a)),
         clamp_intermediate(even[7].wrapping_sub(t24a)),
         clamp_intermediate(even[6].wrapping_sub(t25)),
-        clamp_intermediate(even[5].wrapping_sub(t26)),
+        clamp_intermediate(even[5].wrapping_sub(t26a)),
         clamp_intermediate(even[4].wrapping_sub(t27)),
         clamp_intermediate(even[3].wrapping_sub(t28a)),
         clamp_intermediate(even[2].wrapping_sub(t29)),
@@ -1580,7 +1580,8 @@ fn inverse_rectangular_32x16(
         rows[row_start..row_end].copy_from_slice(&output);
     }
 
-    // Rectangular transforms apply the inverse-sqrt(2) scale between passes.
+    // R32x16 uses AV1's one-bit rectangular intermediate shift with the
+    // reference rounding bias `rnd = (1 << 1) >> 1`.
     for value in &mut rows {
         *value = clamp_intermediate(value.wrapping_add(1) >> 1);
     }
@@ -2887,5 +2888,28 @@ mod tests {
                 .iter()
                 .all(|sample| (-32_768..=32_767).contains(sample))
         );
+    }
+
+    #[test]
+    fn dct_dct16x8_matches_dav1d_chroma_vectors() {
+        let cases = [
+            (
+                [(0, -54), (8, 427), (24, -177), (40, 65), (56, -77)],
+                [3, 5, 5, 5, 5, 6, 6, 2, -3, -7, -7, -6, -6, -7, -6, -5],
+            ),
+            (
+                [(0, -54), (8, -366), (24, 118), (40, -65), (56, 77)],
+                [-4, -6, -6, -5, -4, -5, -6, -3, 2, 5, 4, 3, 4, 5, 4, 3],
+            ),
+        ];
+        for (nonzero, expected_row) in cases {
+            let mut coefficients = [0_i32; 128];
+            for (index, value) in nonzero {
+                coefficients[index] = value;
+            }
+            let residual = super::inverse_dct16x8(&coefficients);
+            assert_eq!(&residual[..16], &expected_row);
+            assert!(residual.chunks_exact(16).all(|row| row == expected_row));
+        }
     }
 }

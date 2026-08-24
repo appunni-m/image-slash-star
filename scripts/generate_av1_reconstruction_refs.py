@@ -895,6 +895,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328",
         "size": [32, 16],
     },
+    "coverage_r32x32_following_01.avif": {
+        "file_sha256": "28b9df05ad61bf01fef2ac11a6a9fa775ced07aed181e30c5c905caaedf4b6d3",
+        "rgb_sha256": "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7",
+        "size": [32, 32],
+    },
     "coverage_r16x64_grid_01.avif": {
         "file_sha256": "af54f720d208bea68fb852bad6bbdca22355b5a646ce40b95dbd6fc01b8af3ed",
         "rgb_sha256": "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15",
@@ -1024,7 +1029,12 @@ def instrument(source: Path) -> None:
 #define DEBUG_B_PIXELS 0
 """
     new = """\
-#define DEBUG_BLOCK_INFO 1 && t->by >= 0 && t->by < 4 && \
+#define DEBUG_BLOCK_INFO 1 && \
+        (t->by >= 0 && t->by < 4 || \
+         (t->by == 4 && f->frame_hdr->width[0] == 32 && \
+          f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present && \
+          f->frame_hdr->txfm_mode == DAV1D_TX_LARGEST && \
+          !f->frame_hdr->allow_screen_content_tools)) && \
         t->bx >= 0 && t->bx < 4
 #define DEBUG_B_PIXELS 1
 """
