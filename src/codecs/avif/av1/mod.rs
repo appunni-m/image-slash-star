@@ -12,7 +12,7 @@ pub(super) mod sample_depth;
 mod sequence;
 mod transform;
 
-pub(super) use sample_depth::normalize_full_range;
+pub(super) use sample_depth::truncate_to_u8;
 
 use self::bit_reader::SegmentedData;
 #[cfg(test)]

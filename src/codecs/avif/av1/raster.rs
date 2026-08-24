@@ -1211,6 +1211,28 @@ mod tests {
     }
 
     #[test]
+    fn preserves_422_chroma_rows_and_odd_width_edges() -> Av1Result<()> {
+        let mut canvas = FrameCanvas::new(5, 3, true, false)?;
+        let planes = [
+            ReconstructedPlane {
+                samples: (0_u16..15).collect(),
+            },
+            ReconstructedPlane {
+                samples: (20_u16..29).collect(),
+            },
+            ReconstructedPlane {
+                samples: (40_u16..49).collect(),
+            },
+        ];
+        canvas.place_planes(5, 3, &planes, 0, 0)?;
+        let [luma, u, v] = canvas.finish()?;
+        assert_eq!(luma.samples, (0_u16..15).collect::<Vec<_>>());
+        assert_eq!(u.samples, (20_u16..29).collect::<Vec<_>>());
+        assert_eq!(v.samples, (40_u16..49).collect::<Vec<_>>());
+        Ok(())
+    }
+
+    #[test]
     fn rejects_misaligned_overlap_and_incomplete_canvas() -> Av1Result<()> {
         let mut canvas = FrameCanvas::new(4, 4, true, true)?;
         let planes = [plane(2, 2, 10), plane(1, 1, 20), plane(1, 1, 30)];
