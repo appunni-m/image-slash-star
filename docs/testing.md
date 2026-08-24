@@ -6,10 +6,11 @@ Reviewed: 2026-08-14 against the current safe-Rust AVIF cutover working tree;
 the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
-The accepted claim-ledger base remains
-`36b939696415a962285d37f9120ff389aebf0205`; it is kept separate from the
-newer cleanup checkpoint because changing lint, coverage hooks, or test
-scaffolding does not silently promote the product claims it records.
+The current claim-ledger refresh base is
+`b22c0b7ecd399f714885754c768a3938b881e7bb`; the historical Pillow parity
+record below remains bound to
+`36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
+coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
 `af56a0c3-5bca-4b7a-8e15-29ac36516edc` from run
 `8d3e09cb-638c-434a-b7cc-a74ea576e667` (108/108 passed). It records

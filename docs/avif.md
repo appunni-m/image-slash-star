@@ -4,9 +4,10 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-14
 
-Historical claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`.
-The current cutover is a new, locally verified working-tree change until its
-revision-bound managed evidence is refreshed.
+Current claim-ledger refresh base revision: `b22c0b7ecd399f714885754c768a3938b881e7bb`.
+The historical Pillow parity baseline remains bound to
+`36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
+is recorded in `roadmap-new.md`, and its 100% release gate remains open.
 
 AVIF is a picture box with three jobs inside it:
 

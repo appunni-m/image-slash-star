@@ -12,8 +12,10 @@ historical pre-cutover evidence; the current AVIF contract is in
 all-feature coverage is recorded in [roadmap.json](../roadmap.json):
 73,615/74,323 lines, 9,464/9,600 branches, 3,635/3,748 functions, and
 110,174/111,446 regions. This is not yet 100% metric coverage; the remaining
-source-level gaps are documented there. The accepted claim-ledger base is
-`36b939696415a962285d37f9120ff389aebf0205`, and remains separate from this
+source-level gaps are documented there. The current claim-ledger refresh base
+is `b22c0b7ecd399f714885754c768a3938b881e7bb`; the historical Pillow parity
+baseline remains bound to
+`36b939696415a962285d37f9120ff389aebf0205` and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
 `af56a0c3-5bca-4b7a-8e15-29ac36516edc` from run
 `8d3e09cb-638c-434a-b7cc-a74ea576e667` (108/108 passed). Historical run
