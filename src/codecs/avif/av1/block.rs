@@ -1632,16 +1632,16 @@ const LOSSY_LUMA_64X64_HIGH: [[u16; 4]; 21] = [
 // qcat-zero `eob_bin_32[chroma][two_d]` row from rav1d's CDF defaults.
 const LOSSY_CHROMA_8X4_EOB_BIN: [u16; 6] = [30_132, 28_495, 25_180, 20_974, 12_367, 0];
 
-// The high EOB bit is indexed by the decoded EOB bin and uses the
-// two-dimensional chroma row.  Entries zero and one are retained because the
-// decoder indexes the table directly with the bin value.
+// ✅ VERIFIED: dav1d 1.5.3 src/cdf.c qcat-zero
+// eob_hi_bit[txctx=1][chroma]. The decoder indexes this row by
+// `eob_bin - 2` for the two-dimensional 32-coefficient sentence.
 const LOSSY_CHROMA_8X4_EOB_HIGH: [[u16; 2]; 6] = [
+    [12_087, 0],
+    [12_067, 0],
+    [17_518, 0],
+    [17_551, 0],
+    [17_840, 0],
     [16_384, 0],
-    [16_384, 0],
-    [12_367, 0],
-    [15_743, 0],
-    [19_923, 0],
-    [19_895, 0],
 ];
 
 const LOSSY_CHROMA_8X4_EOB_BASE: [[u16; 3]; 4] = [
@@ -1754,6 +1754,19 @@ const LOSSY_CHROMA_16X8_EOB_BIN: [u16; 8] =
 // complemented for the portable range decoder. Full-resolution 8x8 chroma
 // uses the 64-coefficient chroma row; it is distinct from the R4x16 row.
 const LOSSY_CHROMA_8X8_EOB_BIN: [u16; 7] = [29_263, 27_464, 22_682, 18_954, 15_084, 9_398, 0];
+
+// ✅ VERIFIED: dav1d 1.5.3 src/cdf.c qcat-zero
+// eob_hi_bit[txctx=1][chroma], complemented for RangeDecoder. Full-resolution
+// 8×8 chroma uses this row after decoding eob_bin_64.
+const LOSSY_CHROMA_8X8_EOB_HIGH: [[u16; 2]; 7] = [
+    [12_087, 0],
+    [12_067, 0],
+    [17_518, 0],
+    [17_551, 0],
+    [17_840, 0],
+    [16_384, 0],
+    [16_384, 0],
+];
 
 const LOSSY_CHROMA_4X16_EOB_BIN: [u16; 7] = [32_433, 32_038, 31_309, 27_274, 24_013, 19_771, 0];
 
@@ -3284,7 +3297,9 @@ impl BlockCdfs {
                 [23_400, 11_210, 5_624, 0],
                 [26_831, 17_802, 11_649, 0],
                 [30_101, 25_543, 21_449, 0],
-                [8_798, 3_298, 390, 0],
+                // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c qcat-zero
+                // base_tok[txctx=2][luma][21], complemented for RangeDecoder.
+                [8_798, 1_298, 390, 0],
                 [15_595, 3_034, 750, 0],
                 [19_973, 7_327, 2_803, 0],
                 [23_787, 13_088, 6_875, 0],
@@ -3353,7 +3368,7 @@ impl BlockCdfs {
             lossy_chroma_8x4_base: LOSSY_CHROMA_8X4_BASE,
             lossy_chroma_8x4_high_tokens: LOSSY_CHROMA_8X4_HIGH,
             lossy_chroma_8x8_eob_bin: LOSSY_CHROMA_8X8_EOB_BIN,
-            lossy_chroma_8x8_eob_high: LOSSY_CHROMA_4X16_EOB_HIGH,
+            lossy_chroma_8x8_eob_high: LOSSY_CHROMA_8X8_EOB_HIGH,
             lossy_chroma_8x8_eob_base: LOSSY_CHROMA_8X4_EOB_BASE,
             lossy_chroma_8x8_base: LOSSY_CHROMA_8X8_BASE,
             lossy_chroma_8x8_high_tokens: LOSSY_CHROMA_8X8_HIGH,
