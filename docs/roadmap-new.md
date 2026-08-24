@@ -17,9 +17,10 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-24
 
-- Accepted claim-ledger base revision: `36b939696415a962285d37f9120ff389aebf0205`
+- Current claim-ledger refresh base revision: `b22c0b7ecd399f714885754c768a3938b881e7bb`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
-  (1,449/1,449 passed at this revision)
+  (1,449/1,449 passed at its recorded revision `36b9396`; the current
+  fixture/hash refresh does not silently relabel that historical parity run)
 - Project: `image-slash-star`, a Rust image-codec library whose runtime is
   intended to be pure safe Rust on every supported target
 - Historical finding evidence only: [the old roadmap](roadmap.md). It does not
@@ -110,8 +111,8 @@ snapshot `667dce48-113b-488d-97d2-d8c2163913ca`. It measured 95,454/106,588 line
 (86.4788%), and 143,731/161,871 regions (88.7935%). The strict four-metric
 verifier remains red because the release target is 100%: 11,134 lines, 1,373
 branches, 758 functions, and 18,140 regions remain uncovered.
-This managed snapshot replaces the stale local current-state baseline, but it
-does not replace the accepted claim-ledger tuple. Compared with the preceding
+This managed snapshot replaces the stale local current-state baseline and is
+bound into the current claim-ledger refresh. Compared with the preceding
 final-head snapshot `0b1c4bee-eeef-47c5-8121-9010df2f50ce` at `2df3b39f`, the
 palette2 implementation and fixture add 464 lines, 86 branches, 22 functions,
 and 735 regions to the denominator; covered counters move by +440, +64, +21,
@@ -123,26 +124,22 @@ the next coverage work. The remaining misses are visible in the report; the
 largest AVIF-specific concentration is the intentionally unimplemented decode
 and encode surface listed below.
 
-Because this cutover changes files hashed by
-`tests/fixtures/claim_ledger.json`, `python3 scripts/verify_claim_ledger.py`
-will report a mismatch until a clean accepted revision has refreshed the
-revision-bound tuple with fresh managed evidence. That failure is a release
-blocker to resolve at acceptance time; it must not be hidden by weakening the
-verifier or copying hashes into the ledger on a dirty tree.
+The revision-bound hash tuple is refreshed at base revision `b22c0b7`;
+`python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
+coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
+the committed tree. This ledger refresh records current source/evidence
+integrity; it does not close the separate 100% LLVM coverage gate or relabel
+the historical Pillow parity run.
 
 ## Current gate status
 
 The current committed tree passes formatting, locked all-feature check, strict
 Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
-and diff checks. The two gates that remain intentionally open are:
+claim-ledger, and diff checks. The one remaining measured release gate is:
 
 - LLVM coverage: 11,134 lines, 1,373 branches, 758 functions, and 18,140 regions
   remain below the 100% release target.
-- The revision-bound claim ledger: its manifest, matrix, coverage-origin, and
-  roadmap hashes must be refreshed only on a clean accepted revision with new
-  managed evidence.
-
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
 accepted-brand variants, grid fixture, and two-column multitile fixture. The
@@ -571,10 +568,10 @@ that an entire workstream is finished because one slice passed.
 
 The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
-directly. The accepted product-claim tuple remains revision-bound to
-`36b939696415a962285d37f9120ff389aebf0205`; the newer source-quality
-checkpoint above has its own managed coverage evidence but does not silently
-rewrite those product claims.
+directly. The accepted product-claim tuple remains revision-bound to the
+historical Pillow parity record at `36b9396`; the current hash and
+coverage-evidence refresh is bound to `b22c0b7` and does not silently rewrite
+that parity result.
 
 ## Contract catalog: behavior Pillow cannot prove
 
