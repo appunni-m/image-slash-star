@@ -6740,8 +6740,13 @@ fn decode_lossy_luma_16x16_coefficients(
 
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
         let mut coefficients = [0_i32; 256];
-        let (coefficient, token) =
-            dequantize_lossy_coefficient_with_token(decoder, token, negative, 0, quantization)?;
+        let (coefficient, token) = dequantize_lossy_luma_16x16_coefficient_with_token(
+            decoder,
+            token,
+            negative,
+            0,
+            quantization,
+        )?;
         coefficients[0] = coefficient;
         return Ok((
             coefficients,
@@ -6890,7 +6895,7 @@ fn decode_lossy_luma_16x16_coefficients(
     let mut dc_negative = false;
     if dc_token != 0 {
         dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
-        let (coefficient, token) = dequantize_lossy_coefficient_with_token(
+        let (coefficient, token) = dequantize_lossy_luma_16x16_coefficient_with_token(
             decoder,
             dc_token,
             dc_negative,
@@ -6902,7 +6907,7 @@ fn decode_lossy_luma_16x16_coefficients(
     }
     for &position in nonzero_positions[..nonzero_count].iter().rev() {
         let negative = decoder.equal();
-        let (coefficient, token) = dequantize_lossy_coefficient_with_token(
+        let (coefficient, token) = dequantize_lossy_luma_16x16_coefficient_with_token(
             decoder,
             tokens[position],
             negative,
@@ -11012,7 +11017,8 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal8x4
         | TransformGrid::Square8
         | TransformGrid::Square16
-        | TransformGrid::Vertical16x32 => 7,
+        | TransformGrid::Vertical16x32
+        | TransformGrid::Vertical16x64 => 7,
         _ => 10,
     };
     let transform_context = match transform_grid {
@@ -11027,10 +11033,12 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Vertical8x16
         | TransformGrid::Horizontal32x8
         | TransformGrid::Vertical8x32 => 1,
-        TransformGrid::Vertical16x32
-        | TransformGrid::Horizontal32x16
-        | TransformGrid::Square32
-        | TransformGrid::Vertical16x64 => 2,
+        TransformGrid::Vertical16x32 | TransformGrid::Horizontal32x16 | TransformGrid::Square32 => {
+            2
+        }
+        // R16x64 maps to one 8x32 chroma transform. dav1d's `t_dim.ctx`
+        // selects the fourth subsampled coefficient-skip row for that shape.
+        TransformGrid::Vertical16x64 => 3,
         // BLOCK_64X16 maps to R32x8 in 4:2:0, whose t_dim.ctx is two.
         TransformGrid::Horizontal64x16 => 2,
         TransformGrid::Square64 => 3,
@@ -11966,6 +11974,17 @@ fn luma_8x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     }
 }
 
+fn luma_16x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        9 => Ok(Some(&quantization::Y_16X16_MATRIX_9)),
+        10 => Ok(Some(&quantization::Y_16X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn chroma_8x16_matrix(
     quantization: LossyQuantization,
     plane: usize,
@@ -11988,6 +12007,24 @@ fn dequantize_lossy_luma_4x4_coefficient_with_token(
     quantization: LossyQuantization,
 ) -> PortableResult<(i32, u32)> {
     let matrix_values = luma_4x4_matrix(quantization)?;
+    dequantize_lossy_coefficient_with_token_using_matrix(
+        decoder,
+        token,
+        negative,
+        index,
+        quantization,
+        matrix_values,
+    )
+}
+
+fn dequantize_lossy_luma_16x16_coefficient_with_token(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    token: u32,
+    negative: bool,
+    index: usize,
+    quantization: LossyQuantization,
+) -> PortableResult<(i32, u32)> {
+    let matrix_values = luma_16x16_matrix(quantization)?;
     dequantize_lossy_coefficient_with_token_using_matrix(
         decoder,
         token,
@@ -21736,7 +21773,7 @@ fn reconstruct_leaf_with_luma_override(
         lossy_luma_8x8_grid_split,
         lossy_luma_16x16_split: _,
         lossy_luma_16x16_horizontal_split: _,
-        lossy_luma_16x16_vertical_split: _,
+        lossy_luma_16x16_vertical_split,
         lossy_luma_16x4_transform,
         lossy_luma_rect_coefficients,
         lossy_luma_rect_transform,
@@ -22154,21 +22191,40 @@ fn reconstruct_leaf_with_luma_override(
                 Lossy4x8TransformKind::DctDct,
             ),
         ],
-        ReconstructionPolicy::Lossy420Dct16x64 => [
-            reconstruct_lossy_luma_16x64(predictors[0], lossy_luma_16x64_coefficients),
-            reconstruct_lossy_residual_plane(
-                predictors[1],
-                &transform::inverse_dct8x32(
-                    &lossy_chroma_8x32_coefficients[0].unwrap_or([0_i32; 256]),
+        ReconstructionPolicy::Lossy420Dct16x64 => {
+            let luma = if let Some(split) = lossy_luma_16x16_vertical_split {
+                reconstruct_lossy_luma_16x64_vertical_split(
+                    luma_predictor,
+                    luma_angle,
+                    filter_intra_mode,
+                    [predictors[0]; 16],
+                    [predictors[0]; 64],
+                    predictors[0],
+                    false,
+                    split,
+                )
+                .unwrap_or_else(|_| ReconstructedPlane {
+                    samples: vec![predictors[0]; 1024],
+                })
+            } else {
+                reconstruct_lossy_luma_16x64(predictors[0], lossy_luma_16x64_coefficients)
+            };
+            [
+                luma,
+                reconstruct_lossy_residual_plane(
+                    predictors[1],
+                    &transform::inverse_dct8x32(
+                        &lossy_chroma_8x32_coefficients[0].unwrap_or([0_i32; 256]),
+                    ),
                 ),
-            ),
-            reconstruct_lossy_residual_plane(
-                predictors[2],
-                &transform::inverse_dct8x32(
-                    &lossy_chroma_8x32_coefficients[1].unwrap_or([0_i32; 256]),
+                reconstruct_lossy_residual_plane(
+                    predictors[2],
+                    &transform::inverse_dct8x32(
+                        &lossy_chroma_8x32_coefficients[1].unwrap_or([0_i32; 256]),
+                    ),
                 ),
-            ),
-        ],
+            ]
+        }
         ReconstructionPolicy::Lossy420Dct32x16 => {
             let luma = if let Some(split) = lossy_luma_8x8_grid_split {
                 reconstruct_lossy_luma_32x16_split(
@@ -30248,7 +30304,7 @@ fn reconstruct_lossy_luma_16x64_vertical_split(
         } else {
             match predictor {
                 LumaPredictor::Dc => {
-                    let value = if has_left || row != 0 {
+                    let value = if has_left {
                         dc_predictor_16(top_edge, left_edge)
                     } else {
                         one_sided_dc_predictor_16(top_edge)
