@@ -278,7 +278,7 @@ enum LossyTransformKind {
     AdstAdst,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Lossy4x8TransformKind {
     IdentityIdentity,
     DctDct,
@@ -358,14 +358,21 @@ const fn is_smooth_chroma_predictor(predictor: Option<ChromaPredictor>) -> bool 
 }
 
 const fn chroma_rect_transform_kind(predictor: ChromaPredictor) -> Lossy4x8TransformKind {
-    match chroma_transform_kind(predictor) {
-        LossyTransformKind::IdentityIdentity => Lossy4x8TransformKind::IdentityIdentity,
-        LossyTransformKind::IdentityDct => Lossy4x8TransformKind::IdentityDct,
-        LossyTransformKind::DctDct => Lossy4x8TransformKind::DctDct,
-        LossyTransformKind::DctAdst => Lossy4x8TransformKind::DctAdst,
-        LossyTransformKind::AdstDct => Lossy4x8TransformKind::AdstDct,
-        LossyTransformKind::DctIdentity => Lossy4x8TransformKind::DctIdentity,
-        LossyTransformKind::AdstAdst => Lossy4x8TransformKind::AdstAdst,
+    match predictor {
+        ChromaPredictor::Dc | ChromaPredictor::Cfl { .. } | ChromaPredictor::Diagonal45 => {
+            Lossy4x8TransformKind::DctDct
+        }
+        ChromaPredictor::Vertical
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal67
+        | ChromaPredictor::SmoothVertical => Lossy4x8TransformKind::AdstDct,
+        ChromaPredictor::Horizontal
+        | ChromaPredictor::Diagonal157
+        | ChromaPredictor::Diagonal203
+        | ChromaPredictor::SmoothHorizontal => Lossy4x8TransformKind::DctAdst,
+        ChromaPredictor::DiagonalDownRight | ChromaPredictor::Smooth | ChromaPredictor::Paeth => {
+            Lossy4x8TransformKind::AdstAdst
+        }
     }
 }
 
@@ -39414,5 +39421,44 @@ mod tests {
         assert_eq!(from_true_top_left.samples, vec![59; 64]);
         assert_eq!(from_left_edge.samples, vec![58; 64]);
         Ok(())
+    }
+
+    #[test]
+    fn chroma_rect_transform_kind_matches_av1_mode_to_txfm() {
+        let cases = [
+            (ChromaPredictor::Dc, Lossy4x8TransformKind::DctDct),
+            (
+                ChromaPredictor::Cfl {
+                    alpha_u: -17,
+                    alpha_v: 23,
+                },
+                Lossy4x8TransformKind::DctDct,
+            ),
+            (ChromaPredictor::Vertical, Lossy4x8TransformKind::AdstDct),
+            (ChromaPredictor::Horizontal, Lossy4x8TransformKind::DctAdst),
+            (ChromaPredictor::Diagonal45, Lossy4x8TransformKind::DctDct),
+            (
+                ChromaPredictor::DiagonalDownRight,
+                Lossy4x8TransformKind::AdstAdst,
+            ),
+            (ChromaPredictor::Diagonal113, Lossy4x8TransformKind::AdstDct),
+            (ChromaPredictor::Diagonal157, Lossy4x8TransformKind::DctAdst),
+            (ChromaPredictor::Diagonal203, Lossy4x8TransformKind::DctAdst),
+            (ChromaPredictor::Diagonal67, Lossy4x8TransformKind::AdstDct),
+            (ChromaPredictor::Smooth, Lossy4x8TransformKind::AdstAdst),
+            (
+                ChromaPredictor::SmoothVertical,
+                Lossy4x8TransformKind::AdstDct,
+            ),
+            (
+                ChromaPredictor::SmoothHorizontal,
+                Lossy4x8TransformKind::DctAdst,
+            ),
+            (ChromaPredictor::Paeth, Lossy4x8TransformKind::AdstAdst),
+        ];
+
+        for (predictor, expected) in cases {
+            assert_eq!(chroma_rect_transform_kind(predictor), expected);
+        }
     }
 }
