@@ -82,25 +82,25 @@
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "dc4009a06da9d88286c325ad8d82276d73a20340",
-        "run_id": "4eb6fb24-e98c-438a-8703-4a343298f9af",
-        "snapshot_id": "735c8895-72d3-44b6-b641-1c6de07ff14c",
+        "commit_sha": "2df3b39fb57d05f9e6c7f4435acd97af41015e1d",
+        "run_id": "37bc6572-4b2f-4236-85cd-3d6c713faacc",
+        "snapshot_id": "0b1c4bee-eeef-47c5-8121-9010df2f50ce",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 154179,
+        "duration_ms": 157152,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
         "note": "The managed command passed the full test workload at this exact commit and automatically ingested the required LLVM JSON artifact. The verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "cc8d67e96b5911927a49d71d7db2e05fb02feca7",
-          "baseline_snapshot_id": "56f1a7e2-3548-4758-9fed-93581c4679df",
-          "line_covered_delta": -11,
-          "line_total_delta": 20,
-          "branch_covered_delta": -2,
-          "branch_total_delta": 2,
-          "function_covered_delta": -1,
-          "function_total_delta": 2,
-          "region_covered_delta": -11,
-          "region_total_delta": 29,
-          "interpretation": "The promoted full-chroma AVIF fixture adds one active decode row and new AV1 reconstruction code. The managed aggregate remains below the 100% release target; Coverage MCP changed-code review identifies the new block reconstruction path as the next coverage work rather than treating the fixture as complete coverage."
+          "baseline_commit": "dc4009a06da9d88286c325ad8d82276d73a20340",
+          "baseline_snapshot_id": "735c8895-72d3-44b6-b641-1c6de07ff14c",
+          "line_covered_delta": 0,
+          "line_total_delta": 0,
+          "branch_covered_delta": 0,
+          "branch_total_delta": 0,
+          "function_covered_delta": 0,
+          "function_total_delta": 0,
+          "region_covered_delta": 0,
+          "region_total_delta": 0,
+          "interpretation": "The final 2df3b39f commit changes only README.md, docs/roadmap-new.md, and roadmap.json after the code-bearing dc4009a0 snapshot; Coverage MCP reports identical aggregate counters and no executable changed-code coverage delta."
         }
       },
       "coverage_origin_inventory": {
@@ -135,7 +135,7 @@
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 4eb6fb24-e98c-438a-8703-4a343298f9af at dc4009a0 reports 11,110 lines, 1,352 branches, 757 functions, and 18,047 regions uncovered in snapshot 735c8895-72d3-44b6-b641-1c6de07ff14c; the required artifact ingested automatically and the four-metric release target remains 100%.",
+      "llvm_coverage": "Managed Coverage MCP run 37bc6572-4b2f-4236-85cd-3d6c713faacc at 2df3b39f reports 11,110 lines, 1,352 branches, 757 functions, and 18,047 regions uncovered in snapshot 0b1c4bee-eeef-47c5-8121-9010df2f50ce; the required artifact ingested automatically and the four-metric release target remains 100%.",
       "claim_ledger": "Revision-bound hashes for manifest.yaml, coverage_matrix.json, coverage_origin_manifest.json, and roadmap.json intentionally remain stale until a clean accepted revision has fresh managed evidence; the verifier is not weakened."
     },
     "next_json_ordered_work": "AVF-STILL-001"
@@ -186,7 +186,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run 4eb6fb24-e98c-438a-8703-4a343298f9af at commit dc4009a0 reports 89.5311% lines (11,110 uncovered), 89.9703% branches (1,352 uncovered), 86.4434% functions (757 uncovered), and 88.8001% regions (18,047 uncovered); the ingested snapshot is 735c8895-72d3-44b6-b641-1c6de07ff14c and the four-metric release target remains open until all reach 100%."
+        "evidence": "Managed Coverage MCP run 37bc6572-4b2f-4236-85cd-3d6c713faacc at commit 2df3b39f reports 89.5311% lines (11,110 uncovered), 89.9703% branches (1,352 uncovered), 86.4434% functions (757 uncovered), and 88.8001% regions (18,047 uncovered); the ingested snapshot is 0b1c4bee-eeef-47c5-8121-9010df2f50ce and the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
