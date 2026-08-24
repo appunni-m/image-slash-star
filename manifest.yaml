@@ -4155,17 +4155,45 @@ formats:
       test_assets:
       - coverage_r16x8_neighbor_10.avif
     - id: coverage_adst_public_01
-      description: 4x8 lossy 4:4:4 quality-99 frame with a padded 8x8 luma and full-chroma AC residuals; pinned dav1d arithmetic trace
+      description: 4x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
       test_assets:
       - coverage_adst_public_01.avif
     - id: coverage_adst_public_02
       description: 8x4 lossy 4:4:4 quality-99 frame with a padded 8x8 luma cropped at the bottom edge; pinned dav1d arithmetic trace
       test_assets:
       - coverage_adst_public_02.avif
+    - id: coverage_adst_public_03
+      description: 4x16 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_03.avif
     - id: coverage_adst_public_04
       description: 16x4 lossy 4:4:4 quality-99 frame split into two 8x8 leaves cropped at the bottom edge; pinned dav1d topology and arithmetic trace
       test_assets:
       - coverage_adst_public_04.avif
+    - id: coverage_adst_public_05
+      description: 8x16 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_05.avif
+    - id: coverage_adst_public_06
+      description: 16x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_06.avif
+    - id: coverage_adst_public_07
+      description: 8x32 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_07.avif
+    - id: coverage_adst_public_08
+      description: 32x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_08.avif
+    - id: coverage_adst_public_09
+      description: 16x16 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_09.avif
+    - id: coverage_adst_public_10
+      description: 32x16 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
+      test_assets:
+      - coverage_adst_public_10.avif
     - id: coverage_i444_square8_four_leaves
       description: 16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace
       test_assets:

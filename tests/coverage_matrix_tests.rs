@@ -4691,7 +4691,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 170);
+    assert_eq!(expected.cases.len(), 177);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4827,7 +4827,18 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             | "portable_lossless_420_split_4x16_a.avif"
             | "portable_lossless_420_split_8x12_a.avif"
             | "portable_lossless_420_split_8x16_a.avif" => Some([46_608, 54_426, 53_236]),
+            "coverage_adst_public_03.avif" => Some([46_608, 54_426, 50_176]),
             "coverage_adst_public_04.avif" => Some([37_392, 43_662, 35_645]),
+            "coverage_adst_public_05.avif" => Some([46_608, 54_426, 46_810]),
+            "coverage_adst_public_06.avif" => Some([37_392, 43_662, 61_804]),
+            _ => None,
+        };
+        let deep_recursive_ranges = match case.fixture.as_str() {
+            "coverage_adst_public_07.avif" => Some(vec![40_720, 57_892, 33_811, 44_974]),
+            "coverage_adst_public_08.avif" => Some(vec![38_416, 43_816, 51_186, 53_848]),
+            "coverage_adst_public_10.avif" => {
+                Some(vec![38_416, 40_864, 47_838, 37_634, 57_584, 33_970])
+            }
             _ => None,
         };
         let square_recursive_ranges = match case.fixture.as_str() {
@@ -4862,6 +4873,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 Some([34_880, 40_768, 45_302, 45_386, 40_125])
             }
+            "coverage_adst_public_09.avif" => Some([34_880, 40_768, 33_809, 44_126, 55_818]),
             _ => None,
         };
         if let Some(ranges) = recursive_ranges {
@@ -4898,6 +4910,109 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             assert_eq!(
                 case.partition_blocks, expected_blocks,
                 "AV1 recursive partition topology case {case_index}"
+            );
+        } else if let Some(ranges) = deep_recursive_ranges {
+            let horizontal = case.portable_color.width > case.portable_color.height;
+            let expected_blocks = if ranges.len() == 4 {
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: ranges[0],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: ranges[1],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[2],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: if horizontal { 2 } else { 0 },
+                        y: if horizontal { 0 } else { 2 },
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[3],
+                    },
+                ]
+            } else {
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: ranges[0],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: ranges[1],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[2],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[3],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[4],
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: ranges[5],
+                    },
+                ]
+            };
+            assert_eq!(
+                case.partition_blocks, expected_blocks,
+                "AV1 deep recursive partition topology case {case_index}"
             );
         } else if let Some(ranges) = square_recursive_ranges {
             let expected_blocks = [
@@ -5437,8 +5552,29 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
             }
+            "coverage_adst_public_03.avif" => {
+                "c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9"
+            }
             "coverage_adst_public_04.avif" => {
                 "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8"
+            }
+            "coverage_adst_public_05.avif" => {
+                "ccf631ee65a05977a2020995f5dc442905ad0c21450f3e3e0df3bd0f0d2b8e11"
+            }
+            "coverage_adst_public_06.avif" => {
+                "988aef43dcf1c4eeaa0cffee66f3ba32e9c127c0b07996830900b4a79ed07cd6"
+            }
+            "coverage_adst_public_07.avif" => {
+                "a40858233036b25f36900bd39be40e6eda843493ac27b767448b891ac8437492"
+            }
+            "coverage_adst_public_08.avif" => {
+                "8b308e80e0a1a904072657a1f8b3472b5b89e37dc01238c8dc6066689a9ebf6a"
+            }
+            "coverage_adst_public_09.avif" => {
+                "e0e5a1ae7b7aef892258e7f7f2332f13f959b419ba0f9b14c8edcc9a298e487d"
+            }
+            "coverage_adst_public_10.avif" => {
+                "93047df7e452ceca5c0cf243100db0b2e1508e7db35d86dc00ad34b70069db4e"
             }
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"

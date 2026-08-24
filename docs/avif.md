@@ -60,13 +60,13 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 200 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 243 AVIF decode rows and 32 encode
 rows:
 
-- 187 decode rows are active: portable still reconstruction and structural
+- 236 decode rows are active: portable still reconstruction and structural
   error contracts.
-- 13 decode rows are planned pure-Rust gaps; the empty-tile malformed-input,
-  lossy DC-predictor, and all sixteen partitioned-square contracts are active.
+- 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
+  high-bit-depth reconstruction, HDR color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
 
 One narrow internal regression contract now consumes six terminal blocks of
@@ -142,25 +142,22 @@ safe-Rust `Unsupported` result (with the named repeated-frame-ID sequence case
 intentionally returning `Malformed`). The generated matrix drops that marker
 as soon as a row becomes active, so it cannot silently survive a real closure.
 
-The current matrix contains 45 former-native AVIF rows: 13 decode gaps and 32
+The current matrix contains 39 former-native AVIF rows: 7 decode gaps and 32
 encode gaps. Every remaining row is explicitly planned until pure safe Rust and
 independent compatibility evidence exist.
 
 ## Exact planned gaps
 
-These are the 13 decode rows that must become real safe-Rust behavior before
+These are the 7 decode rows that must become real safe-Rust behavior before
 they can move from `planned` to `active` in `manifest.yaml` and
 `coverage_matrix.json`:
 
 | Category | Planned rows | Why it is missing |
 | --- | --- | --- |
-| General baseline payload | `baseline`; `accepted_still_major_brands`; `accepted_still_major_brands_major_brand_msf1`; `accepted_still_major_brands_major_brand_mif1_late_avif` | The container brands are understood, but the 128×128 8-bit lossy 4:2:0 payload still needs syntax-driven multi-block partitioning, residual reconstruction, loop filtering, and the complete frame raster. Safe Rust now has a focused R8×16 terminal parser/reconstructor, but the production frame walker still stops before this terminal and no full-frame pixel evidence exists. |
-| Partitioned-square raster | `partitioned_square_12x12_g96_direct_tokens`; `partitioned_square_12x12_midpoint_g96_ac`; `partitioned_square_12x12_top_left_luma_eob4`; `partitioned_square_12x12_top_left_luma_eob12_control`; `partitioned_square_12x12_luma_eob1`; `partitioned_square_12x12_luma_eob2_control`; `partitioned_square_12x12_luma_eob4_control`; `partitioned_square_12x12_luma_eob6_control`; `partitioned_square_12x12_luma_eob9_control`; `partitioned_square_12x12_luma_eob10_control`; `partitioned_square_12x12_luma_eob12_control`; `partitioned_square_12x12_luma_eob15_control` | The four 16×16 4:4:4 square fixtures now have exact safe-Rust plane and entropy evidence. These 12×12 cases still need their cropped-edge and coefficient-class proof. |
 | Adjacent entropy syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | Safe Rust now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes, including moving coefficient-context lookup, matrix-10 dequantization, and independent pixel fixtures. These two byte mutations are rejected by the independent Pillow oracle, so they remain explicit negative planned controls rather than being widened into successful decoding. |
-| Sample depth and auxiliary images | `high_bitdepth` | `high_bitdepth` needs 12-bit reconstruction and conversion. The 64×64 `with_alpha` primary/auxiliary pair is active with exact RGBA8 evidence; broader alpha dimensions, depths, and relationships remain future work. |
-| Color and image composition | `hdr`; `grid` | HDR transfer/primaries/matrix application and grid-cell composition are not implemented. |
+| Sample depth | `high_bitdepth` | `high_bitdepth` needs 12-bit reconstruction and conversion. The 64×64 `with_alpha` primary/auxiliary pair is active with exact RGBA8 evidence; broader alpha dimensions, depths, and relationships remain future work. |
+| Color pipeline | `hdr` | HDR transfer/primaries/matrix application is not implemented; the current public color path is the narrow checked 8-bit BT.601 full-range class. |
 | Animation and tracks | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | Track references, timing, and sequence presentation are not implemented; the safe validator now rejects the repeated current frame ID in the named error fixture. |
-| Multiple AV1 tiles | `multitile` | Multi-tile frame reconstruction is not implemented. |
 
 The remaining active AVIF error rows prove that the safe parser rejects
 malformed or forbidden structure with a stable typed result. They are not
