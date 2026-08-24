@@ -103,22 +103,25 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `953da2c7-5d0b-4150-9725-2b291b18b87f` passed the
+Managed Coverage MCP run `f52a11fc-3f74-478f-8d57-7f2432634f3e` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`c687cf4f` in 157,181 ms. The required LLVM JSON artifact was ingested
-automatically as snapshot `5f6a7869-beae-411d-9760-5896e35d31b2`. It measured
-95,451/106,585 lines (89.5539%), 12,193/13,566 branches (89.8791%), 4,848/5,606 functions (86.4788%), and 143,729/161,870 regions (88.7929%).
-The primary-item/sequence validation boundary and corrected luma-table oracle
-add no aggregate executable line, branch, or function coverage; the strict
-four-metric verifier remains red because the release target is 100%: 11,134
-lines, 1,373 branches, 758 functions, and 18,141 regions remain uncovered.
-This managed snapshot is the current source-quality accounting; the accepted
-claim ledger remains bound to its own clean release revision. Compared with
-the immediately preceding snapshot `26e35242-86ab-4b83-b0e4-5e06edfd2709`,
-line, branch, and function counters are unchanged and the covered-region
-counter is one lower. The remaining misses are visible in the report, and
-the largest AVIF-specific concentration is the intentionally unimplemented
-decode and encode surface listed below.
+`972262c9` in 165,206 ms. The required LLVM JSON artifact was ingested
+automatically as snapshot `8142bb9f-43bd-4b14-a686-78f09a9bb131`. It measured
+95,439/106,517 lines (89.5998%), 12,189/13,562 branches (89.8761%), 4,848/5,606 functions (86.4788%), and 143,754/161,818 regions (88.8368%).
+The private tx64 inverse-transform cleanup removes compile-time-unreachable
+false arms while preserving the active arithmetic and order; it closes no
+public capability, fixture row, or roadmap item. Compared with the compatible
+source-quality snapshot `5f6a7869-beae-411d-9760-5896e35d31b2` at commit
+`c687cf4f`, covered/total deltas are -12/-68 lines, -4/-4 branches, 0/0
+functions, and +25/-52 regions. These are source-mapping/denominator changes,
+not a claim that every metric improved: the branch rate decreases slightly.
+The strict four-metric verifier remains red because the release target is 100%:
+11,078 lines, 1,373 branches, 758 functions, and 18,064 regions remain
+uncovered. This managed snapshot is the current source-quality accounting;
+the accepted claim ledger remains bound to its own clean release revision. The
+remaining misses are visible in the report, and the largest AVIF-specific
+concentration is the intentionally unimplemented decode and encode surface
+listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
@@ -655,27 +658,29 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `c687cf4f`, run `953da2c7-5d0b-4150-9725-2b291b18b87f`, and snapshot
-`5f6a7869-beae-411d-9760-5896e35d31b2`. It replaces the stale local baseline
+commit `972262c9`, run `f52a11fc-3f74-478f-8d57-7f2432634f3e`, and snapshot
+`8142bb9f-43bd-4b14-a686-78f09a9bb131`. It replaces the stale local baseline
 for current source-quality accounting; the accepted claim ledger remains
 revision-bound to its own clean release revision.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 95,451 | 106,585 | 89.5539% | 11,134 | 10.4461% |
-| Branches (managed Coverage MCP) | 12,193 | 13,566 | 89.8791% | 1,373 | 10.1209% |
+| Lines (managed Coverage MCP) | 95,439 | 106,517 | 89.5998% | 11,078 | 10.4002% |
+| Branches (managed Coverage MCP) | 12,189 | 13,562 | 89.8761% | 1,373 | 10.1239% |
 | Functions (managed Coverage MCP) | 4,848 | 5,606 | 86.4788% | 758 | 13.5212% |
-| Regions (managed Coverage MCP) | 143,729 | 161,870 | 88.7929% | 18,141 | 11.2071% |
+| Regions (managed Coverage MCP) | 143,754 | 161,818 | 88.8368% | 18,064 | 11.1632% |
 
-The immediately preceding comparison snapshot is
-`26e35242-86ab-4b83-b0e4-5e06edfd2709`. The new managed run passed with one
-required artifact ingested. Coverage MCP reports unchanged line, branch, and
-function counters and one fewer covered region; this validation-boundary and
-test-oracle slice gets no aggregate coverage credit. The current managed LLVM JSON report carries
-the warning that segments are normalized to segment-start lines; aggregate
-region coverage is preserved from its report summary. RN-001 therefore
-remains open for the current source tree: the release target is still 100% for
-all four measures.
+The compatible comparison snapshot is `5f6a7869-beae-411d-9760-5896e35d31b2`
+at code-bearing commit `c687cf4f`. The new managed run passed with one
+required artifact ingested. Coverage MCP reports covered/total deltas of
+-12/-68 lines, -4/-4 branches, 0/0 functions, and +25/-52 regions. The
+private tx64 cleanup changes source mapping and denominators; because the
+branch rate decreases slightly, this slice receives no aggregate feature-
+coverage credit and closes no roadmap item. The current managed LLVM JSON
+report carries the warning that segments are normalized to segment-start lines;
+aggregate region coverage is preserved from its report summary. RN-001
+therefore remains open for the current source tree: the release target is still
+100% for all four measures.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
@@ -712,10 +717,12 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-code-bearing commit `c687cf4f`; the exact aggregate result and
-automatic-ingestion provenance are recorded above. This slice records the
-primary-item/sequence validation boundary and the corrected luma-table oracle;
-it does not claim aggregate coverage improvement.
+code-bearing commit `972262c9`; the exact aggregate result and
+automatic-ingestion provenance are recorded above. This slice removes
+compile-time-unreachable false arms from the private AV1 tx64 inverse-transform
+chain while preserving active arithmetic and order. It changes source mapping
+and coverage denominators but does not claim a new public capability or
+aggregate feature-coverage improvement.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -724,7 +731,7 @@ from this cleanup checkpoint.
 
 **Done:** not yet. The managed report has no skipped artifact and keeps
 Pillow, Rust-only, and private-model origins distinct, but it reports
-89.5542% lines, 89.8791% branches, 86.4788% functions, and 88.7929% regions.
+89.5998% lines, 89.8761% branches, 86.4788% functions, and 88.8368% regions.
 Close this item only when all four current metrics reach 100% or an explicit,
 reviewed instrumentation decision changes the release target.
 
