@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-24
 
-- Current claim-ledger refresh base revision: `79e0786cf779ed7c9b4ff1684f35d8601d40ee31`
+- Current claim-ledger refresh base revision: `06bb14ae7cf716cf4556b3d75bf2a03946c69758`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -125,7 +125,7 @@ decode and encode surface listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
-The revision-bound hash tuple is refreshed at base revision `79e0786c`;
+The revision-bound hash tuple is refreshed at base revision `06bb14ae`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -581,7 +581,7 @@ The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
 directly. The accepted product-claim tuple remains revision-bound to the
 historical Pillow parity record at `36b9396`; the current hash and
-coverage-evidence refresh is bound to `79e0786c` and does not silently rewrite
+coverage-evidence refresh is bound to `06bb14ae` and does not silently rewrite
 that parity result.
 
 ## Contract catalog: behavior Pillow cannot prove
