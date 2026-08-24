@@ -4074,6 +4074,14 @@ formats:
       description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
       test_assets:
       - coverage_r8x16_band_04.avif
+    - id: coverage_r8x16_band_05
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_05.avif
+    - id: coverage_r8x16_band_06
+      description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
+      test_assets:
+      - coverage_r8x16_band_06.avif
     - id: coverage_r8x16_band_09
       description: 8x32 4:2:0 quality-99 directional bands for following 8x16 and transform coverage
       test_assets:
