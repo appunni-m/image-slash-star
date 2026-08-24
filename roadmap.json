@@ -54,9 +54,9 @@
     },
     "coverage": {
       "line": {
-        "covered": 95454,
-        "total": 106588,
-        "percent": 89.5542,
+        "covered": 95451,
+        "total": 106585,
+        "percent": 89.5539,
         "uncovered": 11134
       },
       "branch": {
@@ -72,8 +72,8 @@
         "uncovered": 758
       },
       "region": {
-        "covered": 143730,
-        "total": 161871,
+        "covered": 143729,
+        "total": 161870,
         "percent": 88.7929,
         "uncovered": 18141
       },
@@ -82,16 +82,16 @@
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "79e0786cf779ed7c9b4ff1684f35d8601d40ee31",
-        "run_id": "f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309",
-        "snapshot_id": "8870928a-8cdd-411f-b5ce-f976b7ef06e0",
+        "commit_sha": "c687cf4fe3dbbd950747f58820c466b7c09bdc9c",
+        "run_id": "953da2c7-5d0b-4150-9725-2b291b18b87f",
+        "snapshot_id": "5f6a7869-beae-411d-9760-5896e35d31b2",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 159610,
+        "duration_ms": 157181,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at commit 79e0786c and automatically ingested the required LLVM JSON artifact. The two promoted R8x16 fixtures add exact public and independent reconstruction evidence but no new aggregate executable lines, branches, or functions; the managed snapshot reports one fewer covered region than the prior snapshot. The verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full test workload at commit c687cf4f and automatically ingested the required LLVM JSON artifact. This slice makes primary-item validation independent from a later movie track and corrects a luma-table test oracle; it adds no aggregate line, branch, or function coverage and reports one fewer covered region than the preceding snapshot. The verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
           "baseline_commit": "a06084c2a41534aba557ebd0674afd3f54e667b2",
-          "baseline_snapshot_id": "667dce48-113b-488d-97d2-d8c2163913ca",
+          "baseline_snapshot_id": "26e35242-86ab-4b83-b0e4-5e06edfd2709",
           "line_covered_delta": 0,
           "line_total_delta": 0,
           "branch_covered_delta": 0,
@@ -100,7 +100,7 @@
           "function_total_delta": 0,
           "region_covered_delta": -1,
           "region_total_delta": 0,
-          "interpretation": "The two promoted R8x16 AVIF fixtures add no new aggregate executable lines, branches, or functions. Coverage MCP reports unchanged line, branch, and function counters and one fewer covered region versus the immediately preceding managed snapshot; no coverage improvement is credited from this fixture-only slice, and the four-metric release target remains open."
+          "interpretation": "The primary-item validation boundary and corrected test oracle add no aggregate executable line, branch, or function coverage. Coverage MCP reports unchanged line, branch, and function counters and one fewer covered region versus the immediately preceding managed snapshot; no aggregate coverage improvement is credited, and the four-metric release target remains open."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309 passed at commit 79e0786c and ingested snapshot 8870928a-8cdd-411f-b5ce-f976b7ef06e0. It reports 11,134 lines, 1,373 branches, 758 functions, and 18,141 regions uncovered; no aggregate line, branch, or function gain is credited from the two promoted R8x16 fixtures, and the four-metric release target remains 100%."
+      "llvm_coverage": "Managed Coverage MCP run 953da2c7-5d0b-4150-9725-2b291b18b87f passed at commit c687cf4f and ingested snapshot 5f6a7869-beae-411d-9760-5896e35d31b2. It reports 11,134 lines, 1,373 branches, 758 functions, and 18,141 regions uncovered; no aggregate line, branch, or function gain is credited from the primary-item boundary slice, and the four-metric release target remains 100%."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -959,7 +959,7 @@
           "error_animated_repeated_frame_id"
         ],
         "deliverable": "Parse sample tables, references, timing, disposal/blend/default-image state, limits, and present frames.",
-        "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets; no AVIF multi-frame presentation exists.",
+        "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets; primary-item validation is now independent from a later movie track, but no AVIF multi-frame presentation exists.",
         "next": "Implement one-frame-at-a-time AVIF sequence materialization before eager collection."
       },
       "AVF-TILE-001": {
