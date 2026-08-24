@@ -88,11 +88,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 233 rows total, 226 active, 7 explicit planned
+- AVIF decode/inspect/verify: 234 rows total, 227 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,457 rows total, 1053 active decode rows, 365 active encode
+- Whole matrix: 1,458 rows total, 1054 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Current local Rust contracts: 33/33 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
@@ -102,17 +102,18 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `218b1116-dc13-46b8-baaa-6a8e11bcd865` ingested
-snapshot `bd5fbf94-e50a-4d02-9e0b-03fde5e04ad3` at commit `eb0945a` and ran
-the complete all-feature test set plus one doctest. It measured 95,025/106,104 lines (89.5584%), 12,130/13,478 branches (89.9985%), 4,828/5,582 functions (86.4923%), and 143,100/161,107 regions (88.8230%). The strict four-metric
+Managed Coverage MCP run `aab2ac3e-c017-4625-8906-eff40ef4f4e7` passed the
+complete all-feature test set plus one doctest at commit `cc8d67e`. Automatic
+artifact ingestion hit a transient DuckDB timeout; the unchanged report was
+then imported successfully as snapshot `56f1a7e2-3548-4758-9fed-93581c4679df`.
+It measured 95,025/106,104 lines (89.5584%), 12,130/13,478 branches (89.9985%), 4,828/5,582 functions (86.4923%), and 143,100/161,107 regions (88.8230%). The strict four-metric
 verifier remains red because the release target is 100%: 11,079 lines, 1,348
 branches, 754 functions, and 18,007 regions remain uncovered.
 This managed snapshot replaces the stale local current-state baseline, but it
 does not replace the accepted claim-ledger tuple. Compared with the previous
-compatible managed snapshot, covered lines moved by -9 with total lines +2,
-covered functions by -9, covered branches by +2, and covered regions by +31;
-this is recorded as measured fluctuation and is not attributed to the new
-fixture without first-divergence evidence. The remaining misses are visible
+compatible managed snapshot at `eb0945a`, all four covered and total counters
+are unchanged; the changed-code review reports the documentation/manifest
+additions as unmeasured and source coverage as unchanged. The remaining misses are visible
 in the report; the largest AVIF-specific concentration is the intentionally
 unimplemented decode and encode surface listed below.
 
@@ -165,6 +166,11 @@ between two new cells—before copying any sample. `place_partition_leaf` also
 converts the entropy walker's checked four-by-four-unit coordinates to pixel
 origins and crops only the visible frame edge. This closes a reusable, atomic
 assembly prerequisite for the baseline and future tile/grid paths. The
+promoted `coverage_adst_public_02.avif` is an 8x4 lossy 4:4:4 frame whose coded
+8x8 leaf is cropped at the bottom edge; it now has a pinned dav1d 218-operation
+trace, exact reconstructed YUV planes, and exact public RGB parity. This is
+fixture evidence for the existing padded-leaf path, not a claim for a separate
+8x4 transform shape. The
 committed grid and two-column multitile fixtures now also have exact public
 pixel evidence; broader tile/grid shapes and auxiliary relationships remain
 open.
@@ -604,7 +610,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,457 total | 1,060 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,053 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,458 total | 1,061 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,054 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 33/33 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -634,9 +640,9 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the current committed
-source tree and is bound to commit `eb0945a`, run
-`218b1116-dc13-46b8-baaa-6a8e11bcd865`, and snapshot
-`bd5fbf94-e50a-4d02-9e0b-03fde5e04ad3`. It replaces the stale local baseline
+source tree and is bound to commit `cc8d67e`, run
+`aab2ac3e-c017-4625-8906-eff40ef4f4e7`, and imported snapshot
+`56f1a7e2-3548-4758-9fed-93581c4679df`. It replaces the stale local baseline
 for current source-quality accounting; the accepted claim ledger remains
 revision-bound to its own clean release revision.
 
@@ -693,7 +699,8 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-commit `eb0945a`; the exact aggregate result is recorded above.
+commit `cc8d67e`; the exact aggregate result and import provenance are recorded
+above.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -1704,7 +1711,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 233 AVIF decode/inspect/verify rows exist: 226 are
+**Current exact state:** 234 AVIF decode/inspect/verify rows exist: 227 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
