@@ -4693,7 +4693,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 181);
+    assert_eq!(expected.cases.len(), 182);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5070,6 +5070,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 case.partition_blocks, expected_blocks,
                 "AV1 square partition topology case {case_index}"
             );
+        } else if case.fixture == "coverage_r32x16_origin_01.avif" {
+            assert_eq!(
+                case.partition_blocks.len(),
+                2,
+                "AV1 Horizontal32x16 origin witness topology case {case_index}"
+            );
         } else {
             assert_eq!(
                 case.partition_blocks.len(),
@@ -5117,6 +5123,65 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 Vertical16x64 witness must decode both chroma planes"
+            );
+        }
+        if case.fixture == "coverage_r32x16_origin_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 0,
+                        range: 36_560,
+                    },
+                ],
+                "AV1 Horizontal32x16 origin witness partition topology"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| *line == "Post-skip[0]: r=35349"),
+                "AV1 Horizontal32x16 origin witness must be non-skipped"
+            );
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-tx[1]:")),
+                "AV1 Horizontal32x16 origin witness must select TX8x8 luma transforms"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=1,"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x16 origin witness must decode four luma transforms"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                2,
+                "AV1 Horizontal32x16 origin witness must decode both 16x8 chroma planes"
             );
         }
         assert_eq!(case.decoded_planes.len(), 3);
@@ -5603,6 +5668,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r16x32_grid_01.avif" => {
                 "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac"
+            }
+            "coverage_r32x16_origin_01.avif" => {
+                "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328"
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"

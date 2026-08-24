@@ -5119,6 +5119,45 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal_transform_origin():
+        def pixel(x, y):
+            quadrant = 2 * (y >= 8) + (x >= 16)
+            base = (56, 108, 164, 212)[quadrant]
+            ripple = ((7 * x + 11 * y) % 9) - 4
+            u_delta = -10 if x < 16 else 12
+            v_delta = -8 if y < 8 else 11
+            return (
+                clamp_channel(base + ripple + u_delta + v_delta),
+                clamp_channel(base + ripple - u_delta),
+                clamp_channel(base + ripple - v_delta),
+            )
+
+        return image_from_pixels((32, 16), pixel)
+
+    write_campaign_image(
+        "coverage_r32x16_origin_01",
+        horizontal_transform_origin(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "32",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def vertical_transform_grid_mosaic(index):
         bands = (44, 100, 156, 212)
 

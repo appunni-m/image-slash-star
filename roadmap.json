@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1471,
-      "decode_rows": 1074,
+      "total_rows": 1472,
+      "decode_rows": 1075,
       "encode_rows": 397,
-      "decode_active": 1067,
+      "decode_active": 1068,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 247,
-      "decode_active": 240,
+      "decode_rows": 248,
+      "decode_active": 241,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -88,7 +88,7 @@
         "suite": "all-features-lines-branches-nightly",
         "duration_ms": 221640,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full all-feature workload at code-bearing commit 2182e314 and automatically ingested the required LLVM JSON artifact as snapshot f006833d. It records 89.8887% lines, 90.1632% branches, 86.7093% functions, and 89.1242% regions; the four-metric release target remains open until all reach 100%. The pinned Vertical16x64 4:2:0 reconstruction fixture is covered by the matrix and exact dav1d/Pillow checks, but AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
+        "note": "The managed command passed the full all-feature workload at code-bearing commit 2182e314 and automatically ingested the required LLVM JSON artifact as snapshot f006833d. It records 89.8887% lines, 90.1632% branches, 86.7093% functions, and 89.1242% regions; the four-metric release target remains open until all reach 100%. The pinned Horizontal32x16 and Vertical16x64 4:2:0 reconstruction fixtures are covered by the matrix and exact dav1d/Pillow checks, but AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
         "comparison_to_previous_snapshot": {
           "baseline_commit": "f1bfd58b1518f58f2003145654e1439f51f149e1",
           "baseline_snapshot_id": "a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5",
@@ -904,7 +904,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, and the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The promoted R8x16 and R16x64 fixtures share pinned dav1d partition/topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. The 4:2:2 test is assembly evidence only; no 4:2:2 decoder path is enabled.",
+        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, and the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The promoted R8x16, Horizontal32x16, and R16x64 fixtures share pinned dav1d partition/topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. The 4:2:2 test is assembly evidence only; no 4:2:2 decoder path is enabled.",
         "next": "Broaden partition/block states, predictors, residual classes, filter-intra, tile-local context cases, and independent full-frame proofs."
       },
       "AVF-ENTROPY-001": {
