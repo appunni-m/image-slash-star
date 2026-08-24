@@ -147,6 +147,19 @@ The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
 and Pillow RGB hashes are pinned in `docs/avif.md` and
 `tests/fixtures/outputs/av1_reconstruction.json`.
 
+`coverage_i444_palette2_square8_four_leaves.avif`
+(`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
+is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated
+through the pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 environment
+with quality 99, speed 8, one encoder thread, and autotiling disabled. Its
+4x4 checker cells alternate RGB `(17,91,203)` and `(0,255,0)`. The coded
+frame selects four terminal 8x8 leaves; each leaf carries paired Y and UV
+palette size 2 syntax, and later leaves reuse the spatial palette cache. It
+proves only this narrow palette class: it does not establish Y-only or
+UV-only palettes, palette sizes above two, other subsampling or bit depths,
+cropped/non-8x8 leaves, or multi-tile support. Its Pillow RGB SHA-256 is
+`ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b`.
+
 The EOB controls are selected by
 `scripts/explore_avif_sample_mutations.py`, which exhaustively replaces every
 AV1 item byte with every other byte value and retains only exact scalar syntax

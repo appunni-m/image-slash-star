@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1459,
-      "decode_rows": 1062,
+      "total_rows": 1460,
+      "decode_rows": 1063,
       "encode_rows": 397,
-      "decode_active": 1055,
+      "decode_active": 1056,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 235,
-      "decode_active": 228,
+      "decode_rows": 236,
+      "decode_active": 229,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -104,7 +104,7 @@
         }
       },
       "coverage_origin_inventory": {
-        "guards": 500,
+        "guards": 499,
         "files": 85
       },
       "status": "open_until_all_four_metrics_are_100_percent"
