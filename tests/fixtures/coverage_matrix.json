@@ -15462,6 +15462,81 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_i444_square8_four_leaves",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace",
+          "asset": "coverage_i444_square8_four_leaves.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "2bb0387f68416eb7cfd3982b595adac7e9b220af78fd16f4d232623349c6c37f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "91ac35bc3eece5b880fb4b4a22b9b99e91f35cb57921b635bb84c332d1bc5345",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_i444_square8_four_leaves_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "10bit.avif",
           "category": "high",
           "description": "12-bit animated AVIF decoded to Pillow RGBA8 output",
@@ -113752,12 +113827,12 @@
     }
   },
   "summary": {
-    "total_rows": 1455,
-    "decode_rows": 1058,
+    "total_rows": 1456,
+    "decode_rows": 1059,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1057,
-    "decode_active": 1051,
+    "assets_available": 1058,
+    "decode_active": 1052,
     "decode_planned": 7,
     "encode_not_wired": 32
   }

@@ -4830,18 +4830,21 @@ def gen_avif():
         quality=100,
         speed=8,
         subsampling="4:4:4",
+        advanced=None,
     ):
         def encode():
             output = BytesIO()
-            image.save(
-                output,
-                format="AVIF",
-                quality=quality,
-                speed=speed,
-                max_threads=1,
-                subsampling=subsampling,
-                autotiling=False,
-            )
+            options = {
+                "format": "AVIF",
+                "quality": quality,
+                "speed": speed,
+                "max_threads": 1,
+                "subsampling": subsampling,
+                "autotiling": False,
+            }
+            if advanced is not None:
+                options["advanced"] = advanced
+            image.save(output, **options)
             return output.getvalue()
 
         first = encode()
@@ -4948,13 +4951,14 @@ def gen_avif():
         )
         return Image.frombytes("RGB", size, pixels)
 
-    def write_campaign_image(name, image, subsampling):
+    def write_campaign_image(name, image, subsampling, advanced=None):
         write_portable_image(
             f"{name}.avif",
             image,
             quality=99,
             speed=8,
             subsampling=subsampling,
+            advanced=advanced,
         )
 
     def write_campaign_family(prefix, count, make_image, subsampling):
@@ -5207,7 +5211,27 @@ def gen_avif():
         return image_from_pixels((width, height), pixel)
 
     write_campaign_family("coverage_adst_public", 10, public_adst, "4:4:4")
-    print("  AVIF coverage campaign: wrote 100 deterministic candidate files")
+
+    # Independent topology witness: the pinned dav1d trace proves that these
+    # options produce one 16x16 superblock split into four terminal 8x8
+    # 4:4:4 leaves. Keep the input structurally distinct from the broad
+    # candidate families so its public parity row proves the positioned full-
+    # chroma path rather than relying on a color or filename special case.
+    partitioned_full_chroma = image_from_pixels(
+        (16, 16),
+        lambda x, y: (
+            ((17, 91, 203), (32, 32, 32), (0, 255, 0), (127, 127, 127))[
+                int(y >= 8) * 2 + int(x >= 8)
+            ]
+        ),
+    )
+    write_campaign_image(
+        "coverage_i444_square8_four_leaves",
+        partitioned_full_chroma,
+        "4:4:4",
+        advanced={"min-partition-size": "8", "max-partition-size": "8"},
+    )
+    print("  AVIF coverage campaign: wrote 100 candidates and one topology witness")
 
     write_portable_lossless("portable_lossless_a.avif", (17, 91, 203))
     write_portable_lossless("portable_lossless_b.avif", (199, 37, 83))
