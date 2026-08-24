@@ -4951,22 +4951,40 @@ def gen_avif():
         )
         return Image.frombytes("RGB", size, pixels)
 
-    def write_campaign_image(name, image, subsampling, advanced=None):
+    def write_campaign_image(
+        name,
+        image,
+        subsampling,
+        advanced=None,
+        quality=99,
+        speed=8,
+    ):
         write_portable_image(
             f"{name}.avif",
             image,
-            quality=99,
-            speed=8,
+            quality=quality,
+            speed=speed,
             subsampling=subsampling,
             advanced=advanced,
         )
 
-    def write_campaign_family(prefix, count, make_image, subsampling):
+    def write_campaign_family(
+        prefix,
+        count,
+        make_image,
+        subsampling,
+        advanced=None,
+        quality=99,
+        speed=8,
+    ):
         for index in range(count):
             write_campaign_image(
                 f"{prefix}_{index + 1:02d}",
                 make_image(index),
                 subsampling,
+                advanced=advanced,
+                quality=quality,
+                speed=speed,
             )
 
     # Coverage campaign candidates are intentionally declarative and generated
@@ -5073,6 +5091,32 @@ def gen_avif():
 
     write_campaign_family(
         "coverage_r16x8_neighbor", 10, upper_context_mosaic, "4:2:0"
+    )
+
+    def transform_grid_mosaic(index):
+        def pixel(x, y):
+            if x < 16:
+                luma = 80 + ((y * 4 + 7 * (index + 1)) % 128)
+            else:
+                local_x = x - 16
+                quadrant = (local_x // 8) + 2 * (y // 16)
+                luma = (40, 100, 180, 232)[quadrant] + ((local_x + y + index) % 5) - 2
+            return (
+                clamp_channel(luma),
+                128,
+                128,
+            )
+
+        return image_from_pixels((32, 32), pixel)
+
+    write_campaign_family(
+        "coverage_r16x32_grid",
+        10,
+        transform_grid_mosaic,
+        "4:2:0",
+        advanced={"enable-filter-intra": "0", "enable-restoration": "0"},
+        quality=76,
+        speed=0,
     )
 
     def full_chroma_square(index):
