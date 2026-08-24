@@ -54,9 +54,9 @@
     },
     "coverage": {
       "line": {
-        "covered": 95439,
-        "total": 106517,
-        "percent": 89.5998,
+        "covered": 95436,
+        "total": 106514,
+        "percent": 89.5995,
         "uncovered": 11078
       },
       "branch": {
@@ -72,35 +72,35 @@
         "uncovered": 758
       },
       "region": {
-        "covered": 143754,
-        "total": 161818,
-        "percent": 88.8368,
-        "uncovered": 18064
+        "covered": 143752,
+        "total": 161815,
+        "percent": 88.8373,
+        "uncovered": 18063
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "972262c9790db045b3a15ab9c36ddbf5f14f2095",
-        "run_id": "f52a11fc-3f74-478f-8d57-7f2432634f3e",
-        "snapshot_id": "8142bb9f-43bd-4b14-a686-78f09a9bb131",
+        "commit_sha": "88fd39edd0b03b618f28a55b86b1ec36ab5ceb3d",
+        "run_id": "c98e4065-eea9-4be9-97da-d457f9a5c165",
+        "snapshot_id": "7791ec29-3bfb-4454-8ad7-6f5f2c26a7de",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 165206,
+        "duration_ms": 210662,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at commit 972262c9 and automatically ingested the required LLVM JSON artifact. This slice removes compile-time-unreachable false arms from the private AV1 tx64 inverse-transform chain while preserving the active arithmetic and order. Against the compatible c687cf4f source-quality snapshot, covered/total deltas are -12/-68 lines, -4/-4 branches, 0/0 functions, and +25/-52 regions. These source-mapping/denominator changes close no public capability, fixture row, or roadmap item; the verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full test workload at commit 88fd39ed and automatically ingested the required LLVM JSON artifact as snapshot 7791ec29. This slice adds a checked pure-Rust high-depth truncation boundary used by the existing 8-bit materializer and a real odd-width 4:2:2 FrameCanvas geometry contract; it does not enable high-depth or 4:2:2 AVIF decoding and closes no public capability or roadmap row. Against the compatible 972262c9 snapshot, covered/total deltas are -3/-3 lines, 0/0 branches, 0/0 functions, and -2/-3 regions. The release verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "c687cf4fe3dbbd950747f58820c466b7c09bdc9c",
-          "baseline_snapshot_id": "5f6a7869-beae-411d-9760-5896e35d31b2",
-          "line_covered_delta": -12,
-          "line_total_delta": -68,
-          "branch_covered_delta": -4,
-          "branch_total_delta": -4,
+          "baseline_commit": "972262c9790db045b3a15ab9c36ddbf5f14f2095",
+          "baseline_snapshot_id": "8142bb9f-43bd-4b14-a686-78f09a9bb131",
+          "line_covered_delta": -3,
+          "line_total_delta": -3,
+          "branch_covered_delta": 0,
+          "branch_total_delta": 0,
           "function_covered_delta": 0,
           "function_total_delta": 0,
-          "region_covered_delta": 25,
-          "region_total_delta": -52,
-          "interpretation": "The private tx64 cleanup removes compile-time-unreachable false arms while preserving the active arithmetic and order. Coverage MCP reports source-mapping/denominator changes rather than a new public behavior: covered/total lines -12/-68, branches -4/-4, functions 0/0, and regions +25/-52. The branch rate decreases slightly, so no aggregate feature-coverage credit or roadmap closure is claimed; the four-metric release target remains open."
+          "region_covered_delta": -2,
+          "region_total_delta": -3,
+          "interpretation": "The checked sample-depth helper and 4:2:2 geometry contract are prerequisite code, not a public high-depth or 4:2:2 decode implementation. Coverage MCP reports small source-mapping/denominator movement: covered/total lines -3/-3, branches 0/0, functions 0/0, and regions -2/-3. No aggregate feature-coverage credit or roadmap closure is claimed; the four-metric release target remains open."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run f52a11fc-3f74-478f-8d57-7f2432634f3e passed at code-bearing commit 972262c9 and ingested snapshot 8142bb9f-43bd-4b14-a686-78f09a9bb131. It reports 11,078 lines, 1,373 branches, 758 functions, and 18,064 regions uncovered. The tx64 cleanup changes source mapping/denominators but closes no public capability or roadmap item; the four-metric release target remains 100%."
+      "llvm_coverage": "Managed Coverage MCP run c98e4065-eea9-4be9-97da-d457f9a5c165 passed at code-bearing commit 88fd39ed and ingested snapshot 7791ec29-3bfb-4454-8ad7-6f5f2c26a7de. It reports 11,078 lines, 1,373 branches, 758 functions, and 18,063 regions uncovered. The checked sample-depth and 4:2:2 geometry prerequisites close no public capability or roadmap item; the four-metric release target remains 100%."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -187,7 +187,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309 at commit 79e0786c reports 89.5542% lines (11,134 uncovered), 89.8791% branches (1,373 uncovered), 86.4788% functions (758 uncovered), and 88.7929% regions (18,141 uncovered); the ingested snapshot is 8870928a-8cdd-411f-b5ce-f976b7ef06e0. The two promoted R8x16 fixtures pass exact public and independent reconstruction checks but add no aggregate executable coverage, so the four-metric release target remains open until all reach 100%."
+        "evidence": "Managed Coverage MCP run c98e4065-eea9-4be9-97da-d457f9a5c165 at commit 88fd39ed reports 89.5995% lines (11,078 uncovered), 89.8761% branches (1,373 uncovered), 86.4788% functions (758 uncovered), and 88.8373% regions (18,063 uncovered); the ingested snapshot is 7791ec29-3bfb-4454-8ad7-6f5f2c26a7de. The checked sample-depth and odd-width 4:2:2 geometry prerequisites add no public high-depth/4:2:2 capability or aggregate closure, so the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
@@ -904,7 +904,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, and the generated 8x32 4:2:0 R8x16 band pair through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The two promoted R8x16 fixtures share the pinned dav1d four-block level-2/3/4 split topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement.",
+        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, and the generated 8x32 4:2:0 R8x16 band pair through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The two promoted R8x16 fixtures share the pinned dav1d four-block level-2/3/4 split topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. The 4:2:2 test is assembly evidence only; no 4:2:2 decoder path is enabled.",
         "next": "Broaden partition/block states, predictors, residual classes, filter-intra, tile-local context cases, and independent full-frame proofs."
       },
       "AVF-ENTROPY-001": {
@@ -923,7 +923,7 @@
           "high_bitdepth"
         ],
         "deliverable": "Reconstruct 10/12-bit planes and apply checked sample-to-8-bit conversion with limits and cancellation.",
-        "current_evidence": "Checked full-range normalization exists, but entropy reconstruction and public materialization remain 8-bit.",
+        "current_evidence": "A checked pure-Rust sample-depth boundary now validates 8/10/12-bit nominal ranges and truncates validated samples to the required 8-bit boundary; the existing 8-bit public materializer uses that boundary. Entropy reconstruction, restoration, 4:2:2 decoding, and public high-depth materialization remain 8-bit-only gaps.",
         "next": "Add high-depth AV1 block reconstruction and exact source-depth fixtures."
       },
       "AVF-ALPHA-001": {
