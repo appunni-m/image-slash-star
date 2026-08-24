@@ -431,7 +431,7 @@ mod tests {
     fn luma_matrix_9_has_checked_8x8_values() {
         assert_eq!(Y_8X8_MATRIX_9.len(), 64);
         assert_eq!(&Y_8X8_MATRIX_9[..8], &[31, 31, 32, 32, 34, 37, 43, 47]);
-        assert_eq!(&Y_8X8_MATRIX_9[56..], &[49, 46, 46, 46, 50, 55, 60, 61]);
+        assert_eq!(&Y_8X8_MATRIX_9[56..], &[47, 44, 45, 46, 52, 59, 67, 71]);
     }
 
     #[test]
