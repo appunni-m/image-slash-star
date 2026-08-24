@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-24",
-  "claim_ledger_base_revision": "b22c0b7ecd399f714885754c768a3938b881e7bb",
+  "claim_ledger_base_revision": "79e0786cf779ed7c9b4ff1684f35d8601d40ee31",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1467,
-      "decode_rows": 1070,
+      "total_rows": 1469,
+      "decode_rows": 1072,
       "encode_rows": 397,
-      "decode_active": 1063,
+      "decode_active": 1065,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 243,
-      "decode_active": 236,
+      "decode_rows": 245,
+      "decode_active": 238,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -72,35 +72,35 @@
         "uncovered": 758
       },
       "region": {
-        "covered": 143731,
+        "covered": 143730,
         "total": 161871,
-        "percent": 88.7935,
-        "uncovered": 18140
+        "percent": 88.7929,
+        "uncovered": 18141
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "a06084c2a41534aba557ebd0674afd3f54e667b2",
-        "run_id": "555702e2-fae4-4849-9209-98002f57a069",
-        "snapshot_id": "667dce48-113b-488d-97d2-d8c2163913ca",
+        "commit_sha": "79e0786cf779ed7c9b4ff1684f35d8601d40ee31",
+        "run_id": "f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309",
+        "snapshot_id": "8870928a-8cdd-411f-b5ce-f976b7ef06e0",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 170449,
+        "duration_ms": 159610,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at this exact code-bearing commit and automatically ingested the required LLVM JSON artifact. The verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full test workload at commit 79e0786c and automatically ingested the required LLVM JSON artifact. The two promoted R8x16 fixtures add exact public and independent reconstruction evidence but no new aggregate executable lines, branches, or functions; the managed snapshot reports one fewer covered region than the prior snapshot. The verifier remains intentionally red until every metric reaches 100%.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "2df3b39fb57d05f9e6c7f4435acd97af41015e1d",
-          "baseline_snapshot_id": "0b1c4bee-eeef-47c5-8121-9010df2f50ce",
+          "baseline_commit": "a06084c2a41534aba557ebd0674afd3f54e667b2",
+          "baseline_snapshot_id": "667dce48-113b-488d-97d2-d8c2163913ca",
           "line_covered_delta": 0,
           "line_total_delta": 0,
-          "branch_covered_delta": 1,
+          "branch_covered_delta": 0,
           "branch_total_delta": 0,
           "function_covered_delta": 0,
           "function_total_delta": 0,
-          "region_covered_delta": 1,
+          "region_covered_delta": -1,
           "region_total_delta": 0,
-          "interpretation": "The seven AVIF public-parity fixtures add no new executable lines or functions to the aggregate denominator, but they cover one additional branch and one additional region. Coverage MCP reports +1 covered branch and +1 covered region versus the preceding final-head snapshot; the four-metric release target remains open."
+          "interpretation": "The two promoted R8x16 AVIF fixtures add no new aggregate executable lines, branches, or functions. Coverage MCP reports unchanged line, branch, and function counters and one fewer covered region versus the immediately preceding managed snapshot; no coverage improvement is credited from this fixture-only slice, and the four-metric release target remains open."
         }
       },
       "coverage_origin_inventory": {
@@ -133,10 +133,11 @@
       "python3 scripts/verify_roadmap.py",
       "python3 scripts/verify_claim_ledger.py",
       "git diff --check",
-      "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
+      "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+      "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 555702e2-fae4-4849-9209-98002f57a069 at a06084c2 reports 11,134 lines, 1,373 branches, 758 functions, and 18,140 regions uncovered in snapshot 667dce48-113b-488d-97d2-d8c2163913ca; the required artifact ingested automatically and the four-metric release target remains 100%."
+      "llvm_coverage": "Managed Coverage MCP run f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309 passed at commit 79e0786c and ingested snapshot 8870928a-8cdd-411f-b5ce-f976b7ef06e0. It reports 11,134 lines, 1,373 branches, 758 functions, and 18,141 regions uncovered; no aggregate line, branch, or function gain is credited from the two promoted R8x16 fixtures, and the four-metric release target remains 100%."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -186,7 +187,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Managed Coverage MCP run 555702e2-fae4-4849-9209-98002f57a069 at commit a06084c2 reports 89.5542% lines (11,134 uncovered), 89.8791% branches (1,373 uncovered), 86.4788% functions (758 uncovered), and 88.7935% regions (18,140 uncovered); the ingested snapshot is 667dce48-113b-488d-97d2-d8c2163913ca and the four-metric release target remains open until all reach 100%."
+        "evidence": "Managed Coverage MCP run f4b8afef-6b5a-4f09-bf0e-9bd73cfa9309 at commit 79e0786c reports 89.5542% lines (11,134 uncovered), 89.8791% branches (1,373 uncovered), 86.4788% functions (758 uncovered), and 88.7929% regions (18,141 uncovered); the ingested snapshot is 8870928a-8cdd-411f-b5ce-f976b7ef06e0. The two promoted R8x16 fixtures pass exact public and independent reconstruction checks but add no aggregate executable coverage, so the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
@@ -903,7 +904,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, and the 256x128 two-column multitile frame through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement.",
+        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, and the generated 8x32 4:2:0 R8x16 band pair through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The two promoted R8x16 fixtures share the pinned dav1d four-block level-2/3/4 split topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement.",
         "next": "Broaden partition/block states, predictors, residual classes, filter-intra, tile-local context cases, and independent full-frame proofs."
       },
       "AVF-ENTROPY-001": {
