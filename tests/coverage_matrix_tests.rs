@@ -4691,7 +4691,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 168);
+    assert_eq!(expected.cases.len(), 169);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4827,6 +4827,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             | "portable_lossless_420_split_4x16_a.avif"
             | "portable_lossless_420_split_8x12_a.avif"
             | "portable_lossless_420_split_8x16_a.avif" => Some([46_608, 54_426, 53_236]),
+            "coverage_adst_public_04.avif" => Some([37_392, 43_662, 35_645]),
             _ => None,
         };
         let square_recursive_ranges = match case.fixture.as_str() {
@@ -5025,6 +5026,13 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             case.entropy_operations.len(),
             "AV1 reconstruction entropy operation count case {case_index}"
         );
+        if case.fixture == "coverage_adst_public_04.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                407,
+                "AV1 _04 pinned entropy operation count"
+            );
+        }
         for (operation_index, (actual, expected)) in actual_operations
             .iter()
             .zip(&case.entropy_operations)
@@ -5425,6 +5433,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
+            }
+            "coverage_adst_public_04.avif" => {
+                "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

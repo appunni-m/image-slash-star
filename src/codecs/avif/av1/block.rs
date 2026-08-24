@@ -1762,7 +1762,7 @@ const LOSSY_CHROMA_8X8_EOB_HIGH: [[u16; 2]; 7] = [
     [12_087, 0],
     [12_067, 0],
     [17_518, 0],
-    [17_551, 0],
+    [17_751, 0],
     [17_840, 0],
     [16_384, 0],
     [16_384, 0],
@@ -21163,17 +21163,43 @@ fn reconstruct_leaf_with_luma_override(
                 lossy_luma_4x8_coefficients,
                 lossy_luma_4x8_transform,
             );
-            let chroma_u = reconstruct_lossy_chroma_4x4(
-                predictors[1],
-                lossy_chroma_coefficients[0],
-                chroma_transform_kind(chroma_predictor),
-            );
-            let chroma_v = reconstruct_lossy_chroma_4x4(
-                predictors[2],
-                lossy_chroma_coefficients[1],
-                chroma_transform_kind(chroma_predictor),
-            );
-            [luma, chroma_u, chroma_v]
+            if matches!(chroma_sampling, ChromaSampling::Full) {
+                let luma_for_chroma = luma.clone();
+                let chroma = |plane: usize| match chroma_predictor {
+                    ChromaPredictor::Cfl { alpha_u, alpha_v } => {
+                        let alpha = if plane == 1 { alpha_u } else { alpha_v };
+                        // `reconstruct_lossy_luma_8x4` always returns exactly 32 samples;
+                        // the CFL helper's fallible extent check protects other callers.
+                        reconstruct_lossy_full_8x4_cfl(
+                            &luma_for_chroma,
+                            predictors[plane],
+                            alpha,
+                            lossy_chroma_8x4_coefficients[plane - 1],
+                        )
+                        .unwrap_or_else(|_| {
+                            unreachable!("8x4 luma reconstruction must have 32 samples")
+                        })
+                    }
+                    _ => reconstruct_lossy_luma_8x4(
+                        predictors[plane],
+                        lossy_chroma_8x4_coefficients[plane - 1],
+                        chroma_rect_transform_kind(chroma_predictor),
+                    ),
+                };
+                [luma, chroma(1), chroma(2)]
+            } else {
+                let chroma_u = reconstruct_lossy_chroma_4x4(
+                    predictors[1],
+                    lossy_chroma_coefficients[0],
+                    chroma_transform_kind(chroma_predictor),
+                );
+                let chroma_v = reconstruct_lossy_chroma_4x4(
+                    predictors[2],
+                    lossy_chroma_coefficients[1],
+                    chroma_transform_kind(chroma_predictor),
+                );
+                [luma, chroma_u, chroma_v]
+            }
         }
         ReconstructionPolicy::Lossy420Dct16x4 => {
             let luma = reconstruct_lossy_luma_16x4(
