@@ -2,22 +2,22 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-14 against the current safe-Rust AVIF cutover working tree;
+Reviewed: 2026-08-25 against the current safe-Rust AVIF cutover working tree;
 the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`06bb14ae7cf716cf4556b3d75bf2a03946c69758`; the historical Pillow parity
+`82c9a304fae159096aa3ec13d81985f1c199d0c7`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`af56a0c3-5bca-4b7a-8e15-29ac36516edc` from run
-`8d3e09cb-638c-434a-b7cc-a74ea576e667` (108/108 passed). It records
-73,473/73,539 lines, 9,434/9,444 branches, 3,629/3,679 functions, and
-109,876/110,011 regions. The managed Pillow parity identifier below is the
+`bc3ddb1f-e7af-496d-ae36-9f393c1eef1d` from run
+`0c05e36b-dd23-47b2-8d6f-a00700bd6638` (full all-feature workload passed). It
+records 96,362/106,985 lines, 12,281/13,622 branches, 4,905/5,629
+functions, and 145,019/162,554 regions. The managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
-all-feature matrix integration tests currently pass 32/32.
+all-feature matrix integration tests currently pass 33/33.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The immutable managed feature-matrix
@@ -26,12 +26,11 @@ registration failed before execution because it invokes sandbox-blocked
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
 The current working tree also passes the complete all-feature test set plus one
-doctest in the local nightly LLVM run. It measures 73,615/74,323 lines
-(99.0474%), 9,464/9,600 branches (98.5833%), 3,635/3,748 functions
-(96.9851%), and 110,174/111,446 regions (98.8586%). The strict four-metric
-verifier remains red because the release target is 100%; this is not a fresh
-managed Coverage MCP claim, and the managed snapshot remains bound to its
-recorded revision until a new artifact is ingested.
+doctest in the managed nightly LLVM run. It measures 96,362/106,985 lines
+(90.0706%), 12,281/13,622 branches (90.1556%), 4,905/5,629 functions
+(87.1380%), and 145,019/162,554 regions (89.2128%). The strict four-metric
+verifier remains red because the release target is 100%; the remaining gaps
+are recorded explicitly in the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
@@ -5480,12 +5479,16 @@ evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
 revision-bound tuple: implementation revision
-`487348d01389eb8d100b8a668c9921d97634c022`, Pillow manifest SHA-256,
-generated-matrix SHA-256, the Coverage MCP run/snapshot identifiers, every
-fixture-manifest SHA-256, the VP8L property-map SHA-256
-`78a0410d2c7e050e9a5746c3c423d0e70d3f7871735897221765c920cb2096d5`, and
+`82c9a304fae159096aa3ec13d81985f1c199d0c7`, manifest SHA-256
+`7989569510f0bde528e49fe0d4c1a5539fc45febfeba14c952464f01f53d5a13`,
+generated-matrix SHA-256
+`bcc305968fc3ce8a45b5a267da5f5c3d44448c230634f823035e344de722adf1`,
+Coverage MCP run `0c05e36b-dd23-47b2-8d6f-a00700bd6638` and snapshot
+`bc3ddb1f-e7af-496d-ae36-9f393c1eef1d`, every fixture-manifest SHA-256, the
+VP8L property-map SHA-256
+`f1de6d7164e1c021a21db2108cc5c5f5946cbfbcab11a40fdf63298ad29b69f9`, and
 the inspector SHA-256
-`833f0926c1a931a24087ae8dea3d199f11e6c236c50f90c97ae657aac40af541`.
+`8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
 and identifiers, and requires the four maintained documents to name the same
 revision; CI runs the verifier so the tuple cannot drift.
