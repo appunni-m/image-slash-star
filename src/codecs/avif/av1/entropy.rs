@@ -2728,7 +2728,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                         return Ok(PartitionVisitControl::Stop);
                     }
                 };
-
                 let (cdef_block_active, cdef_index) = block_decoder.cdef_metadata();
                 record_cdef_metadata(
                     context.frame_width,

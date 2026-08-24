@@ -15612,6 +15612,81 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_r16x32_grid_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "32x32 4:2:0 quality-76 speed-0 T-right split with a production R16x32 depth-two TX8x8 grid",
+          "asset": "coverage_r16x32_grid_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "fb8ee178f58141a3152894c5af033681c871e8562970b2fbab4b89dd487e824a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_r16x32_grid_01_avif.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_adst_public_01",
           "type": "decode",
           "format": "avif",
@@ -20370,7 +20445,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "4bit.bmp",
@@ -20447,7 +20526,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "8bit.bmp",
@@ -20525,7 +20608,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_8_gray",
@@ -20596,7 +20683,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_8_palette_blue_mismatch",
@@ -20673,7 +20764,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_8_palette_green_mismatch",
@@ -20750,7 +20845,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_8_palette_red_mismatch",
@@ -20827,7 +20926,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_8_8bit_implicit_palette",
@@ -20904,7 +21007,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "16bit.bmp",
@@ -20975,7 +21082,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "24bit.bmp",
@@ -21047,7 +21158,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "32bit.bmp",
@@ -21119,7 +21234,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "uncompressed.bmp",
@@ -21190,7 +21309,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "rle8.bmp",
@@ -21268,7 +21391,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_rle8_rle8_mixed",
@@ -21345,7 +21472,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_rle8_rle8_top_down",
@@ -21422,7 +21553,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_rle8_rle8_delta",
@@ -21499,7 +21634,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_rle8_rle8_absolute_odd",
@@ -21576,7 +21715,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "rle4.bmp",
@@ -21653,7 +21796,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_rle4_rle4_mixed",
@@ -21730,7 +21877,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "bitfields.bmp",
@@ -21801,7 +21952,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_bitfields_bitfields_v2_32_no_alpha",
@@ -21872,7 +22027,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_bitfields_v4header16",
@@ -21943,7 +22102,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "top_down.bmp",
@@ -22014,7 +22177,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_1",
@@ -22091,7 +22258,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_1_canonical",
@@ -22162,7 +22333,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_4",
@@ -22239,7 +22414,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_8",
@@ -22316,7 +22495,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_16",
@@ -22387,7 +22570,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "top_down_top_down_32",
@@ -22458,7 +22645,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "bottom_up.bmp",
@@ -22529,7 +22720,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bottom_up_bottom_up_1_palette",
@@ -22606,7 +22801,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "os2v1.bmp",
@@ -22677,7 +22876,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "v4header.bmp",
@@ -22748,7 +22951,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "v5header.bmp",
@@ -22819,7 +23026,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "1x1.bmp",
@@ -22891,7 +23102,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "odd_width.bmp",
@@ -22963,7 +23178,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_width2",
@@ -23034,7 +23253,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_width3",
@@ -23105,7 +23328,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_width31",
@@ -23176,7 +23403,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "planes_nonstandard",
@@ -23247,7 +23478,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "data_offset_before_header",
@@ -23318,7 +23553,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "not_bmp.bmp",
@@ -24169,7 +24408,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_invalid_width",
@@ -24424,7 +24665,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_oversized_height",
@@ -24497,7 +24740,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_invalid_depth",
@@ -27035,7 +27280,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_empty_stream",
@@ -27108,7 +27355,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_short_pair",
@@ -27181,7 +27430,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_delta_missing_payload",
@@ -27254,7 +27505,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_truncated_header",
@@ -27418,7 +27671,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_truncated_palette",
@@ -27491,7 +27746,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_invalid_depth",
@@ -27564,7 +27821,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle4_invalid_depth",
@@ -27637,7 +27896,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_early_eob",
@@ -27710,7 +27971,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle4_early_eob",
@@ -27783,7 +28046,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_delta_truncated",
@@ -27856,7 +28121,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle8_absolute_truncated",
@@ -27929,7 +28196,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle4_delta_truncated",
@@ -28002,7 +28271,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_rle4_absolute_truncated",
@@ -28075,7 +28346,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_bitfields_zero_mask",
@@ -39666,6 +39939,16 @@
           },
           "source_mode": "1",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_bilevel.bin",
           "encoded_ref_bytes": 3005,
           "encoded_ref_sha256": "14f49457df04383d2717a5240614b279aba4026656a8e77db58e458fa37a2dcb",
@@ -39678,17 +39961,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_rgba",
@@ -40070,7 +40343,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "multi.ico",
@@ -40142,7 +40419,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "multi_res_multi_descending",
@@ -40213,7 +40494,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "png_entry.ico",
@@ -40285,7 +40570,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "bmp_entry.ico",
@@ -40356,7 +40645,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_depths",
@@ -40427,7 +40720,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_depths_bmp_4bit",
@@ -40498,7 +40795,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_depths_bmp_8bit",
@@ -40569,7 +40870,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_depths_bmp_32bit",
@@ -40640,7 +40945,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_default_palette",
@@ -40711,7 +41020,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_mask_transparency",
@@ -40782,7 +41095,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_odd_width",
@@ -40853,7 +41170,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "bmp_short_palette_leniency",
@@ -40924,7 +41245,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "cursor",
@@ -41004,7 +41329,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "cursor_cursor_default_palette",
@@ -41084,7 +41413,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "cursor_cursor_24bit",
@@ -41158,7 +41491,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "16x16.ico",
@@ -41230,7 +41567,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "256x256.ico",
@@ -41301,7 +41642,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "error_malformed",
@@ -45172,7 +45517,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_422.jpg",
@@ -45244,7 +45593,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_420.jpg",
@@ -45316,7 +45669,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_411.jpg",
@@ -45388,7 +45745,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_gray.jpg",
@@ -45460,7 +45821,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_ycbcr.jpg",
@@ -45531,7 +45896,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_rgb_jpeg.jpg",
@@ -45602,7 +45971,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_cmyk.jpg",
@@ -45673,7 +46046,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_cmyk_raw",
@@ -45744,7 +46121,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_default.jpg",
@@ -45815,7 +46196,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_optimized.jpg",
@@ -45886,7 +46271,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "progressive.jpg",
@@ -45958,7 +46347,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "q100.jpg",
@@ -46030,7 +46423,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "quality_100_q90",
@@ -46101,7 +46498,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "quality_100_q75",
@@ -46172,7 +46573,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "q50.jpg",
@@ -46244,7 +46649,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "quality_50_q25",
@@ -46315,7 +46724,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "q10.jpg",
@@ -46387,7 +46800,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "q1.jpg",
@@ -46459,7 +46876,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "8x8.jpg",
@@ -46531,7 +46952,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "17x17.jpg",
@@ -46603,7 +47028,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_33x33",
@@ -46674,7 +47103,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "large.jpg",
@@ -46745,7 +47178,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "1x1.jpg",
@@ -46817,7 +47254,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "narrow_422",
@@ -46888,7 +47329,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "unusual_sampling",
@@ -46959,7 +47404,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "unusual_sampling_sampling_1x3",
@@ -47030,7 +47479,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "baseline_default.jpg",
@@ -47101,7 +47554,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "restart.jpg",
@@ -47173,7 +47630,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "exif_orientation.jpg",
@@ -47244,7 +47705,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "exif_thumbnail.jpg",
@@ -47315,7 +47780,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "no_exif.jpg",
@@ -47386,7 +47855,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "trailing_data.jpg",
@@ -47457,7 +47930,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "multiple_eoi.jpg",
@@ -47528,7 +48005,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "empty.jpg",
@@ -49087,7 +49568,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_high_h_sampling",
@@ -49160,7 +49643,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_zero_v_sampling",
@@ -49233,7 +49718,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_high_v_sampling",
@@ -49306,7 +49793,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_bad_quant_table",
@@ -49379,7 +49868,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_missing_quant_table",
@@ -49452,7 +49943,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_progressive_missing_quant_table",
@@ -49525,7 +50018,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sof_sparse_quant_table",
@@ -49598,7 +50093,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_dqt_bad_table",
@@ -49671,7 +50168,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_dqt_no_length",
@@ -50108,7 +50607,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_dht_no_length",
@@ -50545,7 +51046,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_no_length",
@@ -51255,7 +51758,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_zero_components",
@@ -51328,7 +51833,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_bad_dc_table",
@@ -51401,7 +51908,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_bad_ac_table",
@@ -51474,7 +51983,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_missing_dc_table",
@@ -51547,7 +52058,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_missing_ac_table",
@@ -51620,7 +52133,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_sparse_dc_table",
@@ -51693,7 +52208,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_sparse_ac_table",
@@ -51766,7 +52283,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_duplicate_sof",
@@ -51839,7 +52358,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_sos_before_sof",
@@ -52747,7 +53268,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "malformed_markers_fill_marker_truncated",
@@ -53912,7 +54435,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed",
@@ -53983,7 +54508,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_unknown_short_length",
@@ -54054,7 +54583,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_app14_non_adobe",
@@ -54125,7 +54658,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_prefixed_stuffed_marker",
@@ -54196,7 +54733,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_eoi_padding",
@@ -54267,7 +54808,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_empty_scan",
@@ -54338,7 +54883,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_early_eoi_1",
@@ -54409,7 +54958,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_early_eoi_64",
@@ -54480,7 +55033,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_truncated_tail_64",
@@ -54551,7 +55108,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_entropy_stuffed_ff_prefix",
@@ -54622,7 +55183,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_progressive_scan0_empty",
@@ -54693,7 +55258,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "dqt_16bit",
@@ -54764,7 +55333,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "missing_eoi",
@@ -54837,7 +55410,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "asset": "baseline.jpg",
@@ -54909,7 +55484,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "progressive_spectral.jpg",
@@ -54981,7 +55560,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "progressive_modes",
@@ -55052,7 +55635,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "progressive_modes_progressive_cmyk",
@@ -55123,7 +55710,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "progressive_restart",
@@ -55194,7 +55785,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         }
       ],
       "encode": [
@@ -56394,7 +56989,6 @@
             "encode_sequence": "ok"
           },
           "error_contracts": {},
-          "oracle_status": "ok",
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
           "encoded_ref_bytes": 10238,
           "encoded_ref_sha256": "68f15e5e6fa58222070babcba88088a4a9960e427796b96a08f9b7a8aa5905f7",
@@ -57884,7 +58478,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "gray_alpha.png",
@@ -57956,7 +58554,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "rgb.png",
@@ -58028,7 +58630,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "rgba.png",
@@ -58100,7 +58706,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_rgba_alpha_checker",
@@ -58171,7 +58781,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_rgba_alpha_partial",
@@ -58242,7 +58856,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "indexed.png",
@@ -58320,7 +58938,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_indexed_palette_2color",
@@ -58397,7 +59019,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_indexed_palette_256color",
@@ -58474,7 +59100,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_indexed_palette_2bit",
@@ -58551,7 +59181,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_indexed_palette_4bit",
@@ -58628,7 +59262,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "indexed_alpha.png",
@@ -58712,7 +59350,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "color_indexed_alpha_palette_trns_opaque",
@@ -58795,7 +59437,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "1bit.png",
@@ -58867,7 +59513,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "2bit.png",
@@ -58939,7 +59589,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "4bit.png",
@@ -59011,7 +59665,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "8bit.png",
@@ -59083,7 +59741,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "16bit.png",
@@ -59155,7 +59817,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_16_rgb16",
@@ -59226,7 +59892,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_16_la16",
@@ -59297,7 +59967,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "depth_16_rgba16",
@@ -59368,7 +60042,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "no_interlace.png",
@@ -59440,7 +60118,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "adam7.png",
@@ -59512,7 +60194,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "interlace_adam7_adam7_1x1",
@@ -59583,7 +60269,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "interlace_adam7_adam7_2x3",
@@ -59654,7 +60344,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_none.png",
@@ -59726,7 +60420,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_sub.png",
@@ -59798,7 +60496,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_up.png",
@@ -59870,7 +60572,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_average.png",
@@ -59942,7 +60648,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_paeth.png",
@@ -60014,7 +60724,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "filter_mixed.png",
@@ -60086,7 +60800,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "compress_default.png",
@@ -60158,7 +60876,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compress_default_compress_fast",
@@ -60229,7 +60951,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compress_default_compress_mid",
@@ -60300,7 +61026,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "compress_none.png",
@@ -60372,7 +61102,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "compress_max.png",
@@ -60444,7 +61178,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "gama.png",
@@ -60516,7 +61254,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "srgb.png",
@@ -60588,7 +61330,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "iccp.png",
@@ -60659,7 +61405,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "text_chunks.png",
@@ -60731,7 +61481,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "time_chunk.png",
@@ -60802,7 +61556,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "bkgd.png",
@@ -60873,7 +61631,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "phys.png",
@@ -60944,7 +61706,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "1x1.png",
@@ -61016,7 +61782,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "16x16.png",
@@ -61087,7 +61857,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "large.png",
@@ -61158,7 +61932,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "odd_size.png",
@@ -61230,7 +62008,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_2x3",
@@ -61301,7 +62083,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_1x255",
@@ -61372,7 +62158,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "size_odd_255x1",
@@ -61443,7 +62233,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "truncated.png",
@@ -62446,7 +63240,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_invalid_color_type",
@@ -62701,7 +63497,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_invalid_scanline_filter",
@@ -62774,7 +63572,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_short_inflated_scanline",
@@ -62847,7 +63647,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_short_header",
@@ -62920,7 +63722,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_invalid_header",
@@ -62993,7 +63797,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_reserved_block",
@@ -63066,7 +63872,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_bad_stored_complement",
@@ -63139,7 +63947,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_bad_adler",
@@ -63212,7 +64022,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_backreference_before_output",
@@ -63285,7 +64097,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_reserved_distance_symbol",
@@ -63358,7 +64172,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_reserved_literal_symbol",
@@ -63431,7 +64247,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_truncated_fixed_block",
@@ -63504,7 +64322,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_empty_code_length_tree",
@@ -63577,7 +64397,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_oversubscribed_code_length_tree",
@@ -63650,7 +64472,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_dynamic_repeat_overflow",
@@ -63723,7 +64547,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_undecodable_code_length",
@@ -63796,7 +64622,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_zlib_dynamic_backreference_before_output",
@@ -63869,7 +64697,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_adam7_invalid_scanline_filter",
@@ -63942,7 +64772,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_adam7_giant_dimensions",
@@ -64106,7 +64938,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_idat_truncated_chunk_no_iend",
@@ -64190,7 +65024,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_ihdr_only",
@@ -64627,7 +65463,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "error_malformed_structure_iend_without_idat",
@@ -64711,7 +65549,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed",
@@ -64794,7 +65634,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_invalid_compression",
@@ -64865,7 +65709,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_missing_iend",
@@ -64948,7 +65796,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_trns_too_long",
@@ -65031,7 +65883,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_missing_plte",
@@ -65102,7 +65958,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_empty_plte",
@@ -65173,7 +66033,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_short_plte",
@@ -65244,7 +66108,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_partial_plte",
@@ -65321,7 +66189,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_palette_trns_without_plte",
@@ -65392,7 +66264,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_duplicate_plte",
@@ -65469,7 +66345,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_duplicate_trns",
@@ -65552,7 +66432,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_actl_zero_frames",
@@ -65623,7 +66507,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_scanline",
@@ -65694,7 +66582,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_stored_scanline",
@@ -65765,7 +66657,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "pillow_tolerated_malformed_zlib_oversized_backreference_scanline",
@@ -65836,7 +66732,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "compression_dynamic_manual",
@@ -65907,7 +66807,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "transparency_rgb",
@@ -65978,7 +66882,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "apng_static.png",
@@ -66049,7 +66957,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "asset": "apng_animated.png",
@@ -66151,6 +67063,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_animated_png_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -66179,6 +67093,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_animated_png_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -66191,7 +67107,11 @@
                 "pixel_origin": "pillow_fixture"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls",
@@ -66275,6 +67195,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_rgba_controls_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66303,6 +67225,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_rgba_controls_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66331,6 +67255,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_rgba_controls_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66361,7 +67287,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_default_image",
@@ -66445,6 +67375,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_default_image_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66473,6 +67405,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_default_image_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66501,6 +67435,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_default_image_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66531,7 +67467,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_zero_delay_den",
@@ -66615,6 +67555,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_zero_delay_den_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66643,6 +67585,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_zero_delay_den_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66671,6 +67615,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_zero_delay_den_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66701,7 +67647,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_invalid_disposal",
@@ -66785,6 +67735,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_disposal_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66813,6 +67765,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_disposal_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66841,6 +67795,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_disposal_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66871,7 +67827,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_invalid_blend",
@@ -66955,6 +67915,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_blend_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -66983,6 +67945,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_blend_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -67011,6 +67975,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_invalid_blend_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -67041,7 +68007,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_first_previous",
@@ -67125,6 +68095,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_first_previous_png_frame_0.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -67153,6 +68125,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_first_previous_png_frame_1.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -67181,6 +68155,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_first_previous_png_frame_2.bin",
                 "ref_bytes": 64,
                 "ref_mode": "Rgba8",
@@ -67211,7 +68187,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_l1_controls",
@@ -67295,6 +68275,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_l1_controls_png_frame_0.bin",
                 "ref_bytes": 2,
                 "ref_mode": "1",
@@ -67323,6 +68305,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_l1_controls_png_frame_1.bin",
                 "ref_bytes": 2,
                 "ref_mode": "1",
@@ -67351,6 +68335,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_l1_controls_png_frame_2.bin",
                 "ref_bytes": 2,
                 "ref_mode": "1",
@@ -67381,7 +68367,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_l_over",
@@ -67465,6 +68455,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_l_over_png_frame_0.bin",
                 "ref_bytes": 16,
                 "ref_mode": "L8",
@@ -67493,6 +68485,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_l_over_png_frame_1.bin",
                 "ref_bytes": 16,
                 "ref_mode": "L8",
@@ -67523,7 +68517,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_la_over",
@@ -67607,6 +68605,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_la_over_png_frame_0.bin",
                 "ref_bytes": 32,
                 "ref_mode": "La8",
@@ -67635,6 +68635,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_la_over_png_frame_1.bin",
                 "ref_bytes": 32,
                 "ref_mode": "La8",
@@ -67665,7 +68667,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_palette_over",
@@ -67761,6 +68767,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_palette_over_png_frame_0.bin",
                 "ref_bytes": 16,
                 "ref_mode": "P",
@@ -67789,6 +68797,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_palette_over_png_frame_1.bin",
                 "ref_bytes": 16,
                 "ref_mode": "P",
@@ -67819,7 +68829,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_adam7",
@@ -67921,6 +68935,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_adam7_png_frame_0.bin",
                 "ref_bytes": 189,
                 "ref_mode": "Rgb8",
@@ -67933,7 +68949,11 @@
                 "pixel_origin": "pillow_fixture"
               }
             ]
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_controls_apng_long_actl",
@@ -68017,6 +69037,8 @@
                 "is_default_image": true,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_long_actl_png_frame_0.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -68045,6 +69067,8 @@
                 "is_default_image": false,
                 "pixel_layout": "rendered_canvas",
                 "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
                 "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_long_actl_png_frame_1.bin",
                 "ref_bytes": 49152,
                 "ref_mode": "Rgb8",
@@ -68075,7 +69099,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error",
@@ -68512,7 +69540,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error_apng_zero_frame_height",
@@ -68585,7 +69615,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error_apng_no_idat",
@@ -68669,7 +69701,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error_apng_fdat_without_fctl",
@@ -68742,7 +69776,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error_apng_short_fdat_without_fctl",
@@ -68815,7 +69851,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_open_error_apng_corrupt_default_data",
@@ -68888,7 +69926,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error",
@@ -68972,7 +70012,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_duplicate_sequence",
@@ -69056,7 +70100,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_frame_outside_canvas",
@@ -69140,7 +70188,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_declared_frame_mismatch",
@@ -69224,7 +70276,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_short_fctl",
@@ -69308,7 +70364,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_short_fdat",
@@ -69392,7 +70452,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_missing_between_frame_data",
@@ -69476,7 +70540,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_missing_final_frame_data",
@@ -69560,7 +70628,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_multiple_default_controls",
@@ -69644,7 +70716,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_no_controlled_frames",
@@ -69728,7 +70804,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_sequence_later_error_apng_corrupt_frame_data",
@@ -69812,7 +70892,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_control_after_idat",
@@ -69883,7 +70967,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_control_after_idat_apng_large_frame_count",
@@ -69954,7 +71042,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         },
         {
           "id": "apng_control_after_idat_apng_duplicate_actl",
@@ -70025,7 +71117,11 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null
         }
       ],
       "encode": [
@@ -114802,12 +115898,12 @@
     }
   },
   "summary": {
-    "total_rows": 1469,
-    "decode_rows": 1072,
+    "total_rows": 1470,
+    "decode_rows": 1073,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1071,
-    "decode_active": 1065,
+    "assets_available": 1072,
+    "decode_active": 1066,
     "decode_planned": 7,
     "encode_not_wired": 32
   }

@@ -4162,6 +4162,10 @@ formats:
       description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
       test_assets:
       - coverage_r16x8_neighbor_10.avif
+    - id: coverage_r16x32_grid_01
+      description: 32x32 4:2:0 quality-76 speed-0 T-right split with a production R16x32 depth-two TX8x8 grid
+      test_assets:
+      - coverage_r16x32_grid_01.avif
     - id: coverage_adst_public_01
       description: 4x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
       test_assets:

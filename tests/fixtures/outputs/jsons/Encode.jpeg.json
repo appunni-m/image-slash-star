@@ -958,8 +958,7 @@
         "encode": "ok",
         "encode_sequence": "ok"
       },
-      "error_contracts": {},
-      "oracle_status": "ok"
+      "error_contracts": {}
     },
     {
       "id": "enc_1x1",

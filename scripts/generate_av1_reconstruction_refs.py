@@ -885,6 +885,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610",
         "size": [8, 32],
     },
+    "coverage_r16x32_grid_01.avif": {
+        "file_sha256": "fb8ee178f58141a3152894c5af033681c871e8562970b2fbab4b89dd487e824a",
+        "rgb_sha256": "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac",
+        "size": [32, 32],
+    },
     "coverage_adst_public_04.avif": {
         "file_sha256": "2e182dc0b3e66744f22e9e6683898bda8b4031f24e66b04d8099d6699141919c",
         "rgb_sha256": "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8",
