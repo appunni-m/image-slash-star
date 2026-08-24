@@ -5119,6 +5119,31 @@ def gen_avif():
         speed=0,
     )
 
+    def vertical_transform_grid_mosaic(index):
+        bands = (44, 100, 156, 212)
+
+        def pixel(x, y):
+            band = min(3, y // 16)
+            luma = bands[band] + ((x * 17 + y * 13 + index) % 17) - 8
+            chroma_delta = 4 if ((x + y + index) % 2) else -4
+            return (
+                clamp_channel(luma + chroma_delta),
+                clamp_channel(luma),
+                clamp_channel(luma - chroma_delta),
+            )
+
+        return image_from_pixels((16, 64), pixel)
+
+    write_campaign_family(
+        "coverage_r16x64_grid",
+        10,
+        vertical_transform_grid_mosaic,
+        "4:2:0",
+        advanced={"enable-filter-intra": "0", "enable-restoration": "0"},
+        quality=76,
+        speed=0,
+    )
+
     def full_chroma_square(index):
         def pixel(x, y):
             if index == 0:

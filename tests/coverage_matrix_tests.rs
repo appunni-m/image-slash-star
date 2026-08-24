@@ -367,6 +367,7 @@ struct Av1ReconstructionCase {
     portable_color: Av1PortableColor,
     pillow: Av1PillowOutput,
     partition_blocks: Vec<Av1PartitionBlock>,
+    decoder_events: Vec<Value>,
     decoded_planes: Vec<Av1ReconstructionPlane>,
     entropy_operations: Vec<Av1ReconstructionEntropyOperation>,
 }
@@ -671,6 +672,7 @@ json_object!(Av1ReconstructionCase {
     portable_color,
     pillow,
     partition_blocks,
+    decoder_events,
     decoded_planes,
     entropy_operations,
 });
@@ -4691,7 +4693,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 180);
+    assert_eq!(expected.cases.len(), 181);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5073,6 +5075,48 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 case.partition_blocks.len(),
                 1,
                 "AV1 single-leaf partition topology case {case_index}"
+            );
+        }
+        if case.fixture == "coverage_r16x64_grid_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 1,
+                    context: 0,
+                    partition: 2,
+                    range: 46_200,
+                }],
+                "AV1 Vertical16x64 witness partition topology"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str());
+            let debug_lines = debug_lines.collect::<Vec<_>>();
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-tx[2]:")),
+                "AV1 Vertical16x64 witness must select TX16x16 depth two"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=2,"))
+                    .count(),
+                1,
+                "AV1 Vertical16x64 witness must decode its luma transform sentence"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                2,
+                "AV1 Vertical16x64 witness must decode both chroma planes"
             );
         }
         assert_eq!(case.decoded_planes.len(), 3);
@@ -5559,6 +5603,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r16x32_grid_01.avif" => {
                 "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac"
+            }
+            "coverage_r16x64_grid_01.avif" => {
+                "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
