@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 95436,
-        "total": 106514,
-        "percent": 89.5995,
-        "uncovered": 11078
+        "covered": 95949,
+        "total": 106742,
+        "percent": 89.8887,
+        "uncovered": 10793
       },
       "branch": {
-        "covered": 12189,
-        "total": 13562,
-        "percent": 89.8761,
-        "uncovered": 1373
+        "covered": 12264,
+        "total": 13602,
+        "percent": 90.1632,
+        "uncovered": 1338
       },
       "function": {
-        "covered": 4848,
-        "total": 5606,
-        "percent": 86.4788,
-        "uncovered": 758
+        "covered": 4880,
+        "total": 5628,
+        "percent": 86.7093,
+        "uncovered": 748
       },
       "region": {
-        "covered": 143752,
-        "total": 161815,
-        "percent": 88.8373,
-        "uncovered": 18063
+        "covered": 144538,
+        "total": 162176,
+        "percent": 89.1242,
+        "uncovered": 17638
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-24",
         "managed_coverage_mcp": true,
-        "commit_sha": "88fd39edd0b03b618f28a55b86b1ec36ab5ceb3d",
-        "run_id": "c98e4065-eea9-4be9-97da-d457f9a5c165",
-        "snapshot_id": "7791ec29-3bfb-4454-8ad7-6f5f2c26a7de",
+        "commit_sha": "2182e314487743b701a4dd054230d46429395d47",
+        "run_id": "a9c072fe-0fd9-4f59-b975-00c6475fb2c4",
+        "snapshot_id": "f006833d-bd93-495e-a4d9-04c40aeff2cb",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 210662,
+        "duration_ms": 221640,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full test workload at commit 88fd39ed and automatically ingested the required LLVM JSON artifact as snapshot 7791ec29. This slice adds a checked pure-Rust high-depth truncation boundary used by the existing 8-bit materializer and a real odd-width 4:2:2 FrameCanvas geometry contract; it does not enable high-depth or 4:2:2 AVIF decoding and closes no public capability or roadmap row. Against the compatible 972262c9 snapshot, covered/total deltas are -3/-3 lines, 0/0 branches, 0/0 functions, and -2/-3 regions. The release verifier remains intentionally red until every metric reaches 100%.",
+        "note": "The managed command passed the full all-feature workload at code-bearing commit 2182e314 and automatically ingested the required LLVM JSON artifact as snapshot f006833d. It records 89.8887% lines, 90.1632% branches, 86.7093% functions, and 89.1242% regions; the four-metric release target remains open until all reach 100%. The pinned Vertical16x64 4:2:0 reconstruction fixture is covered by the matrix and exact dav1d/Pillow checks, but AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "972262c9790db045b3a15ab9c36ddbf5f14f2095",
-          "baseline_snapshot_id": "8142bb9f-43bd-4b14-a686-78f09a9bb131",
-          "line_covered_delta": -3,
-          "line_total_delta": -3,
+          "baseline_commit": "f1bfd58b1518f58f2003145654e1439f51f149e1",
+          "baseline_snapshot_id": "a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5",
+          "line_covered_delta": 0,
+          "line_total_delta": 0,
           "branch_covered_delta": 0,
           "branch_total_delta": 0,
           "function_covered_delta": 0,
           "function_total_delta": 0,
-          "region_covered_delta": -2,
-          "region_total_delta": -3,
-          "interpretation": "The checked sample-depth helper and 4:2:2 geometry contract are prerequisite code, not a public high-depth or 4:2:2 decode implementation. Coverage MCP reports small source-mapping/denominator movement: covered/total lines -3/-3, branches 0/0, functions 0/0, and regions -2/-3. No aggregate feature-coverage credit or roadmap closure is claimed; the four-metric release target remains open."
+          "region_covered_delta": 0,
+          "region_total_delta": 0,
+          "interpretation": "The current managed run is measured at the exact current commit and is unchanged from the immediately preceding compatible source-quality snapshot because the second commit in this slice only refreshed roadmap and claim-ledger documentation. The release target remains open: 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions are uncovered."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run c98e4065-eea9-4be9-97da-d457f9a5c165 passed at code-bearing commit 88fd39ed and ingested snapshot 7791ec29-3bfb-4454-8ad7-6f5f2c26a7de. It reports 11,078 lines, 1,373 branches, 758 functions, and 18,063 regions uncovered. The checked sample-depth and 4:2:2 geometry prerequisites close no public capability or roadmap item; the four-metric release target remains 100%."
+      "llvm_coverage": "Managed Coverage MCP run a9c072fe-0fd9-4f59-b975-00c6475fb2c4 passed at code-bearing commit 2182e314 and ingested snapshot f006833d-bd93-495e-a4d9-04c40aeff2cb. It reports 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions uncovered. The pinned Vertical16x64 AVIF fixture is covered by the current matrix, but AVIF STILL-001 remains partial and the four-metric release target remains 100%."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },

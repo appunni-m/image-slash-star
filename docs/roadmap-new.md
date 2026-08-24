@@ -103,25 +103,24 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `c98e4065-eea9-4be9-97da-d457f9a5c165` passed the
+Managed Coverage MCP run `a9c072fe-0fd9-4f59-b975-00c6475fb2c4` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`88fd39ed` in 210,662 ms. The required LLVM JSON artifact was ingested
-automatically as snapshot `7791ec29-3bfb-4454-8ad7-6f5f2c26a7de`. It measured
-95,436/106,514 lines (89.5995%), 12,189/13,562 branches (89.8761%), 4,848/5,606 functions (86.4788%), and 143,752/161,815 regions (88.8373%).
-This bounded prerequisite adds a checked pure-Rust high-depth sample boundary
-and an odd-width 4:2:2 canvas contract; it does not enable high-depth or
-4:2:2 AVIF decoding and closes no public capability, fixture row, or roadmap
-item. Compared with the compatible source-quality snapshot
-`8142bb9f-43bd-4b14-a686-78f09a9bb131` at commit `972262c9`, covered/total
-deltas are -3/-3 lines, 0/0 branches, 0/0 functions, and -2/-3 regions.
-These are source-mapping/denominator changes, not a claim that the product
-roadmap advanced. The strict four-metric verifier remains red because the
-release target is 100%: 11,078 lines, 1,373 branches, 758 functions, and
-18,063 regions remain uncovered. This managed snapshot is the current
-source-quality accounting; the accepted claim ledger remains bound to its own
-clean release revision. The remaining misses are visible in the report, and
-the largest AVIF-specific concentration is the intentionally unimplemented
-decode and encode surface listed below.
+`2182e314` in 221,640 ms. The required LLVM JSON artifact was ingested
+automatically as snapshot `f006833d-bd93-495e-a4d9-04c40aeff2cb`. It measured
+95,949/106,742 lines (89.8887%), 12,264/13,602 branches (90.1632%), 4,880/5,628 functions (86.7093%), and 144,538/162,176 regions (89.1242%).
+The pinned `coverage_r16x64_grid_01.avif` fixture now exercises a safe-Rust
+Vertical16x64 4:2:0 reconstruction boundary with exact dav1d topology,
+entropy, matrix, and Pillow RGB evidence. It does not close AVIF STILL-001:
+broader partition/block states and the explicit planned gaps remain open.
+Compared with the immediately preceding compatible source-quality snapshot
+`a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5` at commit `f1bfd58b`, covered/total
+deltas are 0/0 for lines, branches, functions, and regions because the second
+commit in this slice only refreshed roadmap and claim-ledger documentation.
+The strict four-metric release target remains open: 10,793 lines, 1,338
+branches, 748 functions, and 17,638 regions are uncovered. The remaining
+misses are visible in the report, with the largest concentration in the
+intentionally incomplete AV1 block/entropy surface and the explicit AVIF
+decode/encode gaps listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
@@ -139,7 +138,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 11,078 lines, 1,373 branches, 758 functions, and 18,063 regions
+- LLVM coverage: 10,793 lines, 1,338 branches, 748 functions, and 17,638 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -668,25 +667,23 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `88fd39ed`, run `c98e4065-eea9-4be9-97da-d457f9a5c165`, and snapshot
-`7791ec29-3bfb-4454-8ad7-6f5f2c26a7de`. It replaces the stale local baseline
-for current source-quality accounting; the accepted claim ledger remains
-revision-bound to its own clean release revision.
+commit `2182e314`, run `a9c072fe-0fd9-4f59-b975-00c6475fb2c4`, and snapshot
+`f006833d-bd93-495e-a4d9-04c40aeff2cb`. It is the current source-quality
+accounting; the accepted claim ledger remains revision-bound to its own clean
+release revision.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 95,436 | 106,514 | 89.5995% | 11,078 | 10.4005% |
-| Branches (managed Coverage MCP) | 12,189 | 13,562 | 89.8761% | 1,373 | 10.1239% |
-| Functions (managed Coverage MCP) | 4,848 | 5,606 | 86.4788% | 758 | 13.5212% |
-| Regions (managed Coverage MCP) | 143,752 | 161,815 | 88.8373% | 18,063 | 11.1627% |
+| Lines (managed Coverage MCP) | 95,949 | 106,742 | 89.8887% | 10,793 | 10.1113% |
+| Branches (managed Coverage MCP) | 12,264 | 13,602 | 90.1632% | 1,338 | 9.8368% |
+| Functions (managed Coverage MCP) | 4,880 | 5,628 | 86.7093% | 748 | 13.2907% |
+| Regions (managed Coverage MCP) | 144,538 | 162,176 | 89.1242% | 17,638 | 10.8758% |
 
-The compatible comparison snapshot is `8142bb9f-43bd-4b14-a686-78f09a9bb131`
-at code-bearing commit `972262c9`. The new managed run passed with one required
-artifact ingested. Coverage MCP reports covered/total deltas of -3/-3 lines,
-0/0 branches, 0/0 functions, and -2/-3 regions. The checked sample-depth and
-4:2:2 geometry prerequisites do not enable a public high-depth/4:2:2 decode
-path; this slice receives no aggregate feature-coverage credit and closes no
-roadmap item. The current managed LLVM JSON report carries the warning that
+The compatible comparison snapshot is `a2fdd3dd-bd8b-42fc-88f1-760effe7e8f5`
+at code-bearing commit `f1bfd58b`. The new managed run passed with one required
+artifact ingested. Coverage MCP reports covered/total deltas of 0/0 for lines,
+branches, functions, and regions because the second commit only refreshed
+documentation. The current managed LLVM JSON report carries the warning that
 segments are normalized to segment-start lines; aggregate region coverage is
 preserved from its report summary. RN-001 therefore remains open for the
 current source tree: the release target is still 100% for all four measures.
