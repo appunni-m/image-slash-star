@@ -545,12 +545,14 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
         } else {
             None
         };
-        portable = match (
-            &extracted.sequence,
-            still.color.samples.as_slice(),
-            color.first_leaf,
-        ) {
-            (None, [_], Some(leaf)) => Some(portable_still(leaf, color.sequence, alpha_plane)),
+        // An `avis` file may retain the first/default image as a primary
+        // `av01` item as well as carrying a later movie track.  The default
+        // image is an independent decode contract: later track samples must
+        // not make `decode()` fail or hide a supported primary item.  Full
+        // sequence presentation still validates every track sample through
+        // `validate_sequence` and remains a separate capability.
+        portable = match (still.color.samples.as_slice(), color.first_leaf) {
+            ([_], Some(leaf)) => Some(portable_still(leaf, color.sequence, alpha_plane)),
             _ => None,
         };
     }
@@ -1160,6 +1162,42 @@ mod tests {
         }
         let validated = validate_first(&extracted)?;
         assert!(validated.portable_still.is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn primary_item_validation_is_independent_of_sequence_track() -> Av1Result<()> {
+        use std::num::NonZeroU32;
+
+        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let mut extracted = super::super::samples::validated(bytes)?;
+        let still = extracted
+            .still
+            .take()
+            .ok_or_else(|| malformed("alpha fixture has no still payload"))?;
+        let sequence = super::super::samples::SequencePayload {
+            color: still.color.clone(),
+            alpha: still
+                .alpha
+                .as_ref()
+                .map(|plane| super::super::samples::EncodedPlane {
+                    samples: plane.samples.clone(),
+                }),
+            timescale: NonZeroU32::new(1)
+                .ok_or_else(|| malformed("test timescale unexpectedly became zero"))?,
+        };
+        extracted.still = Some(still);
+        extracted.sequence = Some(sequence);
+
+        let validated = validate_first(&extracted)?;
+        assert!(
+            validated.portable_still.is_some(),
+            "the primary item must remain independently eligible when a movie track exists"
+        );
+
+        // Sequence validation deliberately remains a separate contract; no
+        // sequence renderer is implied by the primary-item result above.
+        validate_sequence(&extracted)?;
         Ok(())
     }
 }
