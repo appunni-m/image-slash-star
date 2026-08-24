@@ -1750,6 +1750,11 @@ const LOSSY_CHROMA_16X16_EOB_BIN: [u16; 9] = [
 const LOSSY_CHROMA_16X8_EOB_BIN: [u16; 8] =
     [27_523, 25_312, 19_888, 16_916, 12_735, 8_836, 5_160, 0];
 
+// ✅ VERIFIED: dav1d 1.5.3 src/cdf.c qcat-zero `eob_bin_64[1][0]`,
+// complemented for the portable range decoder. Full-resolution 8x8 chroma
+// uses the 64-coefficient chroma row; it is distinct from the R4x16 row.
+const LOSSY_CHROMA_8X8_EOB_BIN: [u16; 7] = [29_263, 27_464, 22_682, 18_954, 15_084, 9_398, 0];
+
 const LOSSY_CHROMA_4X16_EOB_BIN: [u16; 7] = [32_433, 32_038, 31_309, 27_274, 24_013, 19_771, 0];
 
 // R4x16 uses the tctx-one chroma coefficient sentence. Its EOB high-bit CDF
@@ -3347,7 +3352,7 @@ impl BlockCdfs {
             lossy_chroma_8x4_eob_base: LOSSY_CHROMA_8X4_EOB_BASE,
             lossy_chroma_8x4_base: LOSSY_CHROMA_8X4_BASE,
             lossy_chroma_8x4_high_tokens: LOSSY_CHROMA_8X4_HIGH,
-            lossy_chroma_8x8_eob_bin: LOSSY_CHROMA_4X16_EOB_BIN,
+            lossy_chroma_8x8_eob_bin: LOSSY_CHROMA_8X8_EOB_BIN,
             lossy_chroma_8x8_eob_high: LOSSY_CHROMA_4X16_EOB_HIGH,
             lossy_chroma_8x8_eob_base: LOSSY_CHROMA_8X4_EOB_BASE,
             lossy_chroma_8x8_base: LOSSY_CHROMA_8X8_BASE,

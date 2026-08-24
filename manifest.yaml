@@ -4154,6 +4154,10 @@ formats:
       description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
       test_assets:
       - coverage_r16x8_neighbor_10.avif
+    - id: coverage_i444_square8_four_leaves
+      description: 16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace
+      test_assets:
+      - coverage_i444_square8_four_leaves.avif
     - id: high_bitdepth
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
