@@ -316,7 +316,7 @@ def verify() -> str:
         fail("current AVIF section contains a stale 28/28 test count")
     exact_match(
         current_section,
-        r"nine Rust tests prove[\s\S]*complete-canvas enforcement",
+        r"eleven Rust tests prove[\s\S]*complete-canvas enforcement",
         "atomic raster implementation evidence",
     )
     exact_match(

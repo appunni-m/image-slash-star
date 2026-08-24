@@ -103,25 +103,25 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `f52a11fc-3f74-478f-8d57-7f2432634f3e` passed the
+Managed Coverage MCP run `c98e4065-eea9-4be9-97da-d457f9a5c165` passed the
 complete all-feature test set plus one doctest at code-bearing commit
-`972262c9` in 165,206 ms. The required LLVM JSON artifact was ingested
-automatically as snapshot `8142bb9f-43bd-4b14-a686-78f09a9bb131`. It measured
-95,439/106,517 lines (89.5998%), 12,189/13,562 branches (89.8761%), 4,848/5,606 functions (86.4788%), and 143,754/161,818 regions (88.8368%).
-The private tx64 inverse-transform cleanup removes compile-time-unreachable
-false arms while preserving the active arithmetic and order; it closes no
-public capability, fixture row, or roadmap item. Compared with the compatible
-source-quality snapshot `5f6a7869-beae-411d-9760-5896e35d31b2` at commit
-`c687cf4f`, covered/total deltas are -12/-68 lines, -4/-4 branches, 0/0
-functions, and +25/-52 regions. These are source-mapping/denominator changes,
-not a claim that every metric improved: the branch rate decreases slightly.
-The strict four-metric verifier remains red because the release target is 100%:
-11,078 lines, 1,373 branches, 758 functions, and 18,064 regions remain
-uncovered. This managed snapshot is the current source-quality accounting;
-the accepted claim ledger remains bound to its own clean release revision. The
-remaining misses are visible in the report, and the largest AVIF-specific
-concentration is the intentionally unimplemented decode and encode surface
-listed below.
+`88fd39ed` in 210,662 ms. The required LLVM JSON artifact was ingested
+automatically as snapshot `7791ec29-3bfb-4454-8ad7-6f5f2c26a7de`. It measured
+95,436/106,514 lines (89.5995%), 12,189/13,562 branches (89.8761%), 4,848/5,606 functions (86.4788%), and 143,752/161,815 regions (88.8373%).
+This bounded prerequisite adds a checked pure-Rust high-depth sample boundary
+and an odd-width 4:2:2 canvas contract; it does not enable high-depth or
+4:2:2 AVIF decoding and closes no public capability, fixture row, or roadmap
+item. Compared with the compatible source-quality snapshot
+`8142bb9f-43bd-4b14-a686-78f09a9bb131` at commit `972262c9`, covered/total
+deltas are -3/-3 lines, 0/0 branches, 0/0 functions, and -2/-3 regions.
+These are source-mapping/denominator changes, not a claim that the product
+roadmap advanced. The strict four-metric verifier remains red because the
+release target is 100%: 11,078 lines, 1,373 branches, 758 functions, and
+18,063 regions remain uncovered. This managed snapshot is the current
+source-quality accounting; the accepted claim ledger remains bound to its own
+clean release revision. The remaining misses are visible in the report, and
+the largest AVIF-specific concentration is the intentionally unimplemented
+decode and encode surface listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
@@ -139,7 +139,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 11,134 lines, 1,373 branches, 758 functions, and 18,141 regions
+- LLVM coverage: 11,078 lines, 1,373 branches, 758 functions, and 18,063 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -161,7 +161,7 @@ it does not count a planned row as completed.
 
 The current implementation slice is a checked `FrameCanvas` in
 `src/codecs/avif/av1/raster.rs`. The current still path uses it to place all
-three reconstructed planes, and its nine Rust tests prove subsampling
+three reconstructed planes, and its eleven Rust tests prove subsampling
 alignment, checked extents, overlap rejection, no partial mutation on rejected
 placement, complete-canvas enforcement, and top-left cropping for coded grid
 cells whose visible rectangle is smaller than the coded extent. The new
@@ -170,6 +170,13 @@ between two new cells—before copying any sample. `place_partition_leaf` also
 converts the entropy walker's checked four-by-four-unit coordinates to pixel
 origins and crops only the visible frame edge. This closes a reusable, atomic
 assembly prerequisite for the baseline and future tile/grid paths. The
+bounded prerequisite now also proves that `FrameCanvas::new(5, 3, true,
+false)` retains three chroma rows and the odd-width chroma extent, while
+`av1/sample_depth.rs` rejects out-of-range 8/10/12-bit samples and performs
+explicit high-depth bit truncation. These checks are assembly and conversion
+contracts only: the production decoder still rejects the target 12-bit 4:2:2
+class until reconstruction, restoration, reference state, and exact color
+conversion are implemented. The
 promoted `coverage_adst_public_02.avif` is an 8x4 lossy 4:4:4 frame whose coded
 8x8 leaf is cropped at the bottom edge; it now has a pinned dav1d 218-operation
 trace, exact reconstructed YUV planes, and exact public RGB parity. This is
@@ -658,29 +665,28 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `972262c9`, run `f52a11fc-3f74-478f-8d57-7f2432634f3e`, and snapshot
-`8142bb9f-43bd-4b14-a686-78f09a9bb131`. It replaces the stale local baseline
+commit `88fd39ed`, run `c98e4065-eea9-4be9-97da-d457f9a5c165`, and snapshot
+`7791ec29-3bfb-4454-8ad7-6f5f2c26a7de`. It replaces the stale local baseline
 for current source-quality accounting; the accepted claim ledger remains
 revision-bound to its own clean release revision.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 95,439 | 106,517 | 89.5998% | 11,078 | 10.4002% |
+| Lines (managed Coverage MCP) | 95,436 | 106,514 | 89.5995% | 11,078 | 10.4005% |
 | Branches (managed Coverage MCP) | 12,189 | 13,562 | 89.8761% | 1,373 | 10.1239% |
 | Functions (managed Coverage MCP) | 4,848 | 5,606 | 86.4788% | 758 | 13.5212% |
-| Regions (managed Coverage MCP) | 143,754 | 161,818 | 88.8368% | 18,064 | 11.1632% |
+| Regions (managed Coverage MCP) | 143,752 | 161,815 | 88.8373% | 18,063 | 11.1627% |
 
-The compatible comparison snapshot is `5f6a7869-beae-411d-9760-5896e35d31b2`
-at code-bearing commit `c687cf4f`. The new managed run passed with one
-required artifact ingested. Coverage MCP reports covered/total deltas of
--12/-68 lines, -4/-4 branches, 0/0 functions, and +25/-52 regions. The
-private tx64 cleanup changes source mapping and denominators; because the
-branch rate decreases slightly, this slice receives no aggregate feature-
-coverage credit and closes no roadmap item. The current managed LLVM JSON
-report carries the warning that segments are normalized to segment-start lines;
-aggregate region coverage is preserved from its report summary. RN-001
-therefore remains open for the current source tree: the release target is still
-100% for all four measures.
+The compatible comparison snapshot is `8142bb9f-43bd-4b14-a686-78f09a9bb131`
+at code-bearing commit `972262c9`. The new managed run passed with one required
+artifact ingested. Coverage MCP reports covered/total deltas of -3/-3 lines,
+0/0 branches, 0/0 functions, and -2/-3 regions. The checked sample-depth and
+4:2:2 geometry prerequisites do not enable a public high-depth/4:2:2 decode
+path; this slice receives no aggregate feature-coverage credit and closes no
+roadmap item. The current managed LLVM JSON report carries the warning that
+segments are normalized to segment-start lines; aggregate region coverage is
+preserved from its report summary. RN-001 therefore remains open for the
+current source tree: the release target is still 100% for all four measures.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
@@ -717,12 +723,13 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-code-bearing commit `972262c9`; the exact aggregate result and
+code-bearing commit `88fd39ed`; the exact aggregate result and
 automatic-ingestion provenance are recorded above. This slice removes
 compile-time-unreachable false arms from the private AV1 tx64 inverse-transform
-chain while preserving active arithmetic and order. It changes source mapping
-and coverage denominators but does not claim a new public capability or
-aggregate feature-coverage improvement.
+chain while preserving active arithmetic and order, then records the checked
+sample-depth and 4:2:2 geometry prerequisite. It changes source mapping and
+coverage denominators but does not claim a new public capability or aggregate
+feature-coverage improvement.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -1685,7 +1692,7 @@ planes.
 | --- | --- | --- | --- |
 | `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame and the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair. The R8x16 pair shares the pinned dav1d level-2/3/4 split topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. |
 | `AVF-ENTROPY-001` adjacent EOB syntax | the two `portable_lossy_420_q99_eob_*` rows | Implement the EOB-bin and EOB-base branches with their coefficient scans, tokens, signs, dequantization, and transform output; preserve typed `Unsupported` for syntax not yet proven. | Partial: safe Rust handles legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches including EOB-bin-four, and exact UV dequantization plus matrix-10 data. The two mutation controls remain planned because their independent Pillow oracle rejects the mutated sentences; the six-terminal baseline contract is separate syntax evidence and does not activate those rows. |
-| `AVF-SAMPLE-001` sample depth | `high_bitdepth`; later `hdr` | Reconstruct 10/12-bit planes, apply checked sample-to-8-bit conversion at the public boundary, and test overflow, limits, and cancellation. | Partial prerequisite: `av1/sample_depth.rs` now performs checked rounded full-range normalization for validated 8/10/12-bit samples and the public materializer uses the same boundary for color and alpha. Current entropy reconstruction and sequence materialization remain 8-bit only, so `high_bitdepth` stays planned. |
+| `AVF-SAMPLE-001` sample depth | `high_bitdepth`; later `hdr` | Reconstruct 10/12-bit planes, apply checked sample-to-8-bit conversion at the public boundary, and test overflow, limits, and cancellation. | Partial prerequisite: `av1/sample_depth.rs` now validates 8/10/12-bit nominal ranges and performs explicit high-depth bit truncation; the existing 8-bit materializer uses that checked boundary for color and alpha. Entropy reconstruction, restoration, 4:2:2 decoding, and sequence materialization remain 8-bit-only, so `high_bitdepth` stays planned. |
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
 | `AVF-COLOR-001` declared color pipeline | `hdr` | Implement transfer, primaries, matrix, range, and sample-position conversion with bounded arithmetic and explicit source metadata. | Planned; current RGB conversion is the narrow 8-bit BT.601 full-range class. |
 | `AVF-COMPOSE-001` grid canvas | broader grid counts, dimensions, and relationships | Decode each referenced color/alpha cell, validate cell geometry, place cells in a bounded canvas, and apply relationships without treating metadata inspection as pixel composition. | Implemented for the committed `grid.avif` fixture: safe Rust decodes both 80×64 color cells and their monochrome auxiliary alpha cells, validates complete 80×80 coverage, crops the second row to 80×16, and matches the exact 25,600-byte RGBA8 reference. Broader grid counts, dimensions, tile-boundary contexts, and relationships remain open. |
