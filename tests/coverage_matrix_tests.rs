@@ -4691,7 +4691,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 177);
+    assert_eq!(expected.cases.len(), 179);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4834,6 +4834,8 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             _ => None,
         };
         let deep_recursive_ranges = match case.fixture.as_str() {
+            "coverage_r8x16_band_05.avif" => Some(vec![40_720, 57_892, 33_811, 60_156]),
+            "coverage_r8x16_band_06.avif" => Some(vec![40_720, 57_892, 33_811, 60_156]),
             "coverage_adst_public_07.avif" => Some(vec![40_720, 57_892, 33_811, 44_974]),
             "coverage_adst_public_08.avif" => Some(vec![38_416, 43_816, 51_186, 53_848]),
             "coverage_adst_public_10.avif" => {
@@ -5548,6 +5550,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "partitioned_square_420_16x16_g96.avif" => {
                 "1773a465660162ba2a563e2b05acb59d0ccd578de177210f9252a9abd2013bcf"
+            }
+            "coverage_r8x16_band_05.avif" => {
+                "c11a94094afc690f85b60f373368af7995dca863a978e1835386df16567d5840"
+            }
+            "coverage_r8x16_band_06.avif" => {
+                "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610"
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
