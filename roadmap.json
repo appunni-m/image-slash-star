@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
-  "reviewed": "2026-08-15",
+  "reviewed": "2026-08-24",
   "claim_ledger_base_revision": "36b939696415a962285d37f9120ff389aebf0205",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1424,
-      "decode_rows": 1027,
+      "total_rows": 1457,
+      "decode_rows": 1060,
       "encode_rows": 397,
-      "decode_active": 1020,
+      "decode_active": 1053,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 200,
-      "decode_active": 193,
+      "decode_rows": 233,
+      "decode_active": 226,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -54,36 +54,51 @@
     },
     "coverage": {
       "line": {
-        "covered": 88303,
-        "total": 94506,
-        "percent": 93.4364,
-        "uncovered": 6203
+        "covered": 95025,
+        "total": 106104,
+        "percent": 89.5584,
+        "uncovered": 11079
       },
       "branch": {
-        "covered": 11176,
-        "total": 11980,
-        "percent": 93.2888,
-        "uncovered": 804
+        "covered": 12130,
+        "total": 13478,
+        "percent": 89.9985,
+        "uncovered": 1348
       },
       "function": {
-        "covered": 4466,
-        "total": 4868,
-        "percent": 91.742,
-        "uncovered": 402
+        "covered": 4828,
+        "total": 5582,
+        "percent": 86.4923,
+        "uncovered": 754
       },
       "region": {
-        "covered": 133723,
-        "total": 145199,
-        "percent": 92.0964,
-        "uncovered": 11476
+        "covered": 143100,
+        "total": 161107,
+        "percent": 88.823,
+        "uncovered": 18007
       },
       "measurement": {
-        "kind": "fresh local LLVM all-feature run",
-        "command": "cargo +nightly llvm-cov --all-features --branch --json --no-fail-fast",
-        "measured": "2026-08-15",
-        "managed_coverage_mcp": false,
+        "kind": "managed Coverage MCP all-feature LLVM run",
+        "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
+        "measured": "2026-08-24",
+        "managed_coverage_mcp": true,
+        "commit_sha": "eb0945aefd22c69b7e9dd6204d41af4480629609",
+        "run_id": "218b1116-dc13-46b8-baaa-6a8e11bcd865",
+        "snapshot_id": "bd5fbf94-e50a-4d02-9e0b-03fde5e04ad3",
+        "suite": "all-features-lines-branches-nightly",
+        "duration_ms": 201156,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The JSON report completed the full test workload; the verifier is intentionally red until every metric reaches 100%."
+        "note": "The managed JSON report completed the full test workload and was ingested at this exact commit; the verifier remains intentionally red until every metric reaches 100%.",
+        "comparison_to_previous_snapshot": {
+          "baseline_commit": "9efbe89e239b6ebfbae16fbfcf60c60188cacc40",
+          "baseline_snapshot_id": "f202e15a-1287-44cd-a5aa-654db5ccb92f",
+          "line_covered_delta": -9,
+          "line_total_delta": 2,
+          "branch_covered_delta": 2,
+          "function_covered_delta": -9,
+          "region_covered_delta": 31,
+          "interpretation": "Measured compatible-snapshot fluctuation; do not attribute the line/function movement to the added fixture without first-divergence evidence."
+        }
       },
       "coverage_origin_inventory": {
         "guards": 500,
@@ -101,7 +116,7 @@
     }
   },
   "latest_verification": {
-    "measured": "2026-08-16",
+    "measured": "2026-08-24",
     "passing": [
       "cargo fmt --all -- --check",
       "cargo check --all-features --locked",
@@ -113,11 +128,11 @@
       "python3 scripts/verify_package_surface.py",
       "python3 scripts/verify_third_party_licenses.py",
       "python3 scripts/verify_roadmap.py",
-      "git diff --check"
+      "git diff --check",
+      "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
     ],
     "open_gates": {
-      "clippy": "Open on the installed rustc 1.96.1 / Clippy 0.1.99 toolchain: cargo +nightly clippy --workspace --all-targets --all-features --locked -- -D warnings reports 141 chunks_exact/chunks_exact_mut suggestions across the workspace plus existing style/API warnings. No wrapper or lint suppression was added.",
-      "llvm_coverage": "The fresh local report is valid but below the 100% four-metric release target: 6,203 lines, 804 branches, 402 functions, and 11,476 regions remain uncovered.",
+      "llvm_coverage": "Managed Coverage MCP run 218b1116-dc13-46b8-baaa-6a8e11bcd865 at eb0945a reports 11,079 lines, 1,348 branches, 754 functions, and 18,007 regions uncovered; the four-metric release target remains 100%.",
       "claim_ledger": "Revision-bound hashes for manifest.yaml, coverage_matrix.json, coverage_origin_manifest.json, and roadmap.json intentionally remain stale until a clean accepted revision has fresh managed evidence; the verifier is not weakened."
     },
     "next_json_ordered_work": "AVF-STILL-001"
@@ -168,7 +183,7 @@
         "QA-030",
         "DOC-005"
       ],
-        "evidence": "Fresh local LLVM currently reports 93.4364% lines (6,203 uncovered), 93.2888% branches (804 uncovered), 91.7420% functions (402 uncovered), and 92.0964% regions (11,476 uncovered); managed same-revision Coverage MCP evidence is still required."
+        "evidence": "Managed Coverage MCP run 218b1116-dc13-46b8-baaa-6a8e11bcd865 at commit eb0945a reports 89.5584% lines (11,079 uncovered), 89.9985% branches (1,348 uncovered), 86.4923% functions (754 uncovered), and 88.8230% regions (18,007 uncovered); the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
