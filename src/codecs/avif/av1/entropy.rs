@@ -3534,48 +3534,54 @@ const CLOSED_LOSSY_420_FRAME_TOOLS: FrameToolsContext = FrameToolsContext {
     film_grain_present: false,
 };
 
-fn closed_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+fn closed_lossy_420_frame_context(context: &FirstBlockContext) -> bool {
+    closed_lossy_420_frame_context_with_delta_q(
+        context,
+        CLOSED_LOSSY_420_FRAME_TOOLS.delta_q_present,
+    )
+}
+
+fn closed_lossy_420_frame_context_with_delta_q(
+    context: &FirstBlockContext,
+    delta_q_present: bool,
+) -> bool {
+    let mut expected_frame_tools = CLOSED_LOSSY_420_FRAME_TOOLS;
+    expected_frame_tools.delta_q_present = delta_q_present;
     closed_base_reconstruction_context(context)
         & !context.all_lossless
         & context.subsampling_x
         & context.subsampling_y
-        & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
         & !context.disable_cdf_update
         & !context.allow_screen_content_tools
-        & context.enable_filter_intra
         & (context.restoration_types == [None; 3])
         & (context.restoration_unit_size_log2 == [8; 2])
-        & (context.frame_tools == CLOSED_LOSSY_420_FRAME_TOOLS)
+        & (context.frame_tools == expected_frame_tools)
+}
+
+fn closed_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    closed_lossy_420_frame_context(context)
+        & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
 }
 
 fn closed_lossy_420_recursive_split_context(context: &FirstBlockContext) -> bool {
-    closed_base_reconstruction_context(context)
-        & !context.all_lossless
-        & context.subsampling_x
-        & context.subsampling_y
+    closed_lossy_420_frame_context(context)
         & (context.frame_width == 16)
         & (context.frame_height == 8)
-        & !context.disable_cdf_update
-        & !context.allow_screen_content_tools
-        & context.enable_filter_intra
-        & (context.restoration_types == [None; 3])
-        & (context.restoration_unit_size_log2 == [8; 2])
-        & (context.frame_tools == CLOSED_LOSSY_420_FRAME_TOOLS)
 }
 
 fn closed_lossy_420_square_split_context(context: &FirstBlockContext) -> bool {
-    closed_base_reconstruction_context(context)
-        & !context.all_lossless
-        & context.subsampling_x
-        & context.subsampling_y
+    closed_lossy_420_frame_context(context)
         & (context.frame_width == 16)
         & (context.frame_height == 16)
-        & !context.disable_cdf_update
-        & !context.allow_screen_content_tools
-        & context.enable_filter_intra
-        & (context.restoration_types == [None; 3])
-        & (context.restoration_unit_size_log2 == [8; 2])
-        & (context.frame_tools == CLOSED_LOSSY_420_FRAME_TOOLS)
+}
+
+fn closed_lossy_420_horizontal_four_split_context(context: &FirstBlockContext) -> bool {
+    // The H4 fixture uses the syntax form without frame-level delta-q. The
+    // four-leaf helper does not arm a superblock delta-q sentence, so do not
+    // admit the true form until that state transition is implemented there.
+    closed_lossy_420_frame_context_with_delta_q(context, false)
+        & (context.frame_width == 16)
+        & (context.frame_height == 16)
 }
 
 fn decode_closed_leaf(
@@ -3799,7 +3805,8 @@ pub(super) fn validate_first_partition(
 
     let closed_class = closed_444_reconstruction_context(context)
         || closed_420_reconstruction_context(context)
-        || closed_lossy_420_reconstruction_context(context);
+        || closed_lossy_420_reconstruction_context(context)
+        || closed_lossy_420_horizontal_four_split_context(context);
     if !closed_class {
         // The old narrow decoder is deliberately not allowed to consume a
         // random prefix and then call a valid larger AV1 frame unsupported.
@@ -3829,7 +3836,8 @@ pub(super) fn validate_first_partition(
         let trace_closed_context = (closed_444_reconstruction_context(context)
             & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context)))
             | closed_420_reconstruction_context(context)
-            | closed_lossy_420_reconstruction_context(context);
+            | closed_lossy_420_reconstruction_context(context)
+            | closed_lossy_420_horizontal_four_split_context(context);
         if trace_closed_context {
             decoder.enable_operation_trace();
         }
@@ -3997,6 +4005,32 @@ pub(super) fn validate_first_partition(
                                 .then_some(())
                                 .ok_or(super::block::PortableUnavailable)
                         },
+                    );
+                    return finish_closed_leaf(&decoder, reconstructed);
+                }
+                let reconstruct_lossy_420_horizontal_four_split = (partition == 8)
+                    & closed_lossy_420_horizontal_four_split_context(context)
+                    & (level == 3);
+                if reconstruct_lossy_420_horizontal_four_split {
+                    // PARTITION_H4 keeps one 16-pixel luma span and places
+                    // four 16x4 leaves vertically. Each child carries the
+                    // rectangular transform syntax directly; no child
+                    // partition CDF symbol is present between the leaves.
+                    let quantization = lossy_quantization_for_context(context);
+                    let reconstructed = super::block::decode_four_lossy_420_horizontal_leaves(
+                        &mut decoder,
+                        context.frame_width,
+                        context.frame_height,
+                        quantization,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                            enable_intra_edge_filter: context.enable_intra_edge_filter,
+                            transform_mode: context.frame_tools.transform_mode,
+                            transform_context: 0,
+                            palette_context: Default::default(),
+                        },
+                        |_| Ok(()),
                     );
                     return finish_closed_leaf(&decoder, reconstructed);
                 }
