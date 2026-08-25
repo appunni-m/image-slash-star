@@ -7,15 +7,15 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`260c8646ea89eb164bc5116f0d40eb704910dc21`; the historical Pillow parity
+`ca444cd6ff3c4aac978adda8bbd29839b32997f3`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`b6b8e5f8-30be-410b-a5f5-a549c101a8e2` from run
-`fd89bf16-bd58-4c30-afd5-c2dfb58acda9` (full all-feature workload passed). It
-records 96,330/107,660 lines, 12,285/13,686 branches, 4,915/5,671
-functions, and 144,977/163,481 regions. The managed Pillow parity identifier below is the
+`772591b5-d792-452a-9e35-1d3b7d9a8dd5` from run
+`e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd` (full all-feature workload passed). It
+records 96,498/107,759 lines, 12,298/13,688 branches, 4,909/5,668
+functions, and 145,085/163,503 regions. The managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
 all-feature matrix integration tests currently pass 33/33.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
@@ -26,9 +26,9 @@ registration failed before execution because it invokes sandbox-blocked
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
 The current working tree also passes the complete all-feature test set plus one
-doctest in the managed nightly LLVM run. It measures 96,330/107,660 lines
-(89.4761%), 12,285/13,686 branches (89.7633%), 4,915/5,671 functions
-(86.6690%), and 144,977/163,481 regions (88.6813%). The strict four-metric
+doctest in the managed nightly LLVM run. It measures 96,498/107,759 lines
+(89.5498%), 12,298/13,688 branches (89.8451%), 4,909/5,668 functions
+(86.6090%), and 145,085/163,503 regions (88.7354%). The strict four-metric
 verifier remains red because the release target is 100%; the remaining gaps
 are recorded explicitly in the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
@@ -5479,12 +5479,12 @@ evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
 revision-bound tuple: implementation revision
-`260c8646ea89eb164bc5116f0d40eb704910dc21`, manifest SHA-256
-`7989569510f0bde528e49fe0d4c1a5539fc45febfeba14c952464f01f53d5a13`,
+`ca444cd6ff3c4aac978adda8bbd29839b32997f3`, manifest SHA-256
+`1afa268a08179a9bd3e4c88d3c39ab3b3a8648de595c8227277c96f84efddb61`,
 generated-matrix SHA-256
-`bcc305968fc3ce8a45b5a267da5f5c3d44448c230634f823035e344de722adf1`,
-Coverage MCP run `fd89bf16-bd58-4c30-afd5-c2dfb58acda9` and snapshot
-`b6b8e5f8-30be-410b-a5f5-a549c101a8e2`, every fixture-manifest SHA-256, the
+`e4ffc4c493f881b7395b6ebd5a664ae4b6e69d5d0c486fdaca6fc747d8a47225`,
+Coverage MCP run `e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd` and snapshot
+`772591b5-d792-452a-9e35-1d3b7d9a8dd5`, every fixture-manifest SHA-256, the
 VP8L property-map SHA-256
 `f1de6d7164e1c021a21db2108cc5c5f5946cbfbcab11a40fdf63298ad29b69f9`, and
 the inspector SHA-256
