@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 192);
+    assert_eq!(expected.cases.len(), 193);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5353,6 +5353,39 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=59400 [x=0,cbx4=0]",
                 ],
                 "AV1 filter-intra Horizontal32x16 witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_r32x32_filter_intra_mode3_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 1,
+                    range: 38_976,
+                }],
+                "AV1 mode-3 filter-intra witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                4_359,
+                "AV1 mode-3 filter-intra witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[13/3]:"))
+                    .count(),
+                2,
+                "AV1 mode-3 filter-intra witness must use mode 3 on both leaves"
             );
         }
         if case.fixture == "coverage_h4_horizontal_bands.avif" {
@@ -6009,6 +6042,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x32_filter_intra_probe_01.avif" => {
                 "979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b"
+            }
+            "coverage_r32x32_filter_intra_mode3_01.avif" => {
+                "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495"
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
