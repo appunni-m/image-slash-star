@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 97655,
-        "total": 108413,
-        "percent": 90.0768,
-        "uncovered": 10758
+        "covered": 97928,
+        "total": 108639,
+        "percent": 90.1407,
+        "uncovered": 10711
       },
       "branch": {
-        "covered": 12393,
-        "total": 13778,
-        "percent": 89.9477,
-        "uncovered": 1385
+        "covered": 12413,
+        "total": 13806,
+        "percent": 89.9102,
+        "uncovered": 1393
       },
       "function": {
-        "covered": 4977,
-        "total": 5703,
-        "percent": 87.2699,
-        "uncovered": 726
+        "covered": 4989,
+        "total": 5716,
+        "percent": 87.2813,
+        "uncovered": 727
       },
       "region": {
-        "covered": 146482,
-        "total": 164261,
-        "percent": 89.1764,
-        "uncovered": 17779
+        "covered": 146776,
+        "total": 164471,
+        "percent": 89.2413,
+        "uncovered": 17695
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-26",
         "managed_coverage_mcp": true,
-        "commit_sha": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
-        "run_id": "fa3e9494-15b5-4ae9-8fbe-bb0a4dde29b8",
-        "snapshot_id": "5a49459f-785f-4c5a-bab7-0dbad6a0302f",
+        "commit_sha": "eaeb516b3c9cc5036bc356daac9384ff092e7243",
+        "run_id": "ac8c0dc2-b48e-4a41-808f-36e98db2307e",
+        "snapshot_id": "ae932d43-6f49-4b6d-8628-b03715808e5f",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 143189,
+        "duration_ms": 144614,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run fa3e9494-15b5-4ae9-8fbe-bb0a4dde29b8 passed the all-feature LLVM workload in 143,189 ms at exact implementation commit cb82fc38a583ae300e144ae0a835373b6667ee9a and ingested snapshot 5a49459f-785f-4c5a-bab7-0dbad6a0302f. The snapshot records 90.0768% lines, 89.9477% branches, 87.2699% functions, and 89.1764% regions; the four-metric release target remains open until all reach 100%. The new coverage_r32x32_filter_intra_mode3_01.avif fixture is a real 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. Its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. The explicit incremental review against baseline snapshot 5f24b8a8-b87e-4179-ab39-461ef011a34e reports +6 covered/+6 total lines, +2 covered/+2 total branches, 0/+0 functions, and +13 covered/+15 total regions; it also reports 553 newly covered, 520 regressed, 7,797 hit-count-only, 2,394 added, 2,388 removed, and 211 branch-state-changed observations. Test attribution is unavailable and changed-line detail is bounded; aggregate coverage is measured, the region rate is slightly lower because its denominator grew faster than covered regions, and the remaining gaps stay open. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
+        "note": "Managed Coverage MCP run ac8c0dc2-b48e-4a41-808f-36e98db2307e passed the all-feature LLVM workload in 144,614 ms against the exact implementation checkout eaeb516b3c9cc5036bc356daac9384ff092e7243 and ingested snapshot ae932d43-6f49-4b6d-8628-b03715808e5f. The snapshot records 90.1407% lines, 89.9102% branches, 87.2813% functions, and 89.2413% regions; the four-metric release target remains open until all reach 100%. The new coverage_i444_v16x32_following_filter_intra_mode3_01.avif fixture is a real 32x32 8-bit 4:4:4 vertical-partition frame with a following filter-intra leaf, two TX16x16 luma children, and one RTX16x32 transform per full-resolution chroma plane. Its pinned dav1d trace has 7,446 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. The explicit incremental review against baseline snapshot 5a49459f-785f-4c5a-bab7-0dbad6a0302f reports +273 covered/+226 total lines, +20 covered/+28 total branches, +12/+13 functions, and +294/+210 regions; it also reports 2,771 newly covered, 2,762 regressed, 11,917 hit-count-only, 8,556 added, 8,397 removed, and 844 branch-state-changed observations. Test attribution is unavailable and changed-line detail is bounded; aggregate coverage is measured, the branch percentage is slightly lower because its denominator grew faster than covered branches, and the remaining gaps stay open. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "ab7a23962520aa32a1ac146f10c0f8a788db8df6",
-          "baseline_snapshot_id": "5f24b8a8-b87e-4179-ab39-461ef011a34e",
-          "line_covered_delta": 6,
-          "line_total_delta": 6,
-          "branch_covered_delta": 2,
-          "branch_total_delta": 2,
-          "function_covered_delta": 0,
-          "function_total_delta": 0,
-          "region_covered_delta": 13,
-          "region_total_delta": 15,
-          "interpretation": "Compared with baseline snapshot 5f24b8a8 at ab7a2396, this following-vertical filter-intra measurement has +6 covered/+6 total lines, +2 covered/+2 total branches, 0/+0 functions, and +13 covered/+15 total regions. The stored incremental review reports 553 newly covered, 520 regressed, 7,797 hit-count-only, 2,394 added, 2,388 removed, and 211 branch-state-changed observations; test attribution is unavailable and changed-line detail is bounded. Aggregate rates are 90.0768% lines, 89.9477% branches, 87.2699% functions, and 89.1764% regions; the region rate is slightly lower because its denominator grew faster than covered regions. The release target remains open with 10,758 lines, 1,385 branches, 726 functions, and 17,779 regions uncovered, and the next implementation slice must target another actual uncovered production path."
+          "baseline_commit": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
+          "baseline_snapshot_id": "5a49459f-785f-4c5a-bab7-0dbad6a0302f",
+          "line_covered_delta": 273,
+          "line_total_delta": 226,
+          "branch_covered_delta": 20,
+          "branch_total_delta": 28,
+          "function_covered_delta": 12,
+          "function_total_delta": 13,
+          "region_covered_delta": 294,
+          "region_total_delta": 210,
+          "interpretation": "Compared with baseline snapshot 5a49459f at cb82fc38, this I444 Vertical16x32 following-leaf measurement has +273 covered/+226 total lines, +20 covered/+28 total branches, +12/+13 functions, and +294/+210 regions. The stored incremental review reports 2,771 newly covered, 2,762 regressed, 11,917 hit-count-only, 8,556 added, 8,397 removed, and 844 branch-state-changed observations; test attribution is unavailable and changed-line detail is bounded. Aggregate rates are 90.1407% lines, 89.9102% branches, 87.2813% functions, and 89.2413% regions; the branch rate is slightly lower because its denominator grew faster than covered branches. The release target remains open with 10,711 lines, 1,393 branches, 727 functions, and 17,695 regions uncovered, and the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run fa3e9494-15b5-4ae9-8fbe-bb0a4dde29b8 passed in 143,189 ms and ingested snapshot 5a49459f-785f-4c5a-bab7-0dbad6a0302f against exact implementation commit cb82fc38a583ae300e144ae0a835373b6667ee9a. It reports 10,758 lines, 1,385 branches, 726 functions, and 17,779 regions uncovered; the explicit incremental review against 5f24b8a8 reports +6 covered/+6 total lines, +2 covered/+2 total branches, 0/+0 functions, and +13 covered/+15 total regions, alongside bounded newly-covered and regression observations. The new following-vertical H32x16 filter-intra mode-3 witness is exact through safe Rust, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run ac8c0dc2-b48e-4a41-808f-36e98db2307e passed in 144,614 ms and ingested snapshot ae932d43-6f49-4b6d-8628-b03715808e5f against exact implementation checkout eaeb516b3c9cc5036bc356daac9384ff092e7243. It reports 10,711 lines, 1,393 branches, 727 functions, and 17,695 regions uncovered; the explicit incremental review against 5a49459f reports +273 covered/+226 total lines, +20 covered/+28 total branches, +12/+13 functions, and +294/+210 regions, alongside bounded newly-covered and regression observations. The new I444 Vertical16x32 following-leaf witness is exact through safe Rust, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
