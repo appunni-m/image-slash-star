@@ -3082,6 +3082,268 @@ const LOSSY_LUMA_TXP_INTRA1_S8: [[u16; 7]; 13] = [
     [29_257, 26_436, 21_603, 17_433, 13_445, 9_174, 0],
 ];
 
+// AV1 qcat-three coefficient CDFs (qindex 121..=255), complemented for the
+// portable range decoder. These are the exact dav1d 1.5.3 defaults used by
+// the 16x4 luma and 8x4 subsampled-chroma terminals.
+const QCAT3_LUMA_8X8_EOB_BIN: [u16; 7] = [26_461, 25_227, 20_708, 16_410, 10_215, 4_903, 0];
+
+const QCAT3_LUMA_8X8_EOB_BIN_1D: [u16; 7] = [31_479, 30_448, 28_797, 24_842, 18_615, 8_477, 0];
+
+const QCAT3_LUMA_8X8_EOB_HIGH: [[u16; 2]; 7] = [
+    [16_384, 0],
+    [16_384, 0],
+    [12_530, 0],
+    [11_711, 0],
+    [13_609, 0],
+    [10_431, 0],
+    [12_609, 0],
+];
+
+const QCAT3_LUMA_8X8_EOB_BASE: [[u16; 3]; 4] = [
+    [11_311, 1_725, 0],
+    [817, 285, 0],
+    [615, 206, 0],
+    [1_295, 553, 0],
+];
+
+const QCAT3_LUMA_8X8_BASE: [[u16; 4]; 26] = [
+    [25_014, 15_820, 10_626, 0],
+    [7_098, 438, 77, 0],
+    [17_105, 3_543, 774, 0],
+    [22_890, 9_480, 3_610, 0],
+    [26_349, 15_680, 8_432, 0],
+    [28_909, 21_765, 15_729, 0],
+    [5_206, 173, 43, 0],
+    [15_193, 2_180, 369, 0],
+    [21_949, 7_930, 2_459, 0],
+    [25_644, 14_082, 6_852, 0],
+    [28_289, 20_080, 13_428, 0],
+    [4_383, 292, 95, 0],
+    [17_462, 3_763, 830, 0],
+    [23_831, 11_153, 4_446, 0],
+    [26_786, 17_165, 9_982, 0],
+    [29_148, 22_501, 16_632, 0],
+    [5_488, 304, 101, 0],
+    [17_161, 3_608, 764, 0],
+    [23_677, 10_633, 4_028, 0],
+    [26_536, 16_136, 8_748, 0],
+    [28_721, 21_391, 15_096, 0],
+    [3_548, 138, 50, 0],
+    [13_118, 1_548, 306, 0],
+    [19_718, 6_456, 1_941, 0],
+    [23_540, 11_898, 5_300, 0],
+    [26_622, 17_619, 10_797, 0],
+];
+
+const QCAT3_LUMA_8X8_BASE_1D: [[u16; 4]; 41] = [
+    [25_014, 15_820, 10_626, 0],
+    [7_098, 438, 77, 0],
+    [17_105, 3_543, 774, 0],
+    [22_890, 9_480, 3_610, 0],
+    [26_349, 15_680, 8_432, 0],
+    [28_909, 21_765, 15_729, 0],
+    [5_206, 173, 43, 0],
+    [15_193, 2_180, 369, 0],
+    [21_949, 7_930, 2_459, 0],
+    [25_644, 14_082, 6_852, 0],
+    [28_289, 20_080, 13_428, 0],
+    [4_383, 292, 95, 0],
+    [17_462, 3_763, 830, 0],
+    [23_831, 11_153, 4_446, 0],
+    [26_786, 17_165, 9_982, 0],
+    [29_148, 22_501, 16_632, 0],
+    [5_488, 304, 101, 0],
+    [17_161, 3_608, 764, 0],
+    [23_677, 10_633, 4_028, 0],
+    [26_536, 16_136, 8_748, 0],
+    [28_721, 21_391, 15_096, 0],
+    [3_548, 138, 50, 0],
+    [13_118, 1_548, 306, 0],
+    [19_718, 6_456, 1_941, 0],
+    [23_540, 11_898, 5_300, 0],
+    [26_622, 17_619, 10_797, 0],
+    [2_599, 287, 145, 0],
+    [15_556, 3_457, 1_214, 0],
+    [22_857, 11_457, 5_886, 0],
+    [28_281, 19_454, 12_396, 0],
+    [30_198, 24_996, 19_879, 0],
+    [1_844, 155, 60, 0],
+    [13_278, 2_562, 661, 0],
+    [21_536, 8_770, 3_492, 0],
+    [25_999, 14_813, 7_733, 0],
+    [28_370, 20_145, 13_554, 0],
+    [2_159, 141, 46, 0],
+    [13_398, 2_186, 481, 0],
+    [22_311, 9_149, 3_359, 0],
+    [26_325, 15_131, 7_934, 0],
+    [28_123, 19_532, 12_662, 0],
+];
+
+const QCAT3_LUMA_8X8_HIGH: [[u16; 4]; 21] = [
+    [14_494, 7_955, 4_878, 0],
+    [17_231, 9_619, 5_765, 0],
+    [23_319, 16_028, 10_941, 0],
+    [26_068, 20_270, 15_507, 0],
+    [27_780, 22_902, 18_570, 0],
+    [28_532, 24_621, 20_866, 0],
+    [29_901, 26_908, 24_114, 0],
+    [15_644, 9_597, 6_667, 0],
+    [12_372, 5_291, 2_620, 0],
+    [16_195, 8_139, 4_276, 0],
+    [20_019, 11_922, 7_094, 0],
+    [22_535, 14_890, 9_950, 0],
+    [24_243, 17_436, 12_405, 0],
+    [26_485, 21_136, 16_513, 0],
+    [12_302, 6_257, 3_482, 0],
+    [9_709, 3_594, 1_577, 0],
+    [13_287, 5_505, 2_527, 0],
+    [17_310, 9_137, 4_631, 0],
+    [20_352, 12_160, 7_075, 0],
+    [22_507, 14_757, 9_507, 0],
+    [24_752, 18_113, 13_102, 0],
+];
+
+const QCAT3_CHROMA_8X4_EOB_BIN: [u16; 6] = [10_682, 8_486, 5_758, 2_998, 1_025, 0];
+
+const QCAT3_CHROMA_8X4_EOB_HIGH: [[u16; 2]; 6] = [
+    [12_643, 0],
+    [12_209, 0],
+    [11_061, 0],
+    [10_472, 0],
+    [15_435, 0],
+    [16_384, 0],
+];
+
+const QCAT3_CHROMA_8X4_EOB_BASE: [[u16; 3]; 4] = [
+    [5_210, 1_617, 0],
+    [748, 128, 0],
+    [671, 193, 0],
+    [526, 49, 0],
+];
+
+const QCAT3_CHROMA_8X4_BASE: [[u16; 4]; 41] = [
+    [24_142, 12_497, 6_552, 0],
+    [6_061, 362, 57, 0],
+    [15_769, 2_439, 482, 0],
+    [21_323, 7_645, 2_482, 0],
+    [26_357, 13_940, 7_167, 0],
+    [25_967, 20_310, 12_520, 0],
+    [2_850, 86, 20, 0],
+    [12_119, 1_029, 150, 0],
+    [19_889, 4_995, 1_187, 0],
+    [24_872, 11_017, 4_524, 0],
+    [27_508, 17_898, 9_070, 0],
+    [3_516, 175, 37, 0],
+    [15_696, 2_308, 474, 0],
+    [22_115, 8_625, 3_403, 0],
+    [26_232, 15_278, 8_785, 0],
+    [27_839, 19_598, 12_683, 0],
+    [4_631, 250, 53, 0],
+    [14_597, 1_984, 361, 0],
+    [21_331, 7_332, 2_309, 0],
+    [25_516, 14_234, 6_592, 0],
+    [28_642, 19_415, 11_790, 0],
+    [1_606, 42, 20, 0],
+    [9_751, 546, 67, 0],
+    [17_139, 3_535, 722, 0],
+    [23_381, 10_147, 3_288, 0],
+    [25_846, 15_152, 7_758, 0],
+    [3_930, 503, 154, 0],
+    [13_067, 2_562, 848, 0],
+    [21_554, 10_358, 4_835, 0],
+    [27_448, 18_591, 9_734, 0],
+    [27_719, 19_887, 14_941, 0],
+    [5_284, 297, 34, 0],
+    [11_692, 1_242, 207, 0],
+    [20_061, 6_465, 1_557, 0],
+    [24_599, 11_046, 4_549, 0],
+    [26_723, 13_362, 5_726, 0],
+    [5_015, 196, 23, 0],
+    [11_936, 890, 115, 0],
+    [19_518, 5_412, 1_094, 0],
+    [25_050, 11_260, 2_910, 0],
+    [25_559, 14_418, 7_209, 0],
+];
+
+const QCAT3_CHROMA_8X4_HIGH: [[u16; 4]; 21] = [
+    [15_152, 8_182, 4_656, 0],
+    [16_959, 9_469, 5_613, 0],
+    [22_001, 13_878, 8_975, 0],
+    [25_041, 18_513, 13_903, 0],
+    [26_639, 20_842, 15_886, 0],
+    [28_286, 23_064, 17_907, 0],
+    [29_491, 25_316, 21_246, 0],
+    [9_812, 4_217, 2_038, 0],
+    [10_044, 3_831, 1_807, 0],
+    [14_301, 6_444, 3_188, 0],
+    [19_534, 12_055, 7_119, 0],
+    [21_587, 15_176, 10_287, 0],
+    [24_477, 14_410, 8_192, 0],
+    [25_200, 20_887, 17_784, 0],
+    [7_820, 3_767, 1_621, 0],
+    [7_094, 2_149, 617, 0],
+    [11_927, 5_975, 3_165, 0],
+    [18_099, 8_412, 4_102, 0],
+    [21_434, 9_175, 4_549, 0],
+    [23_846, 18_006, 9_895, 0],
+    [24_467, 19_224, 12_233, 0],
+];
+
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].skip`, complemented for the
+// portable range decoder. Subsampled chroma uses contexts seven through
+// twelve, stored here as six entries for each transform-size context.
+const QCAT3_SUBSAMPLED_CHROMA_SKIP: [[[u16; 2]; 6]; 5] = [
+    [
+        [30_055, 0],
+        [20_907, 0],
+        [11_995, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+    ],
+    [
+        [29_982, 0],
+        [21_574, 0],
+        [12_613, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+    ],
+    [
+        [29_328, 0],
+        [19_651, 0],
+        [10_066, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+    ],
+    [
+        [28_112, 0],
+        [16_694, 0],
+        [8_064, 0],
+        [30_962, 0],
+        [18_123, 0],
+        [7_432, 0],
+    ],
+    [
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+        [16_384, 0],
+    ],
+];
+
+const QCAT3_LUMA_8X8_SKIP: [[u16; 2]; 7] = [
+    [865, 0],
+    [30_724, 0],
+    [25_240, 0],
+    [18_150, 0],
+    [16_586, 0],
+    [8_600, 0],
+    [1_731, 0],
+];
 impl BlockCdfs {
     // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:113-138, 169-177, 412-414,
     // 719-905 and 1313-1348 for q-context zero. Filter-intra is
@@ -3814,9 +4076,10 @@ impl BlockCdfs {
     ///
     /// AV1's mode CDFs are shared across quantizer categories, while its
     /// coefficient CDFs select one of four qcat tables. The first complete
-    /// lossy still class is qcat two (qindex 61..=120); qcat one and qcat
-    /// three remain explicit gaps until their coefficient tables have their
-    /// own fixture evidence.
+    /// lossy still class is qcat two (qindex 61..=120); qcat three is wired
+    /// for the proven 16x4 luma and 8x4 subsampled-chroma terminals. Qcat one
+    /// and the remaining qcat-three geometries stay explicit gaps until their
+    /// coefficient tables have their own fixture evidence.
     fn defaults_for_qindex(use_filter_intra: [u16; 2], qindex: u32) -> Option<Self> {
         let qcat = usize::from(qindex > 20)
             .saturating_add(usize::from(qindex > 60))
@@ -3901,6 +4164,23 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_32x32_eob_base = QCAT2_CHROMA_32X32_EOB_BASE;
                 cdfs.lossy_chroma_32x32_base = QCAT2_CHROMA_32X32_BASE;
                 cdfs.lossy_chroma_32x32_high_tokens = QCAT2_CHROMA_32X32_HIGH;
+                Some(cdfs)
+            }
+            3 => {
+                cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
+                cdfs.lossy_luma_8x8_eob_bin = QCAT3_LUMA_8X8_EOB_BIN;
+                cdfs.lossy_luma_8x8_eob_bin_1d = QCAT3_LUMA_8X8_EOB_BIN_1D;
+                cdfs.lossy_luma_8x8_eob_high = QCAT3_LUMA_8X8_EOB_HIGH;
+                cdfs.lossy_luma_8x8_eob_base = QCAT3_LUMA_8X8_EOB_BASE;
+                cdfs.lossy_luma_8x8_base = QCAT3_LUMA_8X8_BASE;
+                cdfs.lossy_luma_8x8_base_1d = QCAT3_LUMA_8X8_BASE_1D;
+                cdfs.lossy_luma_8x8_high_tokens = QCAT3_LUMA_8X8_HIGH;
+                cdfs.lossy_chroma_8x4_eob_bin = QCAT3_CHROMA_8X4_EOB_BIN;
+                cdfs.lossy_chroma_8x4_eob_high = QCAT3_CHROMA_8X4_EOB_HIGH;
+                cdfs.lossy_chroma_8x4_eob_base = QCAT3_CHROMA_8X4_EOB_BASE;
+                cdfs.lossy_chroma_8x4_base = QCAT3_CHROMA_8X4_BASE;
+                cdfs.lossy_chroma_8x4_high_tokens = QCAT3_CHROMA_8X4_HIGH;
+                cdfs.subsampled_chroma_coefficient_skip = QCAT3_SUBSAMPLED_CHROMA_SKIP;
                 Some(cdfs)
             }
             _ => None,
@@ -8215,12 +8495,7 @@ fn decode_lossy_luma_4x8_coefficients(
         .saturating_add(u32::from(
             *levels.get(LOSSY_LUMA_4X8_LEVEL_STRIDE + 1).portable()?,
         ));
-        let high_context = if dc_magnitude > 12 {
-            6
-        } else {
-            dc_magnitude.saturating_add(1) >> 1
-        };
-        let high_context = usize::try_from(high_context).map_err(|_| PortableUnavailable)?;
+        let high_context = coefficient_high_context(dc_magnitude);
         decode_high_token(
             decoder,
             cdfs.lossy_luma_8x8_high_tokens
@@ -8575,12 +8850,7 @@ fn decode_lossy_luma_16x4_coefficients(
             .saturating_add(u32::from(
                 *levels.get(LOSSY_LUMA_16X4_LEVEL_STRIDE + 1).portable()?,
             ));
-        let high_context = if dc_magnitude > 12 {
-            6
-        } else {
-            dc_magnitude.saturating_add(1) >> 1
-        };
-        let high_context = usize::try_from(high_context).map_err(|_| PortableUnavailable)?;
+        let high_context = coefficient_high_context(dc_magnitude);
         decode_high_token(
             decoder,
             cdfs.lossy_luma_8x8_high_tokens
@@ -12610,6 +12880,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         return Ok(None);
     }
     match quantization.matrix_y {
+        8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
@@ -12814,6 +13085,8 @@ fn chroma_rect32_matrix(
         _ => return Err(PortableUnavailable),
     };
     match (matrix_index, vertical) {
+        (8, false) => Ok(Some(&quantization::UV_8X4_MATRIX_8)),
+        (8, true) => Ok(Some(&quantization::UV_4X8_MATRIX_8)),
         (9, false) => Ok(Some(&quantization::UV_8X4_MATRIX_9)),
         (9, true) => Ok(Some(&quantization::UV_4X8_MATRIX_9)),
         (10, false) => Ok(Some(&quantization::UV_8X4_MATRIX_10)),
@@ -15818,8 +16091,12 @@ fn reconstruct_lossy_luma_16x4_from_prediction(
         Lossy4x8TransformKind::IdentityDct => transform::inverse_identity_dct16x4(&coefficients),
         Lossy4x8TransformKind::DctIdentity => transform::inverse_dct_identity16x4(&coefficients),
         Lossy4x8TransformKind::AdstAdst => transform::inverse_adst_adst16x4(&coefficients),
-        Lossy4x8TransformKind::AdstDct => transform::inverse_adst_dct16x4(&coefficients),
-        Lossy4x8TransformKind::DctAdst => transform::inverse_dct_adst16x4(&coefficients),
+        // Keep this mapping pinned to dav1d's transform type rather than to
+        // the helper names: for R16x4, the column-major safe
+        // `inverse_adst_dct16x4` helper is the exact scalar realization of
+        // dav1d's DCT_ADST sentence.
+        Lossy4x8TransformKind::AdstDct => transform::inverse_dct_adst16x4(&coefficients),
+        Lossy4x8TransformKind::DctAdst => transform::inverse_adst_dct16x4(&coefficients),
     };
     let samples = prediction
         .into_iter()

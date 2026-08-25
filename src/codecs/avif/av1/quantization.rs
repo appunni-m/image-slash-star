@@ -576,6 +576,16 @@ pub(super) const Y_16X4_MATRIX_10: [u8; 64] = [
     35, 36, 43, 51, 38, 39, 45, 54, 38, 39, 45, 54, 42, 42, 48, 58,
 ];
 
+/// AV1 quantization matrix 8 for a coded 16×4 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[8][0][RTX_16X4]`.
+#[rustfmt::skip]
+pub(super) const Y_16X4_MATRIX_8: [u8; 64] = [
+    31, 32, 38, 53, 32, 32, 37, 51, 32, 32, 36, 49, 32, 33, 36, 49,
+    32, 34, 38, 50, 32, 35, 39, 49, 33, 36, 41, 51, 34, 37, 44, 54,
+    35, 38, 49, 60, 37, 40, 51, 63, 38, 40, 52, 65, 42, 43, 56, 71,
+    45, 45, 58, 75, 47, 47, 60, 77, 51, 50, 63, 82, 55, 54, 67, 87,
+];
+
 /// AV1 quantization matrix 9 for a coded 8×16 luma transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][0][RTX_8X16]`.
 pub(super) const Y_8X16_MATRIX_9: [u8; 128] = [
@@ -699,6 +709,22 @@ pub(super) const UV_8X4_MATRIX_10: [u8; 32] = [
 pub(super) const UV_4X8_MATRIX_10: [u8; 32] = [
     31, 31, 33, 36, 40, 45, 47, 47, 34, 35, 37, 41, 44, 46, 47, 46,
     42, 42, 44, 46, 48, 49, 50, 49, 48, 46, 46, 46, 48, 51, 54, 55,
+];
+
+/// AV1 quantization matrix 8 for a coded 8×4 subsampled U/V transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[8][1][RTX_8X4]`.
+#[rustfmt::skip]
+pub(super) const UV_8X4_MATRIX_8: [u8; 32] = [
+    31, 38, 47, 50, 31, 40, 46, 48, 36, 44, 47, 47, 42, 47, 50, 50,
+    47, 48, 53, 54, 46, 46, 54, 60, 48, 46, 55, 64, 50, 48, 56, 67,
+];
+
+/// AV1 quantization matrix 8 for a coded 4×8 subsampled U/V transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[8][1][RTX_4X8]`.
+#[rustfmt::skip]
+pub(super) const UV_4X8_MATRIX_8: [u8; 32] = [
+    31, 31, 36, 42, 47, 46, 48, 50, 38, 40, 44, 47, 48, 46, 46, 48,
+    47, 46, 47, 50, 53, 54, 55, 56, 50, 48, 47, 50, 54, 60, 64, 67,
 ];
 
 /// AV1 quantization matrix 9 for a coded 8×4 subsampled U/V transform.

@@ -920,6 +920,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff",
         "size": [16, 16],
     },
+    "coverage_h4_horizontal_bands.avif": {
+        "file_sha256": "35f037da62ec75ca71341970f7751ba49d64d0f987b90c4f479c278c536c4088",
+        "rgb_sha256": "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7",
+        "size": [16, 16],
+    },
     "coverage_adst_public_04.avif": {
         "file_sha256": "2e182dc0b3e66744f22e9e6683898bda8b4031f24e66b04d8099d6699141919c",
         "rgb_sha256": "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8",
