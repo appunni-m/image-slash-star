@@ -71,7 +71,7 @@ fn encode_case(name: &str) -> (String, Vec<u8>) {
         ),
         "png_rgba" => {
             let mut rgba = Vec::new();
-            for pixel in rgb.chunks_exact(3) {
+            for pixel in rgb.as_chunks::<3>().0 {
                 rgba.extend_from_slice(pixel);
                 rgba.push(255);
             }
@@ -181,7 +181,7 @@ fn encode_case(name: &str) -> (String, Vec<u8>) {
         ),
         "ico_rgba" => {
             let mut rgba = Vec::new();
-            for pixel in rgb.chunks_exact(3) {
+            for pixel in rgb.as_chunks::<3>().0 {
                 rgba.extend_from_slice(pixel);
                 rgba.push(255);
             }

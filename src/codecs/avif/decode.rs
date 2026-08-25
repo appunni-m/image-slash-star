@@ -733,7 +733,7 @@ mod tests {
             alpha
                 .samples
                 .iter()
-                .zip(expected_raw.chunks_exact(4))
+                .zip(expected_raw.as_chunks::<4>().0)
                 .all(|(&actual, rgba)| actual == u16::from(rgba[3]))
         );
         let image = decode_portable(&validated).ok_or_else(|| {

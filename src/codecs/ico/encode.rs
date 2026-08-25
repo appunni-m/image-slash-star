@@ -390,7 +390,7 @@ fn encode_bmp_payload(
             let source_row_bytes = width.saturating_mul(3);
             for row in img.pixels.chunks_exact(source_row_bytes).rev() {
                 crate::codecs::error::check_cancelled(token)?;
-                for pixel in row.chunks_exact(3) {
+                for pixel in row.as_chunks::<3>().0 {
                     output.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
                 }
                 let padding = row_bytes.saturating_sub(source_row_bytes);
@@ -400,7 +400,7 @@ fn encode_bmp_payload(
         IcoBmpPayloadMode::Rgba8 => {
             for row in img.pixels.chunks_exact(row_bytes).rev() {
                 crate::codecs::error::check_cancelled(token)?;
-                for pixel in row.chunks_exact(4) {
+                for pixel in row.as_chunks::<4>().0 {
                     output.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
                 }
             }

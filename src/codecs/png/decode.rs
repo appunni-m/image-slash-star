@@ -1702,7 +1702,7 @@ fn build_image(
             .collect()
     } else if png_color == 4 && depth == 16 {
         let mut bytes = Vec::with_capacity(samples.len().wrapping_mul(2));
-        for pair in samples.chunks_exact(2) {
+        for pair in samples.as_chunks::<2>().0 {
             let luminance = pair[0].to_be_bytes()[0];
             let alpha = pair[1].to_be_bytes()[0];
             bytes.extend_from_slice(&[luminance, luminance, luminance, alpha]);

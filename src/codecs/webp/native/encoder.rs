@@ -2634,7 +2634,7 @@ fn convert_pixels(
         let mut pixels_until_checkpoint = VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS;
         match color {
             ColorType::Rgb8 => {
-                for pixel in data.chunks_exact(3) {
+                for pixel in data.as_chunks::<3>().0 {
                     pixels.push(
                         0xff00_0000
                             | (u32::from(pixel[0]) << 16)
@@ -2649,7 +2649,7 @@ fn convert_pixels(
                 }
             }
             ColorType::Rgba8 => {
-                for pixel in data.chunks_exact(4) {
+                for pixel in data.as_chunks::<4>().0 {
                     pixels.push(
                         (u32::from(pixel[3]) << 24)
                             | (u32::from(pixel[0]) << 16)
@@ -2668,7 +2668,9 @@ fn convert_pixels(
     } else {
         Ok(match color {
             ColorType::Rgb8 => data
-                .chunks_exact(3)
+                .as_chunks::<3>()
+                .0
+                .iter()
                 .map(|pixel| {
                     0xff00_0000
                         | (u32::from(pixel[0]) << 16)
@@ -2677,7 +2679,9 @@ fn convert_pixels(
                 })
                 .collect(),
             ColorType::Rgba8 => data
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| {
                     (u32::from(pixel[3]) << 24)
                         | (u32::from(pixel[0]) << 16)
@@ -3214,7 +3218,7 @@ impl WebPEncoder {
         let result = if let Some(token) = token {
             let mut pixels_until_checkpoint = VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS;
             (|| {
-                for pixel in rgba.chunks_exact(4) {
+                for pixel in rgba.as_chunks::<4>().0 {
                     self.alpha_scratch.push(pixel[3]);
                     pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
                     if pixels_until_checkpoint == 0 {
@@ -3226,7 +3230,7 @@ impl WebPEncoder {
             })()
         } else {
             self.alpha_scratch
-                .extend(rgba.chunks_exact(4).map(|pixel| pixel[3]));
+                .extend(rgba.as_chunks::<4>().0.iter().map(|pixel| pixel[3]));
             Ok(())
         };
         let result = result.and_then(|()| {

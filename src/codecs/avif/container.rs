@@ -479,7 +479,7 @@ fn parse_ftyp(payload: &[u8]) -> ParseResult<Brands> {
     let mut has_avif = major == *b"avif";
     let mut has_avis = major == *b"avis";
     let mut compatible_brands = Vec::new();
-    for bytes in reader.data[reader.offset..].chunks_exact(4) {
+    for bytes in reader.data[reader.offset..].as_chunks::<4>().0 {
         if compatible_brands.len() >= MAX_COMPATIBLE_BRANDS {
             return Err(parse_failure!());
         }
@@ -1196,12 +1196,7 @@ impl Meta {
         let depth = self
             .associated(primary)
             .find_map(|property| match property {
-                Property::Pixi { depth }
-                | Property::Av1C {
-                    depth,
-                    chroma_sample_position: _,
-                    ..
-                } => Some(*depth),
+                Property::Pixi { depth } | Property::Av1C { depth, .. } => Some(*depth),
                 _ => None,
             })
             .unwrap_or(8);

@@ -74,7 +74,7 @@ fn write_encoded(
             ImageMode::P8 => (3, 8, width, 1, Cow::Borrowed(&img.pixels)),
             ImageMode::L16 => {
                 let mut big_endian = Vec::with_capacity(img.pixels.len());
-                for sample in img.pixels.chunks_exact(2) {
+                for sample in img.pixels.as_chunks::<2>().0 {
                     crate::codecs::error::check_cancelled(token)?;
                     big_endian.extend_from_slice(
                         &u16::from_le_bytes([sample[0], sample[1]]).to_be_bytes(),

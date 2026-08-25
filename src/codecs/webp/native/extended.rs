@@ -76,7 +76,12 @@ pub(crate) fn composite_frame(
         if frame_has_alpha {
             canvas.copy_from_slice(frame);
         } else {
-            for (input, output) in frame.chunks_exact(3).zip(canvas.chunks_exact_mut(4)) {
+            for (input, output) in frame
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .zip(canvas.as_chunks_mut::<4>().0.iter_mut())
+            {
                 output[..3].copy_from_slice(input);
                 output[3] = 255;
             }
@@ -88,12 +93,12 @@ pub(crate) fn composite_frame(
     if let Some(clear_color) = clear_color {
         match (frame_is_full_size, frame_has_alpha) {
             (true, true) => {
-                for pixel in canvas.chunks_exact_mut(4) {
+                for pixel in canvas.as_chunks_mut::<4>().0 {
                     pixel.copy_from_slice(&clear_color);
                 }
             }
             (true, false) => {
-                for pixel in canvas.chunks_exact_mut(3) {
+                for pixel in canvas.as_chunks_mut::<3>().0 {
                     pixel.copy_from_slice(&clear_color[..3]);
                 }
             }
@@ -164,7 +169,12 @@ pub(crate) fn composite_frame(
             let input = &frame[index..][..width * 3];
             let output = &mut canvas[canvas_index..][..width * 4];
 
-            for (input, output) in input.chunks_exact(3).zip(output.chunks_exact_mut(4)) {
+            for (input, output) in input
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .zip(output.as_chunks_mut::<4>().0.iter_mut())
+            {
                 output[..3].copy_from_slice(input);
                 output[3] = 255;
             }
@@ -408,7 +418,7 @@ pub(crate) fn read_alpha_chunk<R: BufRead>(
         decoder.decode_frame_implicit_dimensions(u32::from(width), u32::from(height), &mut data)?;
 
         let mut green = vec![0; pixel_count];
-        for (rgba_val, green_val) in data.chunks_exact(4).zip(green.iter_mut()) {
+        for (rgba_val, green_val) in data.as_chunks::<4>().0.iter().zip(green.iter_mut()) {
             *green_val = rgba_val[1];
         }
         green

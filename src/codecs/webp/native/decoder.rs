@@ -544,7 +544,7 @@ impl<'a> WebPDecoder<'a> {
                 frame.fill_rgba(buf);
 
                 let Some(range) = self.chunks.get(&WebPRiffChunk::ALPH).cloned() else {
-                    for pixel in buf.chunks_exact_mut(4) {
+                    for pixel in buf.as_chunks_mut::<4>().0 {
                         pixel[3] = 255;
                     }
                     return Ok(());
@@ -730,7 +730,9 @@ impl<'a> WebPDecoder<'a> {
                 let mut canvas = vec![0; (self.width * self.height * 4) as usize];
                 let color = info.background_color.unwrap_or(info.background_color_hint);
                 canvas
-                    .chunks_exact_mut(4)
+                    .as_chunks_mut::<4>()
+                    .0
+                    .iter_mut()
                     .for_each(|pixel| pixel.copy_from_slice(&color));
                 Some(canvas)
             }
@@ -765,10 +767,15 @@ impl<'a> WebPDecoder<'a> {
         if self.has_alpha() {
             buf.copy_from_slice(self.animation.canvas.as_ref().unwrap());
         } else {
-            for (b, c) in buf
-                .chunks_exact_mut(3)
-                .zip(self.animation.canvas.as_ref().unwrap().chunks_exact(4))
-            {
+            for (b, c) in buf.as_chunks_mut::<3>().0.iter_mut().zip(
+                self.animation
+                    .canvas
+                    .as_ref()
+                    .unwrap()
+                    .as_chunks::<4>()
+                    .0
+                    .iter(),
+            ) {
                 b.copy_from_slice(&c[..3]);
             }
         }

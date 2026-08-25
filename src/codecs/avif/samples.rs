@@ -307,7 +307,7 @@ fn parse_ftyp(input: &[u8], payload: ByteSpan) -> ParseResult<Brands> {
     let compatible = input
         .get(reader.offset..reader.end)
         .ok_or_else(|| parse_failure!())?;
-    for bytes in compatible.chunks_exact(4) {
+    for bytes in compatible.as_chunks::<4>().0 {
         if compatible_brands.len() >= MAX_COMPATIBLE_BRANDS {
             return Err(parse_failure!());
         }

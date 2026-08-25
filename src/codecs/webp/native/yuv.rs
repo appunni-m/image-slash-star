@@ -215,10 +215,10 @@ fn fill_row_fancy_with_2_uv_rows<const BPP: usize>(
 
     // we do two pixels at a time since they share the same u/v values
     let mut main_row_chunks = rest_row_buffer.chunks_exact_mut(BPP.wrapping_mul(2));
-    let mut main_y_chunks = rest_y_row.chunks_exact(2);
+    let (main_y_chunks, main_y_remainder) = rest_y_row.as_chunks::<2>();
 
     for (((((rgb, y_val), u_val_1), u_val_2), v_val_1), v_val_2) in (&mut main_row_chunks)
-        .zip(&mut main_y_chunks)
+        .zip(main_y_chunks.iter())
         .zip(u_row_1.windows(2))
         .zip(u_row_2.windows(2))
         .zip(v_row_1.windows(2))
@@ -242,7 +242,7 @@ fn fill_row_fancy_with_2_uv_rows<const BPP: usize>(
     }
 
     let final_pixel = main_row_chunks.into_remainder();
-    let final_y = main_y_chunks.remainder();
+    let final_y = main_y_remainder;
 
     if let (rgb, [y_value]) = (final_pixel, final_y) {
         let final_u_1 = u_row_1[u_row_1.len().wrapping_sub(1)];
@@ -277,10 +277,10 @@ fn fill_row_fancy_with_1_uv_row<const BPP: usize>(
 
     // two pixels at a time since they share the same u/v value
     let mut main_row_chunks = row_buffer[BPP..].chunks_exact_mut(BPP.wrapping_mul(2));
-    let mut main_y_row_chunks = y_row[1..].chunks_exact(2);
+    let (main_y_row_chunks, main_y_row_remainder) = y_row[1..].as_chunks::<2>();
 
     for (((rgb, y_val), u_val), v_val) in (&mut main_row_chunks)
-        .zip(&mut main_y_row_chunks)
+        .zip(main_y_row_chunks.iter())
         .zip(u_row.windows(2))
         .zip(v_row.windows(2))
     {
@@ -302,7 +302,7 @@ fn fill_row_fancy_with_1_uv_row<const BPP: usize>(
     }
 
     let final_pixel = main_row_chunks.into_remainder();
-    let final_y = main_y_row_chunks.remainder();
+    let final_y = main_y_row_remainder;
 
     if let (rgb, [final_y]) = (final_pixel, final_y) {
         let final_u = u_row[u_row.len().wrapping_sub(1)];

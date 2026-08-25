@@ -541,7 +541,7 @@ impl PreparedPixels<'_> {
         }
         if let Some(token) = token {
             let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-            for pixel in self.bytes.chunks_exact(4) {
+            for pixel in self.bytes.as_chunks::<4>().0 {
                 let has_alpha = pixel[3] != u8::MAX;
                 checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
                 if has_alpha {
@@ -550,7 +550,12 @@ impl PreparedPixels<'_> {
             }
             Ok(false)
         } else {
-            Ok(self.bytes.chunks_exact(4).any(|pixel| pixel[3] != u8::MAX))
+            Ok(self
+                .bytes
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|pixel| pixel[3] != u8::MAX))
         }
     }
 
@@ -565,7 +570,7 @@ impl PreparedPixels<'_> {
         if let Some(token) = token {
             let mut rgb = Vec::with_capacity(self.bytes.len().saturating_div(4).saturating_mul(3));
             let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-            for pixel in self.bytes.chunks_exact(4) {
+            for pixel in self.bytes.as_chunks::<4>().0 {
                 rgb.extend_from_slice(&pixel[..3]);
                 checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
             }
@@ -573,7 +578,9 @@ impl PreparedPixels<'_> {
         } else {
             Ok(self
                 .bytes
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .flat_map(|pixel| pixel[..3].iter().copied())
                 .collect())
         }
@@ -705,7 +712,7 @@ fn expand_indexed(
         }
         let mut rgb = Vec::with_capacity(rgba.len().saturating_div(4).saturating_mul(3));
         pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-        for pixel in rgba.chunks_exact(4) {
+        for pixel in rgba.as_chunks::<4>().0 {
             rgb.extend_from_slice(&pixel[..3]);
             checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
         }
@@ -743,7 +750,9 @@ fn expand_indexed(
     } else {
         Ok(PreparedPixels {
             bytes: Cow::Owned(
-                rgba.chunks_exact(4)
+                rgba.as_chunks::<4>()
+                    .0
+                    .iter()
                     .flat_map(|pixel| pixel[..3].iter().copied())
                     .collect(),
             ),
@@ -759,14 +768,14 @@ fn expand_luminance_alpha(
     if let Some(token) = token {
         let mut has_alpha = false;
         let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-        for pixel in img.pixels.chunks_exact(2) {
+        for pixel in img.pixels.as_chunks::<2>().0 {
             has_alpha |= pixel[1] != u8::MAX;
             checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
         }
         if has_alpha {
             let mut rgba = Vec::with_capacity(img.pixels.len().saturating_div(2).saturating_mul(4));
             pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-            for pixel in img.pixels.chunks_exact(2) {
+            for pixel in img.pixels.as_chunks::<2>().0 {
                 rgba.extend_from_slice(&[pixel[0], pixel[0], pixel[0], pixel[1]]);
                 checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
             }
@@ -777,7 +786,7 @@ fn expand_luminance_alpha(
         }
         let mut rgb = Vec::with_capacity(img.pixels.len().saturating_div(2).saturating_mul(3));
         pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-        for pixel in img.pixels.chunks_exact(2) {
+        for pixel in img.pixels.as_chunks::<2>().0 {
             rgb.extend_from_slice(&[pixel[0]; 3]);
             checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
         }
@@ -787,12 +796,19 @@ fn expand_luminance_alpha(
         });
     }
 
-    let has_alpha = img.pixels.chunks_exact(2).any(|pixel| pixel[1] != u8::MAX);
+    let has_alpha = img
+        .pixels
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .any(|pixel| pixel[1] != u8::MAX);
     if has_alpha {
         Ok(PreparedPixels {
             bytes: Cow::Owned(
                 img.pixels
-                    .chunks_exact(2)
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
                     .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
                     .collect(),
             ),
@@ -802,7 +818,9 @@ fn expand_luminance_alpha(
         Ok(PreparedPixels {
             bytes: Cow::Owned(
                 img.pixels
-                    .chunks_exact(2)
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
                     .flat_map(|pixel| [pixel[0]; 3])
                     .collect(),
             ),
@@ -1110,7 +1128,7 @@ fn cmyk_to_rgb(pixels: &[u8], token: Option<&crate::CancellationToken>) -> Codec
     if let Some(token) = token {
         let mut rgb = Vec::with_capacity(pixels.len().saturating_div(4).saturating_mul(3));
         let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-        for pixel in pixels.chunks_exact(4) {
+        for pixel in pixels.as_chunks::<4>().0 {
             let black = u16::from(255u8.saturating_sub(pixel[3]));
             for &channel in pixel.iter().take(3) {
                 let ink = u16::from(255u8.saturating_sub(channel));
@@ -1126,7 +1144,9 @@ fn cmyk_to_rgb(pixels: &[u8], token: Option<&crate::CancellationToken>) -> Codec
         return Ok(rgb);
     }
     Ok(pixels
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .flat_map(|pixel| {
             let black = u16::from(255u8.saturating_sub(pixel[3]));
             std::array::from_fn::<_, 3, _>(|channel| {
@@ -1176,13 +1196,13 @@ fn expand_l16_to_rgb(
     let mut rgb = Vec::with_capacity(pixel_count.saturating_mul(3));
     if let Some(token) = token {
         let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
-        for pixel in img.pixels.chunks_exact(2) {
+        for pixel in img.pixels.as_chunks::<2>().0 {
             let value = if pixel[1] == 0 { pixel[0] } else { u8::MAX };
             rgb.extend_from_slice(&[value; 3]);
             checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
         }
     } else {
-        for pixel in img.pixels.chunks_exact(2) {
+        for pixel in img.pixels.as_chunks::<2>().0 {
             let value = if pixel[1] == 0 { pixel[0] } else { u8::MAX };
             rgb.extend_from_slice(&[value; 3]);
         }

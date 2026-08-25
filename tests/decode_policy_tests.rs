@@ -472,6 +472,9 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
             case.status.as_str(),
             "ok" | "error" | "malformed" | "dimensions"
         ));
+        if case.operation == "inspect_layout_overflow" && !cfg!(feature = "avif") {
+            continue;
+        }
         let (policy, expected_resource, observed, expected_format) = match case.resource.as_str() {
             "encoded_bytes" => (
                 img::DecodePolicy::default().with_max_encoded_bytes(case.maximum),
@@ -1533,17 +1536,20 @@ fn metadata_policy_manifest_matches_the_public_contract() -> Result<(), Box<dyn 
         }
     }
 
-    // A malformed-but-detected input makes the metadata scan itself fail and
-    // propagates the codec error through the policy preflight.
-    let truncated = fs::read(root.join("tests/fixtures/input/images/png/truncated.png"))?;
-    let malformed_policy = img::DecodePolicy::new().with_max_metadata_bytes(0);
-    match img::inspect_with_policy(&truncated, &malformed_policy) {
-        Err(error) => {
-            assert_eq!(error.kind(), img::ImageErrorKind::Malformed);
-            assert_eq!(error.format(), Some(img::ImageFormat::Png));
-            assert!(error.message().is_some_and(|message| !message.is_empty()));
+    #[cfg(feature = "png")]
+    {
+        // A malformed-but-detected input makes the metadata scan itself fail
+        // and propagates the codec error through the policy preflight.
+        let truncated = fs::read(root.join("tests/fixtures/input/images/png/truncated.png"))?;
+        let malformed_policy = img::DecodePolicy::new().with_max_metadata_bytes(0);
+        match img::inspect_with_policy(&truncated, &malformed_policy) {
+            Err(error) => {
+                assert_eq!(error.kind(), img::ImageErrorKind::Malformed);
+                assert_eq!(error.format(), Some(img::ImageFormat::Png));
+                assert!(error.message().is_some_and(|message| !message.is_empty()));
+            }
+            Ok(_) => panic!("truncated PNG must fail the metadata scan"),
         }
-        Ok(_) => panic!("truncated PNG must fail the metadata scan"),
     }
     Ok(())
 }
