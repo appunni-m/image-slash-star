@@ -4,7 +4,7 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-25
 
-Current claim-ledger refresh base revision: `11559fb63009977d77f12a94990a9c5ac8d17d51`.
+Current claim-ledger refresh base revision: `d2794f037bebe2498655346bd0dc6c2c3968e2da`.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.
