@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 193);
+    assert_eq!(expected.cases.len(), 194);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5386,6 +5386,47 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 mode-3 filter-intra witness must use mode 3 on both leaves"
+            );
+        }
+        if case.fixture == "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 2,
+                    range: 35_904,
+                }],
+                "AV1 I444 Vertical16x32 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                7_446,
+                "AV1 I444 Vertical16x32 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=0,tx=9,"))
+                    .count(),
+                1,
+                "AV1 I444 Vertical16x32 witness must decode one U RTX16x32"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=1,tx=9,"))
+                    .count(),
+                1,
+                "AV1 I444 Vertical16x32 witness must decode one V RTX16x32"
             );
         }
         if case.fixture == "coverage_h4_horizontal_bands.avif" {
@@ -6087,6 +6128,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_i444_rect_02.avif" => {
                 "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb"
+            }
+            "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" => {
+                "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4"
             }
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"
