@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "11559fb63009977d77f12a94990a9c5ac8d17d51",
+  "claim_ledger_base_revision": "d2794f037bebe2498655346bd0dc6c2c3968e2da",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -54,57 +54,57 @@
     },
     "coverage": {
       "line": {
-        "covered": 96361,
-        "total": 106982,
-        "percent": 90.0722,
-        "uncovered": 10621
+        "covered": 96330,
+        "total": 107660,
+        "percent": 89.4761,
+        "uncovered": 11330
       },
       "branch": {
-        "covered": 12281,
-        "total": 13622,
-        "percent": 90.1556,
-        "uncovered": 1341
+        "covered": 12285,
+        "total": 13686,
+        "percent": 89.7633,
+        "uncovered": 1401
       },
       "function": {
-        "covered": 4905,
-        "total": 5629,
-        "percent": 87.1380,
-        "uncovered": 724
+        "covered": 4915,
+        "total": 5671,
+        "percent": 86.6690,
+        "uncovered": 756
       },
       "region": {
-        "covered": 145018,
-        "total": 162551,
-        "percent": 89.2138,
-        "uncovered": 17533
+        "covered": 144978,
+        "total": 163481,
+        "percent": 88.6819,
+        "uncovered": 18503
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
-        "measured": "2026-08-24",
+        "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
-        "run_id": "50f55d49-bb37-457b-abdc-46a1bb83234e",
-        "snapshot_id": "cf72703d-9322-4587-8b03-f39bc2129183",
+        "commit_sha": "d2794f037bebe2498655346bd0dc6c2c3968e2da",
+        "run_id": "d008e96c-d48d-476c-953e-4828cecee166",
+        "snapshot_id": "8d219867-925f-456c-a6fc-7281b8423df0",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 173291,
+        "duration_ms": 203180,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The managed command passed the full all-feature workload at code-bearing commit 11559fb6 and automatically ingested the required LLVM JSON artifact as snapshot cf72703d. It records 90.0722% lines, 90.1556% branches, 87.1380% functions, and 89.2138% regions; the four-metric release target remains open until all reach 100%. This slice replaces the rectangular chroma transform's impossible intermediate identity arms with the exhaustive AV1 predictor-to-transform mapping and adds a private test for all 14 predictor variants, including nonzero Cfl. The cleanup changes the instrumented denominator by removing three impossible executable arms; it does not claim new runtime-state coverage. AVIF STILL-001 remains partial because broader partition/block states and the explicit planned gaps are not complete.",
+        "note": "The registered all-feature command passed the full workload at code-bearing commit d2794f03 in 203,180 ms. Automatic ingestion produced snapshot 85f8b2d7 but retained the command's stale approval lineage at 11559fb6; explicit managed LLVM import with the run's exact commit provenance produced the accepted snapshot 8d219867. It records 89.4761% lines, 89.7633% branches, 86.6690% functions, and 88.6819% regions; the four-metric release target remains open until all reach 100%. This slice fixes sink rollback scope: public still and sequence sink wrappers now track whether write_all or flush was attempted, preserve untouched preflight errors, restore opted-in checkpoints after failed delivery, and retain typed rollback-failure precedence. The feature-gated contract covers partial writes, cancellation before and after the final segment, flush failure, still and genuine multi-frame GIF sequence recovery, and rollback failure. It adds no Pillow parity row and does not claim universal streaming, transient allocation accounting, or complete RN-003 closure.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "82c9a304fae159096aa3ec13d81985f1c199d0c7",
-          "baseline_snapshot_id": "bc3ddb1f-e7af-496d-ae36-9f393c1eef1d",
-          "line_covered_delta": -1,
-          "line_total_delta": -3,
-          "branch_covered_delta": 0,
-          "branch_total_delta": 0,
-          "function_covered_delta": 0,
-          "function_total_delta": 0,
-          "region_covered_delta": -1,
-          "region_total_delta": -3,
-          "interpretation": "Compared with the previous valid managed snapshot at 82c9a304, this exact-head run removes three impossible rectangular-chroma identity arms. The instrumented denominator falls by three lines and three regions; no new runtime state is claimed as covered. The release target remains open: 10,621 lines, 1,341 branches, 724 functions, and 17,533 regions are uncovered."
+          "baseline_commit": "49c8f78ff5ddb3089b91e685245bd0ab3d6332bf",
+          "baseline_snapshot_id": "7e6d8a9f-be30-4aea-be84-22ef114ac517",
+          "line_covered_delta": 40,
+          "line_total_delta": 46,
+          "branch_covered_delta": 2,
+          "branch_total_delta": 2,
+          "function_covered_delta": 8,
+          "function_total_delta": 10,
+          "region_covered_delta": 47,
+          "region_total_delta": 56,
+          "interpretation": "Compared with the previous valid managed snapshot at 49c8f78f, this code-and-test slice adds 40 covered lines, 2 covered branches, 8 covered functions, and 47 covered regions while adding 46 lines, 2 branches, 10 functions, and 56 regions to the denominator. The small percentage movement is expected for a public sink recovery layer; the release target remains open with 11,330 lines, 1,401 branches, 756 functions, and 18,503 regions uncovered."
         }
       },
       "coverage_origin_inventory": {
-        "guards": 499,
+        "guards": 500,
         "files": 85
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 50f55d49-bb37-457b-abdc-46a1bb83234e passed at code-bearing commit 11559fb6 and ingested snapshot cf72703d-9322-4587-8b03-f39bc2129183. It reports 10,621 lines, 1,341 branches, 724 functions, and 17,533 regions uncovered. The chroma transform mapping cleanup is covered by the current matrix, but it adds no new runtime-state claim; AVIF STILL-001 remains partial and the four-metric release target remains open."
+      "llvm_coverage": "Managed Coverage MCP run d008e96c-d48d-476c-953e-4828cecee166 passed at code-bearing commit d2794f03 in 203,180 ms. Its automatic artifact ingestion retained stale registered-command lineage, so the exact report was explicitly imported with commit provenance as snapshot 8d219867-925f-456c-a6fc-7281b8423df0. It reports 11,330 lines, 1,401 branches, 756 functions, and 18,503 regions uncovered. The sink recovery contract is covered by the feature-gated tests, but RN-003, the broader roadmap, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -187,7 +187,7 @@
         "QA-030",
         "DOC-005"
       ],
-      "evidence": "Managed Coverage MCP run 50f55d49-bb37-457b-abdc-46a1bb83234e at commit 11559fb6 reports 90.0722% lines (10,621 uncovered), 90.1556% branches (1,341 uncovered), 87.1380% functions (724 uncovered), and 89.2138% regions (17,533 uncovered); the ingested snapshot is cf72703d-9322-4587-8b03-f39bc2129183. The exhaustive rectangular chroma transform mapping removes three impossible executable arms and adds a private all-variant contract, but no new runtime-state coverage is claimed. The four-metric release target remains open until all reach 100%."
+      "evidence": "Managed Coverage MCP run d008e96c-d48d-476c-953e-4828cecee166 at commit d2794f03 reports 89.4761% lines (11,330 uncovered), 89.7633% branches (1,401 uncovered), 86.6690% functions (756 uncovered), and 88.6819% regions (18,503 uncovered); the lineage-valid explicit import is snapshot 8d219867-925f-456c-a6fc-7281b8423df0. The sink recovery contract adds covered public delivery-attempt tracking and rollback/error-precedence witnesses, but no universal streaming or allocation claim. The four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
@@ -234,11 +234,12 @@
       "remaining": [
         "transient allocation/peak measurement",
         "remaining codec interior checkpoints",
-        "short-write/rollback/cleanup audit",
-        "managed same-revision coverage evidence"
+        "short-write/rollback/cleanup audit beyond the current structural boundaries",
+        "future same-revision managed coverage refreshes for each code-bearing slice"
       ],
       "completed_slices": [
-        "progress callback at cooperative CancellationToken checkpoints; ProgressEvent is monotonic and ProgressDecision::Cancel is typed as cancellation"
+        "progress callback at cooperative CancellationToken checkpoints; ProgressEvent is monotonic and ProgressDecision::Cancel is typed as cancellation",
+        "sink delivery-attempt tracking and checkpoint recovery for partial writes, cancellation, flush failure, still and multi-frame sequence delivery, preflight preservation, and rollback-failure precedence; commit d2794f03, managed snapshot 8d219867"
       ]
     },
     {
@@ -1024,7 +1025,7 @@
     "area": "common_api",
     "status": "open",
     "finding": "Encoders still produce complete `Vec<u8>` output for their return APIs, and codec working state can remain whole-buffer until a validated sink segment is ready. The dependency-free `OutputSink` contract normalizes write and post-delivery flush rejection to `ImageError::OutputWrite`; every current JPEG, PNG, GIF, BMP, TIFF, WebP, ICO, and native AVIF sink path now emits validated structural segments after exact-length preflight. Every sink path calls `OutputSink::flush` once after complete delivery. JPEG delivery splits marker/scan spans, GIF delivery splits signature/logical-screen, color-table, extension/image sub-block, and trailer segments, WebP delivery splits RIFF/chunk spans, ICO delivery splits its directory from embedded payload, TIFF delivery splits its header, page strip/padding, and IFD/value spans, and native AVIF delivery splits validated ISO-BMFF top-level boxes. These are structural delivery boundaries, not universal streaming; PNG filtered/compressed buffers, BMP row/palette segments, GIF working state, WebP encoded RIFF state, ICO embedded payload, TIFF page/compressed-pixel state, and native AVIF's complete encoded buffer remain bounded working state. The original cross-codec Rust-only contract exercises a genuine partial second structural write across every still encoder and supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer available in each feature/target lane; test revision `d5f7e416b30862819dbddb38f8b6027cc4219076` additionally drives the exact-byte and TIFF option/sequence sink contracts through a partial second write, preserving the delivered prefix and reporting the selected encode stage. Broader interrupted-write, rollback, and cleanup behavior remain open.",
-    "next": "Reduce transient working buffers one independently enforceable boundary at a time. Keep `Vec` convenience wrappers, preserve the structured output-write cause, and define behavior for every short-write/rollback path before claiming universal streaming.",
+    "next": "The current structural sink layer now tracks whether delivery was attempted and restores opted-in checkpoints after failed writes, cancellation, or flush; next reduce transient working buffers one independently enforceable boundary at a time and define any future byte-counting writer without claiming universal streaming.",
     "source": "docs/roadmap.md historical finding context",
     "finding_class": "Output model",
     "workstreams": [
@@ -3640,7 +3641,7 @@
     "area": "assurance",
     "status": "open",
     "finding": "A dependency-free `OutputSink` contract exists with deterministic `OutputWrite` cause coverage for every enabled still codec and supported sequence path. JPEG, PNG, BMP, GIF still and sequence, WebP still and multi-frame sequence delivery, ICO still delivery, native AVIF still and sequence delivery, and the one-frame JPEG/BMP/WebP/ICO plus multi-page TIFF sequence deliveries now exercise multiple structural writes, policy preflight, sink-triggered cancellation where implemented, and one post-delivery flush with typed flush-failure coverage; JPEG still and one-frame sequence delivery additionally cover marker/scan boundaries, GIF delivery additionally covers signature/logical-screen, color-table, extension/image sub-block, and trailer segments, TIFF still and multi-page sequence delivery additionally cover the header, strip/padding, and IFD/value segments, and AVIF delivery additionally covers top-level ISO-BMFF box boundaries. The Rust-only cross-codec contract at test/runtime revision `163520b4ab06b9f4b15c2a6e8bdc12e9a29c4d39` proves a genuine partial second structural write and post-delivery flush rejection for every available still writer and each supported multi-frame GIF/TIFF/WebP/native-AVIF sequence writer, with the selected `OutputWrite` cause, exactly one flush attempt, exact delivered-byte preservation, and no flush after a failed structural write. Short-write recovery beyond the tested prefix, rollback, and partial-container cleanup remain open.",
-    "next": "Define short-write, rollback, and recoverable cleanup behavior for the current structural boundaries before claiming a universal incremental writer.",
+    "next": "The current structural boundaries now prove preflight preservation, checkpoint rollback, final-segment cancellation, flush ordering, still/sequence identity, and rollback-failure precedence; continue auditing future short-write and cleanup paths before claiming a universal incremental writer.",
     "source": "docs/roadmap.md historical finding context",
     "workstreams": [
       "RN-003",

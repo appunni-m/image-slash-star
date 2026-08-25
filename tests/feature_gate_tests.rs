@@ -12437,12 +12437,8 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
     // A checkpoint is captured before preflight, but an untouched sink must
     // not be rolled back. Otherwise a rollback failure could replace the
     // original validation or policy error with an OutputWrite result.
-    let invalid = image_slash_star::DecodedImage::new(
-        1,
-        1,
-        Vec::new(),
-        image_slash_star::ColorType::Rgb8,
-    );
+    let invalid =
+        image_slash_star::DecodedImage::new(1, 1, Vec::new(), image_slash_star::ColorType::Rgb8);
     let mut preflight_rollback_failure = RollbackSink {
         bytes: vec![0xD7],
         writes: 0,
