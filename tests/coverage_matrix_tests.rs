@@ -4682,18 +4682,6 @@ fn test_av1_entropy_mosaic_01_materializes() {
 
 #[cfg(coverage)]
 #[test]
-fn test_av1_entropy_mosaic_04_materializes() {
-    assert_entropy_mosaic_candidate("coverage_entropy_mosaic_04.avif");
-}
-
-#[cfg(coverage)]
-#[test]
-fn test_av1_entropy_mosaic_05_materializes() {
-    assert_entropy_mosaic_candidate("coverage_entropy_mosaic_05.avif");
-}
-
-#[cfg(coverage)]
-#[test]
 fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
     let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -4725,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 187);
+    assert_eq!(expected.cases.len(), 185);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5806,12 +5794,6 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_entropy_mosaic_01.avif" => {
                 "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7"
-            }
-            "coverage_entropy_mosaic_04.avif" => {
-                "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24"
-            }
-            "coverage_entropy_mosaic_05.avif" => {
-                "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f"
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"

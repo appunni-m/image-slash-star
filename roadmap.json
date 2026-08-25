@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1474,
-      "decode_rows": 1077,
+      "total_rows": 1475,
+      "decode_rows": 1078,
       "encode_rows": 397,
-      "decode_active": 1070,
+      "decode_active": 1071,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 250,
-      "decode_active": 243,
+      "decode_rows": 251,
+      "decode_active": 244,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -104,7 +104,7 @@
         }
       },
       "coverage_origin_inventory": {
-        "guards": 500,
+        "guards": 502,
         "files": 85
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -905,7 +905,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the new coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frame through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new frame is a single TX32X32 DCT_DCT luma leaf with EOB 467; its 1,168 entropy operations match pinned dav1d 1.5.3 commit b546257f770768b2c88258c533da38b91a06f737, reconstructed Y/U/V bytes match the pinned dav1d plane references, and the final RGB bytes match the independent Pillow 12.2.0 reference. The promoted R8x16, Horizontal32x16, R16x64, and 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled.",
+        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled.",
         "next": "Broaden partition/block states, predictors, residual classes, filter-intra modes, tile-local context cases, transform variants, and independent full-frame proofs beyond the closed 32x32 TX32X32 class."
       },
       "AVF-ENTROPY-001": {
