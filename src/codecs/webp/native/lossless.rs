@@ -165,7 +165,12 @@ impl<'a> LosslessDecoder<'a> {
             &mut data[..transformed_size],
         )?;
         self.apply_transforms(&mut data, transformed_width, transformed_size);
-        for (rgba_val, chunk) in data.chunks_exact(4).zip(buf.chunks_exact_mut(3)) {
+        for (rgba_val, chunk) in data
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(buf.as_chunks_mut::<3>().0.iter_mut())
+        {
             chunk.copy_from_slice(&rgba_val[..3]);
         }
         Ok(())

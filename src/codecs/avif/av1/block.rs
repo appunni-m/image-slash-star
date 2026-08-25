@@ -1400,6 +1400,7 @@ struct BlockCdfs {
     lossy_luma_16x16_base: [[u16; 4]; 41],
     lossy_luma_16x16_high_tokens: [[u16; 4]; 21],
     lossy_luma_32x32_eob_high: [[u16; 2]; 11],
+    lossy_luma_32x16_eob_high: [[u16; 2]; 11],
     lossy_luma_32x32_eob_base: [[u16; 3]; 4],
     lossy_luma_32x32_base: [[u16; 4]; 41],
     lossy_luma_32x32_high_tokens: [[u16; 4]; 21],
@@ -1560,6 +1561,23 @@ const LOSSY_LUMA_16X16_HIGH: [[u16; 4]; 21] = [
 // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` qcat-zero S32x32 coefficient
 // sentence (`t_dim.ctx == 3`, luma). These are complemented CDF values.
 const LOSSY_LUMA_32X32_EOB_HIGH: [[u16; 2]; 11] = [
+    [5_369, 0],
+    [16_441, 0],
+    [14_697, 0],
+    [13_184, 0],
+    [12_047, 0],
+    [14_336, 0],
+    [13_208, 0],
+    [22_618, 0],
+    [23_963, 0],
+    [16_384, 0],
+    [16_384, 0],
+];
+
+// ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` qcat-zero R32x16 coefficient
+// sentence. The 512-coefficient EOB-high sentence is distinct from the
+// 1024-coefficient TX32X32 sentence above.
+const LOSSY_LUMA_32X16_EOB_HIGH: [[u16; 2]; 11] = [
     [16_384, 0],
     [16_384, 0],
     [5_369, 0],
@@ -1849,11 +1867,11 @@ const fn first_26_cdf_rows(rows: [[u16; 4]; 41]) -> [[u16; 4]; 26] {
 const LOSSY_CHROMA_8X8_BASE: [[u16; 4]; 26] = first_26_cdf_rows(LOSSY_CHROMA_8X4_BASE);
 const LOSSY_CHROMA_8X8_HIGH: [[u16; 4]; 21] = LOSSY_CHROMA_8X4_HIGH;
 
-// ✅ VERIFIED: rav1d 1.1.0 qcat-zero coefficient context two, chroma.
-// These tables are shared by the subsampled S16x16 and R4x16 transforms;
-// only their EOB-bin CDF differs.
+// ✅ VERIFIED: dav1d 1.5.3 `src/cdf.c` qcat-zero
+// `eob_bin_256[1][0]`, complemented for the portable range decoder. This
+// row is selected by the subsampled 16x16 chroma transform.
 const LOSSY_CHROMA_16X16_EOB_BIN: [u16; 9] = [
-    31_770, 30_918, 29_770, 27_164, 15_427, 12_880, 9_869, 7_185, 0,
+    30_248, 29_528, 26_816, 23_898, 20_191, 15_210, 12_814, 8_600, 0,
 ];
 
 // ✅ VERIFIED: rav1d 1.1.0 qcat-zero `eob_bin_128[chroma][two-dimensional]`.
@@ -1896,8 +1914,6 @@ const LOSSY_CHROMA_4X16_EOB_HIGH: [[u16; 2]; 7] = [
 ];
 
 const LOSSY_CHROMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
-    [16_384, 0],
-    [16_384, 0],
     [8_809, 0],
     [11_969, 0],
     [13_747, 0],
@@ -1905,6 +1921,8 @@ const LOSSY_CHROMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
     [14_882, 0],
     [18_624, 0],
     [20_758, 0],
+    [16_384, 0],
+    [16_384, 0],
 ];
 
 const LOSSY_CHROMA_16X16_EOB_BASE: [[u16; 3]; 4] = [
@@ -3406,9 +3424,10 @@ impl BlockCdfs {
             lossy_luma_16x16_coefficient_skip: [405, 0],
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
             // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3][0]`
-            // for the 32×32 luma transform. The range decoder stores the
-            // complemented CDF value used by the coefficient trace.
-            lossy_luma_32x32_coefficient_skip: [2_099, 0],
+            // for the shared transform-context-three luma family. The
+            // range decoder stores the complemented CDF value used by the
+            // trace; R16x32/R32x16/TX32x32 all adapt this same sentence.
+            lossy_luma_32x32_coefficient_skip: [14_848, 0],
             // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `skip[4][0]` for
             // S64x64. The range decoder stores the complemented CDF.
             lossy_luma_64x64_coefficient_skip: [26_460, 0],
@@ -3478,6 +3497,7 @@ impl BlockCdfs {
             lossy_luma_16x16_base: LOSSY_LUMA_16X16_BASE,
             lossy_luma_16x16_high_tokens: LOSSY_LUMA_16X16_HIGH,
             lossy_luma_32x32_eob_high: LOSSY_LUMA_32X32_EOB_HIGH,
+            lossy_luma_32x16_eob_high: LOSSY_LUMA_32X16_EOB_HIGH,
             lossy_luma_32x32_eob_base: LOSSY_LUMA_32X32_EOB_BASE,
             lossy_luma_32x32_base: LOSSY_LUMA_32X32_BASE,
             lossy_luma_32x32_high_tokens: LOSSY_LUMA_32X32_HIGH,
@@ -3843,8 +3863,12 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x16_base_1d = QCAT2_LUMA_16X16_BASE;
                 cdfs.lossy_luma_16x16_high_tokens = cdfs.lossy_luma_8x16_high_tokens;
                 cdfs.lossy_luma_32x32_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
+                cdfs.lossy_luma_32x16_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
                 cdfs.lossy_luma_32x32_eob_base = QCAT2_LUMA_32X32_EOB_BASE;
                 cdfs.lossy_luma_32x32_base = QCAT2_LUMA_32X32_BASE;
+                // qcat two has its own initial value for the shared
+                // transform-context-three luma skip sentence.
+                cdfs.lossy_luma_32x32_coefficient_skip = [2_099, 0];
                 // dav1d caps `br_tok` at transform context three, so the
                 // 32x32 and 64x64 luma paths share this high-token table.
                 cdfs.lossy_luma_32x32_high_tokens = QCAT2_LUMA_64X64_HIGH;
@@ -5464,9 +5488,11 @@ fn decode_contextual_skip(
         CoefficientSkipCdf::Subsampled {
             transform_context,
             skip_context,
-        } => decoder.adaptive_bool(
-            &mut cdfs.subsampled_chroma_coefficient_skip[transform_context][skip_context - 7],
-        ),
+        } => {
+            let cdf =
+                &mut cdfs.subsampled_chroma_coefficient_skip[transform_context][skip_context - 7];
+            decoder.adaptive_bool(cdf)
+        }
     }
 }
 
@@ -6073,6 +6099,8 @@ const LOSSY_LUMA_16X16_SCAN: [u16; 256] = [
     222, 207, 223, 238, 253, 254, 239, 255,
 ];
 
+// ✅ VERIFIED: dav1d 1.5.3 `src/scan.c` `scan_32x32`.
+// Coefficients are stored column-major as `row + 32 * column`.
 const fn make_lossy_luma_32x32_scan() -> [u16; 1024] {
     let mut scan = [0_u16; 1024];
     let mut position = 0_usize;
@@ -6087,7 +6115,7 @@ const fn make_lossy_luma_32x32_scan() -> [u16; 1024] {
                         clippy::cast_possible_truncation,
                         reason = "the generated 32x32 raster index is bounded below 1024"
                     )]
-                    let index = x.saturating_mul(32).saturating_add(y) as u16;
+                    let index = y.saturating_mul(32).saturating_add(x) as u16;
                     scan[position] = index;
                     position = position.saturating_add(1);
                 }
@@ -6105,7 +6133,7 @@ const fn make_lossy_luma_32x32_scan() -> [u16; 1024] {
                     clippy::cast_possible_truncation,
                     reason = "the generated 32x32 raster index is bounded below 1024"
                 )]
-                let index = x.saturating_mul(32).saturating_add(y) as u16;
+                let index = y.saturating_mul(32).saturating_add(x) as u16;
                 scan[position] = index;
                 position = position.saturating_add(1);
                 x = x.saturating_add(1);
@@ -7021,6 +7049,7 @@ fn decode_lossy_luma_32x32_coefficients(
     quantization: LossyQuantization,
     eob_bin: u32,
 ) -> PortableResult<Lossy32x32TransformCoefficients> {
+    let matrix_values = luma_32x32_matrix(quantization)?;
     if eob_bin == 0 {
         let eob_base = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_base[0], 2);
         let token = if eob_base == 2 {
@@ -7030,8 +7059,16 @@ fn decode_lossy_luma_32x32_coefficients(
         };
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
         let mut coefficients = [0_i32; 1024];
-        coefficients[0] =
-            dequantize_lossy_coefficient_with_shift(decoder, token, negative, 0, quantization, 1)?;
+        coefficients[0] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+            decoder,
+            token,
+            negative,
+            0,
+            quantization,
+            matrix_values,
+            1,
+        )?
+        .0;
         return Ok(coefficients);
     }
 
@@ -7159,25 +7196,29 @@ fn decode_lossy_luma_32x32_coefficients(
     let mut coefficients = [0_i32; 1024];
     if dc_token != 0 {
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
-        coefficients[0] = dequantize_lossy_coefficient_with_shift(
+        coefficients[0] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
             decoder,
             dc_token,
             negative,
             0,
             quantization,
+            matrix_values,
             1,
-        )?;
+        )?
+        .0;
     }
     for &position in nonzero_positions[..nonzero_count].iter().rev() {
         let negative = decoder.equal();
-        coefficients[position] = dequantize_lossy_coefficient_with_shift(
+        coefficients[position] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
             decoder,
             tokens[position],
             negative,
             position,
             quantization,
+            matrix_values,
             1,
-        )?;
+        )?
+        .0;
     }
     Ok(coefficients)
 }
@@ -10597,7 +10638,13 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_16x16_base[..],
             &mut cdfs.lossy_luma_16x16_high_tokens[..],
         ),
-        LossyLargeCdfSet::Luma32x16 | LossyLargeCdfSet::Luma32x32 => (
+        LossyLargeCdfSet::Luma32x16 => (
+            &mut cdfs.lossy_luma_32x16_eob_high[..],
+            &mut cdfs.lossy_luma_32x32_eob_base[..],
+            &mut cdfs.lossy_luma_32x32_base[..],
+            &mut cdfs.lossy_luma_32x32_high_tokens[..],
+        ),
+        LossyLargeCdfSet::Luma32x32 => (
             &mut cdfs.lossy_luma_32x32_eob_high[..],
             &mut cdfs.lossy_luma_32x32_eob_base[..],
             &mut cdfs.lossy_luma_32x32_base[..],
@@ -10653,17 +10700,19 @@ fn decode_lossy_large_two_d_coefficients(
         ),
     };
     let chroma_matrix_values = match cdf_set {
+        LossyLargeCdfSet::Chroma16x16 => chroma_16x16_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
         _ => None,
     };
-    let luma_matrix_values = if matches!(cdf_set, LossyLargeCdfSet::Luma32x16) {
-        luma_32x16_matrix(quantization)?
-    } else {
-        None
+    let luma_matrix_values = match cdf_set {
+        LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
+        _ => None,
     };
     let dequant_shift = match cdf_set {
-        LossyLargeCdfSet::Luma32x16 | LossyLargeCdfSet::Luma32x32 => 1,
+        LossyLargeCdfSet::Luma32x16 => 1,
+        LossyLargeCdfSet::Luma32x32 => 1,
         LossyLargeCdfSet::Luma64x64 => 2,
         _ => 0,
     };
@@ -10848,7 +10897,9 @@ fn decode_lossy_large_two_d_coefficients(
     }
     for &position in nonzero_positions.iter().rev() {
         let negative = decoder.equal();
-        coefficients[position] = dequantize(decoder, tokens[position], negative, position)?;
+        let token = tokens[position];
+        let coefficient = dequantize(decoder, token, negative, position);
+        coefficients[position] = coefficient?;
         coefficient_magnitude = coefficient_magnitude.saturating_add(tokens[position]);
     }
     if chroma {
@@ -11453,7 +11504,8 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Square16
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
-        | TransformGrid::Vertical16x64 => 7,
+        | TransformGrid::Vertical16x64
+        | TransformGrid::Square32 => 7,
         _ => 10,
     };
     let transform_context = match transform_grid {
@@ -12547,6 +12599,16 @@ fn luma_32x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
     }
 }
 
+fn luma_32x32_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        10 => Ok(Some(&quantization::Y_32X32_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn chroma_8x16_matrix(
     quantization: LossyQuantization,
     plane: usize,
@@ -12557,6 +12619,20 @@ fn chroma_8x16_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_8X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_8X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
+fn chroma_16x16_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X16_MATRIX_9)),
+        (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X16_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
 }
@@ -12620,26 +12696,6 @@ fn dequantize_lossy_coefficient(
 ) -> PortableResult<i32> {
     dequantize_lossy_coefficient_with_token(decoder, token, negative, index, quantization)
         .map(|(coefficient, _)| coefficient)
-}
-
-fn dequantize_lossy_coefficient_with_shift(
-    decoder: &mut RangeDecoder<'_, '_, '_>,
-    token: u32,
-    negative: bool,
-    index: usize,
-    quantization: LossyQuantization,
-    dequant_shift: u32,
-) -> PortableResult<i32> {
-    dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
-        decoder,
-        token,
-        negative,
-        index,
-        quantization,
-        None,
-        dequant_shift,
-    )
-    .map(|(coefficient, _)| coefficient)
 }
 
 fn dequantize_lossy_chroma_coefficient_with_token_using_matrix(
@@ -15132,7 +15188,7 @@ fn inverse_wht_4(values: &mut [i32; 4]) {
 fn inverse_wht_4x4(coefficients: TransformCoefficients) -> [i32; 16] {
     let mut values = [0_i32; 16];
     let columns = [[0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15]];
-    for (row, indices) in values.chunks_exact_mut(4).zip(columns) {
+    for (row, indices) in values.as_chunks_mut::<4>().0.iter_mut().zip(columns) {
         let mut vector = [
             coefficients[indices[0]] >> 2,
             coefficients[indices[1]] >> 2,
@@ -15566,7 +15622,7 @@ fn reconstruct_lossy_luma_4x16_split(
                 ),
             }
         };
-        for (row_offset, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset).saturating_mul(4);
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -16855,7 +16911,7 @@ fn reconstruct_lossy_luma_16x16_split_from_prediction(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (block_row, source) in block.samples.chunks_exact(8).enumerate() {
+        for (block_row, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
             let output_start = (offset_y + block_row).saturating_mul(16) + offset_x;
             samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
         }
@@ -18482,7 +18538,7 @@ fn reconstruct_lossy_luma_8x8_split_from_prediction(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18524,7 +18580,7 @@ fn reconstruct_lossy_luma_8x8_split_dc(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18560,7 +18616,7 @@ fn reconstruct_lossy_luma_8x8_split_dc_horizontal(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18597,7 +18653,7 @@ fn reconstruct_lossy_luma_8x8_split_smooth_horizontal(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18637,7 +18693,7 @@ fn reconstruct_lossy_luma_8x8_split_smooth_vertical(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18672,7 +18728,7 @@ fn reconstruct_lossy_luma_8x8_split_smooth_vertical_only(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18711,7 +18767,7 @@ fn reconstruct_lossy_luma_8x8_split_smooth_horizontal_vertical(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18755,7 +18811,7 @@ fn reconstruct_lossy_luma_8x8_split_dc_vertical(
             split.transforms[transform_index],
         );
 
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18785,7 +18841,7 @@ fn reconstruct_lossy_luma_8x8_split_vertical(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18824,7 +18880,7 @@ fn reconstruct_lossy_luma_8x8_split_horizontal_vertical(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -18875,7 +18931,7 @@ fn reconstruct_lossy_luma_8x8_split_paeth(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19175,7 +19231,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_vertical(
             split.transforms[transform_index],
         )?;
 
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19215,7 +19271,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         )?;
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19320,7 +19376,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1_extended(
             split.transforms[transform_index],
         )?;
 
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19409,7 +19465,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z3(
             split.transforms[transform_index],
         );
 
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19464,7 +19520,7 @@ fn reconstruct_lossy_luma_8x8_split_filter_intra_no_top(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -19518,7 +19574,7 @@ fn reconstruct_lossy_luma_8x8_split_filter_intra(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (transform_y + row).saturating_mul(8) + transform_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -22074,7 +22130,7 @@ fn reconstruct_coded_plane(
         }
         let transform_x = transform_index.rem_euclid(transform_grid_width);
         let transform_y = transform_index.div_euclid(transform_grid_width);
-        for (row_index, row) in transform.chunks_exact(4).enumerate() {
+        for (row_index, row) in transform.as_chunks::<4>().0.iter().enumerate() {
             let output_start = transform_y
                 .saturating_mul(4)
                 .saturating_add(row_index)
@@ -24722,13 +24778,20 @@ fn reconstruct_boundary_plane(
         coefficients[3],
     );
     let mut samples = Vec::with_capacity(64);
-    for (first, second) in top_left.chunks_exact(4).zip(top_right.chunks_exact(4)) {
+    for (first, second) in top_left
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(top_right.as_chunks::<4>().0.iter())
+    {
         samples.extend_from_slice(first);
         samples.extend_from_slice(second);
     }
     for (first, second) in bottom_left
-        .chunks_exact(4)
-        .zip(bottom_right.chunks_exact(4))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(bottom_right.as_chunks::<4>().0.iter())
     {
         samples.extend_from_slice(first);
         samples.extend_from_slice(second);
@@ -29694,10 +29757,9 @@ fn positioned_top_edge<const N: usize>(
         if let Some(value) = value {
             *sample = value;
             last = Some(value);
-        } else if let Some(value) = last {
-            *sample = value;
         } else {
-            return None;
+            let value = last?;
+            *sample = value;
         }
     }
     Some(edge)
@@ -31116,7 +31178,7 @@ fn reconstruct_lossy_luma_16x16_split(
                 ),
             }
         };
-        for (row_offset, source) in block.samples.chunks_exact(8).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset).saturating_mul(16) + offset_x;
             samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
         }
@@ -31353,7 +31415,7 @@ fn reconstruct_lossy_luma_16x64_vertical_split(
         };
         let block =
             reconstruct_lossy_luma_16x16_from_prediction(prediction, coefficients, transform);
-        for (row_offset, source) in block.samples.chunks_exact(16).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<16>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset) * 16;
             samples[output_start..output_start + 16].copy_from_slice(source);
         }
@@ -31501,7 +31563,7 @@ fn reconstruct_lossy_chroma_8x8_split(
                 LossyTransformKind::DctDct,
             ),
         };
-        for (row_offset, source) in block.samples.chunks_exact(4).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset).saturating_mul(8) + offset_x;
             samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
         }
@@ -31640,7 +31702,7 @@ fn reconstruct_lossy_luma_8x16_split(
                 ),
             }
         };
-        for (row_offset, source) in block.samples.chunks_exact(8).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset).saturating_mul(8);
             samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
         }
@@ -31773,7 +31835,7 @@ fn reconstruct_lossy_luma_16x8_split(
                 ),
             }
         };
-        for (row, source) in block.samples.chunks_exact(8).enumerate() {
+        for (row, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
             let output_start = row.saturating_mul(16).saturating_add(offset_x);
             samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
         }
@@ -31935,7 +31997,7 @@ fn reconstruct_lossy_luma_16x32_split(
                     ),
                 }
             };
-            for (row_offset, source) in block.samples.chunks_exact(8).enumerate() {
+            for (row_offset, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
                 let output_start = (offset_y + row_offset).saturating_mul(16) + offset_x;
                 samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
             }
@@ -32188,7 +32250,7 @@ fn reconstruct_lossy_luma_32x16_horizontal_split(
             split.coefficients[column],
             split.transforms[column],
         );
-        for (row_offset, source) in block.samples.chunks_exact(16).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<16>().0.iter().enumerate() {
             let output_start = row_offset * 32 + offset_x;
             samples[output_start..output_start + 16].copy_from_slice(source);
         }
@@ -32319,7 +32381,7 @@ fn reconstruct_lossy_luma_32x8_split(
                 ),
             }
         };
-        for (row_offset, source) in block.samples.chunks_exact(8).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
             let output_start = row_offset.saturating_mul(32) + offset_x;
             samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
         }
@@ -32481,7 +32543,7 @@ fn reconstruct_lossy_luma_32x16_split(
                     ),
                 }
             };
-            for (row_offset, source) in block.samples.chunks_exact(8).enumerate() {
+            for (row_offset, source) in block.samples.as_chunks::<8>().0.iter().enumerate() {
                 let output_start = (offset_y + row_offset).saturating_mul(32) + offset_x;
                 samples[output_start..output_start.saturating_add(8)].copy_from_slice(source);
             }
@@ -33191,7 +33253,7 @@ fn reconstruct_lossy_luma_32x32_split(
             split.coefficients[transform_index],
             split.transforms[transform_index],
         );
-        for (row_offset, source) in block.samples.chunks_exact(16).enumerate() {
+        for (row_offset, source) in block.samples.as_chunks::<16>().0.iter().enumerate() {
             let output_start = (offset_y + row_offset) * 32 + offset_x;
             samples[output_start..output_start + 16].copy_from_slice(source);
         }
@@ -40036,6 +40098,54 @@ mod tests {
     use super::*;
 
     #[test]
+    fn luma_transform_context_three_skip_cdf_is_qcat_specific() {
+        let Some(qcat_zero) = BlockCdfs::defaults_for_qindex([0, 0], 2) else {
+            panic!("qcat zero");
+        };
+        let Some(qcat_two) = BlockCdfs::defaults_for_qindex([0, 0], 120) else {
+            panic!("qcat two");
+        };
+        assert_eq!(qcat_zero.lossy_luma_32x32_coefficient_skip, [14_848, 0]);
+        assert_eq!(qcat_two.lossy_luma_32x32_coefficient_skip, [2_099, 0]);
+    }
+
+    #[test]
+    fn luma_32x32_scan_matches_dav1d_column_major_order() {
+        let scan = make_lossy_luma_32x32_scan();
+        assert_eq!(&scan[..10], &[0, 32, 1, 2, 33, 64, 96, 65, 34, 3]);
+        assert_eq!(scan[31], 131);
+        assert_eq!(scan[32], 100);
+        assert_eq!(scan[1023], 1023);
+
+        let mut seen = [false; 1024];
+        let mut previous_diagonal = 0_usize;
+        let mut previous_column = 0_usize;
+        for (index, &value) in scan.iter().enumerate() {
+            let value = usize::from(value);
+            assert!(value < 1024);
+            assert!(!seen[value], "scan repeats coefficient at position {index}");
+            seen[value] = true;
+
+            let column = value >> 5;
+            let row = value & 31;
+            let diagonal = column + row;
+            if index > 0 {
+                assert!(diagonal >= previous_diagonal);
+                if diagonal == previous_diagonal {
+                    if diagonal & 1 == 0 {
+                        assert!(column > previous_column);
+                    } else {
+                        assert!(column < previous_column);
+                    }
+                }
+            }
+            previous_diagonal = diagonal;
+            previous_column = column;
+        }
+        assert!(seen.into_iter().all(|value| value));
+    }
+
+    #[test]
     fn reconstruct_lossy_luma_8x16_diagonal_filters_zone2_edges() -> PortableResult<()> {
         // This is the prepared edge from the dav1d R8x16 angle-110 vector:
         // the last two left samples are 56 and 79, while the top edge and
@@ -40100,7 +40210,7 @@ mod tests {
             Lossy4x8TransformKind::DctDct,
         );
 
-        for (row, samples) in plane.samples.chunks_exact(16).enumerate() {
+        for (row, samples) in plane.samples.as_chunks::<16>().0.iter().enumerate() {
             assert_eq!(samples, &[left[row]; 16]);
         }
     }

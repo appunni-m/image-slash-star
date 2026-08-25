@@ -446,12 +446,14 @@ fn predict_block<const SIZE: usize>(
                     }
                 }
                 (Some(top), None) => {
-                    for row in output.chunks_exact_mut(SIZE) {
+                    for row in output.as_chunks_mut::<SIZE>().0 {
                         row.copy_from_slice(&top[..SIZE]);
                     }
                 }
                 (None, Some(left)) => {
-                    for (row, &value) in output.chunks_exact_mut(SIZE).zip(left.iter()) {
+                    for (row, &value) in
+                        output.as_chunks_mut::<SIZE>().0.iter_mut().zip(left.iter())
+                    {
                         row.fill(value);
                     }
                 }

@@ -411,13 +411,13 @@ fn color_table_len(packed: u8) -> usize {
 }
 
 fn is_identity_grayscale_palette(palette: &[u8]) -> bool {
-    let entries = palette.chunks_exact(3);
-    let complete = entries.remainder().is_empty();
-    let identity = entries.enumerate().all(|(index, entry)| {
+    let (entries, remainder) = palette.as_chunks::<3>();
+    let complete = remainder.is_empty();
+    let identity = entries.iter().enumerate().all(|(index, entry)| {
         let Ok(value) = u8::try_from(index) else {
             return false;
         };
-        entry == [value; 3]
+        *entry == [value; 3]
     });
     identity && complete
 }

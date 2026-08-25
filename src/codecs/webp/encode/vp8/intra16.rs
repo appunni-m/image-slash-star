@@ -57,12 +57,12 @@ fn predict(
             output.fill(dc.to_le_bytes()[0]);
         }
         Intra16Mode::Vertical => {
-            for row in output.chunks_exact_mut(16) {
+            for row in output.as_chunks_mut::<16>().0 {
                 row.copy_from_slice(top);
             }
         }
         Intra16Mode::Horizontal => {
-            for (row, &value) in output.chunks_exact_mut(16).zip(left) {
+            for (row, &value) in output.as_chunks_mut::<16>().0.iter_mut().zip(left) {
                 row.fill(value);
             }
         }

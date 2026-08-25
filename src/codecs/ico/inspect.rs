@@ -35,7 +35,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut best = &directory[..ENTRY_SIZE];
     let mut best_offset = HEADER_SIZE;
     let mut best_score = 0;
-    for (index, entry) in directory.chunks_exact(ENTRY_SIZE).enumerate() {
+    for (index, entry) in directory.as_chunks::<ENTRY_SIZE>().0.iter().enumerate() {
         let width = if entry[0] == 0 {
             256
         } else {

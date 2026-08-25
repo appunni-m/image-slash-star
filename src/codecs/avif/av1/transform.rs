@@ -2909,7 +2909,13 @@ mod tests {
             }
             let residual = super::inverse_dct16x8(&coefficients);
             assert_eq!(&residual[..16], &expected_row);
-            assert!(residual.chunks_exact(16).all(|row| row == expected_row));
+            assert!(
+                residual
+                    .as_chunks::<16>()
+                    .0
+                    .iter()
+                    .all(|row| *row == expected_row)
+            );
         }
     }
 }

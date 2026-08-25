@@ -4693,7 +4693,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 183);
+    assert_eq!(expected.cases.len(), 184);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5123,6 +5123,51 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 Vertical16x64 witness must decode both chroma planes"
+            );
+        }
+        if case.fixture == "coverage_entropy_mosaic_02.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 0,
+                    range: 36_920,
+                }],
+                "AV1 TX32X32 entropy mosaic partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                1_168,
+                "AV1 TX32X32 entropy mosaic operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-tx[3]:")),
+                "AV1 TX32X32 entropy mosaic must select TX32X32"
+            );
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-y-cf-blk[tx=3,txtp=0,eob=467]")),
+                "AV1 TX32X32 entropy mosaic must decode its luma transform sentence"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                2,
+                "AV1 TX32X32 entropy mosaic must decode both chroma planes"
             );
         }
         if case.fixture == "coverage_r32x16_origin_01.avif" {
@@ -5723,6 +5768,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
+            }
+            "coverage_entropy_mosaic_02.avif" => {
+                "89ca340e1520088f629bb46bdb0c07e08b630e2b13163ae869aca49ae0c72028"
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"

@@ -649,7 +649,7 @@ pub(crate) fn encode_with_token(
         let mut k_plane = Vec::with_capacity(pixel_count);
         for row in pixels.chunks_exact(w.saturating_mul(4).max(1)) {
             crate::codecs::error::check_cancelled(token)?;
-            for pixel in row.chunks_exact(4) {
+            for pixel in row.as_chunks::<4>().0 {
                 c_plane.push(255u8.saturating_sub(pixel[0]));
                 m_plane.push(255u8.saturating_sub(pixel[1]));
                 y_plane.push(255u8.saturating_sub(pixel[2]));

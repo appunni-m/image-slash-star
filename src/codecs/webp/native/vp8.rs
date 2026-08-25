@@ -972,7 +972,7 @@ fn init_final_partition(
         }
 
         let complete_bytes = filled / 4 * 4;
-        for bytes in read_buffer[..complete_bytes].chunks_exact(4) {
+        for bytes in read_buffer[..complete_bytes].as_chunks::<4>().0 {
             chunks.push([bytes[0], bytes[1], bytes[2], bytes[3]]);
         }
 

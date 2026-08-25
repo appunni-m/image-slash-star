@@ -600,7 +600,9 @@ fn parse_hex(format: ImageFormat, key: &str, value: &str) -> ImageResult<Vec<u8>
         return Err(parameter(format, format!("invalid hex value for `{key}`")));
     }
     bytes
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let high = hex_nibble(format, key, pair[0])?;
             let low = hex_nibble(format, key, pair[1])?;

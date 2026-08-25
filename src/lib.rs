@@ -214,7 +214,9 @@ fn is_avif_signature(data: &[u8]) -> bool {
                 && size <= data.len()
                 && size.is_multiple_of(4)
                 && data[16..size]
-                    .chunks_exact(4)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
                     .any(|brand| matches!(brand, b"avif" | b"avis"))
         }
         _ => false,
@@ -399,7 +401,9 @@ fn avif_signature_prefix(data: &[u8]) -> Option<Result<ImageFormat, u64>> {
                 return Some(Err(size as u64));
             }
             data[16..size]
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .any(|brand| matches!(brand, b"avif" | b"avis"))
                 .then_some(Ok(ImageFormat::Avif))
         }

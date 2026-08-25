@@ -68,12 +68,12 @@ fn predict(
             }
         }
         ChromaMode::Vertical => {
-            for row in output.chunks_exact_mut(8) {
+            for row in output.as_chunks_mut::<8>().0 {
                 row.copy_from_slice(top);
             }
         }
         ChromaMode::Horizontal => {
-            for (row, &value) in output.chunks_exact_mut(8).zip(left) {
+            for (row, &value) in output.as_chunks_mut::<8>().0.iter_mut().zip(left) {
                 row.fill(value);
             }
         }

@@ -89,7 +89,7 @@ pub fn digest_hex(input: &[u8]) -> String {
     padded.extend_from_slice(&bit_length.to_be_bytes());
 
     let mut state = INITIAL;
-    for chunk in padded.chunks_exact(64) {
+    for chunk in padded.as_chunks::<64>().0 {
         compress(&mut state, chunk);
     }
 
@@ -106,7 +106,7 @@ pub fn digest_hex(input: &[u8]) -> String {
 
 fn compress(state: &mut [u32; 8], chunk: &[u8]) {
     let mut words = [0u32; 64];
-    for (index, bytes) in chunk.chunks_exact(4).enumerate() {
+    for (index, bytes) in chunk.as_chunks::<4>().0.iter().enumerate() {
         words[index] = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     }
     for index in 16usize..64 {

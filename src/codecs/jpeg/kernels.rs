@@ -125,27 +125,16 @@ pub(crate) fn rgb_to_ycbcr_batch(
 
     let batched_pixels = available - available % 8;
     let batched_bytes = batched_pixels.saturating_mul(3);
-    let sources = pixels[..batched_bytes].chunks_exact(24);
-    let y_destinations = y[..batched_pixels].chunks_exact_mut(8);
-    let cb_destinations = cb[..batched_pixels].chunks_exact_mut(8);
-    let cr_destinations = cr[..batched_pixels].chunks_exact_mut(8);
+    let sources = pixels[..batched_bytes].as_chunks::<24>().0;
+    let y_destinations = y[..batched_pixels].as_chunks_mut::<8>().0;
+    let cb_destinations = cb[..batched_pixels].as_chunks_mut::<8>().0;
+    let cr_destinations = cr[..batched_pixels].as_chunks_mut::<8>().0;
     for (((source, y_destination), cb_destination), cr_destination) in sources
-        .zip(y_destinations)
-        .zip(cb_destinations)
-        .zip(cr_destinations)
+        .iter()
+        .zip(y_destinations.iter_mut())
+        .zip(cb_destinations.iter_mut())
+        .zip(cr_destinations.iter_mut())
     {
-        let source: &[u8; 24] = source
-            .try_into()
-            .unwrap_or_else(|_| unreachable!("chunks_exact returned a non-24-byte RGB batch"));
-        let y_destination: &mut [u8; 8] = y_destination
-            .try_into()
-            .unwrap_or_else(|_| unreachable!("chunks_exact returned a non-eight-byte Y batch"));
-        let cb_destination: &mut [u8; 8] = cb_destination
-            .try_into()
-            .unwrap_or_else(|_| unreachable!("chunks_exact returned a non-eight-byte Cb batch"));
-        let cr_destination: &mut [u8; 8] = cr_destination
-            .try_into()
-            .unwrap_or_else(|_| unreachable!("chunks_exact returned a non-eight-byte Cr batch"));
         convert_eight(source, y_destination, cb_destination, cr_destination);
     }
     let mut pixel = batched_pixels;

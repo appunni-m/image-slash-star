@@ -112,7 +112,7 @@ fn write_encoded(
             let mut palette_bytes = Vec::with_capacity(layout.palette_bytes);
             if img.mode == ImageMode::P8 {
                 if let Some(palette) = img.palette.as_ref() {
-                    for rgb in palette.rgb.chunks_exact(3) {
+                    for rgb in palette.rgb.as_chunks::<3>().0 {
                         palette_bytes.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
                     }
                 } else {

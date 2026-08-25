@@ -734,7 +734,7 @@ fn convert_pixels(
         }
         TiffLayout::Gray16 => {
             let mut output = Vec::with_capacity(pixels.len());
-            for bytes in pixels.chunks_exact(2) {
+            for bytes in pixels.as_chunks::<2>().0 {
                 let value = endian.u16_exact([bytes[0], bytes[1]]);
                 output.extend_from_slice(&value.to_le_bytes());
             }
@@ -756,7 +756,7 @@ fn convert_pixels(
         TiffLayout::Cmyk8 => DecodedImage::new(width, height, pixels, ColorType::Cmyk8),
         TiffLayout::Ycbcr8 => {
             let mut rgb = Vec::with_capacity((pixels.len() / 4).wrapping_mul(3));
-            for pixel in pixels.chunks_exact(4) {
+            for pixel in pixels.as_chunks::<4>().0 {
                 rgb.extend_from_slice(&pixel[..3]);
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
@@ -873,7 +873,7 @@ fn convert_pixels_with_token(
             let mut processed = 0usize;
             for row in pixels.chunks_exact(row_bytes) {
                 crate::codecs::error::check_cancelled(Some(token))?;
-                for bytes in row.chunks_exact(2) {
+                for bytes in row.as_chunks::<2>().0 {
                     let value = endian.u16_exact([bytes[0], bytes[1]]);
                     output.extend_from_slice(&value.to_le_bytes());
                     processed = processed.saturating_add(2);
@@ -904,7 +904,7 @@ fn convert_pixels_with_token(
             let mut processed = 0usize;
             for row in pixels.chunks_exact(row_bytes) {
                 crate::codecs::error::check_cancelled(Some(token))?;
-                for pixel in row.chunks_exact(4) {
+                for pixel in row.as_chunks::<4>().0 {
                     rgb.extend_from_slice(&pixel[..3]);
                     processed = processed.saturating_add(4);
                     if processed.is_multiple_of(1_024) {
@@ -1780,12 +1780,12 @@ impl<'a> Directory<'a> {
         match entry.numeric_kind {
             NumericKind::Bytes => values.extend(bytes.iter().map(|&value| usize::from(value))),
             NumericKind::Shorts => {
-                for chunk in bytes.chunks_exact(2) {
+                for chunk in bytes.as_chunks::<2>().0 {
                     values.push(usize::from(self.endian.u16_exact([chunk[0], chunk[1]])));
                 }
             }
             NumericKind::Longs => {
-                for chunk in bytes.chunks_exact(4) {
+                for chunk in bytes.as_chunks::<4>().0 {
                     values.push(
                         self.endian
                             .u32_exact([chunk[0], chunk[1], chunk[2], chunk[3]])

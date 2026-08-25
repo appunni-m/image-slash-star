@@ -362,7 +362,9 @@ fn hex_bytes(hex: &str) -> Vec<u8> {
         "manifest hex must have an even length"
     );
     hex.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let pair = std::str::from_utf8(pair)
                 .unwrap_or_else(|error| panic!("invalid hex encoding: {error}"));
