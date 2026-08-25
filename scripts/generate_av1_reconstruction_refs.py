@@ -910,6 +910,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495",
         "size": [32, 32],
     },
+    "coverage_r32x32_following_filter_intra_split_mode0_01.avif": {
+        "file_sha256": "925c90b4341178968e1ed74c2abef6148b826c77be869730b6ca9b6f0cf8f1db",
+        "rgb_sha256": "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16",
+        "size": [32, 32],
+    },
     "coverage_r32x16_filter_intra_tx8x8_01.avif": {
         "file_sha256": "9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066",
         "rgb_sha256": "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8",
@@ -1093,7 +1098,6 @@ def instrument(source: Path) -> None:
         (t->by >= 0 && t->by < 4 || \
          (t->by == 4 && f->frame_hdr->width[0] == 32 && \
           f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present && \
-          f->frame_hdr->txfm_mode == DAV1D_TX_LARGEST && \
           !f->frame_hdr->allow_screen_content_tools)) && \
         t->bx >= 0 && t->bx < 4
 #define DEBUG_B_PIXELS 1

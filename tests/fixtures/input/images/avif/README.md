@@ -147,6 +147,11 @@ The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
 and Pillow RGB hashes are pinned in `docs/avif.md` and
 `tests/fixtures/outputs/av1_reconstruction.json`.
 
+The fixture `coverage_r32x16_filter_intra_tx8x8_01.avif` is an origin
+Horizontal32x16 TX8x8 split witness. Its `Post-filterintramode[0/0]` trace
+entry is dav1d's filter-intra-disabled sentinel; it must not be described as
+filter-intra mode 0. Following-leaf split filter-intra remains an open target.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated
