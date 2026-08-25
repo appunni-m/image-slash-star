@@ -5316,8 +5316,48 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_following_split_mode0_noise():
+        """Generate a following H32x16 filter-intra/TX16x16 witness."""
+
+        random_state = random.Random(3)
+        # The candidate search's RGB-noise family consumes one grayscale-sized
+        # prefix before producing the lower leaf's RGB samples. Retain that
+        # deterministic construction so the promoted bytes remain identical
+        # to the independently traced candidate.
+        for _ in range(32 * 16):
+            random_state.randrange(256)
+        lower = bytes(
+            random_state.randrange(256) for _ in range(32 * 16 * 3)
+        )
+        upper = bytes((128, 128, 128)) * (32 * 16)
+        return Image.frombytes("RGB", (32, 32), upper + lower)
+
+    write_campaign_image(
+        "coverage_r32x32_following_filter_intra_split_mode0_01",
+        filter_intra_following_split_mode0_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def filter_intra_tx8x8_noise():
-        """Generate the origin filter-intra TX8x8 split witness."""
+        """Generate the origin TX8x8 split witness with filter-intra disabled."""
 
         random_state = random.Random(2)
         pixels = bytes(

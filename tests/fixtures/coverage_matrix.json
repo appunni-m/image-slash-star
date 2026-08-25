@@ -15912,11 +15912,86 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_r32x32_following_filter_intra_split_mode0_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "32x32 4:2:0 quality-76 speed-0 horizontal split with a following Horizontal32x16 filter-intra mode-0 leaf and two TX16x16 luma children",
+          "asset": "coverage_r32x32_following_filter_intra_split_mode0_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "925c90b4341178968e1ed74c2abef6148b826c77be869730b6ca9b6f0cf8f1db",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_r32x32_following_filter_intra_split_mode0_01_avif.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_r32x16_filter_intra_tx8x8_01",
           "type": "decode",
           "format": "avif",
           "category": "coverage",
-          "description": "32x16 4:2:0 quality-76 speed-0 origin Horizontal32x16 filter-intra leaf with mode 0 and four TX8x8 luma children",
+          "description": "32x16 4:2:0 quality-76 speed-0 origin Horizontal32x16 split leaf with filter-intra disabled and a TX8x8 luma grid",
           "asset": "coverage_r32x16_filter_intra_tx8x8_01.avif",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -117023,12 +117098,12 @@
     }
   },
   "summary": {
-    "total_rows": 1485,
-    "decode_rows": 1088,
+    "total_rows": 1486,
+    "decode_rows": 1089,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1087,
-    "decode_active": 1081,
+    "assets_available": 1088,
+    "decode_active": 1082,
     "decode_planned": 7,
     "encode_not_wired": 32
   }

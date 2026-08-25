@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 195);
+    assert_eq!(expected.cases.len(), 196);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5391,6 +5391,67 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 mode-3 filter-intra witness must use mode 3 on both leaves"
             );
         }
+        if case.fixture == "coverage_r32x32_following_filter_intra_split_mode0_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 1,
+                    range: 38_976,
+                }],
+                "AV1 following filter-intra split witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                2_204,
+                "AV1 following filter-intra split witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=37680",
+                    "Post-cdef_idx[0]: r=37680",
+                    "Post-ymode[0]: r=35868",
+                    "Post-uvmode[0]: r=45544",
+                    "Post-filterintramode[0/0]: r=35856",
+                    "Post-tx[1]: r=38368",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=34348",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=62184",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=47440",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=43941",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=-1]: r=33674 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=-1]: r=60006 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=58130",
+                    "Post-ymode[0]: r=57144",
+                    "Post-uvmode[0]: r=38810",
+                    "Post-filterintramode[13/0]: r=48968",
+                    "Post-tx[2]: r=48960",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=42760",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=127]: r=56840 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=127]: r=62728 [x=0,cbx4=0]",
+                ],
+                "AV1 following filter-intra split witness leaf states"
+            );
+        }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -5432,7 +5493,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .filter(|line| line.starts_with("Post-filterintramode[0/0]:"))
                     .count(),
                 1,
-                "AV1 TX8x8 witness must use filter-intra mode 0"
+                "AV1 TX8x8 witness must record the filter-intra-disabled sentinel"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[13/"))
+                    .count(),
+                0,
+                "AV1 TX8x8 witness must not claim a filter-intra mode"
             );
             assert_eq!(
                 debug_lines
@@ -6149,6 +6218,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x32_filter_intra_mode3_01.avif" => {
                 "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495"
+            }
+            "coverage_r32x32_following_filter_intra_split_mode0_01.avif" => {
+                "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16"
             }
             "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
                 "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"
