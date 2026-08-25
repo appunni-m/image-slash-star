@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 96422,
-        "total": 107953,
-        "percent": 89.3185,
-        "uncovered": 11531
+        "covered": 96917,
+        "total": 107965,
+        "percent": 89.7671,
+        "uncovered": 11048
       },
       "branch": {
-        "covered": 12285,
-        "total": 13692,
-        "percent": 89.7239,
-        "uncovered": 1407
+        "covered": 12311,
+        "total": 13688,
+        "percent": 89.9401,
+        "uncovered": 1377
       },
       "function": {
-        "covered": 4900,
+        "covered": 4933,
         "total": 5678,
-        "percent": 86.2980,
-        "uncovered": 778
+        "percent": 86.8792,
+        "uncovered": 745
       },
       "region": {
-        "covered": 144807,
-        "total": 163685,
-        "percent": 88.4669,
-        "uncovered": 18878
+        "covered": 145562,
+        "total": 163691,
+        "percent": 88.9249,
+        "uncovered": 18129
       },
       "measurement": {
-        "kind": "managed Coverage MCP all-feature LLVM run",
+        "kind": "managed Coverage MCP all-feature LLVM run with explicit report import",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "015fc577c54f65889d5013e296b6c08661349eb4",
-        "run_id": "6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6",
-        "snapshot_id": "6816f0c9-6837-4149-b112-1609fd04b4a8",
+        "commit_sha": "24cc86cb940d64163d34d05e8a589ee9fda97c1a",
+        "run_id": "ae9254a1-6aed-44b4-8d0b-3e7638caf9f5",
+        "snapshot_id": "64d932ae-81b6-4f2b-a9dc-0f69ddcc3718",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 147787,
+        "duration_ms": 150611,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit 015fc577 in 147,787 ms. Automatic ingestion retained stale registered-command provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as snapshot 6816f0c9. It records 89.3185% lines, 89.7239% branches, 86.2980% functions, and 88.4669% regions; the four-metric release target remains open until all reach 100%. This slice adds the pure-safe-Rust 16x16 8-bit 4:2:0 PARTITION_V4 witness coverage_v4_vertical_checker.avif with four ordered 4x16 luma leaves, alternating chroma ownership, exact dav1d reconstruction evidence, and exact Pillow RGB bytes. The explicit Coverage MCP review against snapshot 990062a0 reports 2,386 newly covered observations and 2,570 regressed observations while the AV1 block implementation grows; the aggregate rates therefore moved to the values above and remain subject to regression inspection. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
+        "note": "The managed all-feature LLVM workload passed at the exact execution commit 24cc86cb in 150,611 ms. The registered command still carries stale approval lineage, so the generated LLVM report was explicitly imported with current-commit provenance as snapshot 64d932ae. It records 89.7671% lines, 89.9401% branches, 86.8792% functions, and 88.9249% regions; the four-metric release target remains open until all reach 100%. This slice adds the pure-safe-Rust 16x16 8-bit 4:2:0 PARTITION_V4 HorizontalFour witness coverage_h4_horizontal_bands.avif with four ordered 16x4 luma leaves, exact 8x4 chroma ownership, exact dav1d reconstruction evidence, and exact Pillow RGB bytes. The explicit Coverage MCP review against snapshot 6816f0c9 reports 3,182 newly covered and 2,855 regressed observations, with 495 covered lines, 26 covered branches, 33 covered functions, and 755 covered regions added; regression inspection remains required. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
-          "baseline_snapshot_id": "990062a0-f78c-4d14-a0cb-62ef0b8f3f0f",
-          "line_covered_delta": -76,
-          "line_total_delta": 194,
-          "branch_covered_delta": -13,
-          "branch_total_delta": 4,
-          "function_covered_delta": -9,
-          "function_total_delta": 10,
-          "region_covered_delta": -279,
-          "region_total_delta": 182,
-          "interpretation": "Compared with the immediately preceding accepted managed snapshot 990062a0 at 4c8f3257, this current 015fc577 measurement adds real AV1 block/transform surface: Coverage MCP reports 2,386 newly covered observations, 2,570 regressed observations, 13,107 hit-count-only changes, 8,469 added observations, and 8,332 removed observations. Aggregate line, branch, function, and region rates are 89.3185%, 89.7239%, 86.2980%, and 88.4669%; the release target remains open with 11,531 lines, 1,407 branches, 778 functions, and 18,878 regions uncovered. The next action is regression inspection, not a claim of 100% coverage."
+          "baseline_commit": "015fc577c54f65889d5013e296b6c08661349eb4",
+          "baseline_snapshot_id": "6816f0c9-6837-4149-b112-1609fd04b4a8",
+          "line_covered_delta": 495,
+          "line_total_delta": 12,
+          "branch_covered_delta": 26,
+          "branch_total_delta": -4,
+          "function_covered_delta": 33,
+          "function_total_delta": 0,
+          "region_covered_delta": 755,
+          "region_total_delta": 6,
+          "interpretation": "Compared with the immediately preceding accepted snapshot 6816f0c9 at 015fc577, this current 24cc86cb measurement adds real AV1 block/transform surface: Coverage MCP reports 3,182 newly covered, 2,855 regressed, 13,504 hit-count-only, 8,474 added, and 8,462 removed observations. Aggregate line, branch, function, and region rates are 89.7671%, 89.9401%, 86.8792%, and 88.9249%; the release target remains open with 11,048 lines, 1,377 branches, 745 functions, and 18,129 regions uncovered. The next action is regression inspection, not a claim of 100% coverage."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6 passed at measured code-bearing commit 015fc577 in 147,787 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 6816f0c9-6837-4149-b112-1609fd04b4a8. It reports 11,531 lines, 1,407 branches, 778 functions, and 18,878 regions uncovered. The PARTITION_V4 vertical-checker witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run ae9254a1-6aed-44b4-8d0b-3e7638caf9f5 completed at exact execution commit 24cc86cb in 150,611 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with current-commit provenance as snapshot 64d932ae-81b6-4f2b-a9dc-0f69ddcc3718. It reports 11,048 lines, 1,377 branches, 745 functions, and 18,129 regions uncovered. The HorizontalFour 16x4 witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },

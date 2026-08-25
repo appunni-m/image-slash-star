@@ -103,24 +103,24 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6` passed the
-complete all-feature workload plus doctest at measured code-bearing commit
-`015fc577` in 147,787 ms. Automatic ingestion retained stale registered-command
-lineage; the exact LLVM artifact was explicitly imported with the run's commit
-provenance as snapshot
-`6816f0c9-6837-4149-b112-1609fd04b4a8`. It measures 96,422/107,953 lines
-(89.3185%), 12,285/13,692 branches (89.7239%), 4,900/5,678 functions
-(86.2980%), and 144,807/163,685 regions (88.4669%). This slice adds the
-pure-safe-Rust 16x16 8-bit 4:2:0 `PARTITION_V4` witness
-`coverage_v4_vertical_checker.avif`, with four ordered 4x16 luma leaves,
-alternating chroma ownership, exact dav1d reconstruction evidence, and exact
+Managed Coverage MCP run `ae9254a1-6aed-44b4-8d0b-3e7638caf9f5` completed the
+all-feature workload plus doctest at exact execution commit `24cc86cb` in
+150,611 ms. Its registered command retained stale approval lineage, so the
+exact LLVM artifact was explicitly imported with current-commit provenance as
+snapshot `64d932ae-81b6-4f2b-a9dc-0f69ddcc3718`. It measures 96,917/107,965 lines
+(89.7671%), 12,311/13,688 branches (89.9401%), 4,933/5,678 functions
+(86.8792%), and 145,562/163,691 regions (88.9249%). This slice adds the
+pure-safe-Rust 16x16 8-bit 4:2:0 `PARTITION_V4` HorizontalFour witness
+`coverage_h4_horizontal_bands.avif`, with four ordered 16x4 luma leaves,
+exact 8x4 chroma ownership, exact dav1d reconstruction evidence, and exact
 Pillow RGB bytes. The explicit Coverage MCP review against snapshot
-`990062a0-f78c-4d14-a0cb-62ef0b8f3f0f` reports 2,386 newly covered and 2,570
-regressed observations while the AV1 block implementation grows; regression
-inspection remains required. This does not close the AVIF planned gaps,
-transient allocation work, or the four-metric 100% release gate. The remaining
-misses are visible in the managed report, with the largest concentration in
-the intentionally incomplete AV1 block/entropy surface.
+`6816f0c9-6837-4149-b112-1609fd04b4a8` reports 3,182 newly covered and 2,855
+regressed observations, with 495 covered lines, 26 covered branches, 33
+covered functions, and 755 covered regions added; regression inspection
+remains required. This does not close the AVIF planned gaps, transient
+allocation work, or the four-metric 100% release gate. The remaining misses
+are visible in the managed report, with the largest concentration in the
+intentionally incomplete AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -145,8 +145,9 @@ task is `supported` and requests regression inspection. Current totals are
 This increases the denominator because the slice adds real codec paths, so the
 100% gate remains open rather than being relabeled as complete.
 
-The revision-bound hash tuple is refreshed at base revision
-`015fc577c54f65889d5013e296b6c08661349eb4`;
+The revision-bound hash tuple remains refreshed at base revision
+`015fc577c54f65889d5013e296b6c08661349eb4`, while the current managed
+coverage measurement is bound to implementation commit `24cc86cb`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -160,7 +161,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 11,531 lines, 1,407 branches, 778 functions, and 18,878 regions
+- LLVM coverage: 11,048 lines, 1,377 branches, 745 functions, and 18,129 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,

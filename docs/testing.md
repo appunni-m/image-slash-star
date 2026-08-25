@@ -12,10 +12,12 @@ record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`6816f0c9-6837-4149-b112-1609fd04b4a8` from run
-`6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6` (full all-feature workload passed). It
-records 96,422/107,953 lines, 12,285/13,692 branches, 4,900/5,678
-functions, and 144,807/163,685 regions. The managed Pillow parity identifier below is the
+`64d932ae-81b6-4f2b-a9dc-0f69ddcc3718` from run
+`ae9254a1-6aed-44b4-8d0b-3e7638caf9f5` (full all-feature workload passed at
+exact execution commit `24cc86cb`). Its exact LLVM report was explicitly
+imported because the registered command retains stale approval lineage. It
+records 96,917/107,965 lines, 12,311/13,688 branches, 4,933/5,678
+functions, and 145,562/163,691 regions. The managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
 all-feature matrix integration tests currently pass 34/34 under the managed
 coverage configuration (the ordinary non-coverage matrix has 29 tests).
@@ -27,9 +29,9 @@ registration failed before execution because it invokes sandbox-blocked
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
 The current working tree also passes the complete all-feature test set plus one
-doctest in the managed nightly LLVM run. It measures 96,422/107,953 lines
-(89.3185%), 12,285/13,692 branches (89.7239%), 4,900/5,678 functions
-(86.2980%), and 144,807/163,685 regions (88.4669%). The strict four-metric
+doctest in the managed nightly LLVM run. It measures 96,917/107,965 lines
+(89.7671%), 12,311/13,688 branches (89.9401%), 4,933/5,678 functions
+(86.8792%), and 145,562/163,691 regions (88.9249%). The strict four-metric
 verifier remains red because the release target is 100%; the remaining gaps
 are recorded explicitly in the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
