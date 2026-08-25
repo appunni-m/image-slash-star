@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 259 rows total, 252 active, 7 explicit planned
+- AVIF decode/inspect/verify: 260 rows total, 253 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,483 rows total, 1079 active decode rows, 365 active encode
+- Whole matrix: 1,484 rows total, 1080 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -133,6 +133,14 @@ the corresponding status is recorded in `roadmap.json`:
   the following leaf from its prepared spatial edges and matches exact Y/U/V
   planes and Pillow RGB8 bytes. It closes only this following-leaf mode-3
   class; broader filter-intra modes and AVF-STILL-001 remain partial.
+- The newest bounded I444 proof is
+  `coverage_i444_v16x32_following_filter_intra_mode3_01.avif`, a 32x32 8-bit
+  lossy 4:4:4 frame with two side-by-side Vertical16x32 terminals. The right-
+  hand following leaf uses filter-intra mode 3, two TX16x16 luma children, and
+  one RTX16x32 transform for each full-resolution chroma plane. Its pinned
+  dav1d trace has 7,446 entropy operations; safe Rust matches exact Y/U/V
+  planes and Pillow RGB8 bytes. This closes only this bounded I444 following-
+  leaf class; broader rectangular transforms and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -703,7 +711,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,483 total | 1,086 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,079 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,484 total | 1,087 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,080 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -1864,7 +1872,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 259 AVIF decode/inspect/verify rows exist: 252 are
+**Current exact state:** 260 AVIF decode/inspect/verify rows exist: 253 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
@@ -1899,6 +1907,17 @@ RGB8 output. The fixture SHA-256 is
 `79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29` and the
 RGB reference SHA-256 is
 `8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495`.
+
+The newest bounded I444 proof is
+`coverage_i444_v16x32_following_filter_intra_mode3_01.avif`: it is a 32x32
+8-bit lossy 4:4:4 frame with two side-by-side Vertical16x32 terminals. The
+right-hand following leaf uses filter-intra mode 3, two TX16x16 luma children,
+and one RTX16x32 transform for each full-resolution chroma plane. Safe Rust
+matches its pinned 7,446-operation dav1d trace, exact Y/U/V planes, and Pillow
+RGB8 output. The fixture SHA-256 is
+`fd4465d0f0c47266f7999731081eb8f5dc1f0cb4ad74b33e38b6f013b940484e` and the
+RGB reference SHA-256 is
+`968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4`.
 
 **Work:** Close the planned still gaps in dependency order; add sequence
 support and then encoding; expand bit depth, monochrome, planar YUV, alpha,
