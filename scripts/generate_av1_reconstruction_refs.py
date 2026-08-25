@@ -985,6 +985,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54",
         "size": [16, 16],
     },
+    "coverage_i444_rect_02.avif": {
+        "file_sha256": "fad07546f32d265ddcf03122c8b148705ebff833785b655a1b5e44bbd1d98897",
+        "rgb_sha256": "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb",
+        "size": [16, 16],
+    },
 }
 DEBUG_BLOCK_PATTERN = re.compile(
     r"^poc=(?P<poc>-?\d+),y=(?P<y>-?\d+),x=(?P<x>-?\d+),"

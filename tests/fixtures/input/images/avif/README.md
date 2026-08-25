@@ -170,6 +170,14 @@ and the bounded partition records that its instrumentation observes. These
 fixtures prove these exact rows only; they do not close the broader AV1
 partition, predictor, high-bit-depth, color, tile, or encode roadmap gaps.
 
+The adjacent `coverage_i444_rect_01.avif` and `coverage_i444_rect_02.avif`
+witnesses hold the 16x16 split-root/four-leaf geometry constant while changing
+the gradient orientation and residual sentences. `rect_01` has a pinned
+499-operation trace; `rect_02` has 553 operations and a filter-intra leaf. Both
+are full-resolution lossy 4:4:4 cases with exact dav1d Y/U/V and Pillow RGB
+references. Their evidence is intentionally bounded to these observed syntax
+classes, not a claim of general I444 support.
+
 | Fixture | Size | File SHA-256 | Pillow RGB SHA-256 |
 | --- | ---: | --- | --- |
 | `coverage_adst_public_03.avif` | 4×16 | `b6d15fa1ceb3eedcd3636ed660c0ed6755ce3a2af3ff6a3b2dcf6fa0b1adcc25` | `c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9` |

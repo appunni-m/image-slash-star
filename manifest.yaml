@@ -4246,6 +4246,10 @@ formats:
       description: 16x16 lossy 4:4:4 quality-99 vertical-gradient frame with a split root, four 8x8 leaves, full-resolution Y/U/V residuals, and delta-Q
       test_assets:
       - coverage_i444_rect_01.avif
+    - id: coverage_i444_rect_02
+      description: 16x16 lossy 4:4:4 quality-99 horizontal-gradient frame with a split root, four 8x8 leaves, full-resolution Y/U/V residuals, and delta-Q
+      test_assets:
+      - coverage_i444_rect_02.avif
     - id: coverage_i444_square8_four_leaves
       description: 16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace
       test_assets:
