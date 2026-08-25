@@ -14806,7 +14806,12 @@ fn decode_syntax_with_cdef(
                                         plane,
                                         cdfs,
                                         lossy_quantization,
-                                        None,
+                                        Some(coefficient_dc_sign_context_for_dimensions(
+                                            plane_grid_width,
+                                            plane_grid_height,
+                                            &above_chroma_edge_contexts,
+                                            &left_chroma_edge_contexts,
+                                        )),
                                     )?);
                             }
                             // Publish the final chroma residual context on
@@ -29912,6 +29917,133 @@ fn reconstruct_following_lossy_full_horizontal_32x16_leaf(
     })
 }
 
+fn reconstruct_following_lossy_420_horizontal_16x32_leaf(
+    syntax: BlockSyntax,
+    neighbor: &ClosedLeaf,
+    enable_intra_edge_filter: bool,
+) -> PortableResult<ClosedLeaf> {
+    let BlockSyntax {
+        luma_predictor,
+        luma_angle,
+        filter_intra_mode,
+        chroma_predictor,
+        chroma_angle,
+        lossy_luma_8x8_grid_split,
+        lossy_luma_16x16_vertical_split,
+        lossy_luma_16x32_coefficients,
+        lossy_luma_16x32_transform,
+        lossy_chroma_8x16_coefficients,
+        ..
+    } = syntax;
+    let luma_left: [u16; 32] = if neighbor.planes[0].samples.len() >= 512 {
+        right_edge_at::<32>(&neighbor.planes[0], 16, 32, 0)
+    } else {
+        let edge = right_edge_16(&neighbor.planes[0]);
+        std::array::from_fn(|index| edge[index % 16])
+    };
+    let luma_top = [luma_left[0]; 16];
+    let luma = if let Some(split) = lossy_luma_16x16_vertical_split {
+        let mut padded_left = [luma_left[0]; 64];
+        padded_left[..32].copy_from_slice(&luma_left);
+        reconstruct_lossy_luma_16x64_vertical_split(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            [luma_left[0]; 16],
+            padded_left,
+            luma_left[0],
+            true,
+            split,
+        )?
+    } else if let Some(split) = lossy_luma_8x8_grid_split {
+        reconstruct_lossy_luma_16x32_split(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            luma_top,
+            luma_left,
+            luma_left[0],
+            true,
+            split,
+        )?
+    } else if let Some(coefficients) = lossy_luma_16x32_coefficients {
+        reconstruct_lossy_luma_16x32_from_edges(
+            luma_predictor,
+            filter_intra_mode,
+            luma_top,
+            luma_left,
+            luma_left[0],
+            true,
+            coefficients,
+            lossy_luma_16x32_transform,
+        )?
+    } else {
+        return Err(PortableUnavailable);
+    };
+    let luma_samples = luma.clone();
+
+    let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
+        let left: [u16; 16] = if neighbor.planes[plane].samples.len() >= 128 {
+            right_edge_at::<16>(&neighbor.planes[plane], 8, 16, 0)
+        } else {
+            let edge = right_edge(&neighbor.planes[plane]);
+            std::array::from_fn(|index| edge[index % 8])
+        };
+        let top = [left[0]; 8];
+        let coefficients = lossy_chroma_8x16_coefficients[plane - 1];
+        let transform = chroma_transform_kind(chroma_predictor);
+        match chroma_predictor {
+            ChromaPredictor::Cfl { alpha_u, alpha_v } => {
+                let alpha = if plane == 1 { alpha_u } else { alpha_v };
+                reconstruct_lossy_chroma_8x16_cfl(
+                    &luma_samples,
+                    one_sided_dc_predictor_16(left),
+                    alpha,
+                    coefficients,
+                )
+            }
+            ChromaPredictor::Dc => Ok(reconstruct_lossy_luma_8x16_from_prediction(
+                [one_sided_dc_predictor_16(left); 128],
+                coefficients,
+                transform,
+            )),
+            ChromaPredictor::Vertical => Ok(reconstruct_lossy_luma_8x16_from_prediction(
+                std::array::from_fn(|index| top[index % 8]),
+                coefficients,
+                transform,
+            )),
+            ChromaPredictor::Horizontal => Ok(reconstruct_lossy_luma_8x16_from_prediction(
+                std::array::from_fn(|index| left[index / 8]),
+                coefficients,
+                transform,
+            )),
+            ChromaPredictor::Paeth => Ok(reconstruct_lossy_luma_8x16_from_prediction(
+                std::array::from_fn(|index| {
+                    paeth_predictor(top[index % 8], left[index / 8], top[0])
+                }),
+                coefficients,
+                transform,
+            )),
+            ChromaPredictor::DiagonalDownRight
+            | ChromaPredictor::Diagonal113
+            | ChromaPredictor::Diagonal157 => reconstruct_lossy_luma_8x16_diagonal(
+                std::array::from_fn(|index| top[index % 8]),
+                left,
+                chroma_angle.ok_or(PortableUnavailable)?,
+                enable_intra_edge_filter,
+                coefficients.unwrap_or([0_i32; 128]),
+                transform,
+            ),
+            _ => Err(PortableUnavailable),
+        }
+    };
+
+    Ok(ClosedLeaf {
+        luma_predictor,
+        planes: [luma, chroma(1)?, chroma(2)?],
+    })
+}
+
 fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
     syntax: BlockSyntax,
     neighbor: &ClosedLeaf,
@@ -38912,6 +39044,14 @@ impl Lossy420Decoder {
                 &synthetic_above,
                 &synthetic_above,
                 Some(&neighbor),
+            )
+        } else if matches!(self.chroma_sampling, ChromaSampling::Subsampled420)
+            && matches!(transform_grid, TransformGrid::Vertical16x32)
+        {
+            reconstruct_following_lossy_420_horizontal_16x32_leaf(
+                syntax,
+                &neighbor,
+                tools.enable_intra_edge_filter,
             )
         } else if matches!(self.chroma_sampling, ChromaSampling::Subsampled420)
             && matches!(transform_grid, TransformGrid::Vertical4x16)

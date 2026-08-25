@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1486,
-      "decode_rows": 1089,
+      "total_rows": 1487,
+      "decode_rows": 1090,
       "encode_rows": 397,
-      "decode_active": 1082,
+      "decode_active": 1083,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 262,
-      "decode_active": 255,
+      "decode_rows": 263,
+      "decode_active": 256,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -911,6 +911,7 @@
     "latest_witness": "coverage_r32x16_filter_intra_tx8x8_01.avif is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled and four TX8x8 luma children. Its pinned dav1d trace has 2,328 entropy operations; safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. The fixture SHA-256 is 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, the encoded-item SHA-256 is 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and the RGB reference SHA-256 is fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. This records one origin TX8x8 split-transform class only; filter-intra remains unproven in this witness; following-leaf mode-4/split cases, other transform depths, and AVF-STILL-001 remain open.",
     "latest_slice": "The coverage_r32x16_filter_intra_tx8x8_01 slice routes origin Horizontal32x16 split leaves with filter-intra disabled through the existing generic TX16x16-horizontal and TX8x8-grid reconstruction helpers when split luma coefficient syntax is present. It adds a deterministic seed-2 fixture, a pinned 2,328-operation dav1d trace, exact reconstructed Y/U/V planes, exact Pillow RGB8 bytes, partition and four-child structural assertions, and the generator/reference/matrix provenance. The implementation remains pure safe Rust with checked existing split placement and no native dependency or unsafe code. This promotes one bounded origin TX8x8 split class only; filter-intra remains disabled in this witness; following-leaf split routing, mode 4, broader filter-intra modes and edges, and the managed four-metric coverage release gate remain open.",
         "latest_evidence_addition": "coverage_r32x32_following_filter_intra_split_mode0_01.avif is a 32x32 8-bit 4:2:0 horizontal split whose following Horizontal32x16 leaf selects filter-intra mode 0 and a TX16x16 luma split. Its pinned dav1d trace has 2,204 entropy operations; safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. The fixture SHA-256 is 925c90b4341178968e1ed74c2abef6148b826c77be869730b6ca9b6f0cf8f1db, the encoded-item SHA-256 is 4950daa82b44d07c98f9bd5a48547f060c9e44b40ab625273955e2906d09f608, and the RGB reference SHA-256 is ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16. This closes only the following-leaf mode-0/TX16x16 split class; broader filter-intra modes, transform depths, and AVF-STILL-001 remain open.",
+        "current_slice": "The new coverage_r16x32_following_filter_intra_split_mode3_01.avif witness is a deterministic 32x32 8-bit 4:2:0 vertical split with a right-hand following Vertical16x32 leaf using filter-intra mode 3, two TX16x16 luma children, and one R8x16 U/V transform each. The pinned dav1d trace has partition range 35904 and 4444 entropy operations; safe Rust matches the exact partition record, all entropy operations, reconstructed Y/U/V planes, and Pillow RGB8 bytes. The production path adds a dedicated following 4:2:0 Vertical16x32 reconstruction branch, passes the rectangular chroma DC-sign context used by the entropy sentence, and uses left-only DC prediction when the top edge is unavailable. The deterministic search examined 100 candidates across 10 input families, qualified two exact witnesses, promoted seed 211 as the stable fixture, and retained the second qualified candidate as non-promoted evidence. This is one bounded right-hand mode-3/R8x16 split class only; AVF-STILL-001 remains partial and the managed Coverage MCP measurement must be refreshed at the implementation commit before this slice has revision-bound coverage evidence.",
         "next": "Broaden remaining filter-intra modes and edge cases, partition/block states, predictors, residual classes, tile-local context cases, transform variants, and independent full-frame proofs beyond the closed origin and following-leaf mode-3 classes."
       },
       "AVF-ENTROPY-001": {
