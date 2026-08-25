@@ -93,7 +93,7 @@
     {"path": "src/types/mod.rs", "guard_count": 1, "origin": "defensive_model"},
     {
       "path": "tests/coverage_matrix_tests.rs",
-      "guard_count": 27,
+      "guard_count": 29,
       "guards": [
         {"line": 311, "origin": "independent_implementation"},
         {"line": 321, "origin": "independent_implementation"},
@@ -121,7 +121,9 @@
         {"line": 4535, "origin": "independent_implementation"},
         {"line": 4620, "origin": "independent_implementation"},
         {"line": 4632, "origin": "independent_implementation"},
-        {"line": 4663, "origin": "independent_implementation"}
+        {"line": 4663, "origin": "independent_implementation"},
+        {"line": 4677, "origin": "independent_implementation"},
+        {"line": 4683, "origin": "independent_implementation"}
       ]
     }
   ]
