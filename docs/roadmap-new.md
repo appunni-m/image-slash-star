@@ -108,24 +108,25 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `ae9254a1-6aed-44b4-8d0b-3e7638caf9f5` completed the
-all-feature workload plus doctest at exact execution commit `24cc86cb` in
-150,611 ms. Its registered command retained stale approval lineage, so the
-exact LLVM artifact was explicitly imported with current-commit provenance as
-snapshot `64d932ae-81b6-4f2b-a9dc-0f69ddcc3718`. It measures 96,917/107,965 lines
-(89.7671%), 12,311/13,688 branches (89.9401%), 4,933/5,678 functions
-(86.8792%), and 145,562/163,691 regions (88.9249%). This slice adds the
-pure-safe-Rust 16x16 8-bit 4:2:0 `PARTITION_V4` HorizontalFour witness
-`coverage_h4_horizontal_bands.avif`, with four ordered 16x4 luma leaves,
-exact 8x4 chroma ownership, exact dav1d reconstruction evidence, and exact
-Pillow RGB bytes. The explicit Coverage MCP review against snapshot
-`6816f0c9-6837-4149-b112-1609fd04b4a8` reports 3,182 newly covered and 2,855
-regressed observations, with 495 covered lines, 26 covered branches, 33
-covered functions, and 755 covered regions added; regression inspection
-remains required. This does not close the AVIF planned gaps, transient
-allocation work, or the four-metric 100% release gate. The remaining misses
-are visible in the managed report, with the largest concentration in the
-intentionally incomplete AV1 block/entropy surface.
+Managed Coverage MCP run `2f8abd32-4e28-4520-959b-7a095143d21c` completed the
+all-feature workload plus doctest at exact implementation commit `2cb124b7` in
+145,610 ms. The generated LLVM artifact was explicitly imported as snapshot
+`51d210ea-df1b-4ca2-89a5-285bf57565d6` so the evidence is bound to that exact
+commit. It measures 97,190/108,030 lines (89.9658%), 12,324/13,692 branches
+(90.0088%), 4,949/5,685 functions (87.0536%), and 145,863/163,738 regions
+(89.0832%). This slice adds the pure-safe-Rust 32x32 8-bit 4:2:0
+`PARTITION_H4` witness `coverage_r32x8_h4_ripple_01.avif`, with three ordered
+32x8 luma leaves, 16x4 subsampled chroma leaves, exact dav1d reconstruction
+evidence, exact Pillow RGB bytes, geometry-specific matrix-9 dequantization,
+and one-sided DC prediction. The explicit Coverage MCP review against baseline
+snapshot `64d932ae-81b6-4f2b-a9dc-0f69ddcc3718` reports 2,237 newly covered and
+2,146 regressed observations, with 273 covered lines, 13 covered branches, 16
+covered functions, and 301 covered regions added; test attribution is
+unavailable, aggregate coverage is measured, and regression inspection remains
+required. This does not close the AVIF planned gaps, transient allocation work,
+or the four-metric 100% release gate. The remaining misses are visible in the
+managed report, with the largest concentration in the intentionally incomplete
+AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -152,7 +153,7 @@ This increases the denominator because the slice adds real codec paths, so the
 
 The revision-bound hash tuple remains refreshed at base revision
 `015fc577c54f65889d5013e296b6c08661349eb4`, while the current managed
-coverage measurement is bound to implementation commit `24cc86cb`;
+coverage measurement is bound to implementation commit `2cb124b7`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -166,7 +167,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 11,048 lines, 1,377 branches, 745 functions, and 18,129 regions
+- LLVM coverage: 10,840 lines, 1,368 branches, 736 functions, and 17,875 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -756,15 +757,15 @@ new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
 **Work/result:** The latest all-feature native Coverage MCP measurement is
-bound to code-bearing commit `49c8f78f`; its exact aggregate result and
+bound to code-bearing commit `2cb124b7`; its exact aggregate result and
 explicit-import provenance are recorded above. This slice adds the safe-Rust
-R16x4/H4 luma and 8x4 chroma implementation and proves the pinned
-`coverage_h4_horizontal_bands.avif` candidate byte-for-byte against the pinned
-dav1d planes, 347-operation entropy trace, and Pillow RGB reference. Its
-level-three HorizontalFour tree has four ordered 16x4 luma leaves and 8x4
-chroma ownership on leaves two and four; the second leaf also fixes the 16x4
-DCT_ADST pass-order dispatch. It changes source mapping and coverage
-denominators; it does not claim that the aggregate 100% gate is done.
+32x8 luma and 16x4 chroma matrix/dequantization implementation and proves the
+pinned `coverage_r32x8_h4_ripple_01.avif` candidate byte-for-byte against the
+pinned dav1d planes, 1,522-operation entropy trace, and Pillow RGB reference.
+Its `PARTITION_H4` tree has three ordered 32x8 luma leaves and 16x4
+subsampled chroma leaves; it also exercises one-sided DC prediction. It
+changes source mapping and coverage denominators; it does not claim that the
+aggregate 100% gate is done.
 The current witness `coverage_r32x8_h4_ripple_01.avif` extends this bounded
 class to three 32x8 luma leaves and 16x4 subsampled chroma leaves, with an exact
 1,522-operation trace, exact reconstructed planes, exact Pillow RGB bytes,
