@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-25
 
-- Current claim-ledger refresh base revision: `d2794f037bebe2498655346bd0dc6c2c3968e2da`
+- Current claim-ledger refresh base revision: `260c8646ea89eb164bc5116f0d40eb704910dc21`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -103,12 +103,12 @@ The strict all-target/all-feature Clippy gate passes on the installed rustc
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `d008e96c-d48d-476c-953e-4828cecee166` passed the
-complete all-feature workload plus doctest at code-bearing commit `d2794f03`
-in 203,180 ms. Automatic ingestion retained stale registered-command lineage;
+Managed Coverage MCP run `fd89bf16-bd58-4c30-afd5-c2dfb58acda9` passed the
+complete all-feature workload plus doctest at code-bearing commit `260c8646`
+in 163,099 ms. Automatic ingestion retained stale registered-command lineage;
 the exact LLVM artifact was explicitly imported with the run's commit
-provenance as accepted snapshot `8d219867-925f-456c-a6fc-7281b8423df0`. It
-measures 96,330/107,660 lines (89.4761%), 12,285/13,686 branches (89.7633%), 4,915/5,671 functions (86.6690%), and 144,978/163,481 regions (88.6819%).
+provenance as accepted snapshot `b6b8e5f8-30be-410b-a5f5-a549c101a8e2`. It
+measures 96,330/107,660 lines (89.4761%), 12,285/13,686 branches (89.7633%), 4,915/5,671 functions (86.6690%), and 144,977/163,481 regions (88.6813%).
 The sink recovery layer adds real public delivery-attempt tracking and
 checkpoint behavior; it does not close the AVIF planned gaps, transient
 allocation work, or the four-metric 100% release gate. The remaining misses
@@ -139,7 +139,7 @@ This increases the denominator because the slice adds real codec paths, so the
 100% gate remains open rather than being relabeled as complete.
 
 The revision-bound hash tuple is refreshed at base revision
-`d2794f037bebe2498655346bd0dc6c2c3968e2da`;
+`260c8646ea89eb164bc5116f0d40eb704910dc21`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -153,7 +153,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 11,330 lines, 1,401 branches, 756 functions, and 18,503 regions
+- LLVM coverage: 11,330 lines, 1,401 branches, 756 functions, and 18,504 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -589,7 +589,7 @@ that an entire workstream is finished because one slice passed.
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 500 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `8d219867-925f-456c-a6fc-7281b8423df0` is bound to the current safe-Rust tree; remaining gaps stay visible in the current coverage table. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 500 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `b6b8e5f8-30be-410b-a5f5-a549c101a8e2` is bound to the current safe-Rust tree; remaining gaps stay visible in the current coverage table. |
 | W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 242 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
@@ -597,7 +597,7 @@ The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
 directly. The accepted product-claim tuple remains revision-bound to the
 historical Pillow parity record at `36b9396`; the current hash and
-coverage-evidence refresh is bound to `d2794f03` and does not silently rewrite
+coverage-evidence refresh is bound to `260c8646` and does not silently rewrite
 that parity result.
 
 ## Contract catalog: behavior Pillow cannot prove
@@ -684,8 +684,8 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `d2794f03`, with accepted imported snapshot
-`8d219867-925f-456c-a6fc-7281b8423df0`. The registered command execution and
+commit `260c8646`, with accepted imported snapshot
+`b6b8e5f8-30be-410b-a5f5-a549c101a8e2`. The registered command execution and
 the explicit import provenance are recorded above; the accepted claim ledger
 now records the same revision-bound tuple.
 
@@ -694,7 +694,7 @@ now records the same revision-bound tuple.
 | Lines (managed Coverage MCP) | 96,330 | 107,660 | 89.4761% | 11,330 | 10.5239% |
 | Branches (managed Coverage MCP) | 12,285 | 13,686 | 89.7633% | 1,401 | 10.2367% |
 | Functions (managed Coverage MCP) | 4,915 | 5,671 | 86.6690% | 756 | 13.3310% |
-| Regions (managed Coverage MCP) | 144,978 | 163,481 | 88.6819% | 18,503 | 11.3181% |
+| Regions (managed Coverage MCP) | 144,977 | 163,481 | 88.6813% | 18,504 | 11.3187% |
 
 The compatible comparison snapshot is
 `7e6d8a9f-be30-4aea-be84-22ef114ac517` at code-bearing commit `49c8f78f`.
@@ -845,7 +845,7 @@ category.
 | Transient allocation and peak behavior | Partial / unmeasured | TIFF raw strips reuse the final raster allocation at `122aae0`, and raw tiled layouts place visible rows directly into that raster at `96f5e50`; prior WebP allocation-reuse slices are recorded above and in `docs/testing.md` | Measure allocator counts/retained capacity/peak RSS with a repeatable protocol, then optimize one proven bottleneck at a time. No recoverable-OOM promise is allowed yet. |
 | Progress callbacks | Implemented / locally verified | `CancellationToken::with_progress` emits monotonic `ProgressEvent` values at accepted cooperative checkpoints; `ProgressDecision::Cancel` maps to the existing typed cancellation result. The contract is synchronous, native/WASM identical, and callback panics are intentionally not caught. | Refresh managed target evidence and keep the callback contract covered as new codec checkpoints are added. |
 | Short-write semantics | Current structural contract / partial | `OutputSink::write_all` requires complete acceptance or an error; partial structural writes are tested across available still and sequence writers, and the current checkpointed witness restores an accepted partial segment | Decide whether a future streaming writer needs a byte-counting write API; do not call current structural delivery universal streaming. |
-| Rollback | Current checkpointed contract / partial | `OutputSink::checkpoint`/`rollback` restore opted-in sinks on write, cancellation, flush, and genuine multi-frame sequence failure; rollback failure is typed `OutputWrite` and feature-tested at commit `d2794f03` | Extend rollback only where a caller can provide a real reversible sink position; append-only sinks intentionally retain their documented prefix. |
+| Rollback | Current checkpointed contract / partial | `OutputSink::checkpoint`/`rollback` restore opted-in sinks on write, cancellation, flush, and genuine multi-frame sequence failure; rollback failure is typed `OutputWrite` and feature-tested at commit `260c8646` | Extend rollback only where a caller can provide a real reversible sink position; append-only sinks intentionally retain their documented prefix. |
 | Cleanup and error precedence | Current failure normalization / partially audited | `finish_sink` and `rollback_sink_on_error` now track actual write/flush contact, preserve untouched preflight and pre-cancel errors, suppress flush after failed delivery, and retain rollback-failure precedence | Audit every new progress, allocation, and future short-write path for deterministic cleanup and error precedence; add a regression only when a real branch is found. |
 
 The AVIF sequence path now participates in the shared decoded-byte budget even
@@ -865,7 +865,7 @@ cancellation error with a rollback error would make diagnosis worse.
 hook, or rollback result. This is a Rust-only resource contract and adds no
 parity row.
 
-**Implemented behavior:** Commit `d2794f037bebe2498655346bd0dc6c2c3968e2da`
+**Implemented behavior:** Commit `260c8646ea89eb164bc5116f0d40eb704910dc21`
 adds a safe tracking wrapper around all four public still/sequence sink roots.
 It marks before every `write_all` and `flush`, so partial writes and flush
 failures can restore a real checkpoint. Preflight and pre-cancel failures do
@@ -878,11 +878,11 @@ return `None` retain their documented prefix behavior.
 preflight, pre-cancel, final-segment cancellation, flush failure, still and
 genuine multi-frame GIF sequence recovery, exact prefix restoration, and
 rollback-failure precedence. Full locked tests, formatting, and strict Clippy
-pass. Managed run `d008e96c-d48d-476c-953e-4828cecee166` passed in 203,180 ms;
+pass. Managed run `fd89bf16-bd58-4c30-afd5-c2dfb58acda9` passed in 163,099 ms;
 the lineage-valid explicit LLVM snapshot is
-`8d219867-925f-456c-a6fc-7281b8423df0` at the same commit. Current aggregate
+`b6b8e5f8-30be-410b-a5f5-a549c101a8e2` at the same commit. Current aggregate
 coverage is 96,330/107,660 lines, 12,285/13,686 branches, 4,915/5,671
-functions, and 144,978/163,481 regions. The 100% release gate and RN-003
+functions, and 144,977/163,481 regions. The 100% release gate and RN-003
 remain open.
 
 **Remaining boundary:** This closes the recovery semantics for the current
