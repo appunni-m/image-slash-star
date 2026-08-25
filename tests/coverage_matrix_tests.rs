@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 190);
+    assert_eq!(expected.cases.len(), 191);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4898,6 +4898,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 Some([34_880, 40_768, 45_302, 45_386, 40_125])
             }
             "coverage_i444_rect_01.avif" => Some([34_880, 40_768, 38_246, 37_243, 36_522]),
+            "coverage_i444_rect_02.avif" => Some([34_880, 40_768, 42_220, 40_682, 60_922]),
             "coverage_adst_public_09.avif" => Some([34_880, 40_768, 33_809, 44_126, 55_818]),
             _ => None,
         };
@@ -5397,6 +5398,64 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 4,
                 "AV1 I444 rectangular witness must decode four V leaves"
+            );
+        }
+        if case.fixture == "coverage_i444_rect_02.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                553,
+                "AV1 I444 horizontal-gradient witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-delta_q[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=39413",
+                    "Post-delta_q[-2->2]: r=44296",
+                    "Post-ymode[2]: r=49888",
+                    "Post-uvmode[0]: r=58192",
+                    "Post-tx[1]: r=58192",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=35]: r=33544",
+                    "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=20]: r=58632 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=10]: r=35336 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=40904",
+                    "Post-ymode[2]: r=57256",
+                    "Post-uvmode[0]: r=39896",
+                    "Post-tx[1]: r=39896",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=42272",
+                    "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=20]: r=41224 [x=0,cbx4=2]",
+                    "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=10]: r=33288 [x=0,cbx4=2]",
+                    "Post-skip[0]: r=39493",
+                    "Post-ymode[0]: r=61068",
+                    "Post-uvmode[0]: r=38970",
+                    "Post-filterintramode[0/0]: r=37608",
+                    "Post-tx[1]: r=37608",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=21]: r=55816",
+                    "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=10]: r=48136 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=20]: r=48904 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=59259",
+                    "Post-ymode[2]: r=54532",
+                    "Post-uvmode[0]: r=44992",
+                    "Post-tx[1]: r=44992",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63056",
+                    "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=10]: r=59144 [x=0,cbx4=2]",
+                    "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=20]: r=37640 [x=0,cbx4=2]",
+                ],
+                "AV1 I444 horizontal-gradient witness leaf state"
             );
         }
         assert_eq!(case.decoded_planes.len(), 3);
@@ -5928,6 +5987,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_i444_rect_01.avif" => {
                 "df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54"
+            }
+            "coverage_i444_rect_02.avif" => {
+                "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb"
             }
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"

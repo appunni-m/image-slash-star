@@ -61,7 +61,7 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 256 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 257 AVIF decode rows and 32 encode
 rows:
 
 - 249 decode rows are active: portable still reconstruction and structural
@@ -70,13 +70,16 @@ rows:
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
 
-The newest bounded full-resolution witness is
-`coverage_i444_rect_01.avif`: a 16x16 8-bit lossy 4:4:4 frame with a split
-root and four 8x8 leaves. Its pinned dav1d 1.5.3 trace has 499 entropy
-operations; safe Rust matches its exact 16x16 Y/U/V planes and Pillow RGB8
-bytes, including full-resolution chroma residuals, matrix-10 U/V AC deltas,
-and delta-Q. This is one bounded I444 topology/residual class, not general
-4:4:4 or AV1 support.
+The newest bounded full-resolution witnesses are
+`coverage_i444_rect_01.avif` and `coverage_i444_rect_02.avif`: both are 16x16
+8-bit lossy 4:4:4 frames with a split root and four 8x8 leaves. Safe Rust
+matches their exact dav1d 1.5.3 entropy traces, Y/U/V planes, and Pillow RGB8
+bytes. The second trace has 553 operations, distinct residual/EOB states, and
+a filter-intra leaf; its fixture SHA-256 is
+`fad07546f32d265ddcf03122c8b148705ebff833785b655a1b5e44bbd1d98897` and its
+Pillow RGB SHA-256 is
+`81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb`. These are
+bounded I444 topology/residual witnesses, not general 4:4:4 or AV1 support.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
