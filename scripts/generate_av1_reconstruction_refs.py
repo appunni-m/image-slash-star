@@ -34,6 +34,9 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 DEFAULT_OUTPUT = ROOT / "tests" / "fixtures" / "outputs" / "av1_reconstruction.json"
 DAV1D_COMMIT = "b546257f770768b2c88258c533da38b91a06f737"
+VERTICAL_FOLLOWING_TARGET_FIXTURE = (
+    "coverage_r16x32_following_filter_intra_split_mode3_01.avif"
+)
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
         "file_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
@@ -920,6 +923,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8",
         "size": [32, 16],
     },
+    "coverage_r16x32_following_filter_intra_split_mode3_01.avif": {
+        "file_sha256": "cd15edc5af5d16f553595f9a81a35b472e6e37b4c933a471d613b380037a76f4",
+        "rgb_sha256": "d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186",
+        "size": [32, 32],
+    },
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
@@ -1084,7 +1092,7 @@ def tool_environment(
     return env
 
 
-def instrument(source: Path) -> None:
+def instrument(source: Path, broaden_vertical_following: bool = True) -> None:
     recon_path = source / "src" / "recon.h"
     text = recon_path.read_text()
     old = """\
@@ -1093,7 +1101,7 @@ def instrument(source: Path) -> None:
         t->bx >= 8 && t->bx < 12
 #define DEBUG_B_PIXELS 0
 """
-    new = """\
+    legacy = """\
 #define DEBUG_BLOCK_INFO 1 && \
         (t->by >= 0 && t->by < 4 || \
          (t->by == 4 && f->frame_hdr->width[0] == 32 && \
@@ -1102,6 +1110,20 @@ def instrument(source: Path) -> None:
         t->bx >= 0 && t->bx < 4
 #define DEBUG_B_PIXELS 1
 """
+    broadened = """\
+#define DEBUG_BLOCK_INFO 1 && \
+        (((t->by >= 0 && t->by < 4 || \
+           (t->by == 4 && f->frame_hdr->width[0] == 32 && \
+            f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present && \
+            !f->frame_hdr->allow_screen_content_tools)) && \
+          t->bx >= 0 && t->bx < 4) || \
+         (f->frame_hdr->width[0] == 32 && f->frame_hdr->height == 32 && \
+          !f->frame_hdr->delta.q.present && \
+          !f->frame_hdr->allow_screen_content_tools && \
+          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 8))
+#define DEBUG_B_PIXELS 1
+"""
+    new = broadened if broaden_vertical_following else legacy
     if text.count(old) != 1:
         raise RuntimeError("pinned dav1d debug macros no longer match")
     recon_path.write_text(text.replace(old, new))
@@ -1109,7 +1131,19 @@ def instrument(source: Path) -> None:
     recon_template_path = source / "src" / "recon_tmpl.c"
     text = recon_template_path.read_text()
     old = "    const int dbg = DEBUG_BLOCK_INFO && plane && 0;\n"
-    new = "    const int dbg = DEBUG_BLOCK_INFO;\n"
+    legacy = "    const int dbg = DEBUG_BLOCK_INFO;\n"
+    broadened = """\
+    const int dbg = DEBUG_BLOCK_INFO &&
+                    (((t->by >= 0 && t->by < 4 ||
+                       (t->by == 4 && f->frame_hdr->width[0] == 32 &&
+                        f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present &&
+                        !f->frame_hdr->allow_screen_content_tools)) &&
+                      t->bx >= 0 && t->bx < 4) ||
+                     (f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
+                      bs == BS_16x32 && t->bx >= 4 && t->bx < 8 &&
+                     b->y_mode == FILTER_PRED && b->y_angle == 3));
+"""
+    new = broadened if broaden_vertical_following else legacy
     if text.count(old) != 1:
         raise RuntimeError("pinned dav1d coefficient debug guard no longer matches")
     recon_template_path.write_text(text.replace(old, new))
@@ -1254,12 +1288,13 @@ def build_dav1d(
     meson: Path,
     ninja: Path,
     python_path: Path | None,
+    broaden_vertical_following: bool = True,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
     build = work / "build"
     run(["git", "clone", "--quiet", "--no-local", str(source), str(clone)])
     run(["git", "-C", str(clone), "checkout", "--quiet", DAV1D_COMMIT])
-    instrument(clone)
+    instrument(clone, broaden_vertical_following)
     env = tool_environment(meson, ninja, python_path)
     run(
         [
@@ -1531,11 +1566,26 @@ def generate(
 
     with tempfile.TemporaryDirectory(prefix="image-star-av1-reconstruction-") as name:
         work = Path(name)
-        executable, env = build_dav1d(
-            dav1d_source, work, meson, ninja, python_path
+        legacy_executable, legacy_env = build_dav1d(
+            dav1d_source,
+            work / "legacy",
+            meson,
+            ninja,
+            python_path,
+            broaden_vertical_following=False,
+        )
+        target_executable, target_env = build_dav1d(
+            dav1d_source, work / "target", meson, ninja, python_path
         )
         cases = [
-            decode_fixture(executable, env, work, FIXTURE_DIR / name)
+            decode_fixture(
+                target_executable
+                if name == VERTICAL_FOLLOWING_TARGET_FIXTURE
+                else legacy_executable,
+                target_env if name == VERTICAL_FOLLOWING_TARGET_FIXTURE else legacy_env,
+                work,
+                FIXTURE_DIR / name,
+            )
             for name in EXPECTED_FIXTURES
         ]
     return {

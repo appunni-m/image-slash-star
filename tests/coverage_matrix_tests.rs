@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 196);
+    assert_eq!(expected.cases.len(), 197);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5450,6 +5450,66 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=127]: r=62728 [x=0,cbx4=0]",
                 ],
                 "AV1 following filter-intra split witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_r16x32_following_filter_intra_split_mode3_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 2,
+                    range: 35_904,
+                }],
+                "AV1 following 4:2:0 Vertical16x32 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                4_444,
+                "AV1 following 4:2:0 Vertical16x32 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=34710",
+                    "Post-cdef_idx[0]: r=34710",
+                    "Post-ymode[0]: r=33144",
+                    "Post-uvmode[0]: r=42328",
+                    "Post-filterintramode[0/0]: r=37128",
+                    "Post-tx[2]: r=40656",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=57864",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=254]: r=41224",
+                    "Post-uv-cf-blk[pl=0,tx=7,txtp=0,eob=126]: r=51208 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=7,txtp=0,eob=127]: r=64264 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=62252",
+                    "Post-ymode[0]: r=61228",
+                    "Post-uvmode[0]: r=41570",
+                    "Post-filterintramode[13/3]: r=32818",
+                    "Post-tx[2]: r=32800",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=40968",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=50696",
+                    "Post-uv-cf-blk[pl=0,tx=7,txtp=0,eob=127]: r=47368 [x=0,cbx4=2]",
+                    "Post-uv-cf-blk[pl=1,tx=7,txtp=0,eob=125]: r=47624 [x=0,cbx4=2]",
+                ],
+                "AV1 following 4:2:0 Vertical16x32 witness leaf states"
             );
         }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
@@ -6221,6 +6281,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x32_following_filter_intra_split_mode0_01.avif" => {
                 "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16"
+            }
+            "coverage_r16x32_following_filter_intra_split_mode3_01.avif" => {
+                "d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186"
             }
             "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
                 "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"

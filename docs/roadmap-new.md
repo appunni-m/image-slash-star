@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 262 rows total, 255 active, 7 explicit planned
+- AVIF decode/inspect/verify: 263 rows total, 256 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,486 rows total, 1082 active decode rows, 365 active encode
+- Whole matrix: 1,487 rows total, 1083 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -150,13 +150,23 @@ the corresponding status is recorded in `roadmap.json`:
   Y/U/V planes and Pillow RGB8 bytes. This closes only the origin
   TX8x8 split-transform class; following-leaf split routing, filter-intra modes
   and edges, and AVF-STILL-001 remain partial.
-- The newest bounded following-leaf split proof is
+- The previous bounded following-leaf split proof is
   `coverage_r32x32_following_filter_intra_split_mode0_01.avif`, a 32x32
   8-bit 4:2:0 horizontal split whose following Horizontal32x16 leaf selects
   filter-intra mode 0 and a TX16x16 luma split. Its pinned dav1d trace has
   2,204 entropy operations; safe Rust matches exact Y/U/V planes and Pillow
   RGB8 bytes. It closes only this following-leaf mode-0/TX16x16 class; broader
   filter-intra modes, transform depths, and AVF-STILL-001 remain partial.
+- The newest bounded following-leaf split proof is
+  `coverage_r16x32_following_filter_intra_split_mode3_01.avif`, a 32x32 8-bit
+  4:2:0 vertical split with a right-hand following `Vertical16x32` leaf using
+  filter-intra mode 3, two TX16x16 luma children, and one R8x16 U/V transform
+  each. Its pinned dav1d trace has 4,444 entropy operations; safe Rust matches
+  the exact partition record, every entropy operation, reconstructed Y/U/V
+  planes, and Pillow RGB8 bytes. The production path uses the prepared left
+  edge and dav1d's left-only DC availability rule. This closes only this
+  right-hand 4:2:0 mode-3/R8x16 split class; broader filter-intra modes,
+  topologies, transforms, and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -729,7 +739,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,486 total | 1,089 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,082 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,487 total | 1,090 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,083 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -1966,6 +1976,26 @@ encoded-item SHA-256 is
 `4950daa82b44d07c98f9bd5a48547f060c9e44b40ab625273955e2906d09f608`, and the
 RGB reference SHA-256 is
 `ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16`.
+
+The current bounded right-hand 4:2:0 proof is
+`coverage_r16x32_following_filter_intra_split_mode3_01.avif`: it is a 32x32
+8-bit vertical split whose right-hand `Vertical16x32` leaf selects filter-intra
+mode 3, two TX16x16 luma children, and one R8x16 U/V transform each. Its
+pinned dav1d trace has partition range `35904` and 4,444 entropy operations.
+Safe Rust matches the exact partition record, all entropy operations,
+reconstructed Y/U/V planes, and Pillow RGB8 bytes. The fixture SHA-256 is
+`cd15edc5af5d16f553595f9a81a35b472e6e37b4c933a471d613b380037a76f4`, the
+encoded-item SHA-256 is
+`e25ae8c207af18502b43bebb7ec15f273d437e1673a24168c317040e95915408`, and
+the RGB reference SHA-256 is
+`d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186`.
+The production branch passes the rectangular chroma DC-sign context used by
+the entropy sentence and applies dav1d's left-only DC predictor when the top
+edge is unavailable. A deterministic 100-candidate search across 10 input
+families qualified two candidates; seed 211 is the promoted stable fixture and
+the second qualified candidate remains non-promoted evidence. This closes
+only this right-hand mode-3/R8x16 split class; broader filter-intra modes,
+topologies, transform variants, and AVF-STILL-001 remain open.
 
 **Work:** Close the planned still gaps in dependency order; add sequence
 support and then encoding; expand bit depth, monochrome, planar YUV, alpha,
