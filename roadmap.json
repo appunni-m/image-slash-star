@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
+  "claim_ledger_base_revision": "015fc577c54f65889d5013e296b6c08661349eb4",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1475,
-      "decode_rows": 1078,
+      "total_rows": 1476,
+      "decode_rows": 1079,
       "encode_rows": 397,
-      "decode_active": 1071,
+      "decode_active": 1072,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 251,
-      "decode_active": 244,
+      "decode_rows": 252,
+      "decode_active": 245,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 96498,
-        "total": 107759,
-        "percent": 89.5498,
-        "uncovered": 11261
+        "covered": 96422,
+        "total": 107953,
+        "percent": 89.3185,
+        "uncovered": 11531
       },
       "branch": {
-        "covered": 12298,
-        "total": 13688,
-        "percent": 89.8451,
-        "uncovered": 1390
+        "covered": 12285,
+        "total": 13692,
+        "percent": 89.7239,
+        "uncovered": 1407
       },
       "function": {
-        "covered": 4909,
-        "total": 5668,
-        "percent": 86.6090,
-        "uncovered": 759
+        "covered": 4900,
+        "total": 5678,
+        "percent": 86.2980,
+        "uncovered": 778
       },
       "region": {
-        "covered": 145086,
-        "total": 163503,
-        "percent": 88.7360,
-        "uncovered": 18417
+        "covered": 144807,
+        "total": 163685,
+        "percent": 88.4669,
+        "uncovered": 18878
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
-        "run_id": "ca0f3bf8-b30e-4408-a62a-7d0f0225a0ef",
-        "snapshot_id": "990062a0-f78c-4d14-a0cb-62ef0b8f3f0f",
+        "commit_sha": "015fc577c54f65889d5013e296b6c08661349eb4",
+        "run_id": "6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6",
+        "snapshot_id": "6816f0c9-6837-4149-b112-1609fd04b4a8",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 156934,
+        "duration_ms": 147787,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit 4c8f3257 in 156,934 ms. Automatic ingestion retained stale registered-command provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as accepted snapshot 990062a0. It records 89.5498% lines, 89.8451% branches, 86.6090% functions, and 88.7360% regions; the four-metric release target remains open until all reach 100%. This slice activates one pure-safe-Rust 32x32 8-bit 4:2:0 entropy-mosaic regression witness alongside the existing witness, with exact dav1d/Pillow reconstruction evidence. Coverage MCP reports no newly covered lines, branches, or functions and one additional covered region; the witness is retained for independent coefficient-stream regression value, not as a claim of broad AV1/AVIF completion. It adds no encoder support, no Pillow parity behavior beyond the committed active fixture, and no universal streaming claim.",
+        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit 015fc577 in 147,787 ms. Automatic ingestion retained stale registered-command provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as snapshot 6816f0c9. It records 89.3185% lines, 89.7239% branches, 86.2980% functions, and 88.4669% regions; the four-metric release target remains open until all reach 100%. This slice adds the pure-safe-Rust 16x16 8-bit 4:2:0 PARTITION_V4 witness coverage_v4_vertical_checker.avif with four ordered 4x16 luma leaves, alternating chroma ownership, exact dav1d reconstruction evidence, and exact Pillow RGB bytes. The explicit Coverage MCP review against snapshot 990062a0 reports 2,386 newly covered observations and 2,570 regressed observations while the AV1 block implementation grows; the aggregate rates therefore moved to the values above and remain subject to regression inspection. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
-          "baseline_snapshot_id": "772591b5-d792-452a-9e35-1d3b7d9a8dd5",
-          "line_covered_delta": 0,
-          "line_total_delta": 0,
-          "branch_covered_delta": 0,
-          "branch_total_delta": 0,
-          "function_covered_delta": 0,
-          "function_total_delta": 0,
-          "region_covered_delta": 1,
-          "region_total_delta": 0,
-          "interpretation": "Compared with the previous accepted managed snapshot 772591b5, this fixture-only activation adds one covered region but no newly covered lines, branches, or functions; Coverage MCP reports 6,313 hit-count-only changes and no regressions. The aggregate release target remains open with 11,261 lines, 1,390 branches, 759 functions, and 18,417 regions uncovered."
+          "baseline_commit": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
+          "baseline_snapshot_id": "990062a0-f78c-4d14-a0cb-62ef0b8f3f0f",
+          "line_covered_delta": -76,
+          "line_total_delta": 194,
+          "branch_covered_delta": -13,
+          "branch_total_delta": 4,
+          "function_covered_delta": -9,
+          "function_total_delta": 10,
+          "region_covered_delta": -279,
+          "region_total_delta": 182,
+          "interpretation": "Compared with the immediately preceding accepted managed snapshot 990062a0 at 4c8f3257, this current 015fc577 measurement adds real AV1 block/transform surface: Coverage MCP reports 2,386 newly covered observations, 2,570 regressed observations, 13,107 hit-count-only changes, 8,469 added observations, and 8,332 removed observations. Aggregate line, branch, function, and region rates are 89.3185%, 89.7239%, 86.2980%, and 88.4669%; the release target remains open with 11,531 lines, 1,407 branches, 778 functions, and 18,878 regions uncovered. The next action is regression inspection, not a claim of 100% coverage."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run ca0f3bf8-b30e-4408-a62a-7d0f0225a0ef passed at measured code-bearing commit 4c8f3257 in 156,934 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 990062a0-f78c-4d14-a0cb-62ef0b8f3f0f. It reports 11,261 lines, 1,390 branches, 759 functions, and 18,417 regions uncovered. The entropy-mosaic regression witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run 6b6a97b2-ab34-4dd4-a3d2-a34957ada3e6 passed at measured code-bearing commit 015fc577 in 147,787 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 6816f0c9-6837-4149-b112-1609fd04b4a8. It reports 11,531 lines, 1,407 branches, 778 functions, and 18,878 regions uncovered. The PARTITION_V4 vertical-checker witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -906,6 +906,7 @@
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
         "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled.",
+        "latest_witness": "coverage_v4_vertical_checker.avif is a 16x16 8-bit 4:2:0 PARTITION_V4 case (partition symbol 9) with four ordered 4x16 luma leaves and chroma owned by alternating leaves. The safe decoder matches the pinned dav1d 1.5.3 entropy operations, reconstructed Y/U/V planes, and Pillow RGB8 output exactly; the fixture SHA-256 is b0b4dfb60657f4b87254773d6cca9fbc1ab07c742239fa2e0f3b862785163774 and the RGB reference SHA-256 is cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff. This closes one bounded V4 topology/predictor/transform class only; broader partition/block states, predictors, residual classes, filter-intra modes, tile-local context cases, transform variants, and independent full-frame proofs remain open.",
         "next": "Broaden partition/block states, predictors, residual classes, filter-intra modes, tile-local context cases, transform variants, and independent full-frame proofs beyond the closed 32x32 TX32X32 class."
       },
       "AVF-ENTROPY-001": {
