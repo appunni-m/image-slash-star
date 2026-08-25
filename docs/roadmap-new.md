@@ -121,27 +121,23 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `04774164-3646-4ffb-8016-92f4134de6d6` completed the
-all-feature workload at exact implementation commit `2a141b6f` in 149,426 ms.
-The generated LLVM artifact was explicitly imported as snapshot
-`d4506f36-6103-4de8-935e-9d91dde9f9dc`, so the evidence is bound to that exact
+Managed Coverage MCP run `80357a67-0750-4283-83c6-4870eec3d07e` completed the
+all-feature workload at exact implementation commit
+`bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178` in 143,036 ms and passed. The
+generated LLVM artifact was explicitly imported as snapshot
+`99148741-b4c8-4b7e-8ae3-49650c2c7090`, so the evidence is bound to that exact
 commit. It measures 97,627/108,387 lines (90.0726%), 12,386/13,770 branches
 (89.9492%), 4,976/5,701 functions (87.2829%), and 146,439/164,214 regions
-(89.1757%). This H64x16 slice adds the pure-safe-Rust 64x16 horizontal
-transform/topology/palette witness `coverage_h64x16_horizontal_ramp_01.avif`:
-four 32x16 luma children, chroma-only palette reconstruction, a 4:1 R64x16
-DCT-DCT transform, exact frame-edge context publication, a 641-operation
-dav1d trace, exact Y/U/V planes, and exact Pillow RGB bytes. The explicit
-Coverage MCP incremental review against baseline snapshot
-`51d210ea-df1b-4ca2-89a5-285bf57565d6` reports 3,025 newly covered, 2,894
-regressed, 13,050 hit-count-only, 8,751 added, and 8,482 removed observations;
-aggregate coverage gained 437 lines, 62 branches, 27 functions, and 576
-regions while adding 357, 78, 16, and 476 to the respective denominators.
-Test attribution is unavailable, aggregate coverage is measured, and
-regression inspection remains required. This does not close the AVIF planned
-gaps, transient allocation work, or the four-metric 100% release gate. The
-remaining misses are visible in the managed report, with the largest
-concentration in the intentionally incomplete AV1 block/entropy surface.
+(89.1757%). The explicit Coverage MCP incremental review against baseline
+snapshot `d4506f36-6103-4de8-935e-9d91dde9f9dc` reports 0 newly covered, 0
+regressed, 7,492 hit-count-only, 0 added, and 0 removed observations; aggregate
+line, branch, function, and region deltas are all zero. Test attribution is
+unavailable, but aggregate coverage is measured. This is expected for the
+current fixture-only slice: `coverage_i444_rect_01.avif` adds exact parity
+evidence on the unchanged full-resolution safe-Rust path, so it does not alter
+production-source coverage counters or denominators. The AVIF planned gaps,
+transient allocation work, and four-metric 100% release gate remain open; the
+largest misses remain in the intentionally incomplete AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -168,7 +164,8 @@ This increases the denominator because the slice adds real codec paths, so the
 
 The revision-bound hash tuple remains refreshed at base revision
 `2a141b6fe640af41549b71421fbe4b8f2b134e4f`, while the current managed
-coverage measurement is bound to implementation commit `2a141b6f`;
+coverage measurement is bound to implementation commit
+`bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
