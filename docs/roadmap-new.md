@@ -15,7 +15,7 @@ to be done. The manifest and generated matrix provide machine-backed fixture
 status; CI runs `scripts/verify_roadmap.py` to reject drift between those
 records, the JSON roadmap, and this human rendering.
 
-Reviewed: 2026-08-25
+Reviewed: 2026-08-26
 
 - Current claim-ledger refresh base revision: `2a141b6fe640af41549b71421fbe4b8f2b134e4f`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
@@ -89,13 +89,13 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 258 rows total, 251 active, 7 explicit planned
+- AVIF decode/inspect/verify: 259 rows total, 252 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,482 rows total, 1078 active decode rows, 365 active encode
+- Whole matrix: 1,483 rows total, 1079 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
-- Latest AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
+- Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
   chroma leaves, an exact 1,522-operation dav1d trace, exact Y/U/V planes,
   and exact Pillow RGB output. It exercises geometry-specific matrix-9
@@ -126,6 +126,13 @@ the corresponding status is recorded in `roadmap.json`:
   y-mode 13/filter mode 2 with top=127, left=129, and top-left=128, has a
   pinned 1,168-operation dav1d trace, and matches exact Y/U/V planes and
   Pillow RGB output. It closes only this origin filter-intra class.
+- The latest bounded following-leaf proof is
+  `coverage_r32x32_filter_intra_mode3_01.avif`, a 32x32 8-bit 4:2:0
+  horizontal split with filter-intra mode 3 on both Horizontal32x16 leaves.
+  Its pinned dav1d trace has 4,359 entropy operations; safe Rust reconstructs
+  the following leaf from its prepared spatial edges and matches exact Y/U/V
+  planes and Pillow RGB8 bytes. It closes only this following-leaf mode-3
+  class; broader filter-intra modes and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -134,21 +141,23 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `6167aa05-bbb5-42a9-842f-64556b8a8ef5` completed the
+Managed Coverage MCP run `fa3e9494-15b5-4ae9-8fbe-bb0a4dde29b8` completed the
 all-feature workload at exact implementation commit
-`ab7a23962520aa32a1ac146f10c0f8a788db8df6` in 146,199 ms and passed. Its LLVM
-artifact was ingested as snapshot `5f24b8a8-b87e-4179-ab39-461ef011a34e`, so
-the evidence is bound to that exact commit. It measures 97,649/108,407 lines
-(90.0763%), 12,391/13,776 branches (89.9463%), 4,977/5,703 functions
-(87.2699%), and 146,469/164,246 regions (89.1766%). The explicit Coverage MCP
-incremental review against baseline snapshot
-`9febf1cf-790a-4e46-b8c9-dcd7bb46b235` reports 2 newly covered lines, 0
-regressed lines, 6,807 hit-count-only observations, 16 added observations, and
-4 removed observations. Test attribution is unavailable, but aggregate
-coverage is measured. The origin filter-intra fixture adds a real safe-Rust
-production path and exact parity evidence; the AVIF planned gaps, transient
-allocation work, and four-metric 100% release gate remain open. The largest
-misses remain in the intentionally incomplete AV1 block/entropy surface.
+`cb82fc38a583ae300e144ae0a835373b6667ee9a` in 143,189 ms and passed. Its LLVM
+artifact was ingested as snapshot `5a49459f-785f-4c5a-bab7-0dbad6a0302f`, so
+the evidence is bound to that exact implementation commit. It measures
+97,655/108,413 lines (90.0768%), 12,393/13,778 branches (89.9477%), 4,977/5,703 functions (87.2699%), and 146,482/164,261 regions (89.1764%).
+The explicit Coverage MCP incremental review against baseline snapshot
+`5f24b8a8-b87e-4179-ab39-461ef011a34e` reports +6 covered/+6 total lines,
++2 covered/+2 total branches, 0/+0 functions, and +13 covered/+15 total
+regions. It also reports 553 newly covered, 520 regressed, 7,797 hit-count-
+only, 2,394 added, 2,388 removed, and 211 branch-state-changed observations;
+test attribution is unavailable and changed-line detail is bounded. The
+region percentage is slightly lower because its denominator grew faster than
+covered regions. The new mode-3 fixture adds a real safe-Rust production path
+and exact parity evidence; the AVIF planned gaps, transient allocation work,
+and four-metric 100% release gate remain open. The largest misses remain in
+the intentionally incomplete AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -176,7 +185,7 @@ This increases the denominator because the slice adds real codec paths, so the
 The revision-bound hash tuple remains refreshed at base revision
 `2a141b6fe640af41549b71421fbe4b8f2b134e4f`, while the current managed
 coverage measurement is bound to implementation commit
-`ab7a23962520aa32a1ac146f10c0f8a788db8df6`;
+`cb82fc38a583ae300e144ae0a835373b6667ee9a`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -190,7 +199,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 10,758 lines, 1,385 branches, 726 functions, and 17,777 regions
+- LLVM coverage: 10,758 lines, 1,385 branches, 726 functions, and 17,779 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -316,10 +325,13 @@ transforms, directional/Smooth/filter-intra predictors, and legal chroma EOB
 branches. This narrow runtime contract does not activate the multi-tile or
 other former-native rows. The current R32x16 origin witness proves the
 isolated Horizontal32x16 4:2:0 origin leaf, including its four luma transforms
-and two 16×8 chroma sentences. The R16x64 witness also proves safe 16×16
+and two 16×8 chroma sentences. The new mode-3 witness also proves the
+following Horizontal32x16 leaf reconstructed from prepared spatial edges,
+including its 4,359-operation entropy trace and exact Y/U/V/RGB8 output. The
+R16x64 witness also proves safe 16×16
 matrix-10 luma dequantization and top-only DC prediction for all four vertical
-children when no left neighbor exists; neither witness promotes its broader
-family or following-neighbor cases. Broader
+children when no left neighbor exists; these witnesses do not promote their
+broader families. Broader
 partition/block state, every filter-intra mode, and independent evidence for
 those rows are still required before they can become active.
 
@@ -691,7 +703,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,482 total | 1,085 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,078 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,483 total | 1,086 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,079 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -721,25 +733,28 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `ab7a2396`, with ingested snapshot
-`5f24b8a8-b87e-4179-ab39-461ef011a34e`. The registered command execution and
+commit `cb82fc38`, with ingested snapshot
+`5a49459f-785f-4c5a-bab7-0dbad6a0302f`. The registered command execution and
 the revision-bound provenance are recorded above; the remaining 100% gate is
-still open.
+still open. The later documentation/ledger commit does not relabel that
+implementation measurement.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 97,649 | 108,407 | 90.0763% | 10,758 | 9.9237% |
-| Branches (managed Coverage MCP) | 12,391 | 13,776 | 89.9463% | 1,385 | 10.0537% |
+| Lines (managed Coverage MCP) | 97,655 | 108,413 | 90.0768% | 10,758 | 9.9232% |
+| Branches (managed Coverage MCP) | 12,393 | 13,778 | 89.9477% | 1,385 | 10.0523% |
 | Functions (managed Coverage MCP) | 4,977 | 5,703 | 87.2699% | 726 | 12.7301% |
-| Regions (managed Coverage MCP) | 146,469 | 164,246 | 89.1766% | 17,777 | 10.8234% |
+| Regions (managed Coverage MCP) | 146,482 | 164,261 | 89.1764% | 17,779 | 10.8236% |
 
 The compatible comparison snapshot is
-`990062a0-f78c-4d14-a0cb-62ef0b8f3f0f` at code-bearing commit `4c8f3257`.
-Coverage MCP reports deltas of -76/+194 lines, -13/+4 branches, -9/+10
-functions, and -279/+182 regions (covered/total). It reports 2,386 newly
-covered observations, 2,570 regressed observations, 13,107 hit-count-only
-changes, 8,469 added observations, and 8,332 removed observations; the
-changed AV1 block implementation therefore remains under regression review.
+`5f24b8a8-b87e-4179-ab39-461ef011a34e` at code-bearing commit
+`ab7a23962520aa32a1ac146f10c0f8a788db8df6`. Coverage MCP reports deltas of
++6/+6 lines, +2/+2 branches, 0/+0 functions, and +13/+15 regions
+(covered/total). It reports 553 newly covered observations, 520 regressed
+observations, 7,797 hit-count-only changes, 2,394 added observations, 2,388
+removed observations, and 211 branch-state changes; test attribution is
+unavailable and the changed-line detail is bounded, so the changed AV1 block
+implementation remains under regression review.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:
@@ -1800,6 +1815,15 @@ planes.
 | `AVF-TILE-001` tile raster | broader tile counts/shapes | Decode independently sized tile payloads into one frame canvas with tile-local bounds and shared state only where the AV1 syntax requires it. | Implemented for the committed 256×128 two-column `multitile.avif` fixture: safe Rust decodes and places both tile payloads exactly once, applies frame-global deblocking/CDEF, and matches the independent 98,304-byte RGB reference; the focused reconstruction proof also matches real dav1d all-filter YUV byte-for-byte. Broader tile counts, size combinations, boundary contexts, and full-frame references remain open. |
 | `AVF-ENCODE-001` encoder | all 32 encode rows | Write the AVIF container and a safe Rust AV1 intra encoder, then round-trip emitted bytes through an independent decoder. | Planned; no native or pure-Rust encoder is currently wired. |
 
+The latest `AVF-STILL-001` evidence addition is
+`coverage_r32x32_filter_intra_mode3_01.avif`: both Horizontal32x16 leaves use
+filter-intra mode 3, the following leaf is reconstructed from prepared
+spatial edges, and the pinned dav1d trace has 4,359 entropy operations. Safe
+Rust matches its exact Y/U/V planes and Pillow RGB8 bytes. This closes only
+that following-leaf mode-3 class; other filter-intra modes and edges,
+partition/block states, tile-local contexts, transform variants, and broader
+independent full-frame proofs remain open.
+
 Every row in this map is a pure safe-Rust task. A native oracle may explain a
 bitstream or provide an independent pixel reference, but it cannot satisfy the
 deliverable, change a `planned` row to `active`, or become a target-specific
@@ -1840,7 +1864,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 258 AVIF decode/inspect/verify rows exist: 251 are
+**Current exact state:** 259 AVIF decode/inspect/verify rows exist: 252 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
@@ -1865,6 +1889,16 @@ trace, exact Y/U/V planes, and Pillow RGB8 output; the fixture SHA-256 is
 `2c4eb6014ec79e58d5fbc79b8e89024fbf624b918c4decee0cef790d98914c56` and the
 RGB reference SHA-256 is
 `979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b`.
+
+The latest bounded following-leaf proof is
+`coverage_r32x32_filter_intra_mode3_01.avif`: it is a 32x32 8-bit 4:2:0
+horizontal split with filter-intra mode 3 on both Horizontal32x16 leaves.
+Safe Rust reconstructs the following leaf from prepared spatial edges and
+matches its pinned 4,359-operation dav1d trace, exact Y/U/V planes, and Pillow
+RGB8 output. The fixture SHA-256 is
+`79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29` and the
+RGB reference SHA-256 is
+`8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495`.
 
 **Work:** Close the planned still gaps in dependency order; add sequence
 support and then encoding; expand bit depth, monochrome, planar YUV, alpha,
