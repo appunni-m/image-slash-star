@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
+  "claim_ledger_base_revision": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -48,7 +48,7 @@
       "former_native_remaining": 39
     },
     "tests": {
-      "coverage_matrix_tests": "33/33 matrix tests",
+      "coverage_matrix_tests": "34/34 matrix tests",
       "feature_gate_tests": "66/66 feature-gate tests",
       "doctests": "1/1"
     },
@@ -72,35 +72,35 @@
         "uncovered": 759
       },
       "region": {
-        "covered": 145085,
+        "covered": 145086,
         "total": 163503,
-        "percent": 88.7354,
-        "uncovered": 18418
+        "percent": 88.7360,
+        "uncovered": 18417
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
-        "run_id": "e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd",
-        "snapshot_id": "772591b5-d792-452a-9e35-1d3b7d9a8dd5",
+        "commit_sha": "4c8f3257b68812d1d6c8e583dc4cde42a50dcd81",
+        "run_id": "ca0f3bf8-b30e-4408-a62a-7d0f0225a0ef",
+        "snapshot_id": "990062a0-f78c-4d14-a0cb-62ef0b8f3f0f",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 156535,
+        "duration_ms": 156934,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit ca444cd6 in 156,535 ms. The registered command retained stale approval provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as accepted snapshot 772591b5. It records 89.5498% lines, 89.8451% branches, 86.6090% functions, and 88.7354% regions; the four-metric release target remains open until all reach 100%. This slice adds one pure-safe-Rust 32x32 8-bit 4:2:0 entropy-mosaic reconstruction class, corrects the 32x32 scan orientation and matrix-10 dequantization path, adds exact dav1d/Pillow reconstruction evidence, and makes the strict nightly Clippy and feature-lane contracts pass without allowances. It adds no Pillow parity row and does not claim general AV1/AVIF completion, universal streaming, or complete RN-003 closure.",
+        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit 4c8f3257 in 156,934 ms. Automatic ingestion retained stale registered-command provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as accepted snapshot 990062a0. It records 89.5498% lines, 89.8451% branches, 86.6090% functions, and 88.7360% regions; the four-metric release target remains open until all reach 100%. This slice activates one pure-safe-Rust 32x32 8-bit 4:2:0 entropy-mosaic regression witness alongside the existing witness, with exact dav1d/Pillow reconstruction evidence. Coverage MCP reports no newly covered lines, branches, or functions and one additional covered region; the witness is retained for independent coefficient-stream regression value, not as a claim of broad AV1/AVIF completion. It adds no encoder support, no Pillow parity behavior beyond the committed active fixture, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "260c8646ea89eb164bc5116f0d40eb704910dc21",
-          "baseline_snapshot_id": "b6b8e5f8-30be-410b-a5f5-a549c101a8e2",
-          "line_covered_delta": 168,
-          "line_total_delta": 99,
-          "branch_covered_delta": 13,
-          "branch_total_delta": 2,
-          "function_covered_delta": -6,
-          "function_total_delta": -3,
-          "region_covered_delta": 108,
-          "region_total_delta": 22,
-          "interpretation": "Compared with the previous accepted managed snapshot b6b8e5f8, this code-and-test slice adds 168 covered lines, 13 covered branches, and 108 covered regions while the LLVM function counter decreases by 6 as the generated denominator decreases by 3. It adds 99 lines, 2 branches, and 22 regions to the denominator. The aggregate release target remains open with 11,261 lines, 1,390 branches, 759 functions, and 18,418 regions uncovered."
+          "baseline_commit": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
+          "baseline_snapshot_id": "772591b5-d792-452a-9e35-1d3b7d9a8dd5",
+          "line_covered_delta": 0,
+          "line_total_delta": 0,
+          "branch_covered_delta": 0,
+          "branch_total_delta": 0,
+          "function_covered_delta": 0,
+          "function_total_delta": 0,
+          "region_covered_delta": 1,
+          "region_total_delta": 0,
+          "interpretation": "Compared with the previous accepted managed snapshot 772591b5, this fixture-only activation adds one covered region but no newly covered lines, branches, or functions; Coverage MCP reports 6,313 hit-count-only changes and no regressions. The aggregate release target remains open with 11,261 lines, 1,390 branches, 759 functions, and 18,417 regions uncovered."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd passed at measured code-bearing commit ca444cd6 in 156,535 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 772591b5-d792-452a-9e35-1d3b7d9a8dd5. It reports 11,261 lines, 1,390 branches, 759 functions, and 18,418 regions uncovered. The 32x32 entropy-mosaic contract and strict feature/Clippy gates are covered, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run ca0f3bf8-b30e-4408-a62a-7d0f0225a0ef passed at measured code-bearing commit 4c8f3257 in 156,934 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 990062a0-f78c-4d14-a0cb-62ef0b8f3f0f. It reports 11,261 lines, 1,390 branches, 759 functions, and 18,417 regions uncovered. The entropy-mosaic regression witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
