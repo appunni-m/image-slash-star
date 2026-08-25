@@ -29285,7 +29285,13 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
     let luma_left = left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
         right_edge_16(&neighbor.planes[0])
     });
-    let luma = if let Some(split) = lossy_luma_16x16_horizontal_split {
+    let luma = if let Some(mode) = filter_intra_mode {
+        let prediction =
+            reconstruct_filter_intra_prediction(mode, 32, 16, luma_top[0], &luma_top, &luma_left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        reconstruct_lossy_luma_32x16_from_prediction(prediction, lossy_luma_32x16_coefficients)
+    } else if let Some(split) = lossy_luma_16x16_horizontal_split {
         reconstruct_lossy_luma_32x16_horizontal_split(
             luma_predictor,
             luma_angle,

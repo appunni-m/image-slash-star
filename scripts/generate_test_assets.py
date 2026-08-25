@@ -5281,6 +5281,41 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_mode3_noise():
+        """Generate a deterministic noisy mode-3 filter-intra witness."""
+
+        random_state = random.Random(1015)
+        pixels = bytes(
+            component
+            for _ in range(32 * 32)
+            for component in (random_state.randrange(256) for _ in range(3))
+        )
+        return Image.frombytes("RGB", (32, 32), pixels)
+
+    write_campaign_image(
+        "coverage_r32x32_filter_intra_mode3_01",
+        filter_intra_mode3_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def horizontal_r32x8_ripple():
         """Generate a deterministic PARTITION_H4 32x8-transform witness."""
 
