@@ -1284,8 +1284,8 @@ pub fn encode_sequence_with_token_and_policy(
 /// documented pure-Rust planned gap. A sink that does not opt into checkpointing
 /// may therefore retain a prefix after a write failure, cancellation, or
 /// `flush` failure. Sinks that return a checkpoint have their prefix restored
-/// through [`OutputSink::rollback`] by the public sink APIs when delivery
-/// fails.
+/// through [`OutputSink::rollback`] by the public sink APIs when a write or
+/// `flush` has actually been attempted and delivery fails.
 pub trait OutputSink {
     /// Append one fully accepted encoded segment to this sink.
     ///
@@ -1376,6 +1376,61 @@ impl OutputSink for &mut Vec<u8> {
     }
 }
 
+/// Track whether a public sink operation has contacted its destination.
+///
+/// Validation, policy, and codec errors can occur before any output operation.
+/// They must preserve their original error even for a checkpointed sink; only
+/// a failed write or finalization attempt can make the sink state require
+/// recovery.
+struct DeliveryTrackingSink<'a> {
+    inner: &'a mut dyn OutputSink,
+    delivery_attempted: bool,
+}
+
+impl DeliveryTrackingSink<'_> {
+    fn delivery_attempted(&self) -> bool {
+        self.delivery_attempted
+    }
+}
+
+impl OutputSink for DeliveryTrackingSink<'_> {
+    fn write_all(&mut self, bytes: &[u8]) -> ImageResult<()> {
+        // Set this before forwarding: a sink may accept a prefix and then
+        // return an error, so a failed call is still a delivery attempt.
+        self.delivery_attempted = true;
+        self.inner.write_all(bytes)
+    }
+
+    fn flush(&mut self) -> ImageResult<()> {
+        self.delivery_attempted = true;
+        self.inner.flush()
+    }
+
+    fn checkpoint(&self) -> Option<usize> {
+        self.inner.checkpoint()
+    }
+
+    fn rollback(&mut self, checkpoint: usize) -> ImageResult<()> {
+        self.inner.rollback(checkpoint)
+    }
+}
+
+/// Run one sink operation while remembering whether delivery was attempted.
+fn run_with_delivery_tracking<T, F>(
+    sink: &mut dyn OutputSink,
+    operation: F,
+) -> (bool, ImageResult<T>)
+where
+    F: FnOnce(&mut dyn OutputSink) -> ImageResult<T>,
+{
+    let mut tracked = DeliveryTrackingSink {
+        inner: sink,
+        delivery_attempted: false,
+    };
+    let result = operation(&mut tracked);
+    (tracked.delivery_attempted(), result)
+}
+
 /// Encode a still image into a caller-owned output sink.
 ///
 /// The encoded bytes are produced exactly as by [`encode`] and delivered to
@@ -1425,10 +1480,13 @@ fn encode_to_sink_with_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let checkpoint = sink.checkpoint();
-    let result = encode_to_sink_with_policy_unchecked(img, format, opts, policy, sink);
+    let (delivery_attempted, result) = run_with_delivery_tracking(sink, |sink| {
+        encode_to_sink_with_policy_unchecked(img, format, opts, policy, sink)
+    });
     rollback_sink_on_error(
         sink,
         checkpoint,
+        delivery_attempted,
         result,
         format,
         ImageErrorStage::StillEncode,
@@ -1550,11 +1608,13 @@ fn encode_to_sink_with_token_and_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let checkpoint = sink.checkpoint();
-    let result =
-        encode_to_sink_with_token_and_policy_unchecked(img, format, opts, policy, token, sink);
+    let (delivery_attempted, result) = run_with_delivery_tracking(sink, |sink| {
+        encode_to_sink_with_token_and_policy_unchecked(img, format, opts, policy, token, sink)
+    });
     rollback_sink_on_error(
         sink,
         checkpoint,
+        delivery_attempted,
         result,
         format,
         ImageErrorStage::StillEncode,
@@ -1685,11 +1745,13 @@ fn encode_sequence_to_sink_with_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let checkpoint = sink.checkpoint();
-    let result =
-        encode_sequence_to_sink_with_policy_unchecked(sequence, format, opts, policy, sink);
+    let (delivery_attempted, result) = run_with_delivery_tracking(sink, |sink| {
+        encode_sequence_to_sink_with_policy_unchecked(sequence, format, opts, policy, sink)
+    });
     rollback_sink_on_error(
         sink,
         checkpoint,
+        delivery_attempted,
         result,
         format,
         ImageErrorStage::SequenceEncode,
@@ -1818,12 +1880,15 @@ fn encode_sequence_to_sink_with_token_and_policy_impl(
     sink: &mut dyn OutputSink,
 ) -> ImageResult<usize> {
     let checkpoint = sink.checkpoint();
-    let result = encode_sequence_to_sink_with_token_and_policy_unchecked(
-        sequence, format, opts, policy, token, sink,
-    );
+    let (delivery_attempted, result) = run_with_delivery_tracking(sink, |sink| {
+        encode_sequence_to_sink_with_token_and_policy_unchecked(
+            sequence, format, opts, policy, token, sink,
+        )
+    });
     rollback_sink_on_error(
         sink,
         checkpoint,
+        delivery_attempted,
         result,
         format,
         ImageErrorStage::SequenceEncode,
@@ -1913,6 +1978,7 @@ fn encode_sequence_to_sink_with_token_and_policy_unchecked(
 fn rollback_sink_on_error<T>(
     sink: &mut dyn OutputSink,
     checkpoint: Option<usize>,
+    delivery_attempted: bool,
     result: ImageResult<T>,
     format: ImageFormat,
     stage: ImageErrorStage,
@@ -1920,7 +1986,8 @@ fn rollback_sink_on_error<T>(
     match result {
         Ok(value) => Ok(value),
         Err(error) => {
-            if let Some(checkpoint) = checkpoint
+            if delivery_attempted
+                && let Some(checkpoint) = checkpoint
                 && let Err(rollback_error) = sink.rollback(checkpoint)
             {
                 return Err(ImageError::OutputWrite {
