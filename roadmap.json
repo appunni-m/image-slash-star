@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "015fc577c54f65889d5013e296b6c08661349eb4",
+  "claim_ledger_base_revision": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 97190,
-        "total": 108030,
-        "percent": 89.9658,
-        "uncovered": 10840
+        "covered": 97627,
+        "total": 108387,
+        "percent": 90.0726,
+        "uncovered": 10760
       },
       "branch": {
-        "covered": 12324,
-        "total": 13692,
-        "percent": 90.0088,
-        "uncovered": 1368
+        "covered": 12386,
+        "total": 13770,
+        "percent": 89.9492,
+        "uncovered": 1384
       },
       "function": {
-        "covered": 4949,
-        "total": 5685,
-        "percent": 87.0536,
-        "uncovered": 736
+        "covered": 4976,
+        "total": 5701,
+        "percent": 87.2829,
+        "uncovered": 725
       },
       "region": {
-        "covered": 145863,
-        "total": 163738,
-        "percent": 89.0832,
-        "uncovered": 17875
+        "covered": 146439,
+        "total": 164214,
+        "percent": 89.1757,
+        "uncovered": 17775
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run with explicit report import",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "2cb124b7bad3aeb2cba0876a942c48c4ab567839",
-        "run_id": "2f8abd32-4e28-4520-959b-7a095143d21c",
-        "snapshot_id": "51d210ea-df1b-4ca2-89a5-285bf57565d6",
+        "commit_sha": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
+        "run_id": "04774164-3646-4ffb-8016-92f4134de6d6",
+        "snapshot_id": "d4506f36-6103-4de8-935e-9d91dde9f9dc",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 145610,
+        "duration_ms": 149426,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 2f8abd32-4e28-4520-959b-7a095143d21c passed the all-feature LLVM workload in 145,610 ms. The generated report was explicitly imported after commit 2cb124b7 so the accepted snapshot 51d210ea is bound to the exact implementation commit. It records 89.9658% lines, 90.0088% branches, 87.0536% functions, and 89.0832% regions; the four-metric release target remains open until all reach 100%. This slice adds the pure-safe-Rust 32x32 8-bit 4:2:0 PARTITION_H4 witness coverage_r32x8_h4_ripple_01.avif with three 32x8 luma leaves, 16x4 subsampled chroma leaves, an exact 1,522-operation dav1d trace, exact reconstructed Y/U/V planes, exact Pillow RGB bytes, geometry-specific matrix-9 dequantization, and one-sided DC prediction. The explicit Coverage MCP review against baseline snapshot 64d932ae reports 2,237 newly covered and 2,146 regressed observations, with 273 covered lines, 13 covered branches, 16 covered functions, and 301 covered regions added; test attribution is unavailable, aggregate coverage is measured, and regression inspection remains required. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
+        "note": "Managed Coverage MCP run 04774164-3646-4ffb-8016-92f4134de6d6 passed the all-feature LLVM workload in 149,426 ms. Its generated report was explicitly imported as snapshot d4506f36-6103-4de8-935e-9d91dde9f9dc with exact implementation commit 2a141b6fe640af41549b71421fbe4b8f2b134e4f; the first queued attempt failed before ingestion when the local sccache daemon broke its pipe and is not evidence. The accepted snapshot records 90.0726% lines, 89.9492% branches, 87.2829% functions, and 89.1757% regions; the four-metric release target remains open until all reach 100%. This slice adds the pure-safe-Rust H64x16 8-bit 4:2:0 PARTITION_H4 witness coverage_h64x16_horizontal_ramp_01.avif with four 32x16 luma children, chroma-only palette reconstruction, a 4:1 R64x16 DCT-DCT transform, exact frame-edge context publication, a 641-operation dav1d trace, exact reconstructed Y/U/V planes, and exact Pillow RGB bytes. The explicit Coverage MCP incremental review against baseline snapshot 51d210ea reports 3,025 newly covered and 2,894 regressed observations, 13,050 hit-count-only observations, 8,751 added, and 8,482 removed; aggregate coverage gained 437 lines, 62 branches, 27 functions, and 576 regions while adding 357, 78, 16, and 476 to the respective denominators. Test attribution is unavailable, aggregate coverage is measured, and regression inspection remains required. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "24cc86cb940d64163d34d05e8a589ee9fda97c1a",
-          "baseline_snapshot_id": "64d932ae-81b6-4f2b-a9dc-0f69ddcc3718",
-          "line_covered_delta": 273,
-          "line_total_delta": 65,
-          "branch_covered_delta": 13,
-          "branch_total_delta": 4,
-          "function_covered_delta": 16,
-          "function_total_delta": 7,
-          "region_covered_delta": 301,
-          "region_total_delta": 47,
-          "interpretation": "Compared with the accepted baseline snapshot 64d932ae at 24cc86cb, this current 2cb124b7 measurement adds real AV1 block/transform surface: Coverage MCP reports 2,237 newly covered, 2,146 regressed, 10,854 hit-count-only, 6,764 added, and 6,717 removed observations. Aggregate line, branch, function, and region rates are 89.9658%, 90.0088%, 87.0536%, and 89.0832%; the release target remains open with 10,840 lines, 1,368 branches, 736 functions, and 17,875 regions uncovered. The next action is regression inspection, not a claim of 100% coverage."
+          "baseline_commit": "2cb124b7bad3aeb2cba0876a942c48c4ab567839",
+          "baseline_snapshot_id": "51d210ea-df1b-4ca2-89a5-285bf57565d6",
+          "line_covered_delta": 437,
+          "line_total_delta": 357,
+          "branch_covered_delta": 62,
+          "branch_total_delta": 78,
+          "function_covered_delta": 27,
+          "function_total_delta": 16,
+          "region_covered_delta": 576,
+          "region_total_delta": 476,
+          "interpretation": "Compared with the accepted baseline snapshot 51d210ea at 2cb124b7, this current 2a141b6f measurement adds real H64x16 AV1 block/transform/palette surface: Coverage MCP reports 3,025 newly covered, 2,894 regressed, 13,050 hit-count-only, 8,751 added, and 8,482 removed observations. Aggregate line, branch, function, and region rates are 90.0726%, 89.9492%, 87.2829%, and 89.1757%; the release target remains open with 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. The next action is regression inspection, not a claim of 100% coverage."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 2f8abd32-4e28-4520-959b-7a095143d21c passed in 145,610 ms and its report was explicitly imported as snapshot 51d210ea-df1b-4ca2-89a5-285bf57565d6 against exact implementation commit 2cb124b7. It reports 10,840 lines, 1,368 branches, 736 functions, and 17,875 regions uncovered. The 32x32 H32x8/16x4 matrix witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run 04774164-3646-4ffb-8016-92f4134de6d6 passed in 149,426 ms and its report was explicitly imported as snapshot d4506f36-6103-4de8-935e-9d91dde9f9dc against exact implementation commit 2a141b6fe640af41549b71421fbe4b8f2b134e4f. It reports 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. The H64x16 horizontal transform/topology/palette witness is covered as a pure-safe-Rust fixture, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
