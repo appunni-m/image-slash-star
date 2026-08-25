@@ -1871,7 +1871,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                 let mut tools = tools;
                 tools.palette_context =
                     super::block::PaletteNeighborContext::from_neighbors(node.y, None, None);
-
                 let decoded = if leaves.is_empty() {
                     // A standalone 4x4 image is the one cropped-frame case in
                     // which AV1 codes an 8x8 origin block for a 4x4 visible
@@ -2216,7 +2215,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                         } else {
                             None
                         };
-                        let luma_edge_16 = if (width == 8 || width == 16) && height == 16
+                        let luma_edge_16 = if (width == 4 || width == 8 || width == 16)
+                            && height == 16
                         {
                             let mut complete = true;
                             let edge = std::array::from_fn(|index| {
@@ -2374,7 +2374,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 });
                                 complete.then_some(edge)
                             })
-                        } else if width == 16 && height == 16 {
+                        } else if (width == 4 || width == 16) && height == 16 {
                             let chroma_left_x = node.x.saturating_sub(node.x % 2);
                             let mut chroma_candidates: Vec<_> = leaves
                                 .iter()

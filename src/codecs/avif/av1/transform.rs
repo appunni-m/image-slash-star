@@ -37,9 +37,18 @@ fn inverse_dct4(input: [i32; 4]) -> [i32; 4] {
         .wrapping_mul(181)
         .wrapping_add(128)
         >> 8;
-    let odd_sum = rounded_linear(input[1], 1567, input[3], 312, 2048, 12).wrapping_sub(input[3]);
-    let odd_difference =
-        rounded_linear(input[1], -312, input[3], 1567, 2048, 12).wrapping_add(input[1]);
+    let odd_sum = (input[1]
+        .wrapping_mul(1567)
+        .wrapping_sub(input[3].wrapping_mul(3784 - 4096))
+        .wrapping_add(2048)
+        >> 12)
+        .wrapping_sub(input[3]);
+    let odd_difference = (input[1]
+        .wrapping_mul(3784 - 4096)
+        .wrapping_add(input[3].wrapping_mul(1567))
+        .wrapping_add(2048)
+        >> 12)
+        .wrapping_add(input[1]);
     [
         clamp_intermediate(even_sum.wrapping_add(odd_difference)),
         clamp_intermediate(even_difference.wrapping_add(odd_sum)),
@@ -50,10 +59,20 @@ fn inverse_dct4(input: [i32; 4]) -> [i32; 4] {
 
 fn inverse_dct8(input: [i32; 8]) -> [i32; 8] {
     let even = inverse_dct4([input[0], input[2], input[4], input[6]]);
-    let t4a = rounded_linear(input[1], 799, input[7], 79, 2048, 12).wrapping_sub(input[7]);
+    let t4a = (input[1]
+        .wrapping_mul(799)
+        .wrapping_sub(input[7].wrapping_mul(4017 - 4096))
+        .wrapping_add(2048)
+        >> 12)
+        .wrapping_sub(input[7]);
     let t5a = rounded_linear(input[5], 1703, input[3], -1138, 1024, 11);
     let t6a = rounded_linear(input[5], 1138, input[3], 1703, 1024, 11);
-    let t7a = rounded_linear(input[1], -79, input[7], 799, 2048, 12).wrapping_add(input[1]);
+    let t7a = (input[1]
+        .wrapping_mul(4017 - 4096)
+        .wrapping_add(input[7].wrapping_mul(799))
+        .wrapping_add(2048)
+        >> 12)
+        .wrapping_add(input[1]);
     let t4 = clamp_intermediate(t4a.wrapping_add(t5a));
     let t5 = rounded_linear(
         clamp_intermediate(t7a.wrapping_sub(t6a)),
@@ -1459,8 +1478,11 @@ fn inverse_rectangular_4x16(
     let mut rows = [0_i32; 64];
     for row in 0_usize..16 {
         let input = std::array::from_fn(|column| {
-            let coefficient = coefficients[row.saturating_add(column.saturating_mul(16))];
-            coefficient.wrapping_mul(181).wrapping_add(128) >> 8
+            // R4x16 applies the inverse-sqrt(2) normalization through the
+            // four-point inverse transform itself. Unlike the other
+            // rectangular families, its first pass does not pre-scale the
+            // coefficient before calling the 4-point kernel.
+            coefficients[row.saturating_add(column.saturating_mul(16))]
         });
         let transformed = horizontal(input);
         let row_start = row.saturating_mul(4);

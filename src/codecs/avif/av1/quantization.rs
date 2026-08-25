@@ -539,6 +539,29 @@ pub(super) const Y_4X8_MATRIX_10: [u8; 32] = [
     36, 34, 38, 48, 39, 37, 40, 50,
 ];
 
+/// AV1 quantization matrix 9 for a coded 4×16 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][0][RTX_4X16]`.
+// The reference stores this rectangular table in its transposed
+// `qm_tbl_16x4` order, which is the order consumed by the R4×16 coefficient
+// index used by the decoder.
+#[rustfmt::skip]
+pub(super) const Y_4X16_MATRIX_9: [u8; 64] = [
+    31, 32, 32, 32, 32, 32, 32, 33, 34, 35, 35, 38, 40, 42, 45, 46,
+    32, 32, 32, 33, 34, 34, 35, 36, 37, 38, 38, 40, 41, 43, 45, 46,
+    36, 35, 35, 34, 36, 36, 38, 40, 42, 47, 48, 50, 51, 53, 56, 56,
+    44, 42, 41, 41, 42, 42, 42, 44, 48, 52, 54, 58, 60, 63, 66, 67,
+];
+
+/// AV1 quantization matrix 10 for a coded 4×16 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[10][0][RTX_4X16]`.
+#[rustfmt::skip]
+pub(super) const Y_4X16_MATRIX_10: [u8; 64] = [
+    31, 32, 32, 32, 32, 32, 32, 32, 32, 34, 34, 35, 35, 38, 38, 42,
+    32, 32, 32, 32, 32, 33, 33, 34, 34, 35, 35, 36, 36, 39, 39, 42,
+    34, 34, 34, 33, 33, 35, 35, 37, 37, 39, 39, 43, 43, 45, 45, 48,
+    39, 38, 38, 37, 37, 39, 39, 40, 40, 45, 45, 51, 51, 54, 54, 58,
+];
+
 /// AV1 quantization matrix 10 for a coded 16×4 luma transform.
 ///
 /// Rectangular coefficients use dav1d's transposed `qm_tbl_4x16` order:
@@ -678,12 +701,31 @@ pub(super) const UV_4X8_MATRIX_10: [u8; 32] = [
     42, 42, 44, 46, 48, 49, 50, 49, 48, 46, 46, 46, 48, 51, 54, 55,
 ];
 
+/// AV1 quantization matrix 9 for a coded 8×4 subsampled U/V transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][1][RTX_8X4]`.
+#[rustfmt::skip]
+pub(super) const UV_8X4_MATRIX_9: [u8; 32] = [
+    31, 38, 47, 48, 31, 40, 46, 45, 35, 43, 47, 46, 39, 47, 47, 45,
+    43, 47, 50, 50, 47, 47, 53, 55, 46, 46, 53, 58, 48, 46, 54, 59,
+];
+
+/// AV1 quantization matrix 9 for a coded 4×8 subsampled U/V transform.
+///
+/// This is the transpose of [`UV_8X4_MATRIX_9`] in the coefficient order
+/// consumed by `RTX_4X8`.
+#[rustfmt::skip]
+pub(super) const UV_4X8_MATRIX_9: [u8; 32] = [
+    31, 31, 35, 39, 43, 47, 46, 48, 38, 40, 43, 47, 47, 47, 46, 46,
+    47, 46, 47, 47, 50, 53, 53, 54, 48, 45, 46, 45, 50, 55, 58, 59,
+];
+
 #[cfg(test)]
 mod tests {
     use super::{
-        UV_4X4_MATRIX_9, UV_4X4_MATRIX_10, UV_4X8_MATRIX_10, UV_8BIT, UV_8X4_MATRIX_10,
-        UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_9,
-        UV_16X8_MATRIX_10, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9,
+        UV_4X4_MATRIX_9, UV_4X4_MATRIX_10, UV_4X8_MATRIX_9, UV_4X8_MATRIX_10, UV_8BIT,
+        UV_8X4_MATRIX_9, UV_8X4_MATRIX_10, UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9,
+        UV_8X16_MATRIX_10, UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10,
+        Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9, Y_16X4_MATRIX_10,
     };
 
     #[test]
@@ -747,6 +789,29 @@ mod tests {
     }
 
     #[test]
+    fn luma_rectangular_4x16_matrices_match_dav1d_order() {
+        assert_eq!(Y_4X16_MATRIX_9.len(), 64);
+        assert_eq!(Y_4X16_MATRIX_10.len(), 64);
+        assert_eq!(
+            &Y_4X16_MATRIX_9[..16],
+            &[
+                31, 32, 32, 32, 32, 32, 32, 33, 34, 35, 35, 38, 40, 42, 45, 46
+            ]
+        );
+        assert_eq!(
+            &Y_4X16_MATRIX_10[..16],
+            &[
+                31, 32, 32, 32, 32, 32, 32, 32, 32, 34, 34, 35, 35, 38, 38, 42
+            ]
+        );
+        for x in 0..16 {
+            for y in 0..4 {
+                assert_eq!(Y_16X4_MATRIX_10[x * 4 + y], Y_4X16_MATRIX_10[y * 16 + x]);
+            }
+        }
+    }
+
+    #[test]
     fn chroma_matrices_have_checked_8x8_values() {
         assert_eq!(UV_8X8_MATRIX_9.len(), 64);
         assert_eq!(&UV_8X8_MATRIX_9[..8], &[31, 31, 34, 37, 43, 48, 47, 49]);
@@ -765,6 +830,19 @@ mod tests {
         for x in 0..4 {
             for y in 0..8 {
                 assert_eq!(UV_4X8_MATRIX_10[x * 8 + y], UV_8X4_MATRIX_10[y * 4 + x]);
+            }
+        }
+    }
+
+    #[test]
+    fn chroma_matrix_9_has_the_rectangular_8x4_shape() {
+        assert_eq!(UV_8X4_MATRIX_9.len(), 32);
+        assert_eq!(&UV_8X4_MATRIX_9[..8], &[31, 38, 47, 48, 31, 40, 46, 45]);
+        assert_eq!(&UV_8X4_MATRIX_9[24..], &[46, 46, 53, 58, 48, 46, 54, 59]);
+        assert_eq!(UV_4X8_MATRIX_9.len(), 32);
+        for x in 0..4 {
+            for y in 0..8 {
+                assert_eq!(UV_4X8_MATRIX_9[x * 8 + y], UV_8X4_MATRIX_9[y * 4 + x]);
             }
         }
     }
