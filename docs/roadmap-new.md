@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 252 rows total, 245 active, 7 explicit planned
+- AVIF decode/inspect/verify: 253 rows total, 246 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,476 rows total, 1072 active decode rows, 365 active encode
+- Whole matrix: 1,477 rows total, 1073 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
@@ -661,7 +661,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,476 total | 1,079 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,072 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,477 total | 1,080 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,073 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -752,9 +752,13 @@ reach.
 **Work/result:** The latest all-feature native Coverage MCP measurement is
 bound to code-bearing commit `49c8f78f`; its exact aggregate result and
 explicit-import provenance are recorded above. This slice adds the safe-Rust
-R16x4/H4 luma and 8x4 chroma implementation and proves one pinned candidate
-byte-for-byte against the Pillow reference. It changes source mapping and
-coverage denominators; it does not claim that the aggregate 100% gate is done.
+R16x4/H4 luma and 8x4 chroma implementation and proves the pinned
+`coverage_h4_horizontal_bands.avif` candidate byte-for-byte against the pinned
+dav1d planes, 347-operation entropy trace, and Pillow RGB reference. Its
+level-three HorizontalFour tree has four ordered 16x4 luma leaves and 8x4
+chroma ownership on leaves two and four; the second leaf also fixes the 16x4
+DCT_ADST pass-order dispatch. It changes source mapping and coverage
+denominators; it does not claim that the aggregate 100% gate is done.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
@@ -1802,7 +1806,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 252 AVIF decode/inspect/verify rows exist: 245 are
+**Current exact state:** 253 AVIF decode/inspect/verify rows exist: 246 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

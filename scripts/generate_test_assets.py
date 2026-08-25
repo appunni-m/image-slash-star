@@ -5015,6 +5015,39 @@ def gen_avif():
 
     write_v4_vertical_checker()
 
+    def write_h4_horizontal_bands():
+        """Generate the pinned 16x16 4:2:0 PARTITION_H4 witness."""
+
+        bands = (
+            (224, 106, 202),
+            (235, 115, 18),
+            (74, 138, 132),
+            (111, 243, 208),
+        )
+
+        def pixel(x, y):
+            base = bands[min(3, y // 4)]
+            delta = ((x * 3 + y * 7) % 17) - 8
+            return tuple(
+                clamp_channel(channel + delta) for channel in base
+            )
+
+        write_campaign_image(
+            "coverage_h4_horizontal_bands",
+            image_from_pixels((16, 16), pixel),
+            "4:2:0",
+            advanced={
+                "enable-filter-intra": "0",
+                "enable-restoration": "0",
+                "min-partition-size": "4",
+                "max-partition-size": "16",
+            },
+            quality=50,
+            speed=0,
+        )
+
+    write_h4_horizontal_bands()
+
     # Coverage campaign candidates are intentionally declarative and generated
     # through the same pinned Pillow/libaom path as the rest of this file. The
     # manifest decides which candidates become parity rows after public Rust

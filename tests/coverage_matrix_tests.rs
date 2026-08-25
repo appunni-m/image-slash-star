@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 186);
+    assert_eq!(expected.cases.len(), 187);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5295,6 +5295,67 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Horizontal32x16 witness leaf states"
             );
         }
+        if case.fixture == "coverage_h4_horizontal_bands.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 HorizontalFour witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                347,
+                "AV1 HorizontalFour witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-ymode[0]: r=41156",
+                    "Post-tx[14]: r=41156",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=30]: r=64520",
+                    "Post-skip[0]: r=62500",
+                    "Post-ymode[2]: r=34192",
+                    "Post-uvmode[0]: r=39316",
+                    "Post-tx[14]: r=39316",
+                    "Post-y-cf-blk[tx=14,txtp=2,eob=27]: r=51976",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=6]: r=36360 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=6]: r=59400 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=57656",
+                    "Post-ymode[0]: r=44566",
+                    "Post-tx[14]: r=44566",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=27]: r=63240",
+                    "Post-skip[0]: r=61507",
+                    "Post-ymode[0]: r=58838",
+                    "Post-uvmode[13]: r=60928",
+                    "Post-tx[14]: r=56464",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=30]: r=37896",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=1]: r=37640 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=0]: r=54024 [x=0,cbx4=0]",
+                ],
+                "AV1 HorizontalFour witness leaf state and chroma ownership"
+            );
+        }
         assert_eq!(case.decoded_planes.len(), 3);
         for (plane_index, (actual, expected)) in
             actual.planes.iter().zip(&case.decoded_planes).enumerate()
@@ -5827,6 +5888,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_v4_vertical_checker.avif" => {
                 "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff"
+            }
+            "coverage_h4_horizontal_bands.avif" => {
+                "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

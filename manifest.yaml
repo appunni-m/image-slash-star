@@ -4190,6 +4190,10 @@ formats:
       description: 16x16 4:2:0 quality-76 speed-0 PARTITION_V4 witness with four ordered 4x16 luma leaves and chroma owned by alternating leaves
       test_assets:
       - coverage_v4_vertical_checker.avif
+    - id: coverage_h4_horizontal_bands
+      description: 16x16 4:2:0 quality-50 speed-0 PARTITION_H4 witness with four ordered 16x4 luma leaves and chroma owned by alternating leaves
+      test_assets:
+      - coverage_h4_horizontal_bands.avif
     - id: coverage_adst_public_01
       description: 4x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
       test_assets:
