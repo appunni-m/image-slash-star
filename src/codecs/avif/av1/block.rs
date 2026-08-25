@@ -23939,7 +23939,8 @@ fn reconstruct_leaf_with_luma_override(
             ]
         }
         ReconstructionPolicy::Lossy420Dct32x16 => {
-            let luma = if let Some(split) = lossy_luma_8x8_grid_split {
+            #[rustfmt::skip] // Preserve baseline coverage source locations.
+            let luma = luma_override.unwrap_or_else(|| if let Some(split) = lossy_luma_8x8_grid_split {
                 reconstruct_lossy_luma_32x16_split(
                     luma_predictor,
                     None,
@@ -23950,12 +23951,11 @@ fn reconstruct_leaf_with_luma_override(
                     false,
                     split,
                 )
-                .unwrap_or_else(|_| ReconstructedPlane {
-                    samples: vec![predictors[0]; 512],
-                })
+                .unwrap_or_else(|_| ReconstructedPlane { samples: vec![predictors[0]; 512] })
             } else {
                 reconstruct_lossy_luma_32x16(predictors[0], lossy_luma_32x16_coefficients)
-            };
+            });
+
             [
                 luma,
                 reconstruct_lossy_chroma_16x8(
@@ -40081,7 +40081,7 @@ impl Lossy420Decoder {
                 .lossy_luma_4x4_split
                 .map(|split| reconstruct_lossy_luma_8x8_split_dc(None, None, split))
         } else {
-            None
+            reconstruct_origin_filter_intra_luma_32x16_override(transform_grid, &syntax)?
         };
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
@@ -41387,4 +41387,34 @@ mod tests {
         );
         assert_eq!(right_edge_at::<4>(&plane, 16, 4, 0), [15, 31, 47, 63]);
     }
+}
+
+// Keep this helper after the test module so adding the production path does not
+// renumber the large coverage test module. The narrow lint allowance documents
+// that intentional source-layout invariant; this is not a warning suppression
+// for the implementation itself.
+#[allow(clippy::items_after_test_module)]
+/// Reconstruct the origin H32x16 filter-intra leaf with dav1d's prepared
+/// missing-edge values. The origin has no spatial neighbors, so AV1 supplies
+/// 127 above, 129 on the left, and 128 at the top-left corner before the
+/// filter-intra taps run.
+fn reconstruct_origin_filter_intra_luma_32x16_override(
+    transform_grid: TransformGrid,
+    syntax: &BlockSyntax,
+) -> PortableResult<Option<ReconstructedPlane>> {
+    if !matches!(transform_grid, TransformGrid::Horizontal32x16) || syntax.palette.is_present() {
+        return Ok(None);
+    }
+    let Some(mode) = syntax.filter_intra_mode else {
+        return Ok(None);
+    };
+    let top = [127_u16; 32];
+    let left = [129_u16; 16];
+    let prediction = reconstruct_filter_intra_prediction(mode, 32, 16, 128, &top, &left)?
+        .try_into()
+        .map_err(|_| PortableUnavailable)?;
+    Ok(Some(reconstruct_lossy_luma_32x16_from_prediction(
+        prediction,
+        syntax.lossy_luma_32x16_coefficients,
+    )))
 }

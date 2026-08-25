@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 191);
+    assert_eq!(expected.cases.len(), 192);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5092,7 +5092,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 case.partition_blocks, expected_blocks,
                 "AV1 square partition topology case {case_index}"
             );
-        } else if case.fixture == "coverage_r32x16_origin_01.avif" {
+        } else if matches!(case.fixture.as_str(), "coverage_r32x16_origin_01.avif") {
             assert_eq!(
                 case.partition_blocks.len(),
                 2,
@@ -5295,6 +5295,64 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=40200 [x=0,cbx4=0]",
                 ],
                 "AV1 following Horizontal32x16 witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_r32x32_filter_intra_probe_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 1,
+                    range: 38_976,
+                }],
+                "AV1 filter-intra Horizontal32x16 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                1_168,
+                "AV1 filter-intra Horizontal32x16 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=37680",
+                    "Post-cdef_idx[0]: r=37680",
+                    "Post-ymode[0]: r=35868",
+                    "Post-uvmode[0]: r=45544",
+                    "Post-filterintramode[13/2]: r=59376",
+                    "Post-tx[10]: r=59376",
+                    "Post-y-cf-blk[tx=10,txtp=0,eob=503]: r=62216",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=35]: r=38152 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=64776 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=62748",
+                    "Post-ymode[0]: r=61700",
+                    "Post-uvmode[0]: r=41838",
+                    "Post-filterintramode[0/0]: r=61388",
+                    "Post-tx[10]: r=61388",
+                    "Post-y-cf-blk[tx=10,txtp=0,eob=272]: r=64264",
+                    "Post-uv-cf-blk[pl=0,tx=8,txtp=0,eob=35]: r=54280 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=8,txtp=0,eob=35]: r=59400 [x=0,cbx4=0]",
+                ],
+                "AV1 filter-intra Horizontal32x16 witness leaf states"
             );
         }
         if case.fixture == "coverage_h4_horizontal_bands.avif" {
@@ -5948,6 +6006,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x32_following_01.avif" => {
                 "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"
+            }
+            "coverage_r32x32_filter_intra_probe_01.avif" => {
+                "979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b"
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
