@@ -126,6 +126,28 @@ the explicit AVIF decode/encode gaps listed below.
 Coverage MCP's changed-code review keeps the new block reconstruction path as
 the next coverage work.
 
+Latest AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
+adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
+matrix-10 tables, chroma residual-context publication, rectangular DC-sign
+contexts, and exact H4 edge ownership. The pinned 16x16 4:2:0 candidate
+`/tmp/image-star-r16x4-search-q99-nofilter/1600-2.avif` now decodes to the
+exact Pillow RGB bytes: both candidate and reference hash to
+`f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8`.
+The strict format, all-feature test, and stable-toolchain Clippy gates pass.
+
+Coverage MCP executed the registered all-feature LLVM command successfully at
+this commit in runs `1fc0503b-97f0-4638-a133-ddc387005370` (164,768 ms) and
+`c3817fee-921c-4b86-9cc0-e7a206874413` (203,756 ms). Automatic ingestion hit a
+30-second DuckDB timeout, so the exact generated LLVM JSON was explicitly
+imported with commit provenance as snapshot
+`7e6d8a9f-be30-4aea-be84-22ef114ac517`; this is the accepted current
+four-metric Coverage MCP measurement. The managed `coverage_review` change
+task is `supported` and requests regression inspection. Current totals are
+96,290/107,614 lines (89.4772%), 12,283/13,684 branches (89.7618%),
+4,907/5,661 functions (86.6808%), and 144,931/163,425 regions (88.6835%).
+This increases the denominator because the slice adds real codec paths, so the
+100% gate remains open rather than being relabeled as complete.
+
 The revision-bound hash tuple is refreshed at base revision
 `11559fb63009977d77f12a94990a9c5ac8d17d51`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
@@ -672,26 +694,27 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below is exact for the measured code-bearing
-commit `11559fb6`, run `50f55d49-bb37-457b-abdc-46a1bb83234e`, and snapshot
-`cf72703d-9322-4587-8b03-f39bc2129183`. It is the current source-quality
-accounting; the accepted claim ledger remains revision-bound to this exact
-code-bearing revision.
+commit `49c8f78f`, with accepted imported snapshot
+`7e6d8a9f-be30-4aea-be84-22ef114ac517`. The registered command executions and
+the explicit import provenance are recorded above; the accepted claim ledger
+remains separate from this current source-quality accounting.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 96,361 | 106,982 | 90.0722% | 10,621 | 9.9278% |
-| Branches (managed Coverage MCP) | 12,281 | 13,622 | 90.1556% | 1,341 | 9.8444% |
-| Functions (managed Coverage MCP) | 4,905 | 5,629 | 87.1380% | 724 | 12.8620% |
-| Regions (managed Coverage MCP) | 145,018 | 162,551 | 89.2138% | 17,533 | 10.7862% |
+| Lines (managed Coverage MCP) | 96,290 | 107,614 | 89.4772% | 11,324 | 10.5228% |
+| Branches (managed Coverage MCP) | 12,283 | 13,684 | 89.7618% | 1,401 | 10.2382% |
+| Functions (managed Coverage MCP) | 4,907 | 5,661 | 86.6808% | 754 | 13.3192% |
+| Regions (managed Coverage MCP) | 144,931 | 163,425 | 88.6835% | 18,494 | 11.3165% |
 
-The compatible comparison snapshot is `bc3ddb1f-e7af-496d-ae36-9f393c1eef1d`
-at code-bearing commit `82c9a304`. The new managed run passed with one required
-artifact ingested. Coverage MCP reports the denominator-only cleanup deltas
-of -1/-3 lines, 0/0 branches, 0/0 functions, and -1/-3 regions. The current
-managed LLVM JSON report carries the warning that segments are normalized to
-segment-start lines; aggregate region coverage is preserved from its report
-summary. RN-001 therefore remains open for the current source tree: the
-release target is still 100% for all four measures.
+The compatible comparison snapshot is
+`cf72703d-9322-4587-8b03-f39bc2129183` at code-bearing commit `11559fb6`.
+Coverage MCP reports deltas of -71/+632 lines, +2/+62 branches, +2/+32
+functions, and -87/+874 regions (covered/total), because this slice adds
+substantial executable codec surface. The current managed LLVM JSON report
+carries the warning that segments are normalized to segment-start lines;
+aggregate region coverage is preserved from its report summary. RN-001
+therefore remains open for the current source tree: the release target is
+still 100% for all four measures.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
@@ -727,24 +750,23 @@ are not complete. `PARKED` means it is deliberately not current work.
 new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
-**Work/result:** The all-feature native Coverage MCP snapshot was refreshed at
-code-bearing commit `11559fb6`; the exact aggregate result and
-automatic-ingestion provenance are recorded above. This slice removes three
-impossible rectangular-chroma transform arms and adds a private contract for
-all 14 AV1 chroma predictor variants, including nonzero Cfl. It changes source
-mapping and coverage denominators but does not claim a new public capability or
-aggregate feature-coverage improvement.
+**Work/result:** The latest all-feature native Coverage MCP measurement is
+bound to code-bearing commit `49c8f78f`; its exact aggregate result and
+explicit-import provenance are recorded above. This slice adds the safe-Rust
+R16x4/H4 luma and 8x4 chroma implementation and proves one pinned candidate
+byte-for-byte against the Pillow reference. It changes source mapping and
+coverage denominators; it does not claim that the aggregate 100% gate is done.
 Real behavior uses Pillow-visible fixtures or Rust-only feature contracts,
 private models remain origin-registered, and the claim ledger remains separate
 from this cleanup checkpoint.
 
 **Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`, `DOC-005`.
 
-**Done:** not yet. The managed report has no skipped artifact and keeps
-Pillow, Rust-only, and private-model origins distinct, but it reports
-90.0722% lines, 90.1556% branches, 87.1380% functions, and 89.2138% regions.
-Close this item only when all four current metrics reach 100% or an explicit,
-reviewed instrumentation decision changes the release target.
+**Done:** not yet. The accepted current managed report keeps Pillow, Rust-only,
+and private-model origins distinct, but it reports 89.4772% lines, 89.7618%
+branches, 86.6808% functions, and 88.6835% regions. Close this item only when
+all four current metrics reach 100% or an explicit, reviewed instrumentation
+decision changes the release target.
 
 ### RN-002 — WebP 16-bit luminance normalization boundary — DONE (selected slice; historical evidence)
 
