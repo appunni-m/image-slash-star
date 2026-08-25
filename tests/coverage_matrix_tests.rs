@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 189);
+    assert_eq!(expected.cases.len(), 190);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -4897,6 +4897,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 Some([34_880, 40_768, 45_302, 45_386, 40_125])
             }
+            "coverage_i444_rect_01.avif" => Some([34_880, 40_768, 38_246, 37_243, 36_522]),
             "coverage_adst_public_09.avif" => Some([34_880, 40_768, 33_809, 44_126, 55_818]),
             _ => None,
         };
@@ -5354,6 +5355,48 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=0]: r=54024 [x=0,cbx4=0]",
                 ],
                 "AV1 HorizontalFour witness leaf state and chroma ownership"
+            );
+        }
+        if case.fixture == "coverage_i444_rect_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                499,
+                "AV1 I444 rectangular witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| *line == "Post-delta_q[-2->2]: r=44296"),
+                "AV1 I444 rectangular witness must consume delta-Q"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk["))
+                    .count(),
+                4,
+                "AV1 I444 rectangular witness must decode four luma leaves"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=0,"))
+                    .count(),
+                4,
+                "AV1 I444 rectangular witness must decode four U leaves"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=1,"))
+                    .count(),
+                4,
+                "AV1 I444 rectangular witness must decode four V leaves"
             );
         }
         assert_eq!(case.decoded_planes.len(), 3);
@@ -5882,6 +5925,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_adst_public_10.avif" => {
                 "93047df7e452ceca5c0cf243100db0b2e1508e7db35d86dc00ad34b70069db4e"
+            }
+            "coverage_i444_rect_01.avif" => {
+                "df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54"
             }
             "coverage_i444_palette2_square8_four_leaves.avif" => {
                 "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"
