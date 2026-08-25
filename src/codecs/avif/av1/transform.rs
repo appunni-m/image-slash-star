@@ -1722,11 +1722,15 @@ fn inverse_rectangular_32x8(
     const WIDTH: usize = 32;
     const HEIGHT: usize = 8;
 
+    // ✅ VERIFIED: dav1d 1.5.3 src/itx_tmpl.c:71-121 and the
+    // `inv_txfm_fn32(R, 32, 8, 2)` declaration. R32x8 is a 1:4 rectangle,
+    // so it does not receive the inverse-sqrt(2) coefficient scale used by
+    // R16x8. Its first-pass intermediate uses shift=2 before the final
+    // four-bit output shift.
     let mut rows = [0_i32; WIDTH * HEIGHT];
     for row in 0..HEIGHT {
         let input = std::array::from_fn(|column| {
-            let coefficient = coefficients[row.saturating_add(column.saturating_mul(HEIGHT))];
-            coefficient.wrapping_mul(181).wrapping_add(128) >> 8
+            coefficients[row.saturating_add(column.saturating_mul(HEIGHT))]
         });
         let transformed = horizontal(input);
         let row_start = row.saturating_mul(WIDTH);
@@ -1734,7 +1738,7 @@ fn inverse_rectangular_32x8(
     }
 
     for value in &mut rows {
-        *value = clamp_intermediate(value.wrapping_add(1) >> 1);
+        *value = clamp_intermediate(value.wrapping_add(2) >> 2);
     }
 
     let mut output = [0_i32; WIDTH * HEIGHT];

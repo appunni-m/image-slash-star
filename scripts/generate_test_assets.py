@@ -5257,6 +5257,45 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal_r32x8_ripple():
+        """Generate a deterministic PARTITION_H4 32x8-transform witness."""
+
+        def pixel(x, y):
+            band = min(3, y // 8)
+            base = (48, 104, 160, 216)[band]
+            ripple = ((13 * x + 17 * y + x * y) % 31) - 15
+            return (
+                clamp_channel(base + ripple + (8 if (x + y) % 3 else -8)),
+                clamp_channel(base + ripple),
+                clamp_channel(base - ripple),
+            )
+
+        return image_from_pixels((32, 32), pixel)
+
+    write_campaign_image(
+        "coverage_r32x8_h4_ripple_01",
+        horizontal_r32x8_ripple(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def vertical_transform_grid_mosaic(index):
         bands = (44, 100, 156, 212)
 
