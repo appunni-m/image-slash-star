@@ -141,6 +141,13 @@ the corresponding status is recorded in `roadmap.json`:
   dav1d trace has 7,446 entropy operations; safe Rust matches exact Y/U/V
   planes and Pillow RGB8 bytes. This closes only this bounded I444 following-
   leaf class; broader rectangular transforms and AVF-STILL-001 remain partial.
+- The newest bounded origin split proof is
+  `coverage_r32x16_filter_intra_tx8x8_01.avif`, a 32x16 8-bit 4:2:0 origin
+  Horizontal32x16 leaf using filter-intra mode 0 and four TX8x8 luma children.
+  Its pinned dav1d trace has 2,328 entropy operations; safe Rust matches exact
+  Y/U/V planes and Pillow RGB8 bytes. This closes only the origin
+  filter-intra/TX8x8 split-transform class; following-leaf split routing, mode
+  4, other filter-intra modes and edges, and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -149,22 +156,24 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `ac8c0dc2-b48e-4a41-808f-36e98db2307e` completed the
+Managed Coverage MCP run `33227e8b-e8db-448c-b27d-f64d7f9261fc` completed the
 all-feature workload against implementation commit
-`eaeb516b3c9cc5036bc356daac9384ff092e7243` in 144,614 ms and passed. Its LLVM
-artifact was ingested as snapshot `ae932d43-6f49-4b6d-8628-b03715808e5f`. It
-measures 97,928/108,639 lines (90.1407%), 12,413/13,806 branches (89.9102%), 4,989/5,716 functions (87.2813%), and 146,776/164,471 regions (89.2413%).
-The explicit Coverage MCP incremental review against baseline snapshot
-`5a49459f-785f-4c5a-bab7-0dbad6a0302f` reports +273 covered/+226 total lines,
-+20 covered/+28 total branches, +12/+13 functions, and +294/+210 regions. It
-also reports 2,771 newly covered, 2,762 regressed, 11,917 hit-count-only,
-8,556 added, 8,397 removed, and 844 branch-state-changed observations; test
-attribution is unavailable and changed-line detail is bounded. The branch
-percentage is slightly lower because its denominator grew faster than covered
-branches. The new I444 mode-3 fixture adds a real safe-Rust production path
-and exact parity evidence; the AVIF planned gaps, transient allocation work,
-and four-metric 100% release gate remain open. The largest misses remain in
-the intentionally incomplete AV1 block/entropy surface.
+`a7cbec52e67d57ce6a0131e67ac58540ee4d6bb1` in 145,524 ms and passed. Its LLVM
+artifact was ingested as snapshot `ace5586d-348c-401e-9eb9-b1e83c075fcf`. It
+measures 97,943/108,669 lines (90.1297%), 12,414/13,808 branches (89.9044%), 4,993/5,720 functions (87.2902%), and 146,801/164,516 regions (89.2321%). The
+run record is exact for `a7cbec52`; the stored snapshot metadata still reports
+project commit `cb82fc38`, which is retained as a provenance caveat. The
+explicit Coverage MCP incremental review against baseline snapshot
+`ae932d43-6f49-4b6d-8628-b03715808e5f` reports +15 covered/+30 total lines,
++1 covered/+2 total branches, +4/+4 functions, and +25/+45 regions. It also
+reports 1 newly covered, 5 regressed, 7,153 hit-count-only, 40 added, 10
+removed, and 0 branch-state-changed observations; test attribution is
+unavailable and changed-line detail is bounded. The line percentage is slightly
+lower because its denominator grew faster than covered lines. The new origin
+filter-intra TX8x8 fixture adds a real safe-Rust production path and exact
+parity evidence; the AVIF planned gaps, transient allocation work, and
+four-metric 100% release gate remain open. The largest misses remain in the
+intentionally incomplete AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -184,15 +193,17 @@ imported with commit provenance as snapshot
 four-metric Coverage MCP measurement at that revision. The current managed
 measurement is recorded above. The managed `coverage_review` change
 task is `supported` and requests regression inspection. Current totals are
-96,290/107,614 lines (89.4772%), 12,283/13,684 branches (89.7618%),
-4,907/5,661 functions (86.6808%), and 144,931/163,425 regions (88.6835%).
-This increases the denominator because the slice adds real codec paths, so the
-100% gate remains open rather than being relabeled as complete.
+97,943/108,669 lines (90.1297%), 12,414/13,808 branches (89.9044%),
+4,993/5,720 functions (87.2902%), and 146,801/164,516 regions (89.2321%).
+This slice adds real codec paths and increases the denominator, so the 100%
+gate remains open rather than being relabeled as complete.
 
 The revision-bound hash tuple remains refreshed at base revision
 `2a141b6fe640af41549b71421fbe4b8f2b134e4f`, while the current managed
 coverage run is bound to implementation commit
-`eaeb516b3c9cc5036bc356daac9384ff092e7243`;
+`a7cbec52e67d57ce6a0131e67ac58540ee4d6bb1`; the stored snapshot metadata
+still reports project commit `cb82fc38` and that mismatch is retained as a
+provenance caveat;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence
@@ -206,7 +217,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 10,711 lines, 1,393 branches, 727 functions, and 17,695 regions
+- LLVM coverage: 10,726 lines, 1,394 branches, 727 functions, and 17,715 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -740,28 +751,32 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The managed Coverage MCP snapshot below was ingested from the run against
-code-bearing commit `eaeb516b`, with snapshot
-`ae932d43-6f49-4b6d-8628-b03715808e5f`. The registered command execution and
-the revision-bound provenance are recorded above; the remaining 100% gate is
-still open. The later documentation/ledger commit does not relabel that
-implementation measurement.
+code-bearing commit `a7cbec52`, with snapshot
+`ace5586d-348c-401e-9eb9-b1e83c075fcf`. The run record is exact for that
+implementation commit. The stored snapshot metadata reports project commit
+`cb82fc38`; this mismatch is retained as a provenance caveat, not silently
+corrected. The registered command execution and revision-bound provenance are
+recorded above; the remaining 100% gate is still open. The later
+documentation/ledger commit does not relabel that implementation measurement.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 97,928 | 108,639 | 90.1407% | 10,711 | 9.8593% |
-| Branches (managed Coverage MCP) | 12,413 | 13,806 | 89.9102% | 1,393 | 10.0898% |
-| Functions (managed Coverage MCP) | 4,989 | 5,716 | 87.2813% | 727 | 12.7187% |
-| Regions (managed Coverage MCP) | 146,776 | 164,471 | 89.2413% | 17,695 | 10.7587% |
+| Lines (managed Coverage MCP) | 97,943 | 108,669 | 90.1297% | 10,726 | 9.8703% |
+| Branches (managed Coverage MCP) | 12,414 | 13,808 | 89.9044% | 1,394 | 10.0956% |
+| Functions (managed Coverage MCP) | 4,993 | 5,720 | 87.2902% | 727 | 12.7098% |
+| Regions (managed Coverage MCP) | 146,801 | 164,516 | 89.2321% | 17,715 | 10.7679% |
 
 The compatible comparison snapshot is
-`5a49459f-785f-4c5a-bab7-0dbad6a0302f` at the previous code-bearing
-commit `cb82fc38a583ae300e144ae0a835373b6667ee9a`. Coverage MCP reports
-deltas of +273/+226 lines, +20/+28 branches, +12/+13 functions, and +294/+210
-regions (covered/total). It reports 2,771 newly covered observations, 2,762
-regressed observations, 11,917 hit-count-only changes, 8,556 added
-observations, 8,397 removed observations, and 844 branch-state changes; test
-attribution is unavailable and the changed-line detail is bounded, so the
-changed AV1 block implementation remains under regression review.
+`ae932d43-6f49-4b6d-8628-b03715808e5f` at the previous accepted code-bearing
+commit `eaeb516b3c9cc5036bc356daac9384ff092e7243`. Coverage MCP reports
+deltas of +15/+30 lines, +1/+2 branches, +4/+4 functions, and +25/+45
+regions (covered/total). It reports 1 newly covered observation, 5 regressed
+observations, 7,153 hit-count-only changes, 40 added observations, 10 removed
+observations, and 0 branch-state changes; test attribution is unavailable and
+the changed-line detail is bounded, so the changed AV1 block implementation
+remains under regression review. Coverage MCP's stored baseline metadata also
+reports project commit `cb82fc38`; the accepted run/implementation provenance
+above remains the source of the exact code-bearing revision.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:
