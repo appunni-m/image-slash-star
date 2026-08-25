@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 255 rows total, 248 active, 7 explicit planned
+- AVIF decode/inspect/verify: 256 rows total, 249 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,479 rows total, 1075 active decode rows, 365 active encode
+- Whole matrix: 1,480 rows total, 1076 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Latest AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -107,6 +107,12 @@ the corresponding status is recorded in `roadmap.json`:
   dav1d trace has 641 entropy operations, and safe Rust matches the exact
   Y/U/V planes and Pillow RGB output. It closes only this H64x16
   transform/topology/palette class; AVF-STILL-001 remains partial.
+- The current bounded full-resolution proof is `coverage_i444_rect_01.avif`, a
+  16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals.
+  Its pinned dav1d trace has 499 entropy operations; safe Rust matches exact
+  16x16 Y/U/V planes and Pillow RGB8 bytes, including full-resolution chroma
+  residuals, matrix-10 U/V AC deltas, and delta-Q. This closes only this
+  I444 topology/predictor/residual class; AVF-STILL-001 remains partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -613,7 +619,7 @@ that an entire workstream is finished because one slice passed.
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 502 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `d4506f36-6103-4de8-935e-9d91dde9f9dc` is bound to measured commit `2a141b6f`; remaining gaps stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 248 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 249 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
@@ -677,7 +683,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,479 total | 1,082 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,075 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,480 total | 1,083 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,076 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -1776,7 +1782,7 @@ planes.
 
 | Pure-Rust work item | Required before | Exact deliverable | Current state |
 | --- | --- | --- | --- |
-| `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame, the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair, the pinned `coverage_r32x16_origin_01.avif` 32×16 4:2:0 Horizontal32x16 origin leaf, and the pinned `coverage_r16x64_grid_01.avif` 16×64 4:2:0 Vertical16x64 depth-two TX16x16 luma split. The R8x16, Horizontal32x16, and R16x64 fixtures share pinned dav1d topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references; R16x64 additionally verifies the 16×16 matrix-10 luma table and top-only DC prediction for every child without a left neighbor. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. |
+| `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame, the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair, the pinned `coverage_r32x16_origin_01.avif` 32×16 4:2:0 Horizontal32x16 origin leaf, and the pinned `coverage_r16x64_grid_01.avif` 16×64 4:2:0 Vertical16x64 depth-two TX16x16 luma split. The R8x16, Horizontal32x16, and R16x64 fixtures share pinned dav1d topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references; R16x64 additionally verifies the 16×16 matrix-10 luma table and top-only DC prediction for every child without a left neighbor. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The new `coverage_i444_rect_01.avif` adds a 16×16 full-resolution 4:4:4 split-root/four-leaf case with a 499-operation trace, exact Y/U/V planes, full-resolution chroma residuals, matrix-10 U/V AC deltas, delta-Q, and exact public RGB bytes. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. |
 | `AVF-ENTROPY-001` adjacent EOB syntax | the two `portable_lossy_420_q99_eob_*` rows | Implement the EOB-bin and EOB-base branches with their coefficient scans, tokens, signs, dequantization, and transform output; preserve typed `Unsupported` for syntax not yet proven. | Partial: safe Rust handles legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches including EOB-bin-four, and exact UV dequantization plus matrix-10 data. The two mutation controls remain planned because their independent Pillow oracle rejects the mutated sentences; the six-terminal baseline contract is separate syntax evidence and does not activate those rows. |
 | `AVF-SAMPLE-001` sample depth | `high_bitdepth`; later `hdr` | Reconstruct 10/12-bit planes, apply checked sample-to-8-bit conversion at the public boundary, and test overflow, limits, and cancellation. | Partial prerequisite: `av1/sample_depth.rs` now validates 8/10/12-bit nominal ranges and performs explicit high-depth bit truncation; the existing 8-bit materializer uses that checked boundary for color and alpha. Entropy reconstruction, restoration, 4:2:2 decoding, and sequence materialization remain 8-bit-only, so `high_bitdepth` stays planned. |
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
@@ -1826,19 +1832,20 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 255 AVIF decode/inspect/verify rows exist: 248 are
+**Current exact state:** 256 AVIF decode/inspect/verify rows exist: 249 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
 `tests/fixtures/coverage_matrix.json`.
 
-The newest bounded proof is `coverage_r32x8_h4_ripple_01.avif`: a 32x32
-`PARTITION_H4` 4:2:0 frame whose 1,522 entropy operations, reconstructed
-Y/U/V planes, and Pillow RGB output match the pinned dav1d/Pillow references.
-Its fixture SHA-256 is
-`95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd`; the RGB
+The newest bounded proof is `coverage_i444_rect_01.avif`: a 16x16 8-bit
+lossy 4:4:4 frame with a split root and four 8x8 terminals whose 499 entropy
+operations, reconstructed 16x16 Y/U/V planes, and Pillow RGB output match the
+pinned dav1d/Pillow references. It exercises full-resolution chroma residuals,
+matrix-10 U/V AC deltas, and delta-Q. Its fixture SHA-256 is
+`fd6e70ee3664c47f0f622be98f7e654d473caf0076cf5ea9ad6d29375445a4c9`; the RGB
 reference SHA-256 is
-`ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53`.
+`df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54`.
 
 **Work:** Close the planned still gaps in dependency order; add sequence
 support and then encoding; expand bit depth, monochrome, planar YUV, alpha,
