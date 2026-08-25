@@ -900,6 +900,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7",
         "size": [32, 32],
     },
+    "coverage_r32x32_filter_intra_probe_01.avif": {
+        "file_sha256": "2c4eb6014ec79e58d5fbc79b8e89024fbf624b918c4decee0cef790d98914c56",
+        "rgb_sha256": "979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b",
+        "size": [32, 32],
+    },
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
