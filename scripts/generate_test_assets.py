@@ -4987,6 +4987,34 @@ def gen_avif():
                 speed=speed,
             )
 
+    def write_v4_vertical_checker():
+        """Generate the pinned 16x16 4:2:0 PARTITION_V4 witness."""
+
+        def pixel(x, y):
+            band = min(3, x // 4)
+            phase = ((x + band * 3) // 2 + y * (band + 1)) % 4
+            base = (24, 88, 152, 216)[band]
+            return tuple(
+                max(0, min(255, base + phase * step - 18))
+                for step in (1, 3, 5)
+            )
+
+        write_campaign_image(
+            "coverage_v4_vertical_checker",
+            image_from_pixels((16, 16), pixel),
+            "4:2:0",
+            advanced={
+                "enable-filter-intra": "0",
+                "enable-restoration": "0",
+                "min-partition-size": "4",
+                "max-partition-size": "16",
+            },
+            quality=76,
+            speed=0,
+        )
+
+    write_v4_vertical_checker()
+
     # Coverage campaign candidates are intentionally declarative and generated
     # through the same pinned Pillow/libaom path as the rest of this file. The
     # manifest decides which candidates become parity rows after public Rust

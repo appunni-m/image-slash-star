@@ -4186,6 +4186,10 @@ formats:
       description: 32x32 4:2:0 quality-99 entropy mosaic regression witness with a distinct matrix-10 TX32X32 coefficient stream and EOB profile
       test_assets:
       - coverage_entropy_mosaic_01.avif
+    - id: coverage_v4_vertical_checker
+      description: 16x16 4:2:0 quality-76 speed-0 PARTITION_V4 witness with four ordered 4x16 luma leaves and chroma owned by alternating leaves
+      test_assets:
+      - coverage_v4_vertical_checker.avif
     - id: coverage_adst_public_01
       description: 4x8 lossy 4:4:4 quality-99 frame with a repository-generated asymmetric gradient
       test_assets:

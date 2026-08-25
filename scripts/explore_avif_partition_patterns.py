@@ -98,6 +98,60 @@ def checker(block: int) -> Pattern:
     return pattern
 
 
+def vertical_bands(block: int) -> Pattern:
+    """Return a high-contrast pattern with independent vertical bands."""
+
+    def pattern(x: int, _y: int, _width: int, _height: int) -> Color:
+        return A if (x // block) % 2 == 0 else GREEN
+
+    return pattern
+
+
+def horizontal_bands(block: int) -> Pattern:
+    """Return a high-contrast pattern with independent horizontal bands."""
+
+    def pattern(_x: int, y: int, _width: int, _height: int) -> Color:
+        return A if (y // block) % 2 == 0 else GREEN
+
+    return pattern
+
+
+def vertical_ramp(x: int, _y: int, _width: int, _height: int) -> Color:
+    """Return four distinct vertical color bands."""
+
+    return (A, GRAY_32, GREEN, GRAY_127)[min(3, x // 4)]
+
+
+def horizontal_ramp(_x: int, y: int, _width: int, _height: int) -> Color:
+    """Return four distinct horizontal color bands."""
+
+    return (A, GRAY_32, GREEN, GRAY_127)[min(3, y // 4)]
+
+
+def vertical_bands_ripple(x: int, y: int, _width: int, _height: int) -> Color:
+    """Return vertical bands whose luma also varies along each band."""
+
+    base = (32, 88, 160, 224)[min(3, x // 4)]
+    ripple = ((11 * x + 17 * y) % 29) - 14
+    return (
+        max(0, min(255, base + ripple + 18)),
+        max(0, min(255, base + ripple)),
+        max(0, min(255, base + ripple - 18)),
+    )
+
+
+def vertical_checker(x: int, y: int, _width: int, _height: int) -> Color:
+    """Return four vertical bands with different checker frequencies."""
+
+    band = min(3, x // 4)
+    phase = ((x + band * 3) // 2 + y * (band + 1)) % 4
+    base = (24, 88, 152, 216)[band]
+    return tuple(
+        max(0, min(255, base + phase * step - 18))
+        for step in (1, 3, 5)
+    )
+
+
 def changed_sample(x: int, y: int, width: int, height: int) -> Color:
     return GREEN if x == width - 1 and y == height - 1 else A
 
@@ -118,6 +172,14 @@ PATTERNS: tuple[tuple[str, Pattern, AdvancedOptions], ...] = (
     ("diagonal_quadrants", diagonal_quadrants, {}),
     ("checker_8", checker(8), {}),
     ("checker_4", checker(4), {}),
+    ("vertical_bands_2", vertical_bands(2), {}),
+    ("vertical_bands_4", vertical_bands(4), {}),
+    ("horizontal_bands_2", horizontal_bands(2), {}),
+    ("horizontal_bands_4", horizontal_bands(4), {}),
+    ("vertical_ramp", vertical_ramp, {}),
+    ("horizontal_ramp", horizontal_ramp, {}),
+    ("vertical_bands_ripple", vertical_bands_ripple, {}),
+    ("vertical_checker", vertical_checker, {}),
     ("changed_sample", changed_sample, {}),
 )
 
@@ -132,6 +194,7 @@ def encode_pattern(
     quality: int,
     speed: int,
     advanced: AdvancedOptions,
+    subsampling: str,
 ) -> bytes:
     width, height = size
     pixels = [
@@ -148,7 +211,7 @@ def encode_pattern(
         quality=quality,
         speed=speed,
         max_threads=1,
-        subsampling="4:4:4",
+        subsampling=subsampling,
         autotiling=False,
         advanced=advanced,
     )
@@ -173,12 +236,19 @@ def decode_case(
     quality: int,
     speed: int,
     advanced: AdvancedOptions,
+    subsampling: str,
+    retain_dir: Path | None,
 ) -> dict[str, object]:
-    encoded = encode_pattern(size, pattern, quality, speed, advanced)
-    if encoded != encode_pattern(size, pattern, quality, speed, advanced):
+    encoded = encode_pattern(size, pattern, quality, speed, advanced, subsampling)
+    if encoded != encode_pattern(
+        size, pattern, quality, speed, advanced, subsampling
+    ):
         raise RuntimeError(f"nondeterministic AVIF encoding for {name}")
     path = work / f"{name}_{size[0]}x{size[1]}.avif"
     path.write_bytes(encoded)
+    if retain_dir is not None:
+        retain_dir.mkdir(parents=True, exist_ok=True)
+        (retain_dir / path.name).write_bytes(encoded)
     sample, _ = extract_color_item(path)
     sample_path = path.with_suffix(".obu")
     output_path = path.with_suffix(".yuv")
@@ -205,8 +275,15 @@ def decode_case(
         env=environment,
     )
     yuv = output_path.read_bytes()
-    plane_length = size[0] * size[1]
-    if len(yuv) != plane_length * 3:
+    if subsampling == "4:2:0":
+        chroma_size = ((size[0] + 1) // 2, (size[1] + 1) // 2)
+    elif subsampling == "4:2:2":
+        chroma_size = ((size[0] + 1) // 2, size[1])
+    else:
+        chroma_size = size
+    plane_sizes = (size, chroma_size, chroma_size)
+    plane_lengths = [width * height for width, height in plane_sizes]
+    if len(yuv) != sum(plane_lengths):
         raise RuntimeError(f"unexpected decoded YUV length for {name}: {len(yuv)}")
     debug_log, events, entropy_operations, blocks = partition_trace(result.stdout)
     with Image.open(path) as image:
@@ -214,10 +291,11 @@ def decode_case(
         if image.mode != "RGB" or image.size != size:
             raise RuntimeError(f"unexpected Pillow result for {name}")
         pillow = image.tobytes()
-    planes = [
-        yuv[index * plane_length : (index + 1) * plane_length]
-        for index in range(3)
-    ]
+    planes = []
+    offset = 0
+    for plane_length in plane_lengths:
+        planes.append(yuv[offset : offset + plane_length])
+        offset += plane_length
     return {
         "name": name,
         "advanced": advanced,
@@ -232,9 +310,9 @@ def decode_case(
         "decoded_planes": [
             {
                 "sha256": sha256(plane),
-                "row_bytes": row_bytes(plane, size[0], 1),
+                "row_bytes": row_bytes(plane, plane_sizes[index][0], 1),
             }
-            for plane in planes
+            for index, plane in enumerate(planes)
         ],
         "pillow": {
             "sha256": sha256(pillow),
@@ -298,8 +376,26 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--size", type=parse_size, default=(16, 16))
+    parser.add_argument(
+        "--retain-dir",
+        type=Path,
+        help="Retain generated AVIF candidates in this diagnostic directory",
+    )
     parser.add_argument("--quality", type=int, default=100)
     parser.add_argument("--speed", type=int, default=8)
+    parser.add_argument(
+        "--subsampling",
+        choices=("4:4:4", "4:2:2", "4:2:0"),
+        default="4:4:4",
+        help="Chroma subsampling passed to the pinned Pillow AVIF encoder",
+    )
+    parser.add_argument(
+        "--advanced",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Additional libaom advanced option applied to every candidate",
+    )
     parser.add_argument(
         "--bottom-right-color",
         type=parse_color,
@@ -339,6 +435,12 @@ def main() -> None:
         raise RuntimeError("quality must be in 0..100")
     if not 0 <= args.speed <= 10:
         raise RuntimeError("speed must be in 0..10")
+    advanced_options = {}
+    for option in args.advanced:
+        key, separator, value = option.partition("=")
+        if not separator or not key or not value:
+            raise RuntimeError(f"advanced option must be KEY=VALUE: {option!r}")
+        advanced_options[key] = value
     for boundary_x, boundary_y in args.bottom_right_origin or ():
         if boundary_x >= args.size[0] or boundary_y >= args.size[1]:
             raise RuntimeError("bottom-right origin must be inside the declared size")
@@ -363,6 +465,11 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         patterns = [] if args.only_bottom_right_candidates else list(PATTERNS)
+        if advanced_options:
+            patterns = [
+                (name, pattern, {**advanced_options, **advanced})
+                for name, pattern, advanced in patterns
+            ]
         if args.only_bottom_right_candidates and not args.bottom_right_color:
             raise RuntimeError(
                 "only-bottom-right-candidates requires a bottom-right color"
@@ -404,6 +511,8 @@ def main() -> None:
                 args.quality,
                 args.speed,
                 advanced,
+                args.subsampling,
+                args.retain_dir,
             )
             for pattern_name, pattern, advanced in patterns
         ]
