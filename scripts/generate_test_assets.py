@@ -5296,6 +5296,44 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal_h64x16_ramp():
+        """Generate a 64x64 PARTITION_H4 frame with four H64x16 leaves."""
+
+        bands = (
+            (17, 91, 203),
+            (32, 32, 32),
+            (0, 255, 0),
+            (127, 127, 127),
+        )
+
+        return image_from_pixels(
+            (64, 64), lambda _x, y: bands[min(3, y // 4)]
+        )
+
+    write_campaign_image(
+        "coverage_h64x16_horizontal_ramp_01",
+        horizontal_h64x16_ramp(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "64",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def vertical_transform_grid_mosaic(index):
         bands = (44, 100, 156, 212)
 

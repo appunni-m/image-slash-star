@@ -662,8 +662,8 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
-The generated matrix in this tree contains 1,478 total rows: 1,081 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,074 decode rows and
+The generated matrix in this tree contains 1,479 total rows: 1,082 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,075 decode rows and
 365 encode rows are active; 7 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,

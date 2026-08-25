@@ -2817,8 +2817,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),
@@ -3143,8 +3143,8 @@ pub(super) fn validate_complete_lossless_444_partition(
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),
