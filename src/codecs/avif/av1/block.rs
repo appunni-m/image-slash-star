@@ -150,6 +150,13 @@ struct LossyLuma16x16HorizontalSplit {
 }
 
 #[derive(Clone, Copy)]
+struct LossyLuma32x16HorizontalSplit {
+    coefficients: [Option<Lossy32x16TransformCoefficients>; 2],
+    right_contexts: [u8; 2],
+    bottom_contexts: [u8; 2],
+}
+
+#[derive(Clone, Copy)]
 struct LossyLuma16x16VerticalSplit {
     coefficients: LossyLuma16x16SplitCoefficients,
     transforms: [Lossy16x16TransformKind; 4],
@@ -212,6 +219,7 @@ struct BlockSyntax {
     lossy_luma_8x8_grid_split: Option<LossyLuma8x8GridSplit>,
     lossy_luma_16x16_split: Option<LossyLuma16x16Split>,
     lossy_luma_16x16_horizontal_split: Option<LossyLuma16x16HorizontalSplit>,
+    lossy_luma_32x16_horizontal_split: Option<LossyLuma32x16HorizontalSplit>,
     lossy_luma_16x16_vertical_split: Option<LossyLuma16x16VerticalSplit>,
     lossy_luma_16x4_transform: Lossy4x8TransformKind,
     lossy_luma_rect_coefficients: Option<LossyRectTransformCoefficients>,
@@ -838,6 +846,7 @@ enum CoefficientSkipCdf {
     LumaContext(usize),
     LossyLuma8x8Context(usize),
     LossyLuma16x16Context(usize),
+    LossyLuma32x16Context(usize),
     Base,
     OneNonzeroNeighbor,
     TwoNonzeroNeighbors,
@@ -951,8 +960,8 @@ pub(in crate::codecs::avif) struct FirstLeaf {
     /// Residual contexts on the coded luma right and bottom edges. Split
     /// transforms need one context per 4×4 edge segment for the next leaf's
     /// coefficient-skip sentence.
-    pub(in crate::codecs::avif) luma_right_contexts: [u8; 8],
-    pub(in crate::codecs::avif) luma_bottom_contexts: [u8; 8],
+    pub(in crate::codecs::avif) luma_right_contexts: [u8; 16],
+    pub(in crate::codecs::avif) luma_bottom_contexts: [u8; 16],
     /// Tile-local palette metadata retained for the next spatial leaves.
     pub(super) palette_cache: PaletteCacheState,
     #[cfg(coverage)]
@@ -1011,6 +1020,8 @@ pub(super) fn filter_transform_dimensions(
             | TransformGrid::Vertical8x32 => (8, 8),
             // R16x64 depth two terminates in TX16x16 children.
             TransformGrid::Vertical16x64 => (16, 16),
+            // R64x16 depth one terminates in two R32x16 children.
+            TransformGrid::Horizontal64x16 => (32, 16),
             _ => return None,
         }
     } else {
@@ -1376,7 +1387,7 @@ struct BlockCdfs {
     palette_y: [[[u16; 2]; 3]; 7],
     palette_uv: [[u16; 2]; 2],
     palette_size: [[[u16; 7]; 7]; 2],
-    color_map: [[[u16; 8]; 5]; 2],
+    color_map: [[[[u16; 8]; 5]; 7]; 2],
     use_filter_intra: [[u16; 2]; 22],
     filter_intra: [u16; 5],
     coefficient_skip: [[u16; 2]; 2],
@@ -1384,6 +1395,7 @@ struct BlockCdfs {
     lossy_luma_8x8_coefficient_skip: [[u16; 2]; 7],
     lossy_luma_16x16_coefficient_skip: [u16; 2],
     lossy_luma_16x16_coefficient_skip_contexts: [[u16; 2]; 7],
+    lossy_luma_32x16_coefficient_skip_contexts: [[u16; 2]; 7],
     lossy_luma_32x32_coefficient_skip: [u16; 2],
     lossy_luma_64x64_coefficient_skip: [u16; 2],
     lossy_luma_32x32_eob_bin: [u16; 11],
@@ -3041,6 +3053,39 @@ const QCAT2_LUMA_16X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
     [599, 0],
 ];
 
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[*].skip[3][0..=6]`, complemented
+// for the portable range decoder. R32x16 children of an R64x16 transform use
+// transform-context three and retain all seven luma neighbor contexts.
+const QCAT0_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
+    [14_848, 0],
+    [30_950, 0],
+    [25_486, 0],
+    [7_495, 0],
+    [21_845, 0],
+    [1_214, 0],
+    [144, 0],
+];
+
+const QCAT2_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
+    [2_099, 0],
+    [28_936, 0],
+    [21_105, 0],
+    [13_879, 0],
+    [12_986, 0],
+    [9_455, 0],
+    [1_438, 0],
+];
+
+const QCAT3_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
+    [1_097, 0],
+    [30_712, 0],
+    [21_022, 0],
+    [15_916, 0],
+    [14_133, 0],
+    [8_053, 0],
+    [1_284, 0],
+];
+
 // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:277-290 (`txsz`). AV1 stores these
 // probabilities in the source form; the portable range decoder keeps their
 // complements. The final slot in every row is the adaptive-update count.
@@ -3635,18 +3680,106 @@ impl BlockCdfs {
             ],
             color_map: [
                 [
-                    [4_058, 0, 0, 0, 0, 0, 0, 0],
-                    [16_384, 0, 0, 0, 0, 0, 0, 0],
-                    [22_215, 0, 0, 0, 0, 0, 0, 0],
-                    [5_732, 0, 0, 0, 0, 0, 0, 0],
-                    [1_165, 0, 0, 0, 0, 0, 0, 0],
+                    [
+                        [4_058, 0, 0, 0, 0, 0, 0, 0],
+                        [16_384, 0, 0, 0, 0, 0, 0, 0],
+                        [22_215, 0, 0, 0, 0, 0, 0, 0],
+                        [5_732, 0, 0, 0, 0, 0, 0, 0],
+                        [1_165, 0, 0, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [4_891, 2_278, 0, 0, 0, 0, 0, 0],
+                        [21_236, 7_071, 0, 0, 0, 0, 0, 0],
+                        [26_224, 2_534, 0, 0, 0, 0, 0, 0],
+                        [9_750, 4_696, 0, 0, 0, 0, 0, 0],
+                        [853, 383, 0, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [7_196, 4_722, 2_723, 0, 0, 0, 0, 0],
+                        [23_290, 11_178, 5_512, 0, 0, 0, 0, 0],
+                        [25_520, 5_931, 2_944, 0, 0, 0, 0, 0],
+                        [13_601, 8_282, 4_419, 0, 0, 0, 0, 0],
+                        [1_368, 943, 518, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [7_989, 5_813, 4_192, 2_486, 0, 0, 0, 0],
+                        [24_099, 12_404, 8_695, 4_675, 0, 0, 0, 0],
+                        [28_513, 5_203, 3_391, 1_701, 0, 0, 0, 0],
+                        [12_904, 9_094, 6_052, 3_238, 0, 0, 0, 0],
+                        [1_122, 875, 621, 342, 0, 0, 0, 0],
+                    ],
+                    [
+                        [9_636, 7_361, 5_798, 4_333, 2_695, 0, 0, 0],
+                        [25_325, 15_526, 12_051, 8_006, 4_786, 0, 0, 0],
+                        [26_468, 7_906, 5_824, 3_984, 2_097, 0, 0, 0],
+                        [13_852, 9_873, 7_501, 5_333, 3_116, 0, 0, 0],
+                        [1_498, 1_218, 960, 709, 415, 0, 0, 0],
+                    ],
+                    [
+                        [9_663, 7_569, 6_304, 5_084, 3_837, 2_450, 0, 0],
+                        [25_818, 17_321, 13_816, 10_087, 7_201, 4_205, 0, 0],
+                        [25_208, 9_294, 7_278, 5_565, 3_847, 2_060, 0, 0],
+                        [14_224, 10_395, 8_311, 6_573, 4_649, 2_723, 0, 0],
+                        [1_570, 1_317, 1_098, 886, 645, 377, 0, 0],
+                    ],
+                    [
+                        [11_079, 8_885, 7_605, 6_416, 5_262, 3_941, 2_573, 0],
+                        [25_876, 17_383, 14_928, 11_162, 8_481, 6_015, 3_564, 0],
+                        [27_117, 9_586, 7_726, 6_250, 4_786, 3_376, 1_868, 0],
+                        [13_419, 10_190, 8_350, 6_774, 5_244, 3_737, 2_320, 0],
+                        [1_740, 1_498, 1_264, 1_063, 841, 615, 376, 0],
+                    ],
                 ],
                 [
-                    [3_679, 0, 0, 0, 0, 0, 0, 0],
-                    [16_384, 0, 0, 0, 0, 0, 0, 0],
-                    [24_055, 0, 0, 0, 0, 0, 0, 0],
-                    [3_511, 0, 0, 0, 0, 0, 0, 0],
-                    [1_158, 0, 0, 0, 0, 0, 0, 0],
+                    [
+                        [3_679, 0, 0, 0, 0, 0, 0, 0],
+                        [16_384, 0, 0, 0, 0, 0, 0, 0],
+                        [24_055, 0, 0, 0, 0, 0, 0, 0],
+                        [3_511, 0, 0, 0, 0, 0, 0, 0],
+                        [1_158, 0, 0, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [7_511, 3_623, 0, 0, 0, 0, 0, 0],
+                        [20_481, 5_475, 0, 0, 0, 0, 0, 0],
+                        [25_735, 4_808, 0, 0, 0, 0, 0, 0],
+                        [12_623, 7_363, 0, 0, 0, 0, 0, 0],
+                        [2_160, 1_129, 0, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [8_558, 5_593, 2_865, 0, 0, 0, 0, 0],
+                        [22_880, 10_382, 5_554, 0, 0, 0, 0, 0],
+                        [26_867, 6_715, 3_475, 0, 0, 0, 0, 0],
+                        [14_450, 10_616, 4_435, 0, 0, 0, 0, 0],
+                        [2_309, 1_632, 842, 0, 0, 0, 0, 0],
+                    ],
+                    [
+                        [9_788, 7_289, 4_987, 2_782, 0, 0, 0, 0],
+                        [24_355, 11_360, 7_909, 3_894, 0, 0, 0, 0],
+                        [30_511, 3_319, 2_174, 1_170, 0, 0, 0, 0],
+                        [13_579, 11_566, 6_853, 4_148, 0, 0, 0, 0],
+                        [924, 724, 487, 250, 0, 0, 0, 0],
+                    ],
+                    [
+                        [10_551, 8_201, 6_131, 4_085, 2_220, 0, 0, 0],
+                        [25_461, 16_362, 13_132, 8_136, 4_344, 0, 0, 0],
+                        [28_327, 7_704, 5_889, 3_826, 1_849, 0, 0, 0],
+                        [15_558, 12_240, 9_449, 6_018, 3_186, 0, 0, 0],
+                        [2_094, 1_815, 1_372, 1_033, 561, 0, 0, 0],
+                    ],
+                    [
+                        [11_529, 9_600, 7_724, 5_806, 4_063, 2_262, 0, 0],
+                        [26_223, 17_756, 14_764, 10_951, 7_265, 4_067, 0, 0],
+                        [29_320, 6_473, 5_331, 4_064, 2_642, 1_326, 0, 0],
+                        [16_879, 14_445, 11_064, 8_070, 5_792, 3_078, 0, 0],
+                        [1_780, 1_564, 1_289, 1_034, 785, 443, 0, 0],
+                    ],
+                    [
+                        [11_326, 9_480, 8_010, 6_522, 5_119, 3_788, 2_205, 0],
+                        [26_905, 17_835, 15_216, 12_100, 9_085, 6_357, 3_495, 0],
+                        [29_353, 6_958, 5_891, 4_778, 3_545, 2_374, 1_150, 0],
+                        [14_803, 12_684, 10_536, 8_794, 6_494, 4_366, 2_378, 0],
+                        [1_578, 1_439, 1_252, 1_089, 943, 742, 446, 0],
+                    ],
                 ],
             ],
             use_filter_intra: [
@@ -3689,6 +3822,7 @@ impl BlockCdfs {
             // is `CDF1(32363)`; the range decoder stores its complement.
             lossy_luma_16x16_coefficient_skip: [405, 0],
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
+            lossy_luma_32x16_coefficient_skip_contexts: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
             // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3][0]`
             // for the shared transform-context-three luma family. The
             // range decoder stores the complemented CDF value used by the
@@ -4113,6 +4247,7 @@ impl BlockCdfs {
                 cdfs.high_chroma = QCAT2_GENERIC_HIGH_CHROMA;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT2_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_16x16_coefficient_skip_contexts = QCAT2_LUMA_16X16_SKIP_CONTEXTS;
+                cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT2_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT2_LUMA_8X8_EOB_BIN_1D;
                 cdfs.lossy_luma_8x8_eob_high = QCAT2_LUMA_8X8_EOB_HIGH;
@@ -4168,6 +4303,7 @@ impl BlockCdfs {
             }
             3 => {
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
+                cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT3_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT3_LUMA_8X8_EOB_BIN_1D;
                 cdfs.lossy_luma_8x8_eob_high = QCAT3_LUMA_8X8_EOB_HIGH;
@@ -5762,6 +5898,9 @@ fn decode_contextual_skip(
         }
         CoefficientSkipCdf::LossyLuma16x16Context(context) => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip_contexts[context])
+        }
+        CoefficientSkipCdf::LossyLuma32x16Context(context) => {
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x16_coefficient_skip_contexts[context])
         }
         CoefficientSkipCdf::Base => {
             decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
@@ -10163,6 +10302,65 @@ fn decode_lossy_luma_16x16_horizontal_split(
     })
 }
 
+/// Decode the two R32x16 children of a depth-one R64x16 transform tree.
+///
+/// The transform-size symbol has already selected the horizontal split. Each
+/// child has its own luma coefficient-skip sentence; chroma remains on the
+/// block's independent R32x8 transform and is decoded by the caller.
+fn decode_lossy_luma_32x16_horizontal_split(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    mut above_contexts: [u8; 16],
+    left_contexts: [u8; 16],
+) -> PortableResult<LossyLuma32x16HorizontalSplit> {
+    let mut coefficients = [None; 2];
+    let mut right_contexts = [0x40_u8; 2];
+    let mut bottom_contexts = [0x40_u8; 2];
+
+    for column in 0_usize..2 {
+        let above = &above_contexts[column * 8..column * 8 + 8];
+        let left = &left_contexts[..4];
+        let above_context = above
+            .iter()
+            .copied()
+            .fold(0_u8, |context, value| context | value);
+        let left_context = left
+            .iter()
+            .copied()
+            .fold(0_u8, |context, value| context | value);
+        let skipped = decode_contextual_skip(
+            decoder,
+            0,
+            CoefficientSkipCdf::LossyLuma32x16Context(luma_skip_context(
+                above_context,
+                left_context,
+            )),
+            cdfs,
+        );
+        let residual_context = if skipped {
+            0x40
+        } else {
+            let dc_sign_context = coefficient_dc_sign_context_for_dimensions(8, 4, above, left);
+            let result =
+                decode_lossy_luma_32x16_coefficients(decoder, cdfs, quantization, dc_sign_context)?;
+            let context = coefficient_residual_context(&result);
+            coefficients[column] = Some(result);
+            context
+        };
+        above_contexts[column * 8..column * 8 + 8].fill(residual_context);
+        right_contexts[column] = residual_context;
+        bottom_contexts[column] = residual_context;
+        cdfs.last_lossy_luma_residual_context = Some(residual_context);
+    }
+
+    Ok(LossyLuma32x16HorizontalSplit {
+        coefficients,
+        right_contexts,
+        bottom_contexts,
+    })
+}
+
 /// Decode the four TX_16X16 children of a depth-two R16X64 transform tree.
 ///
 /// The R16X64 tree first splits into two R16X32 transforms and then splits
@@ -10765,6 +10963,7 @@ enum LossyLargeCdfSet {
     Luma16x16,
     Luma32x8,
     Luma32x16,
+    Luma64x16,
     Luma32x32,
     Luma64x64,
     Luma8x16,
@@ -10851,7 +11050,7 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             41,
         ),
-        LossyLargeCdfSet::Luma32x16 => (
+        LossyLargeCdfSet::Luma32x16 | LossyLargeCdfSet::Luma64x16 => (
             &[
                 [0, 16, 6, 6, 21],
                 [16, 16, 6, 21, 21],
@@ -10950,6 +11149,12 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_32x32_base[..],
             &mut cdfs.lossy_luma_32x32_high_tokens[..],
         ),
+        LossyLargeCdfSet::Luma64x16 => (
+            &mut cdfs.lossy_luma_32x32_eob_high[..],
+            &mut cdfs.lossy_luma_32x32_eob_base[..],
+            &mut cdfs.lossy_luma_32x32_base[..],
+            &mut cdfs.lossy_luma_32x32_high_tokens[..],
+        ),
         LossyLargeCdfSet::Luma32x32 => (
             &mut cdfs.lossy_luma_32x32_eob_high[..],
             &mut cdfs.lossy_luma_32x32_eob_base[..],
@@ -11022,11 +11227,13 @@ fn decode_lossy_large_two_d_coefficients(
         LossyLargeCdfSet::Luma4x16 => luma_4x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma64x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
         _ => None,
     };
     let dequant_shift = match cdf_set {
         LossyLargeCdfSet::Luma32x16 => 1,
+        LossyLargeCdfSet::Luma64x16 => 1,
         LossyLargeCdfSet::Luma32x32 => 1,
         LossyLargeCdfSet::Luma64x64 => 2,
         _ => 0,
@@ -11383,6 +11590,7 @@ fn decode_lossy_luma_64x16_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy64x16TransformCoefficients> {
     // R64x16 has a 512-coefficient window. Its two-dimensional EOB context is
     // therefore the same eob_bin_512 family used by R16x64 and R32x16.
@@ -11393,7 +11601,7 @@ fn decode_lossy_luma_64x16_coefficients(
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_32X16_SCAN,
@@ -11403,7 +11611,7 @@ fn decode_lossy_luma_64x16_coefficients(
             levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X16_LEVELS,
             eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma32x32,
+            cdf_set: LossyLargeCdfSet::Luma64x16,
         },
     )
     .map_err(|_| PortableUnavailable)?;
@@ -11833,6 +12041,7 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
         | TransformGrid::Vertical16x64
+        | TransformGrid::Horizontal64x16
         | TransformGrid::Square32 => 7,
         _ => 10,
     };
@@ -13296,7 +13505,10 @@ fn decode_palette_plane(
         6,
     );
     let size = usize::try_from(size_symbol.saturating_add(2)).map_err(|_| PortableUnavailable)?;
-    (size == 2).then_some(()).portable()?;
+    (2..=PALETTE_CAPACITY)
+        .contains(&size)
+        .then_some(())
+        .portable()?;
 
     let (cache, cache_count) = palette_cache_entries(
         neighbors.above,
@@ -13321,20 +13533,32 @@ fn decode_palette_plane(
     let mut new_colors = [0_u16; PALETTE_CAPACITY];
     let mut new_count = used_count;
     if new_count < size {
-        let mut previous = u16::try_from(decoder.bits(8)).unwrap_or(u16::MAX);
-        new_colors[new_count] = previous;
+        let max_color = u32::from(u8::MAX);
+        let increment = u32::from(plane == 0);
+        let mut previous = decoder.bits(8).min(max_color);
+        new_colors[new_count] = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
         new_count = new_count.saturating_add(1);
         if new_count < size {
-            let delta_bits = 5_u32.saturating_add(decoder.bits(2));
-            let delta = decoder.bits(delta_bits);
-            let increment = u32::from(plane == 0);
-            let value = u32::from(previous)
-                .saturating_add(delta)
-                .saturating_add(increment)
-                .min(u32::from(u8::MAX));
-            previous = u16::try_from(value).unwrap_or(u16::from(u8::MAX));
-            new_colors[new_count] = previous;
-            new_count = new_count.saturating_add(1);
+            let mut delta_bits = 5_u32.saturating_add(decoder.bits(2));
+            while new_count < size {
+                let delta = decoder.bits(delta_bits);
+                previous = previous
+                    .saturating_add(delta)
+                    .saturating_add(increment)
+                    .min(max_color);
+                new_colors[new_count] = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
+                new_count = new_count.saturating_add(1);
+                if previous.saturating_add(increment) >= max_color {
+                    for color in new_colors.iter_mut().take(size).skip(new_count) {
+                        *color = u16::try_from(max_color).unwrap_or(u16::MAX);
+                    }
+                    new_count = size;
+                    break;
+                }
+                let remaining = max_color.saturating_sub(previous).saturating_sub(increment);
+                let remaining_bits = 1_u32.saturating_add(remaining.ilog2());
+                delta_bits = delta_bits.min(remaining_bits);
+            }
         }
     }
 
@@ -13492,7 +13716,10 @@ fn decode_palette_indices(
             let symbol = decoder.adaptive_symbol(
                 cdfs.color_map
                     .get_mut(plane)
-                    .and_then(|maps| maps.get_mut(context))
+                    .and_then(|maps| {
+                        maps.get_mut(palette_size.saturating_sub(2))
+                            .and_then(|contexts| contexts.get_mut(context))
+                    })
                     .ok_or(PortableUnavailable)?,
                 palette_size.saturating_sub(1),
             );
@@ -13585,8 +13812,19 @@ fn decode_palette_syntax(
         },
     )?;
     let v = decode_palette_v_plane(decoder, u.size)?;
-    let y_indices = decode_palette_indices(decoder, cdfs, 0, y.size, luma_width, luma_height)?;
-    let uv_indices = decode_palette_indices(decoder, cdfs, 1, u.size, chroma_width, chroma_height)?;
+    // A palette may be present on chroma only. In that case AV1 omits the
+    // luma index-map sentence entirely; decoding it with the zero-sized
+    // luma palette would reject a valid stream before the chroma indices.
+    let y_indices = if y.is_present() {
+        decode_palette_indices(decoder, cdfs, 0, y.size, luma_width, luma_height)?
+    } else {
+        [0; PALETTE_MAP_SAMPLES]
+    };
+    let uv_indices = if u.is_present() || v.is_present() {
+        decode_palette_indices(decoder, cdfs, 1, u.size, chroma_width, chroma_height)?
+    } else {
+        [0; PALETTE_MAP_SAMPLES]
+    };
     let palette = PaletteSyntax {
         y,
         u,
@@ -14087,6 +14325,7 @@ fn decode_syntax_with_cdef(
                         | TransformGrid::Vertical8x16
                         | TransformGrid::Vertical16x32
                         | TransformGrid::Vertical16x64
+                        | TransformGrid::Horizontal64x16
                         | TransformGrid::Horizontal32x16
                         | TransformGrid::Horizontal32x8
                         | TransformGrid::Vertical8x32
@@ -14120,6 +14359,7 @@ fn decode_syntax_with_cdef(
     let mut lossy_luma_8x8_grid_split = None;
     let mut lossy_luma_16x16_split = None;
     let mut lossy_luma_16x16_horizontal_split = None;
+    let mut lossy_luma_32x16_horizontal_split = None;
     let mut lossy_luma_16x16_vertical_split = None;
     let mut lossy_luma_16x4_transform = Lossy4x8TransformKind::DctDct;
     let mut lossy_luma_rect_coefficients = None;
@@ -14805,6 +15045,21 @@ fn decode_syntax_with_cdef(
                 }
                 if matches!(transform_grid, TransformGrid::Horizontal64x16) {
                     if plane == 0 {
+                        if transform_depth == 1 {
+                            let split = decode_lossy_luma_32x16_horizontal_split(
+                                decoder,
+                                cdfs,
+                                lossy_quantization,
+                                above_luma_contexts,
+                                left_luma_contexts,
+                            )?;
+                            cdfs.last_lossy_luma_residual_context = Some(split.bottom_contexts[1]);
+                            lossy_luma_32x16_horizontal_split = Some(split);
+                            return Ok([[0_i32; 16]; 64]);
+                        }
+                        if transform_depth != 0 {
+                            return Err(PortableUnavailable);
+                        }
                         let skipped =
                             decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip);
 
@@ -14814,6 +15069,11 @@ fn decode_syntax_with_cdef(
                                     decoder,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_grid(
+                                        transform_grid,
+                                        &above_luma_contexts,
+                                        &left_luma_contexts,
+                                    ),
                                 )
                                 .map_err(|_| PortableUnavailable)?,
                             );
@@ -15488,6 +15748,7 @@ fn decode_syntax_with_cdef(
             lossy_luma_8x8_grid_split,
             lossy_luma_16x16_split,
             lossy_luma_16x16_horizontal_split,
+            lossy_luma_32x16_horizontal_split,
             lossy_luma_16x16_vertical_split,
             lossy_luma_16x4_transform,
             lossy_luma_rect_coefficients,
@@ -18076,6 +18337,105 @@ fn reconstruct_lossy_luma_64x16_smooth_horizontal(
         }
     });
     reconstruct_lossy_luma_64x16_from_prediction(prediction, coefficients)
+}
+
+/// Reconstruct an R64x16 luma block whose transform tree split into two
+/// horizontal R32x16 children.
+fn reconstruct_lossy_luma_64x16_horizontal_split(
+    predictor: LumaPredictor,
+    top: [u16; 64],
+    left: [u16; 16],
+    has_left: bool,
+    split: LossyLuma32x16HorizontalSplit,
+) -> PortableResult<ReconstructedPlane> {
+    const SMOOTH_WEIGHTS_32: [i32; 32] = [
+        255, 240, 225, 210, 196, 182, 169, 157, 145, 133, 122, 111, 101, 92, 83, 74, 66, 59, 52,
+        45, 39, 34, 29, 25, 21, 17, 14, 12, 10, 9, 8, 8,
+    ];
+    let mut samples = vec![0_u16; 1024];
+    for column in 0_usize..2 {
+        let offset_x = column.saturating_mul(32);
+        let child_top: [u16; 32] = top[offset_x..offset_x.saturating_add(32)]
+            .try_into()
+            .map_err(|_| PortableUnavailable)?;
+        let child_left: [u16; 16] = if column == 0 {
+            left
+        } else {
+            std::array::from_fn(|row| samples[row * 64 + offset_x - 1])
+        };
+        let top_left = if column == 0 {
+            child_top[0]
+        } else {
+            top[offset_x - 1]
+        };
+        let child_prediction: [u16; 512] = match predictor {
+            LumaPredictor::Dc => {
+                let value = if has_left || column != 0 {
+                    rectangular_dc_predictor(&child_top, &child_left)
+                } else {
+                    one_sided_dc_predictor_32(child_top)
+                };
+                [value; 512]
+            }
+            LumaPredictor::Vertical => std::array::from_fn(|index| child_top[index % 32]),
+            LumaPredictor::Horizontal => std::array::from_fn(|index| child_left[index / 32]),
+            LumaPredictor::Paeth => std::array::from_fn(|index| {
+                paeth_predictor(child_top[index % 32], child_left[index / 32], top_left)
+            }),
+            LumaPredictor::SmoothHorizontal => std::array::from_fn(|index| {
+                let row = index / 32;
+                let column = index % 32;
+                let weight = SMOOTH_WEIGHTS_32[column];
+                let right = i32::from(child_top[31]);
+                let value = weight
+                    .saturating_mul(i32::from(child_left[row]))
+                    .saturating_add((256_i32.saturating_sub(weight)).saturating_mul(right))
+                    .saturating_add(128)
+                    >> 8;
+                #[expect(
+                    clippy::cast_sign_loss,
+                    reason = "the smooth predictor is explicitly clamped to eight-bit range"
+                )]
+                {
+                    value.clamp(0, 255) as u16
+                }
+            }),
+            _ => return Err(PortableUnavailable),
+        };
+        let child = reconstruct_lossy_luma_32x16_from_prediction(
+            child_prediction,
+            split.coefficients[column],
+        );
+        for (row, source) in child.samples.as_chunks::<32>().0.iter().enumerate() {
+            let output_start = row * 64 + offset_x;
+            samples[output_start..output_start + 32].copy_from_slice(source);
+        }
+    }
+    Ok(ReconstructedPlane { samples })
+}
+
+fn reconstruct_lossy_luma_64x16_horizontal_split_from_prediction(
+    prediction: [u16; 1024],
+    split: LossyLuma32x16HorizontalSplit,
+) -> ReconstructedPlane {
+    let mut samples = vec![0_u16; 1024];
+    for column in 0_usize..2 {
+        let offset_x = column.saturating_mul(32);
+        let child_prediction: [u16; 512] = std::array::from_fn(|index| {
+            let row = index / 32;
+            let x = index % 32;
+            prediction[row * 64 + offset_x + x]
+        });
+        let child = reconstruct_lossy_luma_32x16_from_prediction(
+            child_prediction,
+            split.coefficients[column],
+        );
+        for (row, source) in child.samples.as_chunks::<32>().0.iter().enumerate() {
+            let output_start = row * 64 + offset_x;
+            samples[output_start..output_start + 32].copy_from_slice(source);
+        }
+    }
+    ReconstructedPlane { samples }
 }
 
 fn reconstruct_lossy_chroma_32x8(
@@ -23021,6 +23381,61 @@ fn reconstruct_palette_square16_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> 
     })
 }
 
+fn reconstruct_palette_horizontal64x16_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> {
+    if !syntax.palette.is_present()
+        || !matches!(syntax.transform_grid, TransformGrid::Horizontal64x16)
+        || !matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        || !matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
+    {
+        return None;
+    }
+
+    let luma = if syntax.palette.y.is_present() {
+        let prediction = palette_prediction(syntax.palette.y, syntax.palette.y_indices)?;
+        if let Some(split) = syntax.lossy_luma_32x16_horizontal_split {
+            reconstruct_lossy_luma_64x16_horizontal_split_from_prediction(prediction, split)
+        } else {
+            reconstruct_lossy_luma_64x16_from_prediction(
+                prediction,
+                syntax.lossy_luma_64x16_coefficients,
+            )
+        }
+    } else if let Some(split) = syntax.lossy_luma_32x16_horizontal_split {
+        reconstruct_lossy_luma_64x16_horizontal_split(
+            syntax.luma_predictor,
+            [syntax.luma_predictor.sample(); 64],
+            [syntax.luma_predictor.sample(); 16],
+            false,
+            split,
+        )
+        .ok()?
+    } else {
+        reconstruct_lossy_luma_64x16(
+            syntax.luma_predictor.sample(),
+            syntax.lossy_luma_64x16_coefficients,
+        )
+    };
+    let chroma = |palette: PalettePlane, coefficients| {
+        if palette.is_present() {
+            let prediction = palette_prediction(palette, syntax.palette.uv_indices)?;
+            let prediction = std::array::from_fn(|index| prediction[index]);
+            Some(reconstruct_lossy_chroma_32x8_from_prediction(
+                prediction,
+                coefficients,
+            ))
+        } else {
+            Some(Ok(reconstruct_lossy_chroma_32x8(128, coefficients)))
+        }
+    };
+    let chroma_u = chroma(syntax.palette.u, syntax.lossy_chroma_32x8_coefficients[0])?.ok()?;
+    let chroma_v = chroma(syntax.palette.v, syntax.lossy_chroma_32x8_coefficients[1])?.ok()?;
+
+    Some(ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes: [luma, chroma_u, chroma_v],
+    })
+}
+
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
     reconstruct_leaf_with_luma_override(syntax, predictors, None)
 }
@@ -23032,6 +23447,11 @@ fn reconstruct_leaf_with_luma_override(
 ) -> ClosedLeaf {
     if luma_override.is_none()
         && let Some(leaf) = reconstruct_palette_square8_leaf(syntax)
+    {
+        return leaf;
+    }
+    if luma_override.is_none()
+        && let Some(leaf) = reconstruct_palette_horizontal64x16_leaf(syntax)
     {
         return leaf;
     }
@@ -23065,6 +23485,7 @@ fn reconstruct_leaf_with_luma_override(
         lossy_luma_8x8_grid_split,
         lossy_luma_16x16_split: _,
         lossy_luma_16x16_horizontal_split: _,
+        lossy_luma_32x16_horizontal_split: _,
         lossy_luma_16x16_vertical_split,
         lossy_luma_16x4_transform,
         lossy_luma_rect_coefficients,
@@ -25259,6 +25680,7 @@ fn reconstruct_following_square_leaf(
         lossy_luma_8x8_grid_split: _,
         lossy_luma_16x16_split: _,
         lossy_luma_16x16_horizontal_split: _,
+        lossy_luma_32x16_horizontal_split: _,
         lossy_luma_16x16_vertical_split: _,
         lossy_luma_16x4_transform: _,
         lossy_luma_rect_coefficients: _,
@@ -28409,6 +28831,8 @@ fn reconstruct_following_lossy_420_vertical_64x16_leaf(
         luma_predictor,
         chroma_predictor,
         chroma_angle: _,
+        palette,
+        lossy_luma_32x16_horizontal_split,
         lossy_luma_64x16_coefficients,
         lossy_chroma_32x8_coefficients,
         ..
@@ -28430,31 +28854,49 @@ fn reconstruct_following_lossy_420_vertical_64x16_leaf(
     let luma_left = left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
         right_edge_64x16(&neighbor.planes[0])
     });
-    let luma = match luma_predictor {
-        LumaPredictor::Dc => reconstruct_lossy_luma_64x16_from_prediction(
-            [rectangular_dc_predictor(&luma_top, &luma_left); 1024],
-            lossy_luma_64x16_coefficients,
-        ),
-        LumaPredictor::Vertical => reconstruct_lossy_luma_64x16_from_prediction(
-            std::array::from_fn(|index| luma_top[index % 64]),
-            lossy_luma_64x16_coefficients,
-        ),
-        LumaPredictor::Horizontal => reconstruct_lossy_luma_64x16_from_prediction(
-            std::array::from_fn(|index| luma_left[index / 64]),
-            lossy_luma_64x16_coefficients,
-        ),
-        LumaPredictor::Paeth => reconstruct_lossy_luma_64x16_from_prediction(
-            std::array::from_fn(|index| {
-                paeth_predictor(luma_top[index % 64], luma_left[index / 64], luma_top[0])
-            }),
-            lossy_luma_64x16_coefficients,
-        ),
-        LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_64x16_smooth_horizontal(
+    let luma = if palette.y.is_present() {
+        let prediction =
+            palette_prediction(palette.y, palette.y_indices).ok_or(PortableUnavailable)?;
+        if let Some(split) = lossy_luma_32x16_horizontal_split {
+            reconstruct_lossy_luma_64x16_horizontal_split_from_prediction(prediction, split)
+        } else {
+            reconstruct_lossy_luma_64x16_from_prediction(prediction, lossy_luma_64x16_coefficients)
+        }
+    } else if let Some(split) = lossy_luma_32x16_horizontal_split {
+        reconstruct_lossy_luma_64x16_horizontal_split(
+            luma_predictor,
             luma_top,
             luma_left,
-            lossy_luma_64x16_coefficients,
-        ),
-        _ => return Err(PortableUnavailable),
+            left_neighbor.is_some(),
+            split,
+        )?
+    } else {
+        match luma_predictor {
+            LumaPredictor::Dc => reconstruct_lossy_luma_64x16_from_prediction(
+                [rectangular_dc_predictor(&luma_top, &luma_left); 1024],
+                lossy_luma_64x16_coefficients,
+            ),
+            LumaPredictor::Vertical => reconstruct_lossy_luma_64x16_from_prediction(
+                std::array::from_fn(|index| luma_top[index % 64]),
+                lossy_luma_64x16_coefficients,
+            ),
+            LumaPredictor::Horizontal => reconstruct_lossy_luma_64x16_from_prediction(
+                std::array::from_fn(|index| luma_left[index / 64]),
+                lossy_luma_64x16_coefficients,
+            ),
+            LumaPredictor::Paeth => reconstruct_lossy_luma_64x16_from_prediction(
+                std::array::from_fn(|index| {
+                    paeth_predictor(luma_top[index % 64], luma_left[index / 64], luma_top[0])
+                }),
+                lossy_luma_64x16_coefficients,
+            ),
+            LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_64x16_smooth_horizontal(
+                luma_top,
+                luma_left,
+                lossy_luma_64x16_coefficients,
+            ),
+            _ => return Err(PortableUnavailable),
+        }
     };
 
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
@@ -28475,6 +28917,13 @@ fn reconstruct_following_lossy_420_vertical_64x16_leaf(
             right_edge_32x8(&neighbor.planes[plane])
         });
         let coefficients = lossy_chroma_32x8_coefficients[plane.saturating_sub(1)];
+        if (plane == 1 && palette.u.is_present()) || (plane == 2 && palette.v.is_present()) {
+            let palette_plane = if plane == 1 { palette.u } else { palette.v };
+            let prediction =
+                palette_prediction(palette_plane, palette.uv_indices).ok_or(PortableUnavailable)?;
+            let prediction = std::array::from_fn(|index| prediction[index]);
+            return reconstruct_lossy_chroma_32x8_from_prediction(prediction, coefficients);
+        }
         match chroma_predictor {
             ChromaPredictor::Dc => reconstruct_lossy_chroma_32x8_from_prediction(
                 [rectangular_dc_predictor(&top, &left); 256],
@@ -34831,7 +35280,7 @@ fn visible_leaf(
     chroma_sampling: ChromaSampling,
     tx_context: (u8, u8),
     luma_transform_split: bool,
-    luma_edge_contexts: ([u8; 8], [u8; 8]),
+    luma_edge_contexts: ([u8; 16], [u8; 16]),
 ) -> FirstLeaf {
     let (transform_grid_width, _, _) = transform_grid.properties();
     let coded_width = transform_grid_width.saturating_mul(4);
@@ -34886,10 +35335,10 @@ fn with_palette_cache(mut leaf: FirstLeaf, palette_cache: PaletteCacheState) -> 
     leaf
 }
 
-fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 8], [u8; 8]) {
+fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 16], [u8; 16]) {
     let fallback = lossy_luma_context(syntax);
-    let mut right = [fallback; 8];
-    let mut bottom = [fallback; 8];
+    let mut right = [fallback; 16];
+    let mut bottom = [fallback; 16];
     if let Some(split) = syntax.lossy_luma_8x8_grid_split.as_ref() {
         match split.orientation {
             SplitOrientation::Vertical => {
@@ -34922,6 +35371,12 @@ fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 8], [u8; 8]) {
         for (index, context) in split.bottom_contexts.into_iter().enumerate() {
             bottom[index * 4..index * 4 + 4].fill(context);
         }
+    } else if let Some(split) = syntax.lossy_luma_32x16_horizontal_split.as_ref() {
+        // The right edge is four 4×4 segments high. The bottom edge spans all
+        // sixteen 4×4 segments: each R32x16 child contributes eight slots.
+        right[..4].fill(split.right_contexts[1]);
+        bottom[..8].fill(split.bottom_contexts[0]);
+        bottom[8..].fill(split.bottom_contexts[1]);
     } else if let Some(split) = syntax.lossy_luma_16x16_split.as_ref() {
         for (index, context) in split.right_contexts.into_iter().enumerate() {
             right[index * 4..index * 4 + 4].fill(context);
@@ -35004,7 +35459,7 @@ pub(super) fn combined_luma_edge_contexts_from_positioned_neighbors(
         // admitted split 8x8 tree, where each 4x4 child can leave a different
         // context. Using those arrays for a normal leaf replays the syntax's
         // input fallback rather than the context dav1d stores after coding.
-        let fallback_edge = [neighbor.luma_context; 8];
+        let fallback_edge = [neighbor.luma_context; 16];
         let has_split_edge =
             neighbor.luma_transform_split && (neighbor.width >= 8 || neighbor.height >= 8);
         let edge = if has_split_edge {
@@ -35166,6 +35621,7 @@ fn luma_transform_context(transform_grid: TransformGrid, split: bool) -> (u8, u8
             TransformGrid::Square16 => (1, 1),
             TransformGrid::Vertical16x32 => (1, 1),
             TransformGrid::Vertical16x64 => (2, 2),
+            TransformGrid::Horizontal64x16 => (3, 2),
             TransformGrid::Square32 => (2, 2),
             _ => (0, 0),
         };
@@ -35241,7 +35697,7 @@ pub(super) fn decode_first_lossless_444_leaf(
         ChromaSampling::Full,
         luma_transform_context(transform_grid, false),
         false,
-        ([0x40; 8], [0x40; 8]),
+        ([0x40; 16], [0x40; 16]),
     ))
 }
 
@@ -37348,7 +37804,7 @@ pub(super) fn decode_first_lossless_420_leaf(
         ChromaSampling::Subsampled420,
         luma_transform_context(transform_grid, false),
         false,
-        ([0x40; 8], [0x40; 8]),
+        ([0x40; 16], [0x40; 16]),
     )))
 }
 
@@ -37652,6 +38108,7 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_split.is_some()
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
+                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -37805,6 +38262,7 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_split.is_some()
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
+                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -38057,6 +38515,7 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_split.is_some()
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
+                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -38331,6 +38790,7 @@ impl Lossy420Decoder {
                             || syntax.lossy_luma_8x8_split.is_some()
                             || syntax.lossy_luma_8x8_grid_split.is_some()
                             || syntax.lossy_luma_16x16_split.is_some()
+                            || syntax.lossy_luma_32x16_horizontal_split.is_some()
                             || syntax.lossy_luma_16x16_vertical_split.is_some(),
                         luma_edge_contexts,
                     ),
@@ -38436,6 +38896,7 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_split.is_some()
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
+                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -38455,6 +38916,7 @@ impl Lossy420Decoder {
                             syntax.lossy_luma_4x4_split.is_some()
                                 || syntax.lossy_luma_8x8_split.is_some()
                                 || syntax.lossy_luma_8x8_grid_split.is_some()
+                                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
                             luma_edge_contexts,
                         ),
@@ -39551,7 +40013,7 @@ impl Lossy420Decoder {
             ChromaSampling::Subsampled420,
             luma_transform_context(TransformGrid::Vertical8x16, false),
             false,
-            ([0x40; 8], [0x40; 8]),
+            ([0x40; 16], [0x40; 16]),
         ))
     }
 
@@ -39629,6 +40091,7 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_split.is_some()
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
+                || syntax.lossy_luma_32x16_horizontal_split.is_some()
                 || syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -39651,6 +40114,7 @@ impl Lossy420Decoder {
                             || syntax.lossy_luma_8x8_split.is_some()
                             || syntax.lossy_luma_8x8_grid_split.is_some()
                             || syntax.lossy_luma_16x16_split.is_some()
+                            || syntax.lossy_luma_32x16_horizontal_split.is_some()
                             || syntax.lossy_luma_16x16_vertical_split.is_some(),
                         luma_edge_contexts,
                     ),
@@ -39720,8 +40184,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -39864,8 +40328,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -40013,8 +40477,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -40179,8 +40643,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -40292,8 +40756,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -40458,8 +40922,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -40624,8 +41088,8 @@ where
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
-        luma_right_contexts: [0x40; 8],
-        luma_bottom_contexts: [0x40; 8],
+        luma_right_contexts: [0x40; 16],
+        luma_bottom_contexts: [0x40; 16],
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),

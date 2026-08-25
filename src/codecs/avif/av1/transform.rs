@@ -1768,7 +1768,8 @@ pub(super) fn inverse_dct_adst32x8(coefficients: &[i32; 256]) -> [i32; 256] {
 /// AV1 stores only the 32×16 low-frequency coefficient window for this
 /// transform. The horizontal 64-point pass therefore receives zeroes for
 /// columns 32 through 63, while the vertical pass remains a full 16-point
-/// transform.
+/// transform. This 4:1 rectangle does not use the inverse-square-root-two
+/// coefficient scaling used by the 2:1 rectangular transforms.
 pub(super) fn inverse_dct64x16(coefficients: &[i32; 512]) -> [i32; 1024] {
     const WIDTH: usize = 64;
     const HEIGHT: usize = 16;
@@ -1778,8 +1779,7 @@ pub(super) fn inverse_dct64x16(coefficients: &[i32; 512]) -> [i32; 1024] {
     for row in 0..HEIGHT {
         let input = std::array::from_fn(|column| {
             if column < COEFFICIENT_WIDTH {
-                let coefficient = coefficients[row.saturating_add(column.saturating_mul(HEIGHT))];
-                coefficient.wrapping_mul(181).wrapping_add(128) >> 8
+                coefficients[row.saturating_add(column.saturating_mul(HEIGHT))]
             } else {
                 0
             }

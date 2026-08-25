@@ -89,17 +89,24 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 254 rows total, 247 active, 7 explicit planned
+- AVIF decode/inspect/verify: 255 rows total, 248 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,478 rows total, 1074 active decode rows, 365 active encode
+- Whole matrix: 1,479 rows total, 1075 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Latest AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
   chroma leaves, an exact 1,522-operation dav1d trace, exact Y/U/V planes,
   and exact Pillow RGB output. It exercises geometry-specific matrix-9
   dequantization and one-sided DC prediction; it does not close AVF-STILL-001.
+- The newest bounded proof is `coverage_h64x16_horizontal_ramp_01.avif`, a
+  64x64 8-bit 4:2:0 `PARTITION_H4` frame whose first 64x16 block exercises
+  four 32x16 luma children, chroma-only palette reconstruction, the 4:1
+  R64x16 DCT-DCT transform, and frame-edge context publication. Its pinned
+  dav1d trace has 641 entropy operations, and safe Rust matches the exact
+  Y/U/V planes and Pillow RGB output. It closes only this H64x16
+  transform/topology/palette class; AVF-STILL-001 remains partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -668,7 +675,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,478 total | 1,081 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,074 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,479 total | 1,082 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,075 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -1817,7 +1824,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 254 AVIF decode/inspect/verify rows exist: 247 are
+**Current exact state:** 255 AVIF decode/inspect/verify rows exist: 248 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
