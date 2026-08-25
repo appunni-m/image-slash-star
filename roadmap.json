@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-25",
-  "claim_ledger_base_revision": "260c8646ea89eb164bc5116f0d40eb704910dc21",
+  "claim_ledger_base_revision": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1473,
-      "decode_rows": 1076,
+      "total_rows": 1474,
+      "decode_rows": 1077,
       "encode_rows": 397,
-      "decode_active": 1069,
+      "decode_active": 1070,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 249,
-      "decode_active": 242,
+      "decode_rows": 250,
+      "decode_active": 243,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -54,53 +54,53 @@
     },
     "coverage": {
       "line": {
-        "covered": 96330,
-        "total": 107660,
-        "percent": 89.4761,
-        "uncovered": 11330
+        "covered": 96498,
+        "total": 107759,
+        "percent": 89.5498,
+        "uncovered": 11261
       },
       "branch": {
-        "covered": 12285,
-        "total": 13686,
-        "percent": 89.7633,
-        "uncovered": 1401
+        "covered": 12298,
+        "total": 13688,
+        "percent": 89.8451,
+        "uncovered": 1390
       },
       "function": {
-        "covered": 4915,
-        "total": 5671,
-        "percent": 86.6690,
-        "uncovered": 756
+        "covered": 4909,
+        "total": 5668,
+        "percent": 86.6090,
+        "uncovered": 759
       },
       "region": {
-        "covered": 144977,
-        "total": 163481,
-        "percent": 88.6813,
-        "uncovered": 18504
+        "covered": 145085,
+        "total": 163503,
+        "percent": 88.7354,
+        "uncovered": 18418
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "260c8646ea89eb164bc5116f0d40eb704910dc21",
-        "run_id": "fd89bf16-bd58-4c30-afd5-c2dfb58acda9",
-        "snapshot_id": "b6b8e5f8-30be-410b-a5f5-a549c101a8e2",
+        "commit_sha": "ca444cd6ff3c4aac978adda8bbd29839b32997f3",
+        "run_id": "e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd",
+        "snapshot_id": "772591b5-d792-452a-9e35-1d3b7d9a8dd5",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 163099,
+        "duration_ms": 156535,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "The registered all-feature command passed the full workload at code-bearing commit 260c8646 in 163,099 ms. Automatic ingestion produced snapshot ea72661b but retained the command's stale approval lineage at 11559fb6; explicit managed LLVM import with the run's exact commit provenance produced the accepted snapshot b6b8e5f8. It records 89.4761% lines, 89.7633% branches, 86.6690% functions, and 88.6813% regions; the four-metric release target remains open until all reach 100%. This slice fixes sink rollback scope: public still and sequence sink wrappers now track whether write_all or flush was attempted, preserve untouched preflight errors, restore opted-in checkpoints after failed delivery, and retain typed rollback-failure precedence. The feature-gated contract covers partial writes, cancellation before and after the final segment, flush failure, still and genuine multi-frame GIF sequence recovery, and rollback failure. It adds no Pillow parity row and does not claim universal streaming, transient allocation accounting, or complete RN-003 closure.",
+        "note": "The exact all-feature LLVM workload passed at measured code-bearing commit ca444cd6 in 156,535 ms. The registered command retained stale approval provenance at 11559fb6, so the generated LLVM report was explicitly imported with the run's exact commit provenance as accepted snapshot 772591b5. It records 89.5498% lines, 89.8451% branches, 86.6090% functions, and 88.7354% regions; the four-metric release target remains open until all reach 100%. This slice adds one pure-safe-Rust 32x32 8-bit 4:2:0 entropy-mosaic reconstruction class, corrects the 32x32 scan orientation and matrix-10 dequantization path, adds exact dav1d/Pillow reconstruction evidence, and makes the strict nightly Clippy and feature-lane contracts pass without allowances. It adds no Pillow parity row and does not claim general AV1/AVIF completion, universal streaming, or complete RN-003 closure.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "49c8f78ff5ddb3089b91e685245bd0ab3d6332bf",
-          "baseline_snapshot_id": "7e6d8a9f-be30-4aea-be84-22ef114ac517",
-          "line_covered_delta": 40,
-          "line_total_delta": 46,
-          "branch_covered_delta": 2,
+          "baseline_commit": "260c8646ea89eb164bc5116f0d40eb704910dc21",
+          "baseline_snapshot_id": "b6b8e5f8-30be-410b-a5f5-a549c101a8e2",
+          "line_covered_delta": 168,
+          "line_total_delta": 99,
+          "branch_covered_delta": 13,
           "branch_total_delta": 2,
-          "function_covered_delta": 8,
-          "function_total_delta": 10,
-          "region_covered_delta": 46,
-          "region_total_delta": 56,
-          "interpretation": "Compared with the previous valid managed snapshot at 49c8f78f, this code-and-test slice adds 40 covered lines, 2 covered branches, 8 covered functions, and 46 covered regions while adding 46 lines, 2 branches, 10 functions, and 56 regions to the denominator. The small percentage movement is expected for a public sink recovery layer; the release target remains open with 11,330 lines, 1,401 branches, 756 functions, and 18,504 regions uncovered."
+          "function_covered_delta": -6,
+          "function_total_delta": -3,
+          "region_covered_delta": 108,
+          "region_total_delta": 22,
+          "interpretation": "Compared with the previous accepted managed snapshot b6b8e5f8, this code-and-test slice adds 168 covered lines, 13 covered branches, and 108 covered regions while the LLVM function counter decreases by 6 as the generated denominator decreases by 3. It adds 99 lines, 2 branches, and 22 regions to the denominator. The aggregate release target remains open with 11,261 lines, 1,390 branches, 759 functions, and 18,418 regions uncovered."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run fd89bf16-bd58-4c30-afd5-c2dfb58acda9 passed at code-bearing commit 260c8646 in 163,099 ms. Its automatic artifact ingestion retained stale registered-command lineage, so the exact report was explicitly imported with commit provenance as snapshot b6b8e5f8-30be-410b-a5f5-a549c101a8e2. It reports 11,330 lines, 1,401 branches, 756 functions, and 18,504 regions uncovered. The sink recovery contract is covered by the feature-gated tests, but RN-003, the broader roadmap, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run e5fdde04-e15a-4a51-a7d2-4db0cd7ef2cd passed at measured code-bearing commit ca444cd6 in 156,535 ms. Its registered command retained stale approval lineage, so the exact report was explicitly imported with commit provenance as snapshot 772591b5-d792-452a-9e35-1d3b7d9a8dd5. It reports 11,261 lines, 1,390 branches, 759 functions, and 18,418 regions uncovered. The 32x32 entropy-mosaic contract and strict feature/Clippy gates are covered, but AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -905,8 +905,8 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, and the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split through reconstruction, deblocking, CDEF, raster, and RGB conversion with exact independent references. The promoted R8x16, Horizontal32x16, and R16x64 fixtures share pinned dav1d partition/topology, checked 4:2:0 chroma planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. The 4:2:2 test is assembly evidence only; no 4:2:2 decoder path is enabled.",
-        "next": "Broaden partition/block states, predictors, residual classes, filter-intra, tile-local context cases, and independent full-frame proofs."
+        "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the new coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frame through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new frame is a single TX32X32 DCT_DCT luma leaf with EOB 467; its 1,168 entropy operations match pinned dav1d 1.5.3 commit b546257f770768b2c88258c533da38b91a06f737, reconstructed Y/U/V bytes match the pinned dav1d plane references, and the final RGB bytes match the independent Pillow 12.2.0 reference. The promoted R8x16, Horizontal32x16, R16x64, and 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled.",
+        "next": "Broaden partition/block states, predictors, residual classes, filter-intra modes, tile-local context cases, transform variants, and independent full-frame proofs beyond the closed 32x32 TX32X32 class."
       },
       "AVF-ENTROPY-001": {
         "status": "partial",
