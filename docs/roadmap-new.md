@@ -118,9 +118,8 @@ the corresponding status is recorded in `roadmap.json`:
   four-leaf geometry but a distinct 553-operation dav1d trace. Safe Rust matches
   its exact Y/U/V planes and Pillow RGB8 bytes; it adds distinct residual/EOB
   states and a filter-intra leaf. This remains bounded evidence, not general
-  I444 or AV1 completion. The managed snapshot above predates this promotion;
-  a fresh exact-commit Coverage MCP measurement is required before it is
-  current coverage evidence.
+  I444 or AV1 completion. The current managed snapshot below is bound to this
+  committed rect_02 promotion; its zero metric delta is recorded explicitly.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -129,19 +128,19 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `80357a67-0750-4283-83c6-4870eec3d07e` completed the
+Managed Coverage MCP run `ad6b1aad-fdf7-4658-aea9-b940f879ab25` completed the
 all-feature workload at exact implementation commit
-`bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178` in 143,036 ms and passed. The
+`919ddb1489969bb3dd074091cdf8b0bc6aa976a2` in 143,146 ms and passed. The
 generated LLVM artifact was explicitly imported as snapshot
-`99148741-b4c8-4b7e-8ae3-49650c2c7090`, so the evidence is bound to that exact
+`9febf1cf-790a-4e46-b8c9-dcd7bb46b235`, so the evidence is bound to that exact
 commit. It measures 97,627/108,387 lines (90.0726%), 12,386/13,770 branches
 (89.9492%), 4,976/5,701 functions (87.2829%), and 146,439/164,214 regions
 (89.1757%). The explicit Coverage MCP incremental review against baseline
-snapshot `d4506f36-6103-4de8-935e-9d91dde9f9dc` reports 0 newly covered, 0
-regressed, 7,492 hit-count-only, 0 added, and 0 removed observations; aggregate
+snapshot `99148741-b4c8-4b7e-8ae3-49650c2c7090` reports 0 newly covered, 0
+regressed, 7,493 hit-count-only, 0 added, and 0 removed observations; aggregate
 line, branch, function, and region deltas are all zero. Test attribution is
 unavailable, but aggregate coverage is measured. This is expected for the
-current fixture-only slice: `coverage_i444_rect_01.avif` adds exact parity
+current fixture-only slice: `coverage_i444_rect_02.avif` adds exact parity
 evidence on the unchanged full-resolution safe-Rust path, so it does not alter
 production-source coverage counters or denominators. The AVIF planned gaps,
 transient allocation work, and four-metric 100% release gate remain open; the
@@ -173,7 +172,7 @@ This increases the denominator because the slice adds real codec paths, so the
 The revision-bound hash tuple remains refreshed at base revision
 `2a141b6fe640af41549b71421fbe4b8f2b134e4f`, while the current managed
 coverage measurement is bound to implementation commit
-`bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178`;
+`919ddb1489969bb3dd074091cdf8b0bc6aa976a2`;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
 coverage-origin inventory, roadmap, and all auxiliary fixture hashes against
 the committed tree. This ledger refresh records current source/evidence

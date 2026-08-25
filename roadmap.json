@@ -82,16 +82,16 @@
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-25",
         "managed_coverage_mcp": true,
-        "commit_sha": "bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178",
-        "run_id": "80357a67-0750-4283-83c6-4870eec3d07e",
-        "snapshot_id": "99148741-b4c8-4b7e-8ae3-49650c2c7090",
+        "commit_sha": "919ddb1489969bb3dd074091cdf8b0bc6aa976a2",
+        "run_id": "ad6b1aad-fdf7-4658-aea9-b940f879ab25",
+        "snapshot_id": "9febf1cf-790a-4e46-b8c9-dcd7bb46b235",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 143036,
+        "duration_ms": 143146,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 80357a67-0750-4283-83c6-4870eec3d07e passed the all-feature LLVM workload in 143,036 ms at exact implementation commit bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178. Its generated report was explicitly imported as snapshot 99148741-b4c8-4b7e-8ae3-49650c2c7090 with that exact commit provenance. The accepted snapshot records 90.0726% lines, 89.9492% branches, 87.2829% functions, and 89.1757% regions; the four-metric release target remains open until all reach 100%. This is fixture-only evidence: coverage_i444_rect_01.avif now exercises the unchanged full-resolution safe-Rust path with a pinned 499-operation dav1d trace, exact 16x16 Y/U/V planes, and exact Pillow RGB bytes, so production-source coverage counters and denominators are unchanged. The explicit incremental review against baseline snapshot d4506f36-6103-4de8-935e-9d91dde9f9dc reports 0 newly covered, 0 regressed, 7,492 hit-count-only, 0 added, and 0 removed observations; aggregate line, branch, function, and region deltas are all zero. Test attribution is unavailable, aggregate coverage is measured, and the remaining gaps stay open. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
+        "note": "Managed Coverage MCP run ad6b1aad-fdf7-4658-aea9-b940f879ab25 passed the all-feature LLVM workload in 143,146 ms at exact implementation commit 919ddb1489969bb3dd074091cdf8b0bc6aa976a2. Its generated report was explicitly imported as snapshot 9febf1cf-790a-4e46-b8c9-dcd7bb46b235 with that exact commit provenance. The accepted snapshot records 90.0726% lines, 89.9492% branches, 87.2829% functions, and 89.1757% regions; the four-metric release target remains open until all reach 100%. This is fixture-only evidence: coverage_i444_rect_02.avif exercises the unchanged full-resolution safe-Rust path with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB bytes, distinct residual/EOB states, and a filter-intra leaf, so production-source coverage counters and denominators are unchanged. The explicit incremental review against baseline snapshot 99148741-b4c8-4b7e-8ae3-49650c2c7090 reports 0 newly covered, 0 regressed, 7,493 hit-count-only, 0 added, and 0 removed observations; aggregate line, branch, function, and region deltas are all zero. Test attribution is unavailable, aggregate coverage is measured, and the remaining gaps stay open. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
-          "baseline_snapshot_id": "d4506f36-6103-4de8-935e-9d91dde9f9dc",
+          "baseline_commit": "bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178",
+          "baseline_snapshot_id": "99148741-b4c8-4b7e-8ae3-49650c2c7090",
           "line_covered_delta": 0,
           "line_total_delta": 0,
           "branch_covered_delta": 0,
@@ -100,7 +100,7 @@
           "function_total_delta": 0,
           "region_covered_delta": 0,
           "region_total_delta": 0,
-          "interpretation": "Compared with the accepted baseline snapshot d4506f36 at 2a141b6f, this bda27c4d fixture-only measurement has no newly covered or regressed observations, 7,492 hit-count-only observations, and no added or removed observations. Aggregate line, branch, function, and region rates remain 90.0726%, 89.9492%, 87.2829%, and 89.1757%; the release target remains open with 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. Test attribution is unavailable, and the next implementation slice must target actual uncovered production paths."
+          "interpretation": "Compared with the accepted baseline snapshot 99148741 at bda27c4d, this 919ddb14 fixture-only measurement has no newly covered or regressed observations, 7,493 hit-count-only observations, and no added or removed observations. Aggregate line, branch, function, and region rates remain 90.0726%, 89.9492%, 87.2829%, and 89.1757%; the release target remains open with 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. Test attribution is unavailable, and the next implementation slice must target actual uncovered production paths."
         }
       },
       "coverage_origin_inventory": {
@@ -137,7 +137,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 80357a67-0750-4283-83c6-4870eec3d07e passed in 143,036 ms and its report was explicitly imported as snapshot 99148741-b4c8-4b7e-8ae3-49650c2c7090 against exact implementation commit bda27c4d67c09bbbbe8cabfae4ffe0fe35dec178. It reports 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. The I444 rect_01 horizontal/vertical witness pair is now locally exact through safe Rust, but the rect_02 promotion needs a fresh managed measurement at its committed revision; AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run ad6b1aad-fdf7-4658-aea9-b940f879ab25 passed in 143,146 ms and its report was explicitly imported as snapshot 9febf1cf-790a-4e46-b8c9-dcd7bb46b235 against exact implementation commit 919ddb1489969bb3dd074091cdf8b0bc6aa976a2. It reports 10,760 lines, 1,384 branches, 725 functions, and 17,775 regions uncovered. The I444 rect_01/rect_02 witness pair is locally exact through safe Rust, but AVF-STILL-001, RN-003, the broader roadmap, the requested regression inspection, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
