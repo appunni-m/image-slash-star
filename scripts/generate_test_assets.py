@@ -5316,6 +5316,39 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_tx8x8_noise():
+        """Generate the origin filter-intra TX8x8 split witness."""
+
+        random_state = random.Random(2)
+        pixels = bytes(
+            random_state.randrange(256) for _ in range(32 * 16 * 3)
+        )
+        return Image.frombytes("RGB", (32, 16), pixels)
+
+    write_campaign_image(
+        "coverage_r32x16_filter_intra_tx8x8_01",
+        filter_intra_tx8x8_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "32",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def filter_intra_i444_mode3_noise():
         """Generate the I444 R16x32 following-leaf filter-intra witness."""
 

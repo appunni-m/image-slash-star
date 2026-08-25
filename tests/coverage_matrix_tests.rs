@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 194);
+    assert_eq!(expected.cases.len(), 195);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5092,7 +5092,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 case.partition_blocks, expected_blocks,
                 "AV1 square partition topology case {case_index}"
             );
-        } else if matches!(case.fixture.as_str(), "coverage_r32x16_origin_01.avif") {
+        } else if matches!(
+            case.fixture.as_str(),
+            "coverage_r32x16_origin_01.avif" | "coverage_r32x16_filter_intra_tx8x8_01.avif"
+        ) {
             assert_eq!(
                 case.partition_blocks.len(),
                 2,
@@ -5386,6 +5389,66 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 mode-3 filter-intra witness must use mode 3 on both leaves"
+            );
+        }
+        if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 0,
+                        range: 36_560,
+                    },
+                ],
+                "AV1 filter-intra TX8x8 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                2_328,
+                "AV1 filter-intra TX8x8 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[0/0]:"))
+                    .count(),
+                1,
+                "AV1 TX8x8 witness must use filter-intra mode 0"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[1]:"))
+                    .count(),
+                1,
+                "AV1 TX8x8 witness must select the TX8x8 luma grid"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=1,"))
+                    .count(),
+                4,
+                "AV1 TX8x8 witness must decode four luma residual blocks"
             );
         }
         if case.fixture == "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" {
@@ -6086,6 +6149,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x32_filter_intra_mode3_01.avif" => {
                 "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495"
+            }
+            "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
+                "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"
             }
             "coverage_r16x64_grid_01.avif" => {
                 "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"

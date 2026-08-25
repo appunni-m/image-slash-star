@@ -41721,6 +41721,32 @@ fn reconstruct_origin_filter_intra_luma_32x16_override(
     };
     let top = [127_u16; 32];
     let left = [129_u16; 16];
+    if let Some(split) = syntax.lossy_luma_16x16_horizontal_split {
+        return reconstruct_lossy_luma_32x16_horizontal_split(
+            LumaPredictor::Dc,
+            None,
+            Some(mode),
+            top,
+            left,
+            128,
+            false,
+            split,
+        )
+        .map(Some);
+    }
+    if let Some(split) = syntax.lossy_luma_8x8_grid_split {
+        return reconstruct_lossy_luma_32x16_split(
+            LumaPredictor::Dc,
+            None,
+            Some(mode),
+            top,
+            left,
+            128,
+            false,
+            split,
+        )
+        .map(Some);
+    }
     let prediction = reconstruct_filter_intra_prediction(mode, 32, 16, 128, &top, &left)?
         .try_into()
         .map_err(|_| PortableUnavailable)?;

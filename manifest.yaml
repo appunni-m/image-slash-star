@@ -4178,6 +4178,10 @@ formats:
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with filter-intra mode 3 on both Horizontal32x16 leaves and noisy residuals
       test_assets:
       - coverage_r32x32_filter_intra_mode3_01.avif
+    - id: coverage_r32x16_filter_intra_tx8x8_01
+      description: 32x16 4:2:0 quality-76 speed-0 origin Horizontal32x16 filter-intra leaf with mode 0 and four TX8x8 luma children
+      test_assets:
+      - coverage_r32x16_filter_intra_tx8x8_01.avif
     - id: coverage_i444_v16x32_following_filter_intra_mode3_01
       description: 32x32 4:4:4 quality-76 speed-0 horizontal split with a following Vertical16x32 leaf using filter-intra mode 3 and full-resolution chroma transforms
       test_assets:
