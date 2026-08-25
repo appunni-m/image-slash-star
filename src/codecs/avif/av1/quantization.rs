@@ -431,6 +431,20 @@ pub(super) const Y_4X8_MATRIX_10: [u8; 32] = [
     36, 34, 38, 48, 39, 37, 40, 50,
 ];
 
+/// AV1 quantization matrix 10 for a coded 16×4 luma transform.
+///
+/// Rectangular coefficients use dav1d's transposed `qm_tbl_4x16` order:
+/// four consecutive values belong to one horizontal coefficient column. This
+/// is the order consumed by the R16×4 scan's `x * 4 + y` coefficient index.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[10][0][RTX_16X4]`.
+#[rustfmt::skip]
+pub(super) const Y_16X4_MATRIX_10: [u8; 64] = [
+    31, 32, 34, 39, 32, 32, 34, 38, 32, 32, 34, 38, 32, 32, 33, 37,
+    32, 32, 33, 37, 32, 33, 35, 39, 32, 33, 35, 39, 32, 34, 37, 40,
+    32, 34, 37, 40, 34, 35, 39, 45, 34, 35, 39, 45, 35, 36, 43, 51,
+    35, 36, 43, 51, 38, 39, 45, 54, 38, 39, 45, 54, 42, 42, 48, 58,
+];
+
 /// AV1 quantization matrix 9 for a coded 8×16 luma transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][0][RTX_8X16]`.
 pub(super) const Y_8X16_MATRIX_9: [u8; 128] = [
@@ -534,12 +548,34 @@ pub(super) const UV_8X8_MATRIX_10: [u8; 64] = [
     48, 46, 46, 47, 48, 51, 53, 54, 48, 46, 45, 46, 47, 51, 54, 56,
 ];
 
+/// AV1 quantization matrix 10 for a coded 8×4 subsampled U/V transform.
+///
+/// This is dav1d's `qm_tbl_4x8` table as consumed by `RTX_8X4`. Rectangular
+/// transform coefficients are stored in transposed order: four consecutive
+/// values belong to one horizontal coefficient column.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[10][1][RTX_8X4]`.
+#[rustfmt::skip]
+pub(super) const UV_8X4_MATRIX_10: [u8; 32] = [
+    31, 34, 42, 48, 31, 35, 42, 46, 33, 37, 44, 46, 36, 41, 46, 46,
+    40, 44, 48, 48, 45, 46, 49, 51, 47, 47, 50, 54, 47, 46, 49, 55,
+];
+
+/// AV1 quantization matrix 10 for a coded 4×8 subsampled U/V transform.
+///
+/// This is the transpose of [`UV_8X4_MATRIX_10`] in the coefficient order
+/// consumed by `RTX_4X8`.
+#[rustfmt::skip]
+pub(super) const UV_4X8_MATRIX_10: [u8; 32] = [
+    31, 31, 33, 36, 40, 45, 47, 47, 34, 35, 37, 41, 44, 46, 47, 46,
+    42, 42, 44, 46, 48, 49, 50, 49, 48, 46, 46, 46, 48, 51, 54, 55,
+];
+
 #[cfg(test)]
 mod tests {
     use super::{
-        UV_4X4_MATRIX_9, UV_4X4_MATRIX_10, UV_8BIT, UV_8X8_MATRIX_9, UV_8X8_MATRIX_10,
-        UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_9,
-        Y_4X4_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9,
+        UV_4X4_MATRIX_9, UV_4X4_MATRIX_10, UV_4X8_MATRIX_10, UV_8BIT, UV_8X4_MATRIX_10,
+        UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_9,
+        UV_16X8_MATRIX_10, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9,
     };
 
     #[test]
@@ -610,6 +646,19 @@ mod tests {
         assert_eq!(UV_8X8_MATRIX_10.len(), 64);
         assert_eq!(&UV_8X8_MATRIX_10[..8], &[31, 31, 32, 35, 39, 45, 48, 48]);
         assert_eq!(&UV_8X8_MATRIX_10[56..], &[48, 46, 45, 46, 47, 51, 54, 56]);
+    }
+
+    #[test]
+    fn chroma_matrix_10_has_the_rectangular_8x4_shape() {
+        assert_eq!(UV_8X4_MATRIX_10.len(), 32);
+        assert_eq!(&UV_8X4_MATRIX_10[..8], &[31, 34, 42, 48, 31, 35, 42, 46]);
+        assert_eq!(&UV_8X4_MATRIX_10[24..], &[47, 47, 50, 54, 47, 46, 49, 55]);
+        assert_eq!(UV_4X8_MATRIX_10.len(), 32);
+        for x in 0..4 {
+            for y in 0..8 {
+                assert_eq!(UV_4X8_MATRIX_10[x * 8 + y], UV_8X4_MATRIX_10[y * 4 + x]);
+            }
+        }
     }
 
     #[test]
