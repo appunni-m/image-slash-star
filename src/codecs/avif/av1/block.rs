@@ -29499,13 +29499,7 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
     let luma_left = left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
         right_edge_16(&neighbor.planes[0])
     });
-    let luma = if let Some(mode) = filter_intra_mode {
-        let prediction =
-            reconstruct_filter_intra_prediction(mode, 32, 16, luma_top[0], &luma_top, &luma_left)?
-                .try_into()
-                .map_err(|_| PortableUnavailable)?;
-        reconstruct_lossy_luma_32x16_from_prediction(prediction, lossy_luma_32x16_coefficients)
-    } else if let Some(split) = lossy_luma_16x16_horizontal_split {
+    let luma = if let Some(split) = lossy_luma_16x16_horizontal_split {
         reconstruct_lossy_luma_32x16_horizontal_split(
             luma_predictor,
             luma_angle,
@@ -29517,7 +29511,7 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
             split,
         )?
     } else if let Some(split) = lossy_luma_8x8_grid_split {
-        let result = reconstruct_lossy_luma_32x16_split(
+        reconstruct_lossy_luma_32x16_split(
             luma_predictor,
             luma_angle,
             filter_intra_mode,
@@ -29526,9 +29520,13 @@ fn reconstruct_following_lossy_420_vertical_32x16_leaf(
             luma_top[0],
             left_neighbor.is_some(),
             split,
-        );
-
-        result?
+        )?
+    } else if let Some(mode) = filter_intra_mode {
+        let prediction =
+            reconstruct_filter_intra_prediction(mode, 32, 16, luma_top[0], &luma_top, &luma_left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        reconstruct_lossy_luma_32x16_from_prediction(prediction, lossy_luma_32x16_coefficients)
     } else {
         let luma_dc = if left_neighbor.is_some() {
             rectangular_dc_predictor(&luma_top, &luma_left)
@@ -33696,9 +33694,13 @@ fn reconstruct_lossy_luma_32x16_split(
                 })
             };
             let left_edge: [u16; 8] = if column == 0 {
-                left[offset_y..offset_y.saturating_add(8)]
-                    .try_into()
-                    .map_err(|_| PortableUnavailable)?
+                if has_left || row == 0 {
+                    left[offset_y..offset_y.saturating_add(8)]
+                        .try_into()
+                        .map_err(|_| PortableUnavailable)?
+                } else {
+                    [top_edge[0]; 8]
+                }
             } else {
                 std::array::from_fn(|index| {
                     samples[(offset_y + index).saturating_mul(32) + offset_x - 1]
@@ -33707,7 +33709,8 @@ fn reconstruct_lossy_luma_32x16_split(
             let block_top_left = match (row, column) {
                 (0, 0) => top_left,
                 (0, _) => top[offset_x - 1],
-                (_, 0) => left[offset_y - 1],
+                (_, 0) if has_left => left[offset_y - 1],
+                (_, 0) => top_edge[0],
                 _ => samples[(offset_y - 1).saturating_mul(32) + offset_x - 1],
             };
             let coefficients = split.coefficients[transform_index];
