@@ -12107,7 +12107,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: usize,
         rollbacks: usize,
         fail_at_second_write: bool,
-        cancel_on_first_write: bool,
+        cancel_on_write: Option<usize>,
         fail_flush: bool,
         fail_rollback: bool,
         token: Option<image_slash_star::CancellationToken>,
@@ -12129,8 +12129,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
                 });
             }
             self.bytes.extend_from_slice(bytes);
-            if self.cancel_on_first_write
-                && self.writes == 1
+            if self.cancel_on_write == Some(self.writes)
                 && let Some(token) = &self.token
             {
                 token.cancel();
@@ -12190,7 +12189,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: 0,
         rollbacks: 0,
         fail_at_second_write: true,
-        cancel_on_first_write: false,
+        cancel_on_write: None,
         fail_flush: false,
         fail_rollback: false,
         token: None,
@@ -12291,7 +12290,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: 0,
         rollbacks: 0,
         fail_at_second_write: false,
-        cancel_on_first_write: true,
+        cancel_on_write: Some(1),
         fail_flush: false,
         fail_rollback: false,
         token: Some(cancellation_token.clone()),
@@ -12330,7 +12329,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: 0,
         rollbacks: 0,
         fail_at_second_write: false,
-        cancel_on_first_write: false,
+        cancel_on_write: None,
         fail_flush: true,
         fail_rollback: false,
         token: None,
@@ -12367,7 +12366,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: 0,
         rollbacks: 0,
         fail_at_second_write: false,
-        cancel_on_first_write: false,
+        cancel_on_write: None,
         fail_flush: true,
         fail_rollback: false,
         token: None,
@@ -12404,7 +12403,7 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
         flushes: 0,
         rollbacks: 0,
         fail_at_second_write: true,
-        cancel_on_first_write: false,
+        cancel_on_write: None,
         fail_flush: false,
         fail_rollback: true,
         token: None,
@@ -12434,6 +12433,232 @@ fn partial_structural_sink_write_preserves_prefix_without_flush()
             .is_some_and(|message| message.contains("output rollback failed"))
     );
     assert_eq!(rollback_failure.rollbacks, 1);
+
+    // A checkpoint is captured before preflight, but an untouched sink must
+    // not be rolled back. Otherwise a rollback failure could replace the
+    // original validation or policy error with an OutputWrite result.
+    let invalid = image_slash_star::DecodedImage::new(
+        1,
+        1,
+        Vec::new(),
+        image_slash_star::ColorType::Rgb8,
+    );
+    let mut preflight_rollback_failure = RollbackSink {
+        bytes: vec![0xD7],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_write: None,
+        fail_flush: false,
+        fail_rollback: true,
+        token: None,
+    };
+    let preflight_error = match image_slash_star::encode_to_sink(
+        &invalid,
+        ImageFormat::Png,
+        &options,
+        &mut preflight_rollback_failure,
+    ) {
+        Ok(length) => {
+            return Err(format!("invalid input unexpectedly wrote {length} bytes").into());
+        }
+        Err(error) => error,
+    };
+    assert_ne!(
+        preflight_error.kind(),
+        image_slash_star::ImageErrorKind::OutputWrite,
+        "preflight errors must retain their original classification"
+    );
+    assert_eq!(preflight_rollback_failure.bytes, vec![0xD7]);
+    assert_eq!(preflight_rollback_failure.writes, 0);
+    assert_eq!(preflight_rollback_failure.flushes, 0);
+    assert_eq!(preflight_rollback_failure.rollbacks, 0);
+
+    // Pre-cancellation is another no-delivery path. It must not contact the
+    // sink or invoke a rollback implementation that would itself fail.
+    let pre_cancelled = image_slash_star::CancellationToken::new();
+    pre_cancelled.cancel();
+    let mut pre_cancel_sink = RollbackSink {
+        bytes: vec![0xD8],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_write: None,
+        fail_flush: false,
+        fail_rollback: true,
+        token: None,
+    };
+    let pre_cancel_error = match image_slash_star::encode_to_sink_with_token_and_policy(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &image_slash_star::EncodePolicy::default(),
+        &pre_cancelled,
+        &mut pre_cancel_sink,
+    ) {
+        Ok(length) => {
+            return Err(format!("pre-cancelled input unexpectedly wrote {length} bytes").into());
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        pre_cancel_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(pre_cancel_sink.bytes, vec![0xD8]);
+    assert_eq!(pre_cancel_sink.writes, 0);
+    assert_eq!(pre_cancel_sink.flushes, 0);
+    assert_eq!(pre_cancel_sink.rollbacks, 0);
+
+    // Cancellation after the final accepted segment is still a failed
+    // delivery: no flush is allowed, and a checkpointed sink is restored.
+    struct CountingSink {
+        writes: usize,
+        flushes: usize,
+    }
+
+    impl image_slash_star::OutputSink for CountingSink {
+        fn write_all(&mut self, _bytes: &[u8]) -> image_slash_star::ImageResult<()> {
+            self.writes += 1;
+            Ok(())
+        }
+
+        fn flush(&mut self) -> image_slash_star::ImageResult<()> {
+            self.flushes += 1;
+            Ok(())
+        }
+    }
+
+    let mut count_png_writes = CountingSink {
+        writes: 0,
+        flushes: 0,
+    };
+    image_slash_star::encode_to_sink(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &mut count_png_writes,
+    )?;
+    assert!(count_png_writes.writes > 1);
+    let final_cancel_token = image_slash_star::CancellationToken::new();
+    let mut final_cancel_sink = RollbackSink {
+        bytes: vec![0xD9],
+        writes: 0,
+        flushes: 0,
+        rollbacks: 0,
+        fail_at_second_write: false,
+        cancel_on_write: Some(count_png_writes.writes),
+        fail_flush: false,
+        fail_rollback: false,
+        token: Some(final_cancel_token.clone()),
+    };
+    let final_cancel_error = match image_slash_star::encode_to_sink_with_token_and_policy(
+        &decoded.content,
+        ImageFormat::Png,
+        &options,
+        &image_slash_star::EncodePolicy::default(),
+        &final_cancel_token,
+        &mut final_cancel_sink,
+    ) {
+        Ok(length) => {
+            return Err(format!("final cancellation unexpectedly wrote {length} bytes").into());
+        }
+        Err(error) => error,
+    };
+    assert_eq!(
+        final_cancel_error.kind(),
+        image_slash_star::ImageErrorKind::Cancelled
+    );
+    assert_eq!(final_cancel_sink.bytes, vec![0xD9]);
+    assert_eq!(final_cancel_sink.flushes, 0);
+    assert_eq!(final_cancel_sink.rollbacks, 1);
+
+    // Use a genuine multi-frame writer to prove that sequence recovery keeps
+    // SequenceEncode identity, not just the one-frame fallback path.
+    if cfg!(feature = "gif") {
+        let gif_data = fs::read(root.join("tests/fixtures/input/images/gif/animated_3frame.gif"))?;
+        let gif_sequence = image_slash_star::decode_sequence(&gif_data)?.into_inner();
+        let gif_options = image_slash_star::EncodeOptions::for_format(ImageFormat::Gif);
+        let mut gif_sequence_rollback = RollbackSink {
+            bytes: vec![0xDA],
+            writes: 0,
+            flushes: 0,
+            rollbacks: 0,
+            fail_at_second_write: true,
+            cancel_on_write: None,
+            fail_flush: false,
+            fail_rollback: false,
+            token: None,
+        };
+        let gif_sequence_error = match image_slash_star::encode_sequence_to_sink(
+            &gif_sequence,
+            ImageFormat::Gif,
+            &gif_options,
+            &mut gif_sequence_rollback,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "checkpointed GIF sequence unexpectedly accepted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            gif_sequence_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(gif_sequence_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            gif_sequence_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert_eq!(gif_sequence_rollback.bytes, vec![0xDA]);
+        assert_eq!(gif_sequence_rollback.flushes, 0);
+        assert_eq!(gif_sequence_rollback.rollbacks, 1);
+
+        let mut gif_sequence_rollback_failure = RollbackSink {
+            bytes: vec![0xDB],
+            writes: 0,
+            flushes: 0,
+            rollbacks: 0,
+            fail_at_second_write: true,
+            cancel_on_write: None,
+            fail_flush: false,
+            fail_rollback: true,
+            token: None,
+        };
+        let gif_rollback_error = match image_slash_star::encode_sequence_to_sink(
+            &gif_sequence,
+            ImageFormat::Gif,
+            &gif_options,
+            &mut gif_sequence_rollback_failure,
+        ) {
+            Ok(length) => {
+                return Err(format!(
+                    "rollback-failing GIF sequence unexpectedly accepted {length} bytes"
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(
+            gif_rollback_error.kind(),
+            image_slash_star::ImageErrorKind::OutputWrite
+        );
+        assert_eq!(gif_rollback_error.format(), Some(ImageFormat::Gif));
+        assert_eq!(
+            gif_rollback_error.stage(),
+            Some(ImageErrorStage::SequenceEncode)
+        );
+        assert!(gif_rollback_error.message().is_some_and(|message| {
+            message.contains("rollback sink rejected a partial segment")
+                && message.contains("rollback sink could not restore its checkpoint")
+        }));
+        assert_eq!(gif_sequence_rollback_failure.rollbacks, 1);
+    }
 
     Ok(())
 }
