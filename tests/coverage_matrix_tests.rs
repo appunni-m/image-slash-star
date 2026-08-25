@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 187);
+    assert_eq!(expected.cases.len(), 188);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5891,6 +5891,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h4_horizontal_bands.avif" => {
                 "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
+            }
+            "coverage_r32x8_h4_ripple_01.avif" => {
+                "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

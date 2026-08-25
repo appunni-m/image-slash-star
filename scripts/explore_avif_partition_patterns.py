@@ -531,7 +531,7 @@ def main() -> None:
             "quality": args.quality,
             "speed": args.speed,
             "max_threads": 1,
-            "subsampling": "4:4:4",
+            "subsampling": args.subsampling,
             "autotiling": False,
         },
         "cases": cases,

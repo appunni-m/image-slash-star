@@ -10763,6 +10763,7 @@ fn decode_lossy_chroma_4x4_coefficients(
 enum LossyLargeCdfSet {
     Luma4x16,
     Luma16x16,
+    Luma32x8,
     Luma32x16,
     Luma32x32,
     Luma64x64,
@@ -10770,6 +10771,7 @@ enum LossyLargeCdfSet {
     Chroma16x16,
     Chroma32x32,
     Chroma8x8,
+    Chroma16x4,
     Chroma16x8,
     Chroma8x16,
     Chroma8x4,
@@ -10811,6 +10813,7 @@ fn decode_lossy_large_two_d_coefficients(
         LossyLargeCdfSet::Chroma16x16
             | LossyLargeCdfSet::Chroma32x32
             | LossyLargeCdfSet::Chroma8x8
+            | LossyLargeCdfSet::Chroma16x4
             | LossyLargeCdfSet::Chroma16x8
             | LossyLargeCdfSet::Chroma8x16
             | LossyLargeCdfSet::Chroma8x4
@@ -10838,6 +10841,16 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             26,
         ),
+        LossyLargeCdfSet::Luma32x8 => (
+            &[
+                [0, 16, 6, 6, 21],
+                [16, 16, 6, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+            ],
+            41,
+        ),
         LossyLargeCdfSet::Luma32x16 => (
             &[
                 [0, 16, 6, 6, 21],
@@ -10857,6 +10870,16 @@ fn decode_lossy_large_two_d_coefficients(
                 [21, 21, 21, 21, 21],
             ],
             41,
+        ),
+        LossyLargeCdfSet::Chroma16x4 => (
+            &[
+                [0, 16, 6, 6, 21],
+                [16, 16, 6, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+                [16, 16, 21, 21, 21],
+            ],
+            26,
         ),
         LossyLargeCdfSet::Chroma16x8 => (
             &[
@@ -10915,6 +10938,12 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_16x16_base[..],
             &mut cdfs.lossy_luma_16x16_high_tokens[..],
         ),
+        LossyLargeCdfSet::Luma32x8 => (
+            &mut cdfs.lossy_luma_16x16_eob_high[..],
+            &mut cdfs.lossy_luma_16x16_eob_base[..],
+            &mut cdfs.lossy_luma_16x16_base[..],
+            &mut cdfs.lossy_luma_16x16_high_tokens[..],
+        ),
         LossyLargeCdfSet::Luma32x16 => (
             &mut cdfs.lossy_luma_32x16_eob_high[..],
             &mut cdfs.lossy_luma_32x32_eob_base[..],
@@ -10938,6 +10967,12 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_16x16_eob_base[..],
             &mut cdfs.lossy_luma_16x16_base[..],
             &mut cdfs.lossy_luma_16x16_high_tokens[..],
+        ),
+        LossyLargeCdfSet::Chroma16x4 => (
+            &mut cdfs.lossy_chroma_8x8_eob_high[..],
+            &mut cdfs.lossy_chroma_8x8_eob_base[..],
+            &mut cdfs.lossy_chroma_8x8_base[..],
+            &mut cdfs.lossy_chroma_8x8_high_tokens[..],
         ),
         LossyLargeCdfSet::Chroma16x16 => (
             &mut cdfs.lossy_chroma_16x16_eob_high[..],
@@ -10977,6 +11012,7 @@ fn decode_lossy_large_two_d_coefficients(
         ),
     };
     let chroma_matrix_values = match cdf_set {
+        LossyLargeCdfSet::Chroma16x4 => chroma_16x4_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x16 => chroma_16x16_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
@@ -10984,6 +11020,7 @@ fn decode_lossy_large_two_d_coefficients(
     };
     let luma_matrix_values = match cdf_set {
         LossyLargeCdfSet::Luma4x16 => luma_4x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
         _ => None,
@@ -11318,6 +11355,7 @@ fn decode_lossy_luma_32x8_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy32x8TransformCoefficients> {
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x16_eob_bin, 8);
     let coefficients = decode_lossy_large_two_d_coefficients(
@@ -11325,7 +11363,7 @@ fn decode_lossy_luma_32x8_coefficients(
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_32X8_SCAN,
@@ -11335,7 +11373,7 @@ fn decode_lossy_luma_32x8_coefficients(
             levels_stride: LOSSY_LUMA_32X8_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X8_LEVELS,
             eob_thresholds: (32, 64),
-            cdf_set: LossyLargeCdfSet::Luma16x16,
+            cdf_set: LossyLargeCdfSet::Luma32x8,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -11742,6 +11780,7 @@ fn decode_lossy_chroma_16x4_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy16x4TransformCoefficients> {
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_8x8_eob_bin, 6);
     let coefficients = decode_lossy_large_two_d_coefficients(
@@ -11749,7 +11788,7 @@ fn decode_lossy_chroma_16x4_coefficients(
         plane,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_16X4_SCAN,
@@ -11759,7 +11798,7 @@ fn decode_lossy_chroma_16x4_coefficients(
             levels_stride: LOSSY_LUMA_16X4_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_16X4_LEVELS,
             eob_thresholds: (8, 16),
-            cdf_set: LossyLargeCdfSet::Chroma8x8,
+            cdf_set: LossyLargeCdfSet::Chroma16x4,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -11789,6 +11828,7 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal8x4
         | TransformGrid::Square8
         | TransformGrid::Horizontal16x4
+        | TransformGrid::Horizontal32x8
         | TransformGrid::Square16
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
@@ -12908,6 +12948,16 @@ fn luma_32x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
     }
 }
 
+fn luma_32x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        9 => Ok(Some(&quantization::Y_32X8_MATRIX_9)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn luma_32x32_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
     if !quantization.using_matrix {
         return Ok(None);
@@ -12942,6 +12992,19 @@ fn chroma_16x16_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
+fn chroma_16x4_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X4_MATRIX_9)),
         _ => Err(PortableUnavailable),
     }
 }
@@ -14674,6 +14737,11 @@ fn decode_syntax_with_cdef(
                                 decoder,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_grid(
+                                    transform_grid,
+                                    &above_luma_contexts,
+                                    &left_luma_contexts,
+                                ),
                             );
                             lossy_luma_32x8_coefficients = Some(result?);
                         }
@@ -14720,6 +14788,12 @@ fn decode_syntax_with_cdef(
                                     plane,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_dimensions(
+                                        4,
+                                        1,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    ),
                                 )?);
                             lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                                 .last_lossy_chroma_residual_context
@@ -15069,6 +15143,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    4,
+                                    1,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             )?);
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                             .last_lossy_chroma_residual_context
@@ -28432,22 +28512,23 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
     above_left: &ClosedLeaf,
     above_right: &ClosedLeaf,
     left_neighbor: Option<&ClosedLeaf>,
+    above_right_is_above_left: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
         luma_predictor,
         luma_angle,
         chroma_predictor,
-        chroma_angle: _,
+        chroma_angle,
         lossy_luma_32x8_coefficients,
         lossy_chroma_16x4_coefficients,
         ..
     } = syntax;
 
-    let luma_top: [u16; 32] = if std::ptr::eq(above_left, above_right) {
-        bottom_edge_32(&above_left.planes[0])
+    let luma_top: [u16; 32] = if above_right_is_above_left {
+        bottom_edge_32x8(&above_left.planes[0])
     } else {
-        let left = bottom_edge_16(&above_left.planes[0]);
-        let right = bottom_edge_16(&above_right.planes[0]);
+        let left = bottom_edge_16x8(&above_left.planes[0]);
+        let right = bottom_edge_16x8(&above_right.planes[0]);
         std::array::from_fn(|index| {
             if index < 16 {
                 left[index]
@@ -28456,11 +28537,14 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
             }
         })
     };
-    let luma_left =
-        left_neighbor.map_or([luma_top[0]; 8], |neighbor| right_edge(&neighbor.planes[0]));
+    let luma_left = left_neighbor.map(|neighbor| right_edge(&neighbor.planes[0]));
+    let luma_left_for_prediction = luma_left.unwrap_or([luma_top[0]; 8]);
     let luma = match luma_predictor {
         LumaPredictor::Dc => reconstruct_lossy_luma_32x8_from_prediction(
-            [rectangular_dc_predictor(&luma_top, &luma_left); 256],
+            [luma_left.map_or_else(
+                || one_sided_dc_predictor_32(luma_top),
+                |left| rectangular_dc_predictor(&luma_top, &left),
+            ); 256],
             lossy_luma_32x8_coefficients,
         ),
         LumaPredictor::Vertical => reconstruct_lossy_luma_32x8_from_prediction(
@@ -28468,12 +28552,16 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
             lossy_luma_32x8_coefficients,
         ),
         LumaPredictor::Horizontal => reconstruct_lossy_luma_32x8_from_prediction(
-            std::array::from_fn(|index| luma_left[index / 32]),
+            std::array::from_fn(|index| luma_left_for_prediction[index / 32]),
             lossy_luma_32x8_coefficients,
         ),
         LumaPredictor::Paeth => reconstruct_lossy_luma_32x8_from_prediction(
             std::array::from_fn(|index| {
-                paeth_predictor(luma_top[index % 32], luma_left[index / 32], luma_top[0])
+                paeth_predictor(
+                    luma_top[index % 32],
+                    luma_left_for_prediction[index / 32],
+                    luma_top[0],
+                )
             }),
             lossy_luma_32x8_coefficients,
         ),
@@ -28481,34 +28569,36 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
         | LumaPredictor::Diagonal113
         | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_32x8_diagonal_z2(
             luma_top,
-            luma_left,
+            luma_left_for_prediction,
             luma_angle.ok_or(PortableUnavailable)?,
             lossy_luma_32x8_coefficients,
         )?,
         LumaPredictor::Diagonal203 => reconstruct_lossy_luma_32x8_diagonal_z3(
-            luma_left,
+            luma_left_for_prediction,
             luma_angle.ok_or(PortableUnavailable)?,
             lossy_luma_32x8_coefficients,
         )?,
-        LumaPredictor::Smooth => {
-            reconstruct_lossy_luma_32x8_smooth(luma_top, luma_left, lossy_luma_32x8_coefficients)
-        }
+        LumaPredictor::Smooth => reconstruct_lossy_luma_32x8_smooth(
+            luma_top,
+            luma_left_for_prediction,
+            lossy_luma_32x8_coefficients,
+        ),
         LumaPredictor::SmoothVertical => reconstruct_lossy_luma_32x8_smooth_vertical(
             luma_top,
-            luma_left,
+            luma_left_for_prediction,
             lossy_luma_32x8_coefficients,
         ),
         LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_32x8_smooth_horizontal(
             luma_top,
-            luma_left,
+            luma_left_for_prediction,
             lossy_luma_32x8_coefficients,
         ),
         _ => return Err(PortableUnavailable),
     };
 
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
-        let top: [u16; 16] = if std::ptr::eq(above_left, above_right) {
-            bottom_edge_16(&above_left.planes[plane])
+        let top: [u16; 16] = if above_right_is_above_left {
+            bottom_edge_at::<16>(&above_left.planes[plane], 16, 0)
         } else {
             let left = bottom_edge_8_for_16x4_chroma(&above_left.planes[plane]);
             let right = bottom_edge_8_for_16x4_chroma(&above_right.planes[plane]);
@@ -28520,9 +28610,8 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
                 }
             })
         };
-        let left = left_neighbor.map_or([top[0]; 4], |neighbor| {
-            right_edge_4(&neighbor.planes[plane])
-        });
+        let left = left_neighbor.map(|neighbor| right_edge_4(&neighbor.planes[plane]));
+        let left_for_prediction = left.unwrap_or([top[0]; 4]);
         let coefficients = lossy_chroma_16x4_coefficients[plane.saturating_sub(1)];
 
         match chroma_predictor {
@@ -28530,34 +28619,29 @@ fn reconstruct_following_lossy_420_vertical_32x8_leaf(
                 let alpha = if plane == 1 { alpha_u } else { alpha_v };
                 reconstruct_lossy_chroma_16x4_cfl(
                     &luma,
-                    rectangular_dc_predictor(&top, &left),
+                    left.map_or_else(
+                        || one_sided_dc_predictor_16(top),
+                        |left| rectangular_dc_predictor(&top, &left),
+                    ),
                     alpha,
                     coefficients,
                 )
             }
             ChromaPredictor::Dc => Ok(reconstruct_lossy_luma_16x4(
-                rectangular_dc_predictor(&top, &left),
+                left.map_or_else(
+                    || one_sided_dc_predictor_16(top),
+                    |left| rectangular_dc_predictor(&top, &left),
+                ),
                 coefficients,
-                Lossy4x8TransformKind::DctDct,
+                chroma_rect_transform_kind(chroma_predictor),
             )),
-            ChromaPredictor::Vertical => Ok(reconstruct_lossy_luma_16x4_vertical(
+            _ => reconstruct_lossy_full_16x4_chroma(
+                chroma_predictor,
+                chroma_angle,
                 top,
+                left_for_prediction,
                 coefficients,
-                Lossy4x8TransformKind::DctDct,
-            )),
-            ChromaPredictor::Horizontal => Ok(reconstruct_lossy_luma_16x4_horizontal(
-                left,
-                coefficients,
-                Lossy4x8TransformKind::DctDct,
-            )),
-            ChromaPredictor::Paeth => Ok(reconstruct_lossy_luma_16x4_from_prediction(
-                std::array::from_fn(|index| {
-                    paeth_predictor(top[index % 16], left[index / 16], top[0])
-                }),
-                coefficients,
-                Lossy4x8TransformKind::DctDct,
-            )),
-            _ => Err(PortableUnavailable),
+            ),
         }
     };
 
@@ -39009,6 +39093,7 @@ impl Lossy420Decoder {
                 &above_left,
                 &above_right,
                 left_neighbor.as_ref(),
+                above_right_is_above_left,
             );
 
             return result.map(visible);
