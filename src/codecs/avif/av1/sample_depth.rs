@@ -8,33 +8,79 @@
 //! prove reconstruction first and then call this boundary without unchecked
 //! shifts or narrowing casts.
 
-/// Truncate one validated AVIF sample to the crate's 8-bit transfer boundary.
+/// A validated nominal AVIF sample depth.
 ///
-/// High-bit-depth AVIF conversion for the target Pillow-compatible path is a
-/// bit truncation, not a rounded full-range rescale. Keeping that distinction
-/// explicit prevents a later decoder stage from accidentally changing the
-/// requested conversion semantics while still rejecting samples outside the
-/// declared nominal range.
-pub(crate) fn truncate_to_u8(value: u16, bit_depth: u32) -> Option<u8> {
-    let maximum = maximum_sample(bit_depth)?;
-    let value = u32::from(value);
-    if value > maximum {
-        return None;
-    }
-    let shift = bit_depth.checked_sub(8)?;
-    u8::try_from(value.checked_shr(shift)?).ok()
+/// This type keeps sample-domain invariants together. It is intentionally
+/// independent from entropy parsing: a future high-bit-depth decoder can
+/// prove reconstruction first and then use the same checked boundary for
+/// sample validation, midpoint prediction, and public 8-bit conversion.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct SampleDepth {
+    bits: u32,
+    maximum: u16,
 }
 
-fn maximum_sample(bit_depth: u32) -> Option<u32> {
-    if !(8..=12).contains(&bit_depth) {
-        return None;
+impl SampleDepth {
+    /// Construct a depth supported by the checked AVIF sample domain.
+    pub(crate) fn new(bits: u32) -> Option<Self> {
+        if !(8..=12).contains(&bits) {
+            return None;
+        }
+        let maximum = 1_u32.checked_shl(bits)?.checked_sub(1)?;
+        Some(Self {
+            bits,
+            maximum: u16::try_from(maximum).ok()?,
+        })
     }
-    1_u32.checked_shl(bit_depth)?.checked_sub(1)
+
+    /// Return the validated number of nominal sample bits.
+    pub(crate) const fn bits(self) -> u32 {
+        self.bits
+    }
+
+    /// Return the greatest representable sample for this depth.
+    pub(crate) const fn maximum(self) -> u16 {
+        self.maximum
+    }
+
+    /// Validate one reconstructed sample against this depth's nominal range.
+    pub(crate) fn validate(self, value: u16) -> Option<u16> {
+        (value <= self.maximum()).then_some(value)
+    }
+
+    /// Truncate one validated sample to the crate's 8-bit transfer boundary.
+    ///
+    /// High-bit-depth AVIF conversion for the target Pillow-compatible path is
+    /// a bit truncation, not a rounded full-range rescale. Keeping that
+    /// distinction explicit prevents a later decoder stage from accidentally
+    /// changing the requested conversion semantics.
+    pub(crate) fn truncate_to_u8(self, value: u16) -> Option<u8> {
+        let value = u32::from(self.validate(value)?);
+        let shift = self.bits().checked_sub(8)?;
+        u8::try_from(value.checked_shr(shift)?).ok()
+    }
+}
+
+/// Truncate one validated AVIF sample to the crate's 8-bit transfer boundary.
+pub(crate) fn truncate_to_u8(value: u16, bit_depth: u32) -> Option<u8> {
+    SampleDepth::new(bit_depth)?.truncate_to_u8(value)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::truncate_to_u8;
+    use super::{SampleDepth, truncate_to_u8};
+
+    #[test]
+    fn validates_supported_depths_and_sample_domain() -> Result<(), &'static str> {
+        assert_eq!(SampleDepth::new(7), None);
+        assert_eq!(SampleDepth::new(13), None);
+        let depth = SampleDepth::new(12).ok_or("12-bit AVIF depth is supported")?;
+        assert_eq!(depth.bits(), 12);
+        assert_eq!(depth.maximum(), 4_095);
+        assert_eq!(depth.validate(4_095), Some(4_095));
+        assert_eq!(depth.validate(4_096), None);
+        Ok(())
+    }
 
     #[test]
     fn truncates_the_endpoints_for_each_avif_depth() {

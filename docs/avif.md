@@ -116,13 +116,13 @@ production walker yet; persistent frame state, complete 4:2:0 chroma geometry,
 neighbor windows, and independent pixel evidence remain planned.
 
 The sample-depth boundary is also isolated in
-`src/codecs/avif/av1/sample_depth.rs`. It uses checked rounded normalization
-for nominal full-range 8-, 10-, and 12-bit samples and rejects an invalid depth
-or out-of-range `u16` value. The current materializer exercises it for its
-8-bit color and auxiliary-alpha samples; this is a reusable conversion
-prerequisite, not support for the 12-bit animated fixture. Full high-bit-depth
-AV1 reconstruction, HDR range/transfer handling, and sequence presentation
-remain planned.
+`src/codecs/avif/av1/sample_depth.rs`. Its checked `SampleDepth` type validates
+nominal 8-, 10-, and 12-bit ranges and uses bit truncation—not rounded
+normalization—for the current 8-bit transfer boundary. The current materializer
+exercises it for its 8-bit color and auxiliary-alpha samples; this is a
+reusable conversion prerequisite, not support for the 12-bit animated
+fixture. Full high-bit-depth AV1 reconstruction, HDR range/transfer handling,
+and sequence presentation remain planned.
 
 The alpha prerequisite now has an explicit safe-Rust frame boundary: the AV1
 block parser distinguishes monochrome lossless syntax from 4:4:4 color syntax,
