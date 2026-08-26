@@ -5571,6 +5571,39 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_vertical8x16_mode1_noise():
+        """Generate the origin Vertical8x16 filter-intra mode-1 witness."""
+
+        random_state = random.Random(105)
+        pixels = bytes(
+            random_state.randrange(256) for _ in range(8 * 16 * 3)
+        )
+        return Image.frombytes("RGB", (8, 16), pixels)
+
+    write_campaign_image(
+        "coverage_vertical8x16_filter_intra_mode1_01",
+        filter_intra_vertical8x16_mode1_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def horizontal_r32x8_ripple():
         """Generate a deterministic PARTITION_H4 32x8-transform witness."""
 

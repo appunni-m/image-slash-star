@@ -4206,6 +4206,10 @@ formats:
       description: 8x16 4:2:0 quality-76 speed-0 origin Vertical8x16 leaf using filter-intra mode 0, one TX8x16 luma transform, and TX4x8 U/V transforms
       test_assets:
       - coverage_vertical8x16_filter_intra_mode0_01.avif
+    - id: coverage_vertical8x16_filter_intra_mode1_01
+      description: 8x16 4:2:0 quality-76 speed-0 origin Vertical8x16 leaf using filter-intra mode 1, one TX8x16 luma transform, and TX4x8 U/V transforms
+      test_assets:
+      - coverage_vertical8x16_filter_intra_mode1_01.avif
     - id: coverage_r32x32_following_01
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with pinned following Horizontal32x16 luma and 16x8 chroma reconstruction
       test_assets:
