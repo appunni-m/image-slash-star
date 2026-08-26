@@ -5873,6 +5873,73 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_smooth_horizontal_square16():
+        """Generate the following Square16 SmoothHorizontal witness.
+
+        This is the promoted SF16-F06-N01 input from the deterministic
+        100-case search. Keep the generator algebra identical to the campaign
+        so the committed fixture remains reproducible from its input-only
+        provenance.
+        """
+
+        family = 5
+        candidate = 1
+        phase = (3 * family + candidate) % 8
+
+        def row_signal(row):
+            return (((row * 7 + phase) % 16) - 8) * (3 + candidate % 3)
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            cx, cy = x // 2, y // 2
+            left = row_signal(cy)
+            if cx < 8:
+                horizontal = (cx - 7) * (1 + family % 3)
+                u_delta = left + horizontal
+                v_delta = left + horizontal // 2
+            else:
+                step = cx - 8
+                continuation = left + ((row_signal(0) - left) * step + 3) // 7
+                ripple = ((cx + 2 * cy + candidate + family) % 3) - 1
+                u_delta = continuation + ripple
+                v_delta = continuation + ripple // 2
+            luma = 128 + ((7 * x + 11 * y + candidate + family) % 7) - 3
+            return yuv_to_rgb(luma, 128 + u_delta, 128 + v_delta)
+
+        return image_from_pixels((32, 16), pixel)
+
+    write_campaign_image(
+        "coverage_square16_chroma_smooth_horizontal_01",
+        chroma_smooth_horizontal_square16(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal157_vertical8x16():
         """Generate the following Vertical8x16 Diagonal157 witness."""
 
