@@ -152,6 +152,16 @@ Horizontal32x16 TX8x8 split witness. Its `Post-filterintramode[0/0]` trace
 entry is dav1d's filter-intra-disabled sentinel; it must not be described as
 filter-intra mode 0. Following-leaf split filter-intra remains an open target.
 
+The fixture `coverage_square16_filter_intra_mode0_01.avif`
+(`2fb3de2676b560d379d05782b3e57c7af028b2fdac0350364389b3f9ceb77bcc`) is a
+16x16 8-bit 4:2:0 origin `Square16` witness. It selects
+`FILTER_PRED[13/0]`, an unsplit TX16x16 luma transform, and TX8x8 U/V
+transforms. The pinned trace has partition range `62320` and 1,116 entropy
+operations; the safe-Rust reconstruction contract matches the exact Y/U/V
+planes and Pillow RGB8 output. Its Pillow RGB SHA-256 is
+`4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008`.
+This is bounded origin Square16 evidence, not general filter-intra support.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated

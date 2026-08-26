@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 198);
+    assert_eq!(expected.cases.len(), 199);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5100,6 +5100,20 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 case.partition_blocks.len(),
                 2,
                 "AV1 Horizontal32x16 origin witness topology case {case_index}"
+            );
+        } else if case.fixture == "coverage_square16_filter_intra_mode0_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 0,
+                    range: 62_320,
+                }],
+                "AV1 origin Square16 filter-intra witness partition topology"
             );
         } else {
             assert_eq!(
@@ -5576,6 +5590,43 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=7,txtp=0,eob=126]: r=60424 [x=0,cbx4=2]",
                 ],
                 "AV1 following 4:2:0 Vertical16x32 mode-0 witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_square16_filter_intra_mode0_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                1_116,
+                "AV1 origin Square16 filter-intra witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=60251",
+                    "Post-cdef_idx[0]: r=60251",
+                    "Post-ymode[0]: r=57426",
+                    "Post-uvmode[0]: r=36572",
+                    "Post-filterintramode[13/0]: r=49648",
+                    "Post-tx[2]: r=49648",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=37384",
+                    "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=62]: r=34568 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=63]: r=62984 [x=0,cbx4=0]",
+                ],
+                "AV1 origin Square16 filter-intra witness leaf states"
             );
         }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
@@ -6353,6 +6404,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r16x32_following_filter_intra_split_mode0_01.avif" => {
                 "cac42b39973f40158ad8fec42946726538adddb9a0d113ed0a16b054a9189272"
+            }
+            "coverage_square16_filter_intra_mode0_01.avif" => {
+                "4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008"
             }
             "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
                 "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"
