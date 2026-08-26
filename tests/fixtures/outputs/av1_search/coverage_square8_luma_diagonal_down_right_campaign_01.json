@@ -82,7 +82,7 @@
       "pillow_rgb_second_sha256": "d6253245c91bfff4763d1336557ca65b23162d3c6d9e438c7925e909328f609d",
       "pillow_rgb_sha256": "d6253245c91bfff4763d1336557ca65b23162d3c6d9e438c7925e909328f609d",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -100,7 +100,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -268,7 +268,7 @@
       "pillow_rgb_second_sha256": "43e2ffc850706b12ae9d8ae7aa65d46ae018438a94f6d8da028ab3aeb740c930",
       "pillow_rgb_sha256": "43e2ffc850706b12ae9d8ae7aa65d46ae018438a94f6d8da028ab3aeb740c930",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -289,7 +289,7 @@
         "luma_modes_dc_then_diagonal_down_right",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -445,7 +445,7 @@
       "pillow_rgb_second_sha256": "48a51b95c8e8bf228715abdb970a456588ab2f3842e38b5a780d27bdd28c762f",
       "pillow_rgb_sha256": "48a51b95c8e8bf228715abdb970a456588ab2f3842e38b5a780d27bdd28c762f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -635,7 +635,7 @@
       "pillow_rgb_second_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
       "pillow_rgb_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -819,7 +819,7 @@
       "pillow_rgb_second_sha256": "7d1d4c92fdd41aa1de6aaefa2d2caaf7324361a13c24432affa5e2bce66b9eba",
       "pillow_rgb_sha256": "7d1d4c92fdd41aa1de6aaefa2d2caaf7324361a13c24432affa5e2bce66b9eba",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -838,7 +838,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -991,7 +991,7 @@
       "pillow_rgb_second_sha256": "8613c01bffbb4292e2ae693a2c6668e390c35b9a6749f2348ab1e932085a6e7a",
       "pillow_rgb_sha256": "8613c01bffbb4292e2ae693a2c6668e390c35b9a6749f2348ab1e932085a6e7a",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -1010,7 +1010,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -1163,7 +1163,7 @@
       "pillow_rgb_second_sha256": "8fd348e53fa1403e408b6c6977bf33f70f60f4642e79760ad7027fac94644025",
       "pillow_rgb_sha256": "8fd348e53fa1403e408b6c6977bf33f70f60f4642e79760ad7027fac94644025",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -1353,7 +1353,7 @@
       "pillow_rgb_second_sha256": "7ddba8d0e15226c7517733b18370953b1a1ade5884a8fecea599f78f737801ca",
       "pillow_rgb_sha256": "7ddba8d0e15226c7517733b18370953b1a1ade5884a8fecea599f78f737801ca",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -1373,7 +1373,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -1520,7 +1520,7 @@
       "pillow_rgb_second_sha256": "88e5579b1cb75cc1eb775d8d2ed90384b69eef4bd4adc74f43d84d336e93e2ee",
       "pillow_rgb_sha256": "88e5579b1cb75cc1eb775d8d2ed90384b69eef4bd4adc74f43d84d336e93e2ee",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -1539,7 +1539,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -1692,7 +1692,7 @@
       "pillow_rgb_second_sha256": "f4ae36a7abb80a177d777829dcd429a47ff8969db6e4ed61378954630addebf6",
       "pillow_rgb_sha256": "f4ae36a7abb80a177d777829dcd429a47ff8969db6e4ed61378954630addebf6",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -1873,7 +1873,7 @@
       "pillow_rgb_second_sha256": "2307b3e97e6c33f7a587bae1189c174f7b88564537232e97b686009d2ea44828",
       "pillow_rgb_sha256": "2307b3e97e6c33f7a587bae1189c174f7b88564537232e97b686009d2ea44828",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2059,7 +2059,7 @@
       "pillow_rgb_second_sha256": "464867db3234ac04351647fea3346ab4f783cca01eab3ef4e5f1df95a80f2c13",
       "pillow_rgb_sha256": "464867db3234ac04351647fea3346ab4f783cca01eab3ef4e5f1df95a80f2c13",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2230,7 +2230,7 @@
       "pillow_rgb_second_sha256": "af640cd676a62f7295ff47362e80f8c769d400a6cd2490b280071ed22ee86779",
       "pillow_rgb_sha256": "af640cd676a62f7295ff47362e80f8c769d400a6cd2490b280071ed22ee86779",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2248,7 +2248,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -2416,7 +2416,7 @@
       "pillow_rgb_second_sha256": "eb3b60ddca546b5c28a9f8c8c6d52bdd9615a514b4e082b3c6ea2375c19d0e2f",
       "pillow_rgb_sha256": "eb3b60ddca546b5c28a9f8c8c6d52bdd9615a514b4e082b3c6ea2375c19d0e2f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2582,7 +2582,7 @@
       "pillow_rgb_second_sha256": "f7e8c5725cfdffb08446ee837bd437524e51efe661332dd3762dd8b0e73d0287",
       "pillow_rgb_sha256": "f7e8c5725cfdffb08446ee837bd437524e51efe661332dd3762dd8b0e73d0287",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2601,7 +2601,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -2769,7 +2769,7 @@
       "pillow_rgb_second_sha256": "6ce470b5527fc2ae4e86ce771b4a5804728ad1ef7c41d6438288fdcddfcc9fc6",
       "pillow_rgb_sha256": "6ce470b5527fc2ae4e86ce771b4a5804728ad1ef7c41d6438288fdcddfcc9fc6",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2935,7 +2935,7 @@
       "pillow_rgb_second_sha256": "da8b558e16414b7e5a690cb66a5355a731b144a1fa64cb84cc7fbac8ec4b475b",
       "pillow_rgb_sha256": "da8b558e16414b7e5a690cb66a5355a731b144a1fa64cb84cc7fbac8ec4b475b",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -2955,7 +2955,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -3117,7 +3117,7 @@
       "pillow_rgb_second_sha256": "e3ef08b35245ea1ef27686e66b85a9cb03dc11ffcb4e6d1234cf8bbf6c8e1689",
       "pillow_rgb_sha256": "e3ef08b35245ea1ef27686e66b85a9cb03dc11ffcb4e6d1234cf8bbf6c8e1689",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -3286,7 +3286,7 @@
       "pillow_rgb_second_sha256": "b9ff8bdf883b319aff8f7f1b39f42656a40c1e958c5a3a892baf01ae5f89bb7d",
       "pillow_rgb_sha256": "b9ff8bdf883b319aff8f7f1b39f42656a40c1e958c5a3a892baf01ae5f89bb7d",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -3304,7 +3304,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -3472,7 +3472,7 @@
       "pillow_rgb_second_sha256": "dc138c6024723385365bdaea959a2cce4fd0ead0e4811405b6a08342e62d027a",
       "pillow_rgb_sha256": "dc138c6024723385365bdaea959a2cce4fd0ead0e4811405b6a08342e62d027a",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -3641,7 +3641,7 @@
       "pillow_rgb_second_sha256": "6be472e3ec1403033dc216b714440493e898efddb67f461d068dbeb7cfc3c734",
       "pillow_rgb_sha256": "6be472e3ec1403033dc216b714440493e898efddb67f461d068dbeb7cfc3c734",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -3660,7 +3660,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -3813,7 +3813,7 @@
       "pillow_rgb_second_sha256": "f817d73a7ac4398750652378ad58397c584ef91904e384caa2b53d64d3fed60c",
       "pillow_rgb_sha256": "f817d73a7ac4398750652378ad58397c584ef91904e384caa2b53d64d3fed60c",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -3833,7 +3833,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -3989,7 +3989,7 @@
       "pillow_rgb_second_sha256": "65313f2c4ad015ca65a46306fbda942e04078549a28b0483c79ad9548828c625",
       "pillow_rgb_sha256": "65313f2c4ad015ca65a46306fbda942e04078549a28b0483c79ad9548828c625",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -4011,7 +4011,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -4184,7 +4184,7 @@
       "pillow_rgb_second_sha256": "6409e364fa30d2261831e5a12e6cb2f80ae0f2b3d06d1e7a06eb418d61a99c38",
       "pillow_rgb_sha256": "6409e364fa30d2261831e5a12e6cb2f80ae0f2b3d06d1e7a06eb418d61a99c38",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -4363,7 +4363,7 @@
       "pillow_rgb_second_sha256": "562336c2a01216af5b584bfdea7cfdc45f6e4a413ad6bfd39569ea09e33ff1fb",
       "pillow_rgb_sha256": "562336c2a01216af5b584bfdea7cfdc45f6e4a413ad6bfd39569ea09e33ff1fb",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -4382,7 +4382,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -4535,7 +4535,7 @@
       "pillow_rgb_second_sha256": "8ff44f5d8c288e3da3096f08597f938f5fc65355b6af1f70aae7c482648c7a4d",
       "pillow_rgb_sha256": "8ff44f5d8c288e3da3096f08597f938f5fc65355b6af1f70aae7c482648c7a4d",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -4555,7 +4555,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -4711,7 +4711,7 @@
       "pillow_rgb_second_sha256": "f89628a5e9541d9f08a37b41640cfeef10a336231a4e99ef3d52db6a25955b71",
       "pillow_rgb_sha256": "f89628a5e9541d9f08a37b41640cfeef10a336231a4e99ef3d52db6a25955b71",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -4731,7 +4731,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -4902,7 +4902,7 @@
       "pillow_rgb_second_sha256": "e59e79809e16af1496e1bec750ed421e33fcca4c90436075eb9ab3231d8a379e",
       "pillow_rgb_sha256": "e59e79809e16af1496e1bec750ed421e33fcca4c90436075eb9ab3231d8a379e",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5081,7 +5081,7 @@
       "pillow_rgb_second_sha256": "105b473f3a2558f0bfbedf804be635f916f5425a21457dd7d51516741dd2cbdb",
       "pillow_rgb_sha256": "105b473f3a2558f0bfbedf804be635f916f5425a21457dd7d51516741dd2cbdb",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5100,7 +5100,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -5253,7 +5253,7 @@
       "pillow_rgb_second_sha256": "b07a6598162f81834a1cf75bfc63ea45a35d708126a4c147ab174e48ba2f31b8",
       "pillow_rgb_sha256": "b07a6598162f81834a1cf75bfc63ea45a35d708126a4c147ab174e48ba2f31b8",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5273,7 +5273,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -5429,7 +5429,7 @@
       "pillow_rgb_second_sha256": "09d8c0a128b0d37b3dbfc1328b9cb39e2ddbdf08fddbb17b91000592e8cb8071",
       "pillow_rgb_sha256": "09d8c0a128b0d37b3dbfc1328b9cb39e2ddbdf08fddbb17b91000592e8cb8071",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5449,7 +5449,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -5590,7 +5590,7 @@
       "pillow_rgb_second_sha256": "cd6625d9c9b54d2de16115fcef3fe988982f4a1fa0851c6315728d27d8b41e90",
       "pillow_rgb_sha256": "cd6625d9c9b54d2de16115fcef3fe988982f4a1fa0851c6315728d27d8b41e90",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5610,7 +5610,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -5781,7 +5781,7 @@
       "pillow_rgb_second_sha256": "6f0791acacd03b673cecd431ed893a35fb751cb900e43a121f49e5e44db05caf",
       "pillow_rgb_sha256": "6f0791acacd03b673cecd431ed893a35fb751cb900e43a121f49e5e44db05caf",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5801,7 +5801,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "left_edge_varies"
       ],
       "right_chroma_payloads": [
@@ -5934,7 +5934,7 @@
       "pillow_rgb_second_sha256": "04776b8ec6e85b5ed4072679873a2318c4f5a0a9d96ae2c36bafd431ea10f95a",
       "pillow_rgb_sha256": "04776b8ec6e85b5ed4072679873a2318c4f5a0a9d96ae2c36bafd431ea10f95a",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -5953,7 +5953,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -6091,7 +6091,7 @@
       "pillow_rgb_second_sha256": "01e97d670365b3001c5338faef4a5323a1c2044cce35dfbde402d119df044d7b",
       "pillow_rgb_sha256": "01e97d670365b3001c5338faef4a5323a1c2044cce35dfbde402d119df044d7b",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6111,7 +6111,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -6267,7 +6267,7 @@
       "pillow_rgb_second_sha256": "107e7703ded2a9a8dd6c6da4d7faefd5cde01dd7eac5d0649696a4af79db8573",
       "pillow_rgb_sha256": "107e7703ded2a9a8dd6c6da4d7faefd5cde01dd7eac5d0649696a4af79db8573",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6287,7 +6287,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -6434,7 +6434,7 @@
       "pillow_rgb_second_sha256": "788b57b4c365da26855c9bbe7d5b9ceae66da358de9625770d85a397e113fed5",
       "pillow_rgb_sha256": "788b57b4c365da26855c9bbe7d5b9ceae66da358de9625770d85a397e113fed5",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6454,7 +6454,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "left_edge_varies"
       ],
       "right_chroma_payloads": [
@@ -6587,7 +6587,7 @@
       "pillow_rgb_second_sha256": "9e58cb518cc15170ac11e048b8a6f3da5a0b1910984e41f7a1e888a5739d7a25",
       "pillow_rgb_sha256": "9e58cb518cc15170ac11e048b8a6f3da5a0b1910984e41f7a1e888a5739d7a25",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6609,7 +6609,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -6759,7 +6759,7 @@
       "pillow_rgb_second_sha256": "5e7a428a4c66f510902dd107ec814f770a1174e6533e96ad7e01af9ec87b5c06",
       "pillow_rgb_sha256": "5e7a428a4c66f510902dd107ec814f770a1174e6533e96ad7e01af9ec87b5c06",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6781,7 +6781,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -6924,7 +6924,7 @@
       "pillow_rgb_second_sha256": "98c3325996fa245b960389e38bc24c984c006ac4244753746e2cabe7711ca52a",
       "pillow_rgb_sha256": "98c3325996fa245b960389e38bc24c984c006ac4244753746e2cabe7711ca52a",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -6944,7 +6944,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -7076,7 +7076,7 @@
       "pillow_rgb_second_sha256": "218ee64b8c62f87e442c1d168646a8175ca31b3bdd5ec5592ec97ebd7628b5fc",
       "pillow_rgb_sha256": "218ee64b8c62f87e442c1d168646a8175ca31b3bdd5ec5592ec97ebd7628b5fc",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7095,7 +7095,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -7248,7 +7248,7 @@
       "pillow_rgb_second_sha256": "4ea9c79c6830b62123c22ea1e5dbe90321257b58e0257e181eb1096989d244a2",
       "pillow_rgb_sha256": "4ea9c79c6830b62123c22ea1e5dbe90321257b58e0257e181eb1096989d244a2",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7270,7 +7270,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -7429,7 +7429,7 @@
       "pillow_rgb_second_sha256": "e888d0d4d2a199fabad44e13e429c0e7ca4f73939d0af4131c846e64003090c6",
       "pillow_rgb_sha256": "e888d0d4d2a199fabad44e13e429c0e7ca4f73939d0af4131c846e64003090c6",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7449,7 +7449,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -7620,7 +7620,7 @@
       "pillow_rgb_second_sha256": "33303060df73face6620a2e3a4f6f00e68c63cbbcd8842acc3861f44360036f5",
       "pillow_rgb_sha256": "33303060df73face6620a2e3a4f6f00e68c63cbbcd8842acc3861f44360036f5",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7792,7 +7792,7 @@
       "pillow_rgb_second_sha256": "7e40c5b7e0668d15791b7f173fee01cbe7d533e2da23c07872bb13f8282ac9ef",
       "pillow_rgb_sha256": "7e40c5b7e0668d15791b7f173fee01cbe7d533e2da23c07872bb13f8282ac9ef",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7812,7 +7812,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -7959,7 +7959,7 @@
       "pillow_rgb_second_sha256": "3b094715ad649cf77e5ef26ad1a169d6aa918c6060e36acf011b44da20220c11",
       "pillow_rgb_sha256": "3b094715ad649cf77e5ef26ad1a169d6aa918c6060e36acf011b44da20220c11",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -7979,7 +7979,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -8135,7 +8135,7 @@
       "pillow_rgb_second_sha256": "c8377d864840f99652a04fa0d9b6a34813c83406a0c8efda5c8c1c1281a62122",
       "pillow_rgb_sha256": "c8377d864840f99652a04fa0d9b6a34813c83406a0c8efda5c8c1c1281a62122",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -8154,7 +8154,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -8322,7 +8322,7 @@
       "pillow_rgb_second_sha256": "e7552faa21c791dd865a95b2c2415e9866fb7bafa25b0eb8fc703559e1fcb4c4",
       "pillow_rgb_sha256": "e7552faa21c791dd865a95b2c2415e9866fb7bafa25b0eb8fc703559e1fcb4c4",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -8494,7 +8494,7 @@
       "pillow_rgb_second_sha256": "79d67ebe9e549f89ef500bde1e6b0b4e394ef1810801e430f46416dd86b6a698",
       "pillow_rgb_sha256": "79d67ebe9e549f89ef500bde1e6b0b4e394ef1810801e430f46416dd86b6a698",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -8513,7 +8513,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -8666,7 +8666,7 @@
       "pillow_rgb_second_sha256": "0ec51d6962de37bef5b894a8f02338006731a880ae875aa8134a95905d6ef5e4",
       "pillow_rgb_sha256": "0ec51d6962de37bef5b894a8f02338006731a880ae875aa8134a95905d6ef5e4",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -8688,7 +8688,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -8846,7 +8846,7 @@
       "pillow_rgb_second_sha256": "95c105d5ab051b379baace0ac7f94e67fad4a156b992c2c033b864e7b1db60d9",
       "pillow_rgb_sha256": "95c105d5ab051b379baace0ac7f94e67fad4a156b992c2c033b864e7b1db60d9",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -8866,7 +8866,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -9007,7 +9007,7 @@
       "pillow_rgb_second_sha256": "474e83a7e39a2544236ed429fff037059044afc52d71edd3e4b6087b87df5e7f",
       "pillow_rgb_sha256": "474e83a7e39a2544236ed429fff037059044afc52d71edd3e4b6087b87df5e7f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9029,7 +9029,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -9172,7 +9172,7 @@
       "pillow_rgb_second_sha256": "914800cacb3d763d2cd5bb4abcd13d46d75d8ee2655a6ed7520d991460c14f3b",
       "pillow_rgb_sha256": "914800cacb3d763d2cd5bb4abcd13d46d75d8ee2655a6ed7520d991460c14f3b",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9194,7 +9194,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -9353,7 +9353,7 @@
       "pillow_rgb_second_sha256": "9ad5b6f27145ffe0288412f63554b835f5d0641ca7173e269d29a8a251e69f58",
       "pillow_rgb_sha256": "9ad5b6f27145ffe0288412f63554b835f5d0641ca7173e269d29a8a251e69f58",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9375,7 +9375,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -9518,7 +9518,7 @@
       "pillow_rgb_second_sha256": "69cab1f17cc8bd97f3cab7eee6f718e4f08cccac39e2e7e90e8c746fe0bef399",
       "pillow_rgb_sha256": "69cab1f17cc8bd97f3cab7eee6f718e4f08cccac39e2e7e90e8c746fe0bef399",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9538,7 +9538,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -9679,7 +9679,7 @@
       "pillow_rgb_second_sha256": "46d18cc3a4522c4bbc3d7d1c6198b227da755c37d29cfd1ee145bf58bab318be",
       "pillow_rgb_sha256": "46d18cc3a4522c4bbc3d7d1c6198b227da755c37d29cfd1ee145bf58bab318be",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9701,7 +9701,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -9844,7 +9844,7 @@
       "pillow_rgb_second_sha256": "d83b0ad45a36027599a1b0325caa1b170fe6636f9b419d52e8150a13327657fb",
       "pillow_rgb_sha256": "d83b0ad45a36027599a1b0325caa1b170fe6636f9b419d52e8150a13327657fb",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -9864,7 +9864,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10020,7 +10020,7 @@
       "pillow_rgb_second_sha256": "6dcc0f45f31a3f0264943a10403a5aad1d714a90086474e2460fba085b1d8b43",
       "pillow_rgb_sha256": "6dcc0f45f31a3f0264943a10403a5aad1d714a90086474e2460fba085b1d8b43",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10040,7 +10040,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10181,7 +10181,7 @@
       "pillow_rgb_second_sha256": "74edaa0371858b03b486a901897dc0a867c4b1a130e00de770819f50b166d080",
       "pillow_rgb_sha256": "74edaa0371858b03b486a901897dc0a867c4b1a130e00de770819f50b166d080",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10201,7 +10201,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10342,7 +10342,7 @@
       "pillow_rgb_second_sha256": "e838f0c02d3cad622f6eb15e3e318583409ce329fa6f3319a35a5351ea128957",
       "pillow_rgb_sha256": "e838f0c02d3cad622f6eb15e3e318583409ce329fa6f3319a35a5351ea128957",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10362,7 +10362,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10503,7 +10503,7 @@
       "pillow_rgb_second_sha256": "927351d6d49c22ec7db7c306f460b61db1969405f920f054894cf5426df17ca9",
       "pillow_rgb_sha256": "927351d6d49c22ec7db7c306f460b61db1969405f920f054894cf5426df17ca9",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10522,7 +10522,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10675,7 +10675,7 @@
       "pillow_rgb_second_sha256": "f12c49696548b13a4d259e8c3b923a58c261bc8884e28f42b6e78f455d7db64c",
       "pillow_rgb_sha256": "f12c49696548b13a4d259e8c3b923a58c261bc8884e28f42b6e78f455d7db64c",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10696,7 +10696,7 @@
         "luma_modes_dc_then_diagonal_down_right",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -10837,7 +10837,7 @@
       "pillow_rgb_second_sha256": "1401dafead0d153f87269887e5cb425c8ef3b2e7c118d43ea7a1e910b778725c",
       "pillow_rgb_sha256": "1401dafead0d153f87269887e5cb425c8ef3b2e7c118d43ea7a1e910b778725c",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -10856,7 +10856,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -10994,7 +10994,7 @@
       "pillow_rgb_second_sha256": "51aa5bac25c171f99fdedd80d6fbb19a5043ccc5e2963620d829737067a11219",
       "pillow_rgb_sha256": "51aa5bac25c171f99fdedd80d6fbb19a5043ccc5e2963620d829737067a11219",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11014,7 +11014,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11155,7 +11155,7 @@
       "pillow_rgb_second_sha256": "18dd5c91e3e674701827dccc8cf644bd58d2246f91b9b1ad7be04c3bb91876a1",
       "pillow_rgb_sha256": "18dd5c91e3e674701827dccc8cf644bd58d2246f91b9b1ad7be04c3bb91876a1",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11174,7 +11174,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11327,7 +11327,7 @@
       "pillow_rgb_second_sha256": "ffdf3e74387d4187ab7780dd945acfa5f562fff140bb43a909079c57e397b8fb",
       "pillow_rgb_sha256": "ffdf3e74387d4187ab7780dd945acfa5f562fff140bb43a909079c57e397b8fb",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11346,7 +11346,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11484,7 +11484,7 @@
       "pillow_rgb_second_sha256": "e0f572de2ac752c4668f9f75a071d63640c79993172427f555d4286c03501b86",
       "pillow_rgb_sha256": "e0f572de2ac752c4668f9f75a071d63640c79993172427f555d4286c03501b86",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11503,7 +11503,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11641,7 +11641,7 @@
       "pillow_rgb_second_sha256": "876773bd27ff4ef442dff50cac3d2f8e15c740038be1e275549e75dfd37f5a06",
       "pillow_rgb_sha256": "876773bd27ff4ef442dff50cac3d2f8e15c740038be1e275549e75dfd37f5a06",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11661,7 +11661,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11802,7 +11802,7 @@
       "pillow_rgb_second_sha256": "02d35f36abe4b32d0b0879f096c235bfdc4edb72e99969a2e9917c5cffae709f",
       "pillow_rgb_sha256": "02d35f36abe4b32d0b0879f096c235bfdc4edb72e99969a2e9917c5cffae709f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11821,7 +11821,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -11974,7 +11974,7 @@
       "pillow_rgb_second_sha256": "db316ad361226fabbc04f4202db17fd8b7e207387b2cb74395aeceb933003518",
       "pillow_rgb_sha256": "db316ad361226fabbc04f4202db17fd8b7e207387b2cb74395aeceb933003518",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -11994,7 +11994,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "left_edge_varies"
       ],
       "right_chroma_payloads": [
@@ -12127,7 +12127,7 @@
       "pillow_rgb_second_sha256": "e44a8a60b4839370664c5edc8f5e2cca7a1d962ade82fe92321dea2e8421bac1",
       "pillow_rgb_sha256": "e44a8a60b4839370664c5edc8f5e2cca7a1d962ade82fe92321dea2e8421bac1",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12147,7 +12147,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -12300,7 +12300,7 @@
       "pillow_rgb_second_sha256": "5af7671ede86e65416df52802332ac251c053cee71ff72402daa705c5835479c",
       "pillow_rgb_sha256": "5af7671ede86e65416df52802332ac251c053cee71ff72402daa705c5835479c",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12322,7 +12322,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -12481,7 +12481,7 @@
       "pillow_rgb_second_sha256": "43f48bc80fc0ff35f3bde0bff01394a6f8f87ee5776cf794edeb393cc30362a0",
       "pillow_rgb_sha256": "43f48bc80fc0ff35f3bde0bff01394a6f8f87ee5776cf794edeb393cc30362a0",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12656,7 +12656,7 @@
       "pillow_rgb_second_sha256": "74ac81b8b2b780db125c30692e3b2807fa647d335d69fe396326346753f018f5",
       "pillow_rgb_sha256": "74ac81b8b2b780db125c30692e3b2807fa647d335d69fe396326346753f018f5",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12676,7 +12676,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -12817,7 +12817,7 @@
       "pillow_rgb_second_sha256": "11d3d50724efda9e0de9f1eb8b1fa9f166c48ae18aba0f0b56817998dccdd2ef",
       "pillow_rgb_sha256": "11d3d50724efda9e0de9f1eb8b1fa9f166c48ae18aba0f0b56817998dccdd2ef",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12836,7 +12836,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -12974,7 +12974,7 @@
       "pillow_rgb_second_sha256": "2b67039517c048b72d5e57a1a9257caf00bc36811e236d77aed5c5e1487825a0",
       "pillow_rgb_sha256": "2b67039517c048b72d5e57a1a9257caf00bc36811e236d77aed5c5e1487825a0",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -12994,7 +12994,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -13165,7 +13165,7 @@
       "pillow_rgb_second_sha256": "9cfc49570aa3a59989ab75f94fe9634bee4fd7b66698113ebdf3d51a6a197920",
       "pillow_rgb_sha256": "9cfc49570aa3a59989ab75f94fe9634bee4fd7b66698113ebdf3d51a6a197920",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -13340,7 +13340,7 @@
       "pillow_rgb_second_sha256": "6941b4c69e1b8405c8b031700763d3fd6f3ed2598e70d81e52e2494b06174163",
       "pillow_rgb_sha256": "6941b4c69e1b8405c8b031700763d3fd6f3ed2598e70d81e52e2494b06174163",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -13360,7 +13360,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -13492,7 +13492,7 @@
       "pillow_rgb_second_sha256": "b8fdb6ce99b6fd68bf01add87bc85274779b7ddb5faecb976eece3ba4bf60265",
       "pillow_rgb_sha256": "b8fdb6ce99b6fd68bf01add87bc85274779b7ddb5faecb976eece3ba4bf60265",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -13512,7 +13512,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -13668,7 +13668,7 @@
       "pillow_rgb_second_sha256": "bae6647a74e31c58b499cae33eb9882109f7a52cb80d0d3dc2003580b98bf5f0",
       "pillow_rgb_sha256": "bae6647a74e31c58b499cae33eb9882109f7a52cb80d0d3dc2003580b98bf5f0",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -13689,7 +13689,7 @@
         "luma_modes_dc_then_diagonal_down_right",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -13830,7 +13830,7 @@
       "pillow_rgb_second_sha256": "0ab21f178f30369eb30c019ca44327d45ed003fa56fe1ce13919051d474593e3",
       "pillow_rgb_sha256": "0ab21f178f30369eb30c019ca44327d45ed003fa56fe1ce13919051d474593e3",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -13850,7 +13850,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -14006,7 +14006,7 @@
       "pillow_rgb_second_sha256": "6be7c70785c1e3ccd758c1477828c6c2bcc01cb0ab9b2c4400d99edb81babc5b",
       "pillow_rgb_sha256": "6be7c70785c1e3ccd758c1477828c6c2bcc01cb0ab9b2c4400d99edb81babc5b",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14026,7 +14026,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -14182,7 +14182,7 @@
       "pillow_rgb_second_sha256": "9c68f2812f169525478eed4a6df492db6b9a91952f1fa4a0b34226c3f74cbebc",
       "pillow_rgb_sha256": "9c68f2812f169525478eed4a6df492db6b9a91952f1fa4a0b34226c3f74cbebc",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14202,7 +14202,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -14373,7 +14373,7 @@
       "pillow_rgb_second_sha256": "4df0552f854aa9e189338aa70ce25c20a339b451dd0aaf8f357bc240edae84ed",
       "pillow_rgb_sha256": "4df0552f854aa9e189338aa70ce25c20a339b451dd0aaf8f357bc240edae84ed",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14548,7 +14548,7 @@
       "pillow_rgb_second_sha256": "503e0990cfe4a6fb534d454c0e27039212218583069e5d8298b9288c2a40fa8e",
       "pillow_rgb_sha256": "503e0990cfe4a6fb534d454c0e27039212218583069e5d8298b9288c2a40fa8e",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14570,7 +14570,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -14729,7 +14729,7 @@
       "pillow_rgb_second_sha256": "f3d0a0fc0bc156a4cfab32c593c887acf2d92fada6ab8973ee77b935cb8a999d",
       "pillow_rgb_sha256": "f3d0a0fc0bc156a4cfab32c593c887acf2d92fada6ab8973ee77b935cb8a999d",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14749,7 +14749,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -14905,7 +14905,7 @@
       "pillow_rgb_second_sha256": "66a428fcbe317c143c593a60d137594af4daa61b33b8cccf530d1190c2d33d18",
       "pillow_rgb_sha256": "66a428fcbe317c143c593a60d137594af4daa61b33b8cccf530d1190c2d33d18",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -14925,7 +14925,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -15096,7 +15096,7 @@
       "pillow_rgb_second_sha256": "8cf8c2279a704de7f4a690334b254820fa948e3fa63dd263781c06fbe2043313",
       "pillow_rgb_sha256": "8cf8c2279a704de7f4a690334b254820fa948e3fa63dd263781c06fbe2043313",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": true,
+        "both_luma_leaves_are_split_tx4x4": true,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15271,7 +15271,7 @@
       "pillow_rgb_second_sha256": "da59a8ee6d7b0b13b4d8b96b0470615215419b193d9327a61c8b05bc56c20f5c",
       "pillow_rgb_sha256": "da59a8ee6d7b0b13b4d8b96b0470615215419b193d9327a61c8b05bc56c20f5c",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15291,7 +15291,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -15447,7 +15447,7 @@
       "pillow_rgb_second_sha256": "d6bf5f773af0b6fa24816865102ce3b3920eacfc7bc9022e723b06e248506e12",
       "pillow_rgb_sha256": "d6bf5f773af0b6fa24816865102ce3b3920eacfc7bc9022e723b06e248506e12",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15469,7 +15469,7 @@
         "luma_angle_symbol_is_zero_delta_135",
         "uv_modes_dc_then_dc",
         "no_uv_angle_symbols",
-        "both_luma_leaves_are_split_tx4x4_dct",
+        "both_luma_leaves_are_split_tx4x4",
         "right_chroma_is_tx4x4_dct"
       ],
       "right_chroma_payloads": [
@@ -15643,7 +15643,7 @@
       "pillow_rgb_second_sha256": "0e437bcb10bf9666481a556ea097678ae085f003cf863ecdef5f29e751222111",
       "pillow_rgb_sha256": "0e437bcb10bf9666481a556ea097678ae085f003cf863ecdef5f29e751222111",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15663,7 +15663,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -15804,7 +15804,7 @@
       "pillow_rgb_second_sha256": "49eaf8990820c359d7e5562a241c201456e069fd924451752194793a31ea3db7",
       "pillow_rgb_sha256": "49eaf8990820c359d7e5562a241c201456e069fd924451752194793a31ea3db7",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15823,7 +15823,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -15961,7 +15961,7 @@
       "pillow_rgb_second_sha256": "1e9d6e42da464451d4a506c550e2031fe10d1d7ccadc2d4a72afae59c20a2c6a",
       "pillow_rgb_sha256": "1e9d6e42da464451d4a506c550e2031fe10d1d7ccadc2d4a72afae59c20a2c6a",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -15981,7 +15981,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16119,7 +16119,7 @@
       "pillow_rgb_second_sha256": "ae59d483845b966a2f5a362f640222d35893cc65f9a3d6f5a704ea40b9457ae6",
       "pillow_rgb_sha256": "ae59d483845b966a2f5a362f640222d35893cc65f9a3d6f5a704ea40b9457ae6",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16139,7 +16139,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16310,7 +16310,7 @@
       "pillow_rgb_second_sha256": "def0909ad8a16875d43c4159510a16e2c1472057078ae196a1130b1bcd704c16",
       "pillow_rgb_sha256": "def0909ad8a16875d43c4159510a16e2c1472057078ae196a1130b1bcd704c16",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16329,7 +16329,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16467,7 +16467,7 @@
       "pillow_rgb_second_sha256": "81a4e78b60b0cddfe0103e42cd172eb8b63f45fa55db54bb47576b5d29a9272d",
       "pillow_rgb_sha256": "81a4e78b60b0cddfe0103e42cd172eb8b63f45fa55db54bb47576b5d29a9272d",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16486,7 +16486,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16624,7 +16624,7 @@
       "pillow_rgb_second_sha256": "1ca928ccf774ed923778028b51c0987facbd5c18c9954c81b5c771ebdf8de650",
       "pillow_rgb_sha256": "1ca928ccf774ed923778028b51c0987facbd5c18c9954c81b5c771ebdf8de650",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16644,7 +16644,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16800,7 +16800,7 @@
       "pillow_rgb_second_sha256": "4254ac2870ec6961347b9c668c1c84b5d6b165a9195f94c01e4271aa8517ad3f",
       "pillow_rgb_sha256": "4254ac2870ec6961347b9c668c1c84b5d6b165a9195f94c01e4271aa8517ad3f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16819,7 +16819,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -16972,7 +16972,7 @@
       "pillow_rgb_second_sha256": "e139a171229fd4801605a33e023848bf77876e07ee6dce8d6c16400b1b1d5db2",
       "pillow_rgb_sha256": "e139a171229fd4801605a33e023848bf77876e07ee6dce8d6c16400b1b1d5db2",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -16991,7 +16991,7 @@
       "quality": 76,
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -17129,7 +17129,7 @@
       "pillow_rgb_second_sha256": "0826250d1cf41cb14bdccd0827bac4beb7a2aa9a65431bf2f34924071c83029f",
       "pillow_rgb_sha256": "0826250d1cf41cb14bdccd0827bac4beb7a2aa9a65431bf2f34924071c83029f",
       "predicates": {
-        "both_luma_leaves_are_split_tx4x4_dct": false,
+        "both_luma_leaves_are_split_tx4x4": false,
         "eight_bit_420_frame": true,
         "exact_visible_split_blocks": true,
         "left_chroma_is_tx4x4_dct": true,
@@ -17149,7 +17149,7 @@
       "rejection_reasons": [
         "luma_modes_dc_then_diagonal_down_right",
         "luma_angle_symbol_is_zero_delta_135",
-        "both_luma_leaves_are_split_tx4x4_dct"
+        "both_luma_leaves_are_split_tx4x4"
       ],
       "right_chroma_payloads": [
         {
@@ -17226,7 +17226,7 @@
   ],
   "counts": {
     "by_rejection_reason": {
-      "both_luma_leaves_are_split_tx4x4_dct": 82,
+      "both_luma_leaves_are_split_tx4x4": 82,
       "eight_bit_420_frame": 0,
       "exact_visible_split_blocks": 0,
       "left_chroma_is_tx4x4_dct": 0,

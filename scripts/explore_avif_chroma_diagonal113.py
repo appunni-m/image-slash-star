@@ -458,7 +458,7 @@ def classify_luma_diagonal_down_right(
         "uv_modes_dc_then_dc": uv_modes == [0, 0],
         "no_uv_angle_symbols": uv_angle_symbols == [],
         "no_palette_or_filter_intra": no_palette_or_filter,
-        "both_luma_leaves_are_split_tx4x4_dct": (
+        "both_luma_leaves_are_split_tx4x4": (
             len(luma_groups) == 2 and all(is_tx4x4(payloads) for payloads in luma_groups)
         ),
         "right_luma_has_ac": (
@@ -734,7 +734,7 @@ def main() -> None:
             "uv_modes_dc_then_dc",
             "no_uv_angle_symbols",
             "no_palette_or_filter_intra",
-            "both_luma_leaves_are_split_tx4x4_dct",
+            "both_luma_leaves_are_split_tx4x4",
             "right_luma_has_ac",
             "left_chroma_is_tx4x4_dct",
             "right_chroma_is_tx4x4_dct",
