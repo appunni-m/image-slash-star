@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 276 rows total, 269 active, 7 explicit planned
+- AVIF decode/inspect/verify: 277 rows total, 270 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,500 rows total, 1096 active decode rows, 365 active encode
+- Whole matrix: 1,501 rows total, 1097 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -323,6 +323,21 @@ the corresponding status is recorded in `roadmap.json`:
   They do not prove Diagonal67 unreachable and authorize no speculative Rust
   edit; the class remains planned and the next AV1 slice must be selected
   separately.
+- The newest bounded following-leaf proof is
+  `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
+  8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode
+  2 (Horizontal). Both leaves use one R4x8 U/V pair; the origin is DCT-DCT,
+  the following leaf is DCT-ADST, both have non-empty AC, and the following
+  UV angle symbol is recorded as `3` (delta `0`, absolute angle `180`). The
+  100-case/10-family input-only campaign qualified exactly two cases in this
+  same zero-delta zone and promoted one. Its pinned trace has 149 entropy
+  operations and root range `57408`; safe Rust matches exact partition,
+  entropy, Y/U/V planes, and Pillow RGB bytes. The durable report is
+  `tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_horizontal_campaign_01.json`
+  (SHA-256
+  `3556712a1a4f2a9a79fb48072dd1108582e4220f0aafe935faab2849d287463a`).
+  This closes only the exact-horizontal 4:2:0 class; nonzero-angle
+  Horizontal zones and broader AVF-STILL-001 remain open.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -903,7 +918,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,500 total | 1,103 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,096 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,501 total | 1,104 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,097 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |

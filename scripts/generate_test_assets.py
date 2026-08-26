@@ -5786,6 +5786,62 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_horizontal_vertical8x16():
+        """Generate the qualified following Horizontal witness."""
+
+        family = 3
+        candidate = 6
+        amplitude = 18 + (candidate % 5) * 3
+        phase = (3 * candidate + 5 * family) % 8
+
+        def deltas(cx, cy):
+            row = cy + phase
+            base = (row - 3) * (amplitude // 3)
+            scale = 1 if cx < 4 else 2
+            ripple = (cx - 3) if cx >= 4 else (cx - 3)
+            u_delta = scale * base + ripple
+            v_delta = scale * base + ((2 * cx + candidate) % 5) - 2
+            return u_delta, v_delta
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            u_delta, v_delta = deltas(x // 2, y // 2)
+            return yuv_to_rgb(128, 128 + u_delta, 128 + v_delta)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_vertical8x16_chroma_horizontal_01",
+        chroma_horizontal_vertical8x16(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_paeth_vertical8x16(family, candidate):
         """Generate one exact following-leaf chroma-Paeth witness."""
 

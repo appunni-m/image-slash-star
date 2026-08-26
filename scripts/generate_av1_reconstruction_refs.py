@@ -55,6 +55,9 @@ CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
 CHROMA_DIAGONAL157_TARGET_FIXTURES = frozenset(
     {"coverage_vertical8x16_chroma_diagonal157_01.avif"}
 )
+CHROMA_HORIZONTAL_TARGET_FIXTURES = frozenset(
+    {"coverage_vertical8x16_chroma_horizontal_01.avif"}
+)
 CHROMA_VERTICAL_TARGET_FIXTURES = frozenset(
     {"coverage_vertical8x16_chroma_vertical_01.avif"}
 )
@@ -993,6 +996,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8",
         "size": [16, 16],
     },
+    "coverage_vertical8x16_chroma_horizontal_01.avif": {
+        "file_sha256": "a4f4638ba60bc5ac4a5e15e161135a7cc51d521801dccbe83a1cdfbfb3cec00b",
+        "rgb_sha256": "fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f",
+        "size": [16, 16],
+    },
     "coverage_vertical8x16_chroma_vertical_01.avif": {
         "file_sha256": "2e397a17d61aad197148e86f64f2d93b6afa1c3ac3f7acb9a72370d43b3da108",
         "rgb_sha256": "56c7822ea3a4ea606bd563b91d17a96a25fb54afa85aea7ce57d3b75f60fa794",
@@ -1192,7 +1200,11 @@ def tool_environment(
     return env
 
 
-def instrument(source: Path, broaden_vertical_following: bool = True) -> None:
+def instrument(
+    source: Path,
+    broaden_vertical_following: bool = True,
+    include_block_angles: bool = False,
+) -> None:
     recon_path = source / "src" / "recon.h"
     text = recon_path.read_text()
     old = """\
@@ -1382,6 +1394,31 @@ unsigned dav1d_msac_decode_hi_tok_c""",
         text = text.replace(old_text, new_text)
     msac_path.write_text(text)
 
+    if include_block_angles:
+        decode_path = source / "src" / "decode.c"
+        text = decode_path.read_text()
+        old = """
+                const int angle = dav1d_msac_decode_symbol_adapt8(&ts->msac, acdf, 6);
+                b->uv_angle = angle - 3;
+            }
+        }
+
+        b->pal_sz[0] = b->pal_sz[1] = 0;
+"""
+        new = """
+                const int angle = dav1d_msac_decode_symbol_adapt8(&ts->msac, acdf, 6);
+                b->uv_angle = angle - 3;
+                if (DEBUG_BLOCK_INFO)
+                    printf("Post-uvangle-symbol[%d]: r=%d\\n", angle, ts->msac.rng);
+            }
+        }
+
+        b->pal_sz[0] = b->pal_sz[1] = 0;
+"""
+        if text.count(old) != 1:
+            raise RuntimeError("pinned dav1d UV angle instrumentation point changed")
+        decode_path.write_text(text.replace(old, new))
+
 
 def build_dav1d(
     source: Path,
@@ -1390,12 +1427,13 @@ def build_dav1d(
     ninja: Path,
     python_path: Path | None,
     broaden_vertical_following: bool = True,
+    include_block_angles: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
     build = work / "build"
     run(["git", "clone", "--quiet", "--no-local", str(source), str(clone)])
     run(["git", "-C", str(clone), "checkout", "--quiet", DAV1D_COMMIT])
-    instrument(clone, broaden_vertical_following)
+    instrument(clone, broaden_vertical_following, include_block_angles)
     env = tool_environment(meson, ninja, python_path)
     run(
         [
@@ -1678,24 +1716,38 @@ def generate(
         target_executable, target_env = build_dav1d(
             dav1d_source, work / "target", meson, ninja, python_path
         )
+        angle_executable, angle_env = build_dav1d(
+            dav1d_source,
+            work / "angle",
+            meson,
+            ninja,
+            python_path,
+            include_block_angles=True,
+        )
         cases = [
             decode_fixture(
-                target_executable
+                angle_executable
+                if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
+                or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
                 or name in SQUARE16_CFL_TARGET_FIXTURES
             else legacy_executable,
-                target_env
+                angle_env
+                if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
+                or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
                 or name in SQUARE16_CFL_TARGET_FIXTURES
