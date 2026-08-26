@@ -5132,6 +5132,56 @@ def gen_avif():
 
     write_h4_horizontal_bands()
 
+    rect4_filter_intra_advanced = {
+        "min-partition-size": "4",
+        "max-partition-size": "16",
+        "use-intra-dct-only": "1",
+        "enable-filter-intra": "1",
+        "enable-intra-edge-filter": "0",
+        "enable-smooth-intra": "0",
+        "enable-paeth-intra": "0",
+        "enable-directional-intra": "0",
+        "enable-cfl-intra": "0",
+        "enable-cdef": "0",
+        "enable-restoration": "0",
+        "loopfilter-control": "0",
+        "aq-mode": "0",
+        "deltaq-mode": "0",
+    }
+
+    def rect4_filter_intra_ramp(vertical):
+        """Generate the exact public ramp reaching rectangular CDF rows 14/19."""
+
+        bands = (
+            (17, 91, 203),
+            (32, 32, 32),
+            (0, 255, 0),
+            (127, 127, 127),
+        )
+
+        def pixel(x, y):
+            coordinate = x if vertical else y
+            return bands[min(3, coordinate // 4)]
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_h16x4_filter_intra_cdf14_false_01",
+        rect4_filter_intra_ramp(False),
+        "4:2:0",
+        advanced=rect4_filter_intra_advanced,
+        quality=12,
+        speed=0,
+    )
+    write_campaign_image(
+        "coverage_v4x16_filter_intra_cdf19_false_01",
+        rect4_filter_intra_ramp(True),
+        "4:2:0",
+        advanced=rect4_filter_intra_advanced,
+        quality=12,
+        speed=0,
+    )
+
     # Coverage campaign candidates are intentionally declarative and generated
     # through the same pinned Pillow/libaom path as the rest of this file. The
     # manifest decides which candidates become parity rows after public Rust

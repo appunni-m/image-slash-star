@@ -13274,6 +13274,7 @@ fn luma_4x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         return Ok(None);
     }
     match quantization.matrix_y {
+        5 => Ok(Some(&quantization::Y_4X16_MATRIX_5)),
         9 => Ok(Some(&quantization::Y_4X16_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_4X16_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -13296,6 +13297,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         return Ok(None);
     }
     match quantization.matrix_y {
+        5 => Ok(Some(&quantization::Y_16X4_MATRIX_5)),
         8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -13575,6 +13577,8 @@ fn chroma_rect32_matrix(
         _ => return Err(PortableUnavailable),
     };
     match (matrix_index, vertical) {
+        (6, false) => Ok(Some(&quantization::UV_8X4_MATRIX_6)),
+        (6, true) => Ok(Some(&quantization::UV_4X8_MATRIX_6)),
         (8, false) => Ok(Some(&quantization::UV_8X4_MATRIX_8)),
         (8, true) => Ok(Some(&quantization::UV_4X8_MATRIX_8)),
         (9, false) => Ok(Some(&quantization::UV_8X4_MATRIX_9)),
@@ -13964,17 +13968,6 @@ fn decode_palette_syntax(
     }
     let palette_context = tools.palette_context;
     let size_context = transform_grid.palette_size_context();
-    let (luma_grid_width, luma_grid_height, _) = transform_grid.properties();
-    let (chroma_grid_width, chroma_grid_height) =
-        chroma_sampling.transform_grid(luma_grid_width, luma_grid_height, 1);
-    let luma_width =
-        u32::try_from(luma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
-    let luma_height =
-        u32::try_from(luma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
-    let chroma_width =
-        u32::try_from(chroma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
-    let chroma_height =
-        u32::try_from(chroma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
     let use_y = if matches!(luma_predictor, LumaPredictor::Dc) {
         let context =
             usize::from(palette_context.above_available && palette_context.above.y.is_present())
@@ -14017,40 +14010,69 @@ fn decode_palette_syntax(
     if !use_y && !use_uv {
         return Ok(PaletteSyntax::default());
     }
-    let u = decode_palette_plane(
-        decoder,
-        cdfs,
-        1,
-        size_context,
-        PalettePlaneContext {
-            above: palette_context.above.u,
-            above_available: palette_context.above_available,
-            left: palette_context.left.u,
-            left_available: palette_context.left_available,
-        },
-    )?;
-    let v = decode_palette_v_plane(decoder, u.size)?;
-    // A palette may be present on chroma only. In that case AV1 omits the
-    // luma index-map sentence entirely; decoding it with the zero-sized
-    // luma palette would reject a valid stream before the chroma indices.
-    let y_indices = if y.is_present() {
-        decode_palette_indices(decoder, cdfs, 0, y.size, luma_width, luma_height)?
+    let (u, v) = if use_uv {
+        let u = decode_palette_plane(
+            decoder,
+            cdfs,
+            1,
+            size_context,
+            PalettePlaneContext {
+                above: palette_context.above.u,
+                above_available: palette_context.above_available,
+                left: palette_context.left.u,
+                left_available: palette_context.left_available,
+            },
+        )?;
+        let v = decode_palette_v_plane(decoder, u.size)?;
+        (u, v)
     } else {
-        [0; PALETTE_MAP_SAMPLES]
+        (PalettePlane::default(), PalettePlane::default())
     };
-    let uv_indices = if u.is_present() || v.is_present() {
-        decode_palette_indices(decoder, cdfs, 1, u.size, chroma_width, chroma_height)?
-    } else {
-        [0; PALETTE_MAP_SAMPLES]
-    };
-    let palette = PaletteSyntax {
+    Ok(PaletteSyntax {
         y,
         u,
         v,
-        y_indices,
-        uv_indices,
-    };
-    Ok(palette)
+        ..PaletteSyntax::default()
+    })
+}
+
+fn decode_palette_index_maps(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    transform_grid: TransformGrid,
+    chroma_sampling: ChromaSampling,
+    palette: &mut PaletteSyntax,
+) -> PortableResult<()> {
+    let (luma_grid_width, luma_grid_height, _) = transform_grid.properties();
+    let (chroma_grid_width, chroma_grid_height) =
+        chroma_sampling.transform_grid(luma_grid_width, luma_grid_height, 1);
+    let luma_width =
+        u32::try_from(luma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+    let luma_height =
+        u32::try_from(luma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+    let chroma_width =
+        u32::try_from(chroma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+    let chroma_height =
+        u32::try_from(chroma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+
+    if palette.y.is_present() {
+        palette.y_indices =
+            decode_palette_indices(decoder, cdfs, 0, palette.y.size, luma_width, luma_height)?;
+    }
+    if palette.u.is_present() || palette.v.is_present() {
+        (palette.u.is_present() && palette.v.is_present() && palette.u.size == palette.v.size)
+            .then_some(())
+            .portable()?;
+        palette.uv_indices = decode_palette_indices(
+            decoder,
+            cdfs,
+            1,
+            palette.u.size,
+            chroma_width,
+            chroma_height,
+        )?;
+    }
+    Ok(())
 }
 
 fn decode_syntax(
@@ -14480,7 +14502,7 @@ fn decode_syntax_with_cdef(
         }
     };
 
-    let palette = decode_palette_syntax(
+    let mut palette = decode_palette_syntax(
         decoder,
         cdfs,
         transform_grid,
@@ -14501,6 +14523,11 @@ fn decode_syntax_with_cdef(
             filter_intra_mode = Some(usize::try_from(mode).map_err(|_| PortableUnavailable)?);
         }
     }
+
+    // AV1 places palette index maps after the optional filter-intra sentence
+    // and before transform-size syntax. Palette metadata and colors are read
+    // above so the luma palette still gates filter-intra exactly as specified.
+    decode_palette_index_maps(decoder, cdfs, transform_grid, chroma_sampling, &mut palette)?;
 
     // AV1 keeps `FILTER_PRED` as the coded luma mode, but transform-type
     // syntax is indexed by the ordinary intra mode represented by the
@@ -23652,12 +23679,24 @@ fn palette_prediction(
     palette: PalettePlane,
     indices: [u8; PALETTE_MAP_SAMPLES],
 ) -> Option<[u16; PALETTE_MAP_SAMPLES]> {
+    palette_prediction_prefix::<PALETTE_MAP_SAMPLES>(palette, &indices)
+}
+
+fn palette_prediction_prefix<const N: usize>(
+    palette: PalettePlane,
+    indices: &[u8; PALETTE_MAP_SAMPLES],
+) -> Option<[u16; N]> {
+    if N > PALETTE_MAP_SAMPLES {
+        return None;
+    }
     (2..=PALETTE_CAPACITY)
         .contains(&usize::from(palette.size))
         .then_some(())?;
-    let mut prediction = [0_u16; PALETTE_MAP_SAMPLES];
-    for (index, sample) in prediction.iter_mut().enumerate() {
-        let palette_index = usize::from(*indices.get(index)?);
+    let palette_size = usize::from(palette.size);
+    let mut prediction = [0_u16; N];
+    for (sample, palette_index) in prediction.iter_mut().zip(indices.iter().take(N)) {
+        let palette_index = usize::from(*palette_index);
+        (palette_index < palette_size).then_some(())?;
         *sample = *palette.colors.get(palette_index)?;
     }
     Some(prediction)
@@ -23802,6 +23841,104 @@ fn reconstruct_palette_horizontal64x16_leaf(syntax: BlockSyntax) -> Option<Close
     })
 }
 
+fn reconstruct_palette_rectangular_420_leaf(
+    syntax: BlockSyntax,
+    predictors: [u16; 3],
+) -> Option<ClosedLeaf> {
+    if !syntax.palette.is_present()
+        || !matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        || !matches!(
+            syntax.transform_grid,
+            TransformGrid::Vertical4x16 | TransformGrid::Horizontal16x4
+        )
+        || ((syntax.palette.u.is_present() || syntax.palette.v.is_present())
+            && !matches!(syntax.chroma_predictor, ChromaPredictor::Dc))
+    {
+        return None;
+    }
+
+    let luma = if syntax.palette.y.is_present() {
+        if syntax.lossy_luma_4x4_split.is_some() {
+            return None;
+        }
+        match syntax.transform_grid {
+            TransformGrid::Vertical4x16 => reconstruct_lossy_luma_4x16_from_prediction(
+                palette_prediction_prefix::<64>(syntax.palette.y, &syntax.palette.y_indices)?,
+                syntax.lossy_luma_coefficients,
+                syntax.lossy_luma_4x8_transform,
+            ),
+            TransformGrid::Horizontal16x4 => reconstruct_lossy_luma_16x4_from_prediction(
+                palette_prediction_prefix::<64>(syntax.palette.y, &syntax.palette.y_indices)?,
+                syntax.lossy_luma_coefficients,
+                syntax.lossy_luma_16x4_transform,
+            ),
+            _ => return None,
+        }
+    } else {
+        match syntax.transform_grid {
+            TransformGrid::Vertical4x16 => reconstruct_lossy_luma_4x16(
+                predictors[0],
+                syntax.lossy_luma_coefficients,
+                syntax.lossy_luma_4x8_transform,
+            ),
+            TransformGrid::Horizontal16x4 => reconstruct_lossy_luma_16x4(
+                predictors[0],
+                syntax.lossy_luma_coefficients,
+                syntax.lossy_luma_16x4_transform,
+            ),
+            _ => return None,
+        }
+    };
+
+    let chroma_transform = chroma_rect_transform_kind(syntax.chroma_predictor);
+    let chroma = |plane: usize| {
+        let palette = if plane == 1 {
+            syntax.palette.u
+        } else {
+            syntax.palette.v
+        };
+        match syntax.transform_grid {
+            TransformGrid::Vertical4x16 => {
+                if palette.is_present() {
+                    Some(reconstruct_lossy_luma_4x8_from_prediction(
+                        palette_prediction_prefix::<32>(palette, &syntax.palette.uv_indices)?,
+                        syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                        chroma_transform,
+                    ))
+                } else {
+                    Some(reconstruct_lossy_luma_4x8(
+                        [predictors[plane]; 4],
+                        [predictors[plane]; 8],
+                        syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                        chroma_transform,
+                    ))
+                }
+            }
+            TransformGrid::Horizontal16x4 => {
+                if palette.is_present() {
+                    Some(reconstruct_lossy_luma_8x4_from_prediction(
+                        palette_prediction_prefix::<32>(palette, &syntax.palette.uv_indices)?,
+                        syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                        chroma_transform,
+                    ))
+                } else {
+                    Some(reconstruct_lossy_luma_8x4(
+                        predictors[plane],
+                        syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                        chroma_transform,
+                    ))
+                }
+            }
+            _ => None,
+        }
+    };
+
+    Some(ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes: [luma, chroma(1)?, chroma(2)?],
+    })
+}
+
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
     reconstruct_leaf_with_luma_override(syntax, predictors, None, true)
 }
@@ -23819,6 +23956,11 @@ fn reconstruct_leaf_with_luma_override(
     }
     if luma_override.is_none()
         && let Some(leaf) = reconstruct_palette_horizontal64x16_leaf(syntax)
+    {
+        return leaf;
+    }
+    if luma_override.is_none()
+        && let Some(leaf) = reconstruct_palette_rectangular_420_leaf(syntax, predictors)
     {
         return leaf;
     }
@@ -27033,6 +27175,8 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
         lossy_luma_coefficients,
         lossy_luma_16x4_transform,
         lossy_chroma_8x4_coefficients,
+        lossy_luma_4x4_split,
+        palette,
         ..
     } = syntax;
 
@@ -27042,57 +27186,70 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
     );
     let luma_left = luma_left.unwrap_or([luma_top[0]; 4]);
 
-    let luma = match luma_predictor {
-        LumaPredictor::Dc => {
-            reconstruct_lossy_luma_16x4(luma_dc, lossy_luma_coefficients, lossy_luma_16x4_transform)
+    let luma = if palette.y.is_present() {
+        if lossy_luma_4x4_split.is_some() {
+            return Err(PortableUnavailable);
         }
-        LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical(
-            luma_top,
+        reconstruct_lossy_luma_16x4_from_prediction(
+            palette_prediction_prefix::<64>(palette.y, &syntax.palette.y_indices).portable()?,
             lossy_luma_coefficients,
             lossy_luma_16x4_transform,
-        ),
-        LumaPredictor::Horizontal => reconstruct_lossy_luma_16x4_horizontal(
-            luma_left,
-            lossy_luma_coefficients,
-            lossy_luma_16x4_transform,
-        ),
-        LumaPredictor::Smooth => reconstruct_lossy_luma_16x4_smooth(
-            luma_top,
-            luma_top[15],
-            luma_left,
-            lossy_luma_coefficients,
-            lossy_luma_16x4_transform,
-        ),
-        LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_16x4_smooth_horizontal(
-            luma_left,
-            luma_top[15],
-            lossy_luma_coefficients,
-            lossy_luma_16x4_transform,
-        ),
-        LumaPredictor::Paeth => reconstruct_lossy_luma_16x4_from_prediction(
-            std::array::from_fn(|index| {
-                paeth_predictor(luma_top[index % 16], luma_left[index / 16], luma_left[0])
-            }),
-            lossy_luma_coefficients,
-            lossy_luma_16x4_transform,
-        ),
-        LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-            reconstruct_lossy_luma_16x4_diagonal_z1(
+        )
+    } else {
+        match luma_predictor {
+            LumaPredictor::Dc => reconstruct_lossy_luma_16x4(
+                luma_dc,
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical(
                 luma_top,
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::Horizontal => reconstruct_lossy_luma_16x4_horizontal(
+                luma_left,
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::Smooth => reconstruct_lossy_luma_16x4_smooth(
+                luma_top,
+                luma_top[15],
+                luma_left,
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_16x4_smooth_horizontal(
+                luma_left,
+                luma_top[15],
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::Paeth => reconstruct_lossy_luma_16x4_from_prediction(
+                std::array::from_fn(|index| {
+                    paeth_predictor(luma_top[index % 16], luma_left[index / 16], luma_left[0])
+                }),
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            ),
+            LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
+                reconstruct_lossy_luma_16x4_diagonal_z1(
+                    luma_top,
+                    luma_top[0],
+                    luma_angle.ok_or(PortableUnavailable)?,
+                    lossy_luma_coefficients,
+                    lossy_luma_16x4_transform,
+                )?
+            }
+            LumaPredictor::Diagonal203 => reconstruct_lossy_luma_16x4_diagonal_z3(
+                luma_left,
                 luma_top[0],
                 luma_angle.ok_or(PortableUnavailable)?,
                 lossy_luma_coefficients,
                 lossy_luma_16x4_transform,
-            )?
+            )?,
+            _ => return Err(PortableUnavailable),
         }
-        LumaPredictor::Diagonal203 => reconstruct_lossy_luma_16x4_diagonal_z3(
-            luma_left,
-            luma_top[0],
-            luma_angle.ok_or(PortableUnavailable)?,
-            lossy_luma_coefficients,
-            lossy_luma_16x4_transform,
-        )?,
-        _ => return Err(PortableUnavailable),
     };
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         let chroma_index = plane.saturating_sub(1);
@@ -27108,6 +27265,18 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
         };
         let coefficients = lossy_chroma_8x4_coefficients[plane.saturating_sub(1)];
         let transform = chroma_rect_transform_kind(chroma_predictor);
+        let palette_plane = if plane == 1 { palette.u } else { palette.v };
+        if palette_plane.is_present() {
+            if !matches!(chroma_predictor, ChromaPredictor::Dc) {
+                return Err(PortableUnavailable);
+            }
+            return Ok(reconstruct_lossy_luma_8x4_from_prediction(
+                palette_prediction_prefix::<32>(palette_plane, &syntax.palette.uv_indices)
+                    .portable()?,
+                coefficients,
+                transform,
+            ));
+        }
         Ok(match chroma_predictor {
             ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                 let alpha = if plane == 1 { alpha_u } else { alpha_v };
@@ -28739,27 +28908,51 @@ fn reconstruct_following_lossy_420_vertical_4x16_leaf_with_edges(
         lossy_luma_4x8_transform,
         lossy_chroma_8x4_coefficients,
         lossy_luma_4x4_split,
+        palette,
         ..
     } = syntax;
-    let luma = reconstruct_lossy_luma_4x16_from_edges(
-        luma_predictor,
-        luma_angle,
-        filter_intra_mode,
-        luma_top,
-        luma_left,
-        luma_left[0],
-        has_top,
-        true,
-        lossy_luma_coefficients,
-        lossy_luma_4x8_transform,
-        lossy_luma_4x4_split,
-    )?;
+    let luma = if palette.y.is_present() {
+        if lossy_luma_4x4_split.is_some() {
+            return Err(PortableUnavailable);
+        }
+        reconstruct_lossy_luma_4x16_from_prediction(
+            palette_prediction_prefix::<64>(palette.y, &syntax.palette.y_indices).portable()?,
+            lossy_luma_coefficients,
+            lossy_luma_4x8_transform,
+        )
+    } else {
+        reconstruct_lossy_luma_4x16_from_edges(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            luma_top,
+            luma_left,
+            luma_left[0],
+            has_top,
+            true,
+            lossy_luma_coefficients,
+            lossy_luma_4x8_transform,
+            lossy_luma_4x4_split,
+        )?
+    };
 
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         let top = chroma_top[plane.saturating_sub(1)];
         let left = chroma_left[plane.saturating_sub(1)].unwrap_or([top[0]; 8]);
         let coefficients = lossy_chroma_8x4_coefficients[plane.saturating_sub(1)];
         let transform = chroma_rect_transform_kind(chroma_predictor);
+        let palette_plane = if plane == 1 { palette.u } else { palette.v };
+        if palette_plane.is_present() {
+            if !matches!(chroma_predictor, ChromaPredictor::Dc) {
+                return Err(PortableUnavailable);
+            }
+            return Ok(reconstruct_lossy_luma_4x8_from_prediction(
+                palette_prediction_prefix::<32>(palette_plane, &syntax.palette.uv_indices)
+                    .portable()?,
+                coefficients,
+                transform,
+            ));
+        }
         match chroma_predictor {
             ChromaPredictor::Dc => Ok(reconstruct_lossy_luma_4x8(
                 [rectangular_dc_predictor(&top, &left); 4],
@@ -39622,7 +39815,10 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         );
-        let syntax = syntax.map_err(|_| PortableUnavailable)?;
+        let syntax = match syntax {
+            Ok(syntax) => syntax,
+            Err(_) => return Err(PortableUnavailable),
+        };
         self.remember_qindex(&syntax, decoder);
 
         let luma_context = lossy_luma_context(&syntax);
