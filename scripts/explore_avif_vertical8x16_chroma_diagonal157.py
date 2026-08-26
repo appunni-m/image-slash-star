@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Search a fixed corpus for a rectangular AV1 chroma Diagonal157 leaf.
+"""Search a fixed corpus for a rectangular AV1 chroma leaf.
 
 The campaign is deliberately bounded and input-driven. It creates exactly one
 hundred deterministic 16x16 RGB candidates, encodes each twice through the
 pinned Pillow/libavif/libaom oracle, and classifies two independent traces from
 the pinned scalar dav1d executable. Generated files are temporary unless
-``--retain-dir`` is supplied; no repository Rust code is invoked.
+``--retain-dir`` is supplied; no repository Rust code is invoked. The
+historical ``diagonal157`` target is the default; ``origin_vertical`` searches
+the newly specified origin-Vertical case using the same corpus.
 """
 
 from __future__ import annotations
@@ -62,6 +64,17 @@ FAMILY_NAMES = (
     "rect_d157_dual_ac",
     "rect_d157_mirror",
 )
+TARGET_DESCRIPTIONS = {
+    "diagonal157": (
+        "two side-by-side Vertical8x16 leaves with following right UV mode 6 "
+        "(Diagonal157), R4x8 U/V, DctAdst, and non-empty AC"
+    ),
+    "origin_vertical": (
+        "two side-by-side Vertical8x16 leaves with origin UV mode 1 "
+        "(Vertical), right UV mode 5 (Diagonal113), ADST-DCT R4x8 U/V, "
+        "non-empty AC on both leaves, and non-palette luma"
+    ),
+}
 BLOCK_PATTERN = re.compile(
     r"^poc=(?P<poc>-?\d+),y=(?P<y>-?\d+),x=(?P<x>-?\d+),"
     r"bl=(?P<level>\d+),ctx=(?P<context>\d+),bp=(?P<partition>\d+): "
@@ -156,8 +169,10 @@ def candidate_pixels(family: int, index: int) -> bytes:
             luma = 128
             if family in (5, 7, 8):
                 luma += 14 if x >= 8 and ((x // 2 + y // 2 + seed) % 2) else 0
-            elif family == 8:
-                luma += ((7 * x + 11 * y + seed) % 17) - 8
+                if family == 5:
+                    luma += ((3 * (x // 2) + 5 * (y // 2) + seed) % 3) - 1
+                if family == 8:
+                    luma += ((7 * x + 11 * y + seed) % 17) - 8
             elif family == 9:
                 luma += ((x // 2 + 3 * (y // 2) + seed) % 13) - 6
             if family == 6 and x >= 8:
@@ -245,15 +260,24 @@ def trace(
 
 
 def classify(
-    blocks: list[dict[str, int]], groups: list[list[str]], left_edge_observable: bool
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    left_edge_observable: bool,
+    target: str,
 ) -> dict[str, object]:
-    """Apply exact predicates for a following Vertical8x16 mode-6 leaf."""
+    """Apply exact predicates for one of the supported rectangular targets."""
 
     root = next(
         (
             block
             for block in blocks
-            if block["x"] == 0 and block["y"] == 0 and block["partition"] == 2
+            if (
+                block["x"] == 0
+                and block["y"] == 0
+                and block["level"] == 3
+                and block["context"] == 0
+                and block["partition"] == 2
+            )
         ),
         None,
     )
@@ -274,6 +298,7 @@ def classify(
         chroma_groups.append(chroma_payloads)
     right_luma = luma_groups[1] if len(luma_groups) == 2 else []
     right_chroma = chroma_groups[1] if len(chroma_groups) == 2 else []
+    left_chroma = chroma_groups[0] if chroma_groups else []
 
     def is_vertical8x16_luma(payloads: list[dict[str, int]]) -> bool:
         """Accept the unsplit or legal two-TX8x8 luma form of Vertical8x16."""
@@ -282,30 +307,60 @@ def classify(
             len(payloads) == 2 and all(payload["tx"] == 1 for payload in payloads)
         )
 
-    predicates = {
+    common_predicates = {
         "vertical_split_root": root is not None,
         "two_visible_leaf_groups": len(groups) == 2,
         "both_vertical8x16_luma": (
             len(luma_groups) == 2
             and all(is_vertical8x16_luma(payloads) for payloads in luma_groups)
         ),
-        "right_uv_mode_6": len(uv_modes) == 2 and uv_modes[1] == 6,
-        "right_chroma_r4x8": (
-            len(right_chroma) == 2
-            and {payload["plane"] for payload in right_chroma} == {0, 1}
-            and all(payload["tx"] == 5 for payload in right_chroma)
-        ),
-        "right_chroma_dct_adst": (
-            len(right_chroma) == 2 and all(payload["txtp"] == 2 for payload in right_chroma)
-        ),
-        "right_chroma_nonempty_ac": (
-            len(right_chroma) == 2 and all(payload["eob"] >= 1 for payload in right_chroma)
-        ),
         "left_edge_observable": left_edge_observable,
         "no_filter_intra": not any(
-            line.startswith("Post-filterintramode[") for line in groups[1]
-        ) if len(groups) == 2 else False,
+            line.startswith("Post-filterintramode[")
+            for group in groups
+            for line in group
+        ),
     }
+    no_luma_palette = not any(
+        line.startswith(("Post-y_pal[", "Post-pal[", "Post-y-pal-indices", "y-pal-pred"))
+        for group in groups
+        for line in group
+    )
+
+    def is_r4x8(payloads: list[dict[str, int]], txtp: int) -> bool:
+        """Accept exactly one non-empty U/V R4x8 coefficient pair."""
+
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(payload["tx"] == 5 for payload in payloads)
+            and all(payload["txtp"] == txtp for payload in payloads)
+        )
+
+    def has_nonempty_ac(payloads: list[dict[str, int]]) -> bool:
+        """Require non-empty AC on both chroma planes."""
+
+        return len(payloads) == 2 and all(payload["eob"] >= 1 for payload in payloads)
+
+    if target == "origin_vertical":
+        target_predicates = {
+            "no_luma_palette": no_luma_palette,
+            "origin_uv_mode_1": len(uv_modes) == 2 and uv_modes[0] == 1,
+            "right_uv_mode_5": len(uv_modes) == 2 and uv_modes[1] == 5,
+            "left_chroma_r4x8_adst_dct": is_r4x8(left_chroma, 1),
+            "right_chroma_r4x8_adst_dct": is_r4x8(right_chroma, 1),
+            "left_chroma_nonempty_ac": has_nonempty_ac(left_chroma),
+            "right_chroma_nonempty_ac": has_nonempty_ac(right_chroma),
+        }
+    elif target == "diagonal157":
+        target_predicates = {
+            "right_uv_mode_6": len(uv_modes) == 2 and uv_modes[1] == 6,
+            "right_chroma_r4x8": is_r4x8(right_chroma, 2),
+            "right_chroma_nonempty_ac": has_nonempty_ac(right_chroma),
+        }
+    else:
+        raise ValueError(f"unknown rectangular campaign target: {target}")
+    predicates = {**common_predicates, **target_predicates}
     return {
         "root_partition": root,
         "group_count": len(groups),
@@ -314,6 +369,7 @@ def classify(
         "right_luma_payloads": right_luma,
         "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
         "right_chroma_payloads": right_chroma,
+        "target": target,
         "predicates": predicates,
         "rejection_reasons": [name for name, passed in predicates.items() if not passed],
         "qualifies": all(predicates.values()),
@@ -326,6 +382,7 @@ def decode_candidate(
     work: Path,
     candidate: dict[str, object],
     retain_dir: Path | None,
+    target: str,
 ) -> dict[str, object]:
     """Double-encode, double-trace, and classify one candidate."""
 
@@ -355,7 +412,7 @@ def decode_candidate(
             int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
         )
     )
-    classification = classify(blocks_a, groups_a, left_edge)
+    classification = classify(blocks_a, groups_a, left_edge, target)
     classification["predicates"].update(
         {
             "double_encode_equal": encoded_a == encoded_b,
@@ -406,6 +463,7 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument("--target", choices=sorted(TARGET_DESCRIPTIONS), default="diagonal157")
     args = parser.parse_args()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -413,7 +471,7 @@ def main() -> None:
     for expected in ("dav1d [dec]:1.5.3", "aom [enc]:3.13.2"):
         if expected not in codecs:
             raise RuntimeError(f"Pillow AVIF oracle lacks {expected}: {codecs}")
-    with tempfile.TemporaryDirectory(prefix="image-star-avif-rectangular-157-") as name:
+    with tempfile.TemporaryDirectory(prefix=f"image-star-avif-rectangular-{args.target}-") as name:
         work = Path(name)
         if args.dav1d_source is not None:
             source = args.dav1d_source.resolve()
@@ -433,7 +491,7 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
-            decode_candidate(executable, environment, work, candidate, args.retain_dir)
+            decode_candidate(executable, environment, work, candidate, args.retain_dir, args.target)
             for candidate in candidates()
         ]
     report = {
@@ -455,7 +513,8 @@ def main() -> None:
         "search": {
             "candidate_count": len(reports),
             "seed_formula": "1000 + 10*family_index + candidate_index",
-            "target": "two side-by-side Vertical8x16 leaves with following right UV mode 6 (Diagonal157), R4x8 U/V, DctAdst, and non-empty AC",
+            "target_id": args.target,
+            "target": TARGET_DESCRIPTIONS[args.target],
             "families": list(FAMILY_NAMES),
         },
         "counts": {
@@ -469,7 +528,7 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    print(f"Written {len(reports)} deterministic Diagonal157 traces: {args.output}")
+    print(f"Written {len(reports)} deterministic {args.target} traces: {args.output}")
 
 
 if __name__ == "__main__":
