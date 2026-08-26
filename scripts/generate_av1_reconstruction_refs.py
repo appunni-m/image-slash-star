@@ -52,6 +52,9 @@ VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
 CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
     {"coverage_square8_chroma_diagonal113_01.avif"}
 )
+CHROMA_DIAGONAL157_TARGET_FIXTURES = frozenset(
+    {"coverage_vertical8x16_chroma_diagonal157_01.avif"}
+)
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
         "file_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
@@ -968,6 +971,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462",
         "size": [16, 8],
     },
+    "coverage_vertical8x16_chroma_diagonal157_01.avif": {
+        "file_sha256": "13a6903043df42aec082de0e3afeb82e30932749e1542160a7e039e5fd53b744",
+        "rgb_sha256": "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8",
+        "size": [16, 16],
+    },
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
@@ -1625,12 +1633,14 @@ def generate(
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
+                or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 else legacy_executable,
                 target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
+                or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 else legacy_env,
                 work,
                 FIXTURE_DIR / name,

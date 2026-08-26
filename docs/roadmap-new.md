@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 268 rows total, 261 active, 7 explicit planned
+- AVIF decode/inspect/verify: 269 rows total, 262 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,492 rows total, 1088 active decode rows, 365 active encode
+- Whole matrix: 1,493 rows total, 1089 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -225,6 +225,30 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
   broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
   remain partial.
+- The newest bounded origin proof is
+  `coverage_vertical8x16_chroma_diagonal157_01.avif`, a 16x16 8-bit 4:2:0
+  vertical split whose origin `Vertical8x16` leaf selects chroma
+  `Diagonal113` with an angle delta of -2 (absolute angle 129), while the
+  following `Vertical8x16` leaf selects chroma `Diagonal157` and a split
+  TX16x16 luma transform. Its pinned origin partition record is
+  `poc=0,y=0,x=0,level=3,context=0,partition=2,range=57408`, with 576
+  entropy operations. Safe Rust matches the exact partition, entropy trace,
+  reconstructed Y/U/V planes, and Pillow RGB bytes. The fixture, encoded-item,
+  Pillow RGB, and Y/U/V plane SHA-256 values are
+  `13a6903043df42aec082de0e3afeb82e30932749e1542160a7e039e5fd53b744`,
+  `66e5bfbe1309ba4be83a88d40c8e552aa9b1ec29018e9ae39355152886b47289`,
+  `fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8`,
+  `ae5e23ff0a0404cab2fb6e7924b8a36e3491e693d3db3efa6d80e9507d9c14da`,
+  `e780788fc8c59a2333ea8443fc43879667b0554e81daefc0a1788873e5f4c1fb`, and
+  `3a5ba9d594531ab615b4b4552e82593a53f47eaa475881391ae75e2a784cb85c`.
+  The bounded search evaluated 100 deterministic candidates across 10 input
+  families and found one qualified witness; its exact report is
+  `tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_diagonal157_campaign_01.json`
+  (SHA-256
+  `04bdb20f5709a52fbf1bd9f30d25af2c936df275cddce34c0ee8028ce5fea463`).
+  This closes only the origin Vertical8x16/chroma-Diagonal113 plus following
+  Vertical8x16/chroma-Diagonal157 class; broader AV1 partitions, diagonal
+  modes, sample depths, and AVF-STILL-001 remain partial.
 - Two disjoint, input-only Diagonal67 campaigns are now recorded as explicit
   no-hit evidence. `scripts/explore_avif_chroma_diagonal67.py` evaluated 100
   deterministic candidates and found zero coded UV mode-8 cases; its report is

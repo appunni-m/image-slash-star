@@ -5643,6 +5643,65 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_diagonal157_vertical8x16():
+        """Generate the following Vertical8x16 Diagonal157 witness."""
+
+        family = 5
+        candidate = 0
+        seed = 1000 + 10 * family + candidate
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            cx, cy = x // 2, y // 2
+            phase = (11 * candidate + 7 * family + 3) % 32
+            amplitude = 16 + (candidate % 5) * 3
+            coordinate = 5 * cx - 2 * cy + phase
+            wrapped = coordinate % 32
+            wave = wrapped - 16
+            chroma = (wave * amplitude) // 16
+            if cx >= 4:
+                chroma *= 2
+            u_delta = chroma + ((37 * cx + 19 * cy + seed) % 121) - 60
+            v_delta = chroma + ((23 * cx + 47 * cy + 3 * seed) % 121) - 60
+            luma = 128
+            if x >= 8 and ((cx + cy + seed) % 2):
+                luma += 14
+            return yuv_to_rgb(luma, 128 + u_delta, 128 + v_delta)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_vertical8x16_chroma_diagonal157_01",
+        chroma_diagonal157_vertical8x16(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def horizontal_r32x8_ripple():
         """Generate a deterministic PARTITION_H4 32x8-transform witness."""
 

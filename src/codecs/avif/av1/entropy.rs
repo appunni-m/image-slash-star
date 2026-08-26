@@ -3569,6 +3569,15 @@ fn closed_lossy_420_recursive_split_context(context: &FirstBlockContext) -> bool
         & (context.frame_height == 8)
 }
 
+fn closed_lossy_420_16x16_vertical_pair_context(context: &FirstBlockContext) -> bool {
+    closed_lossy_420_frame_context(context)
+        & (context.level == 3)
+        & (context.block_width == 4)
+        & (context.block_height == 4)
+        & (context.frame_width == 16)
+        & (context.frame_height == 16)
+}
+
 fn closed_lossy_420_square_split_context(context: &FirstBlockContext) -> bool {
     closed_lossy_420_frame_context(context)
         & (context.frame_width == 16)
@@ -3806,6 +3815,7 @@ pub(super) fn validate_first_partition(
     let closed_class = closed_444_reconstruction_context(context)
         || closed_420_reconstruction_context(context)
         || closed_lossy_420_reconstruction_context(context)
+        || closed_lossy_420_16x16_vertical_pair_context(context)
         || closed_lossy_420_horizontal_four_split_context(context);
     if !closed_class {
         // The old narrow decoder is deliberately not allowed to consume a
@@ -3837,6 +3847,7 @@ pub(super) fn validate_first_partition(
             & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context)))
             | closed_420_reconstruction_context(context)
             | closed_lossy_420_reconstruction_context(context)
+            | closed_lossy_420_16x16_vertical_pair_context(context)
             | closed_lossy_420_horizontal_four_split_context(context);
         if trace_closed_context {
             decoder.enable_operation_trace();
@@ -4005,6 +4016,31 @@ pub(super) fn validate_first_partition(
                                 .then_some(())
                                 .ok_or(super::block::PortableUnavailable)
                         },
+                    );
+                    return finish_closed_leaf(&decoder, reconstructed);
+                }
+                let reconstruct_lossy_420_16x16_vertical_pair =
+                    (partition == 2) & closed_lossy_420_16x16_vertical_pair_context(context);
+                if reconstruct_lossy_420_16x16_vertical_pair {
+                    // PARTITION_VERT places two 8x16 leaves side by side.
+                    // Unlike PARTITION_SPLIT, the direct two-axis form has no
+                    // child partition CDF sentence between the leaf payloads.
+                    let quantization = lossy_quantization_for_context(context);
+                    let reconstructed = super::block::decode_two_lossy_420_leaves(
+                        &mut decoder,
+                        context.frame_width,
+                        context.frame_height,
+                        quantization,
+                        super::block::BlockTools {
+                            allow_screen_content_tools: context.allow_screen_content_tools,
+                            enable_filter_intra: context.enable_filter_intra,
+                            enable_intra_edge_filter: context.enable_intra_edge_filter,
+                            transform_mode: context.frame_tools.transform_mode,
+                            transform_context: 0,
+                            palette_context: Default::default(),
+                        },
+                        super::block::SplitOrientation::Horizontal,
+                        |_| Ok(()),
                     );
                     return finish_closed_leaf(&decoder, reconstructed);
                 }
