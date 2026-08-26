@@ -8,7 +8,9 @@ the pinned scalar dav1d executable. Generated files are temporary unless
 ``--retain-dir`` is supplied; no repository Rust code is invoked. The
 historical ``diagonal157`` target is the default; ``origin_vertical`` searches
 the newly specified origin-Vertical case using the same corpus. The separate
-``following_paeth`` target searches coded UV mode 12 on the following leaf.
+``following_paeth`` target searches coded UV mode 12 on the following leaf. The
+``following_horizontal`` target searches the dependency-ready Horizontal case
+with semantic UV angle symbols recorded by the instrumented oracle.
 """
 
 from __future__ import annotations
@@ -82,6 +84,18 @@ PAETH_FAMILY_NAMES = (
     "paeth_plane_phase",
     "paeth_luma_texture",
 )
+HORIZONTAL_FAMILY_NAMES = (
+    "horizontal_control_d157",
+    "horizontal_row_saw",
+    "horizontal_row_step",
+    "horizontal_row_triangle",
+    "horizontal_row_bands",
+    "horizontal_row_ramp",
+    "horizontal_row_impulse",
+    "horizontal_row_opposed",
+    "horizontal_row_phase",
+    "horizontal_row_mirror",
+)
 TARGET_DESCRIPTIONS = {
     "diagonal157": (
         "two side-by-side Vertical8x16 leaves with following right UV mode 6 "
@@ -98,6 +112,12 @@ TARGET_DESCRIPTIONS = {
         "following ADST-ADST chroma, non-empty AC, and nonconstant origin "
         "chroma right edges"
     ),
+    "following_horizontal": (
+        "two side-by-side Vertical8x16 leaves with origin UV mode 0 (DC), "
+        "following UV mode 2 (Horizontal), one Dct-Dct and one Dct-Adst "
+        "R4x8 U/V pair, non-empty AC, varying origin chroma right edges, "
+        "and a recorded valid following UV angle symbol"
+    ),
 }
 BLOCK_PATTERN = re.compile(
     r"^poc=(?P<poc>-?\d+),y=(?P<y>-?\d+),x=(?P<x>-?\d+),"
@@ -109,6 +129,7 @@ LUMA_PATTERN = re.compile(
     r"eob=(?P<eob>-?\d+)\]"
 )
 LUMA_MODE_PATTERN = re.compile(r"^Post-ymode\[(?P<mode>\d+)\]")
+ANGLE_PATTERN = re.compile(r"^Post-uvangle-symbol\[(?P<symbol>\d+)\]")
 CHROMA_PATTERN = re.compile(
     r"^Post-uv-cf-blk\[pl=(?P<plane>\d+),tx=(?P<tx>\d+),"
     r"txtp=(?P<txtp>-?\d+),eob=(?P<eob>-?\d+)\]"
@@ -219,6 +240,50 @@ def paeth_chroma_deltas(family: int, index: int, cx: int, cy: int) -> tuple[int,
     return base + horizontal, base + ((2 * cx + index) % 5) - 2
 
 
+def horizontal_chroma_deltas(family: int, index: int, cx: int, cy: int) -> tuple[int, int]:
+    """Return row-shaped U/V deltas for a following Horizontal predictor."""
+
+    if family == 0:
+        # Keep one exact historical family as a reproducibility control.
+        return chroma_deltas(0, index, cx, cy)
+    amplitude = 18 + (index % 5) * 3
+    phase = (3 * index + 5 * family) % 8
+    row = cy + phase
+    if family == 1:
+        base = amplitude if row % 2 == 0 else -amplitude
+    elif family == 2:
+        base = (row % 4 - 1) * (amplitude // 2)
+    elif family == 3:
+        base = (row - 3) * (amplitude // 3)
+    elif family == 4:
+        base = (4 - abs((row % 8) - 4)) * (amplitude // 4)
+    elif family == 5:
+        base = amplitude if row >= 4 + index % 3 else -amplitude
+    elif family == 6:
+        base = amplitude if row in {2 + index % 2, 6 + index % 2} else -amplitude // 2
+    elif family == 7:
+        base = amplitude if row == 3 + index % 3 else -amplitude // 3
+    elif family == 8:
+        base = ((row * 3 + phase) % 9 - 4) * (amplitude // 4)
+    else:
+        base = amplitude if (row + phase) % 3 == 0 else -amplitude // 2
+    # Make the right leaf row-shaped while retaining a small AC signal in both
+    # leaves. The left half is deliberately quieter so DC remains reachable.
+    scale = 1 if cx < 4 else 2
+    ripple = ((cx - 3) * (1 + family % 3)) if cx >= 4 else (cx - 3)
+    u = scale * base + ripple
+    if family in {2, 4, 8}:
+        v = -scale * base + ((cx + cy + index) % 3) - 1
+    elif family in {5, 6}:
+        v = scale * base - ripple
+    elif family == 9:
+        v = -scale * base
+        u, v = v, u
+    else:
+        v = scale * base + ((2 * cx + index) % 5) - 2
+    return u, v
+
+
 def candidate_pixels(family: int, index: int, target: str) -> bytes:
     """Create one deterministic 16x16 RGB candidate from a YUV-shaped field."""
 
@@ -229,6 +294,8 @@ def candidate_pixels(family: int, index: int, target: str) -> bytes:
             cx, cy = x // 2, y // 2
             if target == "following_paeth":
                 u_delta, v_delta = paeth_chroma_deltas(family, index, cx, cy)
+            elif target == "following_horizontal":
+                u_delta, v_delta = horizontal_chroma_deltas(family, index, cx, cy)
             else:
                 u_delta, v_delta = chroma_deltas(family, index, cx, cy)
             luma = 128
@@ -237,6 +304,10 @@ def candidate_pixels(family: int, index: int, target: str) -> bytes:
                     luma += ((5 * x + 3 * y + seed) % 9) - 4
                 if x >= 8:
                     luma += 9 if (x // 2 + y // 2 + seed) % 2 else -9
+            elif target == "following_horizontal":
+                # Keep luma on the proven DC-only topology so chroma mode
+                # selection is the only changing variable in this campaign.
+                luma = 128
             elif family in (5, 7, 8):
                 luma += 14 if x >= 8 and ((x // 2 + y // 2 + seed) % 2) else 0
                 if family == 5:
@@ -255,8 +326,15 @@ def candidates(target: str) -> list[dict[str, object]]:
     """Return exactly ten deterministic families with ten cases each."""
 
     result = []
-    family_names = PAETH_FAMILY_NAMES if target == "following_paeth" else FAMILY_NAMES
-    prefix = "PTH" if target == "following_paeth" else "R157"
+    if target == "following_paeth":
+        family_names = PAETH_FAMILY_NAMES
+        prefix = "PTH"
+    elif target == "following_horizontal":
+        family_names = HORIZONTAL_FAMILY_NAMES
+        prefix = "HOR"
+    else:
+        family_names = FAMILY_NAMES
+        prefix = "R157"
     for family, family_name in enumerate(family_names):
         for index in range(10):
             result.append(
@@ -358,6 +436,7 @@ def classify(
     chroma_groups = []
     uv_modes = []
     y_modes = []
+    uv_angle_symbols = []
     for group in groups:
         luma_payloads = []
         chroma_payloads = []
@@ -366,6 +445,8 @@ def classify(
                 uv_modes.append(int(line.split("[", 1)[1].split("]", 1)[0]))
             if match := LUMA_MODE_PATTERN.match(line):
                 y_modes.append(int(match["mode"]))
+            if match := ANGLE_PATTERN.match(line):
+                uv_angle_symbols.append(int(match["symbol"]))
             if match := LUMA_PATTERN.match(line):
                 luma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
             if match := CHROMA_PATTERN.match(line):
@@ -470,6 +551,24 @@ def classify(
             "origin_u_right_edge_varies": len(set(origin_u_edge)) > 1,
             "origin_v_right_edge_varies": len(set(origin_v_edge)) > 1,
         }
+    elif target == "following_horizontal":
+        following_angle_valid = len(uv_angle_symbols) == 1 and all(
+            0 <= symbol <= 6 for symbol in uv_angle_symbols
+        )
+        target_predicates = {
+            "no_palette": no_palette,
+            "luma_modes_dc_only": len(y_modes) == 2 and all(mode == 0 for mode in y_modes),
+            "origin_uv_mode_0": len(uv_modes) == 2 and uv_modes[0] == 0,
+            "following_uv_mode_2": len(uv_modes) == 2 and uv_modes[1] == 2,
+            "origin_chroma_r4x8_dct_dct": is_r4x8(left_chroma, 0, cbx4=0),
+            "following_chroma_r4x8_dct_adst": is_r4x8(right_chroma, 2, cbx4=1),
+            "origin_chroma_nonempty_ac": has_nonempty_ac(left_chroma),
+            "following_chroma_nonempty_ac": has_nonempty_ac(right_chroma),
+            "origin_u_right_edge_varies": len(set(origin_u_edge)) > 1,
+            "origin_v_right_edge_varies": len(set(origin_v_edge)) > 1,
+            "following_uv_angle_recorded": len(uv_angle_symbols) == 1,
+            "following_uv_angle_valid": following_angle_valid,
+        }
     else:
         raise ValueError(f"unknown rectangular campaign target: {target}")
     predicates = {**common_predicates, **target_predicates}
@@ -477,6 +576,9 @@ def classify(
         "root_partition": root,
         "group_count": len(groups),
         "uv_modes": uv_modes,
+        "following_uv_angle_symbols": uv_angle_symbols,
+        "following_uv_angle_deltas": [symbol - 3 for symbol in uv_angle_symbols],
+        "following_uv_angles": [180 + 3 * (symbol - 3) for symbol in uv_angle_symbols],
         "left_luma_payloads": luma_groups[0] if luma_groups else [],
         "right_luma_payloads": right_luma,
         "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
@@ -528,6 +630,10 @@ def decode_candidate(
                 int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
             )
             if target == "following_paeth"
+            else horizontal_chroma_deltas(
+                int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
+            )
+            if target == "following_horizontal"
             else chroma_deltas(
                 int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
             )
@@ -609,6 +715,7 @@ def main() -> None:
                 resolve_tool(args.meson, "Meson"),
                 resolve_tool(args.ninja, "Ninja"),
                 args.python_path.resolve() if args.python_path else None,
+                include_block_angles=args.target == "following_horizontal",
             )
         else:
             executable = args.dav1d.resolve()
@@ -643,7 +750,11 @@ def main() -> None:
             "target_id": args.target,
             "target": TARGET_DESCRIPTIONS[args.target],
             "families": list(
-                PAETH_FAMILY_NAMES if args.target == "following_paeth" else FAMILY_NAMES
+                PAETH_FAMILY_NAMES
+                if args.target == "following_paeth"
+                else HORIZONTAL_FAMILY_NAMES
+                if args.target == "following_horizontal"
+                else FAMILY_NAMES
             ),
         },
         "counts": {

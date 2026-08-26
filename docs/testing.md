@@ -43,7 +43,7 @@ Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
 Square16 CFL/DCT witnesses. Their pinned entropy traces contain 419, 229, and
 388 operations; safe Rust matches exact entropy, reconstructed Y/U/V, and
-Pillow RGB evidence. The campaign and fixture hashes are recorded in
+ Pillow RGB evidence. The campaign and fixture hashes are recorded in
 `roadmap.json` and `docs/roadmap-new.md`. Earlier AVIF revision-bound evidence:
 `coverage_square8_chroma_diagonal113_01.avif`
 is a 16x8 8-bit 4:2:0 horizontal split whose right-hand `Square8` leaf uses
@@ -60,6 +60,17 @@ lines, +22 branches, +4 functions, and +120 regions, with 2,161 newly covered,
 not a source diff: named-test attribution is unavailable and Coverage MCP
 stores `11559fb6` as the current snapshot metadata, so the limitation remains
 explicit.
+
+The current AVIF witness is
+`coverage_vertical8x16_chroma_horizontal_01.avif`: a 100-case/10-family
+input-only search qualified two exact-horizontal following-leaf cases and
+promoted one. Its observed UV angle symbol is `3` (delta `0`, absolute angle
+`180`), the pinned trace contains 149 entropy operations, and the safe-Rust
+decoder matches the exact partition, entropy trace, Y/U/V planes, and Pillow
+RGB bytes. The durable search report is
+`tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_horizontal_campaign_01.json`
+with SHA-256
+`3556712a1a4f2a9a79fb48072dd1108582e4220f0aafe935faab2849d287463a`.
 
 The next AVIF reachability investigation is recorded as two bounded no-hit
 campaigns for right-hand Square8 chroma Diagonal67. Each evaluated exactly 100

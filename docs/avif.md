@@ -156,6 +156,30 @@ This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
 broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
 remain open.
 
+The newest following-leaf witness is
+`coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
+8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode 2
+(Horizontal). Both leaves use one R4x8 U/V pair; the origin is DCT-DCT, the
+following leaf is DCT-ADST, both have non-empty AC, and the following UV angle
+symbol is recorded as `3` (delta `0`, absolute angle `180`). The bounded
+input-only campaign evaluated 100 candidates across 10 families, qualified
+exactly two cases in this same zero-delta zone, and promoted one. Its pinned
+trace has 149 entropy operations and root range `57408`; safe Rust matches the
+exact partition, entropy, Y/U/V planes, and Pillow RGB bytes. The fixture,
+encoded-item, Pillow RGB, and Y/U/V SHA-256 values are
+`a4f4638ba60bc5ac4a5e15e161135a7cc51d521801dccbe83a1cdfbfb3cec00b`,
+`71cba042f6b3d85ff48ace58a02c692c58d01f0ddd248f5175ee2218ae928d6f`,
+`fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f`,
+`5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b`,
+`a827fede50b0209c63cb5f591b182580a3e0d3cc153c685d5e8317261b768b48`, and
+`fcd95e665768fca57727608db3f4d9d7fbafb50dfce932322f30cf68e1021336`.
+The durable campaign report is
+`tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_horizontal_campaign_01.json`
+(SHA-256
+`3556712a1a4f2a9a79fb48072dd1108582e4220f0aafe935faab2849d287463a`). This
+closes only the exact-horizontal 4:2:0 class; nonzero-angle Horizontal zones
+and broader AVF-STILL-001 remain open.
+
 Two separate input-only searches for the adjacent right-hand Square8 chroma
 Diagonal67 class were bounded at 100 candidates each and found no coded UV
 mode-8 sentence. The first report is

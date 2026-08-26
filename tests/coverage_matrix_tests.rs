@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 210);
+    assert_eq!(expected.cases.len(), 211);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5133,7 +5133,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 }],
                 "AV1 origin Vertical8x16 filter-intra witness partition topology"
             );
-        } else if case.fixture == "coverage_vertical8x16_chroma_diagonal157_01.avif" {
+        } else if matches!(
+            case.fixture.as_str(),
+            "coverage_vertical8x16_chroma_diagonal157_01.avif"
+                | "coverage_vertical8x16_chroma_horizontal_01.avif"
+        ) {
             assert_eq!(
                 case.partition_blocks,
                 vec![Av1PartitionBlock {
@@ -5145,7 +5149,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     partition: 2,
                     range: 57_408,
                 }],
-                "AV1 origin Vertical8x16 chroma Diagonal157 witness partition topology"
+                "AV1 origin Vertical8x16 chroma directional witness partition topology"
             );
         } else if case.fixture == "coverage_vertical8x16_chroma_vertical_01.avif" {
             assert_eq!(
@@ -5845,6 +5849,53 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=5,txtp=2,eob=31]: r=35848 [x=0,cbx4=1]",
                 ],
                 "AV1 origin Vertical8x16 chroma Diagonal157 witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_vertical8x16_chroma_horizontal_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                149,
+                "AV1 origin Vertical8x16 chroma Horizontal witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-uvangle-symbol[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=55500",
+                    "Post-cdef_idx[0]: r=55500",
+                    "Post-ymode[0]: r=53016",
+                    "Post-uvmode[0]: r=33686",
+                    "Post-tx[1]: r=36688",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=32965",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=59400",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=64264 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=9]: r=40712 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=39436",
+                    "Post-ymode[0]: r=38736",
+                    "Post-uvmode[2]: r=62944",
+                    "Post-uvangle-symbol[3]: r=56114",
+                    "Post-tx[1]: r=64394",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=58612",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=53584",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=2,eob=9]: r=57096 [x=0,cbx4=1]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=2,eob=9]: r=63240 [x=0,cbx4=1]",
+                ],
+                "AV1 origin Vertical8x16 chroma Horizontal witness leaf states"
             );
         }
         if case.fixture == "coverage_vertical8x16_chroma_vertical_01.avif" {
@@ -6921,6 +6972,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_chroma_diagonal157_01.avif" => {
                 "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8"
+            }
+            "coverage_vertical8x16_chroma_horizontal_01.avif" => {
+                "fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f"
             }
             "coverage_vertical8x16_chroma_vertical_01.avif" => {
                 "56c7822ea3a4ea606bd563b91d17a96a25fb54afa85aea7ce57d3b75f60fa794"
