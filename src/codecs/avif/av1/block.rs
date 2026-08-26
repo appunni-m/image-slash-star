@@ -9552,6 +9552,13 @@ fn decode_lossy_luma_4x4_coefficients(
             matches!(transform_kind, LossyTransformKind::IdentityDct),
         );
     }
+    // AV1 leaves the quantization matrix disabled for IDTX. All other
+    // two-dimensional 4x4 transforms use the selected luma matrix.
+    let matrix_values = if matches!(transform_kind, LossyTransformKind::IdentityIdentity) {
+        None
+    } else {
+        luma_4x4_matrix(quantization)?
+    };
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.eob_bin_luma, 4);
 
     if eob_bin == 0 {
@@ -9574,6 +9581,7 @@ fn decode_lossy_luma_4x4_coefficients(
             negative,
             0,
             quantization,
+            None,
         )?;
         coefficients[0] = coefficient;
         let context = lossy_coefficient_residual_context(token, token, negative);
@@ -9686,6 +9694,7 @@ fn decode_lossy_luma_4x4_coefficients(
             dc_negative,
             0,
             quantization,
+            matrix_values,
         )?;
         coefficients[0] = coefficient;
         coefficient_magnitude = coefficient_magnitude.saturating_add(token);
@@ -9698,6 +9707,7 @@ fn decode_lossy_luma_4x4_coefficients(
             negative,
             position,
             quantization,
+            matrix_values,
         )?;
         coefficients[position] = coefficient;
         coefficient_magnitude = coefficient_magnitude.saturating_add(token);
@@ -13403,16 +13413,25 @@ fn dequantize_lossy_luma_4x4_coefficient_with_token(
     negative: bool,
     index: usize,
     quantization: LossyQuantization,
+    matrix_values: Option<&[u8]>,
 ) -> PortableResult<(i32, u32)> {
-    let matrix_values = luma_4x4_matrix(quantization)?;
-    dequantize_lossy_coefficient_with_token_using_matrix(
-        decoder,
-        token,
-        negative,
-        index,
-        quantization,
-        matrix_values,
-    )
+    Ok(match matrix_values {
+        Some(matrix_values) => dequantize_lossy_coefficient_with_token_using_matrix(
+            decoder,
+            token,
+            negative,
+            index,
+            quantization,
+            Some(matrix_values),
+        )?,
+        None => dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            token,
+            negative,
+            index,
+            quantization,
+        )?,
+    })
 }
 
 fn dequantize_lossy_luma_16x16_coefficient_with_token(
@@ -20254,6 +20273,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1(
     left: Option<[u16; 8]>,
     top_left: Option<u16>,
     angle: i32,
+    top_available: bool,
     split: LossyLuma4x4Split,
 ) -> PortableResult<ReconstructedPlane> {
     let mut samples = vec![0_u16; 64];
@@ -20261,20 +20281,52 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1(
         let transform_x = (transform_index % 2).saturating_mul(4);
         let transform_y = (transform_index / 2).saturating_mul(4);
         let top_edge = if transform_y == 0 {
-            std::array::from_fn(|column| top[transform_x + column])
+            if top_available {
+                std::array::from_fn(|column| top[transform_x + column])
+            } else if transform_x == 0 {
+                [left.map_or(top[0], |edge| edge[0]); 4]
+            } else {
+                [samples[transform_y * 8 + transform_x - 1]; 4]
+            }
         } else {
             std::array::from_fn(|column| {
                 samples[(transform_y - 1).saturating_mul(8) + transform_x + column]
             })
         };
+        let top_extension = if transform_y == 0 {
+            if top_available {
+                if transform_x == 0 {
+                    top[4..8].try_into().map_err(|_| PortableUnavailable)?
+                } else {
+                    [top[7]; 4]
+                }
+            } else {
+                [top_edge[3]; 4]
+            }
+        } else if transform_x == 0 {
+            std::array::from_fn(|column| samples[(transform_y - 1).saturating_mul(8) + 4 + column])
+        } else {
+            [samples[(transform_y - 1).saturating_mul(8) + 7]; 4]
+        };
         let block_top_left = match (transform_x, transform_y) {
-            (0, 0) => top_left.unwrap_or(top_edge[0]),
-            (_, 0) => top[transform_x - 1],
+            (0, 0) if top_available => top_left.unwrap_or(top_edge[0]),
+            (0, 0) => left.map_or(128, |edge| edge[0]),
+            (_, 0) if top_available => top[transform_x - 1],
+            (_, 0) => samples[transform_y * 8 + transform_x - 1],
             (0, _) => left.map_or(top_edge[0], |edge| edge[transform_y - 1]),
             _ => samples[(transform_y - 1).saturating_mul(8) + transform_x - 1],
         };
-        let block = reconstruct_lossy_4x4_diagonal_z1(
-            top_edge,
+        let block = reconstruct_lossy_4x4_diagonal_z1_extended(
+            [
+                top_edge[0],
+                top_edge[1],
+                top_edge[2],
+                top_edge[3],
+                top_extension[0],
+                top_extension[1],
+                top_extension[2],
+                top_extension[3],
+            ],
             block_top_left,
             angle,
             split.coefficients[transform_index],
@@ -27695,6 +27747,7 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
                 Some(luma_edge),
                 Some(luma_edge[0]),
                 luma_angle.ok_or(PortableUnavailable)?,
+                false,
                 split,
             )?,
             (SplitOrientation::Horizontal, None, LumaPredictor::Diagonal203) => {
@@ -27890,14 +27943,14 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
                 SplitOrientation::Horizontal,
             ) => [
                 reconstruct_lossy_chroma_4x4_diagonal(
-                    [128; 8],
+                    [chroma_edges[0][0]; 8],
                     chroma_edges[0],
                     chroma_angle.ok_or(PortableUnavailable)?,
                     lossy_chroma_coefficients[0],
                     chroma_transform_kind(chroma_predictor),
                 )?,
                 reconstruct_lossy_chroma_4x4_diagonal(
-                    [128; 8],
+                    [chroma_edges[1][0]; 8],
                     chroma_edges[1],
                     chroma_angle.ok_or(PortableUnavailable)?,
                     lossy_chroma_coefficients[1],
@@ -40592,7 +40645,7 @@ impl Lossy420Decoder {
                 },
                 allow_horizontal_chroma: false,
                 allow_diagonal_chroma: false,
-                allow_diagonal_luma: false,
+                allow_diagonal_luma: true,
                 allow_smooth_chroma: false,
                 allow_smooth_luma: false,
             },
@@ -40611,7 +40664,7 @@ impl Lossy420Decoder {
                 .lossy_luma_4x4_split
                 .map(|split| reconstruct_lossy_luma_8x8_split_dc(None, None, split))
         } else {
-            reconstruct_origin_filter_intra_luma_override(transform_grid, &syntax)?
+            reconstruct_origin_luma_override(transform_grid, &syntax)?
         };
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
@@ -41925,14 +41978,70 @@ mod tests {
 // that intentional source-layout invariant; this is not a warning suppression
 // for the implementation itself.
 #[allow(clippy::items_after_test_module)]
-/// Reconstruct an origin filter-intra luma block with dav1d's prepared
-/// missing-edge values. The dispatch is kept separate from the generic leaf
-/// policy because filter-intra is a luma prediction process, not an ordinary
-/// DC predictor.
-fn reconstruct_origin_filter_intra_luma_override(
+/// Reconstruct an origin luma block with dav1d's prepared missing-edge values.
+/// The dispatch is kept separate from the generic leaf policy because origin
+/// prediction needs explicit edges for filter-intra, angular, and split modes.
+fn reconstruct_origin_luma_override(
     transform_grid: TransformGrid,
     syntax: &BlockSyntax,
 ) -> PortableResult<Option<ReconstructedPlane>> {
+    if matches!(transform_grid, TransformGrid::Square8)
+        && !syntax.palette.is_present()
+        && syntax.filter_intra_mode.is_none()
+        && let Some(split) = syntax.lossy_luma_4x4_split
+    {
+        let luma = match syntax.luma_predictor {
+            LumaPredictor::Dc => reconstruct_lossy_luma_8x8_split_dc(None, None, split),
+            LumaPredictor::Vertical => reconstruct_lossy_luma_8x8_split_vertical([128; 8], split),
+            LumaPredictor::Horizontal => {
+                reconstruct_lossy_luma_8x8_split_horizontal_vertical([128; 8], None, split)
+            }
+            LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
+                reconstruct_lossy_luma_8x8_split_diagonal_z1(
+                    [127; 8],
+                    None,
+                    None,
+                    syntax.luma_angle.ok_or(PortableUnavailable)?,
+                    false,
+                    split,
+                )?
+            }
+            LumaPredictor::DiagonalDownRight
+            | LumaPredictor::Diagonal113
+            | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_8x8_split_diagonal_vertical(
+                [128; 8],
+                None,
+                None,
+                syntax.luma_angle.ok_or(PortableUnavailable)?,
+                false,
+                false,
+                split,
+            )?,
+            LumaPredictor::Diagonal203 => reconstruct_lossy_luma_8x8_split_diagonal_z3(
+                [128; 8],
+                [128; 8],
+                128,
+                None,
+                syntax.luma_angle.ok_or(PortableUnavailable)?,
+                false,
+                split,
+            )?,
+            LumaPredictor::Smooth => {
+                reconstruct_lossy_luma_8x8_split_smooth_vertical([128; 8], None, split)
+            }
+            LumaPredictor::SmoothVertical => {
+                reconstruct_lossy_luma_8x8_split_smooth_vertical_only([128; 8], None, split)
+            }
+            LumaPredictor::SmoothHorizontal => {
+                reconstruct_lossy_luma_8x8_split_smooth_horizontal([128; 8], split)
+            }
+            LumaPredictor::Paeth => {
+                reconstruct_lossy_luma_8x8_split_paeth([128; 8], None, 128, split)
+            }
+        };
+        return Ok(Some(luma));
+    }
+
     if matches!(transform_grid, TransformGrid::Square16) && !syntax.palette.is_present() {
         let Some(mode) = syntax.filter_intra_mode else {
             return Ok(None);

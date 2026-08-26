@@ -5604,6 +5604,45 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_diagonal113_square8():
+        """Generate the right-hand Square8 Diagonal113 witness."""
+
+        seed = 310
+
+        def pixel(x, y):
+            phase = (x + y + seed % 7) % 16
+            return (
+                clamp_channel(24 + 15 * phase),
+                clamp_channel(180 - 9 * phase),
+                clamp_channel(230 - 11 * phase),
+            )
+
+        return image_from_pixels((16, 8), pixel)
+
+    write_campaign_image(
+        "coverage_square8_chroma_diagonal113_01",
+        chroma_diagonal113_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def horizontal_r32x8_ripple():
         """Generate a deterministic PARTITION_H4 32x8-transform witness."""
 
