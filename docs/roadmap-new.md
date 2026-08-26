@@ -225,6 +225,23 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
   broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
   remain partial.
+- Two disjoint, input-only Diagonal67 campaigns are now recorded as explicit
+  no-hit evidence. `scripts/explore_avif_chroma_diagonal67.py` evaluated 100
+  deterministic candidates and found zero coded UV mode-8 cases; its report is
+  `tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_01.json`
+  (SHA-256
+  `1a54c0803c30443bd7ca2fd24a70be2e146c1235b878c19bd3ef0c5b8f66a977`). The
+  separately reviewed chroma-biased campaign
+  `scripts/explore_avif_chroma_diagonal67_biased.py` also evaluated 100 and
+  found zero; its report is
+  `tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_02.json`
+  (SHA-256
+  `fb14d289c4e0f4d200c673687228a33f1f682eb235605005dc8f632f1dab4af7`). Both
+  kept the 16×8 4:2:0 geometry, pinned Pillow/libavif/libaom/dav1d versions,
+  unchanged strict mode/transform/AC predicates, and recorded every rejection.
+  They do not prove Diagonal67 unreachable and authorize no speculative Rust
+  edit; the class remains planned and the next AV1 slice must be selected
+  separately.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 

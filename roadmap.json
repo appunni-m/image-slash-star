@@ -912,7 +912,33 @@
     "latest_slice": "The new coverage_square8_chroma_diagonal113_01 slice adds a deterministic 16x8 4:2:0 right-hand Square8 chroma-Diagonal113 witness, a pinned 304-operation dav1d trace, exact partition/entropy/YUV/Pillow assertions, and generator/reference/matrix provenance. The 100-candidate/10-family search selected f02_diagonal_chroma_ramp_00 with seed 310. Safe Rust now handles origin angular luma edge preparation, the AV1 IDTX matrix rule, and the following leaf's left-only chroma edge. The exact managed run at 947b5915 reports the current four-metric aggregate and its metadata caveat above; broader AV1 classes and AVF-STILL-001 remain open.",
         "latest_evidence_addition": "coverage_square8_chroma_diagonal113_01.avif is a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial. The managed run d334b4ef-2847-455b-a9d2-662c6481cf5e passed in 142,370 ms and ingested snapshot 9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa; aggregate review reports +102 covered lines, +22 branches, +4 functions, +120 regions, with 2,161 newly covered and 2,075 regressed observations. Named-test attribution is unavailable and stored snapshot metadata reports 11559fb6, so no source-diff claim is made.",
         "current_slice": "The new coverage_square8_chroma_diagonal113_01.avif witness is a deterministic 16x8 4:2:0 horizontal split with a right-hand Square8 leaf selecting chroma Diagonal113 and ADST-DCT U/V transforms. Its exact pinned partition ranges are 37392, 43662, and 63946; its entropy trace has 304 operations; and safe Rust matches its partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. The fixture search retained f02_diagonal_chroma_ramp_00, seed 310. Production changes are limited to safe AV1 reconstruction and IDTX/chroma-edge correctness. This closes one bounded class only; the managed run is exact to 947b5915 with stored snapshot metadata caveat, and AVF-STILL-001 remains partial.",
-        "next": "Select the next dependency-ready uncovered AV1 block/entropy class using current managed insight and a bounded input-only oracle search; retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, and encoding as open."
+        "next": "Select a separate dependency-ready AV1 block/entropy class using current managed insight and a new bounded input-only oracle search; do not widen the Diagonal67 campaign or make a speculative production edit. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, and encoding as open.",
+        "search_evidence": {
+          "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",
+          "campaigns": [
+            {
+              "id": "AVF-STILL-001-DIAGONAL67-01",
+              "script": "scripts/explore_avif_chroma_diagonal67.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_01.json",
+              "report_sha256": "1a54c0803c30443bd7ca2fd24a70be2e146c1235b878c19bd3ef0c5b8f66a977",
+              "candidate_count": 100,
+              "qualified": 0,
+              "right_uv_mode_8_rejections": 100,
+              "tool_contract": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2, pinned dav1d 1.5.3, 16x8 4:2:0, quality 76, speed 0, one thread, deterministic double encoding"
+            },
+            {
+              "id": "AVF-STILL-001-DIAGONAL67-02",
+              "script": "scripts/explore_avif_chroma_diagonal67_biased.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_02.json",
+              "report_sha256": "fb14d289c4e0f4d200c673687228a33f1f682eb235605005dc8f632f1dab4af7",
+              "candidate_count": 100,
+              "qualified": 0,
+              "right_uv_mode_8_rejections": 100,
+              "tool_contract": "same pinned encoder/oracle and unchanged strict acceptance predicates; deterministic YUV-shaped RGB families with seeds 700..799"
+            }
+          ],
+          "decision": "The two disjoint campaigns are bounded no-hit evidence, not proof that Diagonal67 is unreachable. No fixture or production decoder edit is justified; keep this class planned and choose the next slice independently."
+        }
       },
       "AVF-ENTROPY-001": {
         "status": "partial",
