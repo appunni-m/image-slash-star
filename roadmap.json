@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-27",
-  "claim_ledger_base_revision": "11e3b3297c4346e3823d3d6fbaeeda52928a952c",
+  "claim_ledger_base_revision": "1bfe20f465435fd474def91770a06a1289d71544",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -113,16 +113,16 @@
     },
     "coverage": {
       "line": {
-        "covered": 99048,
+        "covered": 99056,
         "total": 109168,
-        "percent": 90.7299,
-        "uncovered": 10120
+        "percent": 90.7372,
+        "uncovered": 10112
       },
       "branch": {
-        "covered": 12574,
+        "covered": 12575,
         "total": 13934,
-        "percent": 90.2397,
-        "uncovered": 1360
+        "percent": 90.2469,
+        "uncovered": 1359
       },
       "function": {
         "covered": 5050,
@@ -131,37 +131,37 @@
         "uncovered": 697
       },
       "region": {
-        "covered": 148220,
+        "covered": 148228,
         "total": 165163,
-        "percent": 89.7416,
-        "uncovered": 16943
+        "percent": 89.7465,
+        "uncovered": 16935
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-27",
         "managed_coverage_mcp": true,
-        "commit_sha": "11e3b3297c4346e3823d3d6fbaeeda52928a952c",
-        "run_id": "225b34f4-7f00-4b0d-a323-9f9ca1100006",
-        "snapshot_id": "6978977a-e0ad-46c1-8348-373719df7fc0",
+        "commit_sha": "1bfe20f465435fd474def91770a06a1289d71544",
+        "run_id": "1220905e-e31a-4c4f-876d-bc47f26bbbc1",
+        "snapshot_id": "b5a94b2e-fdf6-4838-beb0-f970a616b5ad",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 156499,
+        "duration_ms": 146803,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed the all-feature LLVM workload in 156,499 ms; its run record is bound to exact implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. The snapshot records 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, so this record does not overclaim snapshot metadata provenance beyond the exact run checkout. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured and reports zero regressions; its complete-snapshot diff reports +1/+0 lines, +0/+0 branches, +0/+0 functions, and +1/+0 regions (covered/total). Named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
+        "note": "Managed Coverage MCP run 1220905e-e31a-4c4f-876d-bc47f26bbbc1 passed the all-feature LLVM workload in 146,803 ms; its run record is bound to exact implementation checkout 1bfe20f465435fd474def91770a06a1289d71544 and ingested snapshot b5a94b2e-fdf6-4838-beb0-f970a616b5ad. The snapshot records 99,056/109,168 lines (90.7372%), 12,575/13,934 branches (90.2469%), 5,050/5,747 functions (87.8719%), and 148,228/165,163 regions (89.7465%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, so this record does not overclaim snapshot metadata provenance beyond the exact run checkout. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured and reports zero regressions; its complete-snapshot diff reports +9/+0 lines, +1/+0 branches, +0/+0 functions, and +9/+0 regions (covered/total). Newly covered source ranges include src/codecs/avif/av1/block.rs:345 and 621, plus 14414-14419 and 14422; named test attribution is unavailable. The new Square8 chroma Diagonal45 angle-51 witness is exact through safe Rust; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
         "comparison_to_previous_snapshot": {
           "baseline_commit": "d85561351dd1e779aff5eedbf5e562eebb7201e9",
           "baseline_snapshot_id": "02ea7870-faee-4687-94e4-4af30f443dbb",
           "baseline_snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-          "line_covered_delta": 1,
+          "line_covered_delta": 9,
           "line_total_delta": 0,
-          "branch_covered_delta": 0,
+          "branch_covered_delta": 1,
           "branch_total_delta": 0,
           "function_covered_delta": 0,
           "function_total_delta": 0,
-          "region_covered_delta": 1,
+          "region_covered_delta": 9,
           "region_total_delta": 0,
-          "interpretation": "Compared with the previous managed snapshot 02ea7870-faee-4687-94e4-4af30f443dbb, the current complete snapshot records +1/+0 lines, +0/+0 branches, +0/+0 functions, and +1/+0 regions (covered/total). The explicit incremental review is measured, reports zero regressions, and its additive identity merge records 1 newly covered line identity and 1 newly covered region; named test attribution is unavailable. The run record is bound to implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c, while the compact ingested snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db. The corrected H32x8 four-leaf false-filter sentinel witness matches exact independent reconstruction and public RGB evidence. The four-metric release target remains open with 10,120 lines, 1,360 branches, 697 functions, and 16,943 regions uncovered; the next implementation slice must target another actual uncovered production path."
+          "interpretation": "Compared with the previous managed snapshot 02ea7870-faee-4687-94e4-4af30f443dbb, the current complete snapshot records +9/+0 lines, +1/+0 branches, +0/+0 functions, and +9/+0 regions (covered/total). The explicit incremental review is measured, reports zero regressions, and its additive identity merge records 9 newly covered line identities and 9 newly covered regions; named test attribution is unavailable. The run record is bound to implementation checkout 1bfe20f465435fd474def91770a06a1289d71544, while the compact ingested snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db. The new Square8 chroma Diagonal45 angle-51 witness matches exact independent reconstruction and public RGB evidence and covers block.rs:345. The four-metric release target remains open with 10,112 lines, 1,359 branches, 697 functions, and 16,935 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -192,8 +192,12 @@
       "python3 scripts/verify_unreachable_contracts.py",
       "python3 scripts/verify_package_surface.py",
       "python3 scripts/verify_third_party_licenses.py",
+      "python3 scripts/verify_webp_vp8l_property_map.py",
       "python3 scripts/verify_roadmap.py",
       "python3 scripts/verify_claim_ledger.py",
+      "cargo package --allow-dirty --locked",
+      "python3 scripts/verify_package_consumer.py",
+      "python3 -m json.tool roadmap.json",
       "git diff --check",
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
       "./scripts/test_feature_matrix.sh"
@@ -205,7 +209,7 @@
       "llvm_coverage": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed the all-feature LLVM workload in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. It records 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb is measured, reports zero regressions, and records 4 newly covered line identities and 5 newly covered regions; named test attribution is unavailable. The following-Square16 chroma SmoothHorizontal witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed the all-feature LLVM workload in 156,499 ms; its run record is bound to exact implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. It records 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured, reports zero regressions, and records 1 newly covered line identity and 1 newly covered region; named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+      "llvm_coverage": "Managed Coverage MCP run 1220905e-e31a-4c4f-876d-bc47f26bbbc1 passed the all-feature LLVM workload in 146,803 ms; its run record is bound to exact implementation checkout 1bfe20f465435fd474def91770a06a1289d71544 and ingested snapshot b5a94b2e-fdf6-4838-beb0-f970a616b5ad. It records 99,056/109,168 lines (90.7372%), 12,575/13,934 branches (90.2469%), 5,050/5,747 functions (87.8719%), and 148,228/165,163 regions (89.7465%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured, reports zero regressions, and records 9 newly covered line identities, 1 newly covered branch, and 9 newly covered regions; named test attribution is unavailable. The new Square8 chroma Diagonal45 angle-51 witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -248,7 +252,7 @@
       "status": "in_progress",
       "why": "Measure the missing flashlight beams before selecting new tests.",
       "done_when": "All four current native all-feature metrics reach 100%, or a reviewed instrumentation decision changes the release target.",
-      "latest_evidence": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed in 156,499 ms at exact implementation commit 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. It reports 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%). Explicit incremental review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb reports zero regressions, 1 newly covered line identity, and 1 newly covered region; the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, and named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust; all four release metrics and AVF-STILL-001 remain open.",
+      "latest_evidence": "Managed Coverage MCP run 1220905e-e31a-4c4f-876d-bc47f26bbbc1 passed in 146,803 ms at exact implementation commit 1bfe20f465435fd474def91770a06a1289d71544 and ingested snapshot b5a94b2e-fdf6-4838-beb0-f970a616b5ad. It reports 99,056/109,168 lines (90.7372%), 12,575/13,934 branches (90.2469%), 5,050/5,747 functions (87.8719%), and 148,228/165,163 regions (89.7465%). Explicit incremental review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb reports zero regressions, 9 newly covered line identities, 1 newly covered branch, and 9 newly covered regions; the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, and named test attribution is unavailable. The new Square8 chroma Diagonal45 angle-51 witness is exact through safe Rust and covers block.rs:345; all four release metrics and AVF-STILL-001 remain open.",
       "source_ids": [
         "QA-003",
         "QA-010",
@@ -998,7 +1002,7 @@
           "dav1d_trace_sha256": "7e82b9b45660185c77912bc52f02ce521e15e1b5d5c3e4e9cae133db5e8dd512",
           "scope": "This closes only the bounded false-filter CDF decision, H32x8 luma, H16x4 chroma, and exact safe-Rust reconstruction class; it does not claim filter-intra reconstruction or general AV1/AVIF completion."
         },
-        "next": "Select the next dependency-ready AV1 block/entropy class using the refreshed managed coverage insight and a new bounded input-only oracle search. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, encoding, and the explicit Diagonal67 no-hit class as open.",
+        "next": "Select the next dependency-ready AV1 block/entropy class using the managed Coverage MCP insight and a new bounded input-only oracle search. The current ranked AVIF target remains src/codecs/avif/av1/block.rs lines 335, 625, and 630, with 1,059 uncovered branches and 469 uncovered functions in that file. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, encoding, and the explicit Diagonal67 no-hit class as open.",
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",
           "campaigns": [
