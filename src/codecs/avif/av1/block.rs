@@ -24373,6 +24373,11 @@ fn reconstruct_leaf_with_luma_override(
             let chroma_transform = chroma_rect_transform_kind(chroma_predictor);
             let chroma = |predictor: u16, coefficients: Option<Lossy4x8TransformCoefficients>| {
                 match chroma_predictor {
+                    ChromaPredictor::Vertical => reconstruct_lossy_luma_4x8_from_prediction(
+                        [predictor.saturating_sub(1); 32],
+                        coefficients,
+                        chroma_transform,
+                    ),
                     ChromaPredictor::DiagonalDownRight
                     | ChromaPredictor::Diagonal113
                     | ChromaPredictor::Diagonal157 => {

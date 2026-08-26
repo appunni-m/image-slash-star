@@ -4218,6 +4218,10 @@ formats:
       description: 16x16 4:2:0 quality-76 speed-0 vertical split with a following Vertical8x16 leaf using chroma Diagonal157 and DCT-ADST U/V transforms
       test_assets:
       - coverage_vertical8x16_chroma_diagonal157_01.avif
+    - id: coverage_vertical8x16_chroma_vertical_01
+      description: 16x16 4:2:0 quality-76 speed-0 vertical split with origin Vertical and following Diagonal113 chroma predictors using ADST-DCT U/V transforms and non-palette luma
+      test_assets:
+      - coverage_vertical8x16_chroma_vertical_01.avif
     - id: coverage_r32x32_following_01
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with pinned following Horizontal32x16 luma and 16x8 chroma reconstruction
       test_assets:
