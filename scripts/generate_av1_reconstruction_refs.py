@@ -55,6 +55,9 @@ CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
 LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES = frozenset(
     {"coverage_square8_luma_diagonal_down_right_01.avif"}
 )
+LUMA_DIAGONAL45_TARGET_FIXTURES = frozenset(
+    {"coverage_square8_luma_diagonal45_01.avif"}
+)
 LUMA_SMOOTH_TARGET_FIXTURES = frozenset(
     {
         "coverage_square8_luma_smooth_01.avif",
@@ -1006,6 +1009,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
         "size": [16, 8],
     },
+    "coverage_square8_luma_diagonal45_01.avif": {
+        "file_sha256": "0c91a151906a907282309db84231ec2a502a7186fe7403803535871dacd5f0fc",
+        "rgb_sha256": "86bf348ca94bf0609609d58aaff66a92b66834caf9c4261e697a6cb57863c01a",
+        "size": [16, 8],
+    },
     "coverage_square8_luma_smooth_01.avif": {
         "file_sha256": "6efe46905dc699d37beef0620e5b935b2114367c7254b03d0c9c1c2b57c8d4d0",
         "rgb_sha256": "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530",
@@ -1793,6 +1801,7 @@ def generate(
             decode_fixture(
                 luma_angle_executable
                 if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
+                or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_executable
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else target_executable
@@ -1809,6 +1818,7 @@ def generate(
             else legacy_executable,
                 luma_angle_env
                 if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
+                or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_env
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else target_env

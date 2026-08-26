@@ -4230,6 +4230,10 @@ formats:
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma SmoothHorizontal mode 11, DC chroma, and split TX4x4 luma transforms
       test_assets:
       - coverage_square8_luma_smooth_horizontal_01.avif
+    - id: coverage_square8_luma_diagonal45_01
+      description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma Diagonal45 mode 3 at angle 45, DC chroma, and unsplit TX8x8 luma transform
+      test_assets:
+      - coverage_square8_luma_diagonal45_01.avif
     - id: coverage_vertical8x16_chroma_diagonal157_01
       description: 16x16 4:2:0 quality-76 speed-0 vertical split with a following Vertical8x16 leaf using chroma Diagonal157 and DCT-ADST U/V transforms
       test_assets:
