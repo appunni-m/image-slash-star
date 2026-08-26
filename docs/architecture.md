@@ -2,7 +2,7 @@
 
 Status: current implementation reference; AVIF uses the safe Rust path on every target
 
-Reviewed: 2026-08-25 against the pure-Rust AVIF cutover working tree. The
+Reviewed: 2026-08-26 against the pure-Rust AVIF cutover working tree. The
 older coverage and native-AVIF failure records in this opening block are
 historical pre-cutover evidence; the current AVIF contract is in
 [avif.md](avif.md), the canonical roadmap data in
@@ -10,17 +10,18 @@ historical pre-cutover evidence; the current AVIF contract is in
 [roadmap-new.md](roadmap-new.md). The prior source-quality checkpoint was
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current managed nightly LLVM
 all-feature coverage is recorded in [roadmap.json](../roadmap.json):
-97,627/108,387 lines, 12,386/13,770 branches, 4,976/5,701 functions, and
-146,439/164,214 regions. This is not yet 100% metric coverage; the remaining
+98,233/108,851 lines, 12,474/13,838 branches, 4,998/5,731 functions, and
+147,172/164,750 regions. This is not yet 100% metric coverage; the remaining
 source-level gaps are documented there. The current claim-ledger refresh base
 is `2a141b6fe640af41549b71421fbe4b8f2b134e4f`; the historical Pillow parity
 baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
-`d4506f36-6103-4de8-935e-9d91dde9f9dc` from run
-`04774164-3646-4ffb-8016-92f4134de6d6` (full all-feature workload passed at
-exact execution commit `2a141b6f`; the report was explicitly imported because
-the registered command retains stale approval lineage). Historical run
+`a64a167f-c525-4462-bb91-5cb45cc71f78` from run
+`b17d9759-7213-47dc-9b03-350a0932601a` (full all-feature workload passed at
+exact execution commit `e99a80bf`; Coverage MCP retains stale stored snapshot
+commit metadata `cb82fc38`, which is recorded rather than silently corrected).
+Historical run
 records elsewhere in this document retain their original revision scope.
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at

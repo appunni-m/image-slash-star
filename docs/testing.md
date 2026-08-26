@@ -12,11 +12,11 @@ record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`bbf89810-51ab-43ff-b1f7-8f3d848db6dc` from run
-`f3d2300f-dff3-48ae-bea1-c654d8375ed5` (full all-feature workload passed at
-exact execution commit `3fc0b58c`). Its LLVM report records 98,357/108,824
-lines, 12,466/13,830 branches, 5,011/5,730 functions, and
-147,343/164,712 regions. The snapshot metadata retains the stale project
+`a64a167f-c525-4462-bb91-5cb45cc71f78` from run
+`b17d9759-7213-47dc-9b03-350a0932601a` (full all-feature workload passed at
+exact execution commit `e99a80bf`). Its LLVM report records 98,233/108,851
+lines, 12,474/13,838 branches, 4,998/5,731 functions, and
+147,172/164,750 regions. The snapshot metadata retains the stale project
 commit `cb82fc38`; the run record is the exact implementation provenance. The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
@@ -30,9 +30,9 @@ registration failed before execution because it invokes sandbox-blocked
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
 The current working tree also passes the complete all-feature test set plus one
-doctest in the managed nightly LLVM run. It measures 98,357/108,824 lines
-(90.3817%), 12,466/13,830 branches (90.1374%), 5,011/5,730 functions
-(87.4520%), and 147,343/164,712 regions (89.4549%). The strict four-metric
+doctest in the managed nightly LLVM run. It measures 98,233/108,851 lines
+(90.2454%), 12,474/13,838 branches (90.1431%), 4,998/5,731 functions
+(87.2099%), and 147,172/164,750 regions (89.3305%). The strict four-metric
 verifier remains red because the release target is 100%; the remaining gaps
 are recorded explicitly in the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
@@ -40,16 +40,20 @@ pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
 current manifest statuses for today's contract.
 
-Current AVIF revision-bound evidence: `coverage_square16_filter_intra_mode0_01.avif`
-is a 16x16 8-bit 4:2:0 origin `Square16` filter-intra mode-0 witness with an
-unsplit TX16x16 luma transform, TX8x8 U/V transforms, and 1,116 exact entropy
+Current AVIF revision-bound evidence: `coverage_vertical8x16_filter_intra_mode0_01.avif`
+is an 8x16 8-bit 4:2:0 origin `Vertical8x16` filter-intra mode-0 witness with
+an unsplit TX8x16 luma transform, TX4x8 U/V transforms, and 584 exact entropy
 operations. Safe Rust matches its partition, entropy trace, Y/U/V planes, and
 Pillow RGB8 bytes. The implementation is commit
-`3fc0b58cbdb50acc8f4ee0d2a340207f47e79d21`; managed run
-`f3d2300f-dff3-48ae-bea1-c654d8375ed5` ingested snapshot
-`bbf89810-51ab-43ff-b1f7-8f3d848db6dc` in 145,649 ms. The aggregate four-metric
-coverage result is measured, but changed-source attribution remains unavailable
-because Coverage MCP stored `cb82fc38` as the project commit for both snapshots.
+`e99a80bf1adfdb256e7f723df7b0b5cbfb5385b5`; managed run
+`b17d9759-7213-47dc-9b03-350a0932601a` ingested snapshot
+`a64a167f-c525-4462-bb91-5cb45cc71f78` in 179,859 ms. The explicit aggregate
+comparison against baseline snapshot `bbf89810-51ab-43ff-b1f7-8f3d848db6dc`
+reports 2,632 newly covered and 2,677 regressed line observations, with net
+changes of -124 covered lines, +8 covered branches, -13 covered functions,
+and -171 covered regions. The observations are not a source diff: Coverage
+MCP stored `cb82fc38` as the project commit for both snapshots, so changed-
+source attribution remains unavailable.
 
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at

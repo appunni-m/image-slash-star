@@ -1,11 +1,11 @@
 {
   "format_version": 1,
   "base_revision": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
-  "manifest_sha256": "8e2b79d4576eaca3eca44dbb25d023a9bc3b688a618c77599d6482da952ca416",
-  "matrix_sha256": "5696642e3e424ee684e4898a87876d5eecbf1eaa658b9a26d8cc2dde355469cf",
+  "manifest_sha256": "cdeecb2d092977c1278b0af34ab8c8368b3817a302f89e082bbdbbbae1a34a97",
+  "matrix_sha256": "ca4d9effa6c63ea67a1d826fc13f9be03a495915bc07c4c13ea4367b607cf302",
   "coverage": {
-    "run_id": "f3d2300f-dff3-48ae-bea1-c654d8375ed5",
-    "snapshot_id": "bbf89810-51ab-43ff-b1f7-8f3d848db6dc",
+    "run_id": "b17d9759-7213-47dc-9b03-350a0932601a",
+    "snapshot_id": "a64a167f-c525-4462-bb91-5cb45cc71f78",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -21,8 +21,8 @@
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "coverage_origins": "f2da1568c0ea1196f216a2c9c27e6e5107b76759e8cf09ccc74b77a7682c5b68",
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
-    "webp_property_map": "a6d0c309e789db51d78f169fdc5e21acb3b7d54fbbb169081a0f3b66b83e4d83",
+    "webp_property_map": "8d53a8852c0cabd12f24438ec0a3f7738c79a93f3025ce135d58a0c1c91cd9fb",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "66c077e662477b91fb531c8234ba82baa4aaca1e8c228ab250544bfbfd050cbc"
+    "roadmap": "6ff330328f8cff02530d274a6dba7011495ee636a81c7daa95ed0c8265b45488"
   }
 }
