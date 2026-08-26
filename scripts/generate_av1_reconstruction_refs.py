@@ -52,6 +52,9 @@ VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
 CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
     {"coverage_square8_chroma_diagonal113_01.avif"}
 )
+LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES = frozenset(
+    {"coverage_square8_luma_diagonal_down_right_01.avif"}
+)
 CHROMA_DIAGONAL157_TARGET_FIXTURES = frozenset(
     {"coverage_vertical8x16_chroma_diagonal157_01.avif"}
 )
@@ -991,6 +994,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462",
         "size": [16, 8],
     },
+    "coverage_square8_luma_diagonal_down_right_01.avif": {
+        "file_sha256": "fddb447f61b8aa89d5d2bc4dee0baf8dd2c3711ade6d4384edb052841cf4940f",
+        "rgb_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
+        "size": [16, 8],
+    },
     "coverage_vertical8x16_chroma_diagonal157_01.avif": {
         "file_sha256": "13a6903043df42aec082de0e3afeb82e30932749e1542160a7e039e5fd53b744",
         "rgb_sha256": "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8",
@@ -1204,6 +1212,7 @@ def instrument(
     source: Path,
     broaden_vertical_following: bool = True,
     include_block_angles: bool = False,
+    include_luma_angles: bool = False,
 ) -> None:
     recon_path = source / "src" / "recon.h"
     text = recon_path.read_text()
@@ -1394,9 +1403,29 @@ unsigned dav1d_msac_decode_hi_tok_c""",
         text = text.replace(old_text, new_text)
     msac_path.write_text(text)
 
-    if include_block_angles:
+    if include_luma_angles or include_block_angles:
         decode_path = source / "src" / "decode.c"
         text = decode_path.read_text()
+        if include_luma_angles:
+            old = """
+            const int angle = dav1d_msac_decode_symbol_adapt8(&ts->msac, acdf, 6);
+            b->y_angle = angle - 3;
+        } else {
+            b->y_angle = 0;
+        }
+"""
+            new = """
+            const int angle = dav1d_msac_decode_symbol_adapt8(&ts->msac, acdf, 6);
+            b->y_angle = angle - 3;
+            if (DEBUG_BLOCK_INFO)
+                printf("Post-yangle-symbol[%d]: r=%d\\n", angle, ts->msac.rng);
+        } else {
+            b->y_angle = 0;
+        }
+"""
+            if text.count(old) != 1:
+                raise RuntimeError("pinned dav1d luma angle instrumentation point changed")
+            text = text.replace(old, new)
         old = """
                 const int angle = dav1d_msac_decode_symbol_adapt8(&ts->msac, acdf, 6);
                 b->uv_angle = angle - 3;
@@ -1428,12 +1457,18 @@ def build_dav1d(
     python_path: Path | None,
     broaden_vertical_following: bool = True,
     include_block_angles: bool = False,
+    include_luma_angles: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
     build = work / "build"
     run(["git", "clone", "--quiet", "--no-local", str(source), str(clone)])
     run(["git", "-C", str(clone), "checkout", "--quiet", DAV1D_COMMIT])
-    instrument(clone, broaden_vertical_following, include_block_angles)
+    instrument(
+        clone,
+        broaden_vertical_following,
+        include_block_angles,
+        include_luma_angles,
+    )
     env = tool_environment(meson, ninja, python_path)
     run(
         [
@@ -1724,9 +1759,19 @@ def generate(
             python_path,
             include_block_angles=True,
         )
+        luma_angle_executable, luma_angle_env = build_dav1d(
+            dav1d_source,
+            work / "luma-angle",
+            meson,
+            ninja,
+            python_path,
+            include_luma_angles=True,
+        )
         cases = [
             decode_fixture(
-                angle_executable
+                luma_angle_executable
+                if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
+                else angle_executable
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
@@ -1739,7 +1784,9 @@ def generate(
                 or name in CHROMA_PAETH_TARGET_FIXTURES
                 or name in SQUARE16_CFL_TARGET_FIXTURES
             else legacy_executable,
-                angle_env
+                luma_angle_env
+                if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
+                else angle_env
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES

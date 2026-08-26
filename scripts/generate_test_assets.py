@@ -5727,6 +5727,72 @@ def gen_avif():
         speed=0,
     )
 
+    def luma_diagonal_down_right_square8():
+        """Generate the promoted right-hand luma mode-4 witness."""
+
+        family = 0
+        candidate = 3
+        seed = 4000 + 10 * family + candidate
+        phase = (7 * family + 11 * candidate) % 16
+
+        def left_signal(x, y):
+            return ((17 * x + 31 * y + phase + seed) % 33) - 16
+
+        def diagonal_signal(x, y):
+            coordinate = x - y
+            wrapped = (coordinate * (1 + family % 3) + phase) % 32
+            return (wrapped - 16) * 2
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            cx, cy = x // 2, y // 2
+            edge = left_signal(7, y)
+            if x < 8:
+                luma = 128 + left_signal(x, y)
+                chroma = ((3 * x + 5 * y + seed) % 7) - 3
+                scale = 1
+            else:
+                luma = 128 + edge + diagonal_signal(x - 8, y)
+                chroma = ((13 * cx + 17 * cy + phase + seed) % 17) - 8
+                scale = 2 + (candidate % 3)
+            u_delta = scale * chroma + ((cx + 2 * cy + family) % 3) - 1
+            v_delta = scale * chroma + ((2 * cx + cy + candidate) % 3) - 1
+            return yuv_to_rgb(luma, 128 + u_delta, 128 + v_delta)
+
+        return image_from_pixels((16, 8), pixel)
+
+    write_campaign_image(
+        "coverage_square8_luma_diagonal_down_right_01",
+        luma_diagonal_down_right_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal157_vertical8x16():
         """Generate the following Vertical8x16 Diagonal157 witness."""
 
