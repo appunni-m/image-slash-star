@@ -56,6 +56,9 @@ VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
 CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
     {"coverage_square8_chroma_diagonal113_01.avif"}
 )
+CHROMA_DIAGONAL45_TARGET_FIXTURES = frozenset(
+    {"coverage_square8_chroma_diagonal45_angle51_01.avif"}
+)
 LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES = frozenset(
     {"coverage_square8_luma_diagonal_down_right_01.avif"}
 )
@@ -1013,6 +1016,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462",
         "size": [16, 8],
     },
+    "coverage_square8_chroma_diagonal45_angle51_01.avif": {
+        "file_sha256": "49a5be35748530ce5747f0f73f24d2e1e84f94a443c72274e92cfc605351655e",
+        "rgb_sha256": "2b09c1b7c72c153a4ad6456a06bf63a6cd31b2b8952dcb8a78a714d0d6b0d08a",
+        "size": [16, 8],
+    },
     "coverage_square8_luma_diagonal_down_right_01.avif": {
         "file_sha256": "fddb447f61b8aa89d5d2bc4dee0baf8dd2c3711ade6d4384edb052841cf4940f",
         "rgb_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
@@ -1856,7 +1864,8 @@ def generate(
                 if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_executable
-                if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
+                or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_executable
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_executable
@@ -1875,7 +1884,8 @@ def generate(
                 if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_env
-                if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
+                or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_env
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_env

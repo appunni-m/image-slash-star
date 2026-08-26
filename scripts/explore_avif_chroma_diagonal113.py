@@ -7,7 +7,8 @@ each twice through the pinned Pillow/libavif/libaom oracle, and classifies an
 independently instrumented scalar dav1d trace. Generated files are temporary
 unless ``--retain-dir`` is supplied; no repository Rust code is invoked. The
 historical ``diagonal113`` target remains the default; the luma targets search
-bounded right-hand Square8 predictor witnesses.
+bounded right-hand Square8 predictor witnesses, and ``chroma_diagonal45``
+searches a mode-3 chroma witness.
 """
 
 from __future__ import annotations
@@ -71,6 +72,30 @@ LUMA_DIAGONAL45_FAMILY_NAMES = (
     "F08_diagonal45_mirror",
     "F09_diagonal45_dual_ac",
     "F10_diagonal45_mixed",
+)
+CHROMA_DIAGONAL45_FAMILY_NAMES = (
+    "F01_descending_ramp",
+    "F02_descending_step",
+    "F03_descending_wave",
+    "F04_descending_bands",
+    "F05_descending_phase",
+    "F06_rising_bands",
+    "F07_steep_rising_wave",
+    "F08_steep_descending_bands",
+    "F09_wide_rising_phase",
+    "F10_steep_descending_wave",
+)
+CHROMA_DIAGONAL45_PARAMETERS = (
+    (1, -1, 0),
+    (1, -1, 1),
+    (1, -1, 2),
+    (1, -1, 3),
+    (1, -1, 4),
+    (1, 2, 3),
+    (5, 2, 2),
+    (5, -2, 3),
+    (7, 3, 4),
+    (1, -8, 2),
 )
 ADVANCED = {
     "min-partition-size": "8",
@@ -336,6 +361,36 @@ def luma_diagonal45_pattern(family: int, index: int) -> bytes:
     return bytes(pixels)
 
 
+def chroma_diagonal45_pattern(family: int, index: int) -> bytes:
+    """Generate deterministic chroma fields for a mode-3 witness search."""
+
+    a, b, kind = CHROMA_DIAGONAL45_PARAMETERS[family]
+    amplitude = 8 + 2 * (index % 8)
+    phase = (index * 3 + a * 7 + b * 11) % 32
+    pixels = bytearray()
+    for y in range(SIZE[1]):
+        for x in range(SIZE[0]):
+            cx, cy = x // 2, y // 2
+            if cx < 4:
+                chroma = (a * cx + b * cy + phase) % 16 - 8
+            else:
+                value = a * cx + b * cy + phase
+                if kind == 0:
+                    chroma = value % 16 - 8
+                elif kind == 1:
+                    chroma = amplitude if value % 16 >= 8 else -amplitude
+                elif kind == 2:
+                    chroma = ((value % 32) - 16) * amplitude // 8
+                elif kind == 3:
+                    chroma = amplitude if (value // 4) % 2 == 0 else -amplitude
+                else:
+                    chroma = amplitude if value % 3 == 0 else -amplitude // 2
+            # Opposed U/V signals make the chroma direction observable while
+            # leaving luma at a stable DC level for this syntax witness.
+            pixels.extend(yuv_to_rgb(128, 128 + chroma, 128 - chroma))
+    return bytes(pixels)
+
+
 def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
     """Return ten deterministic families with ten cases each."""
 
@@ -392,6 +447,26 @@ def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
                         "candidate_index": index,
                         "seed": 6000 + 10 * family + index,
                         "pixels": luma_diagonal45_pattern(family, index),
+                        "quality": 76,
+                        "speed": 0,
+                    }
+                )
+        if len(result) != 100:
+            raise AssertionError(f"candidate corpus must contain 100 cases, found {len(result)}")
+        return result
+
+    if target == "chroma_diagonal45":
+        result = []
+        for family, family_name in enumerate(CHROMA_DIAGONAL45_FAMILY_NAMES):
+            for index in range(10):
+                result.append(
+                    {
+                        "id": f"CD45-F{family + 1:02d}-N{index:02d}",
+                        "family": family_name,
+                        "family_index": family,
+                        "candidate_index": index,
+                        "seed": 9000 + 10 * family + index,
+                        "pixels": chroma_diagonal45_pattern(family, index),
                         "quality": 76,
                         "speed": 0,
                     }
@@ -1003,6 +1078,147 @@ def classify_luma_diagonal45(
     }
 
 
+def classify_chroma_diagonal45(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+) -> dict[str, object]:
+    """Apply exact predicates for the right-leaf chroma mode-3 witness."""
+
+    parsed = [parse_group(group) for group in groups]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angle_symbols_by_group = [
+        [
+            int(match["symbol"])
+            for line in group
+            if (match := UVANGLE_PATTERN.match(line)) is not None
+        ]
+        for group in groups
+    ]
+    uv_angle_symbols = [symbol for group in uv_angle_symbols_by_group for symbol in group]
+    right_uv_angle_symbols = (
+        uv_angle_symbols_by_group[1] if len(uv_angle_symbols_by_group) == 2 else []
+    )
+    y_angle_symbols = [
+        symbol for group in parsed for symbol in group["y_angle_symbols"]
+    ]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    expected_shape = [
+        (0, 0, 0, 3, 0, 3),
+        (0, 0, 0, 4, 0, 0),
+        (0, 2, 0, 4, 0, 0),
+    ]
+    luma_groups = [group["luma_payloads"] for group in parsed]
+    chroma_groups = [group["chroma_payloads"] for group in parsed]
+    no_palette_or_filter = not any(
+        line.startswith(
+            (
+                "Post-filterintramode[",
+                "Post-y_pal[",
+                "Post-pal[",
+                "Post-y-pal-indices",
+                "y-pal-pred",
+                "Post-uv_pal[",
+                "Post-uv-pal-indices",
+                "uv-pal-pred",
+            )
+        )
+        for group in groups
+        for line in group
+    )
+
+    def is_chroma_tx4x4(payloads: list[dict[str, int]], cbx4: int) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 0
+                and payload["txtp"] == 0
+                and payload["eob"] >= 0
+                and payload.get("cbx4") == cbx4
+                for payload in payloads
+            )
+        )
+
+    predicates = {
+        "exact_visible_split_blocks": shape == expected_shape,
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_square8_groups": len(groups) == 2,
+        "both_luma_modes_dc": y_modes == [0, 0],
+        "no_luma_angle_symbols": y_angle_symbols == [],
+        "uv_modes_dc_then_diagonal45": uv_modes == [0, 3],
+        "right_uv_angle_symbol_is_plus_two_delta_51": right_uv_angle_symbols == [5],
+        "no_palette_or_filter_intra": no_palette_or_filter,
+        "left_chroma_is_tx4x4_dct": (
+            len(chroma_groups) == 2 and is_chroma_tx4x4(chroma_groups[0], 0)
+        ),
+        "right_chroma_is_tx4x4_dct_nonempty": (
+            len(chroma_groups) == 2 and is_chroma_tx4x4(chroma_groups[1], 1)
+        ),
+        "right_leaf_top_unavailable_left_available": (
+            shape == expected_shape
+            and blocks[1]["x"] == 0
+            and blocks[1]["y"] == 0
+            and blocks[2]["x"] == 2
+            and blocks[2]["y"] == 0
+        ),
+    }
+    return {
+        "target": "chroma_diagonal45",
+        "root_partition": blocks[0] if blocks else None,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angle_symbols,
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angle_symbols,
+        "uv_angle_deltas": [symbol - 3 for symbol in uv_angle_symbols],
+        "uv_angles": [45 + 3 * (symbol - 3) for symbol in uv_angle_symbols],
+        "uv_angle_symbols_by_group": uv_angle_symbols_by_group,
+        "right_uv_angle_symbols": right_uv_angle_symbols,
+        "right_uv_angle_deltas": [symbol - 3 for symbol in right_uv_angle_symbols],
+        "right_uv_angles": [45 + 3 * (symbol - 3) for symbol in right_uv_angle_symbols],
+        "qualifications": {
+            "right_mode3_any_valid_angle": (
+                uv_modes == [0, 3]
+                and len(right_uv_angle_symbols) == 1
+                and 0 <= right_uv_angle_symbols[0] <= 6
+            ),
+            "right_mode3_symbol3_delta0_angle45": (
+                uv_modes == [0, 3] and right_uv_angle_symbols == [3]
+            ),
+            "right_mode3_symbol5_delta_plus2_angle51": (
+                uv_modes == [0, 3] and right_uv_angle_symbols == [5]
+            ),
+        },
+        "left_luma_payloads": luma_groups[0] if luma_groups else [],
+        "right_luma_payloads": luma_groups[1] if len(luma_groups) == 2 else [],
+        "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
+        "right_chroma_payloads": chroma_groups[1] if len(chroma_groups) == 2 else [],
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -1026,6 +1242,11 @@ def classify(
         if portable_color is None:
             raise ValueError("portable color metadata is required for the luma target")
         return classify_luma_diagonal45(blocks, groups, yuv, portable_color)
+
+    if target == "chroma_diagonal45":
+        if portable_color is None:
+            raise ValueError("portable color metadata is required for the chroma target")
+        return classify_chroma_diagonal45(blocks, groups, yuv, portable_color)
 
     if target != "diagonal113":
         raise ValueError(f"unknown Square8 campaign target: {target}")
@@ -1197,6 +1418,7 @@ def main() -> None:
             "luma_diagonal_down_right",
             "luma_smooth",
             "luma_diagonal45",
+            "chroma_diagonal45",
         ),
         default="diagonal113",
     )
@@ -1220,6 +1442,7 @@ def main() -> None:
                 args.python_path.resolve() if args.python_path else None,
                 include_luma_angles=args.target
                 in ("luma_diagonal_down_right", "luma_diagonal45"),
+                include_block_angles=args.target == "chroma_diagonal45",
             )
         else:
             executable = args.dav1d.resolve()
@@ -1309,6 +1532,26 @@ def main() -> None:
             "right_chroma_is_dc_skipped",
             "left_top_right_is_not_default",
         )
+    elif args.target == "chroma_diagonal45":
+        target_description = (
+            "visible 16x8 right-hand Square8 leaf with coded chroma mode 3 "
+            "(Diagonal45), angle symbol 5 (+2 steps, 51 degrees), TX4x4 DCT-DCT U/V "
+            "residuals, DC luma, and top-unavailable/left-available edges"
+        )
+        families = list(CHROMA_DIAGONAL45_FAMILY_NAMES)
+        rejection_reasons = (
+            "exact_visible_split_blocks",
+            "eight_bit_420_frame",
+            "two_visible_square8_groups",
+            "both_luma_modes_dc",
+            "no_luma_angle_symbols",
+            "uv_modes_dc_then_diagonal45",
+            "right_uv_angle_symbol_is_plus_two_delta_51",
+            "no_palette_or_filter_intra",
+            "left_chroma_is_tx4x4_dct",
+            "right_chroma_is_tx4x4_dct_nonempty",
+            "right_leaf_top_unavailable_left_available",
+        )
     else:
         target_description = (
             "visible right-hand Square8 leaf with coded UV mode 5 "
@@ -1356,6 +1599,7 @@ def main() -> None:
             "target": target_description,
             "target_id": args.target,
             "families": families,
+            "repository_rust_invoked": False,
         },
         "counts": {
             "qualified": sum(bool(report["qualifies"]) for report in reports),
@@ -1397,13 +1641,30 @@ def main() -> None:
             if args.target == "luma_smooth"
             else {}
         ),
+            **(
+                {
+                    "qualified_candidates": [
+                        report["id"] for report in reports if report["qualifies"]
+                    ]
+                }
+                if args.target in ("luma_diagonal45", "chroma_diagonal45")
+                else {}
+            ),
         **(
             {
-                "qualified_candidates": [
-                    report["id"] for report in reports if report["qualifies"]
-                ]
+                "qualification_counts": {
+                    qualification: sum(
+                        bool(report["qualifications"].get(qualification))
+                        for report in reports
+                    )
+                    for qualification in (
+                        "right_mode3_any_valid_angle",
+                        "right_mode3_symbol3_delta0_angle45",
+                        "right_mode3_symbol5_delta_plus2_angle51",
+                    )
+                }
             }
-            if args.target == "luma_diagonal45"
+            if args.target == "chroma_diagonal45"
             else {}
         ),
         "cases": reports,

@@ -74,6 +74,21 @@ RGB bytes. The durable search report is
 with SHA-256
 `3556712a1a4f2a9a79fb48072dd1108582e4220f0aafe935faab2849d287463a`.
 
+The current bounded chroma-angle witness is
+`coverage_square8_chroma_diagonal45_angle51_01.avif`: a 16x8 8-bit 4:2:0
+horizontal split with a right-hand Square8 chroma Diagonal45 leaf using angle
+symbol 5, delta +2, and resolved angle 51 degrees. Both U/V leaves use
+TX4x4 DCT-DCT with non-empty residuals; the right leaf has top unavailable and
+left available context. The exact pinned reconstruction contains 119 entropy
+operations and partition ranges 37392, 43662, and 34871. Safe Rust matches
+the partition, every entropy operation, reconstructed Y/U/V planes, and the
+Pillow RGB reference. The input-only search report
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal45_angle51_campaign_01.json`
+records 100 candidates, 5 qualified symbol-5/+2/51-degree cases, and zero
+right-hand symbol-3/delta-0/45-degree cases. This bounded fixture provides
+evidence for the nominal `ChromaPredictor::Diagonal45` arm; it does not claim
+general angular chroma or AV1 completion.
+
 The next AVIF reachability investigation is recorded as two bounded no-hit
 campaigns for right-hand Square8 chroma Diagonal67. Each evaluated exactly 100
 deterministic 16×8 8-bit 4:2:0 inputs through Pillow 12.2.0/libavif 1.4.1/

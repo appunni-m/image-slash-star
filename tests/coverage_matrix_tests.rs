@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 218);
+    assert_eq!(expected.cases.len(), 219);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5251,6 +5251,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 right-hand Square8 Diagonal113 witness partition topology"
+            );
+        } else if case.fixture == "coverage_square8_chroma_diagonal45_angle51_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 37_392,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 43_662,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 34_871,
+                    },
+                ],
+                "AV1 right-hand Square8 chroma Diagonal45 angle-51 witness partition topology"
             );
         } else if case.fixture == "coverage_square8_luma_diagonal_down_right_01.avif" {
             assert_eq!(
@@ -6375,6 +6409,84 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 right-hand Square8 luma Diagonal45 witness leaf states"
             );
         }
+        if case.fixture == "coverage_square8_chroma_diagonal45_angle51_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                119,
+                "AV1 right-hand Square8 chroma Diagonal45 angle-51 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-uvangle-symbol[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=42213",
+                    "Post-cdef_idx[0]: r=42213",
+                    "Post-ymode[0]: r=40378",
+                    "Post-uvmode[0]: r=51720",
+                    "Post-tx[0]: r=40408",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=58098",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=42831",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=64636",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=49774",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=4]: r=56072 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=4]: r=58264 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=33779",
+                    "Post-ymode[0]: r=33402",
+                    "Post-uvmode[3]: r=33792",
+                    "Post-uvangle-symbol[5]: r=33808",
+                    "Post-tx[0]: r=57832",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=45229",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=35996",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=58108",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=47577",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=15]: r=57544 [x=0,cbx4=1]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=15]: r=46344 [x=0,cbx4=1]",
+                ],
+                "AV1 right-hand Square8 chroma Diagonal45 angle-51 witness leaf states"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uvmode[3]:"))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uvangle-symbol[5]:"))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=15]:"))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=15]:"))
+                    .count(),
+                1
+            );
+        }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -7398,6 +7510,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_square8_chroma_diagonal113_01.avif" => {
                 "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462"
+            }
+            "coverage_square8_chroma_diagonal45_angle51_01.avif" => {
+                "2b09c1b7c72c153a4ad6456a06bf63a6cd31b2b8952dcb8a78a714d0d6b0d08a"
             }
             "coverage_square8_luma_diagonal_down_right_01.avif" => {
                 "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"

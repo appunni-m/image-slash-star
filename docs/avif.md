@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 278 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 285 AVIF decode rows and 32 encode
 rows:
 
-- 271 decode rows are active: portable still reconstruction and structural
+- 278 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -155,6 +155,30 @@ values are
 This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
 broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
 remain open.
+
+The newest chroma-angle witness is
+`coverage_square8_chroma_diagonal45_angle51_01.avif`, a deterministic 16x8
+8-bit 4:2:0 horizontal split with two visible `Square8` leaves. The right
+leaf selects nominal chroma `Diagonal45` (coded UV mode 3), angle symbol `5`,
+delta `+2`, and resolved angle `51` degrees. Both chroma leaves use TX4x4
+DCT-DCT with non-empty residuals; luma uses DC, and the right leaf has top
+unavailable/left available context. An input-only campaign of 100 candidates
+across 10 families qualified 5; all five were symbol-5/+2/51-degree cases,
+with zero right-hand symbol-3/delta-0/45-degree cases. The promoted witness
+has 119 pinned dav1d entropy operations and partition ranges `37392`, `43662`,
+and `34871`; safe Rust matches exact partition, entropy, Y/U/V, and Pillow
+RGB evidence. Its fixture SHA-256 is
+`49a5be35748530ce5747f0f73f24d2e1e84f94a443c72274e92cfc605351655e`, its
+encoded-item SHA-256 is
+`51c6a128e63997c28550a27cd4079efa31339e5d9e0324992ad93a4f4848f2d4`, and
+its Pillow RGB SHA-256 is
+`2b09c1b7c72c153a4ad6456a06bf63a6cd31b2b8952dcb8a78a714d0d6b0d08a`.
+The durable campaign report is
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal45_angle51_campaign_01.json`
+with SHA-256
+`e8599c33aff2b5abc6baff55dc4cf571c1841d7fe683413b5c99e12b4f158e65`.
+This is bounded evidence for the nominal `ChromaPredictor::Diagonal45` arm,
+not general angular chroma or AV1 completion.
 
 The newest following-leaf witness is
 `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16

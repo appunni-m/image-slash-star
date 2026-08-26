@@ -4218,6 +4218,10 @@ formats:
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using chroma Diagonal113 and ADST-DCT U/V transforms
       test_assets:
       - coverage_square8_chroma_diagonal113_01.avif
+    - id: coverage_square8_chroma_diagonal45_angle51_01
+      description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using nominal chroma Diagonal45 mode with angle symbol 5 at resolved angle 51, TX4x4 DCT-DCT U/V transforms, and non-empty residuals
+      test_assets:
+      - coverage_square8_chroma_diagonal45_angle51_01.avif
     - id: coverage_square8_luma_diagonal_down_right_01
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma DiagonalDownRight mode 4 at angle 135, DC chroma, split TX4x4 luma, and DCT-DCT U/V transforms
       test_assets:
