@@ -4987,6 +4987,90 @@ def gen_avif():
                 speed=speed,
             )
 
+    def cfl_signal(family, index, x, y):
+        """Return the deterministic origin Square16 CFL search field."""
+
+        phase = (7 * family + 11 * index) % 16
+        horizontal = ((x * 17 + phase) % 32) - 16
+        vertical = ((y * 19 + phase) % 32) - 16
+        diagonal = (((x + y) * 13 + phase) % 32) - 16
+        opposing = (((x - y) * 11 + phase) % 32) - 16
+        if family == 0:
+            return horizontal * 4
+        if family == 1:
+            return (horizontal if y % 2 == 0 else -horizontal) * 4
+        if family == 2:
+            return vertical * 4
+        if family == 3:
+            return (vertical if x % 2 == 0 else -vertical) * 4
+        if family == 4:
+            return diagonal * 4
+        if family == 5:
+            return opposing * 4
+        if family == 6:
+            return (38 if (x // 2 + y // 2 + index) % 2 == 0 else -38) + horizontal
+        if family == 7:
+            quadrant = (x // 4) + 4 * (y // 4)
+            return ((quadrant * 23 + phase) % 128) - 64
+        if family == 8:
+            distance = abs(x - 7) + abs(y - 7)
+            return 80 - 10 * distance + (18 if x == 7 or y == 7 else 0)
+        return diagonal * 2 + horizontal + (
+            28 if (x + 2 * y + index) % 5 == 0 else -14
+        )
+
+    def square16_cfl_image(family, index):
+        """Create one public 16x16 I444 CFL witness from the search corpus."""
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            value = cfl_signal(family, index, x, y)
+            orthogonal = ((23 * x + 29 * y + 7 * index + family) % 13) - 6
+            luma = clamp_channel(128 + value // 3)
+            u = clamp_channel(128 + value // 5 + orthogonal)
+            v = clamp_channel(128 - (value * (3 + index % 3)) // 20 - orthogonal)
+            return yuv_to_rgb(luma, u, v)
+
+        return image_from_pixels((16, 16), pixel)
+
+    cfl_advanced = {
+        "min-partition-size": "16",
+        "max-partition-size": "16",
+        "use-intra-dct-only": "1",
+        "enable-filter-intra": "0",
+        "enable-intra-edge-filter": "0",
+        "enable-smooth-intra": "0",
+        "enable-paeth-intra": "0",
+        "enable-directional-intra": "0",
+        "enable-cfl-intra": "1",
+        "enable-cdef": "0",
+        "enable-restoration": "0",
+        "loopfilter-control": "0",
+        "aq-mode": "0",
+        "deltaq-mode": "0",
+    }
+    for name, family, index in (
+        ("coverage_i444_square16_cfl_01", 4, 2),
+        ("coverage_i444_square16_cfl_02", 8, 2),
+        ("coverage_i444_square16_cfl_03", 9, 6),
+    ):
+        write_campaign_image(
+            name,
+            square16_cfl_image(family, index),
+            "4:4:4",
+            advanced=cfl_advanced,
+            quality=76,
+            speed=0,
+        )
+
     def write_v4_vertical_checker():
         """Generate the pinned 16x16 4:2:0 PARTITION_V4 witness."""
 

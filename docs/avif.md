@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 269 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 276 AVIF decode rows and 32 encode
 rows:
 
-- 262 decode rows are active: portable still reconstruction and structural
+- 269 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -80,6 +80,14 @@ a filter-intra leaf; its fixture SHA-256 is
 Pillow RGB SHA-256 is
 `81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb`. These are
 bounded I444 topology/residual witnesses, not general 4:4:4 or AV1 support.
+
+The newest full-resolution CFL witnesses are
+`coverage_i444_square16_cfl_01.avif` through `_03.avif`: deterministic 16x16
+8-bit 4:4:4 origin `Square16` leaves with luma DC, coded CFL mode 13, nonzero
+U/V alpha, unsplit TX16x16 luma, and DCT-DCT TX16x16 chroma residuals. Their
+pinned dav1d traces contain 419, 229, and 388 entropy operations; safe Rust
+matches the complete entropy traces, Y/U/V planes, and Pillow RGB8 output.
+This is a bounded CFL/DCT class, not general full-resolution AV1 support.
 
 The preceding origin witness is `coverage_square16_filter_intra_mode0_01.avif`,
 a 16x16 8-bit 4:2:0 `Square16` leaf with `FILTER_PRED[13/0]`, an unsplit

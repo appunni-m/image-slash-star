@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 273 rows total, 266 active, 7 explicit planned
+- AVIF decode/inspect/verify: 276 rows total, 269 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,497 rows total, 1093 active decode rows, 365 active encode
+- Whole matrix: 1,500 rows total, 1096 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -277,6 +277,35 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the following Vertical8x16/chroma-Paeth/ADST-ADST class;
   broader AV1 partitions, predictors, transforms, and AVF-STILL-001 remain
   partial.
+- The newest bounded full-sampling proof is the three-fixture
+  `coverage_i444_square16_cfl_01.avif` through `_03.avif` set. Each is a
+  deterministic 16x16 8-bit lossy 4:4:4 origin `Square16` leaf with luma DC,
+  coded CFL UV mode 13, nonzero U/V alpha, one unsplit TX16x16 luma block, and
+  two nonempty DCT-DCT TX16x16 chroma blocks. The 100-candidate, 10-family
+  input-only campaign qualified 11 candidates and promoted exactly 3; its
+  durable report is
+  `tests/fixtures/outputs/av1_search/coverage_square16_cfl_campaign_01.json`
+  (SHA-256
+  `6aa456f3ee396f12526e67b9b3c9f7a1eea513cd4025341a48463213362f31a1`).
+  Their pinned traces contain 419, 229, and 388 entropy operations, and safe
+  Rust matches every entropy record, reconstructed Y/U/V plane, and Pillow
+  RGB8 result. The root partition range is 62320 for all three. The fixture,
+  encoded-item, and Pillow RGB SHA-256 triples are respectively
+  `7b6d33f6ca51ca5ce5f69fcd4e1960d1d1b20d52aa4d0b954f555d6e8d47dc6d`,
+  `16826aa3cc1b551ab2490ec931aabfdd2f8ac69812989167d124de8cc413c718`,
+  `937289169b35c042aa7000bcac5896cc781979f96867c872176a19cd08763d20`;
+  `496d2b4edf3ed6f4d9882087b047ac5d5e3e979f1762486762c352ef4d3da8e8`,
+  `def47bf3486eda5705dbefa68b39b6e5dd97e30f9b1397be61b1201ca0774a82`,
+  `c5672465e10df70e92f05c07e8ad290410ff778f748c70abd564c59766ec5b44`;
+  and
+  `475f6ce83fd295a52e59d97cb9504cf6309371b9fe74cd3306d64964875b3663`,
+  `ba9e9fb7e3ec60e991e9f4fb9db5a5482afb01985f79999b30b3d1d8853b4a70`,
+  `3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128`.
+  The production path is pure safe Rust: it adds the verified qcat-two
+  16x16 chroma EOB CDF, matrix-2 U/V dequantization table, and full-resolution
+  CFL reconstruction. This closes only the origin Square16/I444/CFL/DCT class;
+  broader AV1 partitions, transforms, chroma modes, sample depths, sequences,
+  encoding, and AVF-STILL-001 remain partial.
 - Two disjoint, input-only Diagonal67 campaigns are now recorded as explicit
   no-hit evidence. `scripts/explore_avif_chroma_diagonal67.py` evaluated 100
   deterministic candidates and found zero coded UV mode-8 cases; its report is
@@ -800,7 +829,7 @@ that an entire workstream is finished because one slice passed.
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 502 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `58d205ac-9285-4890-bc58-fa9e18ddd3f0` is bound by its run record to implementation commit `455a6eac`; the four metrics remain below 100% and stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 266 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new vertical8x16/chroma-Paeth/ADST-ADST witness set is one bounded production class, not general AVIF completion. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 269 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square16/I444/CFL witness set is one bounded production class, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
@@ -864,7 +893,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,497 total | 1,100 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,093 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,500 total | 1,103 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,096 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2055,7 +2084,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 273 AVIF decode/inspect/verify rows exist: 266 are
+**Current exact state:** 276 AVIF decode/inspect/verify rows exist: 269 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

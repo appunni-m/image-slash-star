@@ -65,6 +65,13 @@ CHROMA_PAETH_TARGET_FIXTURES = frozenset(
         "coverage_vertical8x16_chroma_paeth_03.avif",
     }
 )
+SQUARE16_CFL_TARGET_FIXTURES = frozenset(
+    {
+        "coverage_i444_square16_cfl_01.avif",
+        "coverage_i444_square16_cfl_02.avif",
+        "coverage_i444_square16_cfl_03.avif",
+    }
+)
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
         "file_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
@@ -1096,6 +1103,21 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb",
         "size": [16, 16],
     },
+    "coverage_i444_square16_cfl_01.avif": {
+        "file_sha256": "7b6d33f6ca51ca5ce5f69fcd4e1960d1d1b20d52aa4d0b954f555d6e8d47dc6d",
+        "rgb_sha256": "937289169b35c042aa7000bcac5896cc781979f96867c872176a19cd08763d20",
+        "size": [16, 16],
+    },
+    "coverage_i444_square16_cfl_02.avif": {
+        "file_sha256": "496d2b4edf3ed6f4d9882087b047ac5d5e3e979f1762486762c352ef4d3da8e8",
+        "rgb_sha256": "c5672465e10df70e92f05c07e8ad290410ff778f748c70abd564c59766ec5b44",
+        "size": [16, 16],
+    },
+    "coverage_i444_square16_cfl_03.avif": {
+        "file_sha256": "475f6ce83fd295a52e59d97cb9504cf6309371b9fe74cd3306d64964875b3663",
+        "rgb_sha256": "3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128",
+        "size": [16, 16],
+    },
     "coverage_i444_v16x32_following_filter_intra_mode3_01.avif": {
         "file_sha256": "fd4465d0f0c47266f7999731081eb8f5dc1f0cb4ad74b33e38b6f013b940484e",
         "rgb_sha256": "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4",
@@ -1666,7 +1688,8 @@ def generate(
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
-                else legacy_executable,
+                or name in SQUARE16_CFL_TARGET_FIXTURES
+            else legacy_executable,
                 target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
@@ -1675,7 +1698,8 @@ def generate(
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
-                else legacy_env,
+                or name in SQUARE16_CFL_TARGET_FIXTURES
+            else legacy_env,
                 work,
                 FIXTURE_DIR / name,
             )
