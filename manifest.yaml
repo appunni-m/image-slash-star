@@ -4270,6 +4270,10 @@ formats:
       description: 32x32 4:2:0 quality-76 speed-0 H4 split with terminal Horizontal32x8 luma and 16x4 chroma transforms
       test_assets:
       - coverage_r32x8_h4_ripple_01.avif
+    - id: coverage_r32x8_filter_intra_cdf9_false_01
+      description: 32x32 4:2:0 quality-76 speed-0 H4 split with four terminal Horizontal32x8 DC luma leaves, CDF-index-9 false filter-intra sentinels, and 16x4 DCT-DCT chroma transforms
+      test_assets:
+      - coverage_r32x8_filter_intra_cdf9_false_01.avif
     - id: coverage_h64x16_horizontal_ramp_01
       description: 64x64 4:2:0 quality-76 speed-0 H4 split with four terminal Horizontal64x16 luma leaves, non-skipped luma coefficients, and skipped chroma
       test_assets:
