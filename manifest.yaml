@@ -4198,6 +4198,10 @@ formats:
       description: 32x32 4:2:0 quality-76 speed-0 vertical split with a right-hand following Vertical16x32 leaf using filter-intra mode 0, two TX16x16 luma children, and 8x16 U/V transforms
       test_assets:
       - coverage_r16x32_following_filter_intra_split_mode0_01.avif
+    - id: coverage_square16_filter_intra_mode0_01
+      description: 16x16 4:2:0 quality-76 speed-0 origin Square16 leaf using filter-intra mode 0, one TX16x16 luma transform, and TX8x8 U/V transforms
+      test_assets:
+      - coverage_square16_filter_intra_mode0_01.avif
     - id: coverage_r32x32_following_01
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with pinned following Horizontal32x16 luma and 16x8 chroma reconstruction
       test_assets:

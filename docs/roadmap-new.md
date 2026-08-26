@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 264 rows total, 257 active, 7 explicit planned
+- AVIF decode/inspect/verify: 265 rows total, 258 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,488 rows total, 1084 active decode rows, 365 active encode
+- Whole matrix: 1,489 rows total, 1085 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -177,6 +177,22 @@ the corresponding status is recorded in `roadmap.json`:
   left-only-DC availability bug exposed by this witness. It closes only this
   right-hand mode-0/R8x16 split class; broader filter-intra modes, topologies,
   transforms, and AVF-STILL-001 remain partial.
+- The newest bounded origin proof is
+  `coverage_square16_filter_intra_mode0_01.avif`, a 16x16 8-bit 4:2:0
+  origin `Square16` leaf using `FILTER_PRED[13/0]`, one unsplit TX16x16 luma
+  transform, and TX8x8 U/V transforms. Its exact pinned dav1d trace has
+  partition range `62320` and 1,116 entropy operations; the safe-Rust path
+  matches every entropy record, reconstructed Y/U/V plane, and Pillow RGB8
+  byte. The fixture, encoded-item, Pillow RGB, and Y/U/V plane SHA-256 values
+  are `2fb3de2676b560d379d05782b3e57c7af028b2fdac0350364389b3f9ceb77bcc`,
+  `2afe883ff75f1b7ce779969b5ac7397ade8f690a11f75edeb3c534579fe9888c`,
+  `4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008`,
+  `49d3cfe8c3a0c5db878cb8f17f9de079f273b944f7490b48ec9045bc7d7fc0ee`,
+  `3a432bf4885785a8e1b7b27ef823de21bce1fb7f696eee015ebe74dd15036128`, and
+  `1b3eaf525d2f5a085858c437fd0ebc98d8ab3593df7b696900eb258df064bb75`.
+  This closes only the origin Square16/mode-0/unsplit-TX16x16/TX8x8-chroma
+  class; filter-intra modes, topologies, transforms, and AVF-STILL-001 remain
+  partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
