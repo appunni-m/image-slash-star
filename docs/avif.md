@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 267 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 268 AVIF decode rows and 32 encode
 rows:
 
-- 260 decode rows are active: portable still reconstruction and structural
+- 261 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -127,6 +127,26 @@ Its reconstructed luma/chroma plane SHA-256 values are
 The existing generic safe-Rust prediction path already covered this mode, so
 no production decoder change was required; this closes only the origin
 Vertical8x16/mode-1/unsplit-TX8x16/TX4x8-chroma class.
+
+The newest following-leaf witness is
+`coverage_square8_chroma_diagonal113_01.avif`, a 16x8 8-bit 4:2:0 horizontal
+split whose right-hand `Square8` leaf selects chroma `Diagonal113`, ADST-DCT
+U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges
+are `37392`, `43662`, and `63946`, and its entropy trace has 304 operations.
+Safe Rust prepares the origin angular luma edges, disables the quantization
+matrix for IDTX as AV1 requires, and supplies the following leaf's left-only
+chroma edge; it matches the exact partition, entropy, Y/U/V, and Pillow RGB
+evidence. Its fixture, encoded-item, Pillow RGB, and Y/U/V plane SHA-256
+values are
+`c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7`,
+`6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c`,
+`05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462`,
+`8cd00fa1153aeaf0204349c8989237f0ee89ab01e7edcd6b093b3a8851f96380`,
+`0fe0d5856d2af6835aae223b63f94c911c7fb438b6c540f4009429a93097a31c`, and
+`4a49e2754a4657f7f7f7a60da66d756e707c1a30f9c8e938ca82502c54e85ea0`.
+This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
+broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
+remain open.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is

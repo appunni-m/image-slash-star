@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1491,
-      "decode_rows": 1094,
+      "total_rows": 1492,
+      "decode_rows": 1095,
       "encode_rows": 397,
-      "decode_active": 1087,
+      "decode_active": 1088,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 267,
-      "decode_active": 260,
+      "decode_rows": 268,
+      "decode_active": 261,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
