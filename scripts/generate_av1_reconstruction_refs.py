@@ -36,6 +36,7 @@ DEFAULT_OUTPUT = ROOT / "tests" / "fixtures" / "outputs" / "av1_reconstruction.j
 DAV1D_COMMIT = "b546257f770768b2c88258c533da38b91a06f737"
 VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
     {
+        "coverage_r32x8_filter_intra_cdf9_false_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
     }
@@ -1070,6 +1071,11 @@ EXPECTED_FIXTURES = {
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
+        "size": [32, 32],
+    },
+    "coverage_r32x8_filter_intra_cdf9_false_01.avif": {
+        "file_sha256": "edce5f86fefc08615431608a60154c96efbada2416cf70d4fdc338bf5b78e1eb",
+        "rgb_sha256": "8d7376ab37f3483ecafd2a47bcb0473ff4ff3ce25fdfac4bf1047fa61911ecfc",
         "size": [32, 32],
     },
     "coverage_h64x16_horizontal_ramp_01.avif": {

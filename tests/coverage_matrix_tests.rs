@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 217);
+    assert_eq!(expected.cases.len(), 218);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6545,6 +6545,128 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 HorizontalFour witness leaf state and chroma ownership"
             );
         }
+        if case.fixture == "coverage_r32x8_filter_intra_cdf9_false_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 Horizontal32x8 filter-intra CDF-index-9 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                2_015,
+                "AV1 Horizontal32x8 filter-intra CDF-index-9 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-cdef_idx[0]: r=41704",
+                    "Post-ymode[0]: r=39896",
+                    "Post-uvmode[0]: r=51188",
+                    "Post-filterintramode[0/0]: r=56798",
+                    "Post-tx[16]: r=56798",
+                    "Post-y-cf-blk[tx=16,txtp=0,eob=249]: r=56328",
+                    "Post-uv-cf-blk[pl=0,tx=14,txtp=0,eob=60]: r=37384 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=14,txtp=0,eob=29]: r=36360 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=35220",
+                    "Post-ymode[0]: r=34724",
+                    "Post-uvmode[0]: r=47428",
+                    "Post-filterintramode[0/0]: r=55258",
+                    "Post-tx[16]: r=55258",
+                    "Post-y-cf-blk[tx=16,txtp=0,eob=225]: r=53256",
+                    "Post-uv-cf-blk[pl=0,tx=14,txtp=0,eob=63]: r=62984 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=14,txtp=0,eob=63]: r=42504 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=41255",
+                    "Post-ymode[0]: r=42004",
+                    "Post-uvmode[0]: r=60552",
+                    "Post-filterintramode[0/0]: r=36830",
+                    "Post-tx[16]: r=36830",
+                    "Post-y-cf-blk[tx=16,txtp=0,eob=249]: r=35336",
+                    "Post-uv-cf-blk[pl=0,tx=14,txtp=0,eob=43]: r=43784 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=14,txtp=0,eob=43]: r=43016 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=41836",
+                    "Post-ymode[0]: r=43804",
+                    "Post-uvmode[0]: r=33298",
+                    "Post-filterintramode[0/0]: r=42148",
+                    "Post-tx[16]: r=42148",
+                    "Post-y-cf-blk[tx=16,txtp=0,eob=230]: r=64008",
+                    "Post-uv-cf-blk[pl=0,tx=14,txtp=0,eob=61]: r=38152 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=14,txtp=0,eob=61]: r=40712 [x=0,cbx4=0]",
+                ],
+                "AV1 Horizontal32x8 filter-intra CDF-index-9 witness leaf states"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[0/0]:"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x8 witness must record four filter-intra-disabled sentinels"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[13/"))
+                    .count(),
+                0,
+                "AV1 Horizontal32x8 witness must not claim filter-intra reconstruction"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[16]:"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x8 witness must select four TX32x8 luma grids"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=16,"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x8 witness must decode four luma transform sentences"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=0,tx=14,"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x8 witness must decode four U transform sentences"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=1,tx=14,"))
+                    .count(),
+                4,
+                "AV1 Horizontal32x8 witness must decode four V transform sentences"
+            );
+        }
         if case.fixture == "coverage_i444_rect_01.avif" {
             assert_eq!(
                 case.entropy_operations.len(),
@@ -7360,6 +7482,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_r32x8_h4_ripple_01.avif" => {
                 "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53"
+            }
+            "coverage_r32x8_filter_intra_cdf9_false_01.avif" => {
+                "8d7376ab37f3483ecafd2a47bcb0473ff4ff3ce25fdfac4bf1047fa61911ecfc"
             }
             "coverage_h64x16_horizontal_ramp_01.avif" => {
                 "cb9f9717f9c796f868918297787c1ee8d1db3b43df3556bafde101d4d8b388c3"

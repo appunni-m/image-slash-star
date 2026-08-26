@@ -6186,6 +6186,52 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal_r32x8_filter_intra_cdf9_false():
+        """Generate the pinned H32x8 false-filter CDF-index-9 witness.
+
+        This is the exact F10/N05 candidate from the bounded input-only
+        campaign (seed 7095), including its deterministic in-band noise.
+        """
+
+        random_state = random.Random(7095)
+
+        def pixel(x, y):
+            band = min(3, y // 8)
+            base = (44, 100, 156, 212)[band]
+            sample = random_state.randrange(-12, 13)
+            ripple = ((13 * x + 17 * y + x * y + 16) % 31) - 15
+            return (
+                clamp_channel(base + ripple + ripple + sample // 2),
+                clamp_channel(base + sample // 3 + sample),
+                clamp_channel(base - ripple - ripple),
+            )
+
+        return image_from_pixels((32, 32), pixel)
+
+    write_campaign_image(
+        "coverage_r32x8_filter_intra_cdf9_false_01",
+        horizontal_r32x8_filter_intra_cdf9_false(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def horizontal_h64x16_ramp():
         """Generate a 64x64 PARTITION_H4 frame with four H64x16 leaves."""
 
