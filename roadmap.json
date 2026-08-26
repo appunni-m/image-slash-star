@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-27",
-  "claim_ledger_base_revision": "d85561351dd1e779aff5eedbf5e562eebb7201e9",
+  "claim_ledger_base_revision": "11e3b3297c4346e3823d3d6fbaeeda52928a952c",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -113,10 +113,10 @@
     },
     "coverage": {
       "line": {
-        "covered": 99047,
+        "covered": 99048,
         "total": 109168,
-        "percent": 90.7290,
-        "uncovered": 10121
+        "percent": 90.7299,
+        "uncovered": 10120
       },
       "branch": {
         "covered": 12574,
@@ -131,37 +131,37 @@
         "uncovered": 697
       },
       "region": {
-        "covered": 148219,
+        "covered": 148220,
         "total": 165163,
-        "percent": 89.7410,
-        "uncovered": 16944
+        "percent": 89.7416,
+        "uncovered": 16943
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-27",
         "managed_coverage_mcp": true,
-        "commit_sha": "d85561351dd1e779aff5eedbf5e562eebb7201e9",
-        "run_id": "8740ab80-5d32-4bcf-8026-e5df72346f0e",
-        "snapshot_id": "02ea7870-faee-4687-94e4-4af30f443dbb",
+        "commit_sha": "11e3b3297c4346e3823d3d6fbaeeda52928a952c",
+        "run_id": "225b34f4-7f00-4b0d-a323-9f9ca1100006",
+        "snapshot_id": "6978977a-e0ad-46c1-8348-373719df7fc0",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 151052,
+        "duration_ms": 156499,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed the all-feature LLVM workload in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. The snapshot records 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, so this record does not overclaim snapshot metadata provenance beyond the exact run checkout. Explicit incremental coverage_review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb is measured and reports zero regressions; its complete-snapshot diff reports +7/+0 lines, +0/+0 branches, +0/+0 functions, and +5/+0 regions (covered/total), while the additive review reports 4 newly covered line identities and 5 newly covered regions. Named test attribution is unavailable. The promoted following-Square16 chroma SmoothHorizontal witness is exact through safe Rust; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
+        "note": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed the all-feature LLVM workload in 156,499 ms; its run record is bound to exact implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. The snapshot records 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, so this record does not overclaim snapshot metadata provenance beyond the exact run checkout. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured and reports zero regressions; its complete-snapshot diff reports +1/+0 lines, +0/+0 branches, +0/+0 functions, and +1/+0 regions (covered/total). Named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "af6f0d0c297328131ce7d7ba12c14c65fa58efe1",
-          "baseline_snapshot_id": "83ab4ee9-193f-4393-93ba-15c53962c6cb",
+          "baseline_commit": "d85561351dd1e779aff5eedbf5e562eebb7201e9",
+          "baseline_snapshot_id": "02ea7870-faee-4687-94e4-4af30f443dbb",
           "baseline_snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-          "line_covered_delta": 7,
+          "line_covered_delta": 1,
           "line_total_delta": 0,
           "branch_covered_delta": 0,
           "branch_total_delta": 0,
           "function_covered_delta": 0,
           "function_total_delta": 0,
-          "region_covered_delta": 5,
+          "region_covered_delta": 1,
           "region_total_delta": 0,
-          "interpretation": "Compared with the previous managed snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb, the current complete snapshot records +7/+0 lines, +0/+0 branches, +0/+0 functions, and +5/+0 regions (covered/total). The explicit incremental review is measured, reports zero regressions, and its additive identity merge reports 4 newly covered line identities and 5 newly covered regions; named test attribution is unavailable. The run record is bound to implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9, while the compact ingested snapshot projection retains prior commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db. The following-Square16 chroma SmoothHorizontal witness matches exact independent reconstruction and public RGB evidence. The four-metric release target remains open with 10,121 lines, 1,360 branches, 697 functions, and 16,944 regions uncovered; the next implementation slice must target another actual uncovered production path."
+          "interpretation": "Compared with the previous managed snapshot 02ea7870-faee-4687-94e4-4af30f443dbb, the current complete snapshot records +1/+0 lines, +0/+0 branches, +0/+0 functions, and +1/+0 regions (covered/total). The explicit incremental review is measured, reports zero regressions, and its additive identity merge records 1 newly covered line identity and 1 newly covered region; named test attribution is unavailable. The run record is bound to implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c, while the compact ingested snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db. The corrected H32x8 four-leaf false-filter sentinel witness matches exact independent reconstruction and public RGB evidence. The four-metric release target remains open with 10,120 lines, 1,360 branches, 697 functions, and 16,943 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -198,11 +198,14 @@
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
       "./scripts/test_feature_matrix.sh"
     ],
-    "historical_open_gates": {
+    "previous_open_gates": {
       "llvm_coverage": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed the all-feature LLVM workload in 149,159 ms against exact implementation checkout f92b3d6896e7e03a46396d53ad44dba96866de0e and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Direct aggregate comparison with prior snapshot 6fa9ab92 reports +5/+0/+1/+5 covered metric deltas and +0/+0/+0/+0 total deltas; named-test attribution is unavailable. The following-Horizontal AVIF witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
-    "open_gates": {
+    "historical_open_gates": {
       "llvm_coverage": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed the all-feature LLVM workload in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. It records 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb is measured, reports zero regressions, and records 4 newly covered line identities and 5 newly covered regions; named test attribution is unavailable. The following-Square16 chroma SmoothHorizontal witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+    },
+    "open_gates": {
+      "llvm_coverage": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed the all-feature LLVM workload in 156,499 ms; its run record is bound to exact implementation checkout 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. It records 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental coverage_review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb is measured, reports zero regressions, and records 1 newly covered line identity and 1 newly covered region; named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -245,7 +248,7 @@
       "status": "in_progress",
       "why": "Measure the missing flashlight beams before selecting new tests.",
       "done_when": "All four current native all-feature metrics reach 100%, or a reviewed instrumentation decision changes the release target.",
-      "latest_evidence": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. The current snapshot reports 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%). Explicit incremental review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb reports zero regressions, 4 newly covered line identities, and 5 newly covered regions; the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, and named test attribution is unavailable. The following-Square16 chroma SmoothHorizontal witness is exact through safe Rust; all four release metrics and AVF-STILL-001 remain open.",
+      "latest_evidence": "Managed Coverage MCP run 225b34f4-7f00-4b0d-a323-9f9ca1100006 passed in 156,499 ms at exact implementation commit 11e3b3297c4346e3823d3d6fbaeeda52928a952c and ingested snapshot 6978977a-e0ad-46c1-8348-373719df7fc0. It reports 99,048/109,168 lines (90.7299%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,220/165,163 regions (89.7416%). Explicit incremental review against baseline snapshot 02ea7870-faee-4687-94e4-4af30f443dbb reports zero regressions, 1 newly covered line identity, and 1 newly covered region; the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db, and named test attribution is unavailable. The corrected H32x8 four-leaf false-filter sentinel witness is exact through safe Rust; all four release metrics and AVF-STILL-001 remain open.",
       "source_ids": [
         "QA-003",
         "QA-010",
@@ -978,6 +981,23 @@
        "latest_slice": "The new square16_chroma_smooth_horizontal slice adds one deterministic 32x16 4:2:0 fixture, a 100-case/10-family input-only campaign with 9 qualified candidates, pinned partition and 414-operation dav1d evidence, exact entropy/YUV/Pillow assertions, and generator/reference/matrix provenance. No production decoder edit was required: the existing safe-Rust walker already matched this following-leaf chroma mode. The slice is evidence for one bounded class, not general AV1/AVIF completion.",
                "latest_evidence_addition": "The promoted fixture has fixture SHA-256 f81f98994be3ecce57b31a721d80af4c75ad31acf2ea45ace4a5d05d677cf1f3, encoded-item SHA-256 8f4477a0ee8ae9a9da985a08e11f1d052d472029c0f66478b63d6154ba19f48e, and Pillow RGB SHA-256 cbca1ceee34545f791090f42e152e5bfd495f4ab0cefcce6d943c57ec8edc144. The reconstructed plane SHA-256 values are Y eeb162fb2c4552315306723e52c02666f0767ac3a09cce8c05a644218eac22bb, U 00aacf7d6c450eebf9a657dfdcc37b28929e2fbaedb1725cbed669317eaa4569, and V 288c7f0684484429154a0ce7a08f4f8c9b83c5c93294924f550d26a57984aea6. The durable input-only campaign report is tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_horizontal_campaign_01.json with SHA-256 ef18fd56a8bd55ffbad5a858516081bb6b2b007cc1a616c57d98943004f63b84; it records 100 cases, 9 qualified candidates, deterministic double encoding/tracing/YUV/RGB equality, and exact mode-specific predicates.",
                "current_slice": "The new square16_chroma_smooth_horizontal fixture promotes one independently qualified following Square16 chroma mode-11 witness. Its two visible leaves have exact root/origin/following partition ranges 38416/36560/62182; both luma leaves use TX16x16 DCT_DCT, while the following U/V leaves use TX8x8 DCT_ADST with EOB 36 and the origin U/V leaves use TX8x8 DCT_DCT with EOB 35. Existing safe Rust already reconstructs the exact 414-operation trace and planes, so this slice adds durable input/reference/coverage evidence without a production code change. Other chroma modes, broader partitions, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
+        "current_slice_update": {
+          "target": "32x32 8-bit 4:2:0 PARTITION_H4 with four terminal Horizontal32x8 luma leaves and CDF-index-9 false filter-intra sentinels",
+          "fixture": "coverage_r32x8_filter_intra_cdf9_false_01.avif",
+          "campaign": "tests/fixtures/outputs/av1_search/coverage_r32x8_filter_intra_cdf9_false_campaign_01.json",
+          "campaign_sha256": "dff3ae957eadf4a47411cc1660fd8c1918e500be0f1f24dc4f51bd9446e80950",
+          "candidate_count": 100,
+          "qualified": 1,
+          "promoted_candidate": "H32-F10-N05",
+          "seed": 7095,
+          "entropy_operation_count": 2015,
+          "fixture_sha256": "edce5f86fefc08615431608a60154c96efbada2416cf70d4fdc338bf5b78e1eb",
+          "encoded_item_sha256": "8783faf94d88fdac9cb633cfbbc5b16b835cf55cf4ff08d82bf6b36551295286",
+          "pillow_rgb_sha256": "8d7376ab37f3483ecafd2a47bcb0473ff4ff3ce25fdfac4bf1047fa61911ecfc",
+          "decoded_yuv_sha256": "170404b2f258b2e93d6a5ffe903a12fae91483c024af33820a5c9904c188f74e",
+          "dav1d_trace_sha256": "7e82b9b45660185c77912bc52f02ce521e15e1b5d5c3e4e9cae133db5e8dd512",
+          "scope": "This closes only the bounded false-filter CDF decision, H32x8 luma, H16x4 chroma, and exact safe-Rust reconstruction class; it does not claim filter-intra reconstruction or general AV1/AVIF completion."
+        },
         "next": "Select the next dependency-ready AV1 block/entropy class using the refreshed managed coverage insight and a new bounded input-only oracle search. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, encoding, and the explicit Diagonal67 no-hit class as open.",
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",
