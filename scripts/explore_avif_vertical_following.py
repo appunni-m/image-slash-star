@@ -55,7 +55,9 @@ BLOCK_PATTERN = re.compile(
     r"bl=(?P<level>\d+),ctx=(?P<context>\d+),bp=(?P<partition>\d+): "
     r"r=(?P<range>\d+)$"
 )
-FILTER_PATTERN = re.compile(r"^Post-filterintramode\[(?P<mode>\d+)/(?P<angle>\d+)\]")
+FILTER_PATTERN = re.compile(
+    r"^Post-filterintramode\[(?P<y_mode>\d+)/(?P<filter_mode>\d+)\]"
+)
 TX_PATTERN = re.compile(r"^Post-tx\[(?P<tx>\d+)\]")
 LUMA_PATTERN = re.compile(
     r"^Post-y-cf-blk\[tx=(?P<tx>\d+),txtp=(?P<txtp>-?\d+),eob=(?P<eob>-?\d+)\]"
@@ -351,7 +353,7 @@ def parse_groups(output: str) -> tuple[list[dict[str, int]], list[list[str]], in
 
 
 def right_leaf_predicates(
-    blocks: list[dict[str, int]], groups: list[list[str]]
+    blocks: list[dict[str, int]], groups: list[list[str]], expected_filter_mode: int
 ) -> dict[str, object]:
     root = next(
         (block for block in blocks if block["level"] == 2 and block["x"] == 0 and block["y"] == 0),
@@ -365,7 +367,12 @@ def right_leaf_predicates(
     chroma_payloads = []
     for line in right:
         if match := FILTER_PATTERN.match(line):
-            filter_modes.append({"mode": int(match["mode"]), "angle": int(match["angle"])})
+            filter_modes.append(
+                {
+                    "y_mode": int(match["y_mode"]),
+                    "filter_mode": int(match["filter_mode"]),
+                }
+            )
         if match := TX_PATTERN.match(line):
             transforms.append(int(match["tx"]))
         if match := LUMA_PATTERN.match(line):
@@ -373,12 +380,17 @@ def right_leaf_predicates(
         if match := CHROMA_PATTERN.match(line):
             chroma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
     nonempty_luma = any(payload["eob"] >= 0 for payload in luma_payloads)
-    split_luma = len(luma_payloads) in (2, 8)
-    exact_chroma = len(chroma_payloads) == 2 and {item["plane"] for item in chroma_payloads} == {0, 1}
+    split_luma = len(luma_payloads) == 2 and all(item["tx"] == 2 for item in luma_payloads)
+    exact_chroma = (
+        len(chroma_payloads) == 2
+        and {item["plane"] for item in chroma_payloads} == {0, 1}
+        and all(item["tx"] == 7 for item in chroma_payloads)
+    )
     predicates = {
         "frame_root_vertical": root_vertical,
         "two_following_leaf_groups": len(groups) == 2,
-        "right_filter_intra": any(item["mode"] == 13 for item in filter_modes),
+        "right_filter_intra": filter_modes
+        == [{"y_mode": 13, "filter_mode": expected_filter_mode}],
         "right_luma_split": split_luma,
         "right_luma_nonempty": nonempty_luma,
         "right_chroma_8x16_pair": exact_chroma,
@@ -403,6 +415,7 @@ def decode_candidate(
     work: Path,
     candidate: dict[str, object],
     retain_dir: Path | None,
+    expected_filter_mode: int,
 ) -> dict[str, object]:
     pixels = candidate["pixels"]
     quality = int(candidate["quality"])
@@ -443,7 +456,7 @@ def decode_candidate(
         env=environment,
     )
     blocks, groups, entropy_count = parse_groups(result.stdout)
-    classification = right_leaf_predicates(blocks, groups)
+    classification = right_leaf_predicates(blocks, groups, expected_filter_mode)
     return {
         "id": candidate["id"],
         "family": candidate["family"],
@@ -469,6 +482,7 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument("--filter-mode", type=int, choices=range(5), default=4)
     args = parser.parse_args()
 
     if features.version("avif") != "1.4.1":
@@ -498,7 +512,14 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
-            decode_candidate(executable, environment, work, candidate, args.retain_dir)
+            decode_candidate(
+                executable,
+                environment,
+                work,
+                candidate,
+                args.retain_dir,
+                args.filter_mode,
+            )
             for candidate in candidates()
         ]
 
@@ -520,7 +541,8 @@ def main() -> None:
         },
         "search": {
             "candidate_count": len(reports),
-            "target": "root PARTITION_V with two 16x32 leaves; right filter-intra leaf with split luma and 8x16 U/V pair",
+            "filter_mode": args.filter_mode,
+            "target": f"root PARTITION_V with two 16x32 leaves; right FILTER_PRED mode-{args.filter_mode} leaf with two TX16x16 luma children and R8x16 U/V pair",
             "families": [
                 "F01_rgb_noise",
                 "F02_gray_noise",

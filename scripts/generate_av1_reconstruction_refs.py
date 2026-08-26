@@ -34,8 +34,11 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 DEFAULT_OUTPUT = ROOT / "tests" / "fixtures" / "outputs" / "av1_reconstruction.json"
 DAV1D_COMMIT = "b546257f770768b2c88258c533da38b91a06f737"
-VERTICAL_FOLLOWING_TARGET_FIXTURE = (
-    "coverage_r16x32_following_filter_intra_split_mode3_01.avif"
+VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
+    {
+        "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
+        "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
+    }
 )
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
@@ -928,6 +931,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186",
         "size": [32, 32],
     },
+    "coverage_r16x32_following_filter_intra_split_mode0_01.avif": {
+        "file_sha256": "f903b64aa74c2d7d4132a43061af1e10ace4cbf1d9cc883043e223cc5de7ba54",
+        "rgb_sha256": "cac42b39973f40158ad8fec42946726538adddb9a0d113ed0a16b054a9189272",
+        "size": [32, 32],
+    },
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
@@ -1141,7 +1149,8 @@ def instrument(source: Path, broaden_vertical_following: bool = True) -> None:
                       t->bx >= 0 && t->bx < 4) ||
                      (f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
                       bs == BS_16x32 && t->bx >= 4 && t->bx < 8 &&
-                     b->y_mode == FILTER_PRED && b->y_angle == 3));
+                     b->y_mode == FILTER_PRED &&
+                     (b->y_angle == 0 || b->y_angle == 3)));
 """
     new = broadened if broaden_vertical_following else legacy
     if text.count(old) != 1:
@@ -1580,9 +1589,9 @@ def generate(
         cases = [
             decode_fixture(
                 target_executable
-                if name == VERTICAL_FOLLOWING_TARGET_FIXTURE
+                if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 else legacy_executable,
-                target_env if name == VERTICAL_FOLLOWING_TARGET_FIXTURE else legacy_env,
+                target_env if name in VERTICAL_FOLLOWING_TARGET_FIXTURES else legacy_env,
                 work,
                 FIXTURE_DIR / name,
             )
