@@ -1116,6 +1116,16 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7",
         "size": [16, 16],
     },
+    "coverage_h16x4_filter_intra_cdf14_false_01.avif": {
+        "file_sha256": "5bc0e17ad980bfa5d5a55c26cae21718a67be584c294530d1255e4f8e37647f9",
+        "rgb_sha256": "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4",
+        "size": [16, 16],
+    },
+    "coverage_v4x16_filter_intra_cdf19_false_01.avif": {
+        "file_sha256": "2e898e072d787fd34045ec1d7892a58375912e090213fa47b942d4545a544ebe",
+        "rgb_sha256": "a93370d52a860f2b22bc1730ffe1a8bc38d376f678fc32b3c6328555e0bebb11",
+        "size": [16, 16],
+    },
     "coverage_adst_public_04.avif": {
         "file_sha256": "2e182dc0b3e66744f22e9e6683898bda8b4031f24e66b04d8099d6699141919c",
         "rgb_sha256": "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8",

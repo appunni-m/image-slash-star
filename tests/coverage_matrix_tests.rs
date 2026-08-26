@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 219);
+    assert_eq!(expected.cases.len(), 221);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6657,6 +6657,174 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 HorizontalFour witness leaf state and chroma ownership"
             );
         }
+        if case.fixture == "coverage_h16x4_filter_intra_cdf14_false_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 Horizontal16x4 filter-intra CDF-index-14 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                162,
+                "AV1 Horizontal16x4 filter-intra CDF-index-14 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-cdef_idx[0]: r=41704",
+                    "Post-ymode[0]: r=39896",
+                    "Post-filterintramode[0/0]: r=49284",
+                    "Post-tx[14]: r=49284",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=36688",
+                    "Post-skip[0]: r=35540",
+                    "Post-ymode[0]: r=35104",
+                    "Post-uvmode[0]: r=44584",
+                    "Post-filterintramode[0/0]: r=61824",
+                    "Post-tx[14]: r=61824",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=49288",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=1]: r=52384 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=1]: r=63752 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=61881",
+                    "Post-ymode[0]: r=63176",
+                    "Post-filterintramode[0/0]: r=49274",
+                    "Post-tx[14]: r=49274",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=49776",
+                    "Post-skip[0]: r=48414",
+                    "Post-ymode[0]: r=50616",
+                    "Post-uvmode[0]: r=34542",
+                    "Post-filterintramode[0/0]: r=64080",
+                    "Post-tx[14]: r=58175",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=54072",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=35557 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=48032 [x=0,cbx4=0]",
+                ],
+                "AV1 Horizontal16x4 filter-intra CDF-index-14 witness leaf states"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[0/0]:"))
+                    .count(),
+                4,
+                "AV1 Horizontal16x4 witness must record four false filter-intra decisions"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[14]:"))
+                    .count(),
+                4,
+                "AV1 Horizontal16x4 witness must select four TX16x4 luma grids"
+            );
+        }
+        if case.fixture == "coverage_v4x16_filter_intra_cdf19_false_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 9,
+                    range: 53_504,
+                }],
+                "AV1 Vertical4x16 filter-intra CDF-index-19 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                162,
+                "AV1 Vertical4x16 filter-intra CDF-index-19 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=51724",
+                    "Post-cdef_idx[0]: r=51724",
+                    "Post-ymode[0]: r=49216",
+                    "Post-filterintramode[0/0]: r=37432",
+                    "Post-tx[13]: r=37432",
+                    "Post-y-cf-blk[tx=13,txtp=0,eob=0]: r=56076",
+                    "Post-skip[0]: r=54320",
+                    "Post-ymode[0]: r=53424",
+                    "Post-uvmode[0]: r=34152",
+                    "Post-filterintramode[0/0]: r=56520",
+                    "Post-tx[13]: r=56520",
+                    "Post-y-cf-blk[tx=13,txtp=0,eob=0]: r=44976",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=1]: r=48100 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=1]: r=59400 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=57656",
+                    "Post-ymode[0]: r=58742",
+                    "Post-filterintramode[0/0]: r=53206",
+                    "Post-tx[13]: r=53206",
+                    "Post-y-cf-blk[tx=13,txtp=0,eob=0]: r=54032",
+                    "Post-skip[0]: r=52551",
+                    "Post-ymode[0]: r=54986",
+                    "Post-uvmode[0]: r=37536",
+                    "Post-filterintramode[0/0]: r=39278",
+                    "Post-tx[13]: r=36577",
+                    "Post-y-cf-blk[tx=13,txtp=0,eob=0]: r=33580",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=-1]: r=44154 [x=0,cbx4=1]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=-1]: r=59864 [x=0,cbx4=1]",
+                ],
+                "AV1 Vertical4x16 filter-intra CDF-index-19 witness leaf states"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[0/0]:"))
+                    .count(),
+                4,
+                "AV1 Vertical4x16 witness must record four false filter-intra decisions"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[13]:"))
+                    .count(),
+                4,
+                "AV1 Vertical4x16 witness must select four TX4x16 luma grids"
+            );
+        }
         if case.fixture == "coverage_r32x8_filter_intra_cdf9_false_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -7594,6 +7762,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h4_horizontal_bands.avif" => {
                 "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
+            }
+            "coverage_h16x4_filter_intra_cdf14_false_01.avif" => {
+                "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4"
+            }
+            "coverage_v4x16_filter_intra_cdf19_false_01.avif" => {
+                "a93370d52a860f2b22bc1730ffe1a8bc38d376f678fc32b3c6328555e0bebb11"
             }
             "coverage_r32x8_h4_ripple_01.avif" => {
                 "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53"
