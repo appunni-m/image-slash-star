@@ -7,16 +7,16 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`60718f5ac2109801761a8fa506e08c01b3d18bc1`; the historical Pillow parity
+`3c5fd59b2444ae3dba44526c22aa676bbd0e4208`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`12b456c3-5f22-4c9a-82bc-15f779a3cdcd` from run
-`9e291695-f0ae-4e87-9d41-e6e40865e688` (full all-feature workload passed at
-exact execution commit `60718f5a`). Its LLVM report records 98,388/109,006
+`f42de520-62d9-428a-930a-49b2fb93f5c9` from run
+`9c32da2c-9874-4d36-80ac-74982bf67532` (full all-feature workload passed at
+exact execution commit `3c5fd59b`). Its LLVM report records 98,392/109,010
 lines, 12,505/13,866 branches, 5,006/5,739 functions, and
-147,344/164,946 regions. The snapshot metadata retains `11559fb6`; the run
+147,348/164,950 regions. The snapshot metadata retains `11559fb6`; the run
 record is the exact implementation provenance. The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
