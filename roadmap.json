@@ -54,16 +54,16 @@
     },
     "coverage": {
       "line": {
-        "covered": 98392,
-        "total": 109010,
-        "percent": 90.2596,
-        "uncovered": 10618
+        "covered": 98408,
+        "total": 109024,
+        "percent": 90.2627,
+        "uncovered": 10616
       },
       "branch": {
-        "covered": 12505,
+        "covered": 12508,
         "total": 13866,
-        "percent": 90.1846,
-        "uncovered": 1361
+        "percent": 90.2063,
+        "uncovered": 1358
       },
       "function": {
         "covered": 5006,
@@ -72,37 +72,37 @@
         "uncovered": 733
       },
       "region": {
-        "covered": 147348,
-        "total": 164950,
-        "percent": 89.3289,
-        "uncovered": 17602
+        "covered": 147373,
+        "total": 164968,
+        "percent": 89.3343,
+        "uncovered": 17595
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-26",
         "managed_coverage_mcp": true,
-        "commit_sha": "3c5fd59b2444ae3dba44526c22aa676bbd0e4208",
-        "run_id": "9c32da2c-9874-4d36-80ac-74982bf67532",
-        "snapshot_id": "f42de520-62d9-428a-930a-49b2fb93f5c9",
-        "snapshot_metadata_commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
+        "commit_sha": "455a6eac608496bc758974d134a9c5fd85c26c91",
+        "run_id": "9630869d-97f1-4db3-8817-2e55120d5619",
+        "snapshot_id": "58d205ac-9285-4890-bc58-fa9e18ddd3f0",
+        "snapshot_metadata_commit_sha": "455a6eac608496bc758974d134a9c5fd85c26c91",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 150787,
+        "duration_ms": 148532,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 9c32da2c-9874-4d36-80ac-74982bf67532 passed the all-feature LLVM workload in 150,787 ms against exact implementation checkout 3c5fd59b2444ae3dba44526c22aa676bbd0e4208 and ingested snapshot f42de520-62d9-428a-930a-49b2fb93f5c9. The snapshot records 98,392/109,010 lines (90.2596%), 12,505/13,866 branches (90.1846%), 5,006/5,739 functions (87.2277%), and 147,348/164,950 regions (89.3289%); the four-metric release target remains open until all reach 100%. The run record is exact for 3c5fd59b2444ae3dba44526c22aa676bbd0e4208; Coverage MCP stored snapshot metadata reports 11559fb63009977d77f12a94990a9c5ac8d17d51, retained as a provenance caveat. Aggregate review against baseline snapshot 12b456c3-5f22-4c9a-82bc-15f779a3cdcd reports +4 covered lines and +4 covered regions, with zero branch/function delta and +4 line/region denominator observations. Because stored commit metadata is stale and named test observations are unavailable, no source-diff attribution is claimed. The new coverage witness coverage_vertical8x16_chroma_vertical_01.avif is a 16x16 8-bit 4:2:0 vertical pair with 539 entropy operations; safe Rust matches its exact partition, entropy, Y/U/V, and Pillow RGB evidence. This closes only that bounded AV1 class; broader AV1 states, AVF-STILL-001, and the four-metric release gate remain partial.",
+        "note": "Managed Coverage MCP run 9630869d-97f1-4db3-8817-2e55120d5619 passed the all-feature LLVM workload in 148,532 ms against exact implementation checkout 455a6eac608496bc758974d134a9c5fd85c26c91 and ingested snapshot 58d205ac-9285-4890-bc58-fa9e18ddd3f0. The snapshot records 98,408/109,024 lines (90.2627%), 12,508/13,866 branches (90.2063%), 5,006/5,739 functions (87.2277%), and 147,373/164,968 regions (89.3343%); the four-metric release target remains open until all reach 100%. The current run and stored snapshot metadata are exact for 455a6eac. Direct aggregate comparison with prior snapshot f42de520-62d9-428a-930a-49b2fb93f5c9 records +16 covered lines with +14 line observations, +3 covered branches with no branch-denominator change, zero function delta, and +25 covered regions with +18 region observations. Named test attribution is unavailable; the aggregate measurement remains supported and no named-test attribution is claimed. The three new coverage_vertical8x16_chroma_paeth witnesses are exact through safe Rust; this closes only that bounded AV1 class. Broader AV1 states, AVF-STILL-001, and the four-metric release gate remain partial.",
         "comparison_to_previous_snapshot": {
-        "baseline_commit": "11559fb63009977d77f12a94990a9c5ac8d17d51",
-          "baseline_snapshot_id": "12b456c3-5f22-4c9a-82bc-15f779a3cdcd",
+        "baseline_commit": "3c5fd59b2444ae3dba44526c22aa676bbd0e4208",
+          "baseline_snapshot_id": "f42de520-62d9-428a-930a-49b2fb93f5c9",
           "baseline_snapshot_metadata_commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
-        "line_covered_delta": 4,
-        "line_total_delta": 4,
-        "branch_covered_delta": 0,
+        "line_covered_delta": 16,
+        "line_total_delta": 14,
+        "branch_covered_delta": 3,
         "branch_total_delta": 0,
         "function_covered_delta": 0,
         "function_total_delta": 0,
-        "region_covered_delta": 4,
-        "region_total_delta": 4,
-        "interpretation": "Compared with baseline snapshot 12b456c3-5f22-4c9a-82bc-15f779a3cdcd, this managed run reports +4 covered lines and +4 covered regions with zero branch/function delta while adding +4 line and +4 region observations. Coverage MCP stored stale commit metadata, so the result is retained as aggregate evidence and no source-diff attribution is claimed. The new vertical8x16/chroma-Vertical/Diagonal113 witness matches exact independent reconstruction and public RGB evidence. The release target remains open with 10,618 lines, 1,361 branches, 733 functions, and 17,602 regions uncovered; the next implementation slice must target another actual uncovered production path."
+        "region_covered_delta": 25,
+        "region_total_delta": 18,
+        "interpretation": "Compared with prior snapshot f42de520-62d9-428a-930a-49b2fb93f5c9, the current full snapshot records +16 covered lines with +14 line observations, +3 covered branches with no branch-denominator change, zero function delta, and +25 covered regions with +18 region observations. Coverage MCP reports exact current commit provenance; named test attribution is unavailable, so the result is retained as aggregate evidence without named-test attribution. The three new vertical8x16/chroma-Paeth/ADST-ADST witnesses match exact independent reconstruction and public RGB evidence. The release target remains open with 10,616 lines, 1,358 branches, 733 functions, and 17,595 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -139,7 +139,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 9c32da2c-9874-4d36-80ac-74982bf67532 passed the all-feature LLVM workload in 150,787 ms against exact implementation checkout 3c5fd59b2444ae3dba44526c22aa676bbd0e4208 and ingested snapshot f42de520-62d9-428a-930a-49b2fb93f5c9. It records 98,392/109,010 lines (90.2596%), 12,505/13,866 branches (90.1846%), 5,006/5,739 functions (87.2277%), and 147,348/164,950 regions (89.3289%). The run record is exact for 3c5fd59b; stored snapshot metadata reports 11559fb6 and remains a provenance caveat. Aggregate review against baseline 12b456c3 reports +4/+0/+0/+4 covered metric deltas and +4/+0/+0/+4 total deltas; named-test/source-diff attribution is unavailable because stored commit metadata is stale. The new vertical8x16/chroma-Vertical/Diagonal113 witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+      "llvm_coverage": "Managed Coverage MCP run 9630869d-97f1-4db3-8817-2e55120d5619 passed the all-feature LLVM workload in 148,532 ms against exact implementation checkout 455a6eac608496bc758974d134a9c5fd85c26c91 and ingested snapshot 58d205ac-9285-4890-bc58-fa9e18ddd3f0. It records 98,408/109,024 lines (90.2627%), 12,508/13,866 branches (90.2063%), 5,006/5,739 functions (87.2277%), and 147,373/164,968 regions (89.3343%). Direct aggregate comparison with prior snapshot f42de520 reports +16/+3/+0/+25 covered metric deltas and +14/+0/+0/+18 total deltas; named-test attribution is unavailable. The three vertical8x16/chroma-Paeth/ADST-ADST witnesses are exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -189,7 +189,7 @@
         "QA-030",
         "DOC-005"
       ],
-      "evidence": "Managed Coverage MCP run 9c32da2c-9874-4d36-80ac-74982bf67532 passed at exact implementation commit 3c5fd59b2444ae3dba44526c22aa676bbd0e4208 in 150,787 ms and ingested snapshot f42de520-62d9-428a-930a-49b2fb93f5c9. It reports 90.2596% lines (10,618 uncovered), 90.1846% branches (1,361 uncovered), 87.2277% functions (733 uncovered), and 89.3289% regions (17,602 uncovered). Stored snapshot metadata is 11559fb6 rather than the exact run commit, so the review is aggregate-only and makes no source-diff attribution. The vertical8x16/chroma-Vertical/Diagonal113 AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
+      "evidence": "Managed Coverage MCP run 9630869d-97f1-4db3-8817-2e55120d5619 passed at exact implementation commit 455a6eac608496bc758974d134a9c5fd85c26c91 in 148,532 ms and ingested snapshot 58d205ac-9285-4890-bc58-fa9e18ddd3f0. It reports 90.2627% lines (10,616 uncovered), 90.2063% branches (1,358 uncovered), 87.2277% functions (733 uncovered), and 89.3343% regions (17,595 uncovered). Direct aggregate comparison with prior snapshot f42de520 records +16 covered lines, +3 branches, zero functions, and +25 regions; named-test attribution is unavailable. The three vertical8x16/chroma-Paeth/ADST-ADST AVIF witnesses add real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
