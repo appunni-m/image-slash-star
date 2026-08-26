@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-26",
-  "claim_ledger_base_revision": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
+  "claim_ledger_base_revision": "60718f5ac2109801761a8fa506e08c01b3d18bc1",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -54,55 +54,55 @@
     },
     "coverage": {
       "line": {
-        "covered": 98335,
-        "total": 108929,
-        "percent": 90.2744,
-        "uncovered": 10594
+        "covered": 98388,
+        "total": 109006,
+        "percent": 90.2593,
+        "uncovered": 10618
       },
       "branch": {
-        "covered": 12496,
-        "total": 13860,
-        "percent": 90.1587,
-        "uncovered": 1364
+        "covered": 12505,
+        "total": 13866,
+        "percent": 90.1846,
+        "uncovered": 1361
       },
       "function": {
-        "covered": 5002,
-        "total": 5734,
-        "percent": 87.2340,
-        "uncovered": 732
+        "covered": 5006,
+        "total": 5739,
+        "percent": 87.2277,
+        "uncovered": 733
       },
       "region": {
-        "covered": 147292,
-        "total": 164871,
-        "percent": 89.3377,
-        "uncovered": 17579
+        "covered": 147344,
+        "total": 164946,
+        "percent": 89.3286,
+        "uncovered": 17602
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-26",
         "managed_coverage_mcp": true,
-        "commit_sha": "947b5915fc2ce618aa4a04b02a44a304bd5e8af9",
-        "run_id": "d334b4ef-2847-455b-a9d2-662c6481cf5e",
-        "snapshot_id": "9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa",
+        "commit_sha": "60718f5ac2109801761a8fa506e08c01b3d18bc1",
+        "run_id": "9e291695-f0ae-4e87-9d41-e6e40865e688",
+        "snapshot_id": "12b456c3-5f22-4c9a-82bc-15f779a3cdcd",
         "snapshot_metadata_commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 142370,
+        "duration_ms": 155104,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run d334b4ef-2847-455b-a9d2-662c6481cf5e passed the all-feature LLVM workload in 142,370 ms against exact implementation checkout 947b5915fc2ce618aa4a04b02a44a304bd5e8af9 and ingested snapshot 9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa. The snapshot records 98,335/108,929 lines (90.2744%), 12,496/13,860 branches (90.1587%), 5,002/5,734 functions (87.2340%), and 147,292/164,871 regions (89.3377%); the four-metric release target remains open until all reach 100%. The run record is exact for 947b5915fc2ce618aa4a04b02a44a304bd5e8af9; Coverage MCP stored snapshot metadata reports 11559fb63009977d77f12a94990a9c5ac8d17d51, retained as a provenance caveat. Explicit aggregate review against baseline snapshot a66e148e-4fbc-4c71-b27d-3048c24bb6bc reports +102 covered lines, +22 branches, +4 functions, and +120 regions (+78, +22, +3, and +121 total observations), with 2,161 newly covered, 2,075 regressed, and 12,132 hit-count-only observations. Named-test attribution is unavailable, so this is aggregate evidence rather than a source diff. coverage_square8_chroma_diagonal113_01.avif is a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial.",
+        "note": "Managed Coverage MCP run 9e291695-f0ae-4e87-9d41-e6e40865e688 passed the all-feature LLVM workload in 155,104 ms against exact implementation checkout 60718f5ac2109801761a8fa506e08c01b3d18bc1 and ingested snapshot 12b456c3-5f22-4c9a-82bc-15f779a3cdcd. The snapshot records 98,388/109,006 lines (90.2593%), 12,505/13,866 branches (90.1846%), 5,006/5,739 functions (87.2277%), and 147,344/164,946 regions (89.3286%); the four-metric release target remains open until all reach 100%. The run record is exact for 60718f5ac2109801761a8fa506e08c01b3d18bc1; Coverage MCP stored snapshot metadata reports 11559fb63009977d77f12a94990a9c5ac8d17d51, retained as a provenance caveat. Aggregate review against baseline snapshot 8288550c-78aa-4d4c-98e3-4538be3e18de reports +53 covered lines, +9 branches, +4 functions, and +53 regions (+77, +6, +5, and +75 total observations). Because stored commit metadata is stale, named-test/source-diff attribution is not claimed. The new coverage witness coverage_vertical8x16_chroma_diagonal157_01.avif is a 16x16 8-bit 4:2:0 vertical pair with 576 entropy operations; safe Rust matches its exact partition, entropy, Y/U/V, and Pillow RGB evidence. This closes only that bounded AV1 class; broader AV1 states, AVF-STILL-001, and the four-metric release gate remain partial.",
         "comparison_to_previous_snapshot": {
-        "baseline_commit": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
-        "baseline_snapshot_id": "a66e148e-4fbc-4c71-b27d-3048c24bb6bc",
-          "baseline_snapshot_metadata_commit_sha": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
-        "line_covered_delta": 102,
-        "line_total_delta": 78,
-        "branch_covered_delta": 22,
-        "branch_total_delta": 22,
+        "baseline_commit": "11559fb63009977d77f12a94990a9c5ac8d17d51",
+        "baseline_snapshot_id": "8288550c-78aa-4d4c-98e3-4538be3e18de",
+          "baseline_snapshot_metadata_commit_sha": "11559fb63009977d77f12a94990a9c5ac8d17d51",
+        "line_covered_delta": 53,
+        "line_total_delta": 77,
+        "branch_covered_delta": 9,
+        "branch_total_delta": 6,
         "function_covered_delta": 4,
-        "function_total_delta": 3,
-        "region_covered_delta": 120,
-        "region_total_delta": 121,
-        "interpretation": "Compared with baseline snapshot a66e148e at the prior managed measurement, this Square8 chroma-Diagonal113 run reports +102 covered lines, +22 branches, +4 functions, and +120 regions while adding +78, +22, +3, and +121 total observations. It reports 2,161 newly covered, 2,075 regressed, and 12,132 hit-count-only observations; named-test attribution is unavailable and stored snapshot metadata differs, so this is retained as aggregate coverage evidence rather than a source-diff claim. The new witness matches exact independent reconstruction and public RGB evidence. The release target remains open with 10,594 lines, 1,364 branches, 732 functions, and 17,579 regions uncovered; the next implementation slice must target another actual uncovered production path."
+        "function_total_delta": 5,
+        "region_covered_delta": 53,
+        "region_total_delta": 75,
+        "interpretation": "Compared with baseline snapshot 8288550c-78aa-4d4c-98e3-4538be3e18de, this managed run reports +53 covered lines, +9 branches, +4 functions, and +53 regions while adding +77, +6, +5, and +75 total observations. Coverage MCP stored stale commit metadata, so the result is retained as aggregate evidence and no source-diff attribution is claimed. The new vertical8x16/chroma-Diagonal157 witness matches exact independent reconstruction and public RGB evidence. The release target remains open with 10,618 lines, 1,361 branches, 733 functions, and 17,602 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -139,7 +139,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run d334b4ef-2847-455b-a9d2-662c6481cf5e passed the all-feature LLVM workload in 142,370 ms against exact implementation checkout 947b5915fc2ce618aa4a04b02a44a304bd5e8af9 and ingested snapshot 9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa. It records 98,335/108,929 lines (90.2744%), 12,496/13,860 branches (90.1587%), 5,002/5,734 functions (87.2340%), and 147,292/164,871 regions (89.3377%). The run record is exact for 947b5915; stored snapshot metadata reports 11559fb6 and remains a provenance caveat. Aggregate review against baseline a66e148e reports +102/+22/+4/+120 covered metric deltas, +78/+22/+3/+121 total deltas, 2,161 newly covered, 2,075 regressed, and 12,132 hit-count-only observations; named-test attribution is unavailable. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+      "llvm_coverage": "Managed Coverage MCP run 9e291695-f0ae-4e87-9d41-e6e40865e688 passed the all-feature LLVM workload in 155,104 ms against exact implementation checkout 60718f5ac2109801761a8fa506e08c01b3d18bc1 and ingested snapshot 12b456c3-5f22-4c9a-82bc-15f779a3cdcd. It records 98,388/109,006 lines (90.2593%), 12,505/13,866 branches (90.1846%), 5,006/5,739 functions (87.2277%), and 147,344/164,946 regions (89.3286%). The run record is exact for 60718f5a; stored snapshot metadata reports 11559fb6 and remains a provenance caveat. Aggregate review against baseline 8288550c reports +53/+9/+4/+53 covered metric deltas and +77/+6/+5/+75 total deltas; named-test/source-diff attribution is unavailable because stored commit metadata is stale. The new vertical8x16/chroma-Diagonal157 witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -189,7 +189,7 @@
         "QA-030",
         "DOC-005"
       ],
-      "evidence": "Managed Coverage MCP run fd89bf16-bd58-4c30-afd5-c2dfb58acda9 at commit 260c8646 reports 89.4761% lines (11,330 uncovered), 89.7633% branches (1,401 uncovered), 86.6690% functions (756 uncovered), and 88.6813% regions (18,504 uncovered); the lineage-valid explicit import is snapshot b6b8e5f8-30be-410b-a5f5-a549c101a8e2. The sink recovery contract adds covered public delivery-attempt tracking and rollback/error-precedence witnesses, but no universal streaming or allocation claim. The four-metric release target remains open until all reach 100%."
+      "evidence": "Managed Coverage MCP run 9e291695-f0ae-4e87-9d41-e6e40865e688 passed at exact implementation commit 60718f5ac2109801761a8fa506e08c01b3d18bc1 in 155,104 ms and ingested snapshot 12b456c3-5f22-4c9a-82bc-15f779a3cdcd. It reports 90.2593% lines (10,618 uncovered), 90.1846% branches (1,361 uncovered), 87.2277% functions (733 uncovered), and 89.3286% regions (17,602 uncovered). Stored snapshot metadata is 11559fb6 rather than the exact run commit, so the review is aggregate-only and makes no source-diff attribution. The vertical8x16/chroma-Diagonal157 AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {
       "id": "RN-002",
