@@ -2,7 +2,7 @@
 
 Status: current implementation reference; AVIF uses the safe Rust path on every target
 
-Reviewed: 2026-08-26 against the pure-Rust AVIF cutover working tree. The
+Reviewed: 2026-08-27 against the pure-Rust AVIF cutover working tree. The
 older coverage and native-AVIF failure records in this opening block are
 historical pre-cutover evidence; the current AVIF contract is in
 [avif.md](avif.md), the canonical roadmap data in
@@ -10,16 +10,16 @@ historical pre-cutover evidence; the current AVIF contract is in
 [roadmap-new.md](roadmap-new.md). The prior source-quality checkpoint was
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current managed nightly LLVM
 all-feature coverage is recorded in [roadmap.json](../roadmap.json):
-99,005/109,161 lines, 12,572/13,934 branches, 5,048/5,747 functions, and
-148,157/165,153 regions. This is not yet 100% metric coverage; the remaining
+99,040/109,168 lines, 12,574/13,934 branches, 5,050/5,747 functions, and
+148,214/165,163 regions. This is not yet 100% metric coverage; the remaining
 source-level gaps are documented there. The current claim-ledger refresh base
-is `af6f0d0c297328131ce7d7ba12c14c65fa58efe1`; the historical Pillow parity
+is `3272b3ef49a87c2947c08b46596b442195c6a8db`; the historical Pillow parity
 baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
-`ac1ea94a-3b36-48ed-8825-3db426f07aad` from run
-`5977e3f9-66b0-4474-ba47-4e3a5838e508` (full all-feature workload passed at
-exact execution commit `af6f0d0c297328131ce7d7ba12c14c65fa58efe1`).
+`83ab4ee9-193f-4393-93ba-15c53962c6cb` from run
+`2d5c72ca-2555-4df0-9df2-701b1e02eb3a` (full all-feature workload passed at
+exact execution commit `3272b3ef49a87c2947c08b46596b442195c6a8db`).
 Historical run
 records elsewhere in this document retain their original revision scope.
 The historical exact-head managed Pillow parity run recorded below is
