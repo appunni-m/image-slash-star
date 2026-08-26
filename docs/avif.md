@@ -4,7 +4,7 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-27
 
-Current claim-ledger refresh base revision: `1bfe20f465435fd474def91770a06a1289d71544`.
+Current claim-ledger refresh base revision: `de664cc6dc8d12f6f7f5fe3b73c01faef3709d63`.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.
@@ -61,14 +61,27 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 285 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 287 AVIF decode rows and 32 encode
 rows:
 
-- 278 decode rows are active: portable still reconstruction and structural
+- 280 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
+
+The current newest bounded witnesses are the paired
+`coverage_h16x4_filter_intra_cdf14_false_01.avif` and
+`coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16
+8-bit 4:2:0 `PARTITION_H4`/`PARTITION_V4` frames with four DC
+`Horizontal16x4`/`Vertical4x16` luma leaves, false filter-intra decisions from
+CDF rows 14/19, rectangular DCT-DCT chroma transforms, and 162-operation pinned
+dav1d traces. Safe Rust matches exact partition, entropy, reconstructed Y/U/V,
+and Pillow RGB bytes; the H following leaf exercises two-entry UV palette
+prediction and the V following leaf reaches the transposed rectangular path.
+The input-only search explored 100 candidates across 10 families and qualified
+5 per orientation without invoking repository Rust. This closes only one
+bounded class, not general rectangular AV1 or AVF-STILL-001 support.
 
 The newest bounded full-resolution witnesses are
 `coverage_i444_rect_01.avif` and `coverage_i444_rect_02.avif`: both are 16x16
@@ -101,7 +114,7 @@ encoded-item, and Pillow RGB SHA-256 values are
 This is one bounded origin mode/transform class, not general filter-intra or
 AV1 completion.
 
-The newest origin witness is `coverage_vertical8x16_filter_intra_mode0_01.avif`,
+An earlier origin witness is `coverage_vertical8x16_filter_intra_mode0_01.avif`,
 an 8x16 8-bit 4:2:0 `Vertical8x16` leaf with `FILTER_PRED[13/0]`, an unsplit
 TX8x16 luma transform, and TX4x8 U/V transforms. Its pinned trace has
 partition range `42232` and 584 entropy operations; safe Rust matches the
@@ -119,7 +132,7 @@ top-left=128, adds the TX4x8 chroma CDF tables, corrects the rectangular
 4:2:0 skip context and EOB scratch index, and closes only this bounded origin
 class; broader filter-intra modes, transforms, and AVF-STILL-001 remain open.
 
-The latest origin witness is `coverage_vertical8x16_filter_intra_mode1_01.avif`,
+An earlier origin witness is `coverage_vertical8x16_filter_intra_mode1_01.avif`,
 an 8x16 8-bit 4:2:0 `Vertical8x16` leaf with `FILTER_PRED[13/1]`, an unsplit
 TX8x16 luma transform, and TX4x8 U/V transforms. Its pinned trace has
 partition range `42232` and 559 entropy operations; safe Rust matches the
