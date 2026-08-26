@@ -2,7 +2,7 @@
 
 Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
-Reviewed: 2026-08-25
+Reviewed: 2026-08-26
 
 Current claim-ledger refresh base revision: `2a141b6fe640af41549b71421fbe4b8f2b134e4f`.
 The historical Pillow parity baseline remains bound to
@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 265 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 266 AVIF decode rows and 32 encode
 rows:
 
-- 258 decode rows are active: portable still reconstruction and structural
+- 259 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -81,7 +81,7 @@ Pillow RGB SHA-256 is
 `81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb`. These are
 bounded I444 topology/residual witnesses, not general 4:4:4 or AV1 support.
 
-The newest origin witness is `coverage_square16_filter_intra_mode0_01.avif`,
+The preceding origin witness is `coverage_square16_filter_intra_mode0_01.avif`,
 a 16x16 8-bit 4:2:0 `Square16` leaf with `FILTER_PRED[13/0]`, an unsplit
 TX16x16 luma transform, and TX8x8 U/V transforms. Its pinned trace has
 partition range `62320` and 1,116 entropy operations; safe Rust matches the
@@ -92,6 +92,24 @@ encoded-item, and Pillow RGB SHA-256 values are
 `4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008`.
 This is one bounded origin mode/transform class, not general filter-intra or
 AV1 completion.
+
+The newest origin witness is `coverage_vertical8x16_filter_intra_mode0_01.avif`,
+an 8x16 8-bit 4:2:0 `Vertical8x16` leaf with `FILTER_PRED[13/0]`, an unsplit
+TX8x16 luma transform, and TX4x8 U/V transforms. Its pinned trace has
+partition range `42232` and 584 entropy operations; safe Rust matches the
+exact entropy records, Y/U/V planes, and Pillow RGB8 bytes. Its fixture,
+encoded-item, and Pillow RGB SHA-256 values are
+`da511e016e1e8720cb21af34b4cf41001a97af0f0380576dc47355dcd630f39a`,
+`e86cc0fdfc27ec55e542a581bb22b4c619f5dfac793593ec7b276a13df6d8224`, and
+`82b2100ac5f6f02e88ea931a90b2abab261b7486209ee4f63c538464c52b5c30`.
+Its reconstructed luma/chroma plane SHA-256 values are
+`b2785ade1a3c4756d80bf67138b50d410eb2863ff39410e94b8cfd44467baba6`,
+`fe140aecdaf68c2a55f594a0a1eb6f9404e9e70f452aaee2d73fe7b98af6014a`, and
+`a085afa18ac9de9d6f9c09b3fa6050395bbf1cc71d4444f3cfae4354057469e8`.
+The safe-Rust fix uses the origin missing-edge values top=127, left=129,
+top-left=128, adds the TX4x8 chroma CDF tables, corrects the rectangular
+4:2:0 skip context and EOB scratch index, and closes only this bounded origin
+class; broader filter-intra modes, transforms, and AVF-STILL-001 remain open.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
