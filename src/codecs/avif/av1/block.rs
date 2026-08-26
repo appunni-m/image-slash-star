@@ -24044,6 +24044,7 @@ fn reconstruct_leaf_with_luma_override(
                     [predictors[0]; 32],
                     predictors[0],
                     false,
+                    false,
                     split,
                 )
                 .unwrap_or_else(|_| ReconstructedPlane {
@@ -29963,6 +29964,7 @@ fn reconstruct_following_lossy_420_horizontal_16x32_leaf(
             luma_top,
             luma_left,
             luma_left[0],
+            false,
             true,
             split,
         )?
@@ -30088,6 +30090,7 @@ fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
             luma_top,
             luma_left,
             luma_left[0],
+            false,
             true,
             split,
         )?
@@ -30372,6 +30375,7 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
             luma_top,
             luma_left,
             luma_top[0],
+            true,
             left_neighbor.is_some(),
             split,
         )?
@@ -33251,6 +33255,7 @@ fn reconstruct_lossy_luma_16x32_split(
     top: [u16; 16],
     left: [u16; 32],
     top_left: u16,
+    has_top: bool,
     has_left: bool,
     split: LossyLuma8x8GridSplit,
 ) -> PortableResult<ReconstructedPlane> {
@@ -33310,11 +33315,12 @@ fn reconstruct_lossy_luma_16x32_split(
             } else {
                 match predictor {
                     LumaPredictor::Dc => {
-                        let value = if has_left || row != 0 || column != 0 {
-                            dc_predictor_8(top_edge, left_edge)
-                        } else {
-                            one_sided_dc_predictor(top_edge)
-                        };
+                        let value = dc_predictor_8_with_availability(
+                            top_edge,
+                            left_edge,
+                            has_top || row != 0,
+                            has_left || column != 0,
+                        );
                         reconstruct_lossy_luma_8x8(value, coefficients, transform)
                     }
                     LumaPredictor::Vertical => {
@@ -34007,6 +34013,7 @@ fn reconstruct_following_lossy_420_vertical_16x32_leaf(
             luma_top,
             luma_left,
             luma_top_left,
+            true,
             left_neighbor.is_some(),
             split,
         )

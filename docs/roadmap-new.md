@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 263 rows total, 256 active, 7 explicit planned
+- AVIF decode/inspect/verify: 264 rows total, 257 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,487 rows total, 1083 active decode rows, 365 active encode
+- Whole matrix: 1,488 rows total, 1084 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -167,6 +167,16 @@ the corresponding status is recorded in `roadmap.json`:
   edge and dav1d's left-only DC availability rule. This closes only this
   right-hand 4:2:0 mode-3/R8x16 split class; broader filter-intra modes,
   topologies, transforms, and AVF-STILL-001 remain partial.
+- The newest bounded right-hand mode-0 proof is
+  `coverage_r16x32_following_filter_intra_split_mode0_01.avif`, a deterministic
+  32x32 8-bit 4:2:0 vertical split whose right-hand `Vertical16x32` leaf uses
+  `FILTER_PRED[13/0]`, two TX16x16 luma children, and R8x16 U/V transforms.
+  Its pinned dav1d trace has partition range `35904` and 3,064 entropy
+  operations; safe Rust matches every entropy operation, reconstructed Y/U/V
+  plane, and Pillow RGB8 byte. The slice also fixes the reachable TX8x8
+  left-only-DC availability bug exposed by this witness. It closes only this
+  right-hand mode-0/R8x16 split class; broader filter-intra modes, topologies,
+  transforms, and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -1907,7 +1917,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 262 AVIF decode/inspect/verify rows exist: 255 are
+**Current exact state:** 264 AVIF decode/inspect/verify rows exist: 257 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
@@ -1954,7 +1964,7 @@ RGB8 output. The fixture SHA-256 is
 RGB reference SHA-256 is
 `968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4`.
 
-The newest bounded following-leaf split proof is
+The previous bounded following-leaf split proof is
 `coverage_r32x32_following_filter_intra_split_mode0_01.avif`: it is a 32x32
 8-bit 4:2:0 horizontal split whose following Horizontal32x16 leaf selects
 filter-intra mode 0 and a TX16x16 luma split. Its pinned dav1d trace has
@@ -1965,6 +1975,24 @@ encoded-item SHA-256 is
 `4950daa82b44d07c98f9bd5a48547f060c9e44b40ab625273955e2906d09f608`, and the
 RGB reference SHA-256 is
 `ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16`.
+
+The newest bounded following-leaf split proof is
+`coverage_r16x32_following_filter_intra_split_mode0_01.avif`: it is a 32x32
+8-bit 4:2:0 vertical split whose right-hand Vertical16x32 leaf selects
+filter-intra mode 0, two TX16x16 luma children, and one R8x16 U/V transform
+each. Its pinned dav1d trace has partition range `35904` and 3,064 entropy
+operations; safe Rust matches exact partition and entropy records,
+reconstructed Y/U/V planes, and Pillow RGB8 output. The fixture SHA-256 is
+`f903b64aa74c2d7d4132a43061af1e10ace4cbf1d9cc883043e223cc5de7ba54`, the
+encoded-item SHA-256 is
+`5e9186a2eb4e53d5dc0dcf3f42aa038f8c3ea83795400a37c0d833dd08f503bf`, and the
+RGB reference SHA-256 is
+`cac42b39973f40158ad8fec42946726538adddb9a0d113ed0a16b054a9189272`.
+The witness also exposed and fixes the general TX8x8 split helper's incorrect
+averaging of synthetic unavailable edges; ordinary DC now receives explicit
+external top/left availability while internal child edges remain available.
+The bounded search found no exact mode-4, mode-1, or mode-2 witness in its
+100-candidate corpus; those are search non-hits, not claims of unreachability.
 
 The newest bounded following-leaf split proof is
 `coverage_r32x32_following_filter_intra_split_mode0_01.avif`: it is a 32x32
