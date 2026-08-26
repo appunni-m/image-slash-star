@@ -175,6 +175,23 @@ Pillow RGB SHA-256 is
 This is bounded origin Vertical8x16 evidence, not general filter-intra
 support.
 
+The fixture `coverage_vertical8x16_filter_intra_mode1_01.avif`
+(`7c04bf5be19e0e1acf757dbdda04b3fd48419a2df1dcf7a12871cdefbce99917`) is an
+8x16 8-bit 4:2:0 origin `Vertical8x16` witness. It selects
+`FILTER_PRED[13/1]`, an unsplit TX8x16 luma transform, and TX4x8 U/V
+transforms. The pinned trace has partition range `42232` and 559 entropy
+operations; the safe-Rust reconstruction contract matches the exact Y/U/V
+planes and Pillow RGB8 output. Its encoded-item SHA-256 is
+`2ce5e66bfed511611e28f06c13f3014e6863e026b9e22ea6fd2c2145e36adbde`, and its
+Pillow RGB SHA-256 is
+`6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe`.
+The reconstructed Y/U/V plane SHA-256 values are
+`d5f1f32b7f3bc6d635a7a9bd89b9efa59670ffb723b6f5ff8f7d65a0eca940c9`,
+`f3238ddee04bccf67e555675f978da2a2cd114f0eac6cf751f355763e84dde85`, and
+`ce452bca9cac19f45e3e2257f2ae531197097512d1bd6f76cb914c7eb34f9615`.
+This is bounded origin Vertical8x16 mode-1 evidence, not general filter-intra
+support.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated

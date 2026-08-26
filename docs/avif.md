@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 266 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 267 AVIF decode rows and 32 encode
 rows:
 
-- 259 decode rows are active: portable still reconstruction and structural
+- 260 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -110,6 +110,23 @@ The safe-Rust fix uses the origin missing-edge values top=127, left=129,
 top-left=128, adds the TX4x8 chroma CDF tables, corrects the rectangular
 4:2:0 skip context and EOB scratch index, and closes only this bounded origin
 class; broader filter-intra modes, transforms, and AVF-STILL-001 remain open.
+
+The latest origin witness is `coverage_vertical8x16_filter_intra_mode1_01.avif`,
+an 8x16 8-bit 4:2:0 `Vertical8x16` leaf with `FILTER_PRED[13/1]`, an unsplit
+TX8x16 luma transform, and TX4x8 U/V transforms. Its pinned trace has
+partition range `42232` and 559 entropy operations; safe Rust matches the
+exact entropy records, Y/U/V planes, and Pillow RGB8 bytes. Its fixture,
+encoded-item, and Pillow RGB SHA-256 values are
+`7c04bf5be19e0e1acf757dbdda04b3fd48419a2df1dcf7a12871cdefbce99917`,
+`2ce5e66bfed511611e28f06c13f3014e6863e026b9e22ea6fd2c2145e36adbde`, and
+`6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe`.
+Its reconstructed luma/chroma plane SHA-256 values are
+`d5f1f32b7f3bc6d635a7a9bd89b9efa59670ffb723b6f5ff8f7d65a0eca940c9`,
+`f3238ddee04bccf67e555675f978da2a2cd114f0eac6cf751f355763e84dde85`, and
+`ce452bca9cac19f45e3e2257f2ae531197097512d1bd6f76cb914c7eb34f9615`.
+The existing generic safe-Rust prediction path already covered this mode, so
+no production decoder change was required; this closes only the origin
+Vertical8x16/mode-1/unsplit-TX8x16/TX4x8-chroma class.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
