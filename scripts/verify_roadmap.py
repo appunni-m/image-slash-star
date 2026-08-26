@@ -296,11 +296,11 @@ def verify() -> str:
         fail("roadmap.json coverage-origin inventory disagrees with its manifest")
     coverage_pattern = (
         rf"{coverage['line']['covered']:,}/{coverage['line']['total']:,} lines\s+"
-        rf"\({coverage['line']['percent']:.4f}%\), "
+        rf"\({coverage['line']['percent']:.4f}%\),\s+"
         rf"{coverage['branch']['covered']:,}/{coverage['branch']['total']:,} branches\s+"
-        rf"\({coverage['branch']['percent']:.4f}%\), "
+        rf"\({coverage['branch']['percent']:.4f}%\),\s+"
         rf"{coverage['function']['covered']:,}/{coverage['function']['total']:,} functions\s+"
-        rf"\({coverage['function']['percent']:.4f}%\), and "
+        rf"\({coverage['function']['percent']:.4f}%\),\s+and\s+"
         rf"{coverage['region']['covered']:,}/{coverage['region']['total']:,} regions\s+"
         rf"\({coverage['region']['percent']:.4f}%\)"
     )
