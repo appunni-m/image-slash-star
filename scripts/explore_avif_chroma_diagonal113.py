@@ -6,8 +6,8 @@ hundred deterministic 16x8 RGB candidates for the selected target, encodes
 each twice through the pinned Pillow/libavif/libaom oracle, and classifies an
 independently instrumented scalar dav1d trace. Generated files are temporary
 unless ``--retain-dir`` is supplied; no repository Rust code is invoked. The
-historical ``diagonal113`` target remains the default; ``luma_diagonal_down_right``
-searches a right-hand luma mode-4/135-degree witness.
+historical ``diagonal113`` target remains the default; the luma targets search
+bounded right-hand Square8 predictor witnesses.
 """
 
 from __future__ import annotations
@@ -48,6 +48,18 @@ LUMA_DIAGONAL_FAMILY_NAMES = (
     "F09_diagonal_down_right_dual_ac",
     "F10_diagonal_down_right_mixed",
 )
+LUMA_SMOOTH_FAMILY_NAMES = (
+    "F01_smooth_bilinear_ramp",
+    "F02_smooth_bilinear_offset",
+    "F03_smooth_bilinear_texture",
+    "F04_smooth_vertical_ramp",
+    "F05_smooth_vertical_offset",
+    "F06_smooth_vertical_texture",
+    "F07_smooth_horizontal_wave",
+    "F08_smooth_horizontal_texture",
+    "F09_smooth_horizontal_edges",
+    "F10_smooth_mixed",
+)
 ADVANCED = {
     "min-partition-size": "8",
     "max-partition-size": "8",
@@ -63,6 +75,12 @@ ADVANCED = {
     "loopfilter-control": "0",
     "aq-mode": "0",
     "deltaq-mode": "0",
+}
+LUMA_SMOOTH_ADVANCED = {
+    **ADVANCED,
+    "use-intra-dct-only": "1",
+    "enable-smooth-intra": "1",
+    "enable-directional-intra": "0",
 }
 BLOCK_PATTERN = re.compile(
     r"^poc=(?P<poc>-?\d+),y=(?P<y>-?\d+),x=(?P<x>-?\d+),"
@@ -216,6 +234,73 @@ def luma_diagonal_pattern(family: int, index: int) -> bytes:
     return bytes(pixels)
 
 
+def luma_smooth_pattern(family: int, index: int) -> bytes:
+    """Generate deterministic low-chroma luma-smooth candidates.
+
+    The first, fourth, and seventh families retain the three oracle probes
+    that selected right-leaf modes 9, 10, and 11 respectively. The remaining
+    families add bounded offsets and texture so the campaign tests reachability
+    rather than promoting one repeated input three times.
+    """
+
+    seed = 5000 + 10 * family + index
+    offset = index % 5
+    pixels = bytearray()
+    for y in range(SIZE[1]):
+        for x in range(SIZE[0]):
+            if family == 0:
+                # The index-zero case is the known right-mode-9 bilinear ramp.
+                luma = (
+                    32
+                    + (191 * x // 15)
+                    + ((191 * y // 7) // 2)
+                    + offset
+                )
+            elif family == 1:
+                luma = (
+                    32
+                    + (191 * x // 15)
+                    + ((191 * y // 7) // 2)
+                    + 2 * ((x + 2 * y + seed) % 5 - 2)
+                )
+            elif family == 2:
+                luma = (
+                    36
+                    + (187 * x // 15)
+                    + ((187 * y // 7) // 2)
+                    + ((x // 2 + y + index) % 3 - 1)
+                )
+            elif family == 3:
+                # The index-zero case is the known right-mode-10 vertical ramp.
+                luma = (191 * x // 15) + (191 * y // 7) + offset
+            elif family == 4:
+                luma = (
+                    8
+                    + (183 * x // 15)
+                    + (183 * y // 7)
+                    + 2 * ((x + seed) % 5 - 2)
+                )
+            elif family == 5:
+                luma = (
+                    (191 * x // 15)
+                    + (191 * y // 7)
+                    + ((x + 3 * y + index) % 7 - 3)
+                )
+            elif family == 6:
+                # The index-zero case is the known right-mode-11 horizontal
+                # texture, which naturally selects a split TX4x4 payload.
+                luma = 32 + ((11 * x + 2 * y + index) % 160)
+            elif family == 7:
+                luma = 40 + ((11 * x + 2 * y + seed) % 144)
+            elif family == 8:
+                luma = 32 + ((7 * x + 5 * y + seed) % 160)
+            else:
+                luma = 32 + ((11 * x + 2 * y + index) % 160)
+                luma += ((x + y + seed) % 5) - 2
+            pixels.extend(yuv_to_rgb(clamp(luma), 128, 128))
+    return bytes(pixels)
+
+
 def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
     """Return ten deterministic families with ten cases each."""
 
@@ -232,6 +317,26 @@ def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
                         "candidate_index": index,
                         "seed": seed,
                         "pixels": luma_diagonal_pattern(family, index),
+                        "quality": 76,
+                        "speed": 0,
+                    }
+                )
+        if len(result) != 100:
+            raise AssertionError(f"candidate corpus must contain 100 cases, found {len(result)}")
+        return result
+
+    if target == "luma_smooth":
+        result = []
+        for family, family_name in enumerate(LUMA_SMOOTH_FAMILY_NAMES):
+            for index in range(10):
+                result.append(
+                    {
+                        "id": f"LS-F{family + 1:02d}-N{index:02d}",
+                        "family": family_name,
+                        "family_index": family,
+                        "candidate_index": index,
+                        "seed": 5000 + 10 * family + index,
+                        "pixels": luma_smooth_pattern(family, index),
                         "quality": 76,
                         "speed": 0,
                     }
@@ -281,7 +386,20 @@ def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
     return result
 
 
-def encode(pixels: bytes, quality: int, speed: int) -> bytes:
+def advanced_for_target(target: str) -> dict[str, str]:
+    """Return the immutable pinned encoder controls for a campaign target."""
+
+    if target == "luma_smooth":
+        return LUMA_SMOOTH_ADVANCED
+    return ADVANCED
+
+
+def encode(
+    pixels: bytes,
+    quality: int,
+    speed: int,
+    target: str = "diagonal113",
+) -> bytes:
     """Encode one candidate with the pinned Pillow AVIF oracle."""
 
     output = BytesIO()
@@ -293,7 +411,7 @@ def encode(pixels: bytes, quality: int, speed: int) -> bytes:
         max_threads=1,
         subsampling=SUBSAMPLING,
         autotiling=False,
-        advanced=ADVANCED,
+        advanced=advanced_for_target(target),
     )
     return output.getvalue()
 
@@ -498,6 +616,195 @@ def classify_luma_diagonal_down_right(
     }
 
 
+def classify_luma_smooth(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+) -> dict[str, object]:
+    """Apply exact predicates for the three right-leaf smooth modes."""
+
+    parsed = [parse_group(group) for group in groups]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angle_symbols = [
+        symbol for group in parsed for symbol in group["y_angle_symbols"]
+    ]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angle_symbols = [
+        int(match["symbol"])
+        for group in groups
+        for line in group
+        if (match := UVANGLE_PATTERN.match(line)) is not None
+    ]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    expected_shape = [
+        (0, 0, 0, 3, 0, 3),
+        (0, 0, 0, 4, 0, 0),
+        (0, 2, 0, 4, 0, 0),
+    ]
+    y_plane = yuv[: SIZE[0] * SIZE[1]]
+    left_edge = [
+        y_plane[row * SIZE[0] + 7]
+        for row in range(SIZE[1])
+    ] if len(y_plane) == SIZE[0] * SIZE[1] else []
+    luma_groups = [group["luma_payloads"] for group in parsed]
+    chroma_groups = [group["chroma_payloads"] for group in parsed]
+    no_palette_or_filter = not any(
+        line.startswith(
+            (
+                "Post-filterintramode[",
+                "Post-y_pal[",
+                "Post-pal[",
+                "Post-y-pal-indices",
+                "y-pal-pred",
+                "Post-uv_pal[",
+                "Post-uv-pal-indices",
+                "uv-pal-pred",
+            )
+        )
+        for group in groups
+        for line in group
+    )
+
+    def is_tx8x8(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 1
+            and payloads[0]["tx"] == 1
+            and payloads[0]["txtp"] == 0
+            and payloads[0]["eob"] >= 1
+        )
+
+    def is_tx4x4_split(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 4
+            and all(
+                payload["tx"] == 0
+                and payload["txtp"] == 0
+                and payload["eob"] >= 1
+                for payload in payloads
+            )
+        )
+
+    def is_skipped_chroma(payloads: list[dict[str, int]], cbx4: int) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 0
+                and payload["txtp"] == 0
+                and payload["eob"] == -1
+                and payload.get("cbx4") == cbx4
+                for payload in payloads
+            )
+        )
+
+    right_mode = y_modes[1] if len(y_modes) == 2 and y_modes[0] == 0 else None
+    common_predicates = {
+        "exact_visible_split_blocks": shape == expected_shape,
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_square8_groups": len(groups) == 2,
+        "one_origin_and_one_right_luma_mode": (
+            len(y_modes) == 2 and y_modes[0] == 0
+        ),
+        "right_luma_mode_is_smooth": right_mode in (9, 10, 11),
+        "no_luma_or_chroma_angle_symbols": (
+            y_angle_symbols == [] and uv_angle_symbols == []
+        ),
+        "uv_modes_dc_then_dc": uv_modes == [0, 0],
+        "no_palette_or_filter_intra": no_palette_or_filter,
+        "origin_luma_is_unsplit_tx8x8": (
+            len(luma_groups) == 2 and is_tx8x8(luma_groups[0])
+        ),
+        "left_chroma_is_dc_skipped": (
+            len(chroma_groups) == 2 and is_skipped_chroma(chroma_groups[0], 0)
+        ),
+        "right_chroma_is_dc_skipped": (
+            len(chroma_groups) == 2 and is_skipped_chroma(chroma_groups[1], 1)
+        ),
+        "left_edge_varies": len(left_edge) == SIZE[1] and len(set(left_edge)) > 1,
+    }
+    mode_predicates = {
+        "9": (
+            right_mode == 9
+            and len(luma_groups) == 2
+            and is_tx8x8(luma_groups[1])
+        ),
+        "10": (
+            right_mode == 10
+            and len(luma_groups) == 2
+            and is_tx8x8(luma_groups[1])
+        ),
+        "11": (
+            right_mode == 11
+            and len(luma_groups) == 2
+            and is_tx4x4_split(luma_groups[1])
+        ),
+    }
+    predicates = {
+        **common_predicates,
+        "right_mode_9_has_unsplit_tx8x8": mode_predicates["9"],
+        "right_mode_10_has_unsplit_tx8x8": mode_predicates["10"],
+        "right_mode_11_has_split_tx4x4": mode_predicates["11"],
+    }
+    rejection_reasons = [
+        name for name, passed in common_predicates.items() if not passed
+    ]
+    if right_mode in (9, 10, 11):
+        mode_name = {
+            9: "right_mode_9_has_unsplit_tx8x8",
+            10: "right_mode_10_has_unsplit_tx8x8",
+            11: "right_mode_11_has_split_tx4x4",
+        }[right_mode]
+        if not mode_predicates[str(right_mode)]:
+            rejection_reasons.append(mode_name)
+    else:
+        rejection_reasons.append("right_mode_is_one_of_9_10_11")
+    qualifies_mode = (
+        right_mode
+        if right_mode in (9, 10, 11)
+        and all(common_predicates.values())
+        and mode_predicates[str(right_mode)]
+        else None
+    )
+    return {
+        "target": "luma_smooth",
+        "root_partition": blocks[0] if blocks else None,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "right_mode": right_mode,
+        "uv_modes": uv_modes,
+        "y_angle_symbols": y_angle_symbols,
+        "uv_angle_symbols": uv_angle_symbols,
+        "left_edge": left_edge,
+        "left_luma_payloads": luma_groups[0] if luma_groups else [],
+        "right_luma_payloads": luma_groups[1] if len(luma_groups) == 2 else [],
+        "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
+        "right_chroma_payloads": chroma_groups[1] if len(chroma_groups) == 2 else [],
+        "mode_predicates": mode_predicates,
+        "qualifies_mode": qualifies_mode,
+        "predicates": predicates,
+        "rejection_reasons": rejection_reasons,
+        "qualifies": qualifies_mode is not None,
+    }
+
+
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -511,6 +818,11 @@ def classify(
         if portable_color is None:
             raise ValueError("portable color metadata is required for the luma target")
         return classify_luma_diagonal_down_right(blocks, groups, yuv, portable_color)
+
+    if target == "luma_smooth":
+        if portable_color is None:
+            raise ValueError("portable color metadata is required for the luma target")
+        return classify_luma_smooth(blocks, groups, yuv, portable_color)
 
     if target != "diagonal113":
         raise ValueError(f"unknown Square8 campaign target: {target}")
@@ -575,8 +887,8 @@ def decode_candidate(
         raise TypeError("candidate pixels must be bytes")
     quality = int(candidate["quality"])
     speed = int(candidate["speed"])
-    encoded = encode(pixels, quality, speed)
-    encoded_second = encode(pixels, quality, speed)
+    encoded = encode(pixels, quality, speed, target)
+    encoded_second = encode(pixels, quality, speed, target)
     if encoded != encoded_second:
         raise RuntimeError(f"nondeterministic encoding for {candidate['id']}")
     path = work / f"{candidate['id']}.avif"
@@ -677,7 +989,7 @@ def main() -> None:
     parser.add_argument("--retain-dir", type=Path)
     parser.add_argument(
         "--target",
-        choices=("diagonal113", "luma_diagonal_down_right"),
+        choices=("diagonal113", "luma_diagonal_down_right", "luma_smooth"),
         default="diagonal113",
     )
     args = parser.parse_args()
@@ -718,7 +1030,32 @@ def main() -> None:
             )
             for candidate in candidates(args.target)
         ]
-    if args.target == "luma_diagonal_down_right":
+    if args.target == "luma_smooth":
+        target_description = (
+            "visible 16x8 right-hand Square8 leaf with luma mode 9 "
+            "(Smooth), 10 (SmoothVertical), or 11 (SmoothHorizontal), "
+            "DC chroma, and the observed mode-specific TX8x8/TX4x4 residual shape"
+        )
+        families = list(LUMA_SMOOTH_FAMILY_NAMES)
+        rejection_reasons = (
+            "exact_visible_split_blocks",
+            "eight_bit_420_frame",
+            "two_visible_square8_groups",
+            "one_origin_and_one_right_luma_mode",
+            "right_luma_mode_is_smooth",
+            "no_luma_or_chroma_angle_symbols",
+            "uv_modes_dc_then_dc",
+            "no_palette_or_filter_intra",
+            "origin_luma_is_unsplit_tx8x8",
+            "left_chroma_is_dc_skipped",
+            "right_chroma_is_dc_skipped",
+            "left_edge_varies",
+            "right_mode_9_has_unsplit_tx8x8",
+            "right_mode_10_has_unsplit_tx8x8",
+            "right_mode_11_has_split_tx4x4",
+            "right_mode_is_one_of_9_10_11",
+        )
+    elif args.target == "luma_diagonal_down_right":
         target_description = (
             "visible 16x8 right-hand Square8 leaf with luma mode 4 "
             "(DiagonalDownRight), angle symbol 3 (135 degrees), DC chroma, "
@@ -781,7 +1118,7 @@ def main() -> None:
             "subsampling": SUBSAMPLING,
             "max_threads": 1,
             "autotiling": False,
-            "advanced": ADVANCED,
+            "advanced": advanced_for_target(args.target),
         },
         "search": {
             "candidate_count": len(reports),
@@ -795,7 +1132,40 @@ def main() -> None:
                 reason: sum(reason in report["rejection_reasons"] for report in reports)
                 for reason in rejection_reasons
             },
+            **(
+                {
+                    "qualified_by_mode": {
+                        str(mode): sum(
+                            report.get("qualifies_mode") == mode
+                            for report in reports
+                        )
+                        for mode in (9, 10, 11)
+                    }
+                }
+                if args.target == "luma_smooth"
+                else {}
+            ),
         },
+        **(
+            {
+                "qualified_candidates": [
+                    report["id"] for report in reports if report["qualifies"]
+                ],
+                "promoted_candidates": {
+                    str(mode): next(
+                        (
+                            report["id"]
+                            for report in reports
+                            if report.get("qualifies_mode") == mode
+                        ),
+                        None,
+                    )
+                    for mode in (9, 10, 11)
+                },
+            }
+            if args.target == "luma_smooth"
+            else {}
+        ),
         "cases": reports,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

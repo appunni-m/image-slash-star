@@ -19717,6 +19717,42 @@ fn reconstruct_lossy_luma_8x8_split_smooth_horizontal(
     ReconstructedPlane { samples }
 }
 
+fn reconstruct_lossy_luma_8x8_split_smooth_horizontal_no_top(
+    left: [u16; 8],
+    split: LossyLuma4x4Split,
+) -> ReconstructedPlane {
+    let mut samples = vec![0_u16; 64];
+    for transform_index in 0_usize..4 {
+        let transform_x = (transform_index % 2).saturating_mul(4);
+        let transform_y = (transform_index / 2).saturating_mul(4);
+        let left_edge = std::array::from_fn(|row| {
+            if transform_x == 0 {
+                left[transform_y + row]
+            } else {
+                samples[(transform_y + row).saturating_mul(8) + transform_x - 1]
+            }
+        });
+        let top_edge: [u16; 4] = if transform_y == 0 {
+            [left_edge[0]; 4]
+        } else {
+            std::array::from_fn(|column| {
+                samples[(transform_y - 1).saturating_mul(8) + transform_x + column]
+            })
+        };
+        let block = reconstruct_lossy_4x4_smooth_horizontal(
+            left_edge,
+            top_edge[3],
+            split.coefficients[transform_index],
+            split.transforms[transform_index],
+        );
+        for (row, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
+            let output_start = (transform_y + row).saturating_mul(8) + transform_x;
+            samples[output_start..output_start.saturating_add(4)].copy_from_slice(source);
+        }
+    }
+    ReconstructedPlane { samples }
+}
+
 fn reconstruct_lossy_luma_8x8_split_smooth_vertical(
     top: [u16; 8],
     left: Option<[u16; 8]>,
@@ -27762,7 +27798,7 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
                 reconstruct_lossy_luma_8x8_split_smooth_horizontal(luma_edge, split)
             }
             (SplitOrientation::Horizontal, None, LumaPredictor::SmoothHorizontal) => {
-                reconstruct_lossy_luma_8x8_split_smooth_horizontal(luma_edge, split)
+                reconstruct_lossy_luma_8x8_split_smooth_horizontal_no_top(luma_edge, split)
             }
             (SplitOrientation::Horizontal, None, LumaPredictor::Horizontal) => {
                 let angle = luma_angle.ok_or(PortableUnavailable)?;
