@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-27
 
-- Current claim-ledger refresh base revision: `3272b3ef49a87c2947c08b46596b442195c6a8db`
+- Current claim-ledger refresh base revision: `d85561351dd1e779aff5eedbf5e562eebb7201e9`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 282 rows total, 275 active, 7 explicit planned
+- AVIF decode/inspect/verify: 283 rows total, 276 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,506 rows total, 1102 active decode rows, 365 active encode
+- Whole matrix: 1,507 rows total, 1103 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -377,6 +377,19 @@ the corresponding status is recorded in `roadmap.json`:
   production fix uses the preceding luma top-right edge for this proven
   unsplit Diagonal45 path; Diagonal67 remains separate planned work. This
   closes only this following-leaf Diagonal45 class, not general AV1/AVIF.
+- The newest bounded chroma proof is
+  `coverage_square16_chroma_smooth_horizontal_01.avif`, a deterministic
+  32x16 8-bit 4:2:0 clipped root split with origin/following Square16 leaves
+  at x=0/x=4. The following leaf selects chroma SmoothHorizontal mode 11
+  with DCT-ADST TX8x8 U/V transforms and non-empty AC; both luma leaves use
+  unsplit TX16x16 DCT_DCT transforms. Its pinned dav1d trace has 414 entropy
+  operations and partition ranges `38416/36560/62182`; safe Rust matches the
+  exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes.
+  The 100-case/10-family input-only campaign qualified 9 candidates and
+  promoted `SF16-F06-N01`, with deterministic double-encode/double-trace/
+  double-YUV/double-RGB checks. No production decoder edit was required for
+  this already-correct safe-Rust path; this closes only the bounded following-
+  Square16/chroma-SmoothHorizontal/DCT-ADST class.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 
@@ -407,19 +420,21 @@ snapshot `ac1ea94a-3b36-48ed-8825-3db426f07aad`. Its result is retained as the
 explicit baseline for the current slice.
 
 The latest managed Coverage MCP run is
-`2d5c72ca-2555-4df0-9df2-701b1e02eb3a`, bound to implementation commit
-`3272b3ef49a87c2947c08b46596b442195c6a8db`, passed in 151,962 ms, and ingested
-snapshot `83ab4ee9-193f-4393-93ba-15c53962c6cb`. Its current all-feature LLVM
-snapshot records 99,040/109,168 lines (90.7226%), 12,574/13,934 branches
-(90.2397%), 5,050/5,747 functions (87.8719%), and 148,214/165,163 regions
-(89.7380%). Explicit incremental review against baseline snapshot
-`ac1ea94a-3b36-48ed-8825-3db426f07aad` reports zero regressions. The selected-
-subset additive review reports 2,179 newly covered normalized line identities,
-2 branches, 2 functions, and 57 regions; its merge is marked non-exact and
-3,497 baseline identities are not observed in the selected run, not treated as
-regressions. Named test attribution is unavailable. The following-leaf luma
-Diagonal45 witness is exact through safe Rust, but the four-metric 100% gate
-remains open.
+`8740ab80-5d32-4bcf-8026-e5df72346f0e`, whose run record is bound to exact
+implementation checkout `d85561351dd1e779aff5eedbf5e562eebb7201e9`. It passed
+in 151,052 ms and ingested snapshot `02ea7870-faee-4687-94e4-4af30f443dbb`.
+Its current all-feature LLVM snapshot records 99,047/109,168 lines (90.7290%),
+12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and
+148,219/165,163 regions (89.7410%). The compact snapshot projection retains
+commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance
+caveat is retained rather than silently relabeled. Explicit incremental review
+against baseline snapshot `83ab4ee9-193f-4393-93ba-15c53962c6cb` reports zero
+regressions; its complete-snapshot diff is +7/+0 lines, +0/+0 branches,
++0/+0 functions, and +5/+0 regions (covered/total), while the additive review
+reports 4 newly covered line identities and 5 newly covered regions. Named
+test attribution is unavailable. The following-Square16 chroma
+SmoothHorizontal witness is exact through safe Rust, but the four-metric 100%
+gate remains open.
 
 The strict all-target/all-feature Clippy gate passes on the installed nightly
 rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targets
@@ -489,7 +504,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 10,128 lines, 1,360 branches, 697 functions, and 16,949 regions
+- LLVM coverage: 10,121 lines, 1,360 branches, 697 functions, and 16,944 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -993,7 +1008,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,506 total | 1,109 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,102 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,507 total | 1,110 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,103 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -1023,30 +1038,31 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The latest managed Coverage MCP snapshot below was ingested from run
-`2d5c72ca-2555-4df0-9df2-701b1e02eb3a` against code-bearing commit
-`3272b3ef49a87c2947c08b46596b442195c6a8db`, with snapshot
-`83ab4ee9-193f-4393-93ba-15c53962c6cb`. The run and stored snapshot metadata
-are exact for that implementation commit; the immediately previous snapshot
-`ac1ea94a-3b36-48ed-8825-3db426f07aad` is retained above for the explicit
+`8740ab80-5d32-4bcf-8026-e5df72346f0e`, whose run record is bound to exact
+code-bearing commit `d85561351dd1e779aff5eedbf5e562eebb7201e9`, with snapshot
+`02ea7870-faee-4687-94e4-4af30f443dbb`. The compact snapshot projection
+retains commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this
+provenance caveat is explicit. The immediately previous snapshot
+`83ab4ee9-193f-4393-93ba-15c53962c6cb` is retained above for the explicit
 comparison. The remaining 100% gate is still open.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 99,040 | 109,168 | 90.7226% | 10,128 | 9.2774% |
+| Lines (managed Coverage MCP) | 99,047 | 109,168 | 90.7290% | 10,121 | 9.2710% |
 | Branches (managed Coverage MCP) | 12,574 | 13,934 | 90.2397% | 1,360 | 9.7603% |
 | Functions (managed Coverage MCP) | 5,050 | 5,747 | 87.8719% | 697 | 12.1281% |
-| Regions (managed Coverage MCP) | 148,214 | 165,163 | 89.7380% | 16,949 | 10.2620% |
+| Regions (managed Coverage MCP) | 148,219 | 165,163 | 89.7410% | 16,944 | 10.2590% |
 
 The compatible comparison snapshot is
-`ac1ea94a-3b36-48ed-8825-3db426f07aad`. Direct current snapshot counters report
-+35/+7 lines, +2/+0 branches, +2/+0 functions, and +57/+10 regions
+`83ab4ee9-193f-4393-93ba-15c53962c6cb`. Direct current snapshot counters report
++7/+0 lines, +0/+0 branches, +0/+0 functions, and +5/+0 regions
 (covered/total deltas). The explicit incremental review reports zero
-regressions; its selected-subset additive merge is marked non-exact and 2,179
-normalized line identities, 2 branches, 2 functions, and 57 regions are newly
-covered, while 3,497 baseline identities outside the selected run are not
-observed, not regressions. Named test attribution is unavailable, so no
-named-test claim is made; the aggregate measurement remains supported. The
-following-leaf luma Diagonal45 AVIF witness is a real safe-Rust AV1
+regressions; its complete-snapshot diff is supported, and its additive review
+reports 4 newly covered line identities and 5 newly covered regions. Named
+test attribution is unavailable.
+The snapshot is a complete replacement measurement, so its direct diff is
+interpretable without the selected-subset caveat used by earlier runs. The
+new Square16 chroma SmoothHorizontal fixture is a real safe-Rust AV1
 reconstruction class, not a coverage-only test.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
@@ -2213,11 +2229,22 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 281 AVIF decode/inspect/verify rows exist: 274 are
+**Current exact state:** 283 AVIF decode/inspect/verify rows exist: 276 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
 `tests/fixtures/coverage_matrix.json`.
+
+The newest bounded proof is
+`coverage_square16_chroma_smooth_horizontal_01.avif`: a 32x16 8-bit 4:2:0
+clipped root split with origin/following Square16 leaves at x=0/x=4. The
+following leaf selects chroma SmoothHorizontal mode 11 with DCT-ADST TX8x8
+U/V transforms and non-empty AC; both luma leaves use unsplit TX16x16
+DCT_DCT transforms. Its pinned dav1d trace has 414 entropy operations and
+partition ranges `38416/36560/62182`; safe Rust matches exact partition,
+entropy, Y/U/V planes, and Pillow RGB bytes. The 100-case input-only campaign
+qualified 9 candidates and promoted `SF16-F06-N01`. This closes only the
+bounded following-Square16/chroma-SmoothHorizontal/DCT-ADST class.
 
 The newest bounded proofs are `coverage_i444_rect_01.avif` and
 `coverage_i444_rect_02.avif`: both are 16x16 8-bit lossy 4:4:4 frames with a
