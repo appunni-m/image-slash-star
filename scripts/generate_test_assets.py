@@ -5793,6 +5793,53 @@ def gen_avif():
         speed=0,
     )
 
+    def luma_smooth_square8(family):
+        """Generate one of the promoted right-hand luma smooth witnesses."""
+
+        def pixel(x, y):
+            if family == 0:
+                luma = 32 + (191 * x // 15) + ((191 * y // 7) // 2)
+            elif family == 3:
+                luma = (191 * x // 15) + (191 * y // 7)
+            elif family == 6:
+                luma = 32 + ((11 * x + 2 * y) % 160)
+            else:
+                raise ValueError(f"unknown luma smooth family: {family}")
+            luma = clamp_channel(luma)
+            return (luma, luma, luma)
+
+        return image_from_pixels((16, 8), pixel)
+
+    smooth_luma_advanced = {
+        "min-partition-size": "8",
+        "max-partition-size": "8",
+        "use-intra-dct-only": "1",
+        "enable-filter-intra": "0",
+        "enable-intra-edge-filter": "0",
+        "enable-smooth-intra": "1",
+        "enable-paeth-intra": "0",
+        "enable-directional-intra": "0",
+        "enable-cfl-intra": "0",
+        "enable-cdef": "0",
+        "enable-restoration": "0",
+        "loopfilter-control": "0",
+        "aq-mode": "0",
+        "deltaq-mode": "0",
+    }
+    for name, family in (
+        ("coverage_square8_luma_smooth_01", 0),
+        ("coverage_square8_luma_smooth_vertical_01", 3),
+        ("coverage_square8_luma_smooth_horizontal_01", 6),
+    ):
+        write_campaign_image(
+            name,
+            luma_smooth_square8(family),
+            "4:2:0",
+            advanced=smooth_luma_advanced,
+            quality=76,
+            speed=0,
+        )
+
     def chroma_diagonal157_vertical8x16():
         """Generate the following Vertical8x16 Diagonal157 witness."""
 

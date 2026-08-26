@@ -16662,6 +16662,231 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_square8_luma_smooth_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma Smooth mode 9, DC chroma, and unsplit TX8x8 luma transform",
+          "asset": "coverage_square8_luma_smooth_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "6efe46905dc699d37beef0620e5b935b2114367c7254b03d0c9c1c2b57c8d4d0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_square8_luma_smooth_01_avif.bin",
+          "ref_bytes": 384,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "coverage_square8_luma_smooth_vertical_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma SmoothVertical mode 10, DC chroma, and unsplit TX8x8 luma transform",
+          "asset": "coverage_square8_luma_smooth_vertical_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "2875bcb27db302966ee2bf841db15fabcdec2250021597fe6bb00b205a6bd109",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9ff23d9ce13531af06b602347ba92e3e5797415b48d25ecdcf94f7301b8dfd91",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_square8_luma_smooth_vertical_01_avif.bin",
+          "ref_bytes": 384,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "coverage_square8_luma_smooth_horizontal_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma SmoothHorizontal mode 11, DC chroma, and split TX4x4 luma transforms",
+          "asset": "coverage_square8_luma_smooth_horizontal_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "621dbd34cae09e8246e47cdfe2a3d993ec8572f3f64ef6ff8e7f2ef49beca1a4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "db4447d10c5a73b65b8d7a5fba0331e9a457722c42171658c45c123101759e25",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_square8_luma_smooth_horizontal_01_avif.bin",
+          "ref_bytes": 384,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_vertical8x16_chroma_diagonal157_01",
           "type": "decode",
           "format": "avif",
@@ -118298,12 +118523,12 @@
     }
   },
   "summary": {
-    "total_rows": 1502,
-    "decode_rows": 1105,
+    "total_rows": 1505,
+    "decode_rows": 1108,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1104,
-    "decode_active": 1098,
+    "assets_available": 1107,
+    "decode_active": 1101,
     "decode_planned": 7,
     "encode_not_wired": 32
   }

@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 212);
+    assert_eq!(expected.cases.len(), 215);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5251,6 +5251,51 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 right-hand Square8 luma DiagonalDownRight witness partition topology"
+            );
+        } else if matches!(
+            case.fixture.as_str(),
+            "coverage_square8_luma_smooth_01.avif"
+                | "coverage_square8_luma_smooth_vertical_01.avif"
+                | "coverage_square8_luma_smooth_horizontal_01.avif"
+        ) {
+            let right_range = match case.fixture.as_str() {
+                "coverage_square8_luma_smooth_01.avif" => 47_430,
+                "coverage_square8_luma_smooth_vertical_01.avif" => 62_102,
+                "coverage_square8_luma_smooth_horizontal_01.avif" => 48_616,
+                _ => unreachable!("matched AV1 Square8 luma Smooth witness"),
+            };
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 37_392,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 43_662,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: right_range,
+                    },
+                ],
+                "AV1 right-hand Square8 luma Smooth witness partition topology"
             );
         } else {
             assert_eq!(
@@ -7077,6 +7122,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_square8_luma_diagonal_down_right_01.avif" => {
                 "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"
+            }
+            "coverage_square8_luma_smooth_01.avif" => {
+                "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530"
+            }
+            "coverage_square8_luma_smooth_horizontal_01.avif" => {
+                "db4447d10c5a73b65b8d7a5fba0331e9a457722c42171658c45c123101759e25"
+            }
+            "coverage_square8_luma_smooth_vertical_01.avif" => {
+                "9ff23d9ce13531af06b602347ba92e3e5797415b48d25ecdcf94f7301b8dfd91"
             }
             "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
                 "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"

@@ -55,6 +55,13 @@ CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
 LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES = frozenset(
     {"coverage_square8_luma_diagonal_down_right_01.avif"}
 )
+LUMA_SMOOTH_TARGET_FIXTURES = frozenset(
+    {
+        "coverage_square8_luma_smooth_01.avif",
+        "coverage_square8_luma_smooth_vertical_01.avif",
+        "coverage_square8_luma_smooth_horizontal_01.avif",
+    }
+)
 CHROMA_DIAGONAL157_TARGET_FIXTURES = frozenset(
     {"coverage_vertical8x16_chroma_diagonal157_01.avif"}
 )
@@ -999,6 +1006,21 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b",
         "size": [16, 8],
     },
+    "coverage_square8_luma_smooth_01.avif": {
+        "file_sha256": "6efe46905dc699d37beef0620e5b935b2114367c7254b03d0c9c1c2b57c8d4d0",
+        "rgb_sha256": "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530",
+        "size": [16, 8],
+    },
+    "coverage_square8_luma_smooth_horizontal_01.avif": {
+        "file_sha256": "621dbd34cae09e8246e47cdfe2a3d993ec8572f3f64ef6ff8e7f2ef49beca1a4",
+        "rgb_sha256": "db4447d10c5a73b65b8d7a5fba0331e9a457722c42171658c45c123101759e25",
+        "size": [16, 8],
+    },
+    "coverage_square8_luma_smooth_vertical_01.avif": {
+        "file_sha256": "2875bcb27db302966ee2bf841db15fabcdec2250021597fe6bb00b205a6bd109",
+        "rgb_sha256": "9ff23d9ce13531af06b602347ba92e3e5797415b48d25ecdcf94f7301b8dfd91",
+        "size": [16, 8],
+    },
     "coverage_vertical8x16_chroma_diagonal157_01.avif": {
         "file_sha256": "13a6903043df42aec082de0e3afeb82e30932749e1542160a7e039e5fd53b744",
         "rgb_sha256": "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8",
@@ -1776,6 +1798,7 @@ def generate(
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
+                or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
@@ -1791,6 +1814,7 @@ def generate(
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
+                or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
