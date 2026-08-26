@@ -54,16 +54,16 @@
     },
     "coverage": {
       "line": {
-        "covered": 98315,
-        "total": 108792,
-        "percent": 90.3697,
-        "uncovered": 10477
+        "covered": 98331,
+        "total": 108795,
+        "percent": 90.3819,
+        "uncovered": 10464
       },
       "branch": {
-        "covered": 12456,
-        "total": 13826,
-        "percent": 90.0911,
-        "uncovered": 1370
+        "covered": 12462,
+        "total": 13824,
+        "percent": 90.1476,
+        "uncovered": 1362
       },
       "function": {
         "covered": 5009,
@@ -72,37 +72,37 @@
         "uncovered": 719
       },
       "region": {
-        "covered": 147285,
-        "total": 164675,
-        "percent": 89.4398,
-        "uncovered": 17390
+        "covered": 147310,
+        "total": 164674,
+        "percent": 89.4555,
+        "uncovered": 17364
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-26",
         "managed_coverage_mcp": true,
-        "commit_sha": "1eebc7425f3654dc097920857aab92db9296677e",
-        "run_id": "db5b9f65-f576-470e-b30e-ef47dcdb08bd",
-        "snapshot_id": "d16bfa57-1143-4246-8189-f71d4ed1e94e",
+        "commit_sha": "60b2d1d3eb01f27251062c796394ca670db913e6",
+        "run_id": "420d1073-7b99-485f-b031-b25576a3d433",
+        "snapshot_id": "f74b8668-177a-44dc-af82-2cde5bca99fd",
         "snapshot_metadata_commit_sha": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 145705,
+        "duration_ms": 146621,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run db5b9f65-f576-470e-b30e-ef47dcdb08bd passed the all-feature LLVM workload in 145,705 ms against the exact implementation checkout 1eebc7425f3654dc097920857aab92db9296677e and ingested snapshot d16bfa57-1143-4246-8189-f71d4ed1e94e. The snapshot records 90.3697% lines, 90.0911% branches, 87.4476% functions, and 89.4398% regions; the four-metric release target remains open until all reach 100%. The run record is exact for 1eebc742; Coverage MCP's stored snapshot metadata still reports project commit cb82fc38a583ae300e144ae0a835373b6667ee9a, which is retained as a provenance caveat rather than treated as the measured implementation revision. The bounded review against baseline snapshot 56a94e06-3b30-49e2-b8cb-ed8ec1ea9725 reports +92 covered/+120 total lines, +8 covered/+12 total branches, +3 covered/+8 total functions, and +107 covered/+155 total regions. Because the stored metadata for both snapshots reports cb82fc38, the review cannot attribute source-line changes even though the run record is exact for 1eebc742; aggregate coverage is measured and the attribution limitation is retained. The new coverage_r16x32_following_filter_intra_split_mode3_01.avif fixture is a real 32x32 8-bit 4:2:0 right-hand following Vertical16x32 filter-intra mode-3 leaf with two TX16x16 luma children, one R8x16 U/V transform each, a pinned 4,444-operation dav1d trace, and exact safe-Rust Y/U/V and Pillow RGB8 parity. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
+        "note": "Managed Coverage MCP run 420d1073-7b99-485f-b031-b25576a3d433 passed the all-feature LLVM workload in 146,621 ms against exact implementation checkout 60b2d1d3eb01f27251062c796394ca670db913e6 and ingested snapshot f74b8668-177a-44dc-af82-2cde5bca99fd. The snapshot records 90.3819% lines, 90.1476% branches, 87.4476% functions, and 89.4555% regions; the four-metric release target remains open until all reach 100%. The run record is exact for 60b2d1d3; Coverage MCP's stored snapshot metadata still reports project commit cb82fc38a583ae300e144ae0a835373b6667ee9a, which is retained as a provenance caveat rather than treated as the measured implementation revision. The explicit incremental review against baseline snapshot d16bfa57-1143-4246-8189-f71d4ed1e94e reports +16 covered/+3 total lines, +6 covered/-2 total branches, +0 covered/+0 total functions, and +25 covered/-1 total regions. Because the stored metadata for both snapshots reports cb82fc38, source-line attribution is unavailable; aggregate coverage is measured and that limitation is retained. The new coverage_r16x32_following_filter_intra_split_mode0_01.avif fixture is a real 32x32 8-bit 4:2:0 right-hand following Vertical16x32 filter-intra mode-0 leaf with two TX16x16 luma children, one R8x16 U/V transform each, a pinned 3,064-operation dav1d trace, and exact safe-Rust Y/U/V and Pillow RGB8 parity. It also fixes the shared TX8x8 split helper's left-only-DC edge availability bug. It adds no encoder support, no universal AV1/AVIF completion claim, and no universal streaming claim.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
-          "baseline_snapshot_id": "56a94e06-3b30-49e2-b8cb-ed8ec1ea9725",
+        "baseline_commit": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
+        "baseline_snapshot_id": "d16bfa57-1143-4246-8189-f71d4ed1e94e",
           "baseline_snapshot_metadata_commit_sha": "cb82fc38a583ae300e144ae0a835373b6667ee9a",
-          "line_covered_delta": 92,
-          "line_total_delta": 120,
-          "branch_covered_delta": 8,
-          "branch_total_delta": 12,
-          "function_covered_delta": 3,
-          "function_total_delta": 8,
-          "region_covered_delta": 107,
-          "region_total_delta": 155,
-          "interpretation": "Compared with baseline snapshot 56a94e06 at the prior managed measurement, this right-hand following Vertical16x32 filter-intra mode-3 run reports +92 covered/+120 total lines, +8 covered/+12 total branches, +3 covered/+8 total functions, and +107 covered/+155 total regions. The run record is exact for 1eebc742, while the stored metadata for both snapshots reports cb82fc38, so changed-code attribution is unavailable and this is retained as an aggregate measurement only. The release target remains open with 10,477 lines, 1,370 branches, 719 functions, and 17,390 regions uncovered; the next implementation slice must target another actual uncovered production path."
+        "line_covered_delta": 16,
+        "line_total_delta": 3,
+        "branch_covered_delta": 6,
+        "branch_total_delta": -2,
+        "function_covered_delta": 0,
+        "function_total_delta": 0,
+        "region_covered_delta": 25,
+        "region_total_delta": -1,
+        "interpretation": "Compared with baseline snapshot d16bfa57 at the prior managed measurement, this right-hand following Vertical16x32 filter-intra mode-0 run reports +16 covered/+3 total lines, +6 covered/-2 total branches, +0 covered/+0 total functions, and +25 covered/-1 total regions. The run record is exact for 60b2d1d3, while the stored metadata for both snapshots reports cb82fc38, so changed-code attribution is unavailable and this is retained as an aggregate measurement only. The release target remains open with 10,464 lines, 1,362 branches, 719 functions, and 17,364 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -139,7 +139,7 @@
       "./scripts/test_feature_matrix.sh"
     ],
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run db5b9f65-f576-470e-b30e-ef47dcdb08bd passed in 145,705 ms and ingested snapshot d16bfa57-1143-4246-8189-f71d4ed1e94e against exact implementation checkout 1eebc7425f3654dc097920857aab92db9296677e. It reports 10,477 lines, 1,370 branches, 719 functions, and 17,390 regions uncovered; the bounded review against baseline snapshot 56a94e06 reports +92 covered/+120 total lines, +8 covered/+12 total branches, +3 covered/+8 total functions, and +107 covered/+155 total regions. The run record is exact for 1eebc742 while the stored snapshot metadata reports cb82fc38; source-line attribution is unavailable because both stored snapshot metadata values are cb82fc38, and that limitation is retained. The new right-hand following Vertical16x32 filter-intra mode-3/R8x16 split witness is exact through safe Rust; the earlier following mode-0 and origin TX8x8 witnesses remain bounded proofs only. AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
+      "llvm_coverage": "Managed Coverage MCP run 420d1073-7b99-485f-b031-b25576a3d433 passed in 146,621 ms and ingested snapshot f74b8668-177a-44dc-af82-2cde5bca99fd against exact implementation checkout 60b2d1d3eb01f27251062c796394ca670db913e6. It reports 10,464 lines, 1,362 branches, 719 functions, and 17,364 regions uncovered; the explicit review against baseline snapshot d16bfa57 reports +16 covered/+3 total lines, +6 covered/-2 total branches, +0 covered/+0 total functions, and +25 covered/-1 total regions. The run record is exact for 60b2d1d3 while the stored snapshot metadata reports cb82fc38; source-line attribution is unavailable because both stored snapshot metadata values are cb82fc38, and that limitation is retained. The new right-hand following Vertical16x32 filter-intra mode-0/R8x16 split witness is exact through safe Rust, and the reachable TX8x8 left-only-DC availability bug it exposed is fixed. AVF-STILL-001, RN-003, the broader roadmap, and the four-metric release target remain open."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },

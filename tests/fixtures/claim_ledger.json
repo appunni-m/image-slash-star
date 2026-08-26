@@ -1,11 +1,11 @@
 {
   "format_version": 1,
   "base_revision": "2a141b6fe640af41549b71421fbe4b8f2b134e4f",
-  "manifest_sha256": "9082d1c2a2b4de732de7c2fe8f1b9fc35e862b8d145ba9b67b7f31e448fc3d0c",
-  "matrix_sha256": "553786b12fb1acf45c4250204bb3ad555513a1abfad4bf06463d0d1fe5f64300",
+  "manifest_sha256": "ce28265034676fd373bbd23cb29bb9f75cb68b6c38a8cfbebecd4f129f7b2d58",
+  "matrix_sha256": "852bba66e646f041715da48b017dc83ed7cb150ef8795d033aa9b31ff98faf39",
   "coverage": {
-    "run_id": "db5b9f65-f576-470e-b30e-ef47dcdb08bd",
-    "snapshot_id": "d16bfa57-1143-4246-8189-f71d4ed1e94e",
+    "run_id": "420d1073-7b99-485f-b031-b25576a3d433",
+    "snapshot_id": "f74b8668-177a-44dc-af82-2cde5bca99fd",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -23,6 +23,6 @@
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
     "webp_property_map": "a6d0c309e789db51d78f169fdc5e21acb3b7d54fbbb169081a0f3b66b83e4d83",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "25b93b490071536c1ab66f06e1efdf3c10799e8b194234c37791c9719998c30e"
+    "roadmap": "be62e195dfe5b4223988bcd8836dfa26464ddf548bd3424f638bb3e5d87ad44d"
   }
 }
