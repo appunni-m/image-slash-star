@@ -12,12 +12,12 @@ record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`a64a167f-c525-4462-bb91-5cb45cc71f78` from run
-`b17d9759-7213-47dc-9b03-350a0932601a` (full all-feature workload passed at
-exact execution commit `e99a80bf`). Its LLVM report records 98,233/108,851
-lines, 12,474/13,838 branches, 4,998/5,731 functions, and
-147,172/164,750 regions. The snapshot metadata retains the stale project
-commit `cb82fc38`; the run record is the exact implementation provenance. The
+`9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa` from run
+`d334b4ef-2847-455b-a9d2-662c6481cf5e` (full all-feature workload passed at
+exact execution commit `947b5915`). Its LLVM report records 98,335/108,929
+lines, 12,496/13,860 branches, 5,002/5,734 functions, and
+147,292/164,871 regions. The snapshot metadata retains `11559fb6`; the run
+record is the exact implementation provenance. The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
 all-feature matrix integration tests currently pass 34/34 under the managed
@@ -30,9 +30,9 @@ registration failed before execution because it invokes sandbox-blocked
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
 The current working tree also passes the complete all-feature test set plus one
-doctest in the managed nightly LLVM run. It measures 98,233/108,851 lines
-(90.2454%), 12,474/13,838 branches (90.1431%), 4,998/5,731 functions
-(87.2099%), and 147,172/164,750 regions (89.3305%). The strict four-metric
+doctest in the managed nightly LLVM run. It measures 98,335/108,929 lines
+(90.2744%), 12,496/13,860 branches (90.1587%), 5,002/5,734 functions
+(87.2340%), and 147,292/164,871 regions (89.3377%). The strict four-metric
 verifier remains red because the release target is 100%; the remaining gaps
 are recorded explicitly in the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
@@ -40,20 +40,21 @@ pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
 current manifest statuses for today's contract.
 
-Current AVIF revision-bound evidence: `coverage_vertical8x16_filter_intra_mode0_01.avif`
-is an 8x16 8-bit 4:2:0 origin `Vertical8x16` filter-intra mode-0 witness with
-an unsplit TX8x16 luma transform, TX4x8 U/V transforms, and 584 exact entropy
-operations. Safe Rust matches its partition, entropy trace, Y/U/V planes, and
-Pillow RGB8 bytes. The implementation is commit
-`e99a80bf1adfdb256e7f723df7b0b5cbfb5385b5`; managed run
-`b17d9759-7213-47dc-9b03-350a0932601a` ingested snapshot
-`a64a167f-c525-4462-bb91-5cb45cc71f78` in 179,859 ms. The explicit aggregate
-comparison against baseline snapshot `bbf89810-51ab-43ff-b1f7-8f3d848db6dc`
-reports 2,632 newly covered and 2,677 regressed line observations, with net
-changes of -124 covered lines, +8 covered branches, -13 covered functions,
-and -171 covered regions. The observations are not a source diff: Coverage
-MCP stored `cb82fc38` as the project commit for both snapshots, so changed-
-source attribution remains unavailable.
+Current AVIF revision-bound evidence: `coverage_square8_chroma_diagonal113_01.avif`
+is a 16x8 8-bit 4:2:0 horizontal split whose right-hand `Square8` leaf uses
+chroma `Diagonal113`, ADST-DCT U/V transforms, and a split TX4x4 luma grid.
+Its pinned partition ranges are 37392, 43662, and 63946, with 304 exact
+entropy operations. Safe Rust matches the partition, entropy trace, Y/U/V
+planes, and Pillow RGB8 bytes. The implementation is commit
+`947b5915fc2ce618aa4a04b02a44a304bd5e8af9`; managed run
+`d334b4ef-2847-455b-a9d2-662c6481cf5e` ingested snapshot
+`9e74d5a9-eaf0-4ba7-8d27-ee9b4601aefa` in 142,370 ms. Aggregate review against
+baseline snapshot `a66e148e-4fbc-4c71-b27d-3048c24bb6bc` reports +102 covered
+lines, +22 branches, +4 functions, and +120 regions, with 2,161 newly covered,
+2,075 regressed, and 12,132 hit-count-only observations. The observations are
+not a source diff: named-test attribution is unavailable and Coverage MCP
+stores `11559fb6` as the current snapshot metadata, so the limitation remains
+explicit.
 
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
