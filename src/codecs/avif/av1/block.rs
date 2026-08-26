@@ -2970,6 +2970,16 @@ const QCAT2_CHROMA_8X8_EOB_HIGH: [[u16; 2]; 7] = [
     [16_384, 0],
     [16_384, 0],
 ];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_hi_bit[1][1]`, trimmed
+// to the six bins admitted by the 32-coefficient rectangular sentence.
+const QCAT2_CHROMA_8X4_EOB_HIGH: [[u16; 2]; 6] = [
+    [12_232, 0],
+    [12_104, 0],
+    [12_143, 0],
+    [13_645, 0],
+    [17_906, 0],
+    [16_384, 0],
+];
 const QCAT2_CHROMA_8X8_EOB_BASE: [[u16; 3]; 4] = [
     [5_652, 1_926, 0],
     [797, 170, 0],
@@ -3003,6 +3013,52 @@ const QCAT2_CHROMA_8X8_BASE: [[u16; 4]; 26] = [
     [17_453, 4_099, 1_092, 0],
     [23_470, 10_161, 3_986, 0],
     [26_624, 16_855, 9_800, 0],
+];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].base_tok[1][1]`. The
+// rectangular 4x8 sentence can address the complete 41-entry low-context
+// table; the 8x8 helper above only needs its first 26 entries.
+const QCAT2_CHROMA_8X4_BASE: [[u16; 4]; 41] = [
+    [21_752, 10_657, 5_974, 0],
+    [6_822, 411, 91, 0],
+    [14_878, 2_316, 516, 0],
+    [21_090, 7_626, 2_952, 0],
+    [26_048, 15_234, 8_184, 0],
+    [28_538, 21_103, 14_948, 0],
+    [4_368, 145, 21, 0],
+    [11_604, 1_100, 193, 0],
+    [19_196, 5_380, 1_586, 0],
+    [24_534, 12_018, 5_410, 0],
+    [27_703, 18_713, 11_871, 0],
+    [3_787, 221, 63, 0],
+    [14_087, 2_225, 529, 0],
+    [21_849, 8_693, 3_482, 0],
+    [26_337, 15_569, 8_691, 0],
+    [28_949, 22_304, 16_150, 0],
+    [5_898, 301, 75, 0],
+    [13_727, 1_937, 421, 0],
+    [20_974, 7_557, 2_752, 0],
+    [25_880, 14_749, 7_798, 0],
+    [28_398, 20_405, 13_776, 0],
+    [3_190, 98, 24, 0],
+    [9_609, 761, 155, 0],
+    [17_453, 4_099, 1_092, 0],
+    [23_470, 10_161, 3_986, 0],
+    [26_624, 16_855, 9_800, 0],
+    [4_658, 269, 99, 0],
+    [11_194, 1_831, 753, 0],
+    [20_009, 7_950, 4_041, 0],
+    [26_223, 16_007, 9_726, 0],
+    [29_119, 22_171, 15_935, 0],
+    [4_605, 216, 40, 0],
+    [10_667, 1_299, 304, 0],
+    [19_608, 7_296, 2_625, 0],
+    [25_465, 14_084, 7_300, 0],
+    [27_527, 18_793, 11_813, 0],
+    [4_368, 137, 24, 0],
+    [10_664, 975, 165, 0],
+    [19_211, 6_197, 1_922, 0],
+    [25_019, 12_907, 6_093, 0],
+    [27_895, 18_738, 11_534, 0],
 ];
 const QCAT2_CHROMA_8X8_HIGH: [[u16; 4]; 21] = [
     [18_335, 11_613, 7_830, 0],
@@ -4301,7 +4357,9 @@ impl BlockCdfs {
                 cdfs.lossy_luma_32x32_high_tokens = QCAT2_LUMA_64X64_HIGH;
                 cdfs.lossy_chroma_8x8_eob_bin = QCAT2_CHROMA_8X8_EOB_BIN;
                 cdfs.lossy_chroma_8x4_eob_bin = QCAT2_CHROMA_8X4_EOB_BIN;
+                cdfs.lossy_chroma_8x4_eob_high = QCAT2_CHROMA_8X4_EOB_HIGH;
                 cdfs.lossy_chroma_8x4_eob_base = QCAT2_CHROMA_8X8_EOB_BASE;
+                cdfs.lossy_chroma_8x4_base = QCAT2_CHROMA_8X4_BASE;
                 cdfs.lossy_chroma_8x4_high_tokens = QCAT2_CHROMA_8X8_HIGH;
                 cdfs.lossy_chroma_8x8_eob_high = QCAT2_CHROMA_8X8_EOB_HIGH;
                 cdfs.lossy_chroma_8x8_eob_base = QCAT2_CHROMA_8X8_EOB_BASE;
@@ -10672,9 +10730,16 @@ fn decode_lossy_chroma_rect32_coefficients(
     *levels
         .get_mut(
             eob_x
-                .checked_mul(LOSSY_LUMA_8X4_LEVEL_STRIDE)
+                .checked_mul(level_stride)
                 .and_then(|index| index.checked_add(eob_y))
-                .filter(|&index| index < LOSSY_LUMA_8X4_LEVELS)
+                .filter(|&index| {
+                    index
+                        < if vertical {
+                            LOSSY_LUMA_4X8_LEVELS
+                        } else {
+                            LOSSY_LUMA_8X4_LEVELS
+                        }
+                })
                 .portable()?,
         )
         .portable()? = u8::try_from(eob_level).map_err(|_| PortableUnavailable)?;
@@ -12122,6 +12187,7 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal16x4
         | TransformGrid::Horizontal32x8
         | TransformGrid::Square16
+        | TransformGrid::Vertical8x16
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
         | TransformGrid::Vertical16x64
@@ -24224,11 +24290,13 @@ fn reconstruct_leaf_with_luma_override(
             [luma, chroma_u, chroma_v]
         }
         ReconstructionPolicy::Lossy420Rectangular => {
-            let luma = reconstruct_lossy_luma_8x16(
-                predictors[0],
-                lossy_luma_rect_coefficients,
-                lossy_luma_rect_transform,
-            );
+            let luma = luma_override.unwrap_or_else(|| {
+                reconstruct_lossy_luma_8x16(
+                    predictors[0],
+                    lossy_luma_rect_coefficients,
+                    lossy_luma_rect_transform,
+                )
+            });
             let chroma_transform = chroma_rect_transform_kind(chroma_predictor);
             let chroma_u = reconstruct_lossy_luma_4x8(
                 [predictors[1]; 4],
@@ -41884,6 +41952,25 @@ fn reconstruct_origin_filter_intra_luma_override(
             prediction,
             syntax.lossy_luma_16x16_coefficients,
             syntax.lossy_luma_16x16_transform,
+        )));
+    }
+    if matches!(transform_grid, TransformGrid::Vertical8x16)
+        && !syntax.palette.is_present()
+        && syntax.lossy_luma_8x8_split.is_none()
+    {
+        let Some(mode) = syntax.filter_intra_mode else {
+            return Ok(None);
+        };
+        let top = [127_u16; 8];
+        let left = [129_u16; 16];
+        let prediction: [u16; 128] =
+            reconstruct_filter_intra_prediction(mode, 8, 16, 128, &top, &left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        return Ok(Some(reconstruct_lossy_luma_8x16_from_prediction(
+            prediction,
+            syntax.lossy_luma_rect_coefficients,
+            syntax.lossy_luma_rect_transform,
         )));
     }
     reconstruct_origin_filter_intra_luma_32x16_override(transform_grid, syntax)
