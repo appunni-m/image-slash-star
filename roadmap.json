@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-26",
-  "claim_ledger_base_revision": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+  "claim_ledger_base_revision": "af6f0d0c297328131ce7d7ba12c14c65fa58efe1",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -113,55 +113,55 @@
     },
     "coverage": {
       "line": {
-        "covered": 98968,
-        "total": 109130,
-        "percent": 90.6882,
-        "uncovered": 10162
+        "covered": 99005,
+        "total": 109161,
+        "percent": 90.6963,
+        "uncovered": 10156
       },
       "branch": {
-        "covered": 12568,
-        "total": 13930,
-        "percent": 90.2225,
+        "covered": 12572,
+        "total": 13934,
+        "percent": 90.2253,
         "uncovered": 1362
       },
       "function": {
-        "covered": 5045,
-        "total": 5744,
-        "percent": 87.8308,
+        "covered": 5048,
+        "total": 5747,
+        "percent": 87.8371,
         "uncovered": 699
       },
       "region": {
-        "covered": 148099,
-        "total": 165103,
-        "percent": 89.701,
-        "uncovered": 17004
+        "covered": 148157,
+        "total": 165153,
+        "percent": 89.7089,
+        "uncovered": 16996
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-26",
         "managed_coverage_mcp": true,
-        "commit_sha": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
-        "run_id": "9212d568-8e60-4701-9cfe-089f74cf481b",
-        "snapshot_id": "64548143-b655-4ae7-87d3-4578e9ee4de4",
-        "snapshot_metadata_commit_sha": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+        "commit_sha": "af6f0d0c297328131ce7d7ba12c14c65fa58efe1",
+        "run_id": "5977e3f9-66b0-4474-ba47-4e3a5838e508",
+        "snapshot_id": "ac1ea94a-3b36-48ed-8825-3db426f07aad",
+        "snapshot_metadata_commit_sha": "af6f0d0c297328131ce7d7ba12c14c65fa58efe1",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 148795,
+        "duration_ms": 148483,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed the all-feature LLVM workload in 148,795 ms against exact implementation checkout a8af95eb129934ee0d3becfc91b0b7a98f2ea316 and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. The snapshot records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%); all four release metrics remain open. Explicit coverage_review against baseline snapshot bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered lines, branches, functions, or regions and zero regressions. The bounded luma DiagonalDownRight AVIF witness is exact through safe Rust; named test attribution is unavailable, so no named-test attribution is claimed. Broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
+        "note": "Managed Coverage MCP run 5977e3f9-66b0-4474-ba47-4e3a5838e508 passed the all-feature LLVM workload in 148,483 ms against exact implementation checkout af6f0d0c297328131ce7d7ba12c14c65fa58efe1 and ingested snapshot ac1ea94a-3b36-48ed-8825-3db426f07aad. The current snapshot records 99,005/109,161 lines (90.6963%), 12,572/13,934 branches (90.2253%), 5,048/5,747 functions (87.8371%), and 148,157/165,153 regions (89.7089%); all four release metrics remain open. Explicit incremental coverage_review against baseline snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4 is measured and reports zero regressions; its selected-subset additive review reports 4,618 newly covered normalized line identities, 4 branches, 3 functions, and 58 regions, with a non-exact merge and 6,428 baseline identities not observed in the selected run. Direct current snapshot-counter deltas are +37/+31 lines, +4/+4 branches, +3/+3 functions, and +58/+50 regions (covered/total). Named test attribution is unavailable. The three luma Smooth/SmoothVertical/SmoothHorizontal AVIF witnesses are exact through safe Rust; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
         "comparison_to_previous_snapshot": {
-          "baseline_commit": "f92b3d6896e7e03a46396d53ad44dba96866de0e",
-          "baseline_snapshot_id": "bd67106e-6a28-41c2-9947-5c278e929f83",
-          "baseline_snapshot_metadata_commit_sha": "f92b3d6896e7e03a46396d53ad44dba96866de0e",
-          "line_covered_delta": 0,
-          "line_total_delta": 0,
-          "branch_covered_delta": 0,
-          "branch_total_delta": 0,
-          "function_covered_delta": 0,
-          "function_total_delta": 0,
-          "region_covered_delta": 0,
-          "region_total_delta": 0,
-          "interpretation": "Compared with the immediately previous complete snapshot bd67106e-6a28-41c2-9947-5c278e929f83, the current complete snapshot records zero covered or denominator deltas for all four metrics. Coverage MCP reports exact current commit and snapshot provenance; named test attribution is unavailable. The luma DiagonalDownRight AVIF witness is exact through safe Rust, but it exercises already-covered generic reconstruction, so the four-metric release target remains open with 10,162 lines, 1,362 branches, 699 functions, and 17,004 regions uncovered."
+          "baseline_commit": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+          "baseline_snapshot_id": "64548143-b655-4ae7-87d3-4578e9ee4de4",
+          "baseline_snapshot_metadata_commit_sha": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+          "line_covered_delta": 37,
+          "line_total_delta": 31,
+          "branch_covered_delta": 4,
+          "branch_total_delta": 4,
+          "function_covered_delta": 3,
+          "function_total_delta": 3,
+          "region_covered_delta": 58,
+          "region_total_delta": 50,
+          "interpretation": "Compared with the immediately previous managed snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4, the current snapshot at af6f0d0c297328131ce7d7ba12c14c65fa58efe1 records +37/+31 lines, +4/+4 branches, +3/+3 functions, and +58/+50 regions (covered/total). The explicit incremental review is measured, reports zero regressions, and records the selected-run scope caveat: the additive identity merge is not exact and baseline identities outside the selected run are not observed, not regressions. Named test attribution is unavailable. The three luma Smooth/SmoothVertical/SmoothHorizontal AVIF witnesses match exact independent reconstruction and public RGB evidence. The four-metric release target remains open with 10,156 lines, 1,362 branches, 699 functions, and 16,996 regions uncovered; the next implementation slice must target another actual uncovered production path."
         }
       },
       "coverage_origin_inventory": {
@@ -202,7 +202,7 @@
       "llvm_coverage": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed the all-feature LLVM workload in 149,159 ms against exact implementation checkout f92b3d6896e7e03a46396d53ad44dba96866de0e and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Direct aggregate comparison with prior snapshot 6fa9ab92 reports +5/+0/+1/+5 covered metric deltas and +0/+0/+0/+0 total deltas; named-test attribution is unavailable. The following-Horizontal AVIF witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed the all-feature LLVM workload in 148,795 ms against exact implementation checkout a8af95eb129934ee0d3becfc91b0b7a98f2ea316 and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Explicit incremental review against bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered identities and zero regressions; named-test attribution is unavailable. The bounded luma DiagonalDownRight AVIF witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+      "llvm_coverage": "Managed Coverage MCP run 5977e3f9-66b0-4474-ba47-4e3a5838e508 passed the all-feature LLVM workload in 148,483 ms against exact implementation checkout af6f0d0c297328131ce7d7ba12c14c65fa58efe1 and ingested snapshot ac1ea94a-3b36-48ed-8825-3db426f07aad. It records 99,005/109,161 lines (90.6963%), 12,572/13,934 branches (90.2253%), 5,048/5,747 functions (87.8371%), and 148,157/165,153 regions (89.7089%). Explicit incremental review against baseline snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4 is measured, reports zero regressions, and retains the selected-subset/non-exact-merge caveat; named-test attribution is unavailable. The three luma Smooth/SmoothVertical/SmoothHorizontal witnesses are exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -252,7 +252,7 @@
         "QA-030",
         "DOC-005"
       ],
-      "current_evidence": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed at exact implementation commit a8af95eb129934ee0d3becfc91b0b7a98f2ea316 in 148,795 ms and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Explicit incremental review against bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered identities and zero regressions; named-test attribution is unavailable. The luma DiagonalDownRight AVIF witness is exact through safe Rust, but the four-metric release target remains open until all reach 100%.",
+      "current_evidence": "Managed Coverage MCP run 5977e3f9-66b0-4474-ba47-4e3a5838e508 passed at exact implementation commit af6f0d0c297328131ce7d7ba12c14c65fa58efe1 in 148,483 ms and ingested snapshot ac1ea94a-3b36-48ed-8825-3db426f07aad. It reports 90.6963% lines (10,156 uncovered), 90.2253% branches (1,362 uncovered), 87.8371% functions (699 uncovered), and 89.7089% regions (16,996 uncovered). Explicit incremental review against baseline snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4 is measured and reports zero regressions; the selected-subset additive merge is non-exact and named-test attribution is unavailable. The three luma Smooth/SmoothVertical/SmoothHorizontal witnesses are exact through safe Rust, but the four-metric release target remains open until all reach 100%.",
       "evidence": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed at exact implementation commit f92b3d6896e7e03a46396d53ad44dba96866de0e in 149,159 ms and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Direct aggregate comparison with prior snapshot 6fa9ab92 records +5 covered lines, +0 branches, +1 function, and +5 regions with no denominator changes; named-test attribution is unavailable. The following-Horizontal AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {

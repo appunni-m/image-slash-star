@@ -7,16 +7,16 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`a8af95eb129934ee0d3becfc91b0b7a98f2ea316`; the historical Pillow parity
+`af6f0d0c297328131ce7d7ba12c14c65fa58efe1`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`64548143-b655-4ae7-87d3-4578e9ee4de4` from run
-`9212d568-8e60-4701-9cfe-089f74cf481b` (full all-feature workload passed at
-exact execution commit `a8af95eb129934ee0d3becfc91b0b7a98f2ea316`). Its LLVM
-report records 98,968/109,130 lines, 12,568/13,930 branches, 5,045/5,744
-functions, and 148,099/165,103 regions. The run and snapshot metadata are
+`ac1ea94a-3b36-48ed-8825-3db426f07aad` from run
+`5977e3f9-66b0-4474-ba47-4e3a5838e508` (full all-feature workload passed at
+exact execution commit `af6f0d0c297328131ce7d7ba12c14c65fa58efe1`). Its LLVM
+report records 99,005/109,161 lines, 12,572/13,934 branches, 5,048/5,747
+functions, and 148,157/165,153 regions. The run and snapshot metadata are
 exact for the implementation commit. The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
@@ -31,8 +31,8 @@ registration failed before execution because it invokes sandbox-blocked
 `wasm32-wasip1` locally.
 The current implementation also passes the complete all-feature test set plus
 one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 10,167 lines,
-1,362 branches, 700 functions, and 17,009 regions are recorded explicitly in
+remains red because the release target is 100%; the remaining 10,156 lines,
+1,362 branches, 699 functions, and 16,996 regions are recorded explicitly in
 the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
