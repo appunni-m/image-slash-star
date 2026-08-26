@@ -27987,15 +27987,20 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
                     lossy_luma_transform,
                 )?
             }
-            LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-                reconstruct_lossy_luma_8x8_diagonal_z1(
-                    [128; 8],
-                    128,
-                    luma_angle.ok_or(PortableUnavailable)?,
-                    lossy_luma_coefficients,
-                    lossy_luma_transform,
-                )?
-            }
+            LumaPredictor::Diagonal45 => reconstruct_lossy_luma_8x8_diagonal_z1(
+                [luma_edge[0]; 8],
+                luma_edge[0],
+                luma_angle.ok_or(PortableUnavailable)?,
+                lossy_luma_coefficients,
+                lossy_luma_transform,
+            )?,
+            LumaPredictor::Diagonal67 => reconstruct_lossy_luma_8x8_diagonal_z1(
+                [128; 8],
+                128,
+                luma_angle.ok_or(PortableUnavailable)?,
+                lossy_luma_coefficients,
+                lossy_luma_transform,
+            )?,
             LumaPredictor::Diagonal203 => reconstruct_lossy_luma_8x8_diagonal_z3_with_bottom_left(
                 luma_edge,
                 128,

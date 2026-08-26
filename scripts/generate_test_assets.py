@@ -5840,6 +5840,39 @@ def gen_avif():
             speed=0,
         )
 
+    def luma_diagonal45_square8():
+        """Generate the promoted following-leaf luma mode-3 witness."""
+
+        def pixel(x, y):
+            luma = 120 if x < 8 else 120 + x - 8 + y
+            return (luma, luma, luma)
+
+        return image_from_pixels((16, 8), pixel)
+
+    write_campaign_image(
+        "coverage_square8_luma_diagonal45_01",
+        luma_diagonal45_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal157_vertical8x16():
         """Generate the following Vertical8x16 Diagonal157 witness."""
 
