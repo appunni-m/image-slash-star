@@ -7,7 +7,8 @@ pinned Pillow/libavif/libaom oracle, and classifies two independent traces from
 the pinned scalar dav1d executable. Generated files are temporary unless
 ``--retain-dir`` is supplied; no repository Rust code is invoked. The
 historical ``diagonal157`` target is the default; ``origin_vertical`` searches
-the newly specified origin-Vertical case using the same corpus.
+the newly specified origin-Vertical case using the same corpus. The separate
+``following_paeth`` target searches coded UV mode 12 on the following leaf.
 """
 
 from __future__ import annotations
@@ -52,6 +53,11 @@ ADVANCED = {
     "aq-mode": "0",
     "deltaq-mode": "0",
 }
+PAETH_ADVANCED = {
+    **ADVANCED,
+    "enable-paeth-intra": "1",
+    "enable-directional-intra": "0",
+}
 FAMILY_NAMES = (
     "rect_d157_saw_52",
     "rect_d157_saw_73",
@@ -64,6 +70,18 @@ FAMILY_NAMES = (
     "rect_d157_dual_ac",
     "rect_d157_mirror",
 )
+PAETH_FAMILY_NAMES = (
+    "paeth_one_row_bands",
+    "paeth_two_row_bands",
+    "paeth_opposed_ramps",
+    "paeth_four_row_saw",
+    "paeth_triangle_rows",
+    "paeth_single_step",
+    "paeth_two_step",
+    "paeth_row_impulse",
+    "paeth_plane_phase",
+    "paeth_luma_texture",
+)
 TARGET_DESCRIPTIONS = {
     "diagonal157": (
         "two side-by-side Vertical8x16 leaves with following right UV mode 6 "
@@ -73,6 +91,12 @@ TARGET_DESCRIPTIONS = {
         "two side-by-side Vertical8x16 leaves with origin UV mode 1 "
         "(Vertical), right UV mode 5 (Diagonal113), ADST-DCT R4x8 U/V, "
         "non-empty AC on both leaves, and non-palette luma"
+    ),
+    "following_paeth": (
+        "two side-by-side Vertical8x16 leaves with origin UV mode 0 (DC), "
+        "following UV mode 12 (Paeth), one R4x8 U/V pair per leaf, "
+        "following ADST-ADST chroma, non-empty AC, and nonconstant origin "
+        "chroma right edges"
     ),
 }
 BLOCK_PATTERN = re.compile(
@@ -84,9 +108,11 @@ LUMA_PATTERN = re.compile(
     r"^Post-y-cf-blk\[tx=(?P<tx>\d+),txtp=(?P<txtp>-?\d+),"
     r"eob=(?P<eob>-?\d+)\]"
 )
+LUMA_MODE_PATTERN = re.compile(r"^Post-ymode\[(?P<mode>\d+)\]")
 CHROMA_PATTERN = re.compile(
     r"^Post-uv-cf-blk\[pl=(?P<plane>\d+),tx=(?P<tx>\d+),"
     r"txtp=(?P<txtp>-?\d+),eob=(?P<eob>-?\d+)\]"
+    r"(?:.*cbx4=(?P<cbx4>\d+).*)?$"
 )
 
 
@@ -157,7 +183,43 @@ def chroma_deltas(family: int, index: int, cx: int, cy: int) -> tuple[int, int]:
     return chroma, chroma
 
 
-def candidate_pixels(family: int, index: int) -> bytes:
+def paeth_chroma_deltas(family: int, index: int, cx: int, cy: int) -> tuple[int, int]:
+    """Return row-shaped U/V deltas that can select coded Paeth."""
+
+    amplitude = 24 + 4 * (index % 5)
+    phase = (index + 2 * family) % 8
+    epsilon = 2 + index % 4
+    row = cy + phase
+    if family == 0:
+        base = amplitude if row % 2 == 0 else -amplitude
+    elif family == 1:
+        base = amplitude if (row // 2) % 2 == 0 else -amplitude
+    elif family == 2:
+        base = (row - 3) * (amplitude // 3)
+    elif family == 3:
+        base = (row % 4 - 1) * (amplitude // 2)
+    elif family == 4:
+        distance = abs((row % 8) - 4)
+        base = (4 - distance) * (amplitude // 4)
+    elif family == 5:
+        base = amplitude if row >= 4 + index % 3 else -amplitude
+    elif family == 6:
+        base = amplitude if row in {2 + index % 2, 6 + index % 2} else -amplitude // 2
+    elif family == 7:
+        base = amplitude if row == 3 + index % 3 else -amplitude // 3
+    elif family == 8:
+        base = amplitude if (row + phase) % 3 == 0 else -amplitude // 2
+    else:
+        base = ((row * 3 + phase) % 9 - 4) * (amplitude // 4)
+    horizontal = (cx - 3) * epsilon
+    if family in {2, 4, 8}:
+        return base + horizontal, -base + (cx + cy + index) % 3 - 1
+    if family in {5, 6}:
+        return base + horizontal, base - horizontal
+    return base + horizontal, base + ((2 * cx + index) % 5) - 2
+
+
+def candidate_pixels(family: int, index: int, target: str) -> bytes:
     """Create one deterministic 16x16 RGB candidate from a YUV-shaped field."""
 
     seed = 1000 + 10 * family + index
@@ -165,9 +227,17 @@ def candidate_pixels(family: int, index: int) -> bytes:
     for y in range(SIZE[1]):
         for x in range(SIZE[0]):
             cx, cy = x // 2, y // 2
-            u_delta, v_delta = chroma_deltas(family, index, cx, cy)
+            if target == "following_paeth":
+                u_delta, v_delta = paeth_chroma_deltas(family, index, cx, cy)
+            else:
+                u_delta, v_delta = chroma_deltas(family, index, cx, cy)
             luma = 128
-            if family in (5, 7, 8):
+            if target == "following_paeth":
+                if family in (3, 6, 8, 9):
+                    luma += ((5 * x + 3 * y + seed) % 9) - 4
+                if x >= 8:
+                    luma += 9 if (x // 2 + y // 2 + seed) % 2 else -9
+            elif family in (5, 7, 8):
                 luma += 14 if x >= 8 and ((x // 2 + y // 2 + seed) % 2) else 0
                 if family == 5:
                     luma += ((3 * (x // 2) + 5 * (y // 2) + seed) % 3) - 1
@@ -181,20 +251,22 @@ def candidate_pixels(family: int, index: int) -> bytes:
     return bytes(pixels)
 
 
-def candidates() -> list[dict[str, object]]:
+def candidates(target: str) -> list[dict[str, object]]:
     """Return exactly ten deterministic families with ten cases each."""
 
     result = []
-    for family, family_name in enumerate(FAMILY_NAMES):
+    family_names = PAETH_FAMILY_NAMES if target == "following_paeth" else FAMILY_NAMES
+    prefix = "PTH" if target == "following_paeth" else "R157"
+    for family, family_name in enumerate(family_names):
         for index in range(10):
             result.append(
                 {
-                    "id": f"R157-F{family + 1:02d}-N{index:02d}",
+                    "id": f"{prefix}-F{family + 1:02d}-N{index:02d}",
                     "family": family_name,
                     "family_index": family,
                     "candidate_index": index,
                     "seed": 1000 + 10 * family + index,
-                    "pixels": candidate_pixels(family, index),
+                    "pixels": candidate_pixels(family, index, target),
                     "quality": 76,
                     "speed": 0,
                 }
@@ -204,7 +276,7 @@ def candidates() -> list[dict[str, object]]:
     return result
 
 
-def encode(pixels: bytes, quality: int, speed: int) -> bytes:
+def encode(pixels: bytes, quality: int, speed: int, target: str) -> bytes:
     """Encode one candidate through the pinned Pillow AVIF oracle."""
 
     output = BytesIO()
@@ -216,7 +288,7 @@ def encode(pixels: bytes, quality: int, speed: int) -> bytes:
         max_threads=1,
         subsampling=SUBSAMPLING,
         autotiling=False,
-        advanced=ADVANCED,
+        advanced=PAETH_ADVANCED if target == "following_paeth" else ADVANCED,
     )
     return output.getvalue()
 
@@ -228,7 +300,7 @@ def trace(
     item: bytes,
     stem: str,
     ordinal: int,
-) -> tuple[str, list[dict[str, int]], list[list[str]], int]:
+) -> tuple[str, list[dict[str, int]], list[list[str]], int, bytes]:
     """Trace one color item with the independent scalar dav1d executable."""
 
     item_path = work / f"{stem}-{ordinal}.obu"
@@ -256,13 +328,14 @@ def trace(
         env=environment,
     )
     blocks, groups, entropy_count = parse_trace(result.stdout)
-    return result.stdout, blocks, groups, entropy_count
+    return result.stdout, blocks, groups, entropy_count, yuv_path.read_bytes()
 
 
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
     left_edge_observable: bool,
+    yuv: bytes,
     target: str,
 ) -> dict[str, object]:
     """Apply exact predicates for one of the supported rectangular targets."""
@@ -284,16 +357,25 @@ def classify(
     luma_groups = []
     chroma_groups = []
     uv_modes = []
+    y_modes = []
     for group in groups:
         luma_payloads = []
         chroma_payloads = []
         for line in group:
             if line.startswith("Post-uvmode["):
                 uv_modes.append(int(line.split("[", 1)[1].split("]", 1)[0]))
+            if match := LUMA_MODE_PATTERN.match(line):
+                y_modes.append(int(match["mode"]))
             if match := LUMA_PATTERN.match(line):
                 luma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
             if match := CHROMA_PATTERN.match(line):
-                chroma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
+                chroma_payloads.append(
+                    {
+                        name: int(value)
+                        for name, value in match.groupdict().items()
+                        if value is not None
+                    }
+                )
         luma_groups.append(luma_payloads)
         chroma_groups.append(chroma_payloads)
     right_luma = luma_groups[1] if len(luma_groups) == 2 else []
@@ -321,13 +403,19 @@ def classify(
             for line in group
         ),
     }
-    no_luma_palette = not any(
+    no_palette = not any(
         line.startswith(("Post-y_pal[", "Post-pal[", "Post-y-pal-indices", "y-pal-pred"))
+        for group in groups
+        for line in group
+    ) and not any(
+        line.startswith(("Post-uv_pal[", "Post-uv-pal-indices", "uv-pal-pred"))
         for group in groups
         for line in group
     )
 
-    def is_r4x8(payloads: list[dict[str, int]], txtp: int) -> bool:
+    def is_r4x8(
+        payloads: list[dict[str, int]], txtp: int, cbx4: int | None = None
+    ) -> bool:
         """Accept exactly one non-empty U/V R4x8 coefficient pair."""
 
         return (
@@ -335,6 +423,7 @@ def classify(
             and {payload["plane"] for payload in payloads} == {0, 1}
             and all(payload["tx"] == 5 for payload in payloads)
             and all(payload["txtp"] == txtp for payload in payloads)
+            and (cbx4 is None or all(payload.get("cbx4") == cbx4 for payload in payloads))
         )
 
     def has_nonempty_ac(payloads: list[dict[str, int]]) -> bool:
@@ -342,9 +431,19 @@ def classify(
 
         return len(payloads) == 2 and all(payload["eob"] >= 1 for payload in payloads)
 
+    def origin_right_chroma_edge(offset: int) -> list[int]:
+        """Read the origin leaf's rightmost 4:2:0 chroma column from dav1d YUV."""
+
+        if len(yuv) < 384:
+            return []
+        return [yuv[offset + row * 8 + 3] for row in range(8)]
+
+    origin_u_edge = origin_right_chroma_edge(256)
+    origin_v_edge = origin_right_chroma_edge(320)
+
     if target == "origin_vertical":
         target_predicates = {
-            "no_luma_palette": no_luma_palette,
+            "no_palette": no_palette,
             "origin_uv_mode_1": len(uv_modes) == 2 and uv_modes[0] == 1,
             "right_uv_mode_5": len(uv_modes) == 2 and uv_modes[1] == 5,
             "left_chroma_r4x8_adst_dct": is_r4x8(left_chroma, 1),
@@ -358,6 +457,19 @@ def classify(
             "right_chroma_r4x8": is_r4x8(right_chroma, 2),
             "right_chroma_nonempty_ac": has_nonempty_ac(right_chroma),
         }
+    elif target == "following_paeth":
+        target_predicates = {
+            "no_palette": no_palette,
+            "no_luma_paeth": len(y_modes) == 2 and all(mode != 12 for mode in y_modes),
+            "origin_uv_mode_0": len(uv_modes) == 2 and uv_modes[0] == 0,
+            "following_uv_mode_12": len(uv_modes) == 2 and uv_modes[1] == 12,
+            "left_chroma_r4x8_dct_dct": is_r4x8(left_chroma, 0, cbx4=0),
+            "following_chroma_r4x8_adst_adst": is_r4x8(right_chroma, 3, cbx4=1),
+            "left_chroma_nonempty_ac": has_nonempty_ac(left_chroma),
+            "following_chroma_nonempty_ac": has_nonempty_ac(right_chroma),
+            "origin_u_right_edge_varies": len(set(origin_u_edge)) > 1,
+            "origin_v_right_edge_varies": len(set(origin_v_edge)) > 1,
+        }
     else:
         raise ValueError(f"unknown rectangular campaign target: {target}")
     predicates = {**common_predicates, **target_predicates}
@@ -369,6 +481,9 @@ def classify(
         "right_luma_payloads": right_luma,
         "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
         "right_chroma_payloads": right_chroma,
+        "luma_modes": y_modes,
+        "origin_u_right_edge": origin_u_edge,
+        "origin_v_right_edge": origin_v_edge,
         "target": target,
         "predicates": predicates,
         "rejection_reasons": [name for name, passed in predicates.items() if not passed],
@@ -391,33 +506,42 @@ def decode_candidate(
         raise TypeError("candidate pixels must be bytes")
     quality = int(candidate["quality"])
     speed = int(candidate["speed"])
-    encoded_a = encode(pixels, quality, speed)
-    encoded_b = encode(pixels, quality, speed)
+    encoded_a = encode(pixels, quality, speed, target)
+    encoded_b = encode(pixels, quality, speed, target)
     path_a = work / f"{candidate['id']}.avif"
     path_b = work / f"{candidate['id']}-second.avif"
     path_a.write_bytes(encoded_a)
     path_b.write_bytes(encoded_b)
     item_a, _ = extract_color_item(path_a)
     item_b, _ = extract_color_item(path_b)
-    trace_a, blocks_a, groups_a, entropy_a = trace(
+    trace_a, blocks_a, groups_a, entropy_a, yuv_a = trace(
         executable, environment, work, item_a, str(candidate["id"]), 1
     )
-    trace_b, blocks_b, groups_b, entropy_b = trace(
+    trace_b, blocks_b, groups_b, entropy_b, yuv_b = trace(
         executable, environment, work, item_b, str(candidate["id"]), 2
     )
     left_edge = any(
         delta != 0
         for cy in range(8)
-        for delta in chroma_deltas(
-            int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
+        for delta in (
+            paeth_chroma_deltas(
+                int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
+            )
+            if target == "following_paeth"
+            else chroma_deltas(
+                int(candidate["family_index"]), int(candidate["candidate_index"]), 3, cy
+            )
         )
     )
-    classification = classify(blocks_a, groups_a, left_edge, target)
+    classification = classify(blocks_a, groups_a, left_edge, yuv_a, target)
     classification["predicates"].update(
         {
             "double_encode_equal": encoded_a == encoded_b,
             "double_trace_equal": (
-                trace_a == trace_b and blocks_a == blocks_b and groups_a == groups_b
+                trace_a == trace_b
+                and blocks_a == blocks_b
+                and groups_a == groups_b
+                and yuv_a == yuv_b
             ),
         }
     )
@@ -440,6 +564,9 @@ def decode_candidate(
         "encoded_item_length": len(item_a),
         "entropy_operation_count": entropy_a,
         "entropy_operation_count_second": entropy_b,
+        "yuv_sha256": sha256(yuv_a),
+        "yuv_sha256_second": sha256(yuv_b),
+        "yuv_size": len(yuv_a),
         "partition_blocks": blocks_a,
         "partition_blocks_second": blocks_b,
         "trace_sha256": sha256(trace_a.encode()),
@@ -492,7 +619,7 @@ def main() -> None:
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
             decode_candidate(executable, environment, work, candidate, args.retain_dir, args.target)
-            for candidate in candidates()
+            for candidate in candidates(args.target)
         ]
     report = {
         "format_version": 1,
@@ -508,14 +635,16 @@ def main() -> None:
             "subsampling": SUBSAMPLING,
             "max_threads": 1,
             "autotiling": False,
-            "advanced": ADVANCED,
+            "advanced": PAETH_ADVANCED if args.target == "following_paeth" else ADVANCED,
         },
         "search": {
             "candidate_count": len(reports),
             "seed_formula": "1000 + 10*family_index + candidate_index",
             "target_id": args.target,
             "target": TARGET_DESCRIPTIONS[args.target],
-            "families": list(FAMILY_NAMES),
+            "families": list(
+                PAETH_FAMILY_NAMES if args.target == "following_paeth" else FAMILY_NAMES
+            ),
         },
         "counts": {
             "qualified": sum(bool(report["qualifies"]) for report in reports),

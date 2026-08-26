@@ -5702,6 +5702,98 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_paeth_vertical8x16(family, candidate):
+        """Generate one exact following-leaf chroma-Paeth witness."""
+
+        seed = 1000 + 10 * family + candidate
+        amplitude = 24 + 4 * (candidate % 5)
+        phase = (candidate + 2 * family) % 8
+        epsilon = 2 + candidate % 4
+
+        def deltas(cx, cy):
+            row = cy + phase
+            if family == 0:
+                base = amplitude if row % 2 == 0 else -amplitude
+            elif family == 1:
+                base = amplitude if (row // 2) % 2 == 0 else -amplitude
+            elif family == 2:
+                base = (row - 3) * (amplitude // 3)
+            elif family == 3:
+                base = (row % 4 - 1) * (amplitude // 2)
+            elif family == 4:
+                base = (4 - abs((row % 8) - 4)) * (amplitude // 4)
+            elif family == 5:
+                base = amplitude if row >= 4 + candidate % 3 else -amplitude
+            elif family == 6:
+                base = (
+                    amplitude
+                    if row in {2 + candidate % 2, 6 + candidate % 2}
+                    else -amplitude // 2
+                )
+            elif family == 7:
+                base = amplitude if row == 3 + candidate % 3 else -amplitude // 3
+            elif family == 8:
+                base = amplitude if (row + phase) % 3 == 0 else -amplitude // 2
+            else:
+                base = ((row * 3 + phase) % 9 - 4) * (amplitude // 4)
+            horizontal = (cx - 3) * epsilon
+            if family in {2, 4, 8}:
+                return (
+                    base + horizontal,
+                    -base + (cx + cy + candidate) % 3 - 1,
+                )
+            if family in {5, 6}:
+                return base + horizontal, base - horizontal
+            return base + horizontal, base + ((2 * cx + candidate) % 5) - 2
+
+        def pixel(x, y):
+            cx, cy = x // 2, y // 2
+            u_delta, v_delta = deltas(cx, cy)
+            luma = 128
+            if family in (3, 6, 8, 9):
+                luma += ((5 * x + 3 * y + seed) % 9) - 4
+            if x >= 8:
+                luma += 9 if (x // 2 + y // 2 + seed) % 2 else -9
+            du = u_delta
+            dv = v_delta
+            return (
+                clamp_channel(luma + (358 * dv + 128) // 256),
+                clamp_channel(luma - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(luma + (453 * du + 128) // 256),
+            )
+
+        return image_from_pixels((16, 16), pixel)
+
+    paeth_advanced = {
+        "min-partition-size": "8",
+        "max-partition-size": "16",
+        "use-intra-dct-only": "0",
+        "enable-filter-intra": "0",
+        "enable-intra-edge-filter": "0",
+        "enable-smooth-intra": "0",
+        "enable-paeth-intra": "1",
+        "enable-directional-intra": "0",
+        "enable-cfl-intra": "0",
+        "enable-cdef": "0",
+        "enable-restoration": "0",
+        "loopfilter-control": "0",
+        "aq-mode": "0",
+        "deltaq-mode": "0",
+    }
+    for name, family, candidate in (
+        ("coverage_vertical8x16_chroma_paeth_01", 2, 9),
+        ("coverage_vertical8x16_chroma_paeth_02", 8, 0),
+        ("coverage_vertical8x16_chroma_paeth_03", 9, 2),
+    ):
+        write_campaign_image(
+            name,
+            chroma_paeth_vertical8x16(family, candidate),
+            "4:2:0",
+            advanced=paeth_advanced,
+            quality=76,
+            speed=0,
+        )
+
     def horizontal_r32x8_ripple():
         """Generate a deterministic PARTITION_H4 32x8-transform witness."""
 

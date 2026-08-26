@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 270 rows total, 263 active, 7 explicit planned
+- AVIF decode/inspect/verify: 273 rows total, 266 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,494 rows total, 1090 active decode rows, 365 active encode
+- Whole matrix: 1,497 rows total, 1093 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -249,6 +249,34 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the origin Vertical8x16/chroma-Vertical plus following
   Vertical8x16/chroma-Diagonal113 class; broader AV1 partitions, chroma modes,
   sample depths, and AVF-STILL-001 remain partial.
+- The newest bounded Paeth proof is the three-fixture
+  `coverage_vertical8x16_chroma_paeth_01.avif` through `_03.avif` set. Each is
+  a deterministic 16x16 8-bit 4:2:0 vertical split with origin UV mode 0
+  (DC), following UV mode 12 (Paeth), one TX4x8 U/V block per leaf, and
+  following ADST-ADST chroma. The 100-candidate input-only campaign qualified
+  exactly 3 non-palette cases and recorded every rejection in
+  `tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_paeth_campaign_01.json`
+  (SHA-256
+  `4b85de67e8e8b25e01959ac9eb40a50906fe2e930d60a2a333f9272153d8539d`).
+  Their pinned traces contain 276, 426, and 323 entropy operations; safe Rust
+  matches exact partition, entropy, reconstructed Y/U/V, and Pillow RGB
+  evidence. The production fix reconstructs the split origin luma with its
+  prepared missing-edge DC values and uses one-sided DC for the internal child
+  when no external left edge exists. The fixture, encoded-item, and RGB
+  SHA-256 triples are respectively
+  `880fa280f92839b65e46a15f81a72fcf8ff5ffb7bd16820d42b303fe1ea1a587`,
+  `0fa07a83890b29f0a1f7d7ff239d50a2252d8d19c9e0c2e04f57979273f381fa`,
+  `0a05b452b8f1d623db4a663260696241fb183938c8718f7bc4eb1bc5d019914b`;
+  `5c4ce0eb3a7679b32619ca39277433ca7d85b8dfea04f6ab08946bd61c519297`,
+  `bdf087a8d7a443029b663341abf2dd2cd1876be81ec063a6ec25b83d81c91e92`,
+  `9edeaf44a0e8ef22777109c1228a491ea1d879d9bb75051d2c5200675e20c9ca`;
+  and
+  `13fd1d5aff12ff7157f6cb114653c5fedb4085f247af008c9ae8557e7f0f088c`,
+  `f2f671620dab4ce9ba09c54218d0317dcbd7617e0239a01974c7c718101d1a0f`,
+  `bdb2eefd28dbe8a00d21d18a45cfed874e635ea82fa138dcef67247bc84400fb`.
+  This closes only the following Vertical8x16/chroma-Paeth/ADST-ADST class;
+  broader AV1 partitions, predictors, transforms, and AVF-STILL-001 remain
+  partial.
 - Two disjoint, input-only Diagonal67 campaigns are now recorded as explicit
   no-hit evidence. `scripts/explore_avif_chroma_diagonal67.py` evaluated 100
   deterministic candidates and found zero coded UV mode-8 cases; its report is
@@ -836,7 +864,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,487 total | 1,090 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,083 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,497 total | 1,100 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,093 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2027,7 +2055,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 270 AVIF decode/inspect/verify rows exist: 263 are
+**Current exact state:** 273 AVIF decode/inspect/verify rows exist: 266 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
