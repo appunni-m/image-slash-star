@@ -4314,6 +4314,18 @@ formats:
       description: 16x16 lossy 4:4:4 quality-99 horizontal-gradient frame with a split root, four 8x8 leaves, full-resolution Y/U/V residuals, and delta-Q
       test_assets:
       - coverage_i444_rect_02.avif
+    - id: coverage_i444_square16_cfl_01
+      description: 16x16 lossy 4:4:4 quality-76 speed-0 origin Square16 CFL witness with nonzero alpha and coded TX16x16 U/V residuals
+      test_assets:
+      - coverage_i444_square16_cfl_01.avif
+    - id: coverage_i444_square16_cfl_02
+      description: Independent 16x16 lossy 4:4:4 quality-76 speed-0 origin Square16 CFL witness with distinct chroma residuals and exact Y/U/V parity
+      test_assets:
+      - coverage_i444_square16_cfl_02.avif
+    - id: coverage_i444_square16_cfl_03
+      description: Independent 16x16 lossy 4:4:4 quality-76 speed-0 origin Square16 CFL witness with mixed-frequency luma and nonzero U/V AC
+      test_assets:
+      - coverage_i444_square16_cfl_03.avif
     - id: coverage_i444_square8_four_leaves
       description: 16x16 lossy 4:4:4 quality-99 frame forced to four terminal 8x8 leaves; pinned dav1d topology and entropy trace
       test_assets:

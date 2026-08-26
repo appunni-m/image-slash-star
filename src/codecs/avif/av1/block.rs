@@ -2883,6 +2883,12 @@ const QCAT2_CHROMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
     [16_384, 0],
     [16_384, 0],
 ];
+// ✅ VERIFIED: dav1d 1.5.3 `src/cdf.c` qcat-two
+// `default_coef_cdf[2].eob_bin_256[1][0]`, complemented for the portable
+// range decoder. Full-sampling 16x16 chroma uses this two-dimensional row.
+const QCAT2_CHROMA_16X16_EOB_BIN: [u16; 9] = [
+    21_254, 18_974, 15_288, 12_014, 8_407, 5_390, 3_276, 1_491, 0,
+];
 const QCAT2_CHROMA_16X16_EOB_BASE: [[u16; 3]; 4] = [
     [7_292, 2_402, 0],
     [599, 81, 0],
@@ -4366,6 +4372,7 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_8x8_base = QCAT2_CHROMA_8X8_BASE;
                 cdfs.lossy_chroma_8x8_high_tokens = QCAT2_CHROMA_8X8_HIGH;
                 cdfs.lossy_chroma_16x8_eob_bin = QCAT2_CHROMA_16X8_EOB_BIN;
+                cdfs.lossy_chroma_16x16_eob_bin = QCAT2_CHROMA_16X16_EOB_BIN;
                 cdfs.lossy_chroma_16x16_eob_high = QCAT2_CHROMA_16X16_EOB_HIGH;
                 cdfs.lossy_chroma_16x16_eob_base = QCAT2_CHROMA_16X16_EOB_BASE;
                 cdfs.lossy_chroma_16x16_base = QCAT2_CHROMA_16X16_BASE;
@@ -13360,6 +13367,7 @@ fn chroma_16x16_matrix(
         return Ok(None);
     }
     match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X16_MATRIX_2)),
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X16_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -24084,11 +24092,27 @@ fn reconstruct_leaf_with_luma_override(
                 }
             });
             if matches!(chroma_sampling, ChromaSampling::Full) {
-                let chroma = |plane: usize| {
-                    reconstruct_lossy_chroma_16x16(
+                let luma_for_chroma = luma.clone();
+                let chroma = |plane: usize| match chroma_predictor {
+                    ChromaPredictor::Cfl { alpha_u, alpha_v } => {
+                        let alpha = if plane == 1 { alpha_u } else { alpha_v };
+                        reconstruct_lossy_full_16x16_cfl(
+                            &luma_for_chroma,
+                            predictors[plane],
+                            alpha,
+                            lossy_chroma_16x16_coefficients[plane - 1],
+                        )
+                        .unwrap_or_else(|_| {
+                            reconstruct_lossy_chroma_16x16(
+                                predictors[plane],
+                                lossy_chroma_16x16_coefficients[plane - 1],
+                            )
+                        })
+                    }
+                    _ => reconstruct_lossy_chroma_16x16(
                         predictors[plane],
                         lossy_chroma_16x16_coefficients[plane - 1],
-                    )
+                    ),
                 };
                 return ClosedLeaf {
                     luma_predictor,
@@ -38460,6 +38484,43 @@ pub(super) fn decode_first_lossy_420_leaf(
 ) -> PortableResult<FirstLeaf> {
     let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
     state.decode_origin(decoder, width, height, quantization, tools)
+}
+
+/// Decode the narrow origin 16x16 lossy I444 reconstruction class.
+pub(super) fn decode_first_lossy_444_16x16_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    quantization: LossyQuantization,
+    tools: BlockTools,
+) -> PortableResult<FirstLeaf> {
+    let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
+    let decoded = state.decode_origin_full(
+        decoder,
+        16,
+        16,
+        TransformGrid::Square16,
+        quantization,
+        tools,
+    );
+    let leaf = decoded?;
+    let has_nonzero_cfl = matches!(
+        leaf.chroma_predictor,
+        Some(ChromaPredictor::Cfl { alpha_u, alpha_v })
+            if alpha_u != 0 && alpha_v != 0
+    );
+    let all_planes_are_square16 = leaf
+        .planes
+        .iter()
+        .all(|plane| plane.samples.len() == 16 * 16);
+    if leaf.width != 16
+        || leaf.height != 16
+        || !matches!(leaf.luma_predictor, LumaPredictor::Dc)
+        || !has_nonzero_cfl
+        || leaf.luma_transform_split
+        || !all_planes_are_square16
+    {
+        return Err(PortableUnavailable);
+    }
+    Ok(leaf)
 }
 
 /// Shared adaptive state for a sequence of lossy 4:2:0 leaves.

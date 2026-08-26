@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 207);
+    assert_eq!(expected.cases.len(), 210);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6311,6 +6311,99 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 I444 horizontal-gradient witness leaf state"
             );
         }
+        let square16_cfl_expectations = match case.fixture.as_str() {
+            "coverage_i444_square16_cfl_01.avif" => Some((
+                419,
+                [
+                    "Post-skip[0]: r=60251",
+                    "Post-ymode[0]: r=57426",
+                    "Post-uvmode[13]: r=59600",
+                    "Post-uvalphas[5/-6]: r=60160",
+                    "Post-tx[2]: r=60160",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=255]: r=58376",
+                    "Post-uv-cf-blk[pl=0,tx=2,txtp=0,eob=12]: r=55116 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=2,txtp=0,eob=12]: r=50184 [x=0,cbx4=0]",
+                ],
+            )),
+            "coverage_i444_square16_cfl_02.avif" => Some((
+                229,
+                [
+                    "Post-skip[0]: r=60251",
+                    "Post-ymode[0]: r=57426",
+                    "Post-uvmode[13]: r=59600",
+                    "Post-uvalphas[3/-5]: r=39552",
+                    "Post-tx[2]: r=39552",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=135]: r=40712",
+                    "Post-uv-cf-blk[pl=0,tx=2,txtp=0,eob=5]: r=61192 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=2,txtp=0,eob=5]: r=34592 [x=0,cbx4=0]",
+                ],
+            )),
+            "coverage_i444_square16_cfl_03.avif" => Some((
+                388,
+                [
+                    "Post-skip[0]: r=60251",
+                    "Post-ymode[0]: r=57426",
+                    "Post-uvmode[13]: r=59600",
+                    "Post-uvalphas[5/-4]: r=55504",
+                    "Post-tx[2]: r=55504",
+                    "Post-y-cf-blk[tx=2,txtp=0,eob=248]: r=34568",
+                    "Post-uv-cf-blk[pl=0,tx=2,txtp=0,eob=12]: r=38000 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=2,txtp=0,eob=12]: r=47112 [x=0,cbx4=0]",
+                ],
+            )),
+            _ => None,
+        };
+        if let Some((entropy_count, expected_lines)) = square16_cfl_expectations {
+            assert_eq!(case.entropy_operations.len(), entropy_count);
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 0,
+                    range: 62_320,
+                }]
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-uvalphas[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(debug_lines, expected_lines);
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk["))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=0,"))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk[pl=1,"))
+                    .count(),
+                1
+            );
+        }
         assert_eq!(case.decoded_planes.len(), 3);
         for (plane_index, (actual, expected)) in
             actual.planes.iter().zip(&case.decoded_planes).enumerate()
@@ -6888,6 +6981,15 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_i444_rect_02.avif" => {
                 "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb"
+            }
+            "coverage_i444_square16_cfl_01.avif" => {
+                "937289169b35c042aa7000bcac5896cc781979f96867c872176a19cd08763d20"
+            }
+            "coverage_i444_square16_cfl_02.avif" => {
+                "c5672465e10df70e92f05c07e8ad290410ff778f748c70abd564c59766ec5b44"
+            }
+            "coverage_i444_square16_cfl_03.avif" => {
+                "3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128"
             }
             "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" => {
                 "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4"

@@ -3558,6 +3558,41 @@ fn closed_lossy_420_frame_context_with_delta_q(
         & (context.frame_tools == expected_frame_tools)
 }
 
+fn closed_lossy_444_16x16_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let complete = complete_lossy_420_reconstruction_context(context);
+    let geometry = !context.subsampling_x
+        && !context.subsampling_y
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1);
+    let no_delta_q = !context.frame_tools.delta_q_present;
+    let no_cdef = context.frame_tools.cdef.is_none();
+    let zero_loop_filter = context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0;
+    let transform_state =
+        context.frame_tools.transform_mode == 1 && !context.frame_tools.reduced_transform_set;
+    let segment_state = !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base;
+    let quantization_state = quantization.base != 0;
+    complete
+        && geometry
+        && no_delta_q
+        && no_cdef
+        && zero_loop_filter
+        && transform_state
+        && segment_state
+        && quantization_state
+}
+
 fn closed_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     closed_lossy_420_frame_context(context)
         & matches!((context.frame_width, context.frame_height), (4, 4) | (8, 8))
@@ -3646,6 +3681,26 @@ fn decode_closed_lossy_420_leaf(
         decoder,
         context.frame_width,
         context.frame_height,
+        quantization,
+        super::block::BlockTools {
+            allow_screen_content_tools: context.allow_screen_content_tools,
+            enable_filter_intra: context.enable_filter_intra,
+            enable_intra_edge_filter: context.enable_intra_edge_filter,
+            transform_mode: context.frame_tools.transform_mode,
+            transform_context: 0,
+            palette_context: Default::default(),
+        },
+    );
+    finish_closed_leaf(decoder, reconstructed)
+}
+
+fn decode_closed_lossy_444_16x16_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    context: &FirstBlockContext,
+) -> Av1Result<Option<super::block::FirstLeaf>> {
+    let quantization = lossy_quantization_for_context(context);
+    let reconstructed = super::block::decode_first_lossy_444_16x16_leaf(
+        decoder,
         quantization,
         super::block::BlockTools {
             allow_screen_content_tools: context.allow_screen_content_tools,
@@ -3816,7 +3871,8 @@ pub(super) fn validate_first_partition(
         || closed_420_reconstruction_context(context)
         || closed_lossy_420_reconstruction_context(context)
         || closed_lossy_420_16x16_vertical_pair_context(context)
-        || closed_lossy_420_horizontal_four_split_context(context);
+        || closed_lossy_420_horizontal_four_split_context(context)
+        || closed_lossy_444_16x16_reconstruction_context(context);
     if !closed_class {
         // The old narrow decoder is deliberately not allowed to consume a
         // random prefix and then call a valid larger AV1 frame unsupported.
@@ -3848,7 +3904,8 @@ pub(super) fn validate_first_partition(
             | closed_420_reconstruction_context(context)
             | closed_lossy_420_reconstruction_context(context)
             | closed_lossy_420_16x16_vertical_pair_context(context)
-            | closed_lossy_420_horizontal_four_split_context(context);
+            | closed_lossy_420_horizontal_four_split_context(context)
+            | closed_lossy_444_16x16_reconstruction_context(context);
         if trace_closed_context {
             decoder.enable_operation_trace();
         }
@@ -3910,6 +3967,12 @@ pub(super) fn validate_first_partition(
                     & closed_lossy_420_reconstruction_context(context);
                 if reconstruct_closed_lossy_420_leaf {
                     return decode_closed_lossy_420_leaf(&mut decoder, context);
+                }
+                let reconstruct_closed_lossy_444_16x16_leaf = (partition == 0)
+                    & (level == 3)
+                    & closed_lossy_444_16x16_reconstruction_context(context);
+                if reconstruct_closed_lossy_444_16x16_leaf {
+                    return decode_closed_lossy_444_16x16_leaf(&mut decoder, context);
                 }
                 let reconstruct_square_split = (partition == 3)
                     & closed_444_reconstruction_context(context)
