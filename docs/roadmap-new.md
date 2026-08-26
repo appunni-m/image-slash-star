@@ -446,7 +446,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 10,167 lines, 1,362 branches, 700 functions, and 17,009 regions
+- LLVM coverage: 10,162 lines, 1,362 branches, 699 functions, and 17,004 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -1039,9 +1039,10 @@ are not complete. `PARKED` means it is deliberately not current work.
 new tests. Otherwise we may add tests that do not reach the code we think they
 reach.
 
-**Work/result:** The latest all-feature native Coverage MCP measurement is
-bound to code-bearing commit `2cb124b7`; its exact aggregate result and
-explicit-import provenance are recorded above. This slice adds the safe-Rust
+**Work/result:** The current all-feature native Coverage MCP measurement is
+bound to code-bearing commit `a8af95eb`; run `9212d568-8e60-4701-9cfe-089f74cf481b`
+ingested snapshot `64548143-b655-4ae7-87d3-4578e9ee4de4` and its exact aggregate
+result is recorded above. The preceding H4 slice adds the safe-Rust
 32x8 luma and 16x4 chroma matrix/dequantization implementation and proves the
 pinned `coverage_r32x8_h4_ripple_01.avif` candidate byte-for-byte against the
 pinned dav1d planes, 1,522-operation entropy trace, and Pillow RGB reference.
@@ -1060,8 +1061,8 @@ from this cleanup checkpoint.
 **Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`, `DOC-005`.
 
 **Done:** not yet. The accepted current managed report keeps Pillow, Rust-only,
-and private-model origins distinct, but it reports 89.4772% lines, 89.7618%
-branches, 86.6808% functions, and 88.6835% regions. Close this item only when
+and private-model origins distinct, but it reports 90.6882% lines, 90.2225%
+branches, 87.8308% functions, and 89.7010% regions. Close this item only when
 all four current metrics reach 100% or an explicit, reviewed instrumentation
 decision changes the release target.
 
@@ -2099,6 +2100,25 @@ slice adds exact parity evidence without claiming aggregate coverage gain;
 it closes only this origin mode-1/Vertical8x16 class. Broader filter-intra
 modes and edges, partition/block states, tile-local contexts, transform
 variants, and broader independent full-frame proofs remain open.
+
+The newest bounded luma-angle proof is
+`coverage_square8_luma_diagonal_down_right_01.avif`: a deterministic 16x8
+8-bit 4:2:0 split-root frame whose right Square8 leaf selects luma mode 4
+(`DiagonalDownRight`) with angle symbol `3` (delta `0`, absolute `135` degrees).
+Both leaves use four TX4x4 luma payloads; both chroma leaves use DCT-DCT TX4x4
+U/V, and the right luma/U/V residuals are non-empty. Its exact pinned trace
+has 259 entropy operations and partition ranges `37392/43662/34793`; safe Rust
+matches exact partition, entropy, Y/U/V, and Pillow RGB evidence. The selected
+fixture/item/RGB SHA-256 values are
+`fddb447f61b8aa89d5d2bc4dee0baf8dd2c3711ade6d4384edb052841cf4940f`,
+`e78b3ce456d6a58f455cf8a3dd2bf800f78a273038374d5d1c25cc95f4126a48`, and
+`44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b`. The
+100-case input-only campaign qualified 3/100 candidates and is recorded in
+`tests/fixtures/outputs/av1_search/coverage_square8_luma_diagonal_down_right_campaign_01.json`
+with SHA-256
+`a77ccf867a514d80e8837486ba118b882ed5e6addc779f3a45c435b8a340854d`.
+This closes only the bounded mode-4/135-degree Square8 class; it does not
+close general AV1 or AVF-STILL-001.
 
 Every row in this map is a pure safe-Rust task. A native oracle may explain a
 bitstream or provide an independent pixel reference, but it cannot satisfy the
