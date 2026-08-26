@@ -148,6 +148,20 @@ This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class;
 broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001
 remain open.
 
+Two separate input-only searches for the adjacent right-hand Square8 chroma
+Diagonal67 class were bounded at 100 candidates each and found no coded UV
+mode-8 sentence. The first report is
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_01.json`
+with SHA-256
+`1a54c0803c30443bd7ca2fd24a70be2e146c1235b878c19bd3ef0c5b8f66a977`; the
+chroma-biased second report is
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_02.json`
+with SHA-256
+`fb14d289c4e0f4d200c673687228a33f1f682eb235605005dc8f632f1dab4af7`.
+Both retain the pinned oracle versions and strict predicates. This is no-hit
+evidence, not proof of unreachability; no speculative production change is
+authorized and Diagonal67 remains a planned gap.
+
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
 decoded in AV1 payload order, then two following top-row 8×8 blocks consume

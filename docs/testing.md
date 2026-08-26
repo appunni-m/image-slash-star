@@ -56,6 +56,20 @@ not a source diff: named-test attribution is unavailable and Coverage MCP
 stores `11559fb6` as the current snapshot metadata, so the limitation remains
 explicit.
 
+The next AVIF reachability investigation is recorded as two bounded no-hit
+campaigns for right-hand Square8 chroma Diagonal67. Each evaluated exactly 100
+deterministic 16×8 8-bit 4:2:0 inputs through Pillow 12.2.0/libavif 1.4.1/
+libaom 3.13.2 and pinned dav1d 1.5.3 with unchanged strict predicates; both
+found zero coded UV mode-8 cases. The reports are
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_01.json`
+(SHA-256
+`1a54c0803c30443bd7ca2fd24a70be2e146c1235b878c19bd3ef0c5b8f66a977`) and
+`tests/fixtures/outputs/av1_search/coverage_square8_chroma_diagonal67_campaign_02.json`
+(SHA-256
+`fb14d289c4e0f4d200c673687228a33f1f682eb235605005dc8f632f1dab4af7`). The
+reports preserve per-candidate rejection reasons and authorize no guessed Rust
+edge-context change; the roadmap selects the next AV1 class separately.
+
 The historical exact-head managed Pillow parity run recorded below is
 `49d95968-7a17-4a9d-9002-c6504922610b` (1,445/1,445 passed in 584 ms) at
 its recorded revision. Feature matrix run
