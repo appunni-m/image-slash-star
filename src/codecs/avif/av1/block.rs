@@ -17319,6 +17319,26 @@ fn reconstruct_lossy_luma_4x8_diagonal_z2(
     coefficients: Option<Lossy4x8TransformCoefficients>,
     transform_kind: Lossy4x8TransformKind,
 ) -> PortableResult<ReconstructedPlane> {
+    reconstruct_lossy_luma_4x8_diagonal_z2_with_edge_filter(
+        top,
+        left,
+        top_left,
+        angle,
+        true,
+        coefficients,
+        transform_kind,
+    )
+}
+
+fn reconstruct_lossy_luma_4x8_diagonal_z2_with_edge_filter(
+    top: [u16; 4],
+    left: [u16; 8],
+    top_left: u16,
+    angle: i32,
+    enable_intra_edge_filter: bool,
+    coefficients: Option<Lossy4x8TransformCoefficients>,
+    transform_kind: Lossy4x8TransformKind,
+) -> PortableResult<ReconstructedPlane> {
     // ✅ VERIFIED: rav1d 1.1.0 src/ipred.rs:965-1098 and
     // src/tables.rs:1083-1085. This is the Zone-2 angular predictor for a
     // 4×8 transform. For the admitted 113° sentence the top edge is
@@ -17334,7 +17354,7 @@ fn reconstruct_lossy_luma_4x8_diagonal_z2(
         usize::try_from(180_i32.saturating_sub(angle) >> 1).map_err(|_| PortableUnavailable)?;
     let dy = *DR_INTRA_DERIVATIVE.get(dy_index).portable()?;
     let dx = *DR_INTRA_DERIVATIVE.get(dx_index).portable()?;
-    let upsample_above = angle.saturating_sub(90) < 40;
+    let upsample_above = enable_intra_edge_filter && angle.saturating_sub(90) < 40;
     let mut edge = [0_u16; 32];
     const TOP_LEFT_INDEX: usize = 12;
     edge[TOP_LEFT_INDEX] = top_left;
@@ -23739,13 +23759,14 @@ fn reconstruct_palette_horizontal64x16_leaf(syntax: BlockSyntax) -> Option<Close
 }
 
 fn reconstruct_leaf(syntax: BlockSyntax, predictors: [u16; 3]) -> ClosedLeaf {
-    reconstruct_leaf_with_luma_override(syntax, predictors, None)
+    reconstruct_leaf_with_luma_override(syntax, predictors, None, true)
 }
 
 fn reconstruct_leaf_with_luma_override(
     syntax: BlockSyntax,
     predictors: [u16; 3],
     luma_override: Option<ReconstructedPlane>,
+    enable_intra_edge_filter: bool,
 ) -> ClosedLeaf {
     if luma_override.is_none()
         && let Some(leaf) = reconstruct_palette_square8_leaf(syntax)
@@ -23762,7 +23783,7 @@ fn reconstruct_leaf_with_luma_override(
         luma_angle,
         filter_intra_mode,
         chroma_predictor,
-        chroma_angle: _,
+        chroma_angle,
         coefficients,
         lossy_luma_coefficients,
         lossy_luma_4x8_coefficients,
@@ -24350,18 +24371,39 @@ fn reconstruct_leaf_with_luma_override(
                 )
             });
             let chroma_transform = chroma_rect_transform_kind(chroma_predictor);
-            let chroma_u = reconstruct_lossy_luma_4x8(
-                [predictors[1]; 4],
-                [predictors[1]; 8],
-                lossy_chroma_8x4_coefficients[0],
-                chroma_transform,
-            );
-            let chroma_v = reconstruct_lossy_luma_4x8(
-                [predictors[2]; 4],
-                [predictors[2]; 8],
-                lossy_chroma_8x4_coefficients[1],
-                chroma_transform,
-            );
+            let chroma = |predictor: u16, coefficients: Option<Lossy4x8TransformCoefficients>| {
+                match chroma_predictor {
+                    ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157 => {
+                        reconstruct_lossy_luma_4x8_diagonal_z2_with_edge_filter(
+                            [predictor.saturating_sub(1); 4],
+                            [predictor.saturating_add(1); 8],
+                            predictor,
+                            chroma_angle.unwrap_or(135),
+                            enable_intra_edge_filter,
+                            coefficients,
+                            chroma_transform,
+                        )
+                        .unwrap_or_else(|_| {
+                            reconstruct_lossy_luma_4x8(
+                                [predictor; 4],
+                                [predictor; 8],
+                                coefficients,
+                                chroma_transform,
+                            )
+                        })
+                    }
+                    _ => reconstruct_lossy_luma_4x8(
+                        [predictor; 4],
+                        [predictor; 8],
+                        coefficients,
+                        chroma_transform,
+                    ),
+                }
+            };
+            let chroma_u = chroma(predictors[1], lossy_chroma_8x4_coefficients[0]);
+            let chroma_v = chroma(predictors[2], lossy_chroma_8x4_coefficients[1]);
             [luma, chroma_u, chroma_v]
         }
     };
@@ -40644,7 +40686,10 @@ impl Lossy420Decoder {
                     matrix_v: quantization.matrix_v,
                 },
                 allow_horizontal_chroma: false,
-                allow_diagonal_chroma: false,
+                allow_diagonal_chroma: matches!(
+                    (syntax_chroma_sampling, transform_grid),
+                    (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
+                ),
                 allow_diagonal_luma: true,
                 allow_smooth_chroma: false,
                 allow_smooth_luma: false,
@@ -40680,7 +40725,12 @@ impl Lossy420Decoder {
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
 
-        let leaf = reconstruct_leaf_with_luma_override(syntax, predictors, luma_override);
+        let leaf = reconstruct_leaf_with_luma_override(
+            syntax,
+            predictors,
+            luma_override,
+            tools.enable_intra_edge_filter,
+        );
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_contexts(
@@ -40726,10 +40776,22 @@ where
     if !matches!(orientation, SplitOrientation::Horizontal) {
         return Err(PortableUnavailable);
     }
+    let (child_width, child_height) = match (width, height) {
+        (16, 8) => (8, 8),
+        (16, 16) => (8, 16),
+        _ => return Err(PortableUnavailable),
+    };
     let mut state = Lossy420Decoder::new();
-    let first = state.decode_origin(decoder, 8, 8, quantization, tools)?;
+    let first = state.decode_origin(decoder, child_width, child_height, quantization, tools)?;
     between_leaves(decoder)?;
-    let second = state.decode_following_horizontal(decoder, 8, 8, quantization, tools, &first)?;
+    let second = state.decode_following_horizontal(
+        decoder,
+        child_width,
+        child_height,
+        quantization,
+        tools,
+        &first,
+    )?;
     let coded_planes = [
         compose_split_plane_with_width(
             &first.planes[0],

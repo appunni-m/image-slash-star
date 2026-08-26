@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 202);
+    assert_eq!(expected.cases.len(), 203);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5132,6 +5132,20 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     range: 42_232,
                 }],
                 "AV1 origin Vertical8x16 filter-intra witness partition topology"
+            );
+        } else if case.fixture == "coverage_vertical8x16_chroma_diagonal157_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 2,
+                    range: 57_408,
+                }],
+                "AV1 origin Vertical8x16 chroma Diagonal157 witness partition topology"
             );
         } else if case.fixture == "coverage_square8_chroma_diagonal113_01.avif" {
             assert_eq!(
@@ -5753,6 +5767,51 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=31]: r=64776 [x=0,cbx4=0]",
                 ],
                 "AV1 origin Vertical8x16 filter-intra mode-1 witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_vertical8x16_chroma_diagonal157_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                576,
+                "AV1 origin Vertical8x16 chroma Diagonal157 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=55500",
+                    "Post-cdef_idx[0]: r=55500",
+                    "Post-ymode[0]: r=53016",
+                    "Post-uvmode[4]: r=33248",
+                    "Post-tx[1]: r=57128",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=51405",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=46404",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=3,eob=31]: r=50952 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=3,eob=31]: r=34056 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=32988",
+                    "Post-ymode[0]: r=65200",
+                    "Post-uvmode[6]: r=44832",
+                    "Post-tx[7]: r=33612",
+                    "Post-txtp-intra[7->1][0][1->0]: r=47748",
+                    "Post-y-cf-blk[tx=7,txtp=0,eob=88]: r=55816",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=2,eob=31]: r=34312 [x=0,cbx4=1]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=2,eob=31]: r=35848 [x=0,cbx4=1]",
+                ],
+                "AV1 origin Vertical8x16 chroma Diagonal157 witness leaf states"
             );
         }
         if case.fixture == "coverage_square8_chroma_diagonal113_01.avif" {
@@ -6587,6 +6646,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_filter_intra_mode1_01.avif" => {
                 "6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe"
+            }
+            "coverage_vertical8x16_chroma_diagonal157_01.avif" => {
+                "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8"
             }
             "coverage_square8_chroma_diagonal113_01.avif" => {
                 "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462"
