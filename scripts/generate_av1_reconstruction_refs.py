@@ -44,7 +44,10 @@ SQUARE16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {"coverage_square16_filter_intra_mode0_01.avif"}
 )
 VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
-    {"coverage_vertical8x16_filter_intra_mode0_01.avif"}
+    {
+        "coverage_vertical8x16_filter_intra_mode0_01.avif",
+        "coverage_vertical8x16_filter_intra_mode1_01.avif",
+    }
 )
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
@@ -950,6 +953,11 @@ EXPECTED_FIXTURES = {
     "coverage_vertical8x16_filter_intra_mode0_01.avif": {
         "file_sha256": "da511e016e1e8720cb21af34b4cf41001a97af0f0380576dc47355dcd630f39a",
         "rgb_sha256": "82b2100ac5f6f02e88ea931a90b2abab261b7486209ee4f63c538464c52b5c30",
+        "size": [8, 16],
+    },
+    "coverage_vertical8x16_filter_intra_mode1_01.avif": {
+        "file_sha256": "7c04bf5be19e0e1acf757dbdda04b3fd48419a2df1dcf7a12871cdefbce99917",
+        "rgb_sha256": "6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe",
         "size": [8, 16],
     },
     "coverage_r32x8_h4_ripple_01.avif": {
