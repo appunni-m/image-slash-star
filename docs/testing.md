@@ -12,12 +12,12 @@ record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`f42de520-62d9-428a-930a-49b2fb93f5c9` from run
-`9c32da2c-9874-4d36-80ac-74982bf67532` (full all-feature workload passed at
-exact execution commit `3c5fd59b`). Its LLVM report records 98,392/109,010
-lines, 12,505/13,866 branches, 5,006/5,739 functions, and
-147,348/164,950 regions. The snapshot metadata retains `11559fb6`; the run
-record is the exact implementation provenance. The
+`6fa9ab92-2f3e-4551-b107-6710dda14e3d` from run
+`17733cd0-9930-4d06-994e-728222b6e895` (full all-feature workload passed at
+exact execution commit `4c2e0812313e9d6a5c22eb9851cb3809e529b084`). Its LLVM
+report records 98,963/109,130 lines, 12,568/13,930 branches, 5,044/5,744
+functions, and 148,094/165,103 regions. The run and snapshot metadata are
+exact for the implementation commit. The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
 all-feature matrix integration tests currently pass 34/34 under the managed
@@ -29,18 +29,23 @@ registration failed before execution because it invokes sandbox-blocked
 `sccache` configured in the user's Cargo config; the exact script completed all
 33 matrix lanes across native, `wasm32-unknown-unknown`, and
 `wasm32-wasip1` locally.
-The current working tree also passes the complete all-feature test set plus one
-doctest in the managed nightly LLVM run. It measures 98,388/109,006 lines
-(90.2593%), 12,505/13,866 branches (90.1846%), 5,006/5,739 functions
-(87.2277%), and 147,344/164,946 regions (89.3286%). The strict four-metric
-verifier remains red because the release target is 100%; the remaining gaps
-are recorded explicitly in the canonical roadmap.
+The current implementation also passes the complete all-feature test set plus
+one doctest in the managed nightly LLVM run. The strict four-metric verifier
+remains red because the release target is 100%; the remaining 10,167 lines,
+1,362 branches, 700 functions, and 17,009 regions are recorded explicitly in
+the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
 current manifest statuses for today's contract.
 
-Current AVIF revision-bound evidence: `coverage_square8_chroma_diagonal113_01.avif`
+Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
+`_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
+Square16 CFL/DCT witnesses. Their pinned entropy traces contain 419, 229, and
+388 operations; safe Rust matches exact entropy, reconstructed Y/U/V, and
+Pillow RGB evidence. The campaign and fixture hashes are recorded in
+`roadmap.json` and `docs/roadmap-new.md`. Earlier AVIF revision-bound evidence:
+`coverage_square8_chroma_diagonal113_01.avif`
 is a 16x8 8-bit 4:2:0 horizontal split whose right-hand `Square8` leaf uses
 chroma `Diagonal113`, ADST-DCT U/V transforms, and a split TX4x4 luma grid.
 Its pinned partition ranges are 37392, 43662, and 63946, with 304 exact
