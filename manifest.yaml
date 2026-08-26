@@ -4202,6 +4202,10 @@ formats:
       description: 16x16 4:2:0 quality-76 speed-0 origin Square16 leaf using filter-intra mode 0, one TX16x16 luma transform, and TX8x8 U/V transforms
       test_assets:
       - coverage_square16_filter_intra_mode0_01.avif
+    - id: coverage_square16_chroma_smooth_horizontal_01
+      description: 32x16 4:2:0 quality-76 speed-0 clipped horizontal split with a following Square16 leaf using chroma SmoothHorizontal mode 11, DCT-ADST TX8x8 U/V transforms, and non-empty AC
+      test_assets:
+      - coverage_square16_chroma_smooth_horizontal_01.avif
     - id: coverage_vertical8x16_filter_intra_mode0_01
       description: 8x16 4:2:0 quality-76 speed-0 origin Vertical8x16 leaf using filter-intra mode 0, one TX8x16 luma transform, and TX4x8 U/V transforms
       test_assets:

@@ -43,6 +43,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
 SQUARE16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {"coverage_square16_filter_intra_mode0_01.avif"}
 )
+SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES = frozenset(
+    {"coverage_square16_chroma_smooth_horizontal_01.avif"}
+)
 VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {
         "coverage_vertical8x16_filter_intra_mode0_01.avif",
@@ -989,6 +992,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008",
         "size": [16, 16],
     },
+    "coverage_square16_chroma_smooth_horizontal_01.avif": {
+        "file_sha256": "f81f98994be3ecce57b31a721d80af4c75ad31acf2ea45ace4a5d05d677cf1f3",
+        "rgb_sha256": "cbca1ceee34545f791090f42e152e5bfd495f4ab0cefcce6d943c57ec8edc144",
+        "size": [32, 16],
+    },
     "coverage_vertical8x16_filter_intra_mode0_01.avif": {
         "file_sha256": "da511e016e1e8720cb21af34b4cf41001a97af0f0380576dc47355dcd630f39a",
         "rgb_sha256": "82b2100ac5f6f02e88ea931a90b2abab261b7486209ee4f63c538464c52b5c30",
@@ -1243,6 +1251,7 @@ def instrument(
     broaden_vertical_following: bool = True,
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
+    broaden_horizontal_square16: bool = False,
 ) -> None:
     recon_path = source / "src" / "recon.h"
     text = recon_path.read_text()
@@ -1274,7 +1283,25 @@ def instrument(
           t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 8))
 #define DEBUG_B_PIXELS 1
 """
-    new = broadened if broaden_vertical_following else legacy
+    horizontal_square16 = """\
+#define DEBUG_BLOCK_INFO 1 && \
+        (((t->by >= 0 && t->by < 4 || \
+           (t->by == 4 && f->frame_hdr->width[0] == 32 && \
+            f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present && \
+            !f->frame_hdr->allow_screen_content_tools)) && \
+          t->bx >= 0 && t->bx < 4) || \
+         (f->frame_hdr->width[0] == 32 && f->frame_hdr->height == 16 && \
+          f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
+          t->by >= 0 && t->by < 4 && t->bx >= 4 && t->bx < 8))
+#define DEBUG_B_PIXELS 1
+"""
+    new = (
+        horizontal_square16
+        if broaden_horizontal_square16
+        else broadened
+        if broaden_vertical_following
+        else legacy
+    )
     if text.count(old) != 1:
         raise RuntimeError("pinned dav1d debug macros no longer match")
     recon_path.write_text(text.replace(old, new))
@@ -1295,7 +1322,16 @@ def instrument(
                      b->y_mode == FILTER_PRED &&
                      (b->y_angle == 0 || b->y_angle == 3)));
 """
-    new = broadened if broaden_vertical_following else legacy
+    horizontal_square16 = """\
+    const int dbg = DEBUG_BLOCK_INFO;
+"""
+    new = (
+        horizontal_square16
+        if broaden_horizontal_square16
+        else broadened
+        if broaden_vertical_following
+        else legacy
+    )
     if text.count(old) != 1:
         raise RuntimeError("pinned dav1d coefficient debug guard no longer matches")
     recon_template_path.write_text(text.replace(old, new))
@@ -1488,16 +1524,18 @@ def build_dav1d(
     broaden_vertical_following: bool = True,
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
+    broaden_horizontal_square16: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
     build = work / "build"
-    run(["git", "clone", "--quiet", "--no-local", str(source), str(clone)])
+    run(["git", "clone", "--quiet", "--no-hardlinks", str(source), str(clone)])
     run(["git", "-C", str(clone), "checkout", "--quiet", DAV1D_COMMIT])
     instrument(
         clone,
         broaden_vertical_following,
         include_block_angles,
         include_luma_angles,
+        broaden_horizontal_square16,
     )
     env = tool_environment(meson, ninja, python_path)
     run(
@@ -1781,6 +1819,15 @@ def generate(
         target_executable, target_env = build_dav1d(
             dav1d_source, work / "target", meson, ninja, python_path
         )
+        square16_chroma_executable, square16_chroma_env = build_dav1d(
+            dav1d_source,
+            work / "square16-chroma",
+            meson,
+            ninja,
+            python_path,
+            broaden_vertical_following=False,
+            broaden_horizontal_square16=True,
+        )
         angle_executable, angle_env = build_dav1d(
             dav1d_source,
             work / "angle",
@@ -1804,6 +1851,8 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_executable
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                else square16_chroma_executable
+                if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
@@ -1821,6 +1870,8 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 else angle_env
                 if name in CHROMA_HORIZONTAL_TARGET_FIXTURES
+                else square16_chroma_env
+                if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
