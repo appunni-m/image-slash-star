@@ -13,13 +13,13 @@ all-feature coverage is recorded in [roadmap.json](../roadmap.json):
 98,968/109,130 lines, 12,568/13,930 branches, 5,045/5,744 functions, and
 148,099/165,103 regions. This is not yet 100% metric coverage; the remaining
 source-level gaps are documented there. The current claim-ledger refresh base
-is `f92b3d6896e7e03a46396d53ad44dba96866de0e`; the historical Pillow parity
+is `a8af95eb129934ee0d3becfc91b0b7a98f2ea316`; the historical Pillow parity
 baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
-`bd67106e-6a28-41c2-9947-5c278e929f83` from run
-`a90eb75b-d62d-4c80-a75f-a753990fdea6` (full all-feature workload passed at
-exact execution commit `f92b3d6896e7e03a46396d53ad44dba96866de0e`).
+`64548143-b655-4ae7-87d3-4578e9ee4de4` from run
+`9212d568-8e60-4701-9cfe-089f74cf481b` (full all-feature workload passed at
+exact execution commit `a8af95eb129934ee0d3becfc91b0b7a98f2ea316`).
 Historical run
 records elsewhere in this document retain their original revision scope.
 The historical exact-head managed Pillow parity run recorded below is

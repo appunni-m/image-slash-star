@@ -7,14 +7,14 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`f92b3d6896e7e03a46396d53ad44dba96866de0e`; the historical Pillow parity
+`a8af95eb129934ee0d3becfc91b0b7a98f2ea316`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`bd67106e-6a28-41c2-9947-5c278e929f83` from run
-`a90eb75b-d62d-4c80-a75f-a753990fdea6` (full all-feature workload passed at
-exact execution commit `f92b3d6896e7e03a46396d53ad44dba96866de0e`). Its LLVM
+`64548143-b655-4ae7-87d3-4578e9ee4de4` from run
+`9212d568-8e60-4701-9cfe-089f74cf481b` (full all-feature workload passed at
+exact execution commit `a8af95eb129934ee0d3becfc91b0b7a98f2ea316`). Its LLVM
 report records 98,968/109,130 lines, 12,568/13,930 branches, 5,045/5,744
 functions, and 148,099/165,103 regions. The run and snapshot metadata are
 exact for the implementation commit. The
