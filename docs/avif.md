@@ -4,7 +4,7 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-26
 
-Current claim-ledger refresh base revision: `f92b3d6896e7e03a46396d53ad44dba96866de0e`.
+Current claim-ledger refresh base revision: `a8af95eb129934ee0d3becfc91b0b7a98f2ea316`.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.
@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 276 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 278 AVIF decode rows and 32 encode
 rows:
 
-- 269 decode rows are active: portable still reconstruction and structural
+- 271 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.

@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-26",
-  "claim_ledger_base_revision": "f92b3d6896e7e03a46396d53ad44dba96866de0e",
+  "claim_ledger_base_revision": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1501,
-      "decode_rows": 1104,
+      "total_rows": 1502,
+      "decode_rows": 1105,
       "encode_rows": 397,
-      "decode_active": 1097,
+      "decode_active": 1098,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 277,
-      "decode_active": 270,
+      "decode_rows": 278,
+      "decode_active": 271,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -52,7 +52,7 @@
       "feature_gate_tests": "66/66 feature-gate tests",
       "doctests": "1/1"
     },
-    "coverage": {
+    "historical_coverage": {
       "line": {
         "covered": 98968,
         "total": 109130,
@@ -111,6 +111,65 @@
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },
+    "coverage": {
+      "line": {
+        "covered": 98968,
+        "total": 109130,
+        "percent": 90.6882,
+        "uncovered": 10162
+      },
+      "branch": {
+        "covered": 12568,
+        "total": 13930,
+        "percent": 90.2225,
+        "uncovered": 1362
+      },
+      "function": {
+        "covered": 5045,
+        "total": 5744,
+        "percent": 87.8308,
+        "uncovered": 699
+      },
+      "region": {
+        "covered": 148099,
+        "total": 165103,
+        "percent": 89.701,
+        "uncovered": 17004
+      },
+      "measurement": {
+        "kind": "managed Coverage MCP all-feature LLVM run",
+        "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
+        "measured": "2026-08-26",
+        "managed_coverage_mcp": true,
+        "commit_sha": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+        "run_id": "9212d568-8e60-4701-9cfe-089f74cf481b",
+        "snapshot_id": "64548143-b655-4ae7-87d3-4578e9ee4de4",
+        "snapshot_metadata_commit_sha": "a8af95eb129934ee0d3becfc91b0b7a98f2ea316",
+        "suite": "all-features-lines-branches-nightly",
+        "duration_ms": 148795,
+        "release_gate": "open_until_all_four_metrics_are_100_percent",
+        "note": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed the all-feature LLVM workload in 148,795 ms against exact implementation checkout a8af95eb129934ee0d3becfc91b0b7a98f2ea316 and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. The snapshot records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%); all four release metrics remain open. Explicit coverage_review against baseline snapshot bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered lines, branches, functions, or regions and zero regressions. The bounded luma DiagonalDownRight AVIF witness is exact through safe Rust; named test attribution is unavailable, so no named-test attribution is claimed. Broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
+        "comparison_to_previous_snapshot": {
+          "baseline_commit": "f92b3d6896e7e03a46396d53ad44dba96866de0e",
+          "baseline_snapshot_id": "bd67106e-6a28-41c2-9947-5c278e929f83",
+          "baseline_snapshot_metadata_commit_sha": "f92b3d6896e7e03a46396d53ad44dba96866de0e",
+          "line_covered_delta": 0,
+          "line_total_delta": 0,
+          "branch_covered_delta": 0,
+          "branch_total_delta": 0,
+          "function_covered_delta": 0,
+          "function_total_delta": 0,
+          "region_covered_delta": 0,
+          "region_total_delta": 0,
+          "interpretation": "Compared with the immediately previous complete snapshot bd67106e-6a28-41c2-9947-5c278e929f83, the current complete snapshot records zero covered or denominator deltas for all four metrics. Coverage MCP reports exact current commit and snapshot provenance; named test attribution is unavailable. The luma DiagonalDownRight AVIF witness is exact through safe Rust, but it exercises already-covered generic reconstruction, so the four-metric release target remains open with 10,162 lines, 1,362 branches, 699 functions, and 17,004 regions uncovered."
+        }
+      },
+      "coverage_origin_inventory": {
+        "guards": 502,
+        "files": 85
+      },
+      "status": "open_until_all_four_metrics_are_100_percent"
+    },
     "alpha_fixture": {
       "id": "with_alpha",
       "status": "active",
@@ -139,8 +198,11 @@
       "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
       "./scripts/test_feature_matrix.sh"
     ],
-    "open_gates": {
+    "historical_open_gates": {
       "llvm_coverage": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed the all-feature LLVM workload in 149,159 ms against exact implementation checkout f92b3d6896e7e03a46396d53ad44dba96866de0e and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Direct aggregate comparison with prior snapshot 6fa9ab92 reports +5/+0/+1/+5 covered metric deltas and +0/+0/+0/+0 total deltas; named-test attribution is unavailable. The following-Horizontal AVIF witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
+    },
+    "open_gates": {
+      "llvm_coverage": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed the all-feature LLVM workload in 148,795 ms against exact implementation checkout a8af95eb129934ee0d3becfc91b0b7a98f2ea316 and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Explicit incremental review against bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered identities and zero regressions; named-test attribution is unavailable. The bounded luma DiagonalDownRight AVIF witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -190,6 +252,7 @@
         "QA-030",
         "DOC-005"
       ],
+      "current_evidence": "Managed Coverage MCP run 9212d568-8e60-4701-9cfe-089f74cf481b passed at exact implementation commit a8af95eb129934ee0d3becfc91b0b7a98f2ea316 in 148,795 ms and ingested snapshot 64548143-b655-4ae7-87d3-4578e9ee4de4. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Explicit incremental review against bd67106e-6a28-41c2-9947-5c278e929f83 reports zero newly covered identities and zero regressions; named-test attribution is unavailable. The luma DiagonalDownRight AVIF witness is exact through safe Rust, but the four-metric release target remains open until all reach 100%.",
       "evidence": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed at exact implementation commit f92b3d6896e7e03a46396d53ad44dba96866de0e in 149,159 ms and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Direct aggregate comparison with prior snapshot 6fa9ab92 records +5 covered lines, +0 branches, +1 function, and +5 regions with no denominator changes; named-test attribution is unavailable. The following-Horizontal AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {
@@ -908,12 +971,13 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
+        "current_evidence_addendum": "The latest bounded proof is coverage_square8_luma_diagonal_down_right_01.avif: a deterministic 16x8 8-bit 4:2:0 split-root frame with two Square8 leaves. The right leaf selects luma mode 4 (DiagonalDownRight) with angle symbol 3 (delta 0, 135 degrees); both leaves use four TX4x4 luma payloads, both chroma leaves use DCT-DCT TX4x4 U/V, and the right luma/U/V residuals are non-empty. Its exact pinned trace has 259 entropy operations and partition ranges 37392/43662/34793. Safe Rust matches exact partition, entropy, Y/U/V, and Pillow RGB evidence. The input-only 100-case campaign qualified 3/100 candidates and records deterministic double-encode/double-trace/double-YUV/double-RGB evidence in tests/fixtures/outputs/av1_search/coverage_square8_luma_diagonal_down_right_campaign_01.json; this closes only this mode-4/135-degree Square8 class and AVF-STILL-001 remains partial.",
     "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The new coverage_r32x8_h4_ripple_01.avif witness is a 32x32 8-bit 4:2:0 PARTITION_H4 frame with three 32x8 luma leaves and 16x4 subsampled chroma leaves, an exact 1,522-operation entropy trace, exact Y/U/V planes, and exact Pillow RGB output; it exercises the geometry-specific matrix-9 dequantization and one-sided DC path. The coverage_i444_rect_01.avif witness is a 16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals, full-resolution Y/U/V residuals, delta-Q, a pinned 499-operation dav1d trace, exact 16x16 reconstructed planes, and exact Pillow RGB8 output. The new coverage_i444_rect_02.avif witness is a second 16x16 8-bit lossy 4:4:4 split-root/four-leaf frame with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB8 output, distinct residual/EOB states, and a filter-intra leaf. The new coverage_r32x32_filter_intra_probe_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with an origin Horizontal32x16 leaf using filter-intra y-mode 13/filter mode 2 and dav1d's missing-edge values (top 127, left 129, top-left 128), followed by a second Horizontal32x16 leaf; its pinned trace has 1,168 entropy operations and safe Rust matches exact Y/U/V planes and Pillow RGB bytes. The new coverage_r32x32_filter_intra_mode3_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. The production path reconstructs the vertically following second leaf from its prepared spatial edges; its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. Its fixture, encoded-item, and RGB SHA-256 values are 79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29, cbf90be7ee9f18a5ef502f3fa0030d0fe97be481459461df687d968dfbdcb2e5, and 8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495. The new coverage_r32x16_filter_intra_tx8x8_01.avif witness is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled (trace sentinel Post-filterintramode[0/0]) and a depth-two TX8x8 luma grid. Its pinned dav1d trace has 2,328 entropy operations, the partition path is root H followed by the visible Horizontal32x16 terminal, safe Rust reconstructs all four luma TX8x8 children through the generic split path, and exact Y/U/V planes and Pillow RGB8 bytes match independently. Its fixture, encoded-item, and RGB SHA-256 values are 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled. The new coverage_square16_filter_intra_mode0_01.avif origin witness adds exact Square16 filter-intra mode-0, unsplit TX16x16 luma, TX8x8 chroma, 1,116-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode0_01.avif witness adds exact origin Vertical8x16 filter-intra mode-0, unsplit TX8x16 luma, TX4x8 chroma, 584-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode1_01.avif witness adds exact origin Vertical8x16 filter-intra mode-1, unsplit TX8x16 luma, TX4x8 chroma, 559-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The newest bounded witness is coverage_square8_chroma_diagonal113_01.avif, a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial.",
-       "latest_witness": "coverage_vertical8x16_chroma_horizontal_01.avif is a deterministic 16x16 8-bit 4:2:0 following Horizontal witness. The 100-case/10-family input-only campaign qualified exactly two cases in the same zero-delta angle zone and promoted one. Its pinned reconstruction has root range 57408, 149 entropy operations, origin UV mode 0, following UV mode 2, DCT-DCT/DCT-ADST R4x8 chroma, angle symbol 3 (delta 0, absolute angle 180), exact Y/U/V planes, and exact Pillow RGB bytes. The safe Rust path already matches this closed exact-horizontal class; broader AV1 partitions, nonzero angle zones, and AVF-STILL-001 remain partial.",
-       "latest_slice": "The new coverage_i444_square16_cfl slice adds three deterministic 16x16 4:4:4 origin witnesses, a 100-case/10-family input-only campaign with exactly three promoted cases, pinned 419/229/388-operation dav1d traces, exact partition/entropy/YUV/Pillow assertions, and generator/reference/matrix provenance. First-divergence tracing found the missing qcat-two 16x16 chroma EOB CDF and matrix-2 U/V dequantization table; the safe Rust path now reconstructs full-resolution CFL chroma with the verified DCT residual. Broader AV1 classes and AVF-STILL-001 remain open.",
-               "latest_evidence_addition": "The promoted coverage_vertical8x16_chroma_horizontal_01.avif fixture has fixture SHA-256 a4f4638ba60bc5ac4a5e15e161135a7cc51d521801dccbe83a1cdfbfb3cec00b, encoded-item SHA-256 71cba042f6b3d85ff48ace58a02c692c58d01f0ddd248f5175ee2218ae928d6f, Pillow RGB SHA-256 fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f, and Y/U/V SHA-256 values 5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b / a827fede50b0209c63cb5f591b182580a3e0d3cc153c685d5e8317261b768b48 / fcd95e665768fca57727608db3f4d9d7fbafb50dfce932322f30cf68e1021336. The durable campaign report is tests/fixtures/outputs/av1_search/coverage_vertical8x16_chroma_horizontal_campaign_01.json with SHA-256 3556712a1a4f2a9a79fb48072dd1108582e4220f0aafe935faab2849d287463a; it records 100 cases, exactly two qualified candidates, all rejection counts, double encoding/tracing equality, and the observed angle symbol.",
-               "current_slice": "The new coverage_vertical8x16_chroma_horizontal_01.avif witness promotes one independently qualified following Horizontal 4:2:0 case. The safe Rust implementation required no new production branch because the existing checked 4x8 Horizontal predictor and DCT-ADST path already matched the pinned 149-operation dav1d trace, reconstructed Y/U/V planes, and Pillow RGB bytes. The semantic UV angle symbol is recorded as 3 (delta 0, absolute angle 180); nonzero-angle Horizontal zones remain open. Managed coverage will be refreshed against the exact implementation commit after this slice is committed.",
-        "next": "Select a separate dependency-ready AV1 block/entropy class using current managed insight and a new bounded input-only oracle search. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, encoding, and the explicit Diagonal67 no-hit class as open.",
+       "latest_witness": "coverage_square8_luma_diagonal_down_right_01.avif is a deterministic 16x8 8-bit 4:2:0 split-root witness with two Square8 leaves. The right leaf selects luma mode 4 (DiagonalDownRight) with angle symbol 3 (delta 0, absolute 135 degrees); both leaves use four TX4x4 luma payloads, both chroma leaves use DCT-DCT TX4x4 U/V, and the right luma/U/V residuals are non-empty. Its pinned reconstruction has partition ranges 37392/43662/34793 and 259 entropy operations, with exact Y/U/V and Pillow RGB bytes. The input-only campaign qualified exactly 3/100 candidates and promoted LDR-F01-N03; safe Rust matches this bounded class, while broader AV1 partitions, angle zones, and AVF-STILL-001 remain partial.",
+       "latest_slice": "The new coverage_square8_luma_diagonal_down_right slice adds one deterministic 16x8 4:2:0 split-root witness, a 100-case/10-family input-only campaign with exactly three qualified candidates, a pinned 259-operation dav1d trace, exact partition/entropy/YUV/Pillow assertions, and generator/reference/matrix provenance. The existing generic safe-Rust predictor and transform path already matched the exact luma mode-4/135-degree class, so no new production branch was required; this is bounded evidence, not general AV1/AVIF completion.",
+               "latest_evidence_addition": "The promoted coverage_square8_luma_diagonal_down_right_01.avif fixture has fixture SHA-256 fddb447f61b8aa89d5d2bc4dee0baf8dd2c3711ade6d4384edb052841cf4940f, encoded-item SHA-256 e78b3ce456d6a58f455cf8a3dd2bf800f78a273038374d5d1c25cc95f4126a48, Pillow RGB SHA-256 44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b, full YUV SHA-256 b338c51b0242f2bd5f2db6ba1f32199e6bda96f4cd42451a00c4a93e1cd837b0, and Y/U/V SHA-256 values 3992ef72fae6648130e7212bfd1711e49ccf614e18db5d6b81a98ecaa1cd8348 / 26102195897b046292c3770b12dc45dad0917b003a3420b86d95320e88bc70d4 / 26102195897b046292c3770b12dc45dad0917b003a3420b86d95320e88bc70d4. The durable campaign report is tests/fixtures/outputs/av1_search/coverage_square8_luma_diagonal_down_right_campaign_01.json with SHA-256 a77ccf867a514d80e8837486ba118b882ed5e6addc779f3a45c435b8a340854d; it records 100 cases, exactly three qualified candidates, all rejection counts, deterministic double encoding/tracing/YUV/RGB equality, and the observed luma angle symbol.",
+               "current_slice": "The new coverage_square8_luma_diagonal_down_right_01.avif witness promotes one independently qualified luma DiagonalDownRight 4:2:0 case. The safe Rust implementation required no new production branch because the existing checked Square8 predictor, angle handling, split TX4x4 luma path, and DCT-DCT chroma path already matched the pinned 259-operation dav1d trace, reconstructed Y/U/V planes, and Pillow RGB bytes. The luma angle symbol is 3 (delta 0, absolute 135 degrees); other luma angle zones, broader partitions, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
+        "next": "Select the next dependency-ready AV1 block/entropy class using the refreshed managed coverage insight and a new bounded input-only oracle search. Retain broader filter-intra modes, split transforms, following-edge cases, other chroma geometries, sequences, high depth, HDR, encoding, and the explicit Diagonal67 no-hit class as open.",
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",
           "campaigns": [
@@ -939,6 +1003,18 @@
             }
           ],
           "decision": "The two disjoint campaigns are bounded no-hit evidence, not proof that Diagonal67 is unreachable. No fixture or production decoder edit is justified; keep this class planned and choose the next slice independently."
+        },
+        "latest_search_evidence": {
+          "target_id": "luma_diagonal_down_right",
+          "target": "visible 16x8 right-hand Square8 leaf with luma mode 4 (DiagonalDownRight), angle symbol 3 (delta 0, 135 degrees), DC chroma, split TX4x4 luma/chroma residuals, and right-hand AC",
+          "script": "scripts/explore_avif_chroma_diagonal113.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_square8_luma_diagonal_down_right_campaign_01.json",
+          "report_sha256": "a77ccf867a514d80e8837486ba118b882ed5e6addc779f3a45c435b8a340854d",
+          "candidate_count": 100,
+          "qualified": 3,
+          "qualified_candidates": ["LDR-F01-N03", "LDR-F02-N07", "LDR-F02-N09"],
+          "promoted_candidate": "LDR-F01-N03",
+          "tool_contract": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2, pinned dav1d 1.5.3, 16x8 4:2:0, quality 76, speed 0, one thread, deterministic double encoding/tracing/YUV/RGB"
         }
       },
       "AVF-ENTROPY-001": {
