@@ -201,26 +201,24 @@ rustc 1.99.0 / Clippy 0.1.99 toolchain with `cargo clippy --workspace --all-targ
 --all-features --locked -- -D warnings`; no wrapper change or lint
 suppression was used.
 
-Managed Coverage MCP run `420d1073-7b99-485f-b031-b25576a3d433` completed the
+Managed Coverage MCP run `f3d2300f-dff3-48ae-bea1-c654d8375ed5` completed the
 all-feature workload against exact implementation commit
-`60b2d1d3eb01f27251062c796394ca670db913e6` in 146,621 ms and passed. Its LLVM
-artifact was ingested as snapshot `f74b8668-177a-44dc-af82-2cde5bca99fd`. It
-measures 98,331/108,795 lines (90.3819%), 12,462/13,824 branches (90.1476%),
-5,009/5,728 functions (87.4476%), and 147,310/164,674 regions (89.4555%). The
-run record is exact for `60b2d1d3`; the stored snapshot metadata still reports
+`3fc0b58cbdb50acc8f4ee0d2a340207f47e79d21` in 145,649 ms and passed. Its LLVM
+artifact was ingested as snapshot `bbf89810-51ab-43ff-b1f7-8f3d848db6dc`. It
+measures 98,357/108,824 lines (90.3817%), 12,466/13,830 branches (90.1374%), 5,011/5,730 functions (87.4520%), and 147,343/164,712 regions (89.4549%). The
+run record is exact for `3fc0b58c`; the stored snapshot metadata still reports
 project commit `cb82fc38`, which is retained as a provenance caveat. The
 explicit Coverage MCP review against baseline snapshot
-`d16bfa57-1143-4246-8189-f71d4ed1e94e` reports +16 covered/+3 total lines,
-+6 covered/-2 total branches, +0 covered/+0 total functions, and +25
-covered/-1 total regions. Because both stored snapshots report `cb82fc38`,
+`f74b8668-177a-44dc-af82-2cde5bca99fd` reports +26 covered/+29 total lines,
++4 covered/+6 total branches, +2 covered/+2 total functions, and +33
+covered/+38 total regions. Because both stored snapshots report `cb82fc38`,
 source-line attribution is unavailable even though the run record is exact;
-the aggregate measurement and that limitation are retained. The new right-hand
-following Vertical16x32 filter-intra mode-0/R8x16 split fixture adds a real
-safe-Rust production path and exact parity evidence, and fixes the reachable
-TX8x8 left-only-DC edge-availability bug it exposed. The AVIF planned gaps,
-transient allocation work, and four-metric 100% release gate remain open. The
-largest misses remain in the intentionally incomplete AV1 block/entropy
-surface.
+the aggregate measurement and that limitation are retained. The new origin
+Square16 filter-intra mode-0/TX16x16/TX8x8-chroma fixture adds a real safe-Rust
+production path and exact partition, entropy, Y/U/V, and Pillow RGB evidence.
+The AVIF planned gaps, transient allocation work, and four-metric 100% release
+gate remain open. The largest misses remain in the intentionally incomplete
+AV1 block/entropy surface.
 
 Previous AVIF H4 parity checkpoint: commit `49c8f78ff5ddb3089b91e685245bd0ab3d6332bf`
 adds the safe-Rust R16x4 luma and 8x4 chroma paths, including the rectangular
@@ -247,7 +245,7 @@ gate remains open rather than being relabeled as complete.
 The revision-bound hash tuple remains refreshed at base revision
 `2a141b6fe640af41549b71421fbe4b8f2b134e4f`, while the current managed
 coverage run is bound to implementation commit
-`60b2d1d3eb01f27251062c796394ca670db913e6`; the stored snapshot metadata
+`3fc0b58cbdb50acc8f4ee0d2a340207f47e79d21`; the stored snapshot metadata
 still reports project commit `cb82fc38` and that mismatch is retained as a
 provenance caveat;
 `python3 scripts/verify_claim_ledger.py` checks the manifest, generated matrix,
@@ -263,7 +261,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 10,464 lines, 1,362 branches, 719 functions, and 17,364 regions
+- LLVM coverage: 10,467 lines, 1,364 branches, 719 functions, and 17,369 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
