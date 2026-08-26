@@ -33191,7 +33191,13 @@ fn reconstruct_lossy_luma_8x16_split(
         } else {
             match predictor {
                 LumaPredictor::Dc => {
-                    let value = if has_left || row != 0 {
+                    // A vertically split block still has an internal top edge
+                    // for its second 8x8 transform, but that does not create
+                    // an external left edge. When the leaf has no left
+                    // neighbor, each child therefore uses one-sided DC from
+                    // its available top edge; dav1d does not average it with
+                    // the synthetic unavailable-left sentinel.
+                    let value = if has_left {
                         dc_predictor_8(top_edge, left_edge)
                     } else {
                         one_sided_dc_predictor(top_edge)
@@ -42130,15 +42136,39 @@ fn reconstruct_origin_luma_override(
             syntax.lossy_luma_16x16_transform,
         )));
     }
-    if matches!(transform_grid, TransformGrid::Vertical8x16)
-        && !syntax.palette.is_present()
-        && syntax.lossy_luma_8x8_split.is_none()
-    {
+    if matches!(transform_grid, TransformGrid::Vertical8x16) && !syntax.palette.is_present() {
+        let left = [129_u16; 16];
+        if let Some(split) = syntax.lossy_luma_8x8_split {
+            let top = if syntax.filter_intra_mode.is_some() {
+                [127_u16; 16]
+            } else if matches!(syntax.luma_predictor, LumaPredictor::Dc) {
+                // The origin DC predictor combines dav1d's missing top 127
+                // and left 129 edges into 128. That effective predictor is
+                // the top edge seen by a vertically split second child.
+                [128_u16; 16]
+            } else {
+                return Ok(None);
+            };
+            // A split Vertical8x16 origin has the same prepared missing
+            // edges as its unsplit form. Reconstruct each 8x8 child with the
+            // internal top edge from the preceding child instead of falling
+            // back to the scalar rectangular predictor.
+            let luma = reconstruct_lossy_luma_8x16_split(
+                syntax.luma_predictor,
+                syntax.luma_angle,
+                syntax.filter_intra_mode,
+                top,
+                left,
+                128,
+                false,
+                split,
+            )?;
+            return Ok(Some(luma));
+        }
+        let top = [127_u16; 8];
         let Some(mode) = syntax.filter_intra_mode else {
             return Ok(None);
         };
-        let top = [127_u16; 8];
-        let left = [129_u16; 16];
         let prediction: [u16; 128] =
             reconstruct_filter_intra_prediction(mode, 8, 16, 128, &top, &left)?
                 .try_into()

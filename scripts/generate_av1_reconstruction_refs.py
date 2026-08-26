@@ -58,6 +58,13 @@ CHROMA_DIAGONAL157_TARGET_FIXTURES = frozenset(
 CHROMA_VERTICAL_TARGET_FIXTURES = frozenset(
     {"coverage_vertical8x16_chroma_vertical_01.avif"}
 )
+CHROMA_PAETH_TARGET_FIXTURES = frozenset(
+    {
+        "coverage_vertical8x16_chroma_paeth_01.avif",
+        "coverage_vertical8x16_chroma_paeth_02.avif",
+        "coverage_vertical8x16_chroma_paeth_03.avif",
+    }
+)
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
         "file_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
@@ -984,6 +991,21 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "56c7822ea3a4ea606bd563b91d17a96a25fb54afa85aea7ce57d3b75f60fa794",
         "size": [16, 16],
     },
+    "coverage_vertical8x16_chroma_paeth_01.avif": {
+        "file_sha256": "880fa280f92839b65e46a15f81a72fcf8ff5ffb7bd16820d42b303fe1ea1a587",
+        "rgb_sha256": "0a05b452b8f1d623db4a663260696241fb183938c8718f7bc4eb1bc5d019914b",
+        "size": [16, 16],
+    },
+    "coverage_vertical8x16_chroma_paeth_02.avif": {
+        "file_sha256": "5c4ce0eb3a7679b32619ca39277433ca7d85b8dfea04f6ab08946bd61c519297",
+        "rgb_sha256": "9edeaf44a0e8ef22777109c1228a491ea1d879d9bb75051d2c5200675e20c9ca",
+        "size": [16, 16],
+    },
+    "coverage_vertical8x16_chroma_paeth_03.avif": {
+        "file_sha256": "13fd1d5aff12ff7157f6cb114653c5fedb4085f247af008c9ae8557e7f0f088c",
+        "rgb_sha256": "bdb2eefd28dbe8a00d21d18a45cfed874e635ea82fa138dcef67247bc84400fb",
+        "size": [16, 16],
+    },
     "coverage_r32x8_h4_ripple_01.avif": {
         "file_sha256": "95bba5fd36e7e09566ceaa3b30a616e7145609085a10f3a2adcff419218be4dd",
         "rgb_sha256": "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53",
@@ -1643,6 +1665,7 @@ def generate(
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
+                or name in CHROMA_PAETH_TARGET_FIXTURES
                 else legacy_executable,
                 target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
@@ -1651,6 +1674,7 @@ def generate(
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL157_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
+                or name in CHROMA_PAETH_TARGET_FIXTURES
                 else legacy_env,
                 work,
                 FIXTURE_DIR / name,
