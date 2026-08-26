@@ -5873,6 +5873,66 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_diagonal45_angle51_square8():
+        """Generate the promoted right-hand Square8 chroma mode-3 witness.
+
+        This is the deterministic CD45-F05-N02 input from the 100-case
+        input-only campaign. The coded predictor is nominal Diagonal45, with
+        angle symbol 5 resolving to 51 degrees; the generator remains in YUV
+        space so the opposing U/V signal stays independent of luma mode
+        selection.
+        """
+
+        family = 4
+        candidate = 2
+        a, b, kind = (1, -1, 4)
+        amplitude = 8 + 2 * (candidate % 8)
+        phase = (candidate * 3 + a * 7 + b * 11) % 32
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            cx, cy = x // 2, y // 2
+            if cx < 4:
+                chroma = (a * cx + b * cy + phase) % 16 - 8
+            else:
+                value = a * cx + b * cy + phase
+                chroma = amplitude if value % 3 == 0 else -amplitude // 2
+            return yuv_to_rgb(128, 128 + chroma, 128 - chroma)
+
+        return image_from_pixels((16, 8), pixel)
+
+    write_campaign_image(
+        "coverage_square8_chroma_diagonal45_angle51_01",
+        chroma_diagonal45_angle51_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_smooth_horizontal_square16():
         """Generate the following Square16 SmoothHorizontal witness.
 
