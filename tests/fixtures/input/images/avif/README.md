@@ -51,6 +51,19 @@ payload. Both generated files are covered by this repository's MIT/Apache
 licensing, while their encoded AV1 behavior is verified against the pinned
 oracle.
 
+`coverage_square16_chroma_smooth_vertical_01.avif`
+(`66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380`) is a
+repository-generated 32x16 8-bit 4:2:0 quality-76/speed-0 witness. Its clipped
+root split has origin/following Square16 leaves; the following chroma selects
+SmoothVertical mode 10 with ADST-DCT TX8x8 U/V and non-empty AC. The input-only
+campaign report is
+`tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json`
+(`d7155bcb67dd01c23ec7ddf7286dbf5530547d35ad8acf72d55ae907645996d9`); it
+searched 100 candidates across 10 families, qualified 9, promoted
+`SV16-F06-N03`, and invoked no repository Rust. The fixture was double-encoded
+and its item, trace, Y/U/V, and Pillow RGB outputs were checked for
+determinism.
+
 `portable_lossless_a.avif`
 (`ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411`)
 and `portable_lossless_b.avif`
