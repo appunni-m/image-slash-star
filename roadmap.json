@@ -3,7 +3,7 @@
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
   "reviewed": "2026-08-27",
-  "claim_ledger_base_revision": "b6d2baee08d5057ff3e7a716bd0d7a7dbcf92d56",
+  "claim_ledger_base_revision": "9615bc2408b84f075445e4f6a137b483ec3501db",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
   "source_policy": {
@@ -113,16 +113,16 @@
     },
     "coverage": {
       "line": {
-        "covered": 99782,
-        "total": 109572,
-        "percent": 91.0652,
-        "uncovered": 9790
+        "covered": 99780,
+        "total": 109576,
+        "percent": 91.0601,
+        "uncovered": 9796
       },
       "branch": {
-        "covered": 12707,
-        "total": 14054,
-        "percent": 90.4155,
-        "uncovered": 1347
+        "covered": 12712,
+        "total": 14058,
+        "percent": 90.4254,
+        "uncovered": 1346
       },
       "function": {
         "covered": 5090,
@@ -131,24 +131,24 @@
         "uncovered": 676
       },
       "region": {
-        "covered": 149393,
-        "total": 165725,
-        "percent": 90.1451,
-        "uncovered": 16332
+        "covered": 149391,
+        "total": 165733,
+        "percent": 90.1396,
+        "uncovered": 16342
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-27",
         "managed_coverage_mcp": true,
-        "commit_sha": "39b3679409038c0c3947f3d0ef922f11dbe2512f",
-        "run_id": "c4507315-ea6b-44cb-84d6-8054ccf016be",
-        "snapshot_id": "d1ed9865-de44-4053-abda-ed79d277d067",
+        "commit_sha": "9615bc2408b84f075445e4f6a137b483ec3501db",
+        "run_id": "e3bdfa3f-1d31-4557-8c18-935fac8964fd",
+        "snapshot_id": "c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 153667,
+        "duration_ms": 152353,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run c4507315-ea6b-44cb-84d6-8054ccf016be passed the all-feature LLVM workload in 153,667 ms at clean implementation commit 39b3679409038c0c3947f3d0ef922f11dbe2512f and ingested snapshot d1ed9865-de44-4053-abda-ed79d277d067. The snapshot records 99,782/109,572 lines (91.0652%), 12,707/14,054 branches (90.4155%), 5,090/5,766 functions (88.2761%), and 149,393/165,725 regions (90.1451%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage MCP comparison against explicit baseline snapshot 32722ec9-0c14-4b7d-a0d4-e21daa02be42 recorded 4 newly covered line identities and 5 newly covered regions, with no regressions or denominator changes; direct aggregate counters increased by 7 covered lines and 5 covered regions, with no branch or function increase. Named test attribution is unavailable and no source-only attribution is claimed. The SmoothVertical Square16 witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial."
+        "note": "Managed Coverage MCP run e3bdfa3f-1d31-4557-8c18-935fac8964fd passed the all-feature LLVM workload in 152,353 ms at exact implementation commit 9615bc2408b84f075445e4f6a137b483ec3501db and ingested snapshot c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b. The aggregate snapshot records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches (90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions (90.1396%), leaving 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions uncovered; all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Direct comparison with the previous stored snapshot records covered deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with denominator deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no source-attributable gain or named-test attribution is claimed because the compact projection does not provide reliable changed-code attribution. The Diagonal67 vertical Square8 witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial."
       },
       "coverage_origin_inventory": {
         "guards": 502,
@@ -185,8 +185,7 @@
       "python3 scripts/verify_package_consumer.py",
       "python3 -m json.tool roadmap.json",
       "git diff --check",
-      "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
-      "./scripts/test_feature_matrix.sh"
+      "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings"
     ],
     "previous_open_gates": {
       "llvm_coverage": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed the all-feature LLVM workload in 149,159 ms against exact implementation checkout f92b3d6896e7e03a46396d53ad44dba96866de0e and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It records 98,968/109,130 lines (90.6882%), 12,568/13,930 branches (90.2225%), 5,045/5,744 functions (87.8308%), and 148,099/165,103 regions (89.7010%). Direct aggregate comparison with prior snapshot 6fa9ab92 reports +5/+0/+1/+5 covered metric deltas and +0/+0/+0/+0 total deltas; named-test attribution is unavailable. The following-Horizontal AVIF witness is exact through safe Rust. The four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
@@ -195,7 +194,7 @@
       "llvm_coverage": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed the all-feature LLVM workload in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. It records 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb is measured, reports zero regressions, and records 4 newly covered line identities and 5 newly covered regions; named test attribution is unavailable. The following-Square16 chroma SmoothHorizontal witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
     "open_gates": {
-      "llvm_coverage": "Managed Coverage MCP run c4507315-ea6b-44cb-84d6-8054ccf016be passed the all-feature LLVM workload in 153,667 ms at clean implementation commit 39b3679409038c0c3947f3d0ef922f11dbe2512f and ingested snapshot d1ed9865-de44-4053-abda-ed79d277d067. The snapshot records 99,782/109,572 lines (91.0652%), 12,707/14,054 branches (90.4155%), 5,090/5,766 functions (88.2761%), and 149,393/165,725 regions (90.1451%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage MCP comparison against explicit baseline snapshot 32722ec9-0c14-4b7d-a0d4-e21daa02be42 recorded 4 newly covered line identities and 5 newly covered regions, with no regressions or denominator changes; direct aggregate counters increased by 7 covered lines and 5 covered regions, with no branch or function increase. Named test attribution is unavailable and no source-only attribution is claimed. The SmoothVertical Square16 witness is exact through safe Rust; all four release metrics, AVF-STILL-001, and AVIF encoding remain open."
+      "llvm_coverage": "Managed Coverage MCP run e3bdfa3f-1d31-4557-8c18-935fac8964fd passed the all-feature LLVM workload in 152,353 ms at exact implementation commit 9615bc2408b84f075445e4f6a137b483ec3501db and ingested snapshot c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b. The aggregate snapshot records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches (90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions (90.1396%), leaving 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions uncovered; all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Direct comparison with the previous stored snapshot records covered deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with denominator deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no source-attributable gain or named-test attribution is claimed because the compact projection does not provide reliable changed-code attribution. The Diagonal67 vertical Square8 witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -238,7 +237,7 @@
       "status": "in_progress",
       "why": "Measure the missing flashlight beams before selecting new tests.",
       "done_when": "All four current native all-feature metrics reach 100%, or a reviewed instrumentation decision changes the release target.",
-      "latest_evidence": "Managed Coverage MCP run c4507315-ea6b-44cb-84d6-8054ccf016be passed the all-feature LLVM workload in 153,667 ms at clean implementation commit 39b3679409038c0c3947f3d0ef922f11dbe2512f and ingested snapshot d1ed9865-de44-4053-abda-ed79d277d067. The snapshot records 99,782/109,572 lines (91.0652%), 12,707/14,054 branches (90.4155%), 5,090/5,766 functions (88.2761%), and 149,393/165,725 regions (90.1451%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage MCP comparison against explicit baseline snapshot 32722ec9-0c14-4b7d-a0d4-e21daa02be42 recorded 4 newly covered line identities and 5 newly covered regions, with no regressions or denominator changes; named test attribution is unavailable and no source-only attribution is claimed. The SmoothVertical Square16 witness is exact through safe Rust; all four release metrics, AVF-STILL-001, and AVIF encoding remain open.",
+      "latest_evidence": "Managed Coverage MCP run e3bdfa3f-1d31-4557-8c18-935fac8964fd passed the all-feature LLVM workload in 152,353 ms at exact implementation commit 9615bc2408b84f075445e4f6a137b483ec3501db and ingested snapshot c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b. The aggregate snapshot records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches (90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions (90.1396%), leaving 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions uncovered; all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Direct comparison with the previous stored snapshot records covered deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with denominator deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no source-attributable gain or named-test attribution is claimed because the compact projection does not provide reliable changed-code attribution. The Diagonal67 vertical Square8 witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
       "source_ids": [
         "QA-003",
         "QA-010",
@@ -246,7 +245,7 @@
         "QA-030",
         "DOC-005"
       ],
-  "current_evidence": "Managed Coverage MCP run c4507315-ea6b-44cb-84d6-8054ccf016be passed the all-feature LLVM workload in 153,667 ms at clean implementation commit 39b3679409038c0c3947f3d0ef922f11dbe2512f and ingested snapshot d1ed9865-de44-4053-abda-ed79d277d067. The snapshot records 99,782/109,572 lines (91.0652%), 12,707/14,054 branches (90.4155%), 5,090/5,766 functions (88.2761%), and 149,393/165,725 regions (90.1451%); all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage MCP comparison against explicit baseline snapshot 32722ec9-0c14-4b7d-a0d4-e21daa02be42 recorded 4 newly covered line identities and 5 newly covered regions, with no regressions or denominator changes; named test attribution is unavailable and no source-only attribution is claimed. The SmoothVertical Square16 witness is exact through safe Rust; all four release metrics, AVF-STILL-001, and AVIF encoding remain open.",
+  "current_evidence": "Managed Coverage MCP run e3bdfa3f-1d31-4557-8c18-935fac8964fd passed the all-feature LLVM workload in 152,353 ms at exact implementation commit 9615bc2408b84f075445e4f6a137b483ec3501db and ingested snapshot c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b. The aggregate snapshot records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches (90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions (90.1396%), leaving 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions uncovered; all four release metrics remain open. The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Direct comparison with the previous stored snapshot records covered deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with denominator deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no source-attributable gain or named-test attribution is claimed because the compact projection does not provide reliable changed-code attribution. The Diagonal67 vertical Square8 witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, AVIF encoding, and the four-metric release gate remain partial.",
       "evidence": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed at exact implementation commit f92b3d6896e7e03a46396d53ad44dba96866de0e in 149,159 ms and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Direct aggregate comparison with prior snapshot 6fa9ab92 records +5 covered lines, +0 branches, +1 function, and +5 regions with no denominator changes; named-test attribution is unavailable. The following-Horizontal AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {

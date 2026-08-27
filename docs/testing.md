@@ -7,18 +7,24 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`b6d2baee08d5057ff3e7a716bd0d7a7dbcf92d56`; the historical Pillow parity
+`9615bc2408b84f075445e4f6a137b483ec3501db`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`7cb21184-2ef6-464d-bace-228174ffa9cb` from run
-`d32ad620-d205-4af7-9d4a-b32a6b3ce4ef` (full all-feature workload passed at
-exact execution commit `b6d2baee08d5057ff3e7a716bd0d7a7dbcf92d56`). Its LLVM
-report records 99,330/109,353 lines, 12,636/14,002 branches, 5,061/5,752
-functions, and 148,604/165,413 regions. The compact snapshot projection
-retains prior commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`, so
-the run and snapshot are not silently treated as having identical metadata.
+`c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b` from run
+`e3bdfa3f-1d31-4557-8c18-935fac8964fd` (full all-feature workload passed at
+exact execution commit `9615bc2408b84f075445e4f6a137b483ec3501db`). Its LLVM
+report records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches
+(90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions
+(90.1396%). The compact snapshot projection retains prior commit metadata
+`3272b3ef49a87c2947c08b46596b442195c6a8db`, so the run and snapshot are not
+silently treated as having identical metadata. Direct comparison with the
+previous stored snapshot records covered deltas of -2 lines, +5 branches, +0
+functions, and -2 regions, with denominator deltas of +4 lines, +4 branches,
++0 functions, and +8 regions; no source-attributable gain or named-test
+attribution is claimed because the compact projection does not provide reliable
+changed-code attribution.
 The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
@@ -26,15 +32,15 @@ all-feature matrix integration tests currently pass 34/34 under the managed
 coverage configuration (the ordinary non-coverage matrix has 29 tests).
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
-1,449/1,449 passed and no skips. The immutable managed feature-matrix
-registration failed before execution because it invokes sandbox-blocked
-`sccache` configured in the user's Cargo config; the exact script completed all
-33 matrix lanes across native, `wasm32-unknown-unknown`, and
-`wasm32-wasip1` locally.
+1,449/1,449 passed and no skips. The latest local feature-matrix run reported
+every completed lane as passing, but native/avif compilation was interrupted
+after more than ten minutes while the configured `sccache` client was blocked on
+its FIFO. No overall feature-matrix completion is claimed, and no
+`RUSTC_WRAPPER` setting was changed.
 The current implementation also passes the complete all-feature test set plus
 one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 10,023 lines,
-1,366 branches, 691 functions, and 16,809 regions are recorded explicitly in
+remains red because the release target is 100%; the remaining 9,796 lines,
+1,346 branches, 676 functions, and 16,342 regions are recorded explicitly in
 the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
