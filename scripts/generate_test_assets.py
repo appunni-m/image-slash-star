@@ -5260,6 +5260,68 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal16x4_depth_one_tx8x4():
+        """Generate the bounded depth-one TX8x4 H16x4 witness.
+
+        This is h16x4-f10-n06 at quality 24 from the pinned input-only
+        dav1d campaign. Its second H16x4 leaf selects two non-skipped TX8x4
+        luma children with DCT_DCT residuals. Keep the source construction
+        here so the promoted fixture remains reproducible.
+        """
+
+        amplitude = 16
+        phase = 11
+        random_state = random.Random(164906)
+        column_prbs = [random_state.choice((-1, 1)) for _ in range(16)]
+        row_prbs = [random_state.choice((-1, 1)) for _ in range(4)]
+        positive_row = random_state.randrange(4)
+        negative_row = (positive_row + 1 + random_state.randrange(3)) % 4
+        bases = (48, 104, 160, 216)
+
+        def pixel(x, y):
+            band = y // 4
+            local_y = y % 4
+            if band == 0:
+                signal = amplitude * column_prbs[x]
+            elif band == 1:
+                signal = ((x - local_y + phase) % 16 - 8) * amplitude // 3
+            elif band == 2:
+                signal = (2 * local_y - 3) * amplitude
+            elif local_y == positive_row:
+                signal = amplitude
+            elif local_y == negative_row:
+                signal = -amplitude
+            else:
+                signal = 0
+            value = clamp_channel(bases[band] + signal)
+            return (value, value, value)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_h16x4_tx8x4_split_01",
+        horizontal16x4_depth_one_tx8x4(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-directional-intra": "1",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=24,
+        speed=0,
+    )
+
     def horizontal16x4_split_adst_dct():
         """Generate a depth-two TX4x4 child-grid H16x4 witness.
 

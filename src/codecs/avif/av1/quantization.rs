@@ -766,6 +766,16 @@ pub(super) const Y_4X8_MATRIX_10: [u8; 32] = [
     36, 34, 38, 48, 39, 37, 40, 50,
 ];
 
+/// AV1 quantization matrix 6 for a coded 8×4 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[6][0][RTX_8X4]`.
+// Rectangular coefficients are stored in the transposed order consumed by
+// the R8×4 coefficient scan.
+#[rustfmt::skip]
+pub(super) const Y_8X4_MATRIX_6: [u8; 32] = [
+    32, 34, 43, 62, 32, 34, 42, 59, 33, 37, 44, 58, 35, 43, 54, 68,
+    41, 48, 64, 79, 49, 54, 71, 91, 57, 60, 78, 101, 66, 68, 86, 111,
+];
+
 /// AV1 quantization matrix 5 for a coded 4×16 luma transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[5][0][RTX_4X16]`.
 #[rustfmt::skip]

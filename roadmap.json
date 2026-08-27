@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1521,
-      "decode_rows": 1124,
+      "total_rows": 1522,
+      "decode_rows": 1125,
       "encode_rows": 397,
-      "decode_active": 1117,
+      "decode_active": 1118,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 297,
-      "decode_active": 290,
+      "decode_rows": 298,
+      "decode_active": 291,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1046,7 +1046,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence_addendum": "The latest bounded proof is coverage_square8_chroma_diagonal67_vertical_01.avif: a deterministic 8x16 8-bit 4:2:0 clipped vertical split with top and following Square8 leaves. The following bottom leaf selects chroma Diagonal67 (coded UV mode 8), angle symbol 3/resolved angle 180, ADST-DCT TX4x4 U/V transforms, split TX4x4 luma, and non-empty residuals. The input-only 100-case, 10-family campaign qualified 59 candidates and promoted D67V-F01-N00 (seed 12000); repository Rust was not invoked. Its pinned dav1d trace has 118 entropy operations, and safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. Fixture SHA-256 is 7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f, encoded-item SHA-256 is 90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8, and Pillow RGB SHA-256 is 2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae. This closes only the bounded following-vertical Square8/chroma-Diagonal67 class; AVF-STILL-001 remains partial. A separate bounded active witness, coverage_h16x4_tx4x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth two, yielding four TX4x4 luma children and exercising matrix-8 luma dequantization. Safe Rust matches its pinned 768-byte Pillow RGB8 reference (fixture SHA-256 cbd0c319225f4542fdc99bc9b414252e259f0416a6b43878ca82880d7b98ced2; RGB SHA-256 cafbd0adea2de9433149b1e444a7bf8d67f2a09578c815dd69c8f098fd58c626). This is only bounded depth-two evidence: depth one with TX8x4 children, other H16x4 states, and AVF-STILL-001 remain partial.",
+        "current_evidence_addendum": "The latest bounded proof is coverage_square8_chroma_diagonal67_vertical_01.avif: a deterministic 8x16 8-bit 4:2:0 clipped vertical split with top and following Square8 leaves. The following bottom leaf selects chroma Diagonal67 (coded UV mode 8), angle symbol 3/resolved angle 180, ADST-DCT TX4x4 U/V transforms, split TX4x4 luma, and non-empty residuals. The input-only 100-case, 10-family campaign qualified 59 candidates and promoted D67V-F01-N00 (seed 12000); repository Rust was not invoked. Its pinned dav1d trace has 118 entropy operations, and safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. Fixture SHA-256 is 7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f, encoded-item SHA-256 is 90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8, and Pillow RGB SHA-256 is 2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae. This closes only the bounded following-vertical Square8/chroma-Diagonal67 class; AVF-STILL-001 remains partial. A separate bounded active witness, coverage_h16x4_tx4x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth two, yielding four TX4x4 luma children and exercising matrix-8 luma dequantization. Safe Rust matches its pinned 768-byte Pillow RGB8 reference (fixture SHA-256 cbd0c319225f4542fdc99bc9b414252e259f0416a6b43878ca82880d7b98ced2; RGB SHA-256 cafbd0adea2de9433149b1e444a7bf8d67f2a09578c815dd69c8f098fd58c626). A second bounded active witness, coverage_h16x4_tx8x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth one, yielding two TX8x4 luma children with DCT_DCT transforms and EOB values 5 and 2; the qcat-three stream exercises the verified luma matrix-6 and R8x4 coefficient sentence. Safe Rust matches the independent 768-byte Pillow RGB8 reference (fixture SHA-256 546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d; RGB SHA-256 ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54). The current matrix row keeps header-only container verification and exact public RGB parity; an input-only pinned dav1d probe confirms the two-child transform/EOB topology. This closes only bounded depth-one DCT_DCT evidence: one-dimensional V_DCT/H_DCT, other H16x4 states, and AVF-STILL-001 remain partial.",
         "bounded_witnesses": {
           "coverage_h16x4_tx4x4_split_01": {
             "fixture": "coverage_h16x4_tx4x4_split_01.avif",
@@ -1065,6 +1065,44 @@
               "sha256": "cafbd0adea2de9433149b1e444a7bf8d67f2a09578c815dd69c8f098fd58c626"
             },
             "scope": "Exact public RGB parity for this bounded depth-two topology only; depth-one TX8x4, other H16x4 states, and general AVF-STILL-001 completion remain open.",
+            "reconstruction_oracle": "not_registered"
+          },
+          "coverage_h16x4_tx8x4_split_01": {
+            "fixture": "coverage_h16x4_tx8x4_split_01.avif",
+            "dimensions": [
+              16,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 24,
+            "speed": 0,
+            "topology": "PARTITION_H4 root with a following Horizontal16x4 leaf at transform depth one and two TX8x4 luma children",
+            "luma_quantization_matrix": 6,
+            "child_transforms": [
+              "DCT_DCT",
+              "DCT_DCT"
+            ],
+            "child_eob": [
+              5,
+              2
+            ],
+            "fixture_sha256": "546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d",
+            "encoded_item": {
+              "bytes": 37,
+              "sha256": "b16fb7810f30922217fcb4c7069e0db05dc5847ccb846f333289e63a940bc650"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54"
+            },
+            "pinned_probe": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "evidence": "The second H16x4 group selects transform depth one; both TX8x4 luma children are non-skipped DCT_DCT with EOB 5 and 2. The probe is input-only and did not invoke repository Rust."
+            },
+            "scope": "Exact public RGB parity for this bounded depth-one topology only; container verification remains header-only, one-dimensional V_DCT/H_DCT, other H16x4 states, and general AVF-STILL-001 completion remain open.",
             "reconstruction_oracle": "not_registered"
           }
         },

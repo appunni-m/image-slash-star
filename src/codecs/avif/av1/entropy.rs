@@ -3740,8 +3740,8 @@ fn closed_lossy_420_qcat3_horizontal_four_context(context: &FirstBlockContext) -
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.restoration_unit_size_log2 == [8; 2];
-    let transform_state =
-        context.frame_tools.transform_mode == 1 && !context.frame_tools.reduced_transform_set;
+    let transform_state = matches!(context.frame_tools.transform_mode, 1 | 2)
+        && !context.frame_tools.reduced_transform_set;
 
     base_context
         && geometry
