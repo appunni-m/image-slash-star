@@ -7,8 +7,8 @@ use crate::codecs::compression::deflate::{
 };
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
 use crate::types::{
-    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, FrameRect, ImageMode, ImagePalette, SourceColor,
+    AnimationLoop, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, FrameRect, ImageMode, ImagePalette, SourceColor,
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -859,7 +859,13 @@ pub fn decode_sequence(
             width: header.width,
             height: header.height,
             frames: output_frames,
-            loop_count: Some(loop_count),
+            loop_count: if loop_count == 0 {
+                AnimationLoop::Infinite
+            } else {
+                AnimationLoop::Finite {
+                    total_plays: loop_count,
+                }
+            },
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks,

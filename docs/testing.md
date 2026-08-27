@@ -7077,9 +7077,10 @@ remain open.
 The GIF-extension contract is table-driven: comment, plain-text, and
 non-NETSCAPE application extensions inserted into a minimal GIF must appear as
 ordered `OpaqueMetadata` records with exact payload bytes, the NETSCAPE loop
-extension must remain interpreted into `loop_count`, unknown labels must stay
-in `opaque_blocks`, still and sequence decode must agree, and encoded output
-must not replay any retained extension.
+extension must remain interpreted into `DecodedSequence::loop_count` with
+explicit `AnimationLoop` semantics, unknown labels must stay in
+`opaque_blocks`, still and sequence decode must agree, and encoded output must
+not replay any retained extension.
 
 The JPEG-marker contract is table-driven: APP1/APP2/COM/multi-APP2/APP14
 segments inserted after SOI must appear as exact ordered metadata records on

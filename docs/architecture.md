@@ -319,11 +319,16 @@ applied.
 For GIF, comment (0xFE), plain-text (0x01), and non-NETSCAPE application
 (0xFF) extensions are retained as ordered `OpaqueMetadata` records with the
 label byte as kind and the exact bytes after the label (size, sub-blocks,
-terminator) as data. The NETSCAPE loop extension stays interpreted into
-`loop_count`; unknown extension labels are retained as `OpaqueBlock` records
-and recorded safe to copy because GIF89a requires decoders to ignore
-extensions they do not understand. Still decode attaches the container records
-to the returned image, and default encoding never replays extensions.
+terminator) as data. The NETSCAPE loop extension is interpreted into
+`DecodedSequence::loop_count`, whose common `AnimationLoop` model represents
+omission as `Unspecified`, zero as `Infinite`, and a positive GIF repeat field
+as total plays (`repeat_field + 1`). APNG retains positive `num_plays` as total
+plays, while WebP uses the GIF-style additional-repeat conversion. `Unknown`
+is source-only and is rejected by encoders. Unknown extension labels are
+retained as `OpaqueBlock` records and recorded safe to copy because GIF89a
+requires decoders to ignore extensions they do not understand. Still decode
+attaches the container records to the returned image, and default encoding
+never replays extensions.
 
 For JPEG, APPn (0xE0–0xEF) and COM (0xFE) marker payloads are retained as
 ordered `OpaqueMetadata` records with the marker byte as kind and the exact

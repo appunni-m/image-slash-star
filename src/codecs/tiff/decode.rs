@@ -7,9 +7,9 @@ use crate::codecs::compression::deflate::{
 };
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, need_slice};
 use crate::types::{
-    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder, SourceColor,
-    SourceDescriptor,
+    AnimationLoop, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, ImageMode, ImagePalette, SourceAlpha, SourceByteOrder,
+    SourceColor, SourceDescriptor,
 };
 
 const COMPRESSION_NONE: usize = 1;
@@ -110,7 +110,7 @@ pub fn decode_sequence(
             width,
             height,
             frames,
-            loop_count: None,
+            loop_count: AnimationLoop::Unspecified,
             background: None,
             kind: crate::types::SequenceKind::UntimedPages,
             opaque_blocks: Vec::new(),

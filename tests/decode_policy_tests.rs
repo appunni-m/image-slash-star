@@ -334,7 +334,7 @@ fn assert_gif_sequence(decoded: &img::Decoded<img::DecodedSequence>) {
     assert_eq!(decoded.format, img::ImageFormat::Gif);
     let sequence = &decoded.content;
     assert_eq!([sequence.width, sequence.height], [128, 128]);
-    assert_eq!(sequence.loop_count, Some(0));
+    assert_eq!(sequence.loop_count, img::AnimationLoop::Infinite);
     assert_eq!(
         sequence.background,
         Some(AnimationBackground::PaletteIndex(0))

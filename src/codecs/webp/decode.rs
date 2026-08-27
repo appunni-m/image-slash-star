@@ -6,8 +6,8 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult, need_slice};
 use crate::types::{
-    AnimationBackground, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
-    FrameDisposal, FrameDuration, FrameRect, ImageMode, SourceColor,
+    AnimationBackground, AnimationLoop, ColorType, DecodedFrame, DecodedImage, DecodedSequence,
+    FrameBlend, FrameDisposal, FrameDuration, FrameRect, ImageMode, SourceColor,
 };
 use std::io::Cursor;
 
@@ -143,10 +143,15 @@ pub fn decode_sequence(
         ));
     }
 
-    let loop_count = Some(match decoder.loop_count() {
-        LoopCount::Forever => 0,
-        LoopCount::Times(count) => u32::from(count.get()),
-    });
+    let loop_count = match decoder.loop_count() {
+        LoopCount::Forever => AnimationLoop::Infinite,
+        LoopCount::Times(count) => AnimationLoop::Finite {
+            // The native decoder exposes a u16 additional-repeat field; the
+            // widened total-play value therefore has one representable extra
+            // play without an overflow path.
+            total_plays: u32::from(count.get()) + 1,
+        },
+    };
     let background = decoder.background_color().map(AnimationBackground::Rgba);
     let metadata = std::mem::take(&mut decoder.metadata);
     let opaque_blocks = std::mem::take(&mut decoder.opaque_blocks);

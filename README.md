@@ -385,8 +385,19 @@ defensive diagnostics: Pillow exposes the successful pixels but no equivalent
 structured warning field.
 GIF comment, plain-text, and non-NETSCAPE application extensions are retained
 the same way (label byte as kind, exact payload bytes as data), while unknown
-extension labels stay in `opaque_blocks` and the NETSCAPE loop extension
-remains interpreted into `loop_count`.
+extension labels stay in `opaque_blocks`. The NETSCAPE loop extension remains
+interpreted into `DecodedSequence::loop_count` as `AnimationLoop`: an omitted
+extension is `Unspecified`, zero is `Infinite`, and a positive GIF repeat field
+is converted to canonical `Finite { total_plays: repeat_field + 1 }`.
+
+The same common field keeps APNG positive `num_plays` as total plays and maps
+its zero sentinel to `Infinite`; WebP uses the GIF-style additional-repeat
+conversion. `Unknown` is reserved for a valid source whose loop behavior
+cannot be determined and is rejected by encoders. A finite total-play count
+of one is omitted for GIF (one pass is representable without a loop
+extension); WebP rejects it for its animated output contract. This distinction
+prevents a format's zero sentinel from being silently mistaken for a finite
+one-play value.
 JPEG APPn and COM marker payloads are retained as ordered metadata records
 (marker byte as kind, exact payload bytes as data), including multi-segment
 ICC/EXIF fragments in stream order; the APP14 Adobe transform byte stays

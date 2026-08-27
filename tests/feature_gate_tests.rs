@@ -6,10 +6,10 @@ use std::path::Path;
 
 use bytemuck as _;
 use image_slash_star::{
-    Capability, CapabilityRestriction, CapabilityTarget, CapabilityUnavailableReason, ColorType,
-    DecodedImage, DecodedSequence, DiagnosticKind, EncodeOptions, EncodedImage, ImageDiagnostic,
-    ImageError, ImageErrorStage, ImageFormat, ImageMode, ImagePalette, SequenceKind, SourceColor,
-    UnsupportedReason,
+    AnimationLoop, Capability, CapabilityRestriction, CapabilityTarget,
+    CapabilityUnavailableReason, ColorType, DecodedImage, DecodedSequence, DiagnosticKind,
+    EncodeOptions, EncodedImage, ImageDiagnostic, ImageError, ImageErrorStage, ImageFormat,
+    ImageMode, ImagePalette, SequenceKind, SourceColor, UnsupportedReason,
 };
 #[cfg(feature = "jpeg")]
 use wide as _;
@@ -4373,7 +4373,11 @@ fn gif_metadata_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         sequence.content.opaque_blocks, expected_blocks,
         "sequence blocks"
     );
-    assert_eq!(sequence.content.loop_count, Some(1000), "loop extension");
+    assert_eq!(
+        sequence.content.loop_count,
+        AnimationLoop::Finite { total_plays: 1001 },
+        "loop extension"
+    );
     let decoded = image_slash_star::decode(&bytes)?;
     assert_eq!(
         decoded.content.metadata, expected_metadata,
@@ -9462,7 +9466,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
         assert_eq!(multiple_sink.writes, 0);
 
         let mut retained_metadata = sequence.clone();
-        retained_metadata.loop_count = Some(1);
+        retained_metadata.loop_count = AnimationLoop::Finite { total_plays: 1 };
         let mut metadata_sink = RecordingSink {
             bytes: Vec::new(),
             writes: 0,
@@ -9496,7 +9500,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             width: 0,
             height: 1,
             frames: Vec::new(),
-            loop_count: None,
+            loop_count: AnimationLoop::Unspecified,
             background: None,
             kind: image_slash_star::SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
@@ -11600,7 +11604,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             width: 1,
             height: 1,
             frames: Vec::new(),
-            loop_count: None,
+            loop_count: AnimationLoop::Unspecified,
             background: None,
             kind: image_slash_star::SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
@@ -11735,7 +11739,7 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
             width: 1,
             height: 1,
             frames: Vec::new(),
-            loop_count: None,
+            loop_count: AnimationLoop::Unspecified,
             background: None,
             kind: SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),
@@ -22852,7 +22856,7 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         width: 1,
         height: 1,
         frames: vec![frame.clone(), frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: image_slash_star::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
