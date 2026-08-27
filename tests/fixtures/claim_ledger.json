@@ -1,11 +1,11 @@
 {
   "format_version": 1,
-  "base_revision": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
+  "base_revision": "93ec80ec99c42671dce6cf70694bce27ad8a2ef4",
   "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
   "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58",
   "coverage": {
-    "run_id": "eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d",
-    "snapshot_id": "c694d0a5-4b6e-490c-b7b7-df010e668fb8",
+    "run_id": "ec4c4bbd-dbda-4e49-8109-d7da07722dc0",
+    "snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -19,10 +19,10 @@
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
-    "coverage_origins": "7f8b7a12e4c81949c4821ef15bb274d660a2023e3fac7c4edfdaa49f9aae83ba",
+    "coverage_origins": "322de62980e2c29ea4c1e5ff79f36ad703b1a3f08144ded1f18f86ddf1eb1f97",
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
     "webp_property_map": "4af152b07754467a15cdc4e7fb75f8598332e2dd79bd52d4b5b58c649480da5a",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "6ef70b0bae2caf02a91dfc26a081a66f574ddf305f247328c62fefd901405b43"
+    "roadmap": "358b7dae27e2723e66d7d704821e3c7f64c829dee98db1b504a4a926c6af9229"
   }
 }
