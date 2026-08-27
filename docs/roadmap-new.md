@@ -89,12 +89,19 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 295 rows total, 288 active, 7 explicit planned
+- AVIF decode/inspect/verify: 296 rows total, 289 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,519 rows total, 1115 active decode rows, 365 active encode
+- Whole matrix: 1,520 rows total, 1116 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
+- The completed high-depth slice is
+  `high_bitdepth_still_10bit_444_lossless.avif`: a single-frame 10-bit
+  profile-1, full-range BT.601/SDR, all-lossless 4:4:4 image. Checked u16
+  reconstruction matches the independent dav1d 1.5.3 Y/U/V oracle and the
+  Pillow 12.2.0 RGB8 reference exactly. This closes one bounded 10-bit class;
+  12-bit, HDR, high-depth alpha/sequence, other subsampling, restoration, and
+  encoding remain planned.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
   chroma leaves, an exact 1,522-operation dav1d trace, exact Y/U/V planes,
@@ -1180,7 +1187,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,519 total | 1,122 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,115 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,520 total | 1,123 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,116 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2225,7 +2232,7 @@ the decoder, not an excuse to route around Rust.
 | General still brand/container control | Closed: baseline and all three accepted-brand rows | The 128×128 baseline and each legal generic-HEIF major-brand ordering now decode through the same safe Rust AV1 path with exact independent 49,152-byte RGB references. |
 | Partitioned-square public raster | Closed: all 16 partitioned-square rows | The safe decoder now materializes all twelve cropped 12×12 and four 16×16 4:4:4 square fixtures with exact pinned planes and entropy traces. This category is no longer a planned matrix gap; broader baseline/tile/sequence classes remain separate work. |
 | Adjacent entropy and tile syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | These are nearby AV1 bitstream sentences. The safe decoder now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes with independent ramp/diagonal fixtures; these two byte mutations are rejected by the independent decoder and remain explicit negative planned controls. Empty-tile malformed input and the adjacent lossy DC predictor are active. |
-| Sample depth and future alpha variants | `high_bitdepth` (the committed `with_alpha` row is active) | A picture may use more than 8 bits or carry a second transparency picture. Pure safe Rust now decodes the committed 64×64 alpha pair to exact RGBA8 pixels; 10/12-bit reconstruction and broader alpha relationships/depths remain explicit future work. |
+| Sample depth and future alpha variants | `high_bitdepth` (the committed `with_alpha` row and bounded 10-bit still slice are active) | A picture may use more than 8 bits or carry a second transparency picture. Pure safe Rust now decodes the committed 64×64 alpha pair and the bounded 16×16 10-bit 4:4:4 still to exact public bytes; 12-bit reconstruction and broader alpha relationships/depths remain explicit future work. |
 | Color | `hdr` | HDR changes how numbers become colors. It needs explicit safe-Rust bounds, declared color conversion, and metadata rules. |
 | Sequences and frame identity | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | A movie is many pictures plus timing and frame IDs. Safe Rust now rejects the repeated current-ID error case and keeps a primary item independently eligible from a later movie track; first-frame materialization, track presentation, and partial-state rules remain. |
 | Multi-tile frame payloads | Closed: `multitile` | Large AV1 frames can split work into independently sized tiles. The committed 256×128 two-column fixture now proves checked tile-size parsing, tile-local reconstruction, one-time canvas placement, frame-global deblocking/CDEF, and exact independent pixels; broader tile shapes remain in the implementation work item. |
@@ -2454,7 +2461,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 292 AVIF decode/inspect/verify rows exist: 285 are
+**Current exact state:** 296 AVIF decode/inspect/verify rows exist: 289 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

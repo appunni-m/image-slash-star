@@ -236,7 +236,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !(still.bit_depth == 8
+    if !(matches!(still.bit_depth, 8 | 10)
         && !still.monochrome
         && still.color_primaries == 1
         && still.transfer_characteristics == 13
@@ -530,7 +530,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     still.height = 5;
     rejects(still);
     let mut still = valid_still.clone();
-    still.bit_depth = 10;
+    still.bit_depth = 12;
     rejects(still);
     let mut still = valid_still.clone();
     still.monochrome = true;

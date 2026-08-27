@@ -23,7 +23,7 @@ pub(crate) struct SampleDepth {
 impl SampleDepth {
     /// Construct a depth supported by the checked AVIF sample domain.
     pub(crate) fn new(bits: u32) -> Option<Self> {
-        if !(8..=12).contains(&bits) {
+        if !matches!(bits, 8 | 10 | 12) {
             return None;
         }
         let maximum = 1_u32.checked_shl(bits)?.checked_sub(1)?;
@@ -41,6 +41,21 @@ impl SampleDepth {
     /// Return the greatest representable sample for this depth.
     pub(crate) const fn maximum(self) -> u16 {
         self.maximum
+    }
+
+    /// Return the AV1 midpoint used by the lossless predictor defaults.
+    pub(crate) const fn midpoint(self) -> u16 {
+        1_u16 << self.bits.saturating_sub(1)
+    }
+
+    /// Return the AV1 missing-top-edge default for this sample depth.
+    pub(crate) const fn top_edge_default(self) -> u16 {
+        self.midpoint().saturating_sub(1)
+    }
+
+    /// Return the AV1 missing-left-edge default for this sample depth.
+    pub(crate) const fn left_edge_default(self) -> u16 {
+        self.midpoint().saturating_add(1)
     }
 
     /// Validate one reconstructed sample against this depth's nominal range.
@@ -73,10 +88,15 @@ mod tests {
     #[test]
     fn validates_supported_depths_and_sample_domain() -> Result<(), &'static str> {
         assert_eq!(SampleDepth::new(7), None);
+        assert_eq!(SampleDepth::new(9), None);
+        assert_eq!(SampleDepth::new(11), None);
         assert_eq!(SampleDepth::new(13), None);
         let depth = SampleDepth::new(12).ok_or("12-bit AVIF depth is supported")?;
         assert_eq!(depth.bits(), 12);
         assert_eq!(depth.maximum(), 4_095);
+        assert_eq!(depth.midpoint(), 2_048);
+        assert_eq!(depth.top_edge_default(), 2_047);
+        assert_eq!(depth.left_edge_default(), 2_049);
         assert_eq!(depth.validate(4_095), Some(4_095));
         assert_eq!(depth.validate(4_096), None);
         Ok(())
