@@ -21,14 +21,21 @@ mod support;
 
 use support::json::{self, FromJson, Object, Value};
 
+#[cfg(coverage)]
+use std::collections::BTreeSet;
+
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
 static MATRIX_ROW_SELECTION: OnceLock<Result<MatrixRowSelection, String>> = OnceLock::new();
 static MATRIX_ROW_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
 static MATRIX_ROW_SELECTION_FAILURE_REPORT: OnceLock<()> = OnceLock::new();
 static SELECTED_MATRIX_DISPATCH_CLAIMED: AtomicBool = AtomicBool::new(false);
+static SELECTOR_ARGUMENTS: OnceLock<Result<ParsedSelectorArguments, String>> = OnceLock::new();
 
 const MATRIX_ROW_SELECTOR_STEM: &str = "__image_slash_star_matrix_row_selector__";
 const MATRIX_ROW_SELECTOR_PREFIX: &str = "__image_slash_star_matrix_row_selector__=";
+const AV1_FIXTURE_SELECTOR_STEM: &str = "__image_slash_star_av1_fixture_selector__";
+const AV1_FIXTURE_SELECTOR_PREFIX: &str = "__image_slash_star_av1_fixture_selector__=";
+const RESERVED_SELECTOR_STEM: &str = "__image_slash_star_";
 
 // Coverage MCP keeps its libtest command immutable. Selectors therefore use
 // repeated `--skip <reserved-payload>` arguments, which libtest forwards to
@@ -358,6 +365,12 @@ struct ParsedMatrixRowKey {
     id: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ParsedSelectorArguments {
+    matrix_rows: Vec<String>,
+    av1_fixtures: Vec<String>,
+}
+
 impl ParsedMatrixRowKey {
     fn qualified(&self) -> String {
         format!("{}:{}:{}", self.operation.label(), self.format, self.id)
@@ -419,7 +432,36 @@ impl MatrixRowSelection {
 }
 
 fn parse_matrix_row_selector_args(args: &[OsString]) -> Result<Vec<String>, String> {
-    let mut selectors = Vec::new();
+    Ok(parse_selector_args(args)?.matrix_rows)
+}
+
+fn parse_av1_fixture_selector_args(args: &[OsString]) -> Result<Vec<String>, String> {
+    Ok(parse_selector_args(args)?.av1_fixtures)
+}
+
+fn parse_av1_fixture_name(name: &str) -> Result<(), String> {
+    let valid = !name.is_empty()
+        && name.ends_with(".avif")
+        && name
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'));
+    if valid {
+        Ok(())
+    } else {
+        Err(format!(
+            "invalid AV1 fixture selector {name:?}; expected a bare ASCII .avif fixture basename"
+        ))
+    }
+}
+
+fn parse_selector_args(args: &[OsString]) -> Result<ParsedSelectorArguments, String> {
+    let mut matrix_rows = Vec::new();
+    let mut av1_fixtures = Vec::new();
+    let mut seen_av1_fixtures = HashSet::new();
     let mut has_unrelated_skip = false;
     let mut index = 0usize;
 
@@ -446,7 +488,26 @@ fn parse_matrix_row_selector_args(args: &[OsString]) -> Result<Vec<String>, Stri
                                 .to_owned(),
                         );
                     }
-                    selectors.push(key.to_owned());
+                    matrix_rows.push(key.to_owned());
+                }
+                Some(payload) if payload.starts_with(AV1_FIXTURE_SELECTOR_STEM) => {
+                    let fixture = payload
+                        .strip_prefix(AV1_FIXTURE_SELECTOR_PREFIX)
+                        .ok_or_else(|| {
+                            format!(
+                                "malformed AV1 fixture selector payload {payload:?}; expected {AV1_FIXTURE_SELECTOR_PREFIX}<basename>"
+                            )
+                        })?;
+                    parse_av1_fixture_name(fixture)?;
+                    if !seen_av1_fixtures.insert(fixture.to_owned()) {
+                        return Err(format!("duplicate AV1 fixture selector {fixture:?}"));
+                    }
+                    av1_fixtures.push(fixture.to_owned());
+                }
+                Some(payload) if payload.starts_with(RESERVED_SELECTOR_STEM) => {
+                    return Err(format!(
+                        "unknown reserved selector payload {payload:?}; expected a matrix-row or AV1 fixture selector"
+                    ));
                 }
                 Some(_) | None => {
                     has_unrelated_skip = true;
@@ -457,9 +518,9 @@ fn parse_matrix_row_selector_args(args: &[OsString]) -> Result<Vec<String>, Stri
         }
 
         if let Some(payload) = argument.strip_prefix("--skip=") {
-            if payload.starts_with(MATRIX_ROW_SELECTOR_STEM) {
+            if payload.starts_with(RESERVED_SELECTOR_STEM) {
                 return Err(
-                    "matrix row selectors must use a separate --skip payload; --skip=<selector> is unsupported"
+                    "reserved selectors must use a separate --skip payload; --skip=<selector> is unsupported"
                         .to_owned(),
                 );
             }
@@ -468,21 +529,52 @@ fn parse_matrix_row_selector_args(args: &[OsString]) -> Result<Vec<String>, Stri
             continue;
         }
 
-        if argument.starts_with(MATRIX_ROW_SELECTOR_STEM) {
+        if argument.starts_with(RESERVED_SELECTOR_STEM) {
             return Err(format!(
-                "matrix row selector payload {argument:?} must follow an exact --skip argument"
+                "reserved selector payload {argument:?} must follow an exact --skip argument"
             ));
         }
         index = index.saturating_add(1);
     }
 
-    if !selectors.is_empty() && has_unrelated_skip {
+    if (!matrix_rows.is_empty() || !av1_fixtures.is_empty()) && has_unrelated_skip {
         return Err(
-            "ordinary libtest --skip filters cannot be combined with matrix row selectors"
+            "ordinary libtest --skip filters cannot be combined with reserved selectors".to_owned(),
+        );
+    }
+    if !matrix_rows.is_empty() && !av1_fixtures.is_empty() {
+        return Err(
+            "matrix row selectors and AV1 fixture selectors cannot be combined in one run"
                 .to_owned(),
         );
     }
-    Ok(selectors)
+    Ok(ParsedSelectorArguments {
+        matrix_rows,
+        av1_fixtures,
+    })
+}
+
+fn selector_arguments() -> Result<&'static ParsedSelectorArguments, &'static str> {
+    let result = SELECTOR_ARGUMENTS
+        .get_or_init(|| parse_selector_args(&std::env::args_os().collect::<Vec<_>>()));
+    match result {
+        Ok(arguments) => Ok(arguments),
+        Err(error) => Err(error.as_str()),
+    }
+}
+
+fn av1_fixture_selector_requested() -> bool {
+    let arguments = match selector_arguments() {
+        Ok(arguments) => arguments,
+        Err(error) => panic!("invalid coverage selector arguments: {error}"),
+    };
+    if arguments.av1_fixtures.is_empty() {
+        return false;
+    }
+    if !cfg!(coverage) {
+        panic!("AV1 fixture selectors require the cfg(coverage) test harness");
+    }
+    true
 }
 
 fn parse_matrix_row_key(raw: &str) -> Result<ParsedMatrixRowKey, String> {
@@ -702,8 +794,7 @@ fn matrix_row_selection(
     matrix: &CoverageMatrix,
 ) -> Result<&'static MatrixRowSelection, &'static str> {
     let result = MATRIX_ROW_SELECTION.get_or_init(|| {
-        let args = std::env::args_os().collect::<Vec<_>>();
-        let requested_keys = parse_matrix_row_selector_args(&args)?;
+        let requested_keys = selector_arguments()?.matrix_rows.clone();
         if requested_keys.is_empty() {
             return Ok(MatrixRowSelection::All);
         }
@@ -756,6 +847,9 @@ fn report_matrix_row_selection(selection: &MatrixRowSelection) {
 }
 
 fn matrix_selection_is_filtered() -> bool {
+    if av1_fixture_selector_requested() {
+        return true;
+    }
     coverage_matrix().is_some_and(|matrix| {
         matrix_row_selection_for_test(matrix).is_none_or(MatrixRowSelection::is_selected)
     })
@@ -775,6 +869,9 @@ fn assert_coverage_matrix_summary(matrix: &CoverageMatrix) {
 }
 
 fn dispatch_selected_matrix(run_full: impl FnOnce()) {
+    if av1_fixture_selector_requested() {
+        return;
+    }
     let matrix = require_some(
         coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
@@ -805,6 +902,10 @@ mod matrix_row_selection_tests {
 
     fn transport(key: &str) -> OsString {
         OsString::from(format!("{MATRIX_ROW_SELECTOR_PREFIX}{key}"))
+    }
+
+    fn av1_transport(fixture: &str) -> OsString {
+        OsString::from(format!("{AV1_FIXTURE_SELECTOR_PREFIX}{fixture}"))
     }
 
     fn catalog_row(
@@ -850,6 +951,106 @@ mod matrix_row_selection_tests {
                 "encode:jpeg:enc_subsample_444".to_owned(),
             ])
         );
+    }
+
+    #[test]
+    fn parser_accepts_repeated_exact_av1_fixture_payloads() {
+        let args = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            av1_transport("coverage_square16_chroma_smooth_vertical_01.avif"),
+            OsString::from("--skip"),
+            av1_transport("coverage_r16x32_following_filter_intra_split_mode0_01.avif"),
+        ];
+        assert_eq!(
+            parse_av1_fixture_selector_args(&args),
+            Ok(vec![
+                "coverage_square16_chroma_smooth_vertical_01.avif".to_owned(),
+                "coverage_r16x32_following_filter_intra_split_mode0_01.avif".to_owned(),
+            ])
+        );
+    }
+
+    #[test]
+    fn parser_rejects_invalid_av1_fixture_selection() {
+        let malformed_payloads = [
+            AV1_FIXTURE_SELECTOR_STEM,
+            AV1_FIXTURE_SELECTOR_PREFIX,
+            "__image_slash_star_av1_fixture_selector__bad=fixture.avif",
+        ];
+        for payload in malformed_payloads {
+            let args = vec![
+                OsString::from("coverage_matrix_tests"),
+                OsString::from("--skip"),
+                OsString::from(payload),
+            ];
+            assert!(
+                parse_av1_fixture_selector_args(&args).is_err(),
+                "payload should be rejected: {payload}"
+            );
+        }
+
+        for fixture in [
+            "../fixture.avif",
+            "coverage*.avif",
+            "coverage_fixture.png",
+            "coverage fixture.avif",
+        ] {
+            let args = vec![
+                OsString::from("coverage_matrix_tests"),
+                OsString::from("--skip"),
+                av1_transport(fixture),
+            ];
+            assert!(
+                parse_av1_fixture_selector_args(&args).is_err(),
+                "fixture should be rejected: {fixture}"
+            );
+        }
+
+        let duplicate = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            av1_transport("coverage_square16_chroma_smooth_vertical_01.avif"),
+            OsString::from("--skip"),
+            av1_transport("coverage_square16_chroma_smooth_vertical_01.avif"),
+        ];
+        assert!(parse_av1_fixture_selector_args(&duplicate).is_err());
+    }
+
+    #[test]
+    fn parser_rejects_av1_matrix_and_ordinary_skip_conflicts() {
+        let mixed_matrix = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            av1_transport("coverage_square16_chroma_smooth_vertical_01.avif"),
+            OsString::from("--skip"),
+            transport("decode:bmp:depth_1"),
+        ];
+        assert!(matches!(
+            parse_av1_fixture_selector_args(&mixed_matrix),
+            Err(error) if error.contains("cannot be combined")
+        ));
+
+        let mixed_ordinary = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            av1_transport("coverage_square16_chroma_smooth_vertical_01.avif"),
+            OsString::from("--skip"),
+            OsString::from("ordinary-test-filter"),
+        ];
+        assert!(matches!(
+            parse_av1_fixture_selector_args(&mixed_ordinary),
+            Err(error) if error.contains("ordinary libtest")
+        ));
+
+        let equals_form = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from(format!(
+                "--skip={}{}",
+                AV1_FIXTURE_SELECTOR_PREFIX, "coverage_square16_chroma_smooth_vertical_01.avif"
+            )),
+        ];
+        assert!(parse_av1_fixture_selector_args(&equals_form).is_err());
     }
 
     #[test]
@@ -1462,6 +1663,130 @@ json_object!(Av1ReconstructionEntropyOperation {
     count,
     cdf,
 });
+
+#[cfg(coverage)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Av1FixtureSelection {
+    All,
+    Selected(BTreeSet<String>),
+}
+
+#[cfg(coverage)]
+impl Av1FixtureSelection {
+    fn is_selected(&self) -> bool {
+        matches!(self, Self::Selected(_))
+    }
+
+    fn contains(&self, fixture: &str) -> bool {
+        match self {
+            Self::All => true,
+            Self::Selected(fixtures) => fixtures.contains(fixture),
+        }
+    }
+
+    fn selected(&self) -> Option<&BTreeSet<String>> {
+        match self {
+            Self::All => None,
+            Self::Selected(fixtures) => Some(fixtures),
+        }
+    }
+}
+
+#[cfg(coverage)]
+static AV1_RECONSTRUCTION_DOCUMENT: OnceLock<Result<Av1ReconstructionDocument, String>> =
+    OnceLock::new();
+#[cfg(coverage)]
+static AV1_FIXTURE_SELECTION: OnceLock<Result<Av1FixtureSelection, String>> = OnceLock::new();
+#[cfg(coverage)]
+static AV1_FIXTURE_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
+
+#[cfg(coverage)]
+fn av1_reconstruction_document() -> Result<&'static Av1ReconstructionDocument, &'static str> {
+    let result = AV1_RECONSTRUCTION_DOCUMENT.get_or_init(|| {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("fixtures")
+            .join("outputs")
+            .join("av1_reconstruction.json");
+        let contents = fs::read_to_string(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let document: Av1ReconstructionDocument = json::from_str(&contents)
+            .map_err(|error| format!("cannot parse {}: {error:?}", path.display()))?;
+        let mut names = BTreeSet::new();
+        for case in &document.cases {
+            if !names.insert(case.fixture.as_str()) {
+                return Err(format!(
+                    "AV1 reconstruction oracle contains duplicate fixture {:?}",
+                    case.fixture
+                ));
+            }
+        }
+        Ok(document)
+    });
+    match result {
+        Ok(document) => Ok(document),
+        Err(error) => Err(error.as_str()),
+    }
+}
+
+#[cfg(coverage)]
+fn av1_fixture_selection() -> Result<&'static Av1FixtureSelection, &'static str> {
+    let result = AV1_FIXTURE_SELECTION.get_or_init(|| {
+        let arguments = selector_arguments().map_err(str::to_owned)?;
+        if arguments.av1_fixtures.is_empty() {
+            return Ok(Av1FixtureSelection::All);
+        }
+
+        let document = av1_reconstruction_document().map_err(str::to_owned)?;
+        let known = document
+            .cases
+            .iter()
+            .map(|case| case.fixture.as_str())
+            .collect::<BTreeSet<_>>();
+        let requested = arguments
+            .av1_fixtures
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        for fixture in &requested {
+            if !known.contains(fixture.as_str()) {
+                return Err(format!(
+                    "unknown AV1 reconstruction fixture selector {fixture:?}"
+                ));
+            }
+            if avif_reconstruction_fixture_is_planned(fixture) {
+                return Err(format!(
+                    "AV1 reconstruction fixture selector {fixture:?} refers to a planned case"
+                ));
+            }
+        }
+        Ok(Av1FixtureSelection::Selected(requested))
+    });
+    match result {
+        Ok(selection) => Ok(selection),
+        Err(error) => Err(error.as_str()),
+    }
+}
+
+#[cfg(coverage)]
+fn av1_fixture_selection_for_test() -> &'static Av1FixtureSelection {
+    let selection = match av1_fixture_selection() {
+        Ok(selection) => selection,
+        Err(error) => panic!("invalid AV1 fixture selection: {error}"),
+    };
+    if let Some(fixtures) = selection.selected() {
+        AV1_FIXTURE_SELECTION_REPORT.get_or_init(|| {
+            let count = fixtures.len();
+            let names = fixtures
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(", ");
+            eprintln!("AV1 reconstruction fixture selection: selected={count} [{names}]");
+        });
+    }
+    selection
+}
 
 #[derive(Debug)]
 struct PixelParityRef {
@@ -5513,20 +5838,16 @@ fn test_av1_entropy_mosaic_01_materializes() {
 #[cfg(coverage)]
 #[test]
 fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
-    if matrix_selection_is_filtered() {
+    let fixture_selection = av1_fixture_selection_for_test();
+    if matrix_selection_is_filtered() && !fixture_selection.is_selected() {
         return;
     }
     let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures");
-    let document_path = fixture_root.join("outputs").join("av1_reconstruction.json");
-    let contents = require_ok(
-        fs::read_to_string(document_path),
-        "AV1 reconstruction fixture must be readable",
-    );
-    let expected: Av1ReconstructionDocument = require_ok(
-        json::from_str(&contents),
-        "AV1 reconstruction fixture must be valid JSON",
+    let expected = require_ok(
+        av1_reconstruction_document(),
+        "AV1 reconstruction fixture document must be valid and readable",
     );
     assert_eq!(expected.format_version, 3);
     assert_eq!(expected.oracle.implementation, "dav1d");
@@ -5599,7 +5920,16 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         assert_eq!(extension.entropy_operations, accepted.entropy_operations);
     }
 
+    let mut executed_fixtures = BTreeSet::new();
     for (case_index, case) in expected.cases.iter().enumerate() {
+        if !fixture_selection.contains(&case.fixture) {
+            continue;
+        }
+        assert!(
+            executed_fixtures.insert(case.fixture.clone()),
+            "AV1 reconstruction fixture was encountered more than once: {}",
+            case.fixture
+        );
         let input = require_ok(
             fs::read(
                 fixture_root
@@ -9499,6 +9829,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         {
             img::__coverage_sweep_av1_first_leaf(&input);
         }
+    }
+
+    if let Some(selected_fixtures) = fixture_selection.selected() {
+        assert_eq!(
+            &executed_fixtures, selected_fixtures,
+            "AV1 fixture selector must execute exactly the requested reconstruction cases"
+        );
+        return;
     }
 
     let masked_fixture = "portable_lossy_420_q99_token_2097724_masked_572.avif";

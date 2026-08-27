@@ -76,6 +76,39 @@ selected incremental run is targeted subset evidence, so it cannot replace the
 full all-feature release coverage run or establish the aggregate
 line/branch/function/region release gate.
 
+### AV1 reconstruction fixture selection
+
+Coverage-mode AV1 reconstruction can be narrowed to exact committed oracle
+fixtures with a second reserved `--skip` transport. Use the bare fixture
+basename from `tests/fixtures/outputs/av1_reconstruction.json`, including its
+`.avif` suffix:
+
+```bash
+cargo +nightly test --locked --all-features --test coverage_matrix_tests test_av1_reconstruction_matches_pinned_dav1d_fixture -- --exact --nocapture --skip '__image_slash_star_av1_fixture_selector__=coverage_square16_chroma_smooth_vertical_01.avif'
+```
+
+Repeat the two-token pair to run a small batch. Managed Coverage MCP appends the
+same arguments to its registered LLVM command, for example:
+
+```text
+-- test_av1_reconstruction_matches_pinned_dav1d_fixture --exact --nocapture
+--skip __image_slash_star_av1_fixture_selector__=coverage_square16_chroma_smooth_vertical_01.avif
+--skip __image_slash_star_av1_fixture_selector__=coverage_r16x32_following_filter_intra_split_mode0_01.avif
+```
+
+With no AV1 fixture selector, the existing reconstruction test still validates
+all 230 oracle cases and all other coverage helpers retain their full-run
+behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
+return before doing fixture work; the reconstruction test validates only the
+requested cases and asserts that every requested name ran exactly once. The
+selector is coverage-harness infrastructure, not a new decoder capability.
+
+Selectors are exact and case-sensitive. Empty names, paths, whitespace, commas,
+globs, unknown names, duplicates, planned cases, `--skip=<payload>`, payloads
+outside `--skip`, ordinary libtest skip filters, and matrix-row/AV1-selector
+mixtures are rejected. Selected runs are bounded incremental evidence and do
+not replace the full four-metric release coverage measurement.
+
 Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
 Square16 CFL/DCT witnesses. Their pinned entropy traces contain 419, 229, and
