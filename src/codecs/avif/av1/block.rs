@@ -1027,6 +1027,8 @@ pub(super) fn filter_transform_dimensions(
             TransformGrid::Horizontal32x16
             | TransformGrid::Horizontal32x8
             | TransformGrid::Vertical8x32 => (8, 8),
+            // Square32 depth one terminates in four TX16x16 children.
+            TransformGrid::Square32 => (16, 16),
             // R16x64 depth two terminates in TX16x16 children.
             TransformGrid::Vertical16x64 => (16, 16),
             // R64x16 depth one terminates in two R32x16 children.
@@ -24340,7 +24342,9 @@ fn reconstruct_leaf_with_luma_override(
             [luma, chroma_u, chroma_v]
         }
         ReconstructionPolicy::Lossy420Dct32x32 => {
-            let luma = reconstruct_lossy_luma_32x32(predictors[0], lossy_luma_32x32_coefficients);
+            let luma = luma_override.unwrap_or_else(|| {
+                reconstruct_lossy_luma_32x32(predictors[0], lossy_luma_32x32_coefficients)
+            });
             let chroma = |plane: usize| {
                 if matches!(chroma_sampling, ChromaSampling::Full) {
                     reconstruct_lossy_chroma_32x32(
@@ -34846,6 +34850,7 @@ fn reconstruct_lossy_luma_32x32_split(
     top: [u16; 32],
     left: [u16; 32],
     top_left: u16,
+    has_top: bool,
     has_left: bool,
     split: LossyLuma16x16Split,
 ) -> PortableResult<ReconstructedPlane> {
@@ -34901,10 +34906,11 @@ fn reconstruct_lossy_luma_32x32_split(
             let mut prediction = [0_u16; 256];
             match predictor {
                 LumaPredictor::Dc => {
-                    let value = if has_left || column != 0 || row != 0 {
-                        dc_predictor_16(top_edge, left_edge)
-                    } else {
-                        one_sided_dc_predictor_16(top_edge)
+                    let value = match (has_top || row != 0, has_left || column != 0) {
+                        (true, true) => dc_predictor_16(top_edge, left_edge),
+                        (true, false) => one_sided_dc_predictor_16(top_edge),
+                        (false, true) => one_sided_dc_predictor_16(left_edge),
+                        (false, false) => 128,
                     };
                     prediction.fill(value);
                 }
@@ -35136,6 +35142,7 @@ fn reconstruct_following_lossy_420_vertical_32x32_leaf(
             luma_top,
             luma_left,
             luma_top_left,
+            true,
             left_neighbor.is_some(),
             split,
         )
@@ -41020,6 +41027,16 @@ impl Lossy420Decoder {
         } else {
             reconstruct_origin_luma_override(transform_grid, &syntax)?
         };
+        if matches!(transform_grid, TransformGrid::Square32)
+            && syntax.lossy_luma_16x16_split.is_some()
+            && luma_override.is_none()
+        {
+            // A Square32 split has four TX16x16 luma sentences. Falling back
+            // to the unsplit TX32x32 policy would silently discard that
+            // syntax, so unsupported predictor/tool combinations are an
+            // explicit portable gap.
+            return Err(PortableUnavailable);
+        }
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
         let tx_context = luma_transform_context_for_syntax(
@@ -42410,6 +42427,31 @@ fn reconstruct_origin_luma_override(
                 reconstruct_lossy_luma_8x8_split_paeth([128; 8], None, 128, split)
             }
         };
+        return Ok(Some(luma));
+    }
+
+    if matches!(transform_grid, TransformGrid::Square32)
+        && let Some(split) = syntax.lossy_luma_16x16_split
+    {
+        if syntax.palette.is_present()
+            || !matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+            || !matches!(syntax.luma_predictor, LumaPredictor::Dc)
+            || syntax.luma_angle.is_some()
+            || syntax.filter_intra_mode.is_some()
+        {
+            return Err(PortableUnavailable);
+        }
+        let luma = reconstruct_lossy_luma_32x32_split(
+            LumaPredictor::Dc,
+            None,
+            None,
+            [127_u16; 32],
+            [129_u16; 32],
+            128,
+            false,
+            false,
+            split,
+        )?;
         return Ok(Some(luma));
     }
 

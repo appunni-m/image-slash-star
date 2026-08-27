@@ -41,6 +41,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
     }
 )
+SQUARE32_SPLIT_TARGET_FIXTURES = frozenset(
+    {"coverage_square32_origin_tx16x16_split_01.avif"}
+)
 SQUARE16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {"coverage_square16_filter_intra_mode0_01.avif"}
 )
@@ -959,6 +962,11 @@ EXPECTED_FIXTURES = {
     "coverage_r32x32_following_01.avif": {
         "file_sha256": "28b9df05ad61bf01fef2ac11a6a9fa775ced07aed181e30c5c905caaedf4b6d3",
         "rgb_sha256": "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7",
+        "size": [32, 32],
+    },
+    "coverage_square32_origin_tx16x16_split_01.avif": {
+        "file_sha256": "f4bf64e6de7a7265a1c5564324c812103135c043a05b7119ef4c97bf9892c987",
+        "rgb_sha256": "6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b",
         "size": [32, 32],
     },
     "coverage_r32x32_filter_intra_probe_01.avif": {
@@ -1880,6 +1888,7 @@ def generate(
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
+                or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
@@ -1900,6 +1909,7 @@ def generate(
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
+                or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES

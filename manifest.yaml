@@ -4270,6 +4270,10 @@ formats:
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with pinned following Horizontal32x16 luma and 16x8 chroma reconstruction
       test_assets:
       - coverage_r32x32_following_01.avif
+    - id: coverage_square32_origin_tx16x16_split_01
+      description: 32x32 4:2:0 quality-76 speed-0 origin Square32 leaf with four TX16x16 luma DCT children, DC prediction, and non-empty luma residuals
+      test_assets:
+      - coverage_square32_origin_tx16x16_split_01.avif
     - id: coverage_r32x8_h4_ripple_01
       description: 32x32 4:2:0 quality-76 speed-0 H4 split with terminal Horizontal32x8 luma and 16x4 chroma transforms
       test_assets:
