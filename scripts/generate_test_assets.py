@@ -5260,6 +5260,59 @@ def gen_avif():
         speed=0,
     )
 
+    def vertical4x16_predictor_adst_adst():
+        """Generate the selected predictor-enabled V4x16 witness.
+
+        This is v4x16-f07-n07 from the pinned vertical-flip campaign: the second
+        Vertical4x16 luma leaf selects CDF symbol 4 / dav1d txtp 3
+        (ADST-ADST), while the four terminal leaves use only DC, Horizontal,
+        and Paeth prediction. Keep the reflection in this generator so the
+        promoted fixture is reproducible without copying campaign bytes.
+        """
+
+        amplitude = 18
+        phase = 11
+        bases = (48, 104, 160, 216)
+
+        def pixel(x, y):
+            # The campaign reflects the horizontal predictor corpus vertically:
+            # output[x,y] = source[x,15-y].
+            source_x = x
+            source_y = 15 - y
+            band = source_y // 4
+            local_y = source_y % 4
+            horizontal = ((source_x + phase) % 16) - 8
+            vertical = ((local_y + phase) % 4) - 2
+            signal = (horizontal * horizontal + vertical * vertical - 24) * amplitude // 8
+            value = clamp_channel(bases[band] + signal)
+            return (value, value, value)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_v4x16_predictor_adst_adst_01",
+        vertical4x16_predictor_adst_adst(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-directional-intra": "1",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=68,
+        speed=0,
+    )
+
     def horizontal16x4_depth_one_tx8x4():
         """Generate the bounded depth-one TX8x4 H16x4 witness.
 

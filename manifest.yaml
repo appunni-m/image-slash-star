@@ -4330,6 +4330,10 @@ formats:
       description: 16x16 4:2:0 quality-26 speed-0 PARTITION_H4 witness with predictor-diverse Horizontal16x4 leaves and an ADST-DCT luma transform
       test_assets:
       - coverage_h16x4_predictor_adst_dct_01.avif
+    - id: coverage_v4x16_predictor_adst_adst_01
+      description: 16x16 4:2:0 quality-68 speed-0 PARTITION_V4 witness with DC/Horizontal/Paeth Vertical4x16 leaves and an ADST-ADST luma transform
+      test_assets:
+      - coverage_v4x16_predictor_adst_adst_01.avif
     - id: coverage_h16x4_tx4x4_split_01
       description: 16x16 4:2:0 quality-62 speed-0 PARTITION_H4 witness with one following Horizontal16x4 leaf split into four TX4x4 luma transforms
       test_assets:
