@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-27
 
-- Current claim-ledger refresh base revision: `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`
+- Current claim-ledger refresh base revision: `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -550,20 +550,23 @@ ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
 The latest managed Coverage MCP run is
-`2c15aada-4d4a-4a4f-8547-25172ad7d370`. Its run record is bound to exact
-implementation commit `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`; it passed in
-146,945 ms and ingested snapshot `b3552b87-34e3-4982-aed9-097741233eb6`.
-Its aggregate all-feature LLVM snapshot records 99,780/109,576 lines (91.0601%),
-12,713/14,058 branches (90.4325%), 5,090/5,766 functions (88.2761%), and
-149,392/165,733 regions (90.1402%), leaving 9,796 lines, 1,345 branches, 676
-functions, and 16,341 regions uncovered. The compact snapshot projection retains
-commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance
-caveat is explicit. Explicit incremental review against snapshot
-`c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b` reports +1 covered branch and +1 covered
-region, no aggregate line/function change, and one newly covered line identity at
-`src/codecs/avif/av1/block.rs:7860`; named test attribution is unavailable. The
-mode-2 Vertical8x16 witness is exact through safe Rust, but AVF-STILL-001, AVIF
-encoding, and the four-metric 100% gate remain open.
+`10e5a9c1-5d4e-473c-81f9-f00fd9d9a882`. Its run record is bound to exact
+implementation commit `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; it passed in
+159,751 ms and ingested snapshot `dcebe092-02c4-4343-9dcc-c6b10dcaf9fc`.
+Its aggregate all-feature LLVM snapshot records 100,042/109,633 lines (91.2517%),
+12,789/14,152 branches (90.3689%), 5,102/5,767 functions (88.4689%), and
+149,695/165,811 regions (90.2805%), leaving 9,591 lines, 1,363 branches, 665
+functions, and 16,116 regions uncovered. The run record is exact for the
+implementation commit, while the compact snapshot projection retains commit
+metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
+explicit. Explicit incremental review against baseline snapshot
+`b3552b87-34e3-4982-aed9-097741233eb6` reports +262 covered lines, +76 covered
+branches, +12 covered functions, and +303 covered regions, with denominator
+deltas of +57 lines, +94 branches, +1 function, and +78 regions. The branch rate
+decreased because the complete report added more branch identities than it
+covered; named test attribution is unavailable. The predictor-enabled H16x4
+witness is exact through safe Rust, but AVF-STILL-001, AVIF encoding, and the
+four-metric 100% gate remain open.
 
 The previous managed Coverage MCP run was
 `3b4748a2-f5bf-43d2-9f56-1067f4210257`, whose run record is bound to exact
@@ -647,7 +650,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions
+- LLVM coverage: 9,591 lines, 1,363 branches, 665 functions, and 16,116 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -655,10 +658,10 @@ accepted-brand variants, grid fixture, and two-column multitile fixture. The
 work item remains partial until broader partition/block states, independent
 evidence, and target checks exist.
 The latest managed insight ranks `src/codecs/avif/av1/block.rs` first, with
-uncovered line targets 349, 1,053, and 1,346-1,350, plus 1,049 uncovered
-branches, 448 uncovered functions, and 2,178 uncovered regions in that file;
-this is the next investigation target,
-not evidence that those states are reachable from the current Pillow corpus.
+8,781 uncovered executable lines, 1,046 uncovered branches, 439 uncovered
+functions, and 2,145 uncovered regions; its first compact ranges are 349, 1,053,
+and 1,346-1,350. This is the next investigation target, not evidence that
+those states are reachable from the current Pillow corpus.
 
 The 7 decode gaps and their pure-Rust dependencies are recorded exactly in
 the ledger below. A planned row is a real input or operation that must become
@@ -1201,21 +1204,21 @@ still open.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 99,780 | 109,576 | 91.0601% | 9,796 | 8.9399% |
-| Branches (managed Coverage MCP) | 12,713 | 14,058 | 90.4325% | 1,345 | 9.5675% |
-| Functions (managed Coverage MCP) | 5,090 | 5,766 | 88.2761% | 676 | 11.7239% |
-| Regions (managed Coverage MCP) | 149,392 | 165,733 | 90.1402% | 16,341 | 9.8598% |
+| Lines (managed Coverage MCP) | 100,042 | 109,633 | 91.2517% | 9,591 | 8.7483% |
+| Branches (managed Coverage MCP) | 12,789 | 14,152 | 90.3689% | 1,363 | 9.6311% |
+| Functions (managed Coverage MCP) | 5,102 | 5,767 | 88.4689% | 665 | 11.5311% |
+| Regions (managed Coverage MCP) | 149,695 | 165,811 | 90.2805% | 16,116 | 9.7195% |
 
-The Vertical8x16 filter-intra mode-2 fixture is a real safe-Rust reconstruction class,
-not a coverage-only test. Its input-only search report and exact pinned dav1d,
+The predictor-enabled H16x4 fixture is a real safe-Rust reconstruction class,
+not a coverage-only test. Its input-only search reports and exact pinned dav1d,
 Y/U/V, and Pillow RGB evidence are recorded in the AVIF section above.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:
 the release target is still 100% for all four measures. The explicit aggregate
-comparison found covered deltas of -2 lines, +5 branches, +0 functions, and -2
-regions, with denominator deltas of +4 lines, +4 branches, +0 functions, and +8
-regions; no source-attributable gain or named-test attribution is claimed.
+comparison found covered deltas of +262 lines, +76 branches, +12 functions, and
++303 regions, with denominator deltas of +57 lines, +94 branches, +1 function,
+and +78 regions; named-test attribution is unavailable.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
