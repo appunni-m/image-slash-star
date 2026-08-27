@@ -106,8 +106,8 @@
         }
       },
       "coverage_origin_inventory": {
-        "guards": 502,
-        "files": 85
+        "guards": 503,
+        "files": 86
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },
@@ -151,8 +151,8 @@
         "note": "Managed Coverage MCP run 10e5a9c1-5d4e-473c-81f9-f00fd9d9a882 passed the all-feature LLVM workload in 159,751 ms at exact implementation commit 8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6 and ingested snapshot dcebe092-02c4-4343-9dcc-c6b10dcaf9fc. The aggregate snapshot records 100,042/109,633 lines (91.2517%), 12,789/14,152 branches (90.3689%), 5,102/5,767 functions (88.4689%), and 149,695/165,811 regions (90.2805%), leaving 9,591 lines, 1,363 branches, 665 functions, and 16,116 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Explicit incremental review against baseline snapshot b3552b87-34e3-4982-aed9-097741233eb6 reports +262 covered lines, +76 covered branches, +12 covered functions, and +303 covered regions, with denominator deltas of +57 lines, +94 branches, +1 function, and +78 regions; the branch rate decreased because the complete report added 94 branch identities while covering 76. Named test attribution is unavailable. The predictor-enabled H16x4 ADST-DCT witness matches exact pinned dav1d entropy, reconstructed Y/U/V, and Pillow RGB evidence; broader AV1 states, AVF-STILL-001, ADST-ADST/IDTX/V_DCT/H_DCT wrappers, AVIF encoding, and the four-metric release gate remain partial."
       },
       "coverage_origin_inventory": {
-        "guards": 502,
-        "files": 85
+        "guards": 503,
+        "files": 86
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },

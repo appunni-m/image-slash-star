@@ -665,6 +665,7 @@ fn coverage_sweep_track(samples: &[&[u8]], config: [u8; 4]) {
 #[cfg(coverage)]
 #[coverage(off)]
 pub(crate) fn __coverage_exercise_private_branches() {
+    transform::__coverage_exercise_private_branches();
     bit_reader::__coverage_exercise_private_branches();
     block::__coverage_exercise_private_branches();
     entropy::__coverage_exercise_private_branches();
