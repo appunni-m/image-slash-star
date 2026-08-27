@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1518,
-      "decode_rows": 1121,
+      "total_rows": 1519,
+      "decode_rows": 1122,
       "encode_rows": 397,
-      "decode_active": 1114,
+      "decode_active": 1115,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 294,
-      "decode_active": 287,
+      "decode_rows": 295,
+      "decode_active": 288,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1203,6 +1203,65 @@
             "dav1d-verified luma matrix 6 is wired for RTX_16X4 dequantization"
           ],
           "scope": "This closes only the bounded predictor-enabled H16x4 ADST_DCT class. ADST_ADST and identity/V_DCT/H_DCT wrappers remain open; no claim of general AV1/AVIF or aggregate coverage completion is made."
+        },
+        "current_slice_update_2026_08_27_i444_full_chroma_paeth": {
+          "target": "32x32 8-bit 4:4:4 origin Square8 quadrant with a following target Square8 at pixel (8,8), distinct top/left/upper-left neighbors, and coded chroma Paeth mode 12",
+          "fixture": "coverage_i444_full_chroma_top_left_paeth_01.avif",
+          "script": "scripts/explore_avif_i444_full_chroma_top_left.py",
+          "campaign_report": "tests/fixtures/outputs/av1_search/coverage_i444_full_chroma_top_left_paeth_campaign_01.json",
+          "campaign_report_sha256": "def1e9fd8f9246fdfdb43f6daf3d3be0232008f78ced1202079a83ab904d2e04",
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified": 1,
+            "promoted": "i444-tl-f01-n05",
+            "seed": 7005,
+            "repository_rust_invoked": false,
+            "admission": "double deterministic Pillow/libavif/libaom encode, double encoded-item, double scalar dav1d trace, double YUV, double Pillow RGB, exact top-left-sensitive Paeth evidence, and complete Y/U/V planes",
+            "controls": "quality 76, speed 0, one thread, 32x32, 4:4:4, min partition 8, max partition 16, Paeth enabled; directional, smooth, CFL, palette, filter-intra, CDEF, restoration, loop filter, AQ, and delta-Q disabled",
+            "oracle": "Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, dav1d 1.5.3 at b546257f770768b2c88258c533da38b91a06f737"
+          },
+          "topology": {
+            "partition_blocks": [
+              "level2 (0,0) split range 35872",
+              "level3 (0,0) split range 38144",
+              "level4 (0,0) Square8 range 44528",
+              "level4 (2,0) Square8 range 65476",
+              "level4 (0,2) Square8 range 34270",
+              "level4 (2,2) Square8 range 64942",
+              "level3 (4,0) Square16 range 58984",
+              "level3 (0,4) Horizontal16x16 range 48704",
+              "level3 (4,4) Horizontal16x16 range 34784"
+            ],
+            "target_block": "level4 (2,2) Square8, fourth top-left quadrant leaf",
+            "target_group_index": 3,
+            "target_uv_mode": 12,
+            "target_chroma": "U/V TX8x8 DCT-DCT, EOB -1 in both planes",
+            "target_luma": "four TX4x4 luma children with EOB 14, 15, 11, and 13"
+          },
+          "evidence": {
+            "entropy_operation_count": 4680,
+            "trace_sha256": "20dc07137225fb481b649818b256d649daee85226651724773501e260ba4a529",
+            "fixture_sha256": "695fd9288686eec0cfa8abb174eead2d745ac3155f755222e05cefd694695dd6",
+            "encoded_item_length": 756,
+            "encoded_item_sha256": "b7f0ad6aa050384a5f7bff33719026ec498e3b5440c3d6dff30a17fff24504f",
+            "pillow_rgb_sha256": "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89",
+            "decoded_plane_sha256": {
+              "y": "db9575e22b0ae990f5e1b82ce6a16b590a56bce6c722c12c1d08153c4289bb06",
+              "u": "e11eaa9044c382c3f3295a6020d442cb4ac052daa04eb145f545633152176428",
+              "v": "d1c4626346d0f3b21424cdd81fe2e87ed001f8b3cc1c82e4b21bc70427c89fed"
+            },
+            "decoded_yuv_sha256": "301677b489e09211d7be1991101852bbae6e397ea8f2e158a9718a7865e992e9",
+            "predictor_proof": "For both U and V, the decoded target equals true Paeth and differs from both top-only and left-only fallback predictions; top, left, and upper-left neighbors are pairwise distinct."
+          },
+          "production_changes": [
+            "Add the dav1d-derived UV matrix-2 tables for TX8x8 and RTX16x8 dequantization.",
+            "Use the AV1 four-edge DC-sign context for full-resolution 16x16 chroma instead of a hard-coded context.",
+            "Assemble full-resolution horizontal chroma edges from exact luma-coordinate neighbors and apply AV1 one-sided top/left DC availability.",
+            "Reconstruct split R16x8 luma children with each child's actual top/left availability, including the no-left bottom-left case."
+          ],
+          "focused_verification": "RUSTFLAGS='--cfg coverage' cargo +nightly test --locked --all-features --test coverage_matrix_tests test_av1_reconstruction_matches_pinned_dav1d_fixture passes; exact entropy, partition, Y/U/V, and Pillow RGB assertions pass.",
+          "scope": "This closes only the bounded 32x32 full-resolution 4:4:4 top-left-sensitive chroma-Paeth/Square8 class. General AV1 partitions, other chroma modes and transforms, high bit depth, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open."
         }
       },
       "AVF-ENTROPY-001": {

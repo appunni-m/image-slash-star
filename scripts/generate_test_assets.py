@@ -6840,6 +6840,94 @@ def gen_avif():
         "coverage_i444_square8", 10, full_chroma_square, "4:4:4"
     )
 
+    def full_chroma_top_left_paeth():
+        """Generate the promoted 32x32 I444 full-chroma Paeth witness.
+
+        This is candidate ``i444-tl-f01-n05`` from the maintained
+        input-only campaign.  The four 8x8 quadrants in the top-left 16x16
+        region are deliberately distinct; the lower-right quadrant is
+        Paeth-predictable from the top, left, and upper-left neighbors.
+        """
+
+        seed = 7005
+        random_state = random.Random(seed)
+        top_u = [125 + ((i * 3) % 5) * 7 for i in range(8)]
+        left_u = [95 + ((i * 5) % 5) * 6 for i in range(8)]
+        top_v = [185 - ((i * 2) % 5) * 7 for i in range(8)]
+        left_v = [155 - ((i * 3) % 5) * 5 for i in range(8)]
+        top_left_u = 145
+        top_left_v = 110
+
+        def paeth(left, top, top_left):
+            prediction = left + top - top_left
+            left_distance = abs(prediction - left)
+            top_distance = abs(prediction - top)
+            top_left_distance = abs(prediction - top_left)
+            if left_distance <= top_distance and left_distance <= top_left_distance:
+                return left
+            if top_distance <= top_left_distance:
+                return top
+            return top_left
+
+        def rgb_from_yuv(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            if x < 8 and y < 8:
+                u = 100 + 2 * x + 3 * y
+                v = 150 - 2 * x + y
+            elif y < 8 and 8 <= x < 16:
+                u = top_u[x - 8]
+                v = top_v[x - 8]
+            elif x < 8 and 8 <= y < 16:
+                u = left_u[y - 8]
+                v = left_v[y - 8]
+            elif 8 <= x < 16 and 8 <= y < 16:
+                u = paeth(left_u[y - 8], top_u[x - 8], top_left_u)
+                v = paeth(left_v[y - 8], top_v[x - 8], top_left_v)
+                u += ((13 * x + 7 * y + seed) % 7) - 3
+                v -= ((11 * x + 5 * y + seed) % 7) - 3
+            else:
+                u = 128 + random_state.randrange(-45, 46)
+                v = 128 + random_state.randrange(-45, 46)
+            luma = 128 + random_state.randrange(-20, 21)
+            if x == 7 and y == 7:
+                u = top_left_u
+                v = top_left_v
+            return rgb_from_yuv(luma, u, v)
+
+        return image_from_pixels((32, 32), pixel)
+
+    write_campaign_image(
+        "coverage_i444_full_chroma_top_left_paeth_01",
+        full_chroma_top_left_paeth(),
+        "4:4:4",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "1",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def full_chroma_rect(index):
         geometries = (
             ((16, 16), "vertical"),

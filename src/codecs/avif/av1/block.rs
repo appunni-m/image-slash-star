@@ -7568,7 +7568,6 @@ fn decode_lossy_luma_16x16_coefficients(
     } else {
         dc_base
     };
-
     let mut coefficients = [0_i32; 256];
     let mut coefficient_magnitude = 0_u32;
     let mut dc_negative = false;
@@ -11488,6 +11487,7 @@ fn decode_lossy_large_two_d_coefficients(
     };
     let luma_matrix_values = match cdf_set {
         LossyLargeCdfSet::Luma4x16 => luma_4x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma8x16 => luma_16x8_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma64x16 => luma_32x16_matrix(quantization)?,
@@ -11682,7 +11682,6 @@ fn decode_lossy_large_two_d_coefficients(
     } else {
         dc_base
     };
-
     let mut coefficients = vec![0_i32; coefficient_count];
     let mut coefficient_magnitude = 0_u32;
     let mut dc_negative = false;
@@ -12048,6 +12047,7 @@ fn decode_lossy_chroma_16x16_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy16x16TransformCoefficients> {
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x16_eob_bin, 8);
     let coefficients = decode_lossy_large_two_d_coefficients(
@@ -12055,7 +12055,7 @@ fn decode_lossy_chroma_16x16_coefficients(
         plane,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_16X16_SCAN,
@@ -12485,8 +12485,18 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
             ));
         }
         if matches!(transform_grid, TransformGrid::Square32) {
-            let chroma =
-                decode_lossy_chroma_16x16_coefficients(decoder, plane, cdfs, quantization)?;
+            let chroma = decode_lossy_chroma_16x16_coefficients(
+                decoder,
+                plane,
+                cdfs,
+                quantization,
+                coefficient_dc_sign_context_for_dimensions(
+                    4,
+                    4,
+                    &above_chroma_contexts,
+                    &left_chroma_contexts,
+                ),
+            )?;
             return Ok((
                 [[0_i32; 16]; 64],
                 None,
@@ -13427,6 +13437,18 @@ fn luma_8x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     }
 }
 
+fn luma_16x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        2 => Ok(Some(&quantization::Y_16X8_MATRIX_2)),
+        9 => Ok(Some(&quantization::Y_16X8_MATRIX_9)),
+        10 => Ok(Some(&quantization::Y_16X8_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
     if !quantization.using_matrix {
         return Ok(None);
@@ -13534,6 +13556,7 @@ fn chroma_16x8_matrix(
         return Ok(None);
     }
     match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X8_MATRIX_2)),
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X8_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X8_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -13675,6 +13698,7 @@ fn dequantize_lossy_chroma_coefficient_with_token_using_matrix_and_shift(
             matrix_values
         } else {
             match matrix_index {
+                2 => &quantization::UV_8X8_MATRIX_2,
                 9 => &quantization::UV_8X8_MATRIX_9,
                 10 => &quantization::UV_8X8_MATRIX_10,
                 _ => return Err(PortableUnavailable),
@@ -15140,6 +15164,12 @@ fn decode_syntax_with_cdef(
                                     plane,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_dimensions(
+                                        4,
+                                        4,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    ),
                                 )?);
                         } else {
                             lossy_chroma_8x8_coefficients[plane.saturating_sub(1)] =
@@ -15718,6 +15748,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    4,
+                                    4,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             )?);
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                             .last_lossy_chroma_residual_context
@@ -26591,6 +26627,7 @@ fn reconstruct_following_lossy_420_16x16_leaf(
     top_neighbor: Option<&ClosedLeaf>,
     top_neighbor_is_distinct: bool,
     luma_left_edge_16: Option<[u16; 16]>,
+    chroma_left_edges_16: [Option<[u16; 16]>; 2],
     chroma_left_edges_8: [Option<[u16; 8]>; 2],
 ) -> PortableResult<ClosedLeaf> {
     if let Some(leaf) = reconstruct_palette_square16_leaf(syntax) {
@@ -26698,20 +26735,19 @@ fn reconstruct_following_lossy_420_16x16_leaf(
     };
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         if matches!(chroma_sampling, ChromaSampling::Full) {
-            let left = right_edge_16(&neighbor.planes[plane]);
-            let top = top_neighbor.map_or([left[0]; 16], |neighbor| {
-                bottom_edge_16(&neighbor.planes[plane])
-            });
+            let left = chroma_left_edges_16[plane - 1]
+                .unwrap_or_else(|| right_edge_16(&neighbor.planes[plane]));
+            // A horizontally following leaf has no spatially above neighbor.
+            // `top_neighbor` identifies the upper leaf on a split left edge,
+            // not the block above this leaf, so AV1 repeats the first left
+            // sample when preparing its top edge.
+            let top = [left[0]; 16];
             return match chroma_predictor {
                 ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                     let alpha = if plane == 1 { alpha_u } else { alpha_v };
                     reconstruct_lossy_full_16x16_cfl(
                         &luma_for_chroma,
-                        if top_neighbor.is_some() {
-                            dc_predictor_16(top, left)
-                        } else {
-                            one_sided_dc_predictor_16(top)
-                        },
+                        one_sided_dc_predictor_16(left),
                         alpha,
                         lossy_chroma_16x16_coefficients[plane - 1],
                     )
@@ -26721,6 +26757,7 @@ fn reconstruct_following_lossy_420_16x16_leaf(
                     top,
                     left,
                     top[0],
+                    false,
                     true,
                     lossy_chroma_16x16_coefficients[plane - 1],
                 ),
@@ -27924,6 +27961,8 @@ fn reconstruct_following_lossy_420_horizontal_16x8_leaf(
                     syntax.chroma_angle,
                     [left[0]; 16],
                     left,
+                    false,
+                    true,
                     syntax.lossy_chroma_16x8_coefficients[plane - 1],
                 )?,
             };
@@ -27938,6 +27977,7 @@ fn reconstruct_following_lossy_420_horizontal_16x8_leaf(
             luma_left,
             luma_left[0],
             false,
+            true,
             split,
         )?;
     }
@@ -28145,7 +28185,7 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
     }
     if matches!(syntax.transform_grid, TransformGrid::Square16) {
         return reconstruct_following_lossy_420_16x16_leaf(
-            syntax, neighbor, None, false, None, [None; 2],
+            syntax, neighbor, None, false, None, [None; 2], [None; 2],
         );
     }
     if matches!(syntax.transform_grid, TransformGrid::Horizontal8x4) {
@@ -29598,7 +29638,10 @@ fn reconstruct_following_lossy_420_vertical_16x8_leaf(
     };
     let luma_predictor = match syntax.luma_predictor {
         LumaPredictor::Vertical => luma_top[0],
-        LumaPredictor::Dc => one_sided_dc_predictor_16(luma_top),
+        LumaPredictor::Dc => left_luma_edge.map_or_else(
+            || one_sided_dc_predictor_16(luma_top),
+            |left| rectangular_dc_predictor(&luma_top, &left),
+        ),
         _ => syntax.luma_predictor.sample(),
     };
     let predictors = [
@@ -29621,6 +29664,7 @@ fn reconstruct_following_lossy_420_vertical_16x8_leaf(
             left,
             luma_top[0],
             true,
+            left_luma_edge.is_some(),
             split,
         )?;
     } else if syntax.filter_intra_mode.is_none() {
@@ -30543,6 +30587,8 @@ fn reconstruct_following_lossy_full_horizontal_32x16_leaf(
                 chroma_angle,
                 [left[0]; 16],
                 left[..8].try_into().map_err(|_| PortableUnavailable)?,
+                false,
+                true,
                 Some(coefficients),
             )?;
             let mut samples = Vec::with_capacity(512);
@@ -31294,6 +31340,8 @@ fn reconstruct_following_lossy_full_vertical_32x16_leaf(
                 chroma_angle,
                 top[..16].try_into().map_err(|_| PortableUnavailable)?,
                 left[..8].try_into().map_err(|_| PortableUnavailable)?,
+                true,
+                left_neighbor.is_some(),
                 Some(coefficients),
             )?;
             let mut samples = Vec::with_capacity(512);
@@ -32262,13 +32310,16 @@ fn reconstruct_lossy_full_16x16_chroma(
     top: [u16; 16],
     left: [u16; 16],
     top_left: u16,
+    has_top: bool,
     has_left: bool,
     coefficients: Option<Lossy16x16TransformCoefficients>,
 ) -> PortableResult<ReconstructedPlane> {
     let prediction = match predictor {
         ChromaPredictor::Dc => {
-            [if has_left {
+            [if has_top && has_left {
                 dc_predictor_16(top, left)
+            } else if has_left {
+                one_sided_dc_predictor_16(left)
             } else {
                 one_sided_dc_predictor_16(top)
             }; 256]
@@ -32592,12 +32643,20 @@ fn reconstruct_lossy_full_16x8_chroma(
     angle: Option<i32>,
     top: [u16; 16],
     left: [u16; 8],
+    has_top: bool,
+    has_left: bool,
     coefficients: Option<Lossy16x8TransformCoefficients>,
 ) -> PortableResult<ReconstructedPlane> {
     let transform = chroma_rect_transform_kind(predictor);
     match predictor {
         ChromaPredictor::Dc => Ok(reconstruct_lossy_chroma_16x8_from_prediction(
-            [rectangular_dc_predictor(&top, &left); 128],
+            [if has_top && has_left {
+                rectangular_dc_predictor(&top, &left)
+            } else if has_left {
+                one_sided_dc_predictor(left)
+            } else {
+                one_sided_dc_predictor_16(top)
+            }; 128],
             coefficients,
             transform,
         )),
@@ -33776,6 +33835,7 @@ fn reconstruct_lossy_luma_16x8_split(
     left: [u16; 8],
     top_left: u16,
     has_top: bool,
+    has_left: bool,
     split: LossyLuma8x8Split,
 ) -> PortableResult<ReconstructedPlane> {
     let mut samples = vec![0_u16; 128];
@@ -33817,11 +33877,12 @@ fn reconstruct_lossy_luma_16x8_split(
         } else {
             match predictor {
                 LumaPredictor::Dc => {
-                    let value = if has_top || column != 0 {
-                        dc_predictor_8(top_edge, left_edge)
-                    } else {
-                        one_sided_dc_predictor(left_edge)
-                    };
+                    let value = dc_predictor_8_with_availability(
+                        top_edge,
+                        left_edge,
+                        has_top,
+                        has_left || column != 0,
+                    );
                     reconstruct_lossy_luma_8x8(value, coefficients, transform)
                 }
                 LumaPredictor::Vertical => {
@@ -34891,6 +34952,7 @@ fn reconstruct_following_lossy_420_vertical_16x16_leaf(
                         top,
                         left,
                         top[0],
+                        true,
                         left_neighbor.is_some(),
                         lossy_chroma_16x16_coefficients[plane - 1],
                     )?,
@@ -35016,6 +35078,7 @@ fn reconstruct_following_lossy_420_vertical_16x16_leaf(
                     top,
                     left,
                     top[0],
+                    true,
                     left_neighbor.is_some(),
                     lossy_chroma_16x16_coefficients[plane - 1],
                 ),
@@ -39934,6 +39997,7 @@ impl Lossy420Decoder {
                     luma_top_neighbor.as_ref(),
                     luma_top_neighbor_is_distinct,
                     luma_left_edge_16,
+                    chroma_left_edges_16,
                     chroma_left_edges_8,
                 )
             } else {
@@ -40575,6 +40639,8 @@ impl Lossy420Decoder {
                         syntax.chroma_angle,
                         top,
                         left,
+                        true,
+                        has_left,
                         syntax.lossy_chroma_16x8_coefficients[plane - 1],
                     )?,
                 };
@@ -41252,7 +41318,12 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         );
-        let syntax = syntax?;
+        let syntax = match syntax {
+            Ok(syntax) => syntax,
+            Err(_) => {
+                return Err(PortableUnavailable);
+            }
+        };
         self.remember_qindex(&syntax, decoder);
         let predictors = origin_predictors(syntax.luma_predictor);
         let luma_override = if matches!(transform_grid, TransformGrid::Square8)
