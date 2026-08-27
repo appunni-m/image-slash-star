@@ -1284,6 +1284,7 @@ def instrument(
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
     broaden_horizontal_square16: bool = False,
+    square64_origin: bool = False,
 ) -> None:
     recon_path = source / "src" / "recon.h"
     text = recon_path.read_text()
@@ -1327,8 +1328,18 @@ def instrument(
           t->by >= 0 && t->by < 4 && t->bx >= 4 && t->bx < 8))
 #define DEBUG_B_PIXELS 1
 """
+    square64_origin_debug = """\
+#define DEBUG_BLOCK_INFO 1 && \
+        f->frame_hdr->width[0] == 64 && f->frame_hdr->height == 64 && \
+        f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
+        t->by >= 0 && t->by < 16 && t->bx >= 0 && t->bx < 16
+#define DEBUG_SQUARE64_ORIGIN 1
+#define DEBUG_B_PIXELS 0
+"""
     new = (
-        horizontal_square16
+        square64_origin_debug
+        if square64_origin
+        else horizontal_square16
         if broaden_horizontal_square16
         else broadened
         if broaden_vertical_following
@@ -1358,7 +1369,9 @@ def instrument(
     const int dbg = DEBUG_BLOCK_INFO;
 """
     new = (
-        horizontal_square16
+        "    const int dbg = DEBUG_BLOCK_INFO;\n"
+        if square64_origin
+        else horizontal_square16
         if broaden_horizontal_square16
         else broadened
         if broaden_vertical_following
@@ -1366,7 +1379,54 @@ def instrument(
     )
     if text.count(old) != 1:
         raise RuntimeError("pinned dav1d coefficient debug guard no longer matches")
-    recon_template_path.write_text(text.replace(old, new))
+    text = text.replace(old, new)
+    if square64_origin:
+        luma_coordinate_pattern = re.compile(
+            r'(?m)^(?P<indent>[ ]*)if \(DEBUG_BLOCK_INFO\)\n'
+            r'(?P<print_indent>[ ]*)printf\("Post-y-cf-blk'
+        )
+
+        def add_luma_coordinate(match: re.Match[str]) -> str:
+            indent = match.group("indent")
+            print_indent = match.group("print_indent")
+            return (
+                f'{indent}if (DEBUG_SQUARE64_ORIGIN)\n'
+                f'{print_indent}printf("Post-y-cf-coord[x=%d,y=%d]: r=%d\\n",\n'
+                f'{print_indent}       4 * t->bx, 4 * t->by, ts->msac.rng);\n'
+                f'{match.group(0)}'
+            )
+
+        text, luma_count = luma_coordinate_pattern.subn(
+            add_luma_coordinate, text
+        )
+        if luma_count != 3:
+            raise RuntimeError(
+                "pinned dav1d luma coordinate instrumentation points changed"
+            )
+
+        chroma_coordinate_pattern = re.compile(
+            r'(?m)^(?P<indent>[ ]*)if \(DEBUG_BLOCK_INFO\)\n'
+            r'(?P<print_indent>[ ]*)printf\("Post-uv-cf-blk'
+        )
+
+        def add_chroma_coordinate(match: re.Match[str]) -> str:
+            indent = match.group("indent")
+            print_indent = match.group("print_indent")
+            return (
+                f'{indent}if (DEBUG_SQUARE64_ORIGIN)\n'
+                f'{print_indent}printf("Post-uv-cf-coord[pl=%d,x=%d,y=%d]: r=%d\\n",\n'
+                f'{print_indent}       pl, 4 * t->bx, 4 * t->by, ts->msac.rng);\n'
+                f'{match.group(0)}'
+            )
+
+        text, chroma_count = chroma_coordinate_pattern.subn(
+            add_chroma_coordinate, text
+        )
+        if chroma_count != 3:
+            raise RuntimeError(
+                "pinned dav1d chroma coordinate instrumentation points changed"
+            )
+    recon_template_path.write_text(text)
 
     msac_path = source / "src" / "msac.c"
     text = msac_path.read_text()
@@ -1546,6 +1606,43 @@ unsigned dav1d_msac_decode_hi_tok_c""",
             raise RuntimeError("pinned dav1d UV angle instrumentation point changed")
         decode_path.write_text(text.replace(old, new))
 
+    if square64_origin:
+        decode_path = source / "src" / "decode.c"
+        text = decode_path.read_text()
+        old = """\
+                uint16_t *const tx_cdf = ts->cdf.m.txsz[t_dim->max - 1][tctx];
+                int depth = dav1d_msac_decode_symbol_adapt4(&ts->msac, tx_cdf,
+                                imin(t_dim->max, 2));
+
+                while (depth--) {
+                    b->tx = t_dim->sub;
+                    t_dim = &dav1d_txfm_dimensions[b->tx];
+                }
+"""
+        new = """\
+                const int max_tx = t_dim->max;
+                uint16_t *const tx_cdf = ts->cdf.m.txsz[max_tx - 1][tctx];
+                int depth = dav1d_msac_decode_symbol_adapt4(&ts->msac, tx_cdf,
+                                imin(max_tx, 2));
+                const int selected_depth = depth;
+
+                while (depth--) {
+                    b->tx = t_dim->sub;
+                    t_dim = &dav1d_txfm_dimensions[b->tx];
+                }
+                if (DEBUG_SQUARE64_ORIGIN) {
+                    printf("Post-square64-trace[scope=origin64-v1]: r=%d\\n",
+                           ts->msac.rng);
+                    printf("Post-tx-detail[max=%d,selected=%d,depth=%d,"
+                           "x=%d,y=%d]: r=%d\\n",
+                           max_tx, b->tx, selected_depth, 4 * t->bx,
+                           4 * t->by, ts->msac.rng);
+                }
+"""
+        if text.count(old) != 1:
+            raise RuntimeError("pinned dav1d Square64 transform instrumentation changed")
+        decode_path.write_text(text.replace(old, new))
+
 
 def build_dav1d(
     source: Path,
@@ -1557,6 +1654,7 @@ def build_dav1d(
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
     broaden_horizontal_square16: bool = False,
+    square64_origin: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
     build = work / "build"
@@ -1568,6 +1666,7 @@ def build_dav1d(
         include_block_angles,
         include_luma_angles,
         broaden_horizontal_square16,
+        square64_origin,
     )
     env = tool_environment(meson, ninja, python_path)
     run(
