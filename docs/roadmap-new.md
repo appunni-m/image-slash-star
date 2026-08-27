@@ -136,6 +136,17 @@ the corresponding status is recorded in `roadmap.json`:
   closes only this single-frame 12-bit 4:4:4 class; the animated
   `high_bitdepth` row, other subsampling, restoration, alpha/sequence, HDR,
   and encoding remain open.
+
+  Managed Coverage MCP then ran the exact selected-row incremental command
+  against baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
+  `270c0935-f337-42d1-9249-2b6e8b37624b` passed in 65,949 ms and ingested
+  snapshot `58bf18f6-f5a1-46c2-a5c3-ac64c5ec7439` at commit
+  `1cc231d0c0a28ad2eb7a0caf2a32a643b357d6d4`. The bounded incremental review
+  reports additive deltas of +302 covered lines, +0 branches, +0 functions,
+  and +0 regions, with denominator changes of +2,823, +72, +10, and +582.
+  The merge is conservative rather than exact, named-test attribution is
+  unavailable, and this selected-subset run is not the complete four-metric
+  release measurement.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
   chroma leaves, an exact 1,522-operation dav1d trace, exact Y/U/V planes,
