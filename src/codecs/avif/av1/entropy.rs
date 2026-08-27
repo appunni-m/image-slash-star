@@ -3619,6 +3619,20 @@ fn closed_lossy_420_square_split_context(context: &FirstBlockContext) -> bool {
         & (context.frame_height == 16)
 }
 
+fn closed_lossy_420_square64_split_context(context: &FirstBlockContext) -> bool {
+    complete_lossy_420_reconstruction_context(context)
+        & (context.level == 0)
+        & (context.block_width == 16)
+        & (context.block_height == 16)
+        & (context.frame_width == 64)
+        & (context.frame_height == 64)
+        & (context.upscaled_width == 64)
+        & !context.frame_tools.delta_q_present
+        & (context.frame_tools.transform_mode == 2)
+        & !context.frame_tools.reduced_transform_set
+        & context.frame_tools.cdef.is_none()
+}
+
 fn closed_lossy_420_horizontal_four_split_context(context: &FirstBlockContext) -> bool {
     // The H4 fixture uses the syntax form without frame-level delta-q. The
     // four-leaf helper does not arm a superblock delta-q sentence, so do not
@@ -3870,6 +3884,7 @@ pub(super) fn validate_first_partition(
     let closed_class = closed_444_reconstruction_context(context)
         || closed_420_reconstruction_context(context)
         || closed_lossy_420_reconstruction_context(context)
+        || closed_lossy_420_square64_split_context(context)
         || closed_lossy_420_16x16_vertical_pair_context(context)
         || closed_lossy_420_horizontal_four_split_context(context)
         || closed_lossy_444_16x16_reconstruction_context(context);
@@ -3903,6 +3918,7 @@ pub(super) fn validate_first_partition(
             & (closed_leaf_dimensions(context) | rectangular_leaf_dimensions(context)))
             | closed_420_reconstruction_context(context)
             | closed_lossy_420_reconstruction_context(context)
+            | closed_lossy_420_square64_split_context(context)
             | closed_lossy_420_16x16_vertical_pair_context(context)
             | closed_lossy_420_horizontal_four_split_context(context)
             | closed_lossy_444_16x16_reconstruction_context(context);
@@ -3966,6 +3982,11 @@ pub(super) fn validate_first_partition(
                     & (level == 4)
                     & closed_lossy_420_reconstruction_context(context);
                 if reconstruct_closed_lossy_420_leaf {
+                    return decode_closed_lossy_420_leaf(&mut decoder, context);
+                }
+                let reconstruct_closed_lossy_420_square64_split =
+                    (partition == 0) & closed_lossy_420_square64_split_context(context);
+                if reconstruct_closed_lossy_420_square64_split {
                     return decode_closed_lossy_420_leaf(&mut decoder, context);
                 }
                 let reconstruct_closed_lossy_444_16x16_leaf = (partition == 0)
