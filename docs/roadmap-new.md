@@ -557,6 +557,27 @@ the corresponding status is recorded in `roadmap.json`:
   `cbd4fcaa-0640-4dda-be05-3e368b690955`. It recorded zero aggregate gain;
   because this was a selected subset, it makes no aggregate no-regression
   claim and is not a full-coverage or release-gate run.
+- The AV1 reconstruction test now has a separate exact fixture selector for
+  fast incremental campaigns: repeat `--skip` with the reserved prefix
+  `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
+  `.avif` basename from `av1_reconstruction.json`. No selector still runs all
+  230 reconstruction cases; a selected run reads and executes only the
+  requested active fixtures, reports the exact set, and rejects malformed,
+  empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
+  matrix-selector-mixed arguments. This is test-system filtering only; it does
+  not widen AV1 support or close `AVF-STILL-001`.
+- The managed selected-fixture run
+  `76845131-98f3-4295-841f-61173b796041` passed in 30,712 ms at exact
+  implementation commit `6de450703ab6ffef68b9bfa405800cfd90e76ccb` and
+  ingested snapshot `f4d5dbce-b9cb-43ca-92e7-3e1e6f11c15e` against baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+  `coverage_square16_chroma_smooth_vertical_01.avif` and
+  `coverage_r16x32_following_filter_intra_split_mode0_01.avif`; the additive
+  review recorded zero aggregate covered-metric gain, no regressions, and
+  denominator changes of +2,920 lines, +76 branches, +17 functions, and
+  +8,962 regions. The selected-snapshot projection reports 1,252 newly
+  covered line identities, but selected-subset evidence is not a complete
+  release measurement.
 - The newest bounded rectangular proof pairs
   `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
   `coverage_v4x16_filter_intra_cdf19_false_01.avif`: deterministic 16x16
@@ -1284,7 +1305,7 @@ that an entire workstream is finished because one slice passed.
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 504 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c` is recorded from run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` at implementation commit `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`; the selected incremental run `de02b397-48fa-44ed-bdaf-df4487b096bf` covered the runtime validation of the compile-time JPEG AC table builder through the two standard/custom Huffman rows. Snapshot metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` is retained as a caveat. The four metrics remain below 100% and stay visible in the current coverage table. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 513 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c` is recorded from run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` at implementation commit `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`; the selected incremental run `de02b397-48fa-44ed-bdaf-df4487b096bf` covered the runtime validation of the compile-time JPEG AC table builder through the two standard/custom Huffman rows. Snapshot metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` is retained as a caveat. The four metrics remain below 100% and stay visible in the current coverage table. |
 | W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 293 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The 10-bit and 12-bit still witnesses, H16x4 TX4x4 and TX8x4 witnesses, the new V4x16 predictor/transform witness, and the Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set are bounded production classes, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 

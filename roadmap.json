@@ -76,6 +76,40 @@
       "dispatcher": "test_coverage_matrix",
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate"
     },
+    "av1_fixture_selector": {
+      "coverage_only": true,
+      "transport_argument": "--skip",
+      "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
+      "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
+      "no_selector_behavior": "run_all_230_reconstruction_cases",
+      "selected_execution": "selected_materialized_cases_only",
+      "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
+      "rejected_selections": [
+        "malformed",
+        "empty",
+        "unknown",
+        "duplicate",
+        "planned",
+        "paths",
+        "globs",
+        "ordinary-skip-mixed",
+        "matrix-selector-mixed"
+      ],
+      "dispatcher": "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+      "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
+      "latest_evidence": {
+        "commit_sha": "6de450703ab6ffef68b9bfa405800cfd90e76ccb",
+        "run_id": "76845131-98f3-4295-841f-61173b796041",
+        "snapshot_id": "f4d5dbce-b9cb-43ca-92e7-3e1e6f11c15e",
+        "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+        "duration_ms": 30712,
+        "selected_fixtures": [
+          "coverage_square16_chroma_smooth_vertical_01.avif",
+          "coverage_r16x32_following_filter_intra_split_mode0_01.avif"
+        ],
+        "status": "passed_and_ingested"
+      }
+    },
     "historical_coverage": {
       "line": {
         "covered": 98968,
@@ -370,10 +404,57 @@
             "merge_exact": false,
             "note": "The selected animation-loop run passed and the additive baseline-union review reports 223 newly covered line identities, +1 covered function, and +967 covered regions. The selected snapshot diff is incomplete because unselected baseline hits are not observed; the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run is exact for implementation commit c7704f81fa83dd6d272a028ef0800b7ab5999f34. This is bounded evidence, not a complete four-metric release measurement or a global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "commit_sha": "6de450703ab6ffef68b9bfa405800cfd90e76ccb",
+          "run_id": "76845131-98f3-4295-841f-61173b796041",
+          "snapshot_id": "f4d5dbce-b9cb-43ca-92e7-3e1e6f11c15e",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 30712,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+            "--",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_square16_chroma_smooth_vertical_01.avif",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_r16x32_following_filter_intra_split_mode0_01.avif"
+          ],
+          "selected_rows": [
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture (2 exact AV1 fixture cases)"
+          ],
+          "status": "passed_and_ingested",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 0,
+            "covered_branches_delta": 0,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 0,
+            "newly_covered_lines": 1252,
+            "total_lines_delta": 2920,
+            "total_branches_delta": 76,
+            "total_functions_delta": 17,
+            "total_regions_delta": 8962,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "note": "The exact selected fixture run passed in 30,712 ms and its log reports selected=2 with the two requested basenames. The additive baseline-union review reports no covered line, branch, function, or region metric increase; the selected snapshot projection reports 1,252 newly covered line identities, while unselected baseline hits remain not_observed. The durable run record is exact for implementation commit 6de450703ab6ffef68b9bfa405800cfd90e76ccb; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db. This is selector infrastructure evidence, not a full-release measurement or a global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 504,
+        "guards": 513,
         "files": 86
       },
       "status": "open_until_all_four_metrics_are_100_percent"
