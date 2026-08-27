@@ -2590,16 +2590,182 @@ pub(super) fn inverse_adst_adst8x8(coefficients: &[i32; 64]) -> [i32; 64] {
     output
 }
 
+#[cfg(any(test, coverage))]
+fn assert_sparse<const N: usize>(actual: [i32; N], expected: &[(usize, i32)]) {
+    let mut expected_output = [0_i32; N];
+    for &(index, value) in expected {
+        assert!(index < N);
+        assert_eq!(expected_output[index], 0);
+        expected_output[index] = value;
+    }
+    assert_eq!(actual, expected_output);
+}
+
+#[cfg(any(test, coverage))]
+fn assert_i16_bounded<const N: usize>(output: [i32; N]) {
+    assert!(
+        output
+            .iter()
+            .all(|&sample| (i32::from(i16::MIN)..=i32::from(i16::MAX)).contains(&sample))
+    );
+}
+
+#[cfg(any(test, coverage))]
+#[cfg_attr(coverage, coverage(off))]
+fn assert_rectangular_wrapper_conformance() {
+    // These checks are shared by the normal unit suite and the managed
+    // integration coverage hook. The expected values are checked-in output
+    // from dav1d 1.5.3's scalar inv_txfm_add_c path (BITDEPTH=8,
+    // HAVE_ASM=0), with the neutral destination bias removed.
+    assert_eq!(inverse_identity16x8(&[0; 128]), [0; 128]);
+    assert_eq!(inverse_identity_dct16x8(&[0; 128]), [0; 128]);
+    assert_eq!(inverse_identity16x4(&[0; 64]), [0; 64]);
+    assert_eq!(inverse_identity_dct16x4(&[0; 64]), [0; 64]);
+    assert_eq!(inverse_dct_identity16x4(&[0; 64]), [0; 64]);
+    assert_eq!(inverse_adst_adst16x4(&[0; 64]), [0; 64]);
+    assert_eq!(inverse_adst_dct16x16(&[0; 256]), [0; 256]);
+
+    let mut identity_r16x8 = [0_i32; 128];
+    // Coefficients use y + x * height; output uses y * width + x.
+    identity_r16x8[30] = 4_096; // (x, y) = (3, 6)
+    assert_sparse(inverse_identity16x8(&identity_r16x8), &[(99, 512)]);
+
+    let mut identity_r16x4 = [0_i32; 64];
+    identity_r16x4[22] = -4_096; // (x, y) = (5, 2)
+    assert_sparse(inverse_identity16x4(&identity_r16x4), &[(37, -512)]);
+
+    let mut r16x8 = [0_i32; 128];
+    r16x8[0] = 93;
+    r16x8[8] = -112;
+    r16x8[1] = 66;
+    r16x8[46] = -79;
+    assert_sparse(
+        inverse_identity_dct16x8(&r16x8),
+        &[
+            (0, 8),
+            (1, -5),
+            (5, -2),
+            (16, 8),
+            (17, -5),
+            (21, 5),
+            (32, 6),
+            (33, -5),
+            (37, -5),
+            (48, 5),
+            (49, -5),
+            (53, 2),
+            (64, 3),
+            (65, -5),
+            (69, 2),
+            (80, 2),
+            (81, -5),
+            (85, -5),
+            (96, 1),
+            (97, -5),
+            (101, 5),
+            (113, -5),
+            (117, -2),
+        ],
+    );
+
+    let mut r16x4 = [0_i32; 64];
+    r16x4[0] = 93;
+    r16x4[4] = -112;
+    r16x4[1] = 66;
+    r16x4[22] = -79;
+    assert_sparse(
+        inverse_identity_dct16x4(&r16x4),
+        &[
+            (0, 11),
+            (1, -7),
+            (5, -5),
+            (16, 8),
+            (17, -7),
+            (21, 5),
+            (32, 4),
+            (33, -7),
+            (37, 5),
+            (49, -7),
+            (53, -5),
+        ],
+    );
+    let dct_identity = inverse_dct_identity16x4(&r16x4);
+    assert_eq!(
+        dct_identity.as_chunks::<16>().0,
+        &[
+            [-2, -2, -1, -1, 0, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 8],
+            [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+            [-3, 0, 3, 3, 1, -2, -3, -2, 2, 4, 2, -1, -3, -3, 0, 3],
+            [0; 16],
+        ]
+    );
+    let adst_adst = inverse_adst_adst16x4(&r16x4);
+    assert_eq!(
+        adst_adst.as_chunks::<16>().0,
+        &[
+            [-1, -2, -1, 1, 2, 1, -1, -1, 1, 4, 4, 3, 1, 1, 4, 6],
+            [0, 0, 0, -1, -1, -1, 1, 1, 2, 2, 2, 4, 5, 6, 5, 5],
+            [1, 1, 0, -3, -4, -2, 0, 1, 1, -1, 0, 3, 5, 6, 5, 4],
+            [-1, -3, -3, -1, -1, -2, -3, -3, -2, 1, 2, 2, 1, 2, 4, 6],
+        ]
+    );
+    assert_ne!(inverse_identity_dct16x4(&r16x4), dct_identity);
+    assert_ne!(inverse_identity_dct16x4(&r16x4), adst_adst);
+    assert_ne!(dct_identity, adst_adst);
+
+    let mut square = [0_i32; 256];
+    square[0] = 93;
+    square[16] = -112;
+    square[1] = 66;
+    square[35] = -79;
+    assert_eq!(
+        inverse_adst_dct16x16(&square).as_chunks::<16>().0,
+        &[
+            [0, -1, -1, -1, -1, -1, 0, 1, 2, 2, 3, 3, 3, 3, 2, 2],
+            [0, -1, -1, -1, -1, 0, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 4],
+            [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4],
+            [0, 1, 1, 1, 0, 0, 0, -1, -1, 0, 0, 1, 2, 3, 4, 4],
+            [0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 1, 2, 2, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3],
+            [0, -1, -1, -1, -1, -1, -1, 0, 0, 1, 1, 1, 2, 2, 2, 2],
+            [0, -1, -2, -2, -2, -1, -1, 0, 1, 1, 1, 2, 1, 1, 1, 1],
+            [0, -1, -2, -2, -2, -1, -1, 0, 1, 1, 2, 2, 1, 1, 1, 1],
+            [0, -1, -2, -2, -2, -2, -1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, -1, -1, -1, -2, -1, -1, -1, 0, 0, 1, 1, 1, 1, 1, 1],
+            [0, 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1],
+            [0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 2, 2],
+            [0, 0, 0, 0, 0, -1, -1, -2, -2, -2, -1, 0, 0, 1, 2, 2],
+        ]
+    );
+
+    assert_i16_bounded(inverse_identity16x8(&[i32::MAX; 128]));
+    assert_i16_bounded(inverse_identity_dct16x8(&[i32::MAX; 128]));
+    assert_i16_bounded(inverse_identity16x4(&[i32::MAX; 64]));
+    assert_i16_bounded(inverse_identity_dct16x4(&[i32::MAX; 64]));
+    assert_i16_bounded(inverse_dct_identity16x4(&[i32::MAX; 64]));
+    assert_i16_bounded(inverse_adst_adst16x4(&[i32::MAX; 64]));
+    assert_i16_bounded(inverse_adst_dct16x16(&[i32::MAX; 256]));
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+pub(super) fn __coverage_exercise_private_branches() {
+    assert_rectangular_wrapper_conformance();
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        inverse_adst_adst4x4, inverse_adst_adst4x8, inverse_adst_adst8x8, inverse_adst_adst16x8,
-        inverse_adst_dct4x4, inverse_adst_dct4x8, inverse_adst_dct8x8, inverse_adst_dct16x16,
-        inverse_adst16, inverse_dct_adst4x4, inverse_dct_adst4x8, inverse_dct_adst8x8,
-        inverse_dct_adst8x16, inverse_dct_identity4x8, inverse_dct_identity8x8,
-        inverse_dct_identity16x4, inverse_dct4x4, inverse_dct4x8, inverse_dct8x8, inverse_dct16x64,
-        inverse_dct32x16, inverse_dct32x32, inverse_dct64x64, inverse_identity_dct16x4,
-        inverse_identity_dct16x8, inverse_identity16x4, inverse_identity16x8,
+        assert_rectangular_wrapper_conformance, inverse_adst_adst4x4, inverse_adst_adst4x8,
+        inverse_adst_adst8x8, inverse_adst_adst16x8, inverse_adst_dct4x4, inverse_adst_dct4x8,
+        inverse_adst_dct8x8, inverse_adst_dct16x16, inverse_adst16, inverse_dct_adst4x4,
+        inverse_dct_adst4x8, inverse_dct_adst8x8, inverse_dct_adst8x16, inverse_dct_identity4x8,
+        inverse_dct_identity8x8, inverse_dct_identity16x4, inverse_dct4x4, inverse_dct4x8,
+        inverse_dct8x8, inverse_dct16x64, inverse_dct32x16, inverse_dct32x32, inverse_dct64x64,
+        inverse_identity_dct16x4, inverse_identity_dct16x8, inverse_identity16x4,
+        inverse_identity16x8,
     };
 
     fn assert_sparse<const N: usize>(actual: [i32; N], expected: &[(usize, i32)]) {
@@ -2864,6 +3030,11 @@ mod tests {
         assert_i16_bounded(inverse_identity_dct16x4(&[i32::MAX; 64]));
         assert_i16_bounded(inverse_dct_identity16x4(&[i32::MAX; 64]));
         assert_i16_bounded(inverse_adst_dct16x16(&[i32::MAX; 256]));
+    }
+
+    #[test]
+    fn rectangular_transform_wrappers_match_dav1d_and_invariants() {
+        assert_rectangular_wrapper_conformance();
     }
 
     #[test]
