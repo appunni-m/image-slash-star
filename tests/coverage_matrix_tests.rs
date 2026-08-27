@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use bytemuck as _;
@@ -24,6 +25,7 @@ static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
 static MATRIX_ROW_SELECTION: OnceLock<Result<MatrixRowSelection, String>> = OnceLock::new();
 static MATRIX_ROW_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
 static MATRIX_ROW_SELECTION_FAILURE_REPORT: OnceLock<()> = OnceLock::new();
+static SELECTED_MATRIX_DISPATCH_CLAIMED: AtomicBool = AtomicBool::new(false);
 
 const MATRIX_ROW_SELECTOR_STEM: &str = "__image_slash_star_matrix_row_selector__";
 const MATRIX_ROW_SELECTOR_PREFIX: &str = "__image_slash_star_matrix_row_selector__=";
@@ -759,6 +761,12 @@ fn matrix_selection_is_filtered() -> bool {
     })
 }
 
+fn try_claim_selected_matrix_dispatch(claimed: &AtomicBool) -> bool {
+    claimed
+        .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+        .is_ok()
+}
+
 #[cfg(test)]
 mod matrix_row_selection_tests {
     use super::*;
@@ -998,6 +1006,13 @@ mod matrix_row_selection_tests {
             Err(error) if error.contains("no active rows")
                 && error.contains("planned-not-executed")
         ));
+    }
+
+    #[test]
+    fn selected_dispatch_claim_is_one_time() {
+        let claimed = AtomicBool::new(false);
+        assert!(try_claim_selected_matrix_dispatch(&claimed));
+        assert!(!try_claim_selected_matrix_dispatch(&claimed));
     }
 }
 
@@ -3612,6 +3627,9 @@ fn run_decode_matrix(format_filter: Option<&str>) {
         return;
     };
     let filtered = selection.is_selected();
+    if filtered && format_filter.is_some() {
+        return;
+    }
 
     let assets_dir = manifest_dir
         .join("tests")
@@ -4344,6 +4362,9 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         return;
     };
     let filtered = selection.is_selected();
+    if filtered && (format_filter.is_some() || active_row_range.is_some()) {
+        return;
+    }
 
     let mut total = 0u32;
     let mut passed = 0u32;
@@ -9417,4 +9438,11 @@ fn test_coverage_matrix() {
 
     assert!(s.total_rows > 0, "Matrix must have rows");
     assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
+
+    if selection.is_selected()
+        && try_claim_selected_matrix_dispatch(&SELECTED_MATRIX_DISPATCH_CLAIMED)
+    {
+        run_decode_matrix(None);
+        run_encode_matrix(None, None);
+    }
 }
