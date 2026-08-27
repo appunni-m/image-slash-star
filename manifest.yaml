@@ -3519,21 +3519,17 @@ formats:
       test_assets:
       - portable_lossy_420_q99_token_2097724_masked_572.avif
     - id: portable_lossy_420_q99_eob_bin_control
-      description: One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two
+      description: One-byte AV1 mutation preserving the Slice 35 prefix before an invalid EOB-bin termination; independent dav1d rejects the coded tile
       test_assets:
       - portable_lossy_420_q99_eob_bin_control.avif
       expect_error: true
-      status: planned
-      gap: Pure Rust AV1 entropy decoding does not yet implement this EOB-bin syntax; keep it as an explicit unsupported feature gap.
-      pure_rust_work_item: AVF-ENTROPY-001
+      status: active
     - id: portable_lossy_420_q99_eob_base_control
-      description: One-byte coded-tile mutation retaining EOB-bin zero before selecting unsupported EOB-base zero
+      description: One-byte coded-tile mutation retaining EOB-bin zero before an invalid EOB-base termination; independent dav1d rejects the coded tile
       test_assets:
       - portable_lossy_420_q99_eob_base_control.avif
       expect_error: true
-      status: planned
-      gap: Pure Rust AV1 entropy decoding does not yet implement this EOB-base syntax; keep it as an explicit unsupported feature gap.
-      pure_rust_work_item: AVF-ENTROPY-001
+      status: active
     - id: portable_lossless_420_leaf_4x8_a
       description: 4x8 visible lossless 4:2:0 frame cropped from one coded 8x8 leaf
       test_assets:

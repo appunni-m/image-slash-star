@@ -3685,10 +3685,10 @@
           "type": "decode",
           "format": "avif",
           "category": "portable",
-          "description": "One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two",
+          "description": "One-byte AV1 mutation preserving the Slice 35 prefix before an invalid EOB-bin termination; independent dav1d rejects the coded tile",
           "asset": "portable_lossy_420_q99_eob_bin_control.avif",
           "expect_error": true,
-          "status": "planned",
+          "status": "active",
           "oracle_status": "error",
           "oracle_error_type": "builtins.RuntimeError",
           "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
@@ -3748,9 +3748,6 @@
               "origin": "pillow_fixture"
             }
           },
-          "gap": "Pure Rust AV1 entropy decoding does not yet implement this EOB-bin syntax; keep it as an explicit unsupported feature gap.",
-          "pure_rust_work_item": "AVF-ENTROPY-001",
-          "former_native_only": true,
           "ref_bit_depth": 8,
           "ref_bit_depth_origin": "independent_implementation",
           "inspect_source_byte_order": null,
@@ -3763,10 +3760,10 @@
           "type": "decode",
           "format": "avif",
           "category": "portable",
-          "description": "One-byte coded-tile mutation retaining EOB-bin zero before selecting unsupported EOB-base zero",
+          "description": "One-byte coded-tile mutation retaining EOB-bin zero before an invalid EOB-base termination; independent dav1d rejects the coded tile",
           "asset": "portable_lossy_420_q99_eob_base_control.avif",
           "expect_error": true,
-          "status": "planned",
+          "status": "active",
           "oracle_status": "error",
           "oracle_error_type": "builtins.RuntimeError",
           "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
@@ -3826,9 +3823,6 @@
               "origin": "pillow_fixture"
             }
           },
-          "gap": "Pure Rust AV1 entropy decoding does not yet implement this EOB-base syntax; keep it as an explicit unsupported feature gap.",
-          "pure_rust_work_item": "AVF-ENTROPY-001",
-          "former_native_only": true,
           "ref_bit_depth": 8,
           "ref_bit_depth_origin": "independent_implementation",
           "inspect_source_byte_order": null,
@@ -120028,8 +120022,8 @@
     "encode_rows": 397,
     "formats": 8,
     "assets_available": 1127,
-    "decode_active": 1121,
-    "decode_planned": 7,
+    "decode_active": 1123,
+    "decode_planned": 5,
     "encode_not_wired": 32
   }
 }

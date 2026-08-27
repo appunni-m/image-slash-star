@@ -3738,7 +3738,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_decode.len(),
-        7,
+        5,
         "the AVIF former-native decode census changed"
     );
     assert!(
@@ -3752,7 +3752,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         planned.len(),
         "every former-native AVIF decode row must remain an explicit planned gap"
     );
-    assert_eq!(planned.len(), 7, "the AVIF planned-gap ledger changed");
+    assert_eq!(planned.len(), 5, "the AVIF planned-gap ledger changed");
     assert_eq!(
         planned.len(),
         matrix.summary.decode_planned,
@@ -3778,8 +3778,6 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
             row.id
         );
         let expected_work_item = match row.id.as_str() {
-            "portable_lossy_420_q99_eob_bin_control"
-            | "portable_lossy_420_q99_eob_base_control" => "AVF-ENTROPY-001",
             "high_bitdepth" => "AVF-SAMPLE-001",
             "with_alpha" => "AVF-ALPHA-001",
             "partitioned_square_12x12_g96_direct_tokens"
@@ -3914,7 +3912,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     );
     assert_eq!(
         former_native_decode.len() + former_native_encode.len(),
-        39,
+        37,
         "the complete former-native AVIF census changed"
     );
     assert_eq!(
@@ -9937,12 +9935,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
     );
     assert_eq!(masked_decoded.content.pixels, masked_reference);
 
-    for fixture in [
-        "animated.avif",
-        "10bit.avif",
-        "portable_lossy_420_q99_eob_bin_control.avif",
-        "portable_lossy_420_q99_eob_base_control.avif",
-    ] {
+    for fixture in ["animated.avif", "10bit.avif"] {
         let input = require_ok(
             fs::read(
                 fixture_root
@@ -9960,6 +9953,34 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             )
             .is_none(),
             "{fixture} must not be classified as the closed portable still"
+        );
+    }
+
+    for fixture in [
+        "portable_lossy_420_q99_eob_bin_control.avif",
+        "portable_lossy_420_q99_eob_base_control.avif",
+    ] {
+        let input = require_ok(
+            fs::read(
+                fixture_root
+                    .join("input")
+                    .join("images")
+                    .join("avif")
+                    .join(fixture),
+            ),
+            "malformed AVIF control fixture must be readable",
+        );
+        let result = img::__coverage_av1_reconstruction(&input);
+        assert!(
+            matches!(
+                &result,
+                Err(img::ImageError::Malformed {
+                    format: img::ImageFormat::Avif,
+                    message,
+                    ..
+                }) if message.contains("entropy symbol coder overread")
+            ),
+            "{fixture} must retain the typed malformed entropy result: {result:?}"
         );
     }
 }

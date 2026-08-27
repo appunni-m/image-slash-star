@@ -121,6 +121,18 @@ selected projection reported 920 newly covered line identities and no
 regressions. This is selected-subset evidence only; unselected baseline hits
 are not observed and it is not the release coverage gate.
 
+The two active AVIF negative controls
+`portable_lossy_420_q99_eob_bin_control.avif` and
+`portable_lossy_420_q99_eob_base_control.avif` are exact one-byte mutations
+of the pinned `portable_lossy_420_q99_gray_126.avif` sample. Independent
+dav1d 1.5.3 rejects them at the recorded EOB-bin and EOB-base stages with no
+YUV output; safe Rust now reports the same invalid-input category as typed
+`ImageError::Malformed` after preserving the AV1 symbol-coder overread. Their
+file/sample hashes, byte offsets, 52/39-operation traces, and pinned decoder
+commit are recorded in `roadmap.json`. These rows are active malformed
+contracts, not evidence that either mutated sentence is a legal positive EOB
+feature.
+
 Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
 Square16 CFL/DCT witnesses. Their pinned entropy traces contain 419, 229, and
