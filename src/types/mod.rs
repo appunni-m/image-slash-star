@@ -549,7 +549,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: Vec::new(),
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -561,7 +561,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 0,
         height: 1,
         frames: Vec::new(),
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -573,7 +573,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 0,
         frames: Vec::new(),
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -594,7 +594,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -615,7 +615,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![right_outside_frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -636,7 +636,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![invalid_frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -657,7 +657,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: u32::MAX,
         height: 1,
         frames: vec![right_overflow_frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -678,7 +678,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: u32::MAX,
         frames: vec![bottom_overflow_frame],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -702,7 +702,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![zero_denominator],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -725,7 +725,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![zero_rect],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -747,7 +747,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![zero_rect_height],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -770,7 +770,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 2,
         height: 1,
         frames: vec![mismatched_source],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -792,7 +792,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 2,
         frames: vec![mismatched_source_height],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -817,7 +817,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 2,
         height: 1,
         frames: vec![rendered],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -841,7 +841,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 2,
         frames: vec![rendered_height],
-        loop_count: None,
+        loop_count: AnimationLoop::Unspecified,
         background: None,
         kind: SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -3593,6 +3593,70 @@ pub enum SequenceKind {
     SingleFrame,
 }
 
+/// Loop semantics retained for a decoded timed sequence.
+///
+/// The variants distinguish a container that omitted loop metadata from one
+/// that explicitly requests infinite or finite repetition. `Finite` stores a
+/// canonical total-play count, so `Finite { total_plays: 1 }` means one
+/// presentation of the sequence. Format-specific additional-repeat fields
+/// are converted at the codec boundary. A zero total-play count is retained
+/// when a caller constructs it so encoders can reject it explicitly, while
+/// decoders map each format's zero sentinel to [`Self::Infinite`].
+///
+/// [`Self::Unknown`] is reserved for a valid source whose loop behavior
+/// cannot be determined. It is source-only: encoders reject it rather than
+/// silently changing it to an omission or an infinite loop.
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AnimationLoop {
+    /// The source omitted loop metadata, or the caller does not request it.
+    Unspecified,
+    /// A finite number of total sequence plays.
+    Finite {
+        /// Total presentations of the sequence, including the first play.
+        total_plays: u32,
+    },
+    /// The source explicitly requests infinite repetition.
+    Infinite,
+    /// The source is valid but its loop behavior cannot be determined.
+    Unknown,
+}
+
+impl AnimationLoop {
+    /// Construct a finite total-play count, including zero for validation.
+    #[must_use]
+    pub const fn finite(total_plays: u32) -> Self {
+        Self::Finite { total_plays }
+    }
+
+    /// Return the finite total-play count, if this value is finite.
+    #[must_use]
+    pub const fn finite_total_plays(self) -> Option<u32> {
+        match self {
+            Self::Finite { total_plays } => Some(total_plays),
+            Self::Unspecified | Self::Infinite | Self::Unknown => None,
+        }
+    }
+
+    /// Whether the source omitted loop metadata.
+    #[must_use]
+    pub const fn is_unspecified(self) -> bool {
+        matches!(self, Self::Unspecified)
+    }
+
+    /// Whether the source explicitly requests infinite repetition.
+    #[must_use]
+    pub const fn is_infinite(self) -> bool {
+        matches!(self, Self::Infinite)
+    }
+
+    /// Whether this value cannot be represented as an encoder loop setting.
+    #[must_use]
+    pub const fn is_unknown(self) -> bool {
+        matches!(self, Self::Unknown)
+    }
+}
+
 /// A still image or animation with all frames retained for re-encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedSequence {
@@ -3602,8 +3666,10 @@ pub struct DecodedSequence {
     pub height: u32,
     /// Frames in presentation order.
     pub frames: Vec<DecodedFrame>,
-    /// Format loop count; zero means infinite when present.
-    pub loop_count: Option<u32>,
+    /// Explicit source loop semantics. Decoder-specific zero sentinels are
+    /// normalized to [`AnimationLoop::Infinite`], while omitted metadata is
+    /// retained as [`AnimationLoop::Unspecified`].
+    pub loop_count: AnimationLoop,
     /// Container background metadata, when the source format defines it.
     pub background: Option<AnimationBackground>,
     /// Container meaning of this sequence.
@@ -3638,7 +3704,7 @@ impl DecodedSequence {
                 FrameDisposal::Unspecified,
                 FrameBlend::Unspecified,
             )],
-            loop_count: None,
+            loop_count: AnimationLoop::Unspecified,
             background: None,
             kind: SequenceKind::SingleFrame,
             opaque_blocks: Vec::new(),

@@ -2069,7 +2069,7 @@ fn has_plain_still_semantics(
     {
         return false;
     }
-    if sequence.loop_count.is_some() {
+    if !sequence.loop_count.is_unspecified() {
         return false;
     }
     if sequence.background.is_some() {
@@ -2203,7 +2203,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 0,
         height: 1,
         frames: Vec::new(),
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::SingleFrame,
         opaque_blocks: Vec::new(),
@@ -2377,7 +2377,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 crate::types::FrameBlend::Unspecified,
             ),
         ],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),

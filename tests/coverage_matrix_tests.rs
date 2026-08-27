@@ -3032,6 +3032,7 @@ fn assert_sequence_reference_parity(
     row_id: &str,
     expected: &SequenceParityRef,
     actual: &img::DecodedSequence,
+    expected_format: img::ImageFormat,
 ) -> Result<(), String> {
     actual
         .validate()
@@ -3054,10 +3055,23 @@ fn assert_sequence_reference_parity(
             expected.loop_origin
         ));
     }
-    if actual.loop_count != expected.loop_count {
+    let expected_loop = match expected.loop_count {
+        None => img::AnimationLoop::Unspecified,
+        Some(0) => img::AnimationLoop::Infinite,
+        Some(value) => match expected_format {
+            img::ImageFormat::Gif | img::ImageFormat::WebP => img::AnimationLoop::Finite {
+                total_plays: value
+                    .checked_add(1)
+                    .ok_or_else(|| format!("{row_id}: repeat count overflows total plays"))?,
+            },
+            img::ImageFormat::Png => img::AnimationLoop::Finite { total_plays: value },
+            _ => img::AnimationLoop::Finite { total_plays: value },
+        },
+    };
+    if actual.loop_count != expected_loop {
         return Err(format!(
             "loop count mismatch: actual {:?}, expected {:?}",
-            actual.loop_count, expected.loop_count
+            actual.loop_count, expected_loop
         ));
     }
     let expected_background = expected_background(expected.background.as_ref())?;
@@ -3284,7 +3298,7 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
         ));
     }
     let actual = decoded.content;
-    assert_sequence_reference_parity(manifest_dir, &row.id, expected, &actual)
+    assert_sequence_reference_parity(manifest_dir, &row.id, expected, &actual, expected_format)
 }
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
@@ -4792,10 +4806,24 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     .get("sequence_loop_count")
                     .and_then(Value::as_u64)
                 {
-                    decoded.loop_count = Some(require_ok(
+                    let loop_count = require_ok(
                         u32::try_from(loop_count),
                         "sequence loop count must fit u32",
-                    ));
+                    );
+                    decoded.loop_count = if loop_count == 0 {
+                        img::AnimationLoop::Infinite
+                    } else {
+                        img::AnimationLoop::Finite {
+                            total_plays: if row.format == "gif" || row.format == "webp" {
+                                require_ok(
+                                    loop_count.checked_add(1).ok_or("overflow"),
+                                    "repeat count must fit total plays",
+                                )
+                            } else {
+                                loop_count
+                            },
+                        }
+                    };
                 }
                 if row
                     .params
@@ -4803,7 +4831,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     .and_then(Value::as_bool)
                     == Some(true)
                 {
-                    decoded.loop_count = None;
+                    decoded.loop_count = img::AnimationLoop::Unspecified;
                 }
                 if let Some(background) = row
                     .params
@@ -5211,6 +5239,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                                 &row.id,
                                 expected_sequence,
                                 &decoded.content,
+                                format,
                             )
                         } else {
                             Err(format!(

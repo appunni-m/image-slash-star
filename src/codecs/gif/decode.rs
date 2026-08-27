@@ -6,8 +6,8 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{
-    AnimationBackground, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, ImageMode, ImagePalette, SourceColor,
+    AnimationBackground, AnimationLoop, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, ImageMode, ImagePalette, SourceColor,
 };
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -61,7 +61,7 @@ pub fn decode_sequence(
     };
     let mut graphic_control = GraphicControl::default();
     let mut frames = Vec::new();
-    let mut loop_count = None;
+    let mut loop_count = AnimationLoop::Unspecified;
     let mut recovering_from_bad_gce = false;
     let mut metadata = Vec::new();
     let mut opaque_blocks = Vec::new();
@@ -99,7 +99,17 @@ pub fn decode_sequence(
                     let is_loop_extension = identifier == b"NETSCAPE2.0";
                     if is_loop_extension && payload.len() >= 3 && payload[0] == 1 {
                         let bytes = [payload[1], payload[2]];
-                        loop_count = Some(u32::from(u16::from_le_bytes(bytes)));
+                        let repetitions = u32::from(u16::from_le_bytes(bytes));
+                        loop_count = if repetitions == 0 {
+                            AnimationLoop::Infinite
+                        } else {
+                            AnimationLoop::Finite {
+                                // The source field is u16, so widening before
+                                // adding one cannot overflow the public u32
+                                // total-play representation.
+                                total_plays: repetitions + 1,
+                            }
+                        };
                     }
                     if !is_loop_extension {
                         metadata.push(crate::types::OpaqueMetadata {

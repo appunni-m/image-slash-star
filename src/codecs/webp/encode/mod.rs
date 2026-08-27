@@ -4,7 +4,7 @@ use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::WebPEncodeOptions;
 use crate::encode_policy::EncodePolicy;
 use crate::types::{
-    AnimationBackground, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    AnimationBackground, AnimationLoop, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FramePixelLayout, ImageMode,
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
@@ -326,10 +326,33 @@ pub fn encode_sequence_with_token(
     validate_options(opts)?;
     validate_sequence_options(opts)?;
     let loop_count = match sequence.loop_count {
-        Some(value) => u16::try_from(value).map_err(|_| {
-            CodecError::Parameter("WebP animation loop count exceeds 16 bits".to_owned())
-        })?,
-        None => 0,
+        AnimationLoop::Unspecified | AnimationLoop::Infinite => 0,
+        AnimationLoop::Finite { total_plays: 0 } => {
+            return Err(CodecError::Unsupported(
+                "WebP cannot represent a zero total-play count".to_owned(),
+            ));
+        }
+        AnimationLoop::Finite { total_plays: 1 } => {
+            return Err(CodecError::Unsupported(
+                "WebP animation cannot represent one total play with its required ANIM chunk"
+                    .to_owned(),
+            ));
+        }
+        AnimationLoop::Finite { total_plays } => {
+            // The zero and one cases are handled above, so this checked
+            // conversion cannot silently reinterpret an invalid count.
+            let repetitions = total_plays.checked_sub(1).ok_or_else(|| {
+                CodecError::Parameter("WebP total-play count is invalid".to_owned())
+            })?;
+            u16::try_from(repetitions).map_err(|_| {
+                CodecError::Parameter("WebP animation loop count exceeds 16 bits".to_owned())
+            })?
+        }
+        AnimationLoop::Unknown => {
+            return Err(CodecError::Unsupported(
+                "WebP cannot encode unknown loop semantics".to_owned(),
+            ));
+        }
     };
     let background = match sequence.background {
         Some(AnimationBackground::Rgba(rgba)) => rgba,

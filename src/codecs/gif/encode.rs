@@ -12,8 +12,8 @@ use crate::encode_policy::EncodePolicy;
 #[cfg(coverage)]
 use crate::types::DecodedFrame;
 use crate::types::{
-    AnimationBackground, ColorType, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, FramePixelLayout, ImageMode, ImagePalette,
+    AnimationBackground, AnimationLoop, ColorType, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, FramePixelLayout, ImageMode, ImagePalette,
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::collections::HashMap;
@@ -320,7 +320,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 0,
         height: 1,
         frames: Vec::new(),
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -402,7 +402,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 16,
         height: 16,
         frames,
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -460,7 +460,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: u32::MAX,
         height: u32::MAX,
         frames: vec![still.frames[0].clone(), still.frames[0].clone()],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -478,7 +478,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             width: 1,
             height: 1,
             frames: identical_frames,
-            loop_count: None,
+            loop_count: crate::types::AnimationLoop::Unspecified,
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks: Vec::new(),
@@ -509,7 +509,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 2,
         height: 2,
         frames: background_frames,
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -629,7 +629,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: invalid_disposal_frames,
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -658,7 +658,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep),
             zero_duration_frame,
         ],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -668,7 +668,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = coalesce_identical_frames(&invalid_duration_sequence, 2, None);
 
     let mut oversized_loop = still.clone();
-    oversized_loop.loop_count = Some(u32::MAX);
+    oversized_loop.loop_count = crate::types::AnimationLoop::Finite {
+        total_plays: u32::MAX,
+    };
     let _ = encode_sequence(&oversized_loop, &GifEncodeOptions::default());
     let _ = encode_sequence(
         &still,
@@ -691,7 +693,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: u32::from(u16::MAX) + 1,
         height: 1,
         frames: still.frames.clone(),
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -713,7 +715,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: u32::from(u16::MAX) + 1,
         frames: still.frames.clone(),
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -754,7 +756,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![bad_offset_frame],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -783,7 +785,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![bad_top_frame],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -812,7 +814,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![wide_frame],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -841,7 +843,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![tall_frame],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -872,7 +874,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             width: 1,
             height: 1,
             frames: cmyk_second_frames.clone(),
-            loop_count: None,
+            loop_count: crate::types::AnimationLoop::Unspecified,
             background: None,
             kind: crate::types::SequenceKind::TimedAnimation,
             opaque_blocks: Vec::new(),
@@ -898,7 +900,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         width: 1,
         height: 1,
         frames: vec![long_delay_frame],
-        loop_count: None,
+        loop_count: crate::types::AnimationLoop::Unspecified,
         background: None,
         kind: crate::types::SequenceKind::TimedAnimation,
         opaque_blocks: Vec::new(),
@@ -1702,10 +1704,29 @@ pub fn encode_sequence_with_token(
         Some(GifLoop::Infinite) => Some(0),
         Some(GifLoop::Finite(value)) => Some(value),
         None => match sequence.loop_count {
-            Some(value) => Some(u16::try_from(value).map_err(|_| {
-                CodecError::Parameter("GIF loop count exceeds format limits".to_owned())
-            })?),
-            None => None,
+            AnimationLoop::Unspecified => None,
+            AnimationLoop::Infinite => Some(0),
+            AnimationLoop::Finite { total_plays: 0 } => {
+                return Err(CodecError::Unsupported(
+                    "GIF cannot represent a zero total-play count".to_owned(),
+                ));
+            }
+            AnimationLoop::Finite { total_plays: 1 } => None,
+            AnimationLoop::Finite { total_plays } => {
+                // The zero and one cases are handled above, so this checked
+                // conversion cannot silently reinterpret an invalid count.
+                let repetitions = total_plays.checked_sub(1).ok_or_else(|| {
+                    CodecError::Parameter("GIF total-play count is invalid".to_owned())
+                })?;
+                Some(u16::try_from(repetitions).map_err(|_| {
+                    CodecError::Parameter("GIF loop count exceeds format limits".to_owned())
+                })?)
+            }
+            AnimationLoop::Unknown => {
+                return Err(CodecError::Unsupported(
+                    "GIF cannot encode unknown loop semantics".to_owned(),
+                ));
+            }
         },
     };
     let local_color_table = matches!(opts.color_table, Some(GifColorTable::Local));

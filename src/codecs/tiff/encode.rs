@@ -423,7 +423,7 @@ pub fn encode_sequence_with_token(
 }
 
 fn validate_sequence_semantics(sequence: &DecodedSequence) -> CodecResult<()> {
-    if sequence.loop_count.is_some() || sequence.background.is_some() {
+    if !sequence.loop_count.is_unspecified() || sequence.background.is_some() {
         return Err(CodecError::Unsupported(
             "TIFF pages cannot retain animation loop or background metadata".to_owned(),
         ));
@@ -788,7 +788,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut invalid_sink,
     );
     let mut semantic_sequence = sequence.clone();
-    semantic_sequence.loop_count = Some(1);
+    semantic_sequence.loop_count = crate::types::AnimationLoop::Finite { total_plays: 1 };
     let _ = encode_sequence_to_sink(
         &semantic_sequence,
         &TiffEncodeOptions::default(),
