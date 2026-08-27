@@ -74,7 +74,7 @@ its immutable command invokes the configured Cargo `sccache`; the same script
   observations, not universal performance claims.
 
 This checkpoint improves engineering hygiene and measurement honesty. It does
-not close the 252-item active-finding roadmap below: format capability, metadata,
+not close the 250-item active-finding roadmap below: format capability, metadata,
 partial-input, target, assurance, and lifecycle items remain pending until their
 own caller need and evidence are complete.
 
@@ -533,7 +533,14 @@ the corresponding status is recorded in `roadmap.json`:
   only the bounded following-Square16/chroma-Smooth/ADST-ADST class; broader
   AV1 and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 36/36 matrix tests and 66/66 feature-gate
-  tests pass with all features enabled.
+  tests pass with all features enabled; the dedicated animation-loop contract
+  suite is 4/4.
+- The current loop-contract slice closes `API-050` and `GIF-013`. Public
+  `AnimationLoop` distinguishes omitted metadata, finite total plays, infinite
+  repetition, and source-only unknown semantics. GIF, APNG, and WebP decoders
+  normalize their format-specific fields explicitly; GIF and WebP encoders
+  check representable target fields, while TIFF and unknown loop semantics are
+  rejected instead of being silently discarded.
 - The incremental matrix-row selector is implemented with the reserved
   `--skip` transport prefix `__image_slash_star_matrix_row_selector__=` and
   exact qualified keys `decode:<format>:<row-id>` or
@@ -821,10 +828,19 @@ caught as expected. The additive baseline-union review reports +174 covered
 lines, +0 branches, +0 functions, and +0 regions, with merge exactness false
 and no global regression claim. This is bounded cfg-coverage evidence, not a
 replacement for the complete four-metric release measurement.
+The committed loop-contract run `576b9aa4-c43f-45a9-b5aa-525dbfa4968e` passed
+in 23,078 ms at exact implementation commit
+`c7704f81fa83dd6d272a028ef0800b7ab5999f34` and ingested snapshot
+`f70c91be-9755-44e5-b6c3-564a5cdbfa8f` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its additive baseline-union review
+reports 223 newly covered line identities, +1 covered function, +967 covered
+regions, and zero regressions; merge exactness is false and test attribution
+is unavailable. The selected subset is bounded evidence, not a replacement for
+the complete four-metric release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
-The current active inventory is therefore 252 findings; the closed rows retain
+The current active inventory is therefore 250 findings; the closed rows retain
 their original finding text and explicit resolution evidence in `roadmap.json`.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -2347,8 +2363,8 @@ iteration, partial-input lifecycle, progress, and cache behavior while keeping
 the eager convenience APIs compatible.
 
 **Source IDs:** `API-018`, `API-027`, `API-043`, `API-044`, `API-045`,
-`API-050`, `API-051`, `API-052`, `API-053`, `API-054`, `AVF-013`, `AVF-022`,
-`AVF-023`, `AVF-024`, `AVF-025`, `AVF-034`, `GIF-009`, `GIF-013`, `GIF-019`,
+`API-051`, `API-052`, `API-053`, `API-054`, `AVF-013`, `AVF-022`, `AVF-023`,
+`AVF-024`, `AVF-025`, `AVF-034`, `GIF-009`, `GIF-019`,
 `PNG-012`, `PNG-013`, `PNG-018`, `PNG-020`, `TIF-009`, `TIF-013`, `TIF-016`,
 `TIF-025`, `TIF-026`, `TIF-030`, `WEP-003`, `WEP-010`, `WEP-019`, `WEP-020`.
 
@@ -2781,7 +2797,7 @@ oracle/specification. Add one reverse-mappable fixture class at a time; keep
 unsupported legal classes explicitly unsupported rather than accidentally
 malformed.
 
-**Source IDs:** 20 JPEG (`JPG-*`), 15 PNG (`PNG-*`), 17 GIF (`GIF-*`), 20 BMP
+**Source IDs:** 19 JPEG (`JPG-*`), 15 PNG (`PNG-*`), 16 GIF (`GIF-*`), 20 BMP
 (`BMP-*`), 20 ICO (`ICO-*`), 26 TIFF (`TIF-*`), and 20 WebP (`WEP-*`) rows,
 listed in the complete inventory below.
 
@@ -2859,15 +2875,15 @@ the release-package first-use proof, not a repository integration test.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **252 active
+moved into the appropriate contract document. The list contains **250 active
 finding rows**.
 
 | Area | Count | Open IDs |
 | --- | ---: | --- |
-| Common API | 25 | `API-008`, `API-014`, `API-017`, `API-018`, `API-019`, `API-020`, `API-023`, `API-026`, `API-027`, `API-030`, `API-033`, `API-034`, `API-036`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `API-047`, `API-048`, `API-050`, `API-051`, `API-052`, `API-053`, `API-054` |
+| Common API | 24 | `API-008`, `API-014`, `API-017`, `API-018`, `API-019`, `API-020`, `API-023`, `API-026`, `API-027`, `API-030`, `API-033`, `API-034`, `API-036`, `API-041`, `API-043`, `API-044`, `API-045`, `API-046`, `API-047`, `API-048`, `API-051`, `API-052`, `API-053`, `API-054` |
 | JPEG | 19 | `JPG-002`, `JPG-003`, `JPG-004`, `JPG-006`–`JPG-021` |
 | PNG | 15 | `PNG-003`, `PNG-004`, `PNG-005`, `PNG-006`, `PNG-008`, `PNG-010`–`PNG-013`, `PNG-015`–`PNG-020` |
-| GIF | 17 | `GIF-002`, `GIF-005`–`GIF-007`, `GIF-009`–`GIF-021` |
+| GIF | 16 | `GIF-002`, `GIF-005`–`GIF-007`, `GIF-009`–`GIF-012`, `GIF-014`–`GIF-021` |
 | BMP | 20 | `BMP-001`–`BMP-020` |
 | ICO/CUR | 20 | `ICO-001`, `ICO-002`, `ICO-004`–`ICO-021` |
 | TIFF | 26 | `TIF-002`, `TIF-003`, `TIF-005`–`TIF-014`, `TIF-016`–`TIF-018`, `TIF-020`–`TIF-030` |
@@ -2882,10 +2898,10 @@ current audit. The historical roadmap is retained for provenance and original
 finding context; this file is the canonical status inventory, dependency order,
 and acceptance contract.
 
-These 252 rows are not 252 equal-sized coding tasks. A row may be a small
+These 250 rows are not 250 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 252 active finding rows, the current four-metric coverage
+today are the exact 250 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.

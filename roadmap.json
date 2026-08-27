@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
-  "reviewed": "2026-08-27",
+  "reviewed": "2026-08-28",
   "claim_ledger_base_revision": "93ec80ec99c42671dce6cf70694bce27ad8a2ef4",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
@@ -50,6 +50,7 @@
     "tests": {
       "coverage_matrix_tests": "36/36 matrix tests",
       "feature_gate_tests": "66/66 feature-gate tests",
+      "animation_loop_tests": "4/4 animation-loop contract tests",
       "doctests": "1/1"
     },
     "matrix_row_selector": {
@@ -330,6 +331,45 @@
             "merge_exact": false,
             "note": "The hook passed with its intentional caught defensive panics, and the additive baseline-union review reports +174 covered lines with no new branch/function/region identities. Unobserved baseline hits are not regressions; this selected-subset result is not a complete four-metric release measurement."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "commit_sha": "c7704f81fa83dd6d272a028ef0800b7ab5999f34",
+          "run_id": "576b9aa4-c43f-45a9-b5aa-525dbfa4968e",
+          "snapshot_id": "f70c91be-9755-44e5-b6c3-564a5cdbfa8f",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 23078,
+          "arguments": [
+            "test",
+            "--test",
+            "animation_loop_tests"
+          ],
+          "selected_rows": [
+            "animation_loop_tests (4 explicit loop-state and target-conversion cases)"
+          ],
+          "status": "passed_and_ingested",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 0,
+            "covered_branches_delta": 0,
+            "covered_functions_delta": 1,
+            "covered_regions_delta": 967,
+            "newly_covered_lines": 223,
+            "total_lines_delta": 2920,
+            "total_branches_delta": 76,
+            "total_functions_delta": 17,
+            "total_regions_delta": 8962,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "note": "The selected animation-loop run passed and the additive baseline-union review reports 223 newly covered line identities, +1 covered function, and +967 covered regions. The selected snapshot diff is incomplete because unselected baseline hits are not observed; the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run is exact for implementation commit c7704f81fa83dd6d272a028ef0800b7ab5999f34. This is bounded evidence, not a complete four-metric release measurement or a global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -534,7 +574,6 @@
         "API-043",
         "API-044",
         "API-045",
-        "API-050",
         "API-051",
         "API-052",
         "API-053",
@@ -626,7 +665,6 @@
         "GIF-010",
         "GIF-011",
         "GIF-012",
-        "GIF-013",
         "GIF-014",
         "GIF-015",
         "GIF-016",
@@ -2034,7 +2072,12 @@
   {
     "id": "API-050",
     "area": "common_api",
-    "status": "open",
+    "status": "resolved",
+    "resolution": {
+      "kind": "implemented_safe_rust_contract",
+      "implementation_commit": "c7704f81fa83dd6d272a028ef0800b7ab5999f34",
+      "evidence": "AnimationLoop now distinguishes Unspecified, Finite { total_plays }, Infinite, and source-only Unknown. GIF, APNG, and WebP decoders normalize their format fields explicitly; GIF/WebP encoders perform checked target conversion, and TIFF/unsupported Unknown states reject instead of being dropped. The all-feature suite and managed Coverage MCP run 576b9aa4-c43f-45a9-b5aa-525dbfa4968e passed the focused animation-loop contract tests."
+    },
     "finding": "`Option<u32>` does not name whether a value means total plays, additional repetitions, a file-format loop field, unknown repetition, or infinity. GIF/WebP convention and libavif's `n + 1` repetition contract differ.",
     "next": "Introduce explicit `Unspecified`, `Finite { total_plays }`, `Infinite`, and, if an oracle exposes it, `Unknown` states with checked per-format conversion.",
     "source": "docs/roadmap.md historical finding context",
@@ -2577,7 +2620,12 @@
   {
     "id": "GIF-013",
     "area": "gif",
-    "status": "open",
+    "status": "resolved",
+    "resolution": {
+      "kind": "implemented_safe_rust_contract",
+      "implementation_commit": "c7704f81fa83dd6d272a028ef0800b7ab5999f34",
+      "evidence": "GIF omission, infinite zero sentinel, finite repeat conversion, one-play omission, zero-count rejection, and Unknown rejection are covered by the public animation-loop tests and the existing GIF metadata/matrix contracts. Managed Coverage MCP run 576b9aa4-c43f-45a9-b5aa-525dbfa4968e passed the focused contract suite."
+    },
     "finding": "Zero and missing delays now retain exact rational fields, but absent loop metadata, finite repeats, and infinite repeats still share an underspecified cross-format loop model.",
     "next": "Complete the API-050 loop-semantics contract before adding another animation encoder.",
     "source": "docs/roadmap.md historical finding context",
@@ -4971,7 +5019,7 @@
   }
 ],
   "open_inventory": {
-    "count": 252,
+    "count": 250,
     "groups": {
       "common_api": [
         "API-008",
@@ -4994,7 +5042,6 @@
         "API-046",
         "API-047",
         "API-048",
-        "API-050",
         "API-051",
         "API-052",
         "API-053",
@@ -5047,7 +5094,6 @@
         "GIF-010",
         "GIF-011",
         "GIF-012",
-        "GIF-013",
         "GIF-014",
         "GIF-015",
         "GIF-016",
@@ -5271,7 +5317,6 @@
       "API-046",
       "API-047",
       "API-048",
-      "API-050",
       "API-051",
       "API-052",
       "API-053",
@@ -5318,7 +5363,6 @@
       "GIF-010",
       "GIF-011",
       "GIF-012",
-      "GIF-013",
       "GIF-014",
       "GIF-015",
       "GIF-016",
@@ -5571,9 +5615,11 @@
       "FTR-019",
       "FTR-030",
       "FTR-031",
-      "FTR-033",
-      "QA-013",
-      "QA-038"
-    ],
+    "FTR-033",
+    "QA-013",
+    "QA-038",
+    "API-050",
+    "GIF-013"
+  ],
   "open_ids_are_authoritative": true
 }
