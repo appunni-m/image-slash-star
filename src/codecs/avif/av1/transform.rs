@@ -2594,11 +2594,31 @@ pub(super) fn inverse_adst_adst8x8(coefficients: &[i32; 64]) -> [i32; 64] {
 mod tests {
     use super::{
         inverse_adst_adst4x4, inverse_adst_adst4x8, inverse_adst_adst8x8, inverse_adst_adst16x8,
-        inverse_adst_dct4x4, inverse_adst_dct4x8, inverse_adst_dct8x8, inverse_adst16,
-        inverse_dct_adst4x4, inverse_dct_adst4x8, inverse_dct_adst8x8, inverse_dct_adst8x16,
-        inverse_dct_identity4x8, inverse_dct_identity8x8, inverse_dct4x4, inverse_dct4x8,
-        inverse_dct8x8, inverse_dct16x64, inverse_dct32x16, inverse_dct32x32, inverse_dct64x64,
+        inverse_adst_dct4x4, inverse_adst_dct4x8, inverse_adst_dct8x8, inverse_adst_dct16x16,
+        inverse_adst16, inverse_dct_adst4x4, inverse_dct_adst4x8, inverse_dct_adst8x8,
+        inverse_dct_adst8x16, inverse_dct_identity4x8, inverse_dct_identity8x8,
+        inverse_dct_identity16x4, inverse_dct4x4, inverse_dct4x8, inverse_dct8x8, inverse_dct16x64,
+        inverse_dct32x16, inverse_dct32x32, inverse_dct64x64, inverse_identity_dct16x4,
+        inverse_identity_dct16x8, inverse_identity16x4, inverse_identity16x8,
     };
+
+    fn assert_sparse<const N: usize>(actual: [i32; N], expected: &[(usize, i32)]) {
+        let mut expected_output = [0_i32; N];
+        for &(index, value) in expected {
+            assert!(index < N);
+            assert_eq!(expected_output[index], 0);
+            expected_output[index] = value;
+        }
+        assert_eq!(actual, expected_output);
+    }
+
+    fn assert_i16_bounded<const N: usize>(output: [i32; N]) {
+        assert!(
+            output
+                .iter()
+                .all(|&sample| (i32::from(i16::MIN)..=i32::from(i16::MAX)).contains(&sample))
+        );
+    }
 
     #[test]
     fn dc_only_4x4_transform_is_constant() {
@@ -2709,6 +2729,141 @@ mod tests {
     fn zero_rectangular_transform_is_zero() {
         assert_eq!(inverse_dct_adst8x16(&[0; 128]), [0; 128]);
         assert_eq!(inverse_dct4x8(&[0; 32]), [0; 32]);
+    }
+
+    #[test]
+    fn uncovered_transform_wrappers_preserve_zero_input() {
+        assert_eq!(inverse_identity16x8(&[0; 128]), [0; 128]);
+        assert_eq!(inverse_identity_dct16x8(&[0; 128]), [0; 128]);
+        assert_eq!(inverse_identity16x4(&[0; 64]), [0; 64]);
+        assert_eq!(inverse_identity_dct16x4(&[0; 64]), [0; 64]);
+        assert_eq!(inverse_dct_identity16x4(&[0; 64]), [0; 64]);
+        assert_eq!(inverse_adst_dct16x16(&[0; 256]), [0; 256]);
+    }
+
+    #[test]
+    fn identity_rectangular_transforms_preserve_coefficient_layout() {
+        let mut r16x8 = [0_i32; 128];
+        // Coefficients use y + x * height; output uses y * width + x.
+        r16x8[30] = 4_096; // (x, y) = (3, 6)
+        assert_sparse(inverse_identity16x8(&r16x8), &[(99, 512)]);
+
+        let mut r16x4 = [0_i32; 64];
+        r16x4[22] = -4_096; // (x, y) = (5, 2)
+        assert_sparse(inverse_identity16x4(&r16x4), &[(37, -512)]);
+    }
+
+    #[test]
+    fn rectangular_transform_variants_match_dav1d_scalar_vectors() {
+        // These expected residuals were generated once from dav1d 1.5.3's
+        // scalar `inv_txfm_add_c` path with BITDEPTH=8 and HAVE_ASM=0. The
+        // destination was initialized to 128 and the bias was subtracted,
+        // leaving the signed residual after dav1d's final shift. They are
+        // checked-in constants rather than values computed by this module.
+        let mut r16x8 = [0_i32; 128];
+        r16x8[0] = 93;
+        r16x8[8] = -112;
+        r16x8[1] = 66;
+        r16x8[46] = -79;
+        assert_sparse(
+            inverse_identity_dct16x8(&r16x8),
+            &[
+                (0, 8),
+                (1, -5),
+                (5, -2),
+                (16, 8),
+                (17, -5),
+                (21, 5),
+                (32, 6),
+                (33, -5),
+                (37, -5),
+                (48, 5),
+                (49, -5),
+                (53, 2),
+                (64, 3),
+                (65, -5),
+                (69, 2),
+                (80, 2),
+                (81, -5),
+                (85, -5),
+                (96, 1),
+                (97, -5),
+                (101, 5),
+                (113, -5),
+                (117, -2),
+            ],
+        );
+
+        let mut r16x4 = [0_i32; 64];
+        r16x4[0] = 93;
+        r16x4[4] = -112;
+        r16x4[1] = 66;
+        r16x4[22] = -79;
+        assert_sparse(
+            inverse_identity_dct16x4(&r16x4),
+            &[
+                (0, 11),
+                (1, -7),
+                (5, -5),
+                (16, 8),
+                (17, -7),
+                (21, 5),
+                (32, 4),
+                (33, -7),
+                (37, 5),
+                (49, -7),
+                (53, -5),
+            ],
+        );
+        let dct_identity = inverse_dct_identity16x4(&r16x4);
+        let expected = [
+            [-2, -2, -1, -1, 0, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 8],
+            [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+            [-3, 0, 3, 3, 1, -2, -3, -2, 2, 4, 2, -1, -3, -3, 0, 3],
+            [0; 16],
+        ];
+        assert_eq!(dct_identity.as_chunks::<16>().0, &expected);
+    }
+
+    #[test]
+    fn adst_dct16x16_matches_dav1d_scalar_vector() {
+        // The input is asymmetric in both axes. This catches an accidental
+        // ADST/DCT axis swap that a DC-only vector would not expose.
+        let mut coefficients = [0_i32; 256];
+        coefficients[0] = 93;
+        coefficients[16] = -112;
+        coefficients[1] = 66;
+        coefficients[35] = -79;
+        let output = inverse_adst_dct16x16(&coefficients);
+        let expected = [
+            [0, -1, -1, -1, -1, -1, 0, 1, 2, 2, 3, 3, 3, 3, 2, 2],
+            [0, -1, -1, -1, -1, 0, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 3, 4],
+            [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 4],
+            [0, 1, 1, 1, 0, 0, 0, -1, -1, 0, 0, 1, 2, 3, 4, 4],
+            [0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 1, 2, 2, 3, 3],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3],
+            [0, -1, -1, -1, -1, -1, -1, 0, 0, 1, 1, 1, 2, 2, 2, 2],
+            [0, -1, -2, -2, -2, -1, -1, 0, 1, 1, 1, 2, 1, 1, 1, 1],
+            [0, -1, -2, -2, -2, -1, -1, 0, 1, 1, 2, 2, 1, 1, 1, 1],
+            [0, -1, -2, -2, -2, -2, -1, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, -1, -1, -1, -2, -1, -1, -1, 0, 0, 1, 1, 1, 1, 1, 1],
+            [0, 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 1, 1, 1, 1],
+            [0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, 0, 0, 1, 2, 2],
+            [0, 0, 0, 0, 0, -1, -1, -2, -2, -2, -1, 0, 0, 1, 2, 2],
+        ];
+        assert_eq!(output.as_chunks::<16>().0, &expected);
+    }
+
+    #[test]
+    fn uncovered_transform_wrappers_bound_extreme_coefficients() {
+        assert_i16_bounded(inverse_identity16x8(&[i32::MAX; 128]));
+        assert_i16_bounded(inverse_identity_dct16x8(&[i32::MAX; 128]));
+        assert_i16_bounded(inverse_identity16x4(&[i32::MAX; 64]));
+        assert_i16_bounded(inverse_identity_dct16x4(&[i32::MAX; 64]));
+        assert_i16_bounded(inverse_dct_identity16x4(&[i32::MAX; 64]));
+        assert_i16_bounded(inverse_adst_dct16x16(&[i32::MAX; 256]));
     }
 
     #[test]
