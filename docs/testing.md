@@ -26,11 +26,9 @@ covered lines, +0 branches, +10 functions, and +66 regions, with denominator
 deltas of +15 lines, +0 branches, +3 functions, and +24 regions. Named-test
 attribution is unavailable; bounded source review marks all seven rectangular
 transform wrappers green.
-The
-managed Pillow parity identifier below is the
-accepted claim-ledger result at its own recorded revision; the local
-all-feature matrix integration tests currently pass 34/34 under the managed
-coverage configuration (the ordinary non-coverage matrix has 29 tests).
+The managed Pillow parity identifier below is the accepted claim-ledger result
+at its own recorded revision; the local ordinary all-feature matrix integration
+suite currently passes 36/36.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The latest local feature-matrix run completed
@@ -46,6 +44,40 @@ Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
 current manifest statuses for today's contract.
+
+## Incremental matrix-row selection
+
+Run the full local matrix with no selector:
+
+```bash
+cargo test --locked --all-features --test coverage_matrix_tests
+```
+
+To run exact rows, pass each qualified key as its own reserved `--skip`
+payload:
+
+```bash
+cargo test --locked --all-features --test coverage_matrix_tests -- test_coverage_matrix --exact --nocapture --skip '__image_slash_star_matrix_row_selector__=decode:bmp:depth_1' --skip '__image_slash_star_matrix_row_selector__=encode:jpeg:enc_subsample_444'
+```
+
+Keys are case-sensitive and use exactly
+`decode:<format>:<row-id>` or `encode:<format>:<row-id>`. For managed Coverage
+MCP, keep the registered test tail `-- test_coverage_matrix --exact --nocapture`
+and append repeated two-token pairs in the same shape:
+
+```text
+--skip __image_slash_star_matrix_row_selector__=decode:bmp:depth_1
+--skip __image_slash_star_matrix_row_selector__=encode:jpeg:enc_subsample_444
+```
+
+Do not use `--skip=<payload>`, aliases, globs, format-only or function-name
+selectors, comma lists, trimming, or ordinary libtest skip filters with these
+payloads. A selected run executes only selected active rows; selected planned
+rows are reported as `planned-not-executed` and never counted as pass/fail.
+Malformed, empty, unknown, duplicate, and planned-only selections fail. A
+selected incremental run is targeted subset evidence, so it cannot replace the
+full all-feature release coverage run or establish the aggregate
+line/branch/function/region release gate.
 
 Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin

@@ -48,9 +48,32 @@
       "former_native_remaining": 39
     },
     "tests": {
-      "coverage_matrix_tests": "34/34 matrix tests",
+      "coverage_matrix_tests": "36/36 matrix tests",
       "feature_gate_tests": "66/66 feature-gate tests",
       "doctests": "1/1"
+    },
+    "matrix_row_selector": {
+      "transport_argument": "--skip",
+      "transport_prefix": "__image_slash_star_matrix_row_selector__=",
+      "qualified_key_forms": [
+        "decode:<format>:<row-id>",
+        "encode:<format>:<row-id>"
+      ],
+      "no_selector_behavior": "run_full_matrix",
+      "selected_execution": "selected_active_rows_only",
+      "selected_reporting": {
+        "active": "executed",
+        "planned": "planned-not-executed"
+      },
+      "rejected_selections": [
+        "malformed",
+        "empty",
+        "unknown",
+        "duplicate",
+        "planned-only"
+      ],
+      "dispatcher": "test_coverage_matrix",
+      "coverage_scope": "selected_subset_not_release_or_full_coverage_gate"
     },
     "historical_coverage": {
       "line": {
