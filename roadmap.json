@@ -1507,6 +1507,27 @@
           "scope": "One 12-bit AV1 profile-2, full-range BT.601/SDR, single-frame, all-lossless, 4:4:4 AVIF class with checked u16 reconstruction and measured Pillow-compatible RGB8 output.",
           "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_12bit_444_lossless.avif",
           "independent_provenance": "Generated from a deterministic 16x16 RGB source with the pinned libavif 1.4.1/libaom 3.13.2 avifenc fixture toolchain; independent AV1C/ISO-BMFF inspection records AV1 profile 2, 12-bit 4:4:4, still-picture, full-range CICP 1/13/6, one tile, and all_lossless with base qindex 0. Promotion required exact Pillow 12.2.0 RGB8 output and safe-Rust public parity; the native generator is fixture provenance only and is not a runtime dependency.",
+          "managed_incremental_coverage": {
+            "run_id": "270c0935-f337-42d1-9249-2b6e8b37624b",
+            "snapshot_id": "58bf18f6-f5a1-46c2-a5c3-ac64c5ec7439",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "duration_ms": 65949,
+            "commit_sha": "1cc231d0c0a28ad2eb7a0caf2a32a643b357d6d4",
+            "scope": "selected_subset",
+            "selector": "decode:avif:high_bitdepth_still_12bit_444_lossless",
+            "result": "passed",
+            "metric_deltas": {
+              "covered_lines": 302,
+              "total_lines": 2823,
+              "covered_branches": 0,
+              "total_branches": 72,
+              "covered_functions": 0,
+              "total_functions": 10,
+              "covered_regions": 0,
+              "total_regions": 582
+            },
+            "review": "The incremental review used conservative additive-union fallback (exact merge false), reports no regressions within the selected-subset observation, and has no named-test attribution. These deltas are bounded evidence for this slice only; the accepted complete release baseline remains unchanged and the run is not a four-metric release measurement."
+          },
           "non_goals": [
             "the existing 12-bit animated 10bit.avif row",
             "HDR transfer/primaries conversion",
