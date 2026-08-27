@@ -94,6 +94,16 @@ RGB SHA-256 values are
 This closes only the origin Square32 split luma/residual class; broader AV1,
 AVF-STILL-001, and AVIF encoding remain open.
 
+The newest bounded depth-one witness is
+`coverage_h16x4_tx8x4_split_01.avif`: a deterministic 16x16 8-bit 4:2:0
+`PARTITION_H4` stream whose following `Horizontal16x4` leaf selects two TX8x4
+luma children, both DCT-DCT with EOB values 5 and 2. Safe Rust matches the
+independent 768-byte Pillow RGB8 reference (fixture SHA-256
+`546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d`; RGB
+SHA-256 `ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54`).
+The row remains header-only for container verification; V_DCT/H_DCT and other
+H16x4 states remain explicit bounded gaps.
+
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
 `coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16

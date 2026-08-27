@@ -748,6 +748,19 @@ identities, and no regressions. Snapshot metadata retains commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db`; test attribution is unavailable,
 and this selected-subset result is bounded evidence rather than a replacement
 for the complete release measurement.
+The newest bounded AVIF incremental run
+`ec9eeafa-f383-40f0-a5fb-d938e19de70f` passed in 65,013 ms at exact
+implementation commit `bcb6fa5f205d987434f579c71853a3f3252e0c77` and ingested
+snapshot `0e194d9f-dfa5-4746-b1af-9b6316281d48` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only
+`decode:avif:coverage_h16x4_tx8x4_split_01`; the additive baseline-union review
+adds 686 covered line identities, no newly covered branch/function/region
+identities, and no regressions. The aggregate denominator grew by 2,823 lines,
+72 branches, 10 functions, and 582 regions because this slice adds production
+code. Snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; test attribution is unavailable,
+and this selected-subset result is bounded evidence rather than a replacement
+for the complete release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.

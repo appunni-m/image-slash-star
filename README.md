@@ -683,6 +683,16 @@ The current accepted Coverage MCP snapshot is recorded in
 branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
+The newest bounded AVIF incremental run
+`ec9eeafa-f383-40f0-a5fb-d938e19de70f` passed in 65,013 ms at exact
+implementation commit `bcb6fa5f205d987434f579c71853a3f3252e0c77` and ingested
+snapshot `0e194d9f-dfa5-4746-b1af-9b6316281d48` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only
+`decode:avif:coverage_h16x4_tx8x4_split_01`; the additive review adds 686
+covered line identities, no new branch/function/region identities, and no
+regressions. The selected subset is bounded evidence, not a replacement for
+the complete release measurement.
+
 The oracle identity, regeneration workflow, exact comparison contract, test
 tiers, current run identifiers, and troubleshooting are in
 [oracle, fixtures, tests, and coverage](docs/testing.md).
