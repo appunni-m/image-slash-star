@@ -7,24 +7,25 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`; the historical Pillow parity
+`8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`b3552b87-34e3-4982-aed9-097741233eb6` from run
-`2c15aada-4d4a-4a4f-8547-25172ad7d370` (full all-feature workload passed at
-exact execution commit `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`). Its LLVM
-report records 99,780/109,576 lines (91.0601%), 12,713/14,058 branches
-(90.4325%), 5,090/5,766 functions (88.2761%), and 149,392/165,733 regions
-(90.1402%). The compact snapshot projection retains prior commit metadata
-`3272b3ef49a87c2947c08b46596b442195c6a8db`, so the run and snapshot are not
-silently treated as having identical metadata. Direct comparison with the
-previous stored snapshot records covered deltas of -2 lines, +5 branches, +0
-functions, and -2 regions, with denominator deltas of +4 lines, +4 branches,
-+0 functions, and +8 regions; no source-attributable gain or named-test
-attribution is claimed because the compact projection does not provide reliable
-changed-code attribution.
+`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` from run
+`10e5a9c1-5d4e-473c-81f9-f00fd9d9a882` (full all-feature workload passed at
+exact execution commit `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`). Its LLVM
+report records 100,042/109,633 lines (91.2517%), 12,789/14,152 branches
+(90.3689%), 5,102/5,767 functions (88.4689%), and 149,695/165,811 regions
+(90.2805%). The run record is exact for the implementation commit, while the
+compact snapshot projection retains commit metadata
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is explicit.
+Explicit incremental comparison with baseline snapshot
+`b3552b87-34e3-4982-aed9-097741233eb6` records covered deltas of +262 lines,
++76 branches, +12 functions, and +303 regions, with denominator deltas of +57
+lines, +94 branches, +1 function, and +78 regions. Named-test attribution is
+unavailable; the branch rate decreased because the complete report added more
+branch identities than it covered.
 The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
@@ -32,15 +33,14 @@ all-feature matrix integration tests currently pass 34/34 under the managed
 coverage configuration (the ordinary non-coverage matrix has 29 tests).
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
-1,449/1,449 passed and no skips. The latest local feature-matrix run reported
-every completed lane as passing, but native/avif compilation was interrupted
-after more than ten minutes while the configured `sccache` client was blocked on
-its FIFO. No overall feature-matrix completion is claimed, and no
-`RUSTC_WRAPPER` setting was changed.
+1,449/1,449 passed and no skips. The latest local feature-matrix run completed
+with every configured native, `wasm32-wasip1`, and `wasm32-unknown-unknown`
+lane passing; the configured `sccache` client was used and no `RUSTC_WRAPPER`
+setting was changed.
 The current implementation also passes the complete all-feature test set plus
 one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 9,796 lines,
-1,346 branches, 676 functions, and 16,342 regions are recorded explicitly in
+remains red because the release target is 100%; the remaining 9,591 lines,
+1,363 branches, 665 functions, and 16,116 regions are recorded explicitly in
 the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
