@@ -471,8 +471,24 @@ the corresponding status is recorded in `roadmap.json`:
   double-YUV/double-RGB checks and no repository Rust invocation. This closes
   only the bounded following-Square16/chroma-Smooth/ADST-ADST class; broader
   AV1 and AVF-STILL-001 remain partial.
-- Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
+- Current local Rust contracts: 36/36 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
+- The incremental matrix-row selector is implemented with the reserved
+  `--skip` transport prefix `__image_slash_star_matrix_row_selector__=` and
+  exact qualified keys `decode:<format>:<row-id>` or
+  `encode:<format>:<row-id>`. With no selector, the full matrix behavior is
+  preserved; selected runs execute only selected active rows, report selected
+  planned rows as `planned-not-executed`, and never count planned rows as
+  pass/fail. Malformed, empty, unknown, duplicate, and planned-only
+  selections fail, and `test_coverage_matrix` is the central selected-run
+  dispatcher. Selected coverage is subset evidence, not a release or
+  full-coverage gate.
+- Selected-subset evidence only: managed Coverage MCP run
+  `3a0d2ca9-0ff7-4d35-b712-1aa44a6f5403` selected two rows, passed in 52.8s, and
+  ingested snapshot `82c70c05-eea0-4431-b8c6-80b052916283` against baseline
+  `cbd4fcaa-0640-4dda-be05-3e368b690955`. It recorded zero aggregate gain;
+  because this was a selected subset, it makes no aggregate no-regression
+  claim and is not a full-coverage or release-gate run.
 - The newest bounded rectangular proof pairs
   `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
   `coverage_v4x16_filter_intra_cdf19_false_01.avif`: deterministic 16x16
@@ -1190,7 +1206,7 @@ were the same unit.
 | Fixture rows | 1,520 total | 1,123 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,116 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 36/36 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Historical source-quality checkpoint | reviewed revision `2d3e7ec` | Strict fmt, locked check, Clippy, rustdoc, full tests, verifiers, managed coverage, and the production JPEG comparison are recorded in the historical checkpoint above. |
 | Accepted product-claim baseline | revision `36b9396` | The managed Pillow claim ledger remains bound to this source/evidence revision. |
 
