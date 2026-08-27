@@ -40,7 +40,7 @@
     {"path": "src/codecs/ico/mod.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/jpeg/decode/bit_reader.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/jpeg/decode/decode.rs", "guard_count": 1, "origin": "defensive_model"},
-    {"path": "src/codecs/jpeg/decode/huffman.rs", "guard_count": 1, "origin": "defensive_model"},
+    {"path": "src/codecs/jpeg/decode/huffman.rs", "guard_count": 2, "origin": "defensive_model"},
     {"path": "src/codecs/jpeg/decode/mod.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/jpeg/decode/parser.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/codecs/jpeg/decode/progressive.rs", "guard_count": 1, "origin": "defensive_model"},
