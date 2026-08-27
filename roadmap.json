@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1524,
-      "decode_rows": 1127,
+      "total_rows": 1525,
+      "decode_rows": 1128,
       "encode_rows": 397,
-      "decode_active": 1120,
+      "decode_active": 1121,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 300,
-      "decode_active": 293,
+      "decode_rows": 301,
+      "decode_active": 294,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_230_reconstruction_cases",
+      "no_selector_behavior": "run_all_231_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -1284,7 +1284,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence_addendum": "The latest bounded proof is coverage_square8_chroma_diagonal67_vertical_01.avif: a deterministic 8x16 8-bit 4:2:0 clipped vertical split with top and following Square8 leaves. The following bottom leaf selects chroma Diagonal67 (coded UV mode 8), angle symbol 3/resolved angle 180, ADST-DCT TX4x4 U/V transforms, split TX4x4 luma, and non-empty residuals. The input-only 100-case, 10-family campaign qualified 59 candidates and promoted D67V-F01-N00 (seed 12000); repository Rust was not invoked. Its pinned dav1d trace has 118 entropy operations, and safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. Fixture SHA-256 is 7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f, encoded-item SHA-256 is 90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8, and Pillow RGB SHA-256 is 2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae. This closes only the bounded following-vertical Square8/chroma-Diagonal67 class; AVF-STILL-001 remains partial. A separate bounded active witness, coverage_h16x4_tx4x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth two, yielding four TX4x4 luma children and exercising matrix-8 luma dequantization. Safe Rust matches its pinned 768-byte Pillow RGB8 reference (fixture SHA-256 cbd0c319225f4542fdc99bc9b414252e259f0416a6b43878ca82880d7b98ced2; RGB SHA-256 cafbd0adea2de9433149b1e444a7bf8d67f2a09578c815dd69c8f098fd58c626). A second bounded active witness, coverage_h16x4_tx8x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth one, yielding two TX8x4 luma children with DCT_DCT transforms and EOB values 5 and 2; the qcat-three stream exercises the verified luma matrix-6 and R8x4 coefficient sentence. Safe Rust matches the independent 768-byte Pillow RGB8 reference (fixture SHA-256 546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d; RGB SHA-256 ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54). The current matrix row keeps header-only container verification and exact public RGB parity; an input-only pinned dav1d probe confirms the two-child transform/EOB topology. This closes only bounded depth-one DCT_DCT evidence: one-dimensional V_DCT/H_DCT, other H16x4 states, and AVF-STILL-001 remain partial.",
+        "current_evidence_addendum": "The latest bounded proof is coverage_square8_chroma_diagonal67_vertical_01.avif: a deterministic 8x16 8-bit 4:2:0 clipped vertical split with top and following Square8 leaves. The following bottom leaf selects chroma Diagonal67 (coded UV mode 8), angle symbol 3/resolved angle 180, ADST-DCT TX4x4 U/V transforms, split TX4x4 luma, and non-empty residuals. The input-only 100-case, 10-family campaign qualified 59 candidates and promoted D67V-F01-N00 (seed 12000); repository Rust was not invoked. Its pinned dav1d trace has 118 entropy operations, and safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. Fixture SHA-256 is 7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f, encoded-item SHA-256 is 90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8, and Pillow RGB SHA-256 is 2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae. This closes only the bounded following-vertical Square8/chroma-Diagonal67 class; AVF-STILL-001 remains partial. A separate bounded active witness, coverage_h16x4_tx4x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth two, yielding four TX4x4 luma children and exercising matrix-8 luma dequantization. Safe Rust matches its pinned 768-byte Pillow RGB8 reference (fixture SHA-256 cbd0c319225f4542fdc99bc9b414252e259f0416a6b43878ca82880d7b98ced2; RGB SHA-256 cafbd0adea2de9433149b1e444a7bf8d67f2a09578c815dd69c8f098fd58c626). A second bounded active witness, coverage_h16x4_tx8x4_split_01.avif, is a 16x16 8-bit 4:2:0 H4-root stream whose following Horizontal16x4 leaf selects transform depth one, yielding two TX8x4 luma children with DCT_DCT transforms and EOB values 5 and 2; the qcat-three stream exercises the verified luma matrix-6 and R8x4 coefficient sentence. Safe Rust matches the independent 768-byte Pillow RGB8 reference (fixture SHA-256 546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d; RGB SHA-256 ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54). The current matrix row keeps header-only container verification and exact public RGB parity; an input-only pinned dav1d probe confirms the two-child transform/EOB topology. This closes only bounded depth-one DCT_DCT evidence: one-dimensional V_DCT/H_DCT, other H16x4 states, and AVF-STILL-001 remain partial. The new bounded 4:2:2 proof is coverage_422_square16_vertical_halves_01.avif: a deterministic 16x16 8-bit origin Square16 stream with Y and UV palette syntax, skipped residuals, one TX16x16 luma transform, and one TX8x16 transform per U/V plane. Safe Rust matches the pinned dav1d 1.5.3 partition, 461-operation entropy trace, exact 16x16 Y and 8x16 U/V planes, and Pillow RGB8 output; fixture SHA-256 is 6c524c2b189f47893ace4e93ea0bdb1123cfbd555c5102991679e0e9d9854a49, encoded-item SHA-256 is c4aa6f97fa02301e61829ab68dc85808f8d16a640daa32e5aecdec90bb0a63c9, and Pillow RGB SHA-256 is bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7. This closes only the simple 4:2:2 Square16 palette class; other 4:2:2 geometries, residual-bearing palette blocks, optional filters/tools, broader AV1/AVIF support, and AVF-STILL-001 remain partial.",
         "bounded_witnesses": {
           "coverage_h16x4_tx4x4_split_01": {
             "fixture": "coverage_h16x4_tx4x4_split_01.avif",
@@ -1342,6 +1342,58 @@
             },
             "scope": "Exact public RGB parity for this bounded depth-one topology only; container verification remains header-only, one-dimensional V_DCT/H_DCT, other H16x4 states, and general AVF-STILL-001 completion remain open.",
             "reconstruction_oracle": "not_registered"
+          },
+          "coverage_422_square16_vertical_halves_01": {
+            "fixture": "coverage_422_square16_vertical_halves_01.avif",
+            "dimensions": [
+              16,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:2",
+            "quality": 76,
+            "speed": 0,
+            "topology": "one origin Square16 leaf with Y and UV palettes, skipped residuals, one TX16x16 luma transform, and one TX8x16 U/V transform per chroma plane",
+            "fixture_sha256": "6c524c2b189f47893ace4e93ea0bdb1123cfbd555c5102991679e0e9d9854a49",
+            "encoded_item": {
+              "bytes": 34,
+              "sha256": "c4aa6f97fa02301e61829ab68dc85808f8d16a640daa32e5aecdec90bb0a63c9"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition": "poc=0,y=0,x=0,level=3,context=0,partition=0,range=62320",
+              "entropy_operation_count": 461,
+              "entropy_states": [
+                "skip=0",
+                "ymode=0",
+                "uvmode=0",
+                "y-palettes=2/2",
+                "uv-palettes=2/2",
+                "tx=1",
+                "y-cf-blk=4 skipped",
+                "uv-cf-blk=2 skipped"
+              ],
+              "evidence": "Input-only scalar dav1d probing produced the exact partition, entropy, palette, and raw-plane reference; repository Rust is not invoked by the oracle."
+            },
+            "decoded_plane_sha256": {
+              "y": "8108b3e6e76674a7ad2b435f7b3b2f6ed185a2ab55791df0b853c7661b26b889",
+              "u": "5269f12562f3d3819c1ea8ca9adfee3c310f126d18bd326613d34cf28144d72c",
+              "v": "4d26033182e94d94ff36d65976d62eb5d582db552e4b6e79daabc9e392b30853"
+            },
+            "production_changes": [
+              "Model 4:2:2 as half-width/full-height chroma geometry in safe frame and block reconstruction.",
+              "Decode the bounded Square16 chroma skip CDF and TX8x16 U/V coefficient sentence without forcing the skip result.",
+              "Use the existing safe Square16 palette reconstruction with a 128-entry chroma index region and libavif-compatible horizontal YUV422 conversion."
+            ],
+            "focused_verification": "The AVIF decode matrix passes 294/294 active rows; the pinned reconstruction test passes all 231 cases including this fixture; strict fmt, locked checks, Clippy, rustdoc, and all-feature tests pass.",
+            "scope": "This closes only the simple 16x16 origin Square16 8-bit 4:2:2 palette class. Rectangular/partial 4:2:2 blocks, residual-bearing palette blocks, optional filters/tools, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
     "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The new coverage_r32x8_h4_ripple_01.avif witness is a 32x32 8-bit 4:2:0 PARTITION_H4 frame with three 32x8 luma leaves and 16x4 subsampled chroma leaves, an exact 1,522-operation entropy trace, exact Y/U/V planes, and exact Pillow RGB output; it exercises the geometry-specific matrix-9 dequantization and one-sided DC path. The coverage_i444_rect_01.avif witness is a 16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals, full-resolution Y/U/V residuals, delta-Q, a pinned 499-operation dav1d trace, exact 16x16 reconstructed planes, and exact Pillow RGB8 output. The new coverage_i444_rect_02.avif witness is a second 16x16 8-bit lossy 4:4:4 split-root/four-leaf frame with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB8 output, distinct residual/EOB states, and a filter-intra leaf. The new coverage_r32x32_filter_intra_probe_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with an origin Horizontal32x16 leaf using filter-intra y-mode 13/filter mode 2 and dav1d's missing-edge values (top 127, left 129, top-left 128), followed by a second Horizontal32x16 leaf; its pinned trace has 1,168 entropy operations and safe Rust matches exact Y/U/V planes and Pillow RGB bytes. The new coverage_r32x32_filter_intra_mode3_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. The production path reconstructs the vertically following second leaf from its prepared spatial edges; its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. Its fixture, encoded-item, and RGB SHA-256 values are 79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29, cbf90be7ee9f18a5ef502f3fa0030d0fe97be481459461df687d968dfbdcb2e5, and 8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495. The new coverage_r32x16_filter_intra_tx8x8_01.avif witness is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled (trace sentinel Post-filterintramode[0/0]) and a depth-two TX8x8 luma grid. Its pinned dav1d trace has 2,328 entropy operations, the partition path is root H followed by the visible Horizontal32x16 terminal, safe Rust reconstructs all four luma TX8x8 children through the generic split path, and exact Y/U/V planes and Pillow RGB8 bytes match independently. Its fixture, encoded-item, and RGB SHA-256 values are 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled. The new coverage_square16_filter_intra_mode0_01.avif origin witness adds exact Square16 filter-intra mode-0, unsplit TX16x16 luma, TX8x8 chroma, 1,116-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode0_01.avif witness adds exact origin Vertical8x16 filter-intra mode-0, unsplit TX8x16 luma, TX4x8 chroma, 584-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode1_01.avif witness adds exact origin Vertical8x16 filter-intra mode-1, unsplit TX8x16 luma, TX4x8 chroma, 559-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The newest bounded witness is coverage_square8_chroma_diagonal113_01.avif, a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial. The newest paired rectangular H16x4/V4x16 fixtures add exact safe-Rust false-filter-CDF and UV-palette reconstruction evidence with 162-operation traces in each orientation; this is one bounded class and AVF-STILL-001 remains partial. The new coverage_square32_origin_tx16x16_split_01.avif witness adds a 32x32 4:2:0 origin Square32 leaf with four TX16x16 luma DCT children, DC prediction, non-empty residuals, and TX16x16 DCT chroma; its 4,436-operation pinned trace, exact Y/U/V planes, and Pillow RGB bytes match safe Rust.",
@@ -1769,6 +1821,71 @@
               "note": "The additive baseline-union review measured the selected reconstruction test and retained unobserved baseline hits as not_observed. It is bounded evidence, not a complete four-metric release measurement or a global regression claim."
             }
           }
+        },
+        "current_slice_update_2026_08_28_422_palette": {
+          "target": "simple origin Square16 8-bit 4:2:2 palette decode with full-height chroma",
+          "fixture": "coverage_422_square16_vertical_halves_01.avif",
+          "generator": "scripts/generate_test_assets.py::subsampled422_vertical_halves",
+          "dimensions": [
+            16,
+            16
+          ],
+          "bit_depth": 8,
+          "subsampling": "4:2:2",
+          "encoding": {
+            "quality": 76,
+            "speed": 0,
+            "topology": "one origin Square16 leaf",
+            "palette": "two-entry Y and UV palettes with skipped residuals",
+            "transforms": [
+              "TX16x16 luma",
+              "TX8x16 U",
+              "TX8x16 V"
+            ],
+            "frame_tools": "CDEF, restoration, delta-Q, and loop filtering disabled"
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=0,range=62320",
+            "entropy_operation_count": 461,
+            "planes": {
+              "y": [
+                16,
+                16
+              ],
+              "u": [
+                8,
+                16
+              ],
+              "v": [
+                8,
+                16
+              ]
+            }
+          },
+          "fixture_sha256": "6c524c2b189f47893ace4e93ea0bdb1123cfbd555c5102991679e0e9d9854a49",
+          "encoded_item": {
+            "bytes": 34,
+            "sha256": "c4aa6f97fa02301e61829ab68dc85808f8d16a640daa32e5aecdec90bb0a63c9"
+          },
+          "pillow_rgb": {
+            "bytes": 768,
+            "mode": "RGB8",
+            "sha256": "bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7"
+          },
+          "decoded_plane_sha256": {
+            "y": "8108b3e6e76674a7ad2b435f7b3b2f6ed185a2ab55791df0b853c7661b26b889",
+            "u": "5269f12562f3d3819c1ea8ca9adfee3c310f126d18bd326613d34cf28144d72c",
+            "v": "4d26033182e94d94ff36d65976d62eb5d582db552e4b6e79daabc9e392b30853"
+          },
+          "production_changes": [
+            "Add explicit ChromaSampling::Subsampled422 half-width/full-height geometry.",
+            "Keep the admitted entropy/CDF boundary exact to Square16 and reject other 4:2:2 transform shapes before entropy consumption.",
+            "Reconstruct 8x16 chroma palette planes and apply the pinned libavif 1.4.1 YUV422 horizontal conversion phase."
+          ],
+          "focused_verification": "The AVIF decode matrix passes 294/294 active rows, the pinned dav1d reconstruction test passes all 231 cases, and the new U/V plane rows 0-15 match independently generated references.",
+          "scope": "This closes only the simple origin Square16 palette class; it does not claim general 4:2:2, AVF-STILL-001, AVIF encoding, or 100% four-metric coverage."
         }
       },
       "AVF-ENTROPY-001": {

@@ -4968,6 +4968,40 @@ def gen_avif():
             advanced=advanced,
         )
 
+    def subsampled422_vertical_halves():
+        """Generate the minimal lossy 4:2:2 origin reconstruction witness."""
+
+        left = (17, 91, 203)
+        right = (0, 255, 0)
+        return image_from_pixels(
+            (16, 16),
+            lambda x, _y: left if x < 8 else right,
+        )
+
+    write_campaign_image(
+        "coverage_422_square16_vertical_halves_01",
+        subsampled422_vertical_halves(),
+        "4:2:2",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def square32_origin_tx16x16_split_noise():
         """Generate the origin Square32/TX16x16 split reconstruction witness."""
 

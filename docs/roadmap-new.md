@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 300 rows total, 293 active, 7 explicit planned
+- AVIF decode/inspect/verify: 301 rows total, 294 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,524 rows total, 1120 active decode rows, 365 active encode
+- Whole matrix: 1,525 rows total, 1121 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -152,6 +152,19 @@ the corresponding status is recorded in `roadmap.json`:
   closes only this single-frame 12-bit 4:4:4 class; the animated
   `high_bitdepth` row, other subsampling, restoration, alpha/sequence, HDR,
   and encoding remain open.
+- The new bounded 4:2:2 witness is
+  `coverage_422_square16_vertical_halves_01.avif`: a deterministic 16x16
+  8-bit origin `Square16` stream with Y/UV palettes, skipped residuals, one
+  TX16x16 luma transform, and TX8x16 U/V transforms over half-width,
+  full-height chroma. Safe Rust matches the pinned dav1d 1.5.3 partition,
+  461-operation entropy trace, exact 16x16 Y and 8x16 U/V planes, and Pillow
+  RGB8 output. Fixture, encoded-item, and Pillow RGB SHA-256 values are
+  `6c524c2b189f47893ace4e93ea0bdb1123cfbd555c5102991679e0e9d9854a49`,
+  `c4aa6f97fa02301e61829ab68dc85808f8d16a640daa32e5aecdec90bb0a63c9`, and
+  `bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7`.
+  This closes only the simple `Square16` palette class; other 4:2:2
+  geometries, residual-bearing palette blocks, optional tools/filters,
+  broader AV1/AVIF support, and `AVF-STILL-001` remain partial.
 
   Managed Coverage MCP then ran the exact selected-row incremental command
   against baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
@@ -561,7 +574,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  230 reconstruction cases; a selected run reads and executes only the
+  231 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -1370,7 +1383,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,524 total | 1,127 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,120 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,525 total | 1,128 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,121 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 36/36 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2635,7 +2648,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 299 AVIF decode/inspect/verify rows exist: 292 are
+**Current exact state:** 301 AVIF decode/inspect/verify rows exist: 294 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

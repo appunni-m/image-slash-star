@@ -1802,6 +1802,11 @@ pub(super) fn validate_complete_lossy_420_partition(
     if !complete_lossy_420_reconstruction_context(context) {
         return Ok(None);
     }
+    let chroma_sampling = super::block::ChromaSampling::from_subsampling(
+        context.subsampling_x,
+        context.subsampling_y,
+    )
+    .ok_or_else(|| malformed("unsupported AV1 chroma subsampling"))?;
     let mut decoder = RangeDecoder::new(data, range.start, range.end, context.disable_cdf_update)?;
     #[cfg(coverage)]
     decoder.enable_operation_trace();
@@ -1826,8 +1831,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     let root_step =
         usize::try_from(root_size).map_err(|_| malformed("superblock root size exceeds usize"))?;
     let mut walker = PartitionWalker::new(&mut decoder, context);
-    let Some(mut block_decoder) = super::block::Lossy420Decoder::with_qindex(quantization.qindex)
-    else {
+    let Some(mut block_decoder) = super::block::Lossy420Decoder::with_qindex_and_sampling(
+        quantization.qindex,
+        chroma_sampling,
+    ) else {
         return Ok(None);
     };
     let mut canvas = super::raster::FrameCanvas::new(
@@ -2894,10 +2901,25 @@ pub(super) fn validate_complete_lossy_420_partition(
 }
 
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let simple_422 = context.subsampling_x
+        && !context.subsampling_y
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.delta_q_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0;
     closed_base_reconstruction_context(context)
         && !context.all_lossless
         && ((context.subsampling_x && context.subsampling_y)
-            || (!context.subsampling_x && !context.subsampling_y))
+            || (!context.subsampling_x && !context.subsampling_y)
+            || simple_422)
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.restoration_present
