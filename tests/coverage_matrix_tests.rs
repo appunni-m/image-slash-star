@@ -767,6 +767,34 @@ fn try_claim_selected_matrix_dispatch(claimed: &AtomicBool) -> bool {
         .is_ok()
 }
 
+#[allow(clippy::arithmetic_side_effects)]
+fn assert_coverage_matrix_summary(matrix: &CoverageMatrix) {
+    let s = &matrix.summary;
+    assert!(s.total_rows > 0, "Matrix must have rows");
+    assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
+}
+
+fn dispatch_selected_matrix(run_full: impl FnOnce()) {
+    let matrix = require_some(
+        coverage_matrix(),
+        "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
+    );
+    let Some(selection) = matrix_row_selection_for_test(matrix) else {
+        return;
+    };
+
+    if selection.is_selected() {
+        assert_coverage_matrix_summary(matrix);
+        if try_claim_selected_matrix_dispatch(&SELECTED_MATRIX_DISPATCH_CLAIMED) {
+            run_decode_matrix(None);
+            run_encode_matrix(None, None);
+        }
+        return;
+    }
+
+    run_full();
+}
+
 #[cfg(test)]
 mod matrix_row_selection_tests {
     use super::*;
@@ -3303,42 +3331,42 @@ fn result_matches_oracle<T>(
 
 #[test]
 fn test_decode_matrix_jpeg() {
-    run_decode_matrix(Some("jpeg"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("jpeg")));
 }
 
 #[test]
 fn test_decode_matrix_png() {
-    run_decode_matrix(Some("png"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("png")));
 }
 
 #[test]
 fn test_decode_matrix_gif() {
-    run_decode_matrix(Some("gif"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("gif")));
 }
 
 #[test]
 fn test_decode_matrix_bmp() {
-    run_decode_matrix(Some("bmp"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("bmp")));
 }
 
 #[test]
 fn test_decode_matrix_tiff() {
-    run_decode_matrix(Some("tiff"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("tiff")));
 }
 
 #[test]
 fn test_decode_matrix_webp() {
-    run_decode_matrix(Some("webp"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("webp")));
 }
 
 #[test]
 fn test_decode_matrix_ico() {
-    run_decode_matrix(Some("ico"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("ico")));
 }
 
 #[test]
 fn test_decode_matrix_avif() {
-    run_decode_matrix(Some("avif"));
+    dispatch_selected_matrix(|| run_decode_matrix(Some("avif")));
 }
 
 #[test]
@@ -4254,12 +4282,12 @@ fn run_decode_matrix(format_filter: Option<&str>) {
 
 #[test]
 fn test_encode_matrix_jpeg() {
-    run_encode_matrix(Some("jpeg"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("jpeg"), None));
 }
 
 #[test]
 fn test_encode_matrix_png() {
-    run_encode_matrix(Some("png"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("png"), None));
 }
 
 #[test]
@@ -4268,87 +4296,87 @@ fn test_encode_matrix_gif_basic() {
     // retaining repeated source assets in one worker. The ranges below are
     // contiguous in active-row order; the final range is intentionally open
     // ended via usize::MAX so appended active rows remain covered.
-    run_encode_matrix(Some("gif"), Some((0, 4)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((0, 4))));
 }
 
 #[test]
 fn test_encode_matrix_gif_palette_animation() {
-    run_encode_matrix(Some("gif"), Some((4, 9)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((4, 9))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_a() {
-    run_encode_matrix(Some("gif"), Some((9, 13)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((9, 13))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_b1() {
-    run_encode_matrix(Some("gif"), Some((13, 14)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((13, 14))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_b2() {
-    run_encode_matrix(Some("gif"), Some((14, 15)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((14, 15))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_b3() {
-    run_encode_matrix(Some("gif"), Some((15, 16)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((15, 16))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_b4() {
-    run_encode_matrix(Some("gif"), Some((16, 17)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((16, 17))));
 }
 
 #[test]
 fn test_encode_matrix_gif_rgba_animation_b5() {
-    run_encode_matrix(Some("gif"), Some((17, 18)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((17, 18))));
 }
 
 #[test]
 fn test_encode_matrix_gif_still_options() {
-    run_encode_matrix(Some("gif"), Some((18, 31)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((18, 31))));
 }
 
 #[test]
 fn test_encode_matrix_gif_color_quantization() {
-    run_encode_matrix(Some("gif"), Some((31, usize::MAX)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("gif"), Some((31, usize::MAX))));
 }
 
 #[test]
 fn test_encode_matrix_bmp() {
-    run_encode_matrix(Some("bmp"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("bmp"), None));
 }
 
 #[test]
 fn test_encode_matrix_tiff() {
-    run_encode_matrix(Some("tiff"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("tiff"), None));
 }
 
 #[test]
 fn test_encode_matrix_webp_animation() {
-    run_encode_matrix(Some("webp"), Some((0, 28)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("webp"), Some((0, 28))));
 }
 
 #[test]
 fn test_encode_matrix_webp_common_sources() {
-    run_encode_matrix(Some("webp"), Some((28, 75)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("webp"), Some((28, 75))));
 }
 
 #[test]
 fn test_encode_matrix_webp_remaining_sources() {
-    run_encode_matrix(Some("webp"), Some((75, usize::MAX)));
+    dispatch_selected_matrix(|| run_encode_matrix(Some("webp"), Some((75, usize::MAX))));
 }
 
 #[test]
 fn test_encode_matrix_ico() {
-    run_encode_matrix(Some("ico"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("ico"), None));
 }
 
 #[test]
 fn test_encode_matrix_avif() {
-    run_encode_matrix(Some("avif"), None);
+    dispatch_selected_matrix(|| run_encode_matrix(Some("avif"), None));
 }
 
 #[allow(clippy::arithmetic_side_effects)]
@@ -9416,33 +9444,27 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
 
 #[test]
 fn test_coverage_matrix() {
-    let matrix = require_some(
-        coverage_matrix(),
-        "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
-    );
-    let Some(selection) = matrix_row_selection_for_test(matrix) else {
-        return;
-    };
-
-    let s = &matrix.summary;
-    if !selection.is_selected() {
-        eprintln!(
-            "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
-            s.decode_active,
-            s.decode_rows,
-            s.decode_planned,
-            s.encode_not_wired,
-            s.assets_available
+    dispatch_selected_matrix(|| {
+        let matrix = require_some(
+            coverage_matrix(),
+            "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
         );
-    }
+        let Some(selection) = matrix_row_selection_for_test(matrix) else {
+            return;
+        };
 
-    assert!(s.total_rows > 0, "Matrix must have rows");
-    assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
+        let s = &matrix.summary;
+        if !selection.is_selected() {
+            eprintln!(
+                "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
+                s.decode_active,
+                s.decode_rows,
+                s.decode_planned,
+                s.encode_not_wired,
+                s.assets_available
+            );
+        }
 
-    if selection.is_selected()
-        && try_claim_selected_matrix_dispatch(&SELECTED_MATRIX_DISPATCH_CLAIMED)
-    {
-        run_decode_matrix(None);
-        run_encode_matrix(None, None);
-    }
+        assert_coverage_matrix_summary(matrix);
+    });
 }
