@@ -290,6 +290,46 @@
             "merge_exact": false,
             "note": "The additive baseline-union review measured the selected reconstruction test and retained unobserved baseline hits as not_observed. It is bounded evidence, not a complete four-metric release measurement or a global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "commit_sha": "9831b09d65dd02754785d6e3de4d02bf5e43559f",
+          "run_id": "7cdea475-3fdc-4194-8bd9-7509249580ff",
+          "snapshot_id": "1007a9cf-9c6e-4f5f-ae72-b1c99f3c6cbd",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 107163,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_internal_coverage_hooks",
+            "--",
+            "--nocapture"
+          ],
+          "selected_rows": [
+            "test_internal_coverage_hooks"
+          ],
+          "status": "passed_and_ingested",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "baseline_union_incremental",
+            "covered_lines_delta": 174,
+            "covered_branches_delta": 0,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 0,
+            "total_lines_delta": 2815,
+            "total_branches_delta": 72,
+            "total_functions_delta": 10,
+            "total_regions_delta": 582,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "note": "The hook passed with its intentional caught defensive panics, and the additive baseline-union review reports +174 covered lines with no new branch/function/region identities. Unobserved baseline hits are not regressions; this selected-subset result is not a complete four-metric release measurement."
+          }
         }
       ],
       "coverage_origin_inventory": {
