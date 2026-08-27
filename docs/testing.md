@@ -7,11 +7,11 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger implementation anchor is
-`17f548e91b83b61fbc071787ef8285d3d621c0ee`; the current complete managed
-Coverage MCP record is run `eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d`, snapshot
-`c694d0a5-4b6e-490c-b7b7-df010e668fb8`, executed at that exact commit. It
-records 100,316/110,009 lines (91.1889%), 12,835/14,220 branches (90.2602%),
-5,124/5,794 functions (88.4363%), and 150,124/166,363 regions (90.2388%).
+`93ec80ec99c42671dce6cf70694bce27ad8a2ef4`; the current complete managed
+Coverage MCP record is run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`, snapshot
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`, executed at that exact commit. It
+records 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%),
+5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 The compact snapshot retains metadata commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat. The
 historical Pillow parity record below remains bound to
@@ -5580,12 +5580,12 @@ metadata extent); the policy manifests cited there are the active boundary
 evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
-implementation anchor `17f548e91b83b61fbc071787ef8285d3d621c0ee`, manifest
+implementation anchor `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`, manifest
 SHA-256 `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`,
 generated-matrix SHA-256
 `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`,
-Coverage MCP run `eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d` and snapshot
-`c694d0a5-4b6e-490c-b7b7-df010e668fb8`, every fixture-manifest SHA-256, the
+Coverage MCP run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` and snapshot
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`, every fixture-manifest SHA-256, the
 VP8L property-map SHA-256
 `4af152b07754467a15cdc4e7fb75f8598332e2dd79bd52d4b5b58c649480da5a`, and
 the inspector SHA-256
