@@ -4,7 +4,7 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-27
 
-Current claim-ledger refresh base revision: `de664cc6dc8d12f6f7f5fe3b73c01faef3709d63`.
+Current claim-ledger refresh base revision: `b6d2baee08d5057ff3e7a716bd0d7a7dbcf92d56`.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.
@@ -61,16 +61,31 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 287 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 288 AVIF decode rows and 32 encode
 rows:
 
-- 280 decode rows are active: portable still reconstruction and structural
+- 281 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
 
-The current newest bounded witnesses are the paired
+The current newest bounded witness is
+`coverage_square32_origin_tx16x16_split_01.avif`: a deterministic 32x32
+8-bit 4:2:0 quality-76/speed-0 origin `Square32` leaf with four TX16x16 luma
+DCT children, DC prediction, non-empty luma residuals, and TX16x16 DCT
+chroma. Its 4,436-operation pinned dav1d trace, exact reconstructed Y/U/V
+planes, and Pillow RGB bytes match safe Rust. The input-only campaign explored
+100 candidates across 10 families, qualified 5, promoted `S32-F01-N01` (seed
+32001), and invoked no repository Rust. Its fixture, encoded-item, and Pillow
+RGB SHA-256 values are
+`f4bf64e6de7a7265a1c5564324c812103135c043a05b7119ef4c97bf9892c987`,
+`e97269cfe2a869fa66c947e6165c712a313aaa301d621575fe646591e58023dd`, and
+`6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b`.
+This closes only the origin Square32 split luma/residual class; broader AV1,
+AVF-STILL-001, and AVIF encoding remain open.
+
+The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
 `coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16
 8-bit 4:2:0 `PARTITION_H4`/`PARTITION_V4` frames with four DC
