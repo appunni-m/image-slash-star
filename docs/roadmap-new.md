@@ -724,6 +724,17 @@ shows the compile-time AC pair-table builder has no uncovered source regions
 in the complete refresh; the extra `cfg(coverage)` probe is classified as the
 existing `defensive_model` origin and leaves the non-coverage const tables
 unchanged.
+The new bounded AVIF incremental run
+`6ff67b6a-f8e8-4b32-97cb-48e4ce3bd8ae` passed in 68,405 ms at exact
+implementation commit `9f333de8096faaa4e0f9d8bb2eddde41dbbc2727` and ingested
+snapshot `b8793e3c-91bf-4bd6-a927-fe0091ccfadb` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only
+`decode:avif:coverage_h16x4_tx4x4_split_01`; the additive baseline-union review
+adds 192 covered line identities, no newly covered branch/function/region
+identities, and no regressions. Snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; test attribution is unavailable,
+and this selected-subset result is bounded evidence rather than a replacement
+for the complete release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
@@ -1265,9 +1276,10 @@ It does **not** mean that every legal file in every image specification is
 implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
-The latest complete managed Coverage MCP snapshot above is the release
-measurement for this current source tree. A selected-subset incremental run is
-recorded separately and is never substituted for this full denominator.
+The latest complete managed Coverage MCP snapshot above remains the accepted
+release-measurement baseline; the current H16x4 commit has a separate
+selected-subset incremental result recorded below. That bounded result is never
+substituted for the complete denominator.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
