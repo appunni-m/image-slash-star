@@ -218,6 +218,19 @@ The reconstructed Y/U/V plane SHA-256 values are
 This is bounded origin Vertical8x16 mode-1 evidence, not general filter-intra
 support.
 
+The fixture `coverage_vertical8x16_filter_intra_mode2_01.avif`
+(`a9a4a6ccb31aaed0164ce68ca9988fab9d8e8b0407e3e4e93de5dd0d53b48c41`) is an
+8x16 8-bit 4:2:0 origin `Vertical8x16` witness. It selects
+`FILTER_PRED[13/2]`, an unsplit TX8x16 luma transform, and TX4x8 U/V
+transforms. The pinned trace has partition range `42232` and 578 entropy
+operations; the safe-Rust reconstruction contract matches the exact Y/U/V
+planes and Pillow RGB8 output. Its encoded-item SHA-256 is
+`f275334de5da1405864b4570d137fe24b05d7e4d07a569cea361fa5833b37f8f`, and its
+Pillow RGB SHA-256 is
+`5bf4eb2849056ecbba6885bbab1852d39449dec94909f05f6b26657b74104b8d`.
+This is bounded origin Vertical8x16 mode-2 evidence, not general filter-intra
+support.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated

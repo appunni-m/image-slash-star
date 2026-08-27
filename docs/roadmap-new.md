@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 292 rows total, 285 active, 7 explicit planned
+- AVIF decode/inspect/verify: 293 rows total, 286 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,516 rows total, 1112 active decode rows, 365 active encode
+- Whole matrix: 1,517 rows total, 1113 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -505,6 +505,17 @@ the corresponding status is recorded in `roadmap.json`:
   recorded in `roadmap.json`; this closes only the origin Square64 split
   luma/residual class while broader AV1, AVF-STILL-001, and AVIF encoding
   remain open.
+- The current evidence-only mode-2 proof is
+  `coverage_vertical8x16_filter_intra_mode2_01.avif`: an 8x16 8-bit 4:2:0
+  origin `Vertical8x16` leaf selecting `FILTER_PRED[13/2]`, one unsplit
+  TX8x16 luma transform, and one TX4x8 U/V pair. The strict input-only search
+  evaluated 100 deterministic candidates and qualified exactly 6; the
+  selected seed is 107. Its pinned dav1d trace has 578 entropy operations,
+  partition range 42232, and a complete 192-byte YUV output. Safe Rust matches
+  the exact entropy records, partition, Y/U/V planes, and Pillow RGB8 bytes.
+  The generic mode-2 production path was already implemented, so this closes
+  only the origin Vertical8x16/mode-2 evidence class; modes 3/4 and broader
+  AV1 still remain partial.
 
 An earlier managed Coverage MCP run was
 `a90eb75b-d62d-4c80-a75f-a753990fdea6`, bound to implementation commit
@@ -637,7 +648,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 9,790 lines, 1,347 branches, 676 functions, and 16,332 regions
+- LLVM coverage: 9,796 lines, 1,346 branches, 676 functions, and 16,342 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -1146,7 +1157,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,516 total | 1,119 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,112 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,517 total | 1,120 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,113 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |

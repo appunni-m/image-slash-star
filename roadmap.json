@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1516,
-      "decode_rows": 1119,
+      "total_rows": 1517,
+      "decode_rows": 1120,
       "encode_rows": 397,
-      "decode_active": 1112,
+      "decode_active": 1113,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 292,
-      "decode_active": 285,
+      "decode_rows": 293,
+      "decode_active": 286,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1078,6 +1078,46 @@
           "tool_contract": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2, pinned dav1d 1.5.3, 8x16 4:2:0, quality 76, speed 0, one thread, deterministic double encoding/item/trace/YUV/RGB; repository Rust was not invoked",
           "repository_rust_invoked": false,
           "decision": "The maintained campaign supplies bounded reachability evidence and the promoted fixture supplies exact safe-Rust reconstruction and Pillow RGB evidence; broader chroma modes, transforms, predictors, and AV1 states remain open."
+        },
+        "current_slice_update_2026_08_27": {
+          "target": "origin Vertical8x16 filter-intra mode 2 with one TX8x16 luma block and one TX4x8 U/V pair",
+          "fixture": "coverage_vertical8x16_filter_intra_mode2_01.avif",
+          "script": "scripts/explore_avif_vertical8x16_filter_intra.py",
+          "campaign": {
+            "candidate_count": 100,
+            "qualified": 6,
+            "selected": "f01_rgb_noise_06",
+            "seed": 107,
+            "filter_mode": 2,
+            "repository_rust_invoked": false,
+            "expected_yuv_bytes": 192,
+            "rejection_counts": {
+              "one_origin_vertical8x16_root": 29,
+              "single_leaf_group": 29,
+              "ordered_filter_intra_syntax": 94,
+              "filter_intra_selected": 91,
+              "one_unsplit_tx8x16_luma": 62,
+              "luma_nonempty": 29,
+              "one_tx4x8_chroma_pair": 37,
+              "full_yuv_output": 0
+            }
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=2,range=42232",
+            "entropy_operation_count": 578,
+            "encoded_item_length": 121,
+            "encoded_item_sha256": "f275334de5da1405864b4570d137fe24b05d7e4d07a569cea361fa5833b37f8f",
+            "fixture_sha256": "a9a4a6ccb31aaed0164ce68ca9988fab9d8e8b0407e3e4e93de5dd0d53b48c41",
+            "pillow_rgb_sha256": "5bf4eb2849056ecbba6885bbab1852d39449dec94909f05f6b26657b74104b8d",
+            "decoded_plane_sha256": {
+              "y": "bc2d9809c80f9764bbd92fcaf059cdde01f66b6e70223b728a17baccd6098a6d",
+              "u": "2368c8983b35fcb82c99c61db479d3b4e9a5b064e857fdba2e9d051c40375154",
+              "v": "7d97d40b0dd79552faa5206bec692a379bf42aab18ea0866547de55c78ba5888"
+            }
+          },
+          "scope": "This is evidence for one 8-bit 4:2:0 origin mode-2 class. Generic safe-Rust prediction already implements the mode; no production decoder change is claimed. Modes 3 and 4, other topologies, and AVF-STILL-001 remain partial."
         }
       },
       "AVF-ENTROPY-001": {

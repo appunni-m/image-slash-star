@@ -32,6 +32,7 @@ from generate_av1_reconstruction_refs import (
 
 
 SIZE = (8, 16)
+EXPECTED_YUV_BYTES = SIZE[0] * SIZE[1] + 2 * (SIZE[0] // 2) * (SIZE[1] // 2)
 SUBSAMPLING = "4:2:0"
 ADVANCED = {
     "min-partition-size": "8",
@@ -278,22 +279,37 @@ def parse_trace(output: str) -> tuple[list[dict[str, int]], list[list[str]], int
     return blocks, groups, len(entropy)
 
 
-def classify(blocks: list[dict[str, int]], groups: list[list[str]]) -> dict[str, object]:
-    """Apply exact predicates for an origin unsplit Vertical8x16 leaf."""
+def classify(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    target_filter_mode: int,
+    yuv_bytes: int,
+) -> dict[str, object]:
+    """Apply exact predicates for one origin unsplit Vertical8x16 leaf."""
 
-    root = next(
-        (
-            block
-            for block in blocks
-            if block["level"] == 3 and block["x"] == 0 and block["y"] == 0
-        ),
-        None,
-    )
+    root_blocks = [
+        block
+        for block in blocks
+        if block["level"] == 3 and block["x"] == 0 and block["y"] == 0
+    ]
+    root = root_blocks[0] if len(root_blocks) == 1 else None
     leaf = groups[0] if len(groups) == 1 else []
     filter_modes = []
     luma_payloads = []
     chroma_payloads = []
+    syntax_markers = []
     for line in leaf:
+        if line.startswith(
+            (
+                "Post-skip[",
+                "Post-cdef_idx[",
+                "Post-ymode[",
+                "Post-uvmode[",
+                "Post-filterintramode[",
+                "Post-tx[",
+            )
+        ):
+            syntax_markers.append(line.split(":", 1)[0])
         if match := FILTER_PATTERN.match(line):
             filter_modes.append(
                 {"y_mode": int(match["y_mode"]), "filter_mode": int(match["filter_mode"])}
@@ -302,10 +318,27 @@ def classify(blocks: list[dict[str, int]], groups: list[list[str]]) -> dict[str,
             luma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
         if match := CHROMA_PATTERN.match(line):
             chroma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
+    expected_syntax_markers = [
+        "Post-skip[0]",
+        "Post-cdef_idx[0]",
+        "Post-ymode[0]",
+        "Post-uvmode[0]",
+        f"Post-filterintramode[13/{target_filter_mode}]",
+        "Post-tx[7]",
+    ]
     predicates = {
-        "origin_vertical8x16_root": root is not None and root["partition"] == 2,
+        "one_origin_vertical8x16_root": (
+            len(blocks) == 1
+            and root is not None
+            and root["partition"] == 2
+        ),
         "single_leaf_group": len(groups) == 1,
-        "filter_intra_selected": len(filter_modes) == 1 and filter_modes[0]["y_mode"] == 13,
+        "ordered_filter_intra_syntax": syntax_markers == expected_syntax_markers,
+        "filter_intra_selected": (
+            len(filter_modes) == 1
+            and filter_modes[0]["y_mode"] == 13
+            and filter_modes[0]["filter_mode"] == target_filter_mode
+        ),
         "one_unsplit_tx8x16_luma": len(luma_payloads) == 1 and luma_payloads[0]["tx"] == 7,
         "luma_nonempty": bool(luma_payloads) and luma_payloads[0]["eob"] >= 0,
         "one_tx4x8_chroma_pair": (
@@ -314,13 +347,17 @@ def classify(blocks: list[dict[str, int]], groups: list[list[str]]) -> dict[str,
             and all(item["tx"] == 5 for item in chroma_payloads)
             and all(item["eob"] >= 0 for item in chroma_payloads)
         ),
+        "full_yuv_output": yuv_bytes == EXPECTED_YUV_BYTES,
     }
     return {
         "root_partition": root,
         "group_count": len(groups),
+        "target_filter_mode": target_filter_mode,
+        "syntax_markers": syntax_markers,
         "filter_modes": filter_modes,
         "luma_payloads": luma_payloads,
         "chroma_payloads": chroma_payloads,
+        "yuv_bytes": yuv_bytes,
         "predicates": predicates,
         "rejection_reasons": [name for name, passed in predicates.items() if not passed],
         "qualifies": all(predicates.values()),
@@ -333,6 +370,7 @@ def decode_candidate(
     work: Path,
     candidate: dict[str, object],
     retain_dir: Path | None,
+    target_filter_mode: int,
 ) -> dict[str, object]:
     """Encode, independently decode, and classify one candidate."""
 
@@ -373,6 +411,7 @@ def decode_candidate(
         env=environment,
     )
     blocks, groups, entropy_count = parse_trace(result.stdout)
+    yuv_bytes = output_path.stat().st_size
     return {
         "id": candidate["id"],
         "family": candidate["family"],
@@ -385,7 +424,7 @@ def decode_candidate(
         "encoded_item_length": len(sample),
         "entropy_operation_count": entropy_count,
         "partition_blocks": blocks,
-        **classify(blocks, groups),
+        **classify(blocks, groups, target_filter_mode, yuv_bytes),
     }
 
 
@@ -399,6 +438,7 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument("--filter-mode", type=int, choices=range(5), default=2)
     args = parser.parse_args()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -426,7 +466,14 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
-            decode_candidate(executable, environment, work, candidate, args.retain_dir)
+            decode_candidate(
+                executable,
+                environment,
+                work,
+                candidate,
+                args.retain_dir,
+                args.filter_mode,
+            )
             for candidate in candidates()
         ]
     report = {
@@ -447,7 +494,12 @@ def main() -> None:
         },
         "search": {
             "candidate_count": len(reports),
-            "target": "origin Vertical8x16 FILTER_PRED with one TX8x16 luma payload and TX4x8 U/V pair",
+            "target": (
+                "origin Vertical8x16 FILTER_PRED mode "
+                f"{args.filter_mode} with one TX8x16 luma payload and TX4x8 U/V pair"
+            ),
+            "filter_mode": args.filter_mode,
+            "expected_yuv_bytes": EXPECTED_YUV_BYTES,
             "families": [
                 "F01_rgb_noise",
                 "F02_gray_noise",
@@ -466,12 +518,14 @@ def main() -> None:
             "by_rejection_reason": {
                 reason: sum(reason in report["rejection_reasons"] for report in reports)
                 for reason in (
-                    "origin_vertical8x16_root",
+                    "one_origin_vertical8x16_root",
                     "single_leaf_group",
+                    "ordered_filter_intra_syntax",
                     "filter_intra_selected",
                     "one_unsplit_tx8x16_luma",
                     "luma_nonempty",
                     "one_tx4x8_chroma_pair",
+                    "full_yuv_output",
                 )
             },
         },
