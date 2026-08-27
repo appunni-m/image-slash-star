@@ -164,6 +164,23 @@ The existing generic safe-Rust prediction path already covered this mode, so
 no production decoder change was required; this closes only the origin
 Vertical8x16/mode-1/unsplit-TX8x16/TX4x8-chroma class.
 
+The current evidence-only origin witness is
+`coverage_vertical8x16_filter_intra_mode2_01.avif`, an 8x16 8-bit 4:2:0
+`Vertical8x16` leaf with `FILTER_PRED[13/2]`, an unsplit TX8x16 luma transform,
+and TX4x8 U/V transforms. Its strict input-only campaign evaluated 100
+deterministic candidates and qualified exactly 6; seed 107 was promoted. The
+pinned trace has partition range `42232` and 578 entropy operations, and the
+independent YUV output is the complete 192-byte 8x16 4:2:0 frame. Safe Rust
+matches exact partition, entropy records, reconstructed Y/U/V planes, and
+Pillow RGB8 bytes. The fixture, encoded-item, and Pillow RGB SHA-256 values
+are
+`a9a4a6ccb31aaed0164ce68ca9988fab9d8e8b0407e3e4e93de5dd0d53b48c41`,
+`f275334de5da1405864b4570d137fe24b05d7e4d07a569cea361fa5833b37f8f`, and
+`5bf4eb2849056ecbba6885bbab1852d39449dec94909f05f6b26657b74104b8d`.
+The generic safe-Rust mode-2 path was already implemented, so this closes only
+the origin Vertical8x16/mode-2/unsplit-TX8x16/TX4x8-chroma evidence class;
+broader filter-intra modes and AVF-STILL-001 remain partial.
+
 The newest following-leaf witness is
 `coverage_square8_chroma_diagonal113_01.avif`, a 16x8 8-bit 4:2:0 horizontal
 split whose right-hand `Square8` leaf selects chroma `Diagonal113`, ADST-DCT
