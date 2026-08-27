@@ -497,6 +497,58 @@
             "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
             "note": "The exact selected fixture run passed in 32,144 ms; its log reports selected=1 for coverage_422_square16_vertical_halves_01.avif and 1 passed/0 failed. The additive baseline-union review reports +7 covered branches, +2 covered functions, +199 covered regions, and no aggregate covered-line identity increase; the selected snapshot projection reports 920 newly covered line identities. Unselected baseline hits remain not_observed, so this is bounded selected-subset evidence rather than a complete four-metric release measurement or global regression claim. The durable run record is exact for implementation commit 3281cf6d524ead2a4a34299f154e8ae942dc9952; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "feb851bdb1c882191c1467117b2acbb5b533ec3a",
+          "run_id": "bcd2e044-53c5-4c06-a9c6-d6ca8b02220d",
+          "snapshot_id": "287b9937-982e-471d-92f0-4137927a0730",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 31206,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_coverage_matrix",
+            "--",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_matrix_row_selector__=decode:avif:portable_lossy_420_q99_eob_bin_control",
+            "--skip",
+            "__image_slash_star_matrix_row_selector__=decode:avif:portable_lossy_420_q99_eob_base_control"
+          ],
+          "selected_rows": [
+            "decode:avif:portable_lossy_420_q99_eob_bin_control",
+            "decode:avif:portable_lossy_420_q99_eob_base_control"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "matrix row selection: selected=2 active=2 planned-not-executed=0; decode matrix (selected): 2/2 active rows passed, 0 failed, 0 planned-not-executed; the central test result was 1 passed, 0 failed, 43 filtered out.",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 0,
+            "covered_branches_delta": 1,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 0,
+            "newly_covered_lines": 1080,
+            "total_lines_delta": 3201,
+            "total_branches_delta": 126,
+            "total_functions_delta": 26,
+            "total_regions_delta": 9511,
+            "not_observed": 75631,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The selected central matrix run passed both active malformed controls. The additive baseline-union review reports +1 covered branch and no covered-line, function, or region identity increase; the selected projection reports 1,080 newly covered line identities. Denominator changes are +3,201 lines, +126 branches, +26 functions, and +9,511 regions because the selected run is a subset under a changed implementation. Unselected baseline hits remain not_observed; this is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim. The durable run record is exact for implementation commit feb851bdb1c882191c1467117b2acbb5b533ec3a; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -1916,7 +1968,7 @@
             "Keep the admitted entropy/CDF boundary exact to Square16 and reject other 4:2:2 transform shapes before entropy consumption.",
             "Reconstruct 8x16 chroma palette planes and apply the pinned libavif 1.4.1 YUV422 horizontal conversion phase."
           ],
-          "focused_verification": "The AVIF decode matrix passes 294/294 active rows, the pinned dav1d reconstruction test passes all 231 cases, and the new U/V plane rows 0-15 match independently generated references.",
+          "focused_verification": "The AVIF decode matrix passes 296/296 active rows, the pinned dav1d reconstruction test passes all 231 cases, and the new U/V plane rows 0-15 match independently generated references.",
           "scope": "This closes only the simple origin Square16 palette class; it does not claim general 4:2:2, AVF-STILL-001, AVIF encoding, or 100% four-metric coverage.",
           "managed_incremental_coverage": {
             "run_id": "0effd878-d082-4952-9ecf-63b0892d375d",
@@ -1988,6 +2040,39 @@
             "pillow_result": "builtins.RuntimeError: Failed to decode frame 0: Decoding of color planes failed"
           }
         ],
+        "managed_incremental_coverage": {
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "run_id": "bcd2e044-53c5-4c06-a9c6-d6ca8b02220d",
+          "snapshot_id": "287b9937-982e-471d-92f0-4137927a0730",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "commit_sha": "feb851bdb1c882191c1467117b2acbb5b533ec3a",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "duration_ms": 31206,
+          "selected_rows": [
+            "decode:avif:portable_lossy_420_q99_eob_bin_control",
+            "decode:avif:portable_lossy_420_q99_eob_base_control"
+          ],
+          "status": "passed_and_ingested",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 0,
+            "covered_branches_delta": 1,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 0,
+            "newly_covered_lines": 1080,
+            "total_lines_delta": 3201,
+            "total_branches_delta": 126,
+            "total_functions_delta": 26,
+            "total_regions_delta": 9511,
+            "not_observed": 75631,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "note": "The selected central matrix run reports selected=2 active=2 and passes 2/2 active rows. The additive baseline-union review adds one covered branch and no covered-line, function, or region identity; the selected projection reports 1,080 newly covered line identities. Unselected baseline hits remain not_observed."
+          }
+        },
         "next": "Add independent positive fixtures for the remaining legal EOB-bin/base coefficient sentences, then implement only the syntax and transforms proven by those fixtures; retain Malformed for arithmetic overread and Unsupported for valid but unimplemented syntax."
       },
       "AVF-SAMPLE-001": {

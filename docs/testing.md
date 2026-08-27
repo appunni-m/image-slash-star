@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-27 against the current safe-Rust AVIF cutover working tree;
+Reviewed: 2026-08-28 against the current safe-Rust AVIF cutover working tree;
 the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
@@ -34,8 +34,8 @@ lane passing; the configured `sccache` client was used and no `RUSTC_WRAPPER`
 setting was changed.
 The current implementation also passes the complete all-feature test set plus
 one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 9,570 lines,
-1,363 branches, 658 functions, and 16,074 regions are recorded explicitly in
+remains red because the release target is 100%; the remaining 9,626 lines,
+1,385 branches, 669 functions, and 16,154 regions are recorded explicitly in
 the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
@@ -132,6 +132,20 @@ file/sample hashes, byte offsets, 52/39-operation traces, and pinned decoder
 commit are recorded in `roadmap.json`. These rows are active malformed
 contracts, not evidence that either mutated sentence is a legal positive EOB
 feature.
+
+Managed Coverage MCP also ran the exact central matrix selection for these two
+controls: run `bcd2e044-53c5-4c06-a9c6-d6ca8b02220d` passed in 31,206 ms at
+implementation commit `feb851bdb1c882191c1467117b2acbb5b533ec3a` and ingested
+snapshot `287b9937-982e-471d-92f0-4137927a0730` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its log reports `selected=2 active=2`
+and `2/2 active rows passed`; the standalone incremental review is measured
+with additive baseline-union deltas of +1 covered branch and +0 covered lines,
+functions, or regions, plus 1,080 selected-projection newly covered line
+identities. The merge is conservative, 75,631 baseline observations were not
+observed in this selected subset, named-test attribution is unavailable, and
+there are no regression claims. The snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; the durable run commit is the
+authoritative implementation provenance.
 
 Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
