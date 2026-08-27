@@ -104,6 +104,9 @@ CHROMA_PAETH_TARGET_FIXTURES = frozenset(
         "coverage_vertical8x16_chroma_paeth_03.avif",
     }
 )
+FULL_CHROMA_TOP_LEFT_TARGET_FIXTURES = frozenset(
+    {"coverage_i444_full_chroma_top_left_paeth_01.avif"}
+)
 SQUARE16_CFL_TARGET_FIXTURES = frozenset(
     {
         "coverage_i444_square16_cfl_01.avif",
@@ -1187,6 +1190,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b",
         "size": [16, 16],
     },
+    "coverage_i444_full_chroma_top_left_paeth_01.avif": {
+        "file_sha256": "695fd9288686eec0cfa8abb174eead2d745ac3155f755222e05cefd694695dd6",
+        "rgb_sha256": "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89",
+        "size": [32, 32],
+    },
     "coverage_adst_public_03.avif": {
         "file_sha256": "b6d15fa1ceb3eedcd3636ed660c0ed6755ce3a2af3ff6a3b2dcf6fa0b1adcc25",
         "rgb_sha256": "c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9",
@@ -2052,6 +2060,7 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
+                or name in FULL_CHROMA_TOP_LEFT_TARGET_FIXTURES
                 or name in SQUARE16_CFL_TARGET_FIXTURES
             else legacy_executable,
                 luma_angle_env
@@ -2078,6 +2087,7 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 or name in CHROMA_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_PAETH_TARGET_FIXTURES
+                or name in FULL_CHROMA_TOP_LEFT_TARGET_FIXTURES
                 or name in SQUARE16_CFL_TARGET_FIXTURES
             else legacy_env,
                 work,

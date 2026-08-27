@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 294 rows total, 287 active, 7 explicit planned
+- AVIF decode/inspect/verify: 295 rows total, 288 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,518 rows total, 1114 active decode rows, 365 active encode
+- Whole matrix: 1,519 rows total, 1115 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -493,6 +493,28 @@ the corresponding status is recorded in `roadmap.json`:
   `6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b`.
   This closes only the origin Square32 split luma/residual class; broader
   AV1, AVF-STILL-001, and AVIF encoding remain open.
+- The newest bounded full-resolution proof is
+  `coverage_i444_full_chroma_top_left_paeth_01.avif`: a deterministic 32x32
+  8-bit 4:4:4 frame whose target fourth top-left `Square8` leaf at pixel
+  `(8,8)` has distinct top, left, and upper-left neighbors and coded chroma
+  Paeth mode 12. The input-only campaign evaluated 100 candidates across 10
+  families, qualified 1, and promoted `i444-tl-f01-n05` (seed 7005) without
+  invoking repository Rust. Its pinned dav1d trace has 4,680 entropy
+  operations; safe Rust matches exact partition, entropy, reconstructed Y/U/V
+  planes, and Pillow RGB bytes. The campaign report is
+  `tests/fixtures/outputs/av1_search/coverage_i444_full_chroma_top_left_paeth_campaign_01.json`
+  (SHA-256
+  `def1e9fd8f9246fdfdb43f6daf3d3be0232008f78ced1202079a83ab904d2e04`).
+  Fixture, encoded-item, and Pillow RGB SHA-256 values are
+  `695fd9288686eec0cfa8abb174eead2d745ac3155f755222e05cefd694695dd6`,
+  `b7f0ad6aa050384a5f7bff33719026ec498e3b5440c3d6dff30a17fff24504f`, and
+  `41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89`.
+  The production fix adds the verified UV matrix-2 tables, derives the
+  full-resolution chroma DC-sign context, assembles exact horizontal edges,
+  and applies one-sided AV1 DC availability to split luma/chroma. This closes
+  only the bounded top-left-sensitive I444 chroma-Paeth/Square8 class; broader
+  AV1 partitions, chroma modes, sample depths, sequences, encoding, and the
+  four-metric 100% coverage gate remain open.
 - The latest bounded proof is
   `coverage_square64_origin_tx32x32_split_01.avif`: a deterministic 64x64
   8-bit 4:2:0 quality-76/speed-0 origin `Square64` leaf with four TX32x32
@@ -1159,7 +1181,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,518 total | 1,121 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,114 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,519 total | 1,122 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,115 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |

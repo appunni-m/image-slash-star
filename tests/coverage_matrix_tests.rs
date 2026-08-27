@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 228);
+    assert_eq!(expected.cases.len(), 229);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5501,6 +5501,94 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 right-hand Square8 luma Smooth witness partition topology"
+            );
+        } else if case.fixture == "coverage_i444_full_chroma_top_left_paeth_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 35_872,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 38_144,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 44_528,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 65_476,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 34_270,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 64_942,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 0,
+                        range: 58_984,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 4,
+                        range: 48_704,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 4,
+                        level: 3,
+                        context: 2,
+                        partition: 4,
+                        range: 34_784,
+                    },
+                ],
+                "AV1 full-resolution I444 Paeth witness partition topology"
             );
         } else {
             assert_eq!(
@@ -7527,6 +7615,137 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 I444 horizontal-gradient witness leaf state"
             );
         }
+        if case.fixture == "coverage_i444_full_chroma_top_left_paeth_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 35_872,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 38_144,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 44_528,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 65_476,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 34_270,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 2,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 64_942,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 0,
+                        range: 58_984,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 4,
+                        range: 48_704,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 4,
+                        level: 3,
+                        context: 2,
+                        partition: 4,
+                        range: 34_784,
+                    },
+                ],
+                "AV1 I444 full-resolution top-left witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                4_680,
+                "AV1 I444 full-resolution top-left witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let uv_modes = debug_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-uvmode["))
+                .take(4)
+                .copied()
+                .collect::<Vec<_>>();
+            assert_eq!(
+                uv_modes,
+                vec![
+                    "Post-uvmode[0]: r=52064",
+                    "Post-uvmode[0]: r=42520",
+                    "Post-uvmode[0]: r=49068",
+                    "Post-uvmode[12]: r=51744",
+                ],
+                "AV1 I444 full-resolution top-left witness must use Paeth on target D"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| { line.starts_with("Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob=-1]") })
+                    .count(),
+                1,
+                "AV1 I444 full-resolution top-left witness must decode skipped U Paeth"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| { line.starts_with("Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob=-1]") })
+                    .count(),
+                1,
+                "AV1 I444 full-resolution top-left witness must decode skipped V Paeth"
+            );
+        }
         let square16_cfl_expectations = match case.fixture.as_str() {
             "coverage_i444_square16_cfl_01.avif" => Some((
                 419,
@@ -8245,6 +8464,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_i444_square16_cfl_03.avif" => {
                 "3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128"
+            }
+            "coverage_i444_full_chroma_top_left_paeth_01.avif" => {
+                "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89"
             }
             "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" => {
                 "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4"

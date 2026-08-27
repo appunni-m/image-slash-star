@@ -2257,7 +2257,10 @@ pub(super) fn validate_complete_lossy_420_partition(
                         } else {
                             None
                         };
-                        let chroma_edges_16 = if full_resolution && width == 8 && height == 16 {
+                        let chroma_edges_16 = if full_resolution
+                            && (width == 8 || width == 16)
+                            && height == 16
+                        {
                             std::array::from_fn(|plane| {
                                 let mut complete = true;
                                 let edge = std::array::from_fn(|index| {
@@ -2294,6 +2297,62 @@ pub(super) fn validate_complete_lossy_420_partition(
                                         })
                                 });
                                 complete.then_some(edge)
+                            })
+                        } else if (!full_resolution || width == 4)
+                            && (width == 4 || width == 16)
+                            && height == 16
+                        {
+                            let chroma_left_x = node.x.saturating_sub(node.x % 2);
+                            let mut chroma_candidates: Vec<_> = leaves
+                                .iter()
+                                .filter(|(prior, _)| {
+                                    let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
+                                        && (prior.height > 1 || prior.y % 2 != 0);
+                                    has_chroma
+                                        && prior.x.saturating_add(prior.width) == chroma_left_x
+                                        && prior.y < node.y.saturating_add(node.height)
+                                        && prior.y.saturating_add(prior.height) > node.y
+                                })
+                                .collect();
+                            chroma_candidates.sort_by_key(|(prior, _)| prior.y);
+
+                            std::array::from_fn(|plane| {
+                                Some(std::array::from_fn(|index| {
+                                    let sample_y = node
+                                        .y
+                                        .saturating_div(2)
+                                        .saturating_mul(4)
+                                        .saturating_add(u32::try_from(index).unwrap_or(0));
+                                    chroma_candidates
+                                        .iter()
+                                        .find_map(|candidate| {
+                                            let candidate = &**candidate;
+                                            let prior = &candidate.0;
+                                            let leaf = &candidate.1;
+                                            let prior_y =
+                                                prior.y.saturating_div(2).saturating_mul(4);
+                                            let prior_height = prior
+                                                .height
+                                                .saturating_div(2)
+                                                .max(1)
+                                                .saturating_mul(4);
+                                            if prior_y <= sample_y
+                                                && sample_y < prior_y.saturating_add(prior_height)
+                                            {
+                                                Some(
+                                                    super::block::right_edge_at::<1>(
+                                                        &leaf.planes[plane.saturating_add(1)],
+                                                        leaf.width.div_ceil(2).max(4),
+                                                        leaf.height.div_ceil(2).max(4),
+                                                        sample_y.saturating_sub(prior_y),
+                                                    )[0],
+                                                )
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .unwrap_or(128)
+                                }))
                             })
                         } else {
                             [None; 2]
