@@ -20647,9 +20647,10 @@ fn reconstruct_lossy_4x4_diagonal_z1_with_edge(
         .get(dx_index)
         .filter(|&&value| value > 0)
         .portable()?;
-    let upsample = 50 < angle;
+    let upsample = enable_intra_edge_filter
+        && intra_edge_upsample(8, 90_i32.saturating_sub(angle), smooth_edges);
 
-    let filtered_edge = if enable_intra_edge_filter {
+    let filtered_edge = if enable_intra_edge_filter && !upsample {
         let strength = intra_edge_filter_strength(8, 90_i32.saturating_sub(angle), smooth_edges);
         if strength == 0 {
             edge
@@ -35905,16 +35906,17 @@ fn reconstruct_following_lossy_420_vertical_leaf(
             )
         },
     );
+    let chroma_top_right_available = above_chroma_extension.is_some();
     let chroma_top_right = above_chroma_extension.map_or_else(
         || {
-            if above_right_x_offset / 2 + 4 > above_right_width.div_ceil(2).max(4) {
-                chroma_top_left
-            } else {
+            if chroma_top_right_available {
                 bottom_edge_at::<4>(
                     &above_right.planes[1],
                     above_right_width.div_ceil(2).max(4),
                     above_right_x_offset / 2,
                 )
+            } else {
+                [chroma_top_left[3]; 4]
             }
         },
         |neighbor| {
@@ -35929,18 +35931,17 @@ fn reconstruct_following_lossy_420_vertical_leaf(
     // shared AV1 intra-edge scratch region. At a tile boundary the following
     // 4×4 chroma Zone-2 predictor consumes that bounded continuation rather
     // than repeating the last chroma-top sample.
-    let chroma_top_z2_right =
-        if lossy_luma_4x4_split.is_some() && chroma_top_right == chroma_top_left {
-            left_top_neighbor.map_or(chroma_top_right, |neighbor| {
-                if neighbor.planes[0].samples.len() >= 64 {
-                    bottom_edge_at::<4>(&neighbor.planes[0], 8, 4)
-                } else {
-                    bottom_edge_4(&neighbor.planes[0])
-                }
-            })
-        } else {
-            chroma_top_right
-        };
+    let chroma_top_z2_right = if lossy_luma_4x4_split.is_some() && !chroma_top_right_available {
+        left_top_neighbor.map_or(chroma_top_right, |neighbor| {
+            if neighbor.planes[0].samples.len() >= 64 {
+                bottom_edge_at::<4>(&neighbor.planes[0], 8, 4)
+            } else {
+                bottom_edge_4(&neighbor.planes[0])
+            }
+        })
+    } else {
+        chroma_top_right
+    };
     let chroma_top_z2 = [
         chroma_top_left[0],
         chroma_top_left[1],
@@ -36053,10 +36054,12 @@ fn reconstruct_following_lossy_420_vertical_leaf(
             chroma_transform_kind(chroma_predictor),
         )?,
         ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
-            reconstruct_lossy_4x4_diagonal_z1(
-                chroma_top_left,
+            reconstruct_lossy_4x4_diagonal_z1_with_edge(
+                chroma_top_z1,
                 chroma_top_left_u,
                 chroma_angle.ok_or(PortableUnavailable)?,
+                enable_intra_edge_filter,
+                smooth_neighbor_edges,
                 lossy_chroma_coefficients[0],
                 chroma_transform_kind(chroma_predictor),
             )?
@@ -36100,14 +36103,14 @@ fn reconstruct_following_lossy_420_vertical_leaf(
     );
     let chroma_top_right_v = above_chroma_extension.map_or_else(
         || {
-            if above_right_x_offset / 2 + 4 > above_right_width.div_ceil(2).max(4) {
-                chroma_top_left_v_edge
-            } else {
+            if chroma_top_right_available {
                 bottom_edge_at::<4>(
                     &above_right.planes[2],
                     above_right_width.div_ceil(2).max(4),
                     above_right_x_offset / 2,
                 )
+            } else {
+                [chroma_top_left_v_edge[3]; 4]
             }
         },
         |neighbor| {
@@ -36128,18 +36131,17 @@ fn reconstruct_following_lossy_420_vertical_leaf(
         chroma_top_right_v[2],
         chroma_top_right_v[3],
     ];
-    let chroma_top_z2_right_v =
-        if lossy_luma_4x4_split.is_some() && chroma_top_right_v == chroma_top_left_v_edge {
-            left_top_neighbor.map_or(chroma_top_right_v, |neighbor| {
-                if neighbor.planes[0].samples.len() >= 64 {
-                    bottom_edge_at::<4>(&neighbor.planes[0], 8, 4)
-                } else {
-                    bottom_edge_4(&neighbor.planes[0])
-                }
-            })
-        } else {
-            chroma_top_right_v
-        };
+    let chroma_top_z2_right_v = if lossy_luma_4x4_split.is_some() && !chroma_top_right_available {
+        left_top_neighbor.map_or(chroma_top_right_v, |neighbor| {
+            if neighbor.planes[0].samples.len() >= 64 {
+                bottom_edge_at::<4>(&neighbor.planes[0], 8, 4)
+            } else {
+                bottom_edge_4(&neighbor.planes[0])
+            }
+        })
+    } else {
+        chroma_top_right_v
+    };
     let chroma_top_z2_v = [
         chroma_top_left_v_edge[0],
         chroma_top_left_v_edge[1],
@@ -36241,10 +36243,12 @@ fn reconstruct_following_lossy_420_vertical_leaf(
             chroma_transform_kind(chroma_predictor),
         )?,
         ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
-            reconstruct_lossy_4x4_diagonal_z1(
-                chroma_top_left_v_edge,
+            reconstruct_lossy_4x4_diagonal_z1_with_edge(
+                chroma_top_z1_v,
                 chroma_top_left_v,
                 chroma_angle.ok_or(PortableUnavailable)?,
+                enable_intra_edge_filter,
+                smooth_neighbor_edges,
                 lossy_chroma_coefficients[1],
                 chroma_transform_kind(chroma_predictor),
             )?

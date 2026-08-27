@@ -5989,6 +5989,98 @@ def gen_avif():
         speed=0,
     )
 
+    def chroma_diagonal67_vertical_square8():
+        """Generate the promoted vertical-following UV mode-8 witness.
+
+        This is the exact D67V-F01-N00 candidate from the bounded 100-case
+        input-only campaign. The top and bottom 8x8 leaves are joined by a
+        clipped 16x16 root split. The chroma field continues the top leaf's
+        four-sample edge at the Zone-1 angle-67 slope while the luma field
+        retains a small split-TX4x4 residual.
+        """
+
+        def edge_signal(x, plane):
+            amplitude = 10
+            value = (x - 1) * amplitude
+            if plane == 1:
+                value += x - 1
+            return value
+
+        def interpolate_edge(edge, position_q6):
+            if position_q6 <= 0:
+                return edge[0]
+            last = len(edge) - 1
+            index = position_q6 // 64
+            if index >= last:
+                return edge[last]
+            fraction = position_q6 % 64
+            return edge[index] + ((edge[index + 1] - edge[index]) * fraction + 32) // 64
+
+        def chroma_sample(cx, cy):
+            top_edges = [
+                [edge_signal(x, plane) for x in range(4)]
+                for plane in (0, 1)
+            ]
+            if cy < 4:
+                vertical = cy - 3
+                return (
+                    top_edges[0][cx] + vertical,
+                    top_edges[1][cx] - vertical,
+                )
+            local_y = cy - 4
+            position_q6 = cx * 64 + (local_y + 1) * 27
+            u = interpolate_edge(top_edges[0], position_q6)
+            v = interpolate_edge(top_edges[1], position_q6)
+            perturbation = (3 * cx + 5 * local_y) % 5 - 2
+            return u + 3 * perturbation, v + 2 * perturbation
+
+        def yuv_to_rgb(y, u, v):
+            du = u - 128
+            dv = v - 128
+            return (
+                clamp_channel(y + (358 * dv + 128) // 256),
+                clamp_channel(y - (88 * du + 183 * dv + 128) // 256),
+                clamp_channel(y + (453 * du + 128) // 256),
+            )
+
+        def pixel(x, y):
+            if y < 8:
+                luma = 80 + 3 * x
+            else:
+                local_y = y - 8
+                source_x = min(7, x + local_y + 1)
+                luma = 80 + 3 * source_x
+                if (x, local_y) == (1, 0):
+                    luma += 16
+            u_delta, v_delta = chroma_sample(x // 2, y // 2)
+            return yuv_to_rgb(luma, 128 + u_delta, 128 + v_delta)
+
+        return image_from_pixels((8, 16), pixel)
+
+    write_campaign_image(
+        "coverage_square8_chroma_diagonal67_vertical_01",
+        chroma_diagonal67_vertical_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal45_angle51_square8():
         """Generate the promoted right-hand Square8 chroma mode-3 witness.
 

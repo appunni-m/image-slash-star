@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 291 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 292 AVIF decode rows and 32 encode
 rows:
 
-- 284 decode rows are active: portable still reconstruction and structural
+- 285 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -295,8 +295,30 @@ chroma-biased second report is
 with SHA-256
 `fb14d289c4e0f4d200c673687228a33f1f682eb235605005dc8f632f1dab4af7`.
 Both retain the pinned oracle versions and strict predicates. This is no-hit
-evidence, not proof of unreachability; no speculative production change is
-authorized and Diagonal67 remains a planned gap.
+evidence for the adjacent horizontal class, not proof of unreachability; no
+speculative production change was made for that class, which remains planned.
+
+A separate input-only campaign found a reachable vertical Diagonal67 class:
+`scripts/explore_avif_chroma_diagonal67_vertical.py` evaluated 100 candidates
+across 10 families, qualified 59, and promoted `D67V-F01-N00` (seed 12000).
+The promoted `coverage_square8_chroma_diagonal67_vertical_01.avif` is an 8x16
+4:2:0 clipped vertical split with a following bottom `Square8` leaf, coded UV
+mode 8/angle symbol 3 (resolved angle 180), ADST-DCT TX4x4 U/V, split TX4x4
+luma, and non-empty residuals. Its pinned dav1d trace has 118 entropy
+operations and partition ranges `46608/54426/48340`; safe Rust matches exact
+partition, entropy, Y/U/V planes, and Pillow RGB bytes. The fixture,
+encoded-item, Pillow RGB, Y/U/V, and trace SHA-256 values are
+`7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f`,
+`90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8`,
+`2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae`,
+`8686c05fa88a9d164fc4be87227e3f09189aa1c7ca4016f2e9a8a9cb5ed7b6dc`,
+`1c2902255e36f70fb4d51da60bbd81470d8851d678afb49324bc581ec5d65df0`,
+`5183ad5bc6643e34ce0794e3a19c3c11e28cf7a6faa3799e0719fe22eb2f795e`, and
+`1b5c7e5dda87d07e4b4cdd37fe99ce3b33d56368a05026deb74c124e308589ba`.
+The production correction uses explicit vertical top-right extension
+availability plus the shared eight-sample Z1 edge/filter predicate. This
+closes only this bounded following-vertical Square8/chroma-Diagonal67 class;
+broader Diagonal67, AV1, and AVF-STILL-001 remain open.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
