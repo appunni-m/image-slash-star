@@ -4,6 +4,7 @@
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
 use std::collections::{HashMap, HashSet, hash_map::Entry};
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -20,6 +21,16 @@ mod support;
 use support::json::{self, FromJson, Object, Value};
 
 static COVERAGE_MATRIX: OnceLock<Option<CoverageMatrix>> = OnceLock::new();
+static MATRIX_ROW_SELECTION: OnceLock<Result<MatrixRowSelection, String>> = OnceLock::new();
+static MATRIX_ROW_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
+static MATRIX_ROW_SELECTION_FAILURE_REPORT: OnceLock<()> = OnceLock::new();
+
+const MATRIX_ROW_SELECTOR_STEM: &str = "__image_slash_star_matrix_row_selector__";
+const MATRIX_ROW_SELECTOR_PREFIX: &str = "__image_slash_star_matrix_row_selector__=";
+
+// Coverage MCP keeps its libtest command immutable. Selectors therefore use
+// repeated `--skip <reserved-payload>` arguments, which libtest forwards to
+// this test process without changing the existing test dispatcher.
 
 // Encode rows are partitioned into several integration-test functions for
 // parallel execution. Keep their immutable, fixture-derived source sequences
@@ -306,6 +317,688 @@ struct Summary {
     decode_active: usize,
     decode_planned: usize,
     encode_not_wired: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum MatrixOperation {
+    Decode,
+    Encode,
+}
+
+impl MatrixOperation {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Decode => "decode",
+            Self::Encode => "encode",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MatrixRowStatus {
+    Active,
+    Planned,
+}
+
+impl MatrixRowStatus {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Planned => "planned-not-executed",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ParsedMatrixRowKey {
+    operation: MatrixOperation,
+    format: String,
+    id: String,
+}
+
+impl ParsedMatrixRowKey {
+    fn qualified(&self) -> String {
+        format!("{}:{}:{}", self.operation.label(), self.format, self.id)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct MatrixCatalogRow {
+    key: String,
+    operation: MatrixOperation,
+    format: String,
+    id: String,
+    status: MatrixRowStatus,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SelectedMatrixRow {
+    key: String,
+    operation: MatrixOperation,
+    format: String,
+    id: String,
+    status: MatrixRowStatus,
+}
+
+#[derive(Clone, Debug)]
+struct ResolvedMatrixSelection {
+    rows: Vec<SelectedMatrixRow>,
+    selected_by_operation: HashMap<MatrixOperation, HashMap<String, HashSet<String>>>,
+    active_count: usize,
+    planned_count: usize,
+}
+
+impl ResolvedMatrixSelection {
+    fn contains(&self, operation: MatrixOperation, format: &str, id: &str) -> bool {
+        self.selected_by_operation
+            .get(&operation)
+            .and_then(|formats| formats.get(format))
+            .is_some_and(|ids| ids.contains(id))
+    }
+}
+
+#[derive(Clone, Debug)]
+enum MatrixRowSelection {
+    All,
+    Selected(ResolvedMatrixSelection),
+}
+
+impl MatrixRowSelection {
+    fn is_selected(&self) -> bool {
+        matches!(self, Self::Selected(_))
+    }
+
+    fn contains(&self, operation: MatrixOperation, format: &str, id: &str) -> bool {
+        match self {
+            Self::All => true,
+            Self::Selected(selection) => selection.contains(operation, format, id),
+        }
+    }
+}
+
+fn parse_matrix_row_selector_args(args: &[OsString]) -> Result<Vec<String>, String> {
+    let mut selectors = Vec::new();
+    let mut has_unrelated_skip = false;
+    let mut index = 0usize;
+
+    while index < args.len() {
+        let Some(argument) = args[index].to_str() else {
+            index = index.saturating_add(1);
+            continue;
+        };
+
+        if argument == "--skip" {
+            let payload = args.get(index.saturating_add(1)).ok_or_else(|| {
+                "matrix row selector transport has --skip without a payload".to_owned()
+            })?;
+            match payload.to_str() {
+                Some(payload) if payload.starts_with(MATRIX_ROW_SELECTOR_STEM) => {
+                    let key = payload.strip_prefix(MATRIX_ROW_SELECTOR_PREFIX).ok_or_else(|| {
+                        format!(
+                            "malformed matrix row selector payload {payload:?}; expected {MATRIX_ROW_SELECTOR_PREFIX}<operation>:<format>:<row-id>"
+                        )
+                    })?;
+                    if key.is_empty() {
+                        return Err(
+                            "empty matrix row selector key after the reserved transport prefix"
+                                .to_owned(),
+                        );
+                    }
+                    selectors.push(key.to_owned());
+                }
+                Some(_) | None => {
+                    has_unrelated_skip = true;
+                }
+            }
+            index = index.saturating_add(2);
+            continue;
+        }
+
+        if let Some(payload) = argument.strip_prefix("--skip=") {
+            if payload.starts_with(MATRIX_ROW_SELECTOR_STEM) {
+                return Err(
+                    "matrix row selectors must use a separate --skip payload; --skip=<selector> is unsupported"
+                        .to_owned(),
+                );
+            }
+            has_unrelated_skip = true;
+            index = index.saturating_add(1);
+            continue;
+        }
+
+        if argument.starts_with(MATRIX_ROW_SELECTOR_STEM) {
+            return Err(format!(
+                "matrix row selector payload {argument:?} must follow an exact --skip argument"
+            ));
+        }
+        index = index.saturating_add(1);
+    }
+
+    if !selectors.is_empty() && has_unrelated_skip {
+        return Err(
+            "ordinary libtest --skip filters cannot be combined with matrix row selectors"
+                .to_owned(),
+        );
+    }
+    Ok(selectors)
+}
+
+fn parse_matrix_row_key(raw: &str) -> Result<ParsedMatrixRowKey, String> {
+    if raw.is_empty() {
+        return Err("matrix row selector key must not be empty".to_owned());
+    }
+    if raw.contains(',') {
+        return Err(format!(
+            "matrix row selector {raw:?} is invalid; comma-separated keys are unsupported"
+        ));
+    }
+    if raw.contains('*') {
+        return Err(format!(
+            "matrix row selector {raw:?} is invalid; glob selectors are unsupported"
+        ));
+    }
+    if raw.chars().any(char::is_whitespace) {
+        return Err(format!(
+            "matrix row selector {raw:?} is invalid; selector keys are exact and are not trimmed"
+        ));
+    }
+
+    let mut fields = raw.split(':');
+    let operation = fields.next().unwrap_or_default();
+    let format = fields.next().unwrap_or_default();
+    let id = fields.next().unwrap_or_default();
+    if fields.next().is_some() {
+        return Err(format!(
+            "malformed matrix row selector {raw:?}; expected exactly operation:format:row-id"
+        ));
+    }
+    let operation = match operation {
+        "decode" => MatrixOperation::Decode,
+        "encode" => MatrixOperation::Encode,
+        other => {
+            return Err(format!(
+                "unknown matrix row selector operation {other:?} in {raw:?}; expected decode or encode"
+            ));
+        }
+    };
+    if format.is_empty() {
+        return Err(format!("matrix row selector {raw:?} has an empty format"));
+    }
+    if id.is_empty() {
+        return Err(format!("matrix row selector {raw:?} has an empty row id"));
+    }
+
+    Ok(ParsedMatrixRowKey {
+        operation,
+        format: format.to_owned(),
+        id: id.to_owned(),
+    })
+}
+
+fn append_matrix_catalog_row(
+    catalog: &mut Vec<MatrixCatalogRow>,
+    known_keys: &mut HashSet<String>,
+    operation: MatrixOperation,
+    format_name: &str,
+    row_format: &str,
+    row_id: &str,
+    row_status: &str,
+) -> Result<(), String> {
+    if row_format != format_name {
+        return Err(format!(
+            "matrix row {operation:?}:{row_id:?} declares format {row_format:?}, but is stored under {format_name:?}"
+        ));
+    }
+    let status = match row_status {
+        "active" => MatrixRowStatus::Active,
+        "planned" => MatrixRowStatus::Planned,
+        other => {
+            return Err(format!(
+                "matrix row {operation:?}:{format_name}:{row_id} has unsupported status {other:?}"
+            ));
+        }
+    };
+    let key = format!("{}:{}:{}", operation.label(), format_name, row_id);
+    if !known_keys.insert(key.clone()) {
+        return Err(format!(
+            "matrix contains duplicate qualified row key {key:?}"
+        ));
+    }
+    catalog.push(MatrixCatalogRow {
+        key,
+        operation,
+        format: format_name.to_owned(),
+        id: row_id.to_owned(),
+        status,
+    });
+    Ok(())
+}
+
+fn matrix_row_catalog(matrix: &CoverageMatrix) -> Result<Vec<MatrixCatalogRow>, String> {
+    let mut format_names = matrix.formats.keys().collect::<Vec<_>>();
+    format_names.sort_unstable();
+
+    let mut catalog = Vec::new();
+    let mut known_keys = HashSet::new();
+    for operation in [MatrixOperation::Decode, MatrixOperation::Encode] {
+        for format_name in &format_names {
+            let format_name = format_name.as_str();
+            let format_data = matrix.formats.get(format_name).ok_or_else(|| {
+                format!("matrix format {format_name:?} disappeared during cataloging")
+            })?;
+            match operation {
+                MatrixOperation::Decode => {
+                    for row in &format_data.decode {
+                        append_matrix_catalog_row(
+                            &mut catalog,
+                            &mut known_keys,
+                            operation,
+                            format_name,
+                            &row.format,
+                            &row.id,
+                            &row.status,
+                        )?;
+                    }
+                }
+                MatrixOperation::Encode => {
+                    for row in &format_data.encode {
+                        append_matrix_catalog_row(
+                            &mut catalog,
+                            &mut known_keys,
+                            operation,
+                            format_name,
+                            &row.format,
+                            &row.id,
+                            &row.status,
+                        )?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(catalog)
+}
+
+fn resolve_matrix_row_keys(
+    requested_keys: &[String],
+    catalog: &[MatrixCatalogRow],
+) -> Result<ResolvedMatrixSelection, String> {
+    let mut known = HashMap::new();
+    for row in catalog {
+        if known.insert(row.key.clone(), row).is_some() {
+            return Err(format!(
+                "matrix contains duplicate qualified row key {:?}",
+                row.key
+            ));
+        }
+    }
+
+    let mut requested = HashSet::new();
+    for raw in requested_keys {
+        let parsed = parse_matrix_row_key(raw)?;
+        let key = parsed.qualified();
+        if !requested.insert(key.clone()) {
+            return Err(format!("duplicate matrix row selector key {key:?}"));
+        }
+        if !known.contains_key(&key) {
+            return Err(format!(
+                "unknown matrix row selector key {key:?}; keys are exact qualified operation:format:row-id tuples"
+            ));
+        }
+    }
+
+    let rows = catalog
+        .iter()
+        .filter(|row| requested.contains(&row.key))
+        .map(|row| SelectedMatrixRow {
+            key: row.key.clone(),
+            operation: row.operation,
+            format: row.format.clone(),
+            id: row.id.clone(),
+            status: row.status,
+        })
+        .collect::<Vec<_>>();
+    let active_count = rows
+        .iter()
+        .filter(|row| row.status == MatrixRowStatus::Active)
+        .count();
+    let planned_count = rows
+        .iter()
+        .filter(|row| row.status == MatrixRowStatus::Planned)
+        .count();
+    if active_count == 0 {
+        let planned = rows
+            .iter()
+            .map(|row| row.key.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "matrix row selection has no active rows; selected={} active={active_count} planned-not-executed={planned_count}; planned rows: {planned}",
+            rows.len()
+        ));
+    }
+
+    let mut selected_by_operation = HashMap::new();
+    for row in &rows {
+        selected_by_operation
+            .entry(row.operation)
+            .or_insert_with(HashMap::new)
+            .entry(row.format.clone())
+            .or_insert_with(HashSet::new)
+            .insert(row.id.clone());
+    }
+
+    Ok(ResolvedMatrixSelection {
+        rows,
+        selected_by_operation,
+        active_count,
+        planned_count,
+    })
+}
+
+fn matrix_row_selection(
+    matrix: &CoverageMatrix,
+) -> Result<&'static MatrixRowSelection, &'static str> {
+    let result = MATRIX_ROW_SELECTION.get_or_init(|| {
+        let args = std::env::args_os().collect::<Vec<_>>();
+        let requested_keys = parse_matrix_row_selector_args(&args)?;
+        if requested_keys.is_empty() {
+            return Ok(MatrixRowSelection::All);
+        }
+        let catalog = matrix_row_catalog(matrix)?;
+        resolve_matrix_row_keys(&requested_keys, &catalog).map(MatrixRowSelection::Selected)
+    });
+    match result {
+        Ok(selection) => {
+            report_matrix_row_selection(selection);
+            Ok(selection)
+        }
+        Err(error) => Err(error.as_str()),
+    }
+}
+
+fn report_invalid_matrix_row_selection(error: &str) {
+    if MATRIX_ROW_SELECTION_FAILURE_REPORT.set(()).is_ok() {
+        panic!("invalid matrix row selection: {error}");
+    }
+}
+
+fn matrix_row_selection_for_test(matrix: &CoverageMatrix) -> Option<&'static MatrixRowSelection> {
+    match matrix_row_selection(matrix) {
+        Ok(selection) => Some(selection),
+        Err(error) => {
+            report_invalid_matrix_row_selection(error);
+            None
+        }
+    }
+}
+
+fn report_matrix_row_selection(selection: &MatrixRowSelection) {
+    let MatrixRowSelection::Selected(selection) = selection else {
+        return;
+    };
+    MATRIX_ROW_SELECTION_REPORT.get_or_init(|| {
+        let plan = selection
+            .rows
+            .iter()
+            .map(|row| format!("{} [{}]", row.key, row.status.label()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        eprintln!(
+            "matrix row selection: selected={} active={} planned-not-executed={}; canonical={plan}",
+            selection.rows.len(),
+            selection.active_count,
+            selection.planned_count
+        );
+    });
+}
+
+fn matrix_selection_is_filtered() -> bool {
+    coverage_matrix().is_some_and(|matrix| {
+        matrix_row_selection_for_test(matrix).is_none_or(MatrixRowSelection::is_selected)
+    })
+}
+
+#[cfg(test)]
+mod matrix_row_selection_tests {
+    use super::*;
+
+    fn arguments(values: &[&str]) -> Vec<OsString> {
+        values.iter().map(OsString::from).collect()
+    }
+
+    fn transport(key: &str) -> OsString {
+        OsString::from(format!("{MATRIX_ROW_SELECTOR_PREFIX}{key}"))
+    }
+
+    fn catalog_row(
+        operation: MatrixOperation,
+        format: &str,
+        id: &str,
+        status: MatrixRowStatus,
+    ) -> MatrixCatalogRow {
+        MatrixCatalogRow {
+            key: format!("{}:{format}:{id}", operation.label()),
+            operation,
+            format: format.to_owned(),
+            id: id.to_owned(),
+            status,
+        }
+    }
+
+    #[test]
+    fn parser_ignores_unrelated_libtest_arguments_without_selectors() {
+        let args = arguments(&[
+            "coverage_matrix_tests",
+            "--nocapture",
+            "--skip",
+            "ordinary-test-filter",
+            "--skip=another-test-filter",
+        ]);
+        assert_eq!(parse_matrix_row_selector_args(&args), Ok(Vec::new()));
+    }
+
+    #[test]
+    fn parser_accepts_repeated_exact_selector_payloads() {
+        let args = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            transport("decode:bmp:depth_1"),
+            OsString::from("--skip"),
+            transport("encode:jpeg:enc_subsample_444"),
+        ];
+        assert_eq!(
+            parse_matrix_row_selector_args(&args),
+            Ok(vec![
+                "decode:bmp:depth_1".to_owned(),
+                "encode:jpeg:enc_subsample_444".to_owned(),
+            ])
+        );
+    }
+
+    #[test]
+    fn parser_rejects_malformed_or_ambiguous_transport() {
+        let malformed_payloads = [
+            MATRIX_ROW_SELECTOR_STEM,
+            MATRIX_ROW_SELECTOR_PREFIX,
+            "__image_slash_star_matrix_row_selector__bad=decode:bmp:depth_1",
+        ];
+        for payload in malformed_payloads {
+            let args = vec![
+                OsString::from("coverage_matrix_tests"),
+                OsString::from("--skip"),
+                OsString::from(payload),
+            ];
+            assert!(
+                parse_matrix_row_selector_args(&args).is_err(),
+                "payload should be rejected: {payload}"
+            );
+        }
+
+        let equals_form = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from(format!(
+                "--skip={}{}",
+                MATRIX_ROW_SELECTOR_PREFIX, "decode:bmp:depth_1"
+            )),
+        ];
+        let equals_error = parse_matrix_row_selector_args(&equals_form);
+        assert!(equals_error.is_err());
+
+        let outside_payload = vec![
+            OsString::from("coverage_matrix_tests"),
+            transport("decode:bmp:depth_1"),
+        ];
+        assert!(parse_matrix_row_selector_args(&outside_payload).is_err());
+
+        let mixed_skips = vec![
+            OsString::from("coverage_matrix_tests"),
+            OsString::from("--skip"),
+            OsString::from("ordinary-test-filter"),
+            OsString::from("--skip"),
+            transport("decode:bmp:depth_1"),
+        ];
+        let mixed_error = parse_matrix_row_selector_args(&mixed_skips);
+        assert!(matches!(
+            mixed_error,
+            Err(error) if error.contains("ordinary libtest")
+        ));
+    }
+
+    #[test]
+    fn resolver_uses_exact_qualified_tuples_and_canonical_order() {
+        let catalog = vec![
+            catalog_row(
+                MatrixOperation::Decode,
+                "bmp",
+                "same",
+                MatrixRowStatus::Active,
+            ),
+            catalog_row(
+                MatrixOperation::Decode,
+                "png",
+                "same",
+                MatrixRowStatus::Active,
+            ),
+            catalog_row(
+                MatrixOperation::Encode,
+                "bmp",
+                "same",
+                MatrixRowStatus::Planned,
+            ),
+        ];
+        let reversed = vec![
+            "encode:bmp:same".to_owned(),
+            "decode:png:same".to_owned(),
+            "decode:bmp:same".to_owned(),
+        ];
+        let canonical = vec![
+            "decode:bmp:same".to_owned(),
+            "decode:png:same".to_owned(),
+            "encode:bmp:same".to_owned(),
+        ];
+        let resolved = match resolve_matrix_row_keys(&reversed, &catalog) {
+            Ok(value) => value,
+            Err(error) => panic!("valid tuple selection failed: {error}"),
+        };
+        assert_eq!(
+            resolved
+                .rows
+                .iter()
+                .map(|row| row.key.clone())
+                .collect::<Vec<_>>(),
+            canonical
+        );
+        assert_eq!(resolved.active_count, 2);
+        assert_eq!(resolved.planned_count, 1);
+        assert!(resolved.contains(MatrixOperation::Decode, "bmp", "same"));
+        assert!(resolved.contains(MatrixOperation::Decode, "png", "same"));
+        assert!(resolved.contains(MatrixOperation::Encode, "bmp", "same"));
+        assert!(!resolved.contains(MatrixOperation::Encode, "png", "same"));
+
+        let forward = vec![
+            "decode:bmp:same".to_owned(),
+            "decode:png:same".to_owned(),
+            "encode:bmp:same".to_owned(),
+        ];
+        let forward = match resolve_matrix_row_keys(&forward, &catalog) {
+            Ok(value) => value,
+            Err(error) => panic!("forward tuple selection failed: {error}"),
+        };
+        assert_eq!(resolved.rows, forward.rows);
+    }
+
+    #[test]
+    fn resolver_rejects_duplicates_unknown_keys_and_non_exact_forms() {
+        let catalog = vec![catalog_row(
+            MatrixOperation::Decode,
+            "bmp",
+            "same",
+            MatrixRowStatus::Active,
+        )];
+        let duplicate = vec!["decode:bmp:same".to_owned(), "decode:bmp:same".to_owned()];
+        let duplicate_error = resolve_matrix_row_keys(&duplicate, &catalog);
+        assert!(matches!(
+            duplicate_error,
+            Err(error) if error.contains("duplicate")
+        ));
+
+        let unknown = vec!["decode:BMP:same".to_owned()];
+        let unknown_error = resolve_matrix_row_keys(&unknown, &catalog);
+        assert!(matches!(
+            unknown_error,
+            Err(error) if error.contains("unknown")
+        ));
+
+        let duplicate_catalog = vec![
+            catalog_row(
+                MatrixOperation::Decode,
+                "bmp",
+                "same",
+                MatrixRowStatus::Active,
+            ),
+            catalog_row(
+                MatrixOperation::Decode,
+                "bmp",
+                "same",
+                MatrixRowStatus::Active,
+            ),
+        ];
+        let catalog_error =
+            resolve_matrix_row_keys(&["decode:bmp:same".to_owned()], &duplicate_catalog);
+        assert!(matches!(
+            catalog_error,
+            Err(error) if error.contains("duplicate")
+        ));
+
+        for key in [
+            "decode:bmp",
+            "decode:bmp:same,other",
+            "decode:bmp:*",
+            "decode:bmp: same",
+        ] {
+            assert!(
+                parse_matrix_row_key(key).is_err(),
+                "non-exact key should be rejected: {key}"
+            );
+        }
+    }
+
+    #[test]
+    fn resolver_reports_planned_only_selection_without_active_counts() {
+        let catalog = vec![catalog_row(
+            MatrixOperation::Decode,
+            "avif",
+            "planned",
+            MatrixRowStatus::Planned,
+        )];
+        let result = resolve_matrix_row_keys(&["decode:avif:planned".to_owned()], &catalog);
+        assert!(matches!(
+            result,
+            Err(error) if error.contains("no active rows")
+                && error.contains("planned-not-executed")
+        ));
+    }
 }
 
 #[cfg(coverage)]
@@ -2638,6 +3331,9 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     if !cfg!(feature = "avif") {
         return;
     }
+    if matrix_selection_is_filtered() {
+        return;
+    }
 
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
@@ -2912,6 +3608,10 @@ fn run_decode_matrix(format_filter: Option<&str>) {
         coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
+    let Some(selection) = matrix_row_selection_for_test(matrix) else {
+        return;
+    };
+    let filtered = selection.is_selected();
 
     let assets_dir = manifest_dir
         .join("tests")
@@ -2922,6 +3622,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
     let mut passed = 0u32;
     let mut failed = 0u32;
     let mut skipped = 0u32;
+    let mut planned_not_executed = 0u32;
     let mut source_lifecycle_formats = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
@@ -2930,7 +3631,16 @@ fn run_decode_matrix(format_filter: Option<&str>) {
         }
         for row in &fmt_data.decode {
             if row.status == "planned" {
-                skipped += 1;
+                if filtered {
+                    if selection.contains(MatrixOperation::Decode, fmt_name, &row.id) {
+                        planned_not_executed += 1;
+                    }
+                } else {
+                    skipped += 1;
+                }
+                continue;
+            }
+            if !selection.contains(MatrixOperation::Decode, fmt_name, &row.id) {
                 continue;
             }
             let asset_name = match &row.asset {
@@ -3508,7 +4218,15 @@ fn run_decode_matrix(format_filter: Option<&str>) {
         }
     }
 
-    eprintln!("\ndecode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped");
+    if filtered {
+        if total > 0 || planned_not_executed > 0 {
+            eprintln!(
+                "\ndecode matrix (selected): {passed}/{total} active rows passed, {failed} failed, {planned_not_executed} planned-not-executed"
+            );
+        }
+    } else {
+        eprintln!("\ndecode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped");
+    }
     if failed > 0 {
         panic!("{failed} decode test(s) failed");
     }
@@ -3622,11 +4340,16 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
+    let Some(selection) = matrix_row_selection_for_test(matrix) else {
+        return;
+    };
+    let filtered = selection.is_selected();
 
     let mut total = 0u32;
     let mut passed = 0u32;
     let mut failed = 0u32;
     let mut skipped = 0u32;
+    let mut planned_not_executed = 0u32;
     let assets_dir = manifest_dir
         .join("tests")
         .join("fixtures")
@@ -3646,13 +4369,22 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         let mut active_row_index = 0usize;
         for row in &fmt_data.encode {
             if row.status == "planned" {
-                skipped += 1;
+                if filtered {
+                    if selection.contains(MatrixOperation::Encode, fmt_name, &row.id) {
+                        planned_not_executed += 1;
+                    }
+                } else {
+                    skipped += 1;
+                }
                 continue;
             }
 
             let row_index = active_row_index;
             active_row_index += 1;
             if active_row_range.is_some_and(|(start, end)| row_index < start || row_index >= end) {
+                continue;
+            }
+            if !selection.contains(MatrixOperation::Encode, fmt_name, &row.id) {
                 continue;
             }
 
@@ -4520,7 +5252,15 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         }
     }
 
-    eprintln!("\nencode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped");
+    if filtered {
+        if total > 0 || planned_not_executed > 0 {
+            eprintln!(
+                "\nencode matrix (selected): {passed}/{total} active rows passed, {failed} failed, {planned_not_executed} planned-not-executed"
+            );
+        }
+    } else {
+        eprintln!("\nencode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped");
+    }
     if failed > 0 {
         panic!("{failed} encode test(s) failed");
     }
@@ -4529,12 +5269,18 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
 #[cfg(coverage)]
 #[test]
 fn test_internal_coverage_hooks() {
+    if matrix_selection_is_filtered() {
+        return;
+    }
     img::__coverage_exercise_private_branches();
 }
 
 #[cfg(coverage)]
 #[test]
 fn test_av1_entropy_trace_matches_pinned_dav1d_fixture() {
+    if matrix_selection_is_filtered() {
+        return;
+    }
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures")
@@ -4632,6 +5378,9 @@ fn avif_reconstruction_fixture_is_planned(fixture: &str) -> bool {
 #[cfg(coverage)]
 #[test]
 fn test_partitioned_square_444_fixtures_materialize() {
+    if matrix_selection_is_filtered() {
+        return;
+    }
     let fixtures = [
         "partitioned_square_12x12_g96_direct_tokens.avif",
         "partitioned_square_12x12_midpoint_g96_ac.avif",
@@ -4677,12 +5426,18 @@ fn assert_entropy_mosaic_candidate(fixture: &str) {
 #[cfg(coverage)]
 #[test]
 fn test_av1_entropy_mosaic_01_materializes() {
+    if matrix_selection_is_filtered() {
+        return;
+    }
     assert_entropy_mosaic_candidate("coverage_entropy_mosaic_01.avif");
 }
 
 #[cfg(coverage)]
 #[test]
 fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
+    if matrix_selection_is_filtered() {
+        return;
+    }
     let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures");
@@ -8644,12 +9399,21 @@ fn test_coverage_matrix() {
         coverage_matrix(),
         "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
     );
+    let Some(selection) = matrix_row_selection_for_test(matrix) else {
+        return;
+    };
 
     let s = &matrix.summary;
-    eprintln!(
-        "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
-        s.decode_active, s.decode_rows, s.decode_planned, s.encode_not_wired, s.assets_available
-    );
+    if !selection.is_selected() {
+        eprintln!(
+            "Coverage: {}/{} decode active, {} planned, {} encode not wired, {} assets",
+            s.decode_active,
+            s.decode_rows,
+            s.decode_planned,
+            s.encode_not_wired,
+            s.assets_available
+        );
+    }
 
     assert!(s.total_rows > 0, "Matrix must have rows");
     assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
