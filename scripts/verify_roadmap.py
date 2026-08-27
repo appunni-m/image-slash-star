@@ -211,6 +211,75 @@ def verify() -> str:
     open_id_set = set(open_ids)
     if not open_id_set.issubset(detail_by_id):
         fail("roadmap.json is missing detail records for active finding IDs")
+    status_ids = {
+        status: {
+            detail["id"]
+            for detail in finding_details
+            if detail.get("status") == status
+        }
+        for status in ("open", "resolved", "parked")
+    }
+    if open_id_set != status_ids["open"]:
+        missing = sorted(status_ids["open"] - open_id_set)
+        stale = sorted(open_id_set - status_ids["open"])
+        fail(
+            "roadmap open inventory must equal open finding details; "
+            f"missing={missing}, stale={stale}"
+        )
+    parked_entries = {
+        task_id
+        for value in roadmap_data.get("parked", {}).values()
+        if isinstance(value, list)
+        for task_id in value
+    }
+    resolved_entries = set(roadmap_data.get("resolved", []))
+    if not status_ids["resolved"].issubset(resolved_entries):
+        fail(
+            "roadmap resolved detail IDs are missing from resolved: "
+            f"{sorted(status_ids['resolved'] - resolved_entries)}"
+        )
+    if not status_ids["parked"].issubset(parked_entries):
+        fail(
+            "roadmap parked detail IDs are missing from parked: "
+            f"{sorted(status_ids['parked'] - parked_entries)}"
+        )
+    if (status_ids["open"] & status_ids["resolved"]) or (
+        status_ids["open"] & status_ids["parked"]
+    ) or (status_ids["resolved"] & status_ids["parked"]):
+        fail("roadmap open, resolved, and parked finding sets overlap")
+    for task_id in status_ids["resolved"]:
+        resolution = detail_by_id[task_id].get("resolution")
+        if not isinstance(resolution, dict):
+            fail(f"roadmap resolved finding {task_id} has no resolution object")
+        if not isinstance(resolution.get("kind"), str) or not resolution["kind"].strip():
+            fail(f"roadmap resolved finding {task_id} has no resolution kind")
+        if not isinstance(resolution.get("evidence"), str) or not resolution["evidence"].strip():
+            fail(f"roadmap resolved finding {task_id} has no resolution evidence")
+    group_area = {
+        "common_api": "common_api",
+        "jpeg": "jpeg",
+        "png": "png",
+        "gif": "gif",
+        "bmp": "bmp",
+        "ico_cur": "ico_cur",
+        "tiff": "tiff",
+        "webp": "webp",
+        "avif": "avif",
+        "features": "features_package",
+        "assurance": "assurance",
+        "documentation": "documentation",
+    }
+    for group, group_ids in open_inventory["groups"].items():
+        if group not in group_area:
+            fail(f"roadmap open inventory has unknown group {group}")
+        expected_group_ids = {
+            detail["id"]
+            for detail in finding_details
+            if detail.get("status") == "open"
+            and detail.get("area") == group_area[group]
+        }
+        if set(group_ids) != expected_group_ids:
+            fail(f"roadmap group {group} does not match open finding areas")
     for task_id in open_id_set:
         detail = detail_by_id[task_id]
         if detail.get("status") != "open":

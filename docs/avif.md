@@ -4,14 +4,16 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-27
 
-Current claim-ledger refresh base revision: `99f8cd59d8fb2ae0109f071e5902435de1812139`.
-The current managed Coverage MCP snapshot is
-`283cc397-39ec-4dc5-98ec-21cc4720cdf8` from run
-`40400567-ea79-4811-a683-c823c683646f`, bound to exact implementation commit
-`99f8cd59d8fb2ae0109f071e5902435de1812139`. It records 100,078/109,648 lines
-(91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions
-(88.5962%), and 149,758/165,832 regions (90.3071%); all four 100% metrics
-remain open.
+Current claim-ledger implementation anchor:
+`17f548e91b83b61fbc071787ef8285d3d621c0ee`.
+The current complete managed Coverage MCP snapshot is
+`c694d0a5-4b6e-490c-b7b7-df010e668fb8` from run
+`eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d`, bound to that exact implementation
+commit. It records 100,316/110,009 lines (91.1889%), 12,835/14,220 branches
+(90.2602%), 5,124/5,794 functions (88.4363%), and 150,124/166,363 regions
+(90.2388%); all four 100% metrics remain open. The compact snapshot retains
+metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance
+caveat.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.
