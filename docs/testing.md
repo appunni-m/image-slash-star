@@ -109,6 +109,18 @@ outside `--skip`, ordinary libtest skip filters, and matrix-row/AV1-selector
 mixtures are rejected. Selected runs are bounded incremental evidence and do
 not replace the full four-metric release coverage measurement.
 
+The latest managed one-fixture run
+`0effd878-d082-4952-9ecf-63b0892d375d` passed in 32,144 ms at implementation
+commit `3281cf6d524ead2a4a34299f154e8ae942dc9952` and ingested snapshot
+`cabeeba6-7f0c-453e-9ef3-cc02bb4a5fd8` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`coverage_422_square16_vertical_halves_01.avif` and passed 1/1 cases. The
+additive baseline-union review measured +7 covered branches, +2 covered
+functions, +199 covered regions, and 0 covered-line identity delta; the
+selected projection reported 920 newly covered line identities and no
+regressions. This is selected-subset evidence only; unselected baseline hits
+are not observed and it is not the release coverage gate.
+
 Current AVIF revision-bound evidence: `coverage_i444_square16_cfl_01.avif`,
 `_02.avif`, and `_03.avif` are deterministic 16x16 8-bit 4:4:4 origin
 Square16 CFL/DCT witnesses. Their pinned entropy traces contain 419, 229, and

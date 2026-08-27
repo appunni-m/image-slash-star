@@ -591,6 +591,19 @@ the corresponding status is recorded in `roadmap.json`:
   +8,962 regions. The selected-snapshot projection reports 1,252 newly
   covered line identities, but selected-subset evidence is not a complete
   release measurement.
+- The newest managed selected-fixture run
+  `0effd878-d082-4952-9ecf-63b0892d375d` passed in 32,144 ms at exact
+  implementation commit `3281cf6d524ead2a4a34299f154e8ae942dc9952` and
+  ingested snapshot `cabeeba6-7f0c-453e-9ef3-cc02bb4a5fd8` against baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+  `coverage_422_square16_vertical_halves_01.avif`; the log reports 1 passed,
+  0 failed, and 43 filtered out. The additive baseline-union review reports
+  +7 covered branches, +2 covered functions, +199 covered regions, and 0
+  aggregate covered-line identity delta with no regressions; the selected
+  projection reports 920 newly covered line identities. The snapshot metadata
+  still names `3272b3ef49a87c2947c08b46596b442195c6a8db`, so the durable run
+  commit is the authoritative implementation provenance. This remains bounded
+  selected-subset evidence, not a complete four-metric release measurement.
 - The newest bounded rectangular proof pairs
   `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
   `coverage_v4x16_filter_intra_cdf19_false_01.avif`: deterministic 16x16
