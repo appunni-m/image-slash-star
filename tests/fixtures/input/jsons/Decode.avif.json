@@ -2561,6 +2561,144 @@
       ]
     },
     {
+      "id": "portable_lossy_420_q99_eob_bin_control",
+      "asset": "portable_lossy_420_q99_eob_bin_control.avif",
+      "asset_sha256": "0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_eob_bin_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "portable_lossy_420_q99_eob_base_control",
+      "asset": "portable_lossy_420_q99_eob_base_control.avif",
+      "asset_sha256": "ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossy_420_q99_eob_base_control.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_420_leaf_4x8_a",
       "asset": "portable_lossless_420_leaf_4x8_a.avif",
       "asset_sha256": "31aae6e6395da7d749786b00c339ace12d29af7acbfa7d9710bca10d9d92346e",

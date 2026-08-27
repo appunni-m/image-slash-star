@@ -2864,7 +2864,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         return Ok(None);
     }
     if decoder.symbol_coder_overread() {
-        return Ok(None);
+        return Err(malformed("entropy symbol coder overread the tile padding"));
     }
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
@@ -3874,9 +3874,6 @@ fn finish_closed_leaf(
     _decoder: &RangeDecoder<'_, '_, '_>,
     reconstructed: super::block::PortableResult<super::block::FirstLeaf>,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
-    if _decoder.symbol_coder_overread() {
-        return Ok(None);
-    }
     #[expect(
         clippy::manual_ok_err,
         reason = "PortableUnavailable is the explicit pure-Rust unsupported outcome, not an erased AV1 failure"

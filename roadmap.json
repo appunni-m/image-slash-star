@@ -33,19 +33,19 @@
       "total_rows": 1525,
       "decode_rows": 1128,
       "encode_rows": 397,
-      "decode_active": 1121,
-      "decode_planned": 7,
+      "decode_active": 1123,
+      "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
       "decode_rows": 301,
-      "decode_active": 294,
-      "decode_planned": 7,
+      "decode_active": 296,
+      "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
       "encode_planned": 32,
-      "former_native_remaining": 39
+      "former_native_remaining": 37
     },
     "tests": {
       "coverage_matrix_tests": "36/36 matrix tests",
@@ -735,7 +735,7 @@
         "AVF-035"
       ],
       "remaining": [
-        "7 decode rows",
+        "5 decode rows",
         "32 encode rows",
         "sequence presentation",
         "broader grid/tile composition",
@@ -1047,20 +1047,6 @@
   ],
   "avif": {
     "planned_decode": [
-      {
-        "id": "portable_lossy_420_q99_eob_bin_control",
-        "work_item": "AVF-ENTROPY-001",
-        "gap": "Pure Rust AV1 entropy decoding does not yet implement this EOB-bin syntax; keep it as an explicit unsupported feature gap.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
-        "id": "portable_lossy_420_q99_eob_base_control",
-        "work_item": "AVF-ENTROPY-001",
-        "gap": "Pure Rust AV1 entropy decoding does not yet implement this EOB-base syntax; keep it as an explicit unsupported feature gap.",
-        "former_native_only": true,
-        "status": "planned"
-      },
       {
         "id": "high_bitdepth",
         "work_item": "AVF-SAMPLE-001",
@@ -1437,7 +1423,7 @@
               "Decode the bounded Square16 chroma skip CDF and TX8x16 U/V coefficient sentence without forcing the skip result.",
               "Use the existing safe Square16 palette reconstruction with a 128-entry chroma index region and libavif-compatible horizontal YUV422 conversion."
             ],
-            "focused_verification": "The AVIF decode matrix passes 294/294 active rows; the pinned reconstruction test passes all 231 cases including this fixture; strict fmt, locked checks, Clippy, rustdoc, and all-feature tests pass.",
+            "focused_verification": "The AVIF decode matrix passes 296/296 active rows; the pinned reconstruction test passes all 231 cases including this fixture; strict fmt, locked checks, Clippy, rustdoc, and all-feature tests pass.",
             "scope": "This closes only the simple 16x16 origin Square16 8-bit 4:2:2 palette class. Rectangular/partial 4:2:2 blocks, residual-bearing palette blocks, optional filters/tools, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
@@ -1965,13 +1951,44 @@
       },
       "AVF-ENTROPY-001": {
         "status": "partial",
-        "depends_on": [
-          "portable_lossy_420_q99_eob_bin_control",
-          "portable_lossy_420_q99_eob_base_control"
-        ],
+        "depends_on": [],
         "deliverable": "Implement the remaining EOB-bin/base coefficient scans, signs, dequantization, transforms, and typed unsupported boundaries.",
-        "current_evidence": "Legal EOB classes and matrix-10 dequantization are covered; the two mutation controls remain planned because their independent oracle rejects them.",
-        "next": "Resolve whether each mutation is a legal supported sentence or retain it as an explicit negative contract after first-divergence evidence."
+        "current_evidence": "Legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches, and matrix-10 dequantization are covered. The two one-byte controls are now active malformed-input rows: pinned dav1d 1.5.3 rejects each at the intended EOB stage with no YUV output, and safe Rust preserves the AV1 symbol-coder overread as typed Malformed rather than collapsing it into Unsupported. This classifies invalid arithmetic termination; it does not claim that either mutation is a legal EOB syntax implementation.",
+        "active_negative_controls": [
+          {
+            "id": "portable_lossy_420_q99_eob_bin_control",
+            "stage": "eob_bin",
+            "source_fixture": "portable_lossy_420_q99_gray_126.avif",
+            "source_sha256": "f82b264295ffb7ea9e357a352e674200ed89138a182b0de7c4002fbc55fade4d",
+            "sample_offset": 24,
+            "file_offset": 299,
+            "old_byte": "0x72",
+            "new_byte": "0x73",
+            "file_sha256": "0ff53f82624ab0c9e213a7398251aef6d14af7a91ca3a31ba757d1fe36f8cdea",
+            "sample_sha256": "303fb111b5c26b8f350ecafd3668887f37c307c15ce9908a5f1f8e5ac8b042d4",
+            "independent_decoder": "dav1d 1.5.3, commit b546257f770768b2c88258c533da38b91a06f737",
+            "independent_trace_operations": 52,
+            "independent_result": "return code 1; Invalid argument; No data decoded; no YUV output",
+            "pillow_result": "builtins.RuntimeError: Failed to decode frame 0: Decoding of color planes failed"
+          },
+          {
+            "id": "portable_lossy_420_q99_eob_base_control",
+            "stage": "eob_base",
+            "source_fixture": "portable_lossy_420_q99_gray_126.avif",
+            "source_sha256": "f82b264295ffb7ea9e357a352e674200ed89138a182b0de7c4002fbc55fade4d",
+            "sample_offset": 25,
+            "file_offset": 300,
+            "old_byte": "0xe1",
+            "new_byte": "0x1e",
+            "file_sha256": "ebf00b9dc914982bd698af0413a0e26a6a849208871abbeccc6789541efb08f5",
+            "sample_sha256": "2ee81aa9ad19f8ef6b3ed326c127c093546f3b76d642e5b7ebb7339865568b36",
+            "independent_decoder": "dav1d 1.5.3, commit b546257f770768b2c88258c533da38b91a06f737",
+            "independent_trace_operations": 39,
+            "independent_result": "return code 1; Invalid argument; No data decoded; no YUV output",
+            "pillow_result": "builtins.RuntimeError: Failed to decode frame 0: Decoding of color planes failed"
+          }
+        ],
+        "next": "Add independent positive fixtures for the remaining legal EOB-bin/base coefficient sentences, then implement only the syntax and transforms proven by those fixtures; retain Malformed for arithmetic overread and Unsupported for valid but unimplemented syntax."
       },
       "AVF-SAMPLE-001": {
         "status": "partial",
