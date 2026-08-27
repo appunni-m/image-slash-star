@@ -4968,6 +4968,39 @@ def gen_avif():
             advanced=advanced,
         )
 
+    def square32_origin_tx16x16_split_noise():
+        """Generate the origin Square32/TX16x16 split reconstruction witness."""
+
+        random_state = random.Random(32001)
+        pixels = bytes(
+            random_state.randrange(256) for _ in range(32 * 32 * 3)
+        )
+        return Image.frombytes("RGB", (32, 32), pixels)
+
+    write_campaign_image(
+        "coverage_square32_origin_tx16x16_split_01",
+        square32_origin_tx16x16_split_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "32",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def write_campaign_family(
         prefix,
         count,
