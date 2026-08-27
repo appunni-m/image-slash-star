@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-27
 
-- Current claim-ledger refresh base revision: `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`
+- Current claim-ledger refresh base revision: `99f8cd59d8fb2ae0109f071e5902435de1812139`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -550,23 +550,23 @@ ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
 The latest managed Coverage MCP run is
-`10e5a9c1-5d4e-473c-81f9-f00fd9d9a882`. Its run record is bound to exact
-implementation commit `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; it passed in
-159,751 ms and ingested snapshot `dcebe092-02c4-4343-9dcc-c6b10dcaf9fc`.
-Its aggregate all-feature LLVM snapshot records 100,042/109,633 lines (91.2517%),
-12,789/14,152 branches (90.3689%), 5,102/5,767 functions (88.4689%), and
-149,695/165,811 regions (90.2805%), leaving 9,591 lines, 1,363 branches, 665
-functions, and 16,116 regions uncovered. The run record is exact for the
+`40400567-ea79-4811-a683-c823c683646f`. Its run record is bound to exact
+implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`; it passed in
+159,185 ms and ingested snapshot `283cc397-39ec-4dc5-98ec-21cc4720cdf8`.
+Its complete all-feature LLVM snapshot records 100,078/109,648 lines (91.2721%),
+12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and
+149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658
+functions, and 16,074 regions uncovered. The run record is exact for the
 implementation commit, while the compact snapshot projection retains commit
 metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
-explicit. Explicit incremental review against baseline snapshot
-`b3552b87-34e3-4982-aed9-097741233eb6` reports +262 covered lines, +76 covered
-branches, +12 covered functions, and +303 covered regions, with denominator
-deltas of +57 lines, +94 branches, +1 function, and +78 regions. The branch rate
-decreased because the complete report added more branch identities than it
-covered; named test attribution is unavailable. The predictor-enabled H16x4
-witness is exact through safe Rust, but AVF-STILL-001, AVIF encoding, and the
-four-metric 100% gate remain open.
+explicit. Explicit coverage review against baseline snapshot
+`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` reports additive-union deltas of +36
+covered lines, +0 branches, +10 functions, and +66 regions, with denominator
+deltas of +15 lines, +0 branches, +3 functions, and +24 regions. The complete
+snapshot diff reports 21 newly covered line identities and no regressions;
+bounded source review marks all seven rectangular transform wrappers green.
+Named test attribution is unavailable. This coverage-only hook does not close
+AVF-STILL-001, AVIF encoding, or the four-metric 100% gate.
 
 The previous managed Coverage MCP run was
 `3b4748a2-f5bf-43d2-9f56-1067f4210257`, whose run record is bound to exact
@@ -650,7 +650,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 9,591 lines, 1,363 branches, 665 functions, and 16,116 regions
+- LLVM coverage: 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -1094,7 +1094,7 @@ that an entire workstream is finished because one slice passed.
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 503 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b` is recorded from the latest all-feature run, bound to exact implementation commit `9615bc2408b84f075445e4f6a137b483ec3501db`. The four metrics remain below 100% and stay visible in the current coverage table. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 503 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `283cc397-39ec-4dc5-98ec-21cc4720cdf8` is recorded from run `40400567-ea79-4811-a683-c823c683646f` at exact implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`. The four metrics remain below 100% and stay visible in the current coverage table. |
 | W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 285 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set is one bounded production class, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
@@ -1102,7 +1102,7 @@ The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
 directly. The accepted product-claim tuple remains revision-bound to the
 historical Pillow parity record at `36b9396`; the current hash and
-coverage-evidence refresh is bound to `9615bc24` and does not silently rewrite
+coverage-evidence refresh is bound to `99f8cd59` and does not silently rewrite
 that parity result.
 
 ## Contract catalog: behavior Pillow cannot prove
@@ -1189,25 +1189,25 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The latest managed Coverage MCP snapshot below was ingested from run
-`e3bdfa3f-1d31-4557-8c18-935fac8964fd`, whose run record is bound to exact
-implementation commit `9615bc2408b84f075445e4f6a137b483ec3501db`, with snapshot
-`c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b`. It passed in 152,353 ms. The compact
+`40400567-ea79-4811-a683-c823c683646f`, whose run record is bound to exact
+implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`, with snapshot
+`283cc397-39ec-4dc5-98ec-21cc4720cdf8`. It passed in 159,185 ms. The compact
 snapshot projection retains commit metadata
 `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
-explicit. Direct comparison with the previous stored snapshot records covered
-deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with denominator
-deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no
-source-attributable gain or named-test attribution is claimed because the compact
-projection does not provide reliable changed-code attribution. The Diagonal67
-vertical Square8 fixture is exact through safe Rust; the remaining 100% gate is
-still open.
+explicit. Explicit review against baseline snapshot
+`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` records additive-union gains of +36
+lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of
++15 lines, +0 branches, +3 functions, and +24 regions. The complete snapshot
+diff has 21 newly covered line identities and no regressions; source review
+marks all seven rectangular transform wrappers green. The new hook is
+coverage-only, so AVF-STILL-001 and the remaining 100% gate stay open.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 100,042 | 109,633 | 91.2517% | 9,591 | 8.7483% |
+| Lines (managed Coverage MCP) | 100,078 | 109,648 | 91.2721% | 9,570 | 8.7279% |
 | Branches (managed Coverage MCP) | 12,789 | 14,152 | 90.3689% | 1,363 | 9.6311% |
-| Functions (managed Coverage MCP) | 5,102 | 5,767 | 88.4689% | 665 | 11.5311% |
-| Regions (managed Coverage MCP) | 149,695 | 165,811 | 90.2805% | 16,116 | 9.7195% |
+| Functions (managed Coverage MCP) | 5,112 | 5,770 | 88.5962% | 658 | 11.4038% |
+| Regions (managed Coverage MCP) | 149,758 | 165,832 | 90.3071% | 16,074 | 9.6929% |
 
 The predictor-enabled H16x4 fixture is a real safe-Rust reconstruction class,
 not a coverage-only test. Its input-only search reports and exact pinned dav1d,
@@ -1216,9 +1216,9 @@ The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:
 the release target is still 100% for all four measures. The explicit aggregate
-comparison found covered deltas of +262 lines, +76 branches, +12 functions, and
-+303 regions, with denominator deltas of +57 lines, +94 branches, +1 function,
-and +78 regions; named-test attribution is unavailable.
+comparison found covered deltas of +36 lines, +0 branches, +10 functions, and
++66 regions, with denominator deltas of +15 lines, +0 branches, +3 functions,
+and +24 regions; named-test attribution is unavailable.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
