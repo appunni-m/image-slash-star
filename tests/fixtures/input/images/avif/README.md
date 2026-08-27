@@ -9,6 +9,7 @@ generation provenance follow.
 | `baseline.avif` | Pillow `Tests/images/avif/hopper.avif` | Pillow 12.2.0 / `3c41c09` | `d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2` | MIT-CMU (`third_party/pillow/LICENSE`) |
 | `alpha.avif` | Pillow `Tests/images/avif/transparency.avif` | Pillow 12.2.0 / `3c41c09` | `b19f57d9421bbd3d0b0706c8fe79cef802aebf106afefa6bddde9de1a07509c9` | MIT-CMU (`third_party/pillow/LICENSE`) |
 | `10bit.avif` | libavif `tests/data/colors-animated-12bpc-keyframes-0-2-3.avif` | libavif 1.4.1 / `6543b22` | `3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
+| `high_bitdepth_still_12bit_444_lossless.avif` | Deterministic 16x16 RGB source encoded as a single-frame 12-bit 4:4:4 witness | libavif 1.4.1 / `6543b22`; libaom 3.13.2 fixture build | `8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd` | MIT/Apache-2.0 (repository-generated) |
 | `hdr.avif` | libavif `tests/data/colors_hdr_rec2020.avif` | libavif 1.4.1 / `6543b22` | `9980e58ddf718a923f1738c34aad1c72f8e5795ec07e68f1a5f9bd216ca19740` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `grid.avif` | libavif `tests/data/color_grid_alpha_nogrid.avif` | libavif 1.4.1 / `6543b22` | `bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `animated.avif` | libavif `tests/data/colors-animated-8bpc.avif` | libavif 1.4.1 / `6543b22` | `2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
@@ -25,6 +26,17 @@ the upstream BSD-2-Clause fixture license and proves that pinned Pillow/libavif
 rejects an otherwise intact `avis` track sequence when item metadata is absent.
 Its SHA-256 is
 `45c85bd7d08261cfcb1a4563150e993d606b5e309b4767d922988ce700587fe4`.
+
+`high_bitdepth_still_12bit_444_lossless.avif` is repository-generated from a
+deterministic 16x16 RGB pattern with the pinned libavif 1.4.1 `avifenc`
+toolchain and libaom 3.13.2, using `--depth 12 --yuv 444 --qcolor 100`,
+`--cicp 1/13/6`, full range, speed 8, and one encoder job. The resulting AV1
+frame is independently inspected as AV1 profile 2, 12-bit 4:4:4,
+still-picture, one tile, all-lossless, with base qindex 0. The exact Pillow
+12.2.0 RGB8 reference is 768 bytes with SHA-256
+`9bb7dfcac6b47a80ec62d5d1732dc2d5954390e55c8462b312f5eb2ccb332661`.
+`avifenc` and its native libraries are fixture-generation tools only; the
+crate's runtime path remains pure safe Rust with no native AVIF dependency.
 
 `forbidden_422_partition.avif` is deterministically derived from the pinned
 BSD-2-Clause `10bit.avif` input. It replaces only the 14-byte first color-item

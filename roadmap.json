@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1522,
-      "decode_rows": 1125,
+      "total_rows": 1523,
+      "decode_rows": 1126,
       "encode_rows": 397,
-      "decode_active": 1118,
+      "decode_active": 1119,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 298,
-      "decode_active": 291,
+      "decode_rows": 299,
+      "decode_active": 292,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1499,14 +1499,14 @@
           "high_bitdepth"
         ],
         "deliverable": "Reconstruct 10/12-bit planes and apply checked sample-to-8-bit conversion with limits and cancellation.",
-        "current_evidence": "A checked pure-Rust sample-depth boundary now validates 8/10/12-bit nominal ranges and truncates validated samples to the required 8-bit boundary. The committed 16x16 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 still fixture now reconstructs Y/U/V in checked u16 arithmetic and matches the independent dav1d 1.5.3 plane oracle plus the Pillow 12.2.0 RGB8 reference exactly. Entropy reconstruction, restoration, 4:2:2 decoding, high-depth alpha/sequence materialization, HDR conversion, and 12-bit coverage remain open.",
-        "next": "Extend the proven 10-bit lossless 4:4:4 slice to the remaining 12-bit, subsampling, restoration, alpha/sequence, color-conversion, and limit/cancellation cases without widening the public acceptance boundary by guesswork.",
+        "current_evidence": "A checked pure-Rust sample-depth boundary now validates 8/10/12-bit nominal ranges and truncates validated samples to the required 8-bit boundary. The committed 16x16 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 still fixture now reconstructs Y/U/V in checked u16 arithmetic and matches the independent dav1d 1.5.3 plane oracle plus the Pillow 12.2.0 RGB8 reference exactly. The new 16x16 AV1 profile-2 12-bit full-range BT.601 SDR all-lossless 4:4:4 still fixture also reconstructs through the same checked path and matches its independent ISO-BMFF/AV1 inspection and Pillow 12.2.0 RGB8 reference exactly. Entropy reconstruction, restoration, 4:2:2 decoding, high-depth alpha/sequence materialization, HDR conversion, and broader 12-bit coverage remain open.",
+        "next": "Extend the proven 10-/12-bit lossless 4:4:4 still slices to the remaining subsampling, restoration, alpha/sequence, color-conversion, and limit/cancellation cases without widening the public acceptance boundary by guesswork.",
         "active_slice": {
-          "id": "high_bitdepth_still_10bit_444_lossless",
+          "id": "high_bitdepth_still_12bit_444_lossless",
           "status": "completed",
-          "scope": "One 10-bit profile-1, full-range BT.601/SDR, single-frame, all-lossless, 4:4:4 AVIF class with checked u16 reconstruction and measured Pillow-compatible RGB8 output.",
-          "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_10bit_444_lossless.avif",
-          "independent_provenance": "Generated with AOM 3.13.0/libavif 1.4.1 and promoted only after pinned dav1d 1.5.3 reconstruction and Pillow 12.2.0 public RGB8 references matched exactly.",
+          "scope": "One 12-bit AV1 profile-2, full-range BT.601/SDR, single-frame, all-lossless, 4:4:4 AVIF class with checked u16 reconstruction and measured Pillow-compatible RGB8 output.",
+          "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_12bit_444_lossless.avif",
+          "independent_provenance": "Generated from a deterministic 16x16 RGB source with the pinned libavif 1.4.1/libaom 3.13.2 avifenc fixture toolchain; independent AV1C/ISO-BMFF inspection records AV1 profile 2, 12-bit 4:4:4, still-picture, full-range CICP 1/13/6, one tile, and all_lossless with base qindex 0. Promotion required exact Pillow 12.2.0 RGB8 output and safe-Rust public parity; the native generator is fixture provenance only and is not a runtime dependency.",
           "non_goals": [
             "the existing 12-bit animated 10bit.avif row",
             "HDR transfer/primaries conversion",
@@ -1582,17 +1582,17 @@
       "mode": "Rgba8"
     },
     "active_high_bitdepth_fixture": {
-      "id": "high_bitdepth_still_10bit_444_lossless",
-      "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_10bit_444_lossless.avif",
+      "id": "high_bitdepth_still_12bit_444_lossless",
+      "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_12bit_444_lossless.avif",
       "status": "completed",
-      "scope": "10-bit profile-1, full-range BT.601/SDR, single-frame, all-lossless 4:4:4 still; public output remains Rgb8 after checked conversion.",
-      "fixture_sha256": "c49589983c8492a12c3920123f9535c887b8715bf5cbdb25b57dfdad0d8c3c7e",
-      "reference_sha256": "e11c0ff053477c85dee9ef479a13777cb4677c5236f1a1e2b15423d12351a1c3",
+      "scope": "12-bit AV1 profile-2, full-range BT.601/SDR, single-frame, all-lossless 4:4:4 still; public output remains Rgb8 after checked conversion.",
+      "fixture_sha256": "8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd",
+      "reference_sha256": "9bb7dfcac6b47a80ec62d5d1732dc2d5954390e55c8462b312f5eb2ccb332661",
       "dimensions": [
         16,
         16
       ],
-      "source_depth": 10,
+      "source_depth": 12,
       "mode": "Rgb8"
     }
   },

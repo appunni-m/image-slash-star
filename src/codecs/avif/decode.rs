@@ -236,7 +236,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !(matches!(still.bit_depth, 8 | 10)
+    if !(matches!(still.bit_depth, 8 | 10 | 12)
         && !still.monochrome
         && still.color_primaries == 1
         && still.transfer_characteristics == 13
