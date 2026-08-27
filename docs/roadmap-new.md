@@ -811,6 +811,16 @@ reports +1,638 covered lines, +0 branches, +0 functions, and +0 regions, with
 denominator changes of +2,815, +72, +10, and +582. Merge exactness is false,
 test attribution is unavailable, and unobserved baseline hits are not
 regressions; this selected-subset result is not a full-release measurement.
+The final clean-revision cfg-coverage hook run
+`7cdea475-3fdc-4194-8bd9-7509249580ff` passed in 107,163 ms at exact
+implementation commit `9831b09d65dd02754785d6e3de4d02bf5e43559f` and ingested
+snapshot `1007a9cf-9c6e-4f5f-ae72-b1c99f3c6cbd` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only
+`test_internal_coverage_hooks`; the hook’s intentional defensive panics were
+caught as expected. The additive baseline-union review reports +174 covered
+lines, +0 branches, +0 functions, and +0 regions, with merge exactness false
+and no global regression claim. This is bounded cfg-coverage evidence, not a
+replacement for the complete four-metric release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
