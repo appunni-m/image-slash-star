@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 222);
+    assert_eq!(expected.cases.len(), 223);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -5545,6 +5545,73 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .any(|line| line.starts_with("Post-y-cf-blk[tx=2,txtp=0,eob=255]")),
                 "AV1 origin Square32 split witness must retain non-empty luma residuals"
             );
+        }
+        if case.fixture == "coverage_square64_origin_tx32x32_split_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 1,
+                    context: 0,
+                    partition: 0,
+                    range: 40_248,
+                }],
+                "AV1 origin Square64 split witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                17_158,
+                "AV1 origin Square64 split witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-square64-trace[scope=origin64-v1]:")),
+                "AV1 origin Square64 split witness must retain its origin trace"
+            );
+            assert!(
+                debug_lines.iter().any(|line| {
+                    line.starts_with("Post-tx-detail[max=4,selected=3,depth=1,x=0,y=0]:")
+                }),
+                "AV1 origin Square64 split witness must select terminal TX32x32 children"
+            );
+            assert!(
+                debug_lines
+                    .iter()
+                    .any(|line| line.starts_with("Post-tx[3]:")),
+                "AV1 origin Square64 split witness must select TX32x32"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=3,txtp=0,"))
+                    .count(),
+                4,
+                "AV1 origin Square64 split witness must decode four luma transforms"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                2,
+                "AV1 origin Square64 split witness must decode both chroma planes"
+            );
+            for eob in [1023, 1023, 1022, 1020] {
+                assert!(
+                    debug_lines.iter().any(|line| {
+                        line.starts_with(&format!("Post-y-cf-blk[tx=3,txtp=0,eob={eob}]:"))
+                    }),
+                    "AV1 origin Square64 split witness must retain luma eob={eob}"
+                );
+            }
         }
         if case.fixture == "coverage_r32x16_origin_01.avif" {
             assert_eq!(
@@ -7833,6 +7900,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h64x16_horizontal_ramp_01.avif" => {
                 "cb9f9717f9c796f868918297787c1ee8d1db3b43df3556bafde101d4d8b388c3"
+            }
+            "coverage_square64_origin_tx32x32_split_01.avif" => {
+                "be7eab35fabf3bd1032e7f1da118d4d4010584789051da47d0ae9500e8aeaa2c"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };

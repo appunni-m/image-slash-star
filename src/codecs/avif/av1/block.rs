@@ -142,6 +142,19 @@ struct LossyLuma16x16Split {
 }
 
 #[derive(Clone, Copy)]
+struct LossyLuma32x32Child {
+    coefficients: Option<Lossy32x32TransformCoefficients>,
+    residual_context: u8,
+}
+
+#[derive(Clone, Copy)]
+struct LossyLuma64x64Split {
+    children: [LossyLuma32x32Child; 4],
+    right_contexts: [u8; 2],
+    bottom_contexts: [u8; 2],
+}
+
+#[derive(Clone, Copy)]
 struct LossyLuma16x16HorizontalSplit {
     coefficients: [Option<Lossy16x16TransformCoefficients>; 2],
     transforms: [Lossy16x16TransformKind; 2],
@@ -206,6 +219,7 @@ struct BlockSyntax {
     lossy_luma_16x32_coefficients: Option<Lossy16x32TransformCoefficients>,
     lossy_luma_16x32_transform: Lossy16x16TransformKind,
     lossy_luma_64x64_coefficients: Option<Lossy32x32TransformCoefficients>,
+    lossy_luma_64x64_split: Option<LossyLuma64x64Split>,
     lossy_luma_8x32_coefficients: Option<Lossy8x32TransformCoefficients>,
     lossy_luma_16x64_coefficients: Option<Lossy16x64TransformCoefficients>,
     lossy_luma_32x16_coefficients: Option<Lossy32x16TransformCoefficients>,
@@ -849,6 +863,7 @@ enum CoefficientSkipCdf {
     LossyLuma8x8Context(usize),
     LossyLuma16x16Context(usize),
     LossyLuma32x16Context(usize),
+    LossyLuma32x32Context(usize),
     Base,
     OneNonzeroNeighbor,
     TwoNonzeroNeighbors,
@@ -1033,6 +1048,8 @@ pub(super) fn filter_transform_dimensions(
             TransformGrid::Vertical16x64 => (16, 16),
             // R64x16 depth one terminates in two R32x16 children.
             TransformGrid::Horizontal64x16 => (32, 16),
+            // S64x64 depth one terminates in four TX32x32 children.
+            TransformGrid::Square64 => (32, 32),
             _ => return None,
         }
     } else {
@@ -1407,6 +1424,7 @@ struct BlockCdfs {
     lossy_luma_16x16_coefficient_skip: [u16; 2],
     lossy_luma_16x16_coefficient_skip_contexts: [[u16; 2]; 7],
     lossy_luma_32x16_coefficient_skip_contexts: [[u16; 2]; 7],
+    lossy_luma_32x32_coefficient_skip_contexts: [[u16; 2]; 7],
     lossy_luma_32x32_coefficient_skip: [u16; 2],
     lossy_luma_64x64_coefficient_skip: [u16; 2],
     lossy_luma_32x32_eob_bin: [u16; 11],
@@ -3174,6 +3192,13 @@ const QCAT3_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
     [1_284, 0],
 ];
 
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[*].skip[3][0..=6]`, complemented
+// for the safe inverse-CDF range decoder. A depth-one S64x64 luma split has
+// TX32x32 children but uses the same transform-context-three skip sentence.
+const QCAT0_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT0_LUMA_32X16_SKIP_CONTEXTS;
+const QCAT2_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
+const QCAT3_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
+
 // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:277-290 (`txsz`). AV1 stores these
 // probabilities in the source form; the portable range decoder keeps their
 // complements. The final slot in every row is the adaptive-update count.
@@ -3911,6 +3936,7 @@ impl BlockCdfs {
             lossy_luma_16x16_coefficient_skip: [405, 0],
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
             lossy_luma_32x16_coefficient_skip_contexts: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
+            lossy_luma_32x32_coefficient_skip_contexts: QCAT0_LUMA_32X32_SKIP_CONTEXTS,
             // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3][0]`
             // for the shared transform-context-three luma family. The
             // range decoder stores the complemented CDF value used by the
@@ -4337,6 +4363,7 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT2_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_16x16_coefficient_skip_contexts = QCAT2_LUMA_16X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
+                cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT2_LUMA_32X32_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT2_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT2_LUMA_8X8_EOB_BIN_1D;
                 cdfs.lossy_luma_8x8_eob_high = QCAT2_LUMA_8X8_EOB_HIGH;
@@ -4357,6 +4384,11 @@ impl BlockCdfs {
                 cdfs.lossy_luma_32x16_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
                 cdfs.lossy_luma_32x32_eob_base = QCAT2_LUMA_32X32_EOB_BASE;
                 cdfs.lossy_luma_32x32_base = QCAT2_LUMA_32X32_BASE;
+                // The TX32 children of a depth-one S64x64 split use the
+                // qcat-two 1024-coefficient EOB-bin sentence. The source
+                // CDF exposes this row with the S64 family because it is
+                // shared by the split's terminal children.
+                cdfs.lossy_luma_32x32_eob_bin = QCAT2_LUMA_64X64_EOB_BIN;
                 // qcat two has its own initial value for the shared
                 // transform-context-three luma skip sentence.
                 cdfs.lossy_luma_32x32_coefficient_skip = [2_099, 0];
@@ -4397,6 +4429,7 @@ impl BlockCdfs {
             3 => {
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
+                cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT3_LUMA_32X32_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT3_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT3_LUMA_8X8_EOB_BIN_1D;
                 cdfs.lossy_luma_8x8_eob_high = QCAT3_LUMA_8X8_EOB_HIGH;
@@ -5826,6 +5859,9 @@ fn coefficient_residual_context(coefficients: &[i32]) -> u8 {
 }
 
 fn lossy_luma_context(syntax: &BlockSyntax) -> u8 {
+    if let Some(split) = syntax.lossy_luma_64x64_split.as_ref() {
+        return split.children[3].residual_context;
+    }
     if let Some(context) = syntax.lossy_luma_residual_context {
         return context;
     }
@@ -5995,6 +6031,9 @@ fn decode_contextual_skip(
         }
         CoefficientSkipCdf::LossyLuma32x16Context(context) => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_32x16_coefficient_skip_contexts[context])
+        }
+        CoefficientSkipCdf::LossyLuma32x32Context(context) => {
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip_contexts[context])
         }
         CoefficientSkipCdf::Base => {
             decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
@@ -7568,7 +7607,8 @@ fn decode_lossy_luma_32x32_coefficients(
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
     eob_bin: u32,
-) -> PortableResult<Lossy32x32TransformCoefficients> {
+    dc_sign_context: usize,
+) -> PortableResult<(Lossy32x32TransformCoefficients, u8)> {
     let matrix_values = luma_32x32_matrix(quantization)?;
     if eob_bin == 0 {
         let eob_base = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_base[0], 2);
@@ -7577,7 +7617,7 @@ fn decode_lossy_luma_32x32_coefficients(
         } else {
             eob_base.saturating_add(1)
         };
-        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
+        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
         let mut coefficients = [0_i32; 1024];
         coefficients[0] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
             decoder,
@@ -7589,7 +7629,8 @@ fn decode_lossy_luma_32x32_coefficients(
             1,
         )?
         .0;
-        return Ok(coefficients);
+        let residual_context = coefficient_residual_context(&coefficients);
+        return Ok((coefficients, residual_context));
     }
 
     let eob = if eob_bin > 1 {
@@ -7715,7 +7756,7 @@ fn decode_lossy_luma_32x32_coefficients(
 
     let mut coefficients = [0_i32; 1024];
     if dc_token != 0 {
-        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][0]);
+        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
         coefficients[0] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
             decoder,
             dc_token,
@@ -7740,7 +7781,8 @@ fn decode_lossy_luma_32x32_coefficients(
         )?
         .0;
     }
-    Ok(coefficients)
+    let residual_context = coefficient_residual_context(&coefficients);
+    Ok((coefficients, residual_context))
 }
 
 fn decode_lossy_luma_8x16_coefficients(
@@ -10331,6 +10373,93 @@ fn decode_lossy_luma_16x16_split(
     })
 }
 
+/// Decode the four TX32x32 children of a depth-one S64x64 luma transform.
+///
+/// The child order is row-major. Each child consumes one contextual skip
+/// sentence and, when coded, the existing TX32x32 coefficient syntax. Its
+/// residual context is then published to the next child on the same row or
+/// column and retained for the block's CDEF and following-leaf edges.
+fn decode_lossy_luma_32x32_split(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    mut above_contexts: [u8; 16],
+    mut left_contexts: [u8; 16],
+) -> PortableResult<LossyLuma64x64Split> {
+    let mut children = [LossyLuma32x32Child {
+        coefficients: None,
+        residual_context: 0x40,
+    }; 4];
+    let mut right_contexts = [0x40_u8; 2];
+    let mut bottom_contexts = [0x40_u8; 2];
+
+    for (child_index, child) in children.iter_mut().enumerate() {
+        let row = child_index / 2;
+        let column = child_index % 2;
+        let above: [u8; 8] = std::array::from_fn(|index| above_contexts[column * 8 + index]);
+        let left: [u8; 8] = std::array::from_fn(|index| left_contexts[row * 8 + index]);
+        let above_context = above
+            .iter()
+            .copied()
+            .fold(0_u8, |context, value| context | value);
+        let left_context = left
+            .iter()
+            .copied()
+            .fold(0_u8, |context, value| context | value);
+        let skipped = decode_contextual_skip(
+            decoder,
+            0,
+            CoefficientSkipCdf::LossyLuma32x32Context(luma_skip_context(
+                above_context,
+                left_context,
+            )),
+            cdfs,
+        );
+        if skipped {
+            above_contexts[column * 8..column * 8 + 8].fill(0x40);
+            left_contexts[row * 8..row * 8 + 8].fill(0x40);
+            if column == 1 {
+                right_contexts[row] = 0x40;
+            }
+            if row == 1 {
+                bottom_contexts[column] = 0x40;
+            }
+            cdfs.last_lossy_luma_residual_context = Some(0x40);
+            continue;
+        }
+
+        let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10);
+        let dc_sign_context = coefficient_dc_sign_context_for_dimensions(8, 8, &above, &left);
+        let coefficients_result = decode_lossy_luma_32x32_coefficients(
+            decoder,
+            cdfs,
+            quantization,
+            eob_bin,
+            dc_sign_context,
+        );
+        let (transform_coefficients, residual_context) = coefficients_result?;
+        *child = LossyLuma32x32Child {
+            coefficients: Some(transform_coefficients),
+            residual_context,
+        };
+        above_contexts[column * 8..column * 8 + 8].fill(residual_context);
+        left_contexts[row * 8..row * 8 + 8].fill(residual_context);
+        if column == 1 {
+            right_contexts[row] = residual_context;
+        }
+        if row == 1 {
+            bottom_contexts[column] = residual_context;
+        }
+        cdfs.last_lossy_luma_residual_context = Some(residual_context);
+    }
+
+    Ok(LossyLuma64x64Split {
+        children,
+        right_contexts,
+        bottom_contexts,
+    })
+}
+
 fn decode_lossy_luma_16x16_horizontal_split(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     luma_mode: usize,
@@ -11351,6 +11480,7 @@ fn decode_lossy_large_two_d_coefficients(
     let chroma_matrix_values = match cdf_set {
         LossyLargeCdfSet::Chroma16x4 => chroma_16x4_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x16 => chroma_16x16_matrix(quantization, plane)?,
+        LossyLargeCdfSet::Chroma32x32 => chroma_32x32_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x32 => chroma_16x32_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
@@ -11421,12 +11551,14 @@ fn decode_lossy_large_two_d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        // The compact 64-coefficient tables are indexed by the exponent
-        // (`eob_bin - 2`). The new R16x32 chroma table retains two leading
-        // padding entries so its Rust index is the decoded EOB-bin symbol,
-        // matching dav1d's `eob_hi_bit[...][eob_bin]` access.
+        // Most compact EOB-high tables are indexed by the exponent
+        // (`eob_bin - 2`). The R16x32 and S32x32 chroma tables retain two
+        // leading padding entries so their Rust index is the decoded EOB-bin
+        // symbol, matching dav1d's `eob_hi_bit[...][eob_bin]` access.
         let eob_bin_index = match cdf_set {
-            LossyLargeCdfSet::Luma4x16 | LossyLargeCdfSet::Chroma16x32 => {
+            LossyLargeCdfSet::Luma4x16
+            | LossyLargeCdfSet::Chroma16x32
+            | LossyLargeCdfSet::Chroma32x32 => {
                 usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?
             }
             _ => usize::try_from(eob_bin.saturating_sub(2)).map_err(|_| PortableUnavailable)?,
@@ -12211,7 +12343,8 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Vertical16x32
         | TransformGrid::Vertical16x64
         | TransformGrid::Horizontal64x16
-        | TransformGrid::Square32 => 7,
+        | TransformGrid::Square32
+        | TransformGrid::Square64 => 7,
         _ => 10,
     };
     let transform_context = match transform_grid {
@@ -12668,8 +12801,8 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
 
     if matches!(transform_grid, TransformGrid::Square32) {
         let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10);
-        let coefficients =
-            decode_lossy_luma_32x32_coefficients(decoder, cdfs, quantization, eob_bin)?;
+        let (coefficients, _) =
+            decode_lossy_luma_32x32_coefficients(decoder, cdfs, quantization, eob_bin, 0)?;
         return Ok((
             [[0_i32; 16]; 64],
             None,
@@ -13344,6 +13477,7 @@ fn luma_32x32_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
         return Ok(None);
     }
     match quantization.matrix_y {
+        9 => Ok(Some(&quantization::Y_32X32_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_32X32_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
@@ -13415,6 +13549,19 @@ fn chroma_16x32_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X32_MATRIX_2)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X32_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
+fn chroma_32x32_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_32X32_MATRIX_9)),
         _ => Err(PortableUnavailable),
     }
 }
@@ -14569,6 +14716,7 @@ fn decode_syntax_with_cdef(
                         | TransformGrid::Square8
                         | TransformGrid::Square16
                         | TransformGrid::Square32
+                        | TransformGrid::Square64
                         | TransformGrid::Vertical8x16
                         | TransformGrid::Vertical16x32
                         | TransformGrid::Vertical16x64
@@ -14592,6 +14740,7 @@ fn decode_syntax_with_cdef(
     let mut lossy_luma_16x32_coefficients = None;
     let mut lossy_luma_16x32_transform = Lossy16x16TransformKind::DctDct;
     let mut lossy_luma_64x64_coefficients = None;
+    let mut lossy_luma_64x64_split = None;
     let mut lossy_luma_8x32_coefficients = None;
     let mut lossy_luma_16x64_coefficients = None;
     let mut lossy_luma_32x16_coefficients = None;
@@ -14792,6 +14941,21 @@ fn decode_syntax_with_cdef(
                     )?;
                     cdfs.last_lossy_luma_residual_context = Some(split.bottom_contexts[1]);
                     lossy_luma_16x16_split = Some(split);
+                    return Ok([[0_i32; 16]; 64]);
+                }
+                if matches!(transform_grid, TransformGrid::Square64)
+                    && transform_depth == 1
+                    && plane == 0
+                {
+                    let split = decode_lossy_luma_32x32_split(
+                        decoder,
+                        cdfs,
+                        lossy_quantization,
+                        above_luma_contexts,
+                        left_luma_contexts,
+                    )?;
+                    cdfs.last_lossy_luma_residual_context = Some(split.bottom_contexts[1]);
+                    lossy_luma_64x64_split = Some(split);
                     return Ok([[0_i32; 16]; 64]);
                 }
                 if matches!(transform_grid, TransformGrid::Vertical16x32) {
@@ -15071,6 +15235,9 @@ fn decode_syntax_with_cdef(
                 }
                 if matches!(transform_grid, TransformGrid::Square64) {
                     if plane == 0 {
+                        if transform_depth != 0 {
+                            return Err(PortableUnavailable);
+                        }
                         let skipped =
                             decoder.adaptive_bool(&mut cdfs.lossy_luma_64x64_coefficient_skip);
                         if !skipped {
@@ -16001,24 +16168,9 @@ fn decode_syntax_with_cdef(
     let coefficients = if skip {
         [[[0_i32; 16]; 64]; 3]
     } else {
-        let plane0 = match decode_plane(decoder, 0, cdfs) {
-            Ok(plane) => plane,
-            Err(error) => {
-                return Err(error);
-            }
-        };
-        let plane1 = match decode_plane(decoder, 1, cdfs) {
-            Ok(plane) => plane,
-            Err(error) => {
-                return Err(error);
-            }
-        };
-        let plane2 = match decode_plane(decoder, 2, cdfs) {
-            Ok(plane) => plane,
-            Err(error) => {
-                return Err(error);
-            }
-        };
+        let plane0 = decode_plane(decoder, 0, cdfs)?;
+        let plane1 = decode_plane(decoder, 1, cdfs)?;
+        let plane2 = decode_plane(decoder, 2, cdfs)?;
         [plane0, plane1, plane2]
     };
     let lossy_luma_residual_context = cdfs.last_lossy_luma_residual_context.take();
@@ -16039,6 +16191,7 @@ fn decode_syntax_with_cdef(
             lossy_luma_16x32_coefficients,
             lossy_luma_16x32_transform,
             lossy_luma_64x64_coefficients,
+            lossy_luma_64x64_split,
             lossy_luma_8x32_coefficients,
             lossy_luma_16x64_coefficients,
             lossy_luma_32x16_coefficients,
@@ -17951,6 +18104,47 @@ fn reconstruct_lossy_32x32_from_prediction(
     let coefficients = coefficients.unwrap_or([0_i32; 1024]);
     let residual = transform::inverse_dct32x32(&coefficients);
     reconstruct_lossy_predicted_plane(&prediction, &residual)
+}
+
+/// Reconstruct a depth-one S64x64 luma split using the origin's prepared
+/// missing edges. Children are emitted row-major so each child can use the
+/// already reconstructed TX32x32 block above or to its left as an intra edge.
+fn reconstruct_lossy_luma_64x64_split_dc(split: LossyLuma64x64Split) -> ReconstructedPlane {
+    let mut samples = vec![0_u16; 4096];
+    for (child_index, child) in split.children.into_iter().enumerate() {
+        let row = child_index / 2;
+        let column = child_index % 2;
+        let offset_x = column * 32;
+        let offset_y = row * 32;
+        let top = std::array::from_fn(|index| {
+            if row == 0 {
+                127
+            } else {
+                samples[(offset_y - 1) * 64 + offset_x + index]
+            }
+        });
+        let left = std::array::from_fn(|index| {
+            if column == 0 {
+                129
+            } else {
+                samples[(offset_y + index) * 64 + offset_x - 1]
+            }
+        });
+        let predictor = match (row, column) {
+            (0, 0) => 128,
+            (0, 1) => one_sided_dc_predictor_32(left),
+            (1, 0) => one_sided_dc_predictor_32(top),
+            _ => dc_predictor_32(top, left),
+        };
+        let block = reconstruct_lossy_32x32_from_prediction([predictor; 1024], child.coefficients);
+        for block_row in 0..32 {
+            let source_start = block_row * 32;
+            let output_start = (offset_y + block_row) * 64 + offset_x;
+            samples[output_start..output_start + 32]
+                .copy_from_slice(&block.samples[source_start..source_start + 32]);
+        }
+    }
+    ReconstructedPlane { samples }
 }
 
 fn reconstruct_lossy_luma_16x64(
@@ -23982,6 +24176,7 @@ fn reconstruct_leaf_with_luma_override(
         lossy_luma_16x32_coefficients,
         lossy_luma_16x32_transform,
         lossy_luma_64x64_coefficients,
+        lossy_luma_64x64_split,
         lossy_luma_8x32_coefficients,
         lossy_luma_16x64_coefficients,
         lossy_luma_32x16_coefficients,
@@ -24362,11 +24557,20 @@ fn reconstruct_leaf_with_luma_override(
             let chroma_v = chroma(2);
             [luma, chroma_u, chroma_v]
         }
-        ReconstructionPolicy::Lossy420Dct64x64 => [
-            reconstruct_lossy_luma_64x64(predictors[0], lossy_luma_64x64_coefficients),
-            reconstruct_lossy_chroma_32x32(predictors[1], lossy_chroma_32x32_coefficients[0]),
-            reconstruct_lossy_chroma_32x32(predictors[2], lossy_chroma_32x32_coefficients[1]),
-        ],
+        ReconstructionPolicy::Lossy420Dct64x64 => {
+            let luma = luma_override.unwrap_or_else(|| {
+                if let Some(split) = lossy_luma_64x64_split {
+                    reconstruct_lossy_luma_64x64_split_dc(split)
+                } else {
+                    reconstruct_lossy_luma_64x64(predictors[0], lossy_luma_64x64_coefficients)
+                }
+            });
+            [
+                luma,
+                reconstruct_lossy_chroma_32x32(predictors[1], lossy_chroma_32x32_coefficients[0]),
+                reconstruct_lossy_chroma_32x32(predictors[2], lossy_chroma_32x32_coefficients[1]),
+            ]
+        }
         ReconstructionPolicy::Lossy420Dct16x32 => {
             let luma = if let Some(split) = lossy_luma_16x16_vertical_split {
                 reconstruct_lossy_luma_16x64_vertical_split(
@@ -26079,6 +26283,14 @@ fn one_sided_dc_predictor_32(edge: [u16; 32]) -> u16 {
     u16::try_from(sum.saturating_add(16).div_euclid(32)).unwrap_or(128)
 }
 
+fn dc_predictor_32(top: [u16; 32], left: [u16; 32]) -> u16 {
+    let sum = top
+        .iter()
+        .chain(&left)
+        .fold(0_u32, |sum, sample| sum.saturating_add(u32::from(*sample)));
+    u16::try_from(sum.saturating_add(32).div_euclid(64)).unwrap_or(128)
+}
+
 fn dc_predictor_16(top: [u16; 16], left: [u16; 16]) -> u16 {
     let sum = top
         .iter()
@@ -26276,6 +26488,7 @@ fn reconstruct_following_square_leaf(
         lossy_luma_16x16_horizontal_split: _,
         lossy_luma_32x16_horizontal_split: _,
         lossy_luma_16x16_vertical_split: _,
+        lossy_luma_64x64_split: _,
         lossy_luma_16x4_transform: _,
         lossy_luma_rect_coefficients: _,
         lossy_luma_rect_transform: _,
@@ -36255,6 +36468,13 @@ fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 16], [u8; 16]) {
         right[..4].fill(split.right_contexts[1]);
         bottom[..8].fill(split.bottom_contexts[0]);
         bottom[8..].fill(split.bottom_contexts[1]);
+    } else if let Some(split) = syntax.lossy_luma_64x64_split.as_ref() {
+        // The S64x64 depth-one tree has two TX32x32 children on each edge.
+        // Each child context covers eight 4x4 edge segments.
+        right[..8].fill(split.right_contexts[0]);
+        right[8..16].fill(split.right_contexts[1]);
+        bottom[..8].fill(split.bottom_contexts[0]);
+        bottom[8..16].fill(split.bottom_contexts[1]);
     } else if let Some(split) = syntax.lossy_luma_16x16_split.as_ref() {
         for (index, context) in split.right_contexts.into_iter().enumerate() {
             right[index * 4..index * 4 + 4].fill(context);
@@ -36501,6 +36721,7 @@ fn luma_transform_context(transform_grid: TransformGrid, split: bool) -> (u8, u8
             TransformGrid::Vertical16x64 => (2, 2),
             TransformGrid::Horizontal64x16 => (3, 2),
             TransformGrid::Square32 => (2, 2),
+            TransformGrid::Square64 => (3, 3),
             _ => (0, 0),
         };
     }
@@ -38764,6 +38985,14 @@ pub(super) fn decode_first_lossy_444_16x16_leaf(
     Ok(leaf)
 }
 
+fn reject_unhandled_lossy_luma_64x64_split(syntax: &BlockSyntax) -> PortableResult<()> {
+    syntax
+        .lossy_luma_64x64_split
+        .is_none()
+        .then_some(())
+        .portable()
+}
+
 /// Shared adaptive state for a sequence of lossy 4:2:0 leaves.
 ///
 /// AV1 updates the block CDFs after every symbol. A frame walker therefore
@@ -39031,6 +39260,7 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         )?;
+        reject_unhandled_lossy_luma_64x64_split(&syntax)?;
         self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
         let tx_context = luma_transform_context_for_syntax(
@@ -39186,6 +39416,7 @@ impl Lossy420Decoder {
                 return Err(PortableUnavailable);
             }
         };
+        reject_unhandled_lossy_luma_64x64_split(&syntax)?;
         self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
         let tx_context = luma_transform_context_for_syntax(
@@ -39437,6 +39668,7 @@ impl Lossy420Decoder {
             Ok(syntax) => syntax,
             Err(_) => return Err(PortableUnavailable),
         };
+        reject_unhandled_lossy_luma_64x64_split(&syntax)?;
 
         self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
@@ -39826,6 +40058,7 @@ impl Lossy420Decoder {
             Ok(syntax) => syntax,
             Err(_) => return Err(PortableUnavailable),
         };
+        reject_unhandled_lossy_luma_64x64_split(&syntax)?;
         self.remember_qindex(&syntax, decoder);
 
         let luma_context = lossy_luma_context(&syntax);
@@ -40874,6 +41107,7 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         )?;
+        reject_unhandled_lossy_luma_64x64_split(&syntax)?;
         self.remember_qindex(&syntax, decoder);
         let BlockSyntax {
             luma_predictor,
@@ -41037,6 +41271,16 @@ impl Lossy420Decoder {
             // explicit portable gap.
             return Err(PortableUnavailable);
         }
+        if matches!(transform_grid, TransformGrid::Square64)
+            && syntax.lossy_luma_64x64_split.is_some()
+            && luma_override.is_none()
+        {
+            // A Square64 split has four TX32x32 luma sentences. Falling back
+            // to the unsplit TX64x64 policy would silently discard that
+            // syntax, so unsupported predictor/tool combinations are an
+            // explicit portable gap.
+            return Err(PortableUnavailable);
+        }
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
         let tx_context = luma_transform_context_for_syntax(
@@ -41046,7 +41290,8 @@ impl Lossy420Decoder {
                 || syntax.lossy_luma_8x8_grid_split.is_some()
                 || syntax.lossy_luma_16x16_split.is_some()
                 || syntax.lossy_luma_32x16_horizontal_split.is_some()
-                || syntax.lossy_luma_16x16_vertical_split.is_some(),
+                || syntax.lossy_luma_16x16_vertical_split.is_some()
+                || syntax.lossy_luma_64x64_split.is_some(),
             syntax.lossy_luma_16x16_vertical_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
@@ -41075,7 +41320,8 @@ impl Lossy420Decoder {
                             || syntax.lossy_luma_8x8_grid_split.is_some()
                             || syntax.lossy_luma_16x16_split.is_some()
                             || syntax.lossy_luma_32x16_horizontal_split.is_some()
-                            || syntax.lossy_luma_16x16_vertical_split.is_some(),
+                            || syntax.lossy_luma_16x16_vertical_split.is_some()
+                            || syntax.lossy_luma_64x64_split.is_some(),
                         luma_edge_contexts,
                     ),
                     syntax.palette.cache_state(),
@@ -42453,6 +42699,20 @@ fn reconstruct_origin_luma_override(
             split,
         )?;
         return Ok(Some(luma));
+    }
+
+    if matches!(transform_grid, TransformGrid::Square64)
+        && let Some(split) = syntax.lossy_luma_64x64_split
+    {
+        if syntax.palette.is_present()
+            || !matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+            || !matches!(syntax.luma_predictor, LumaPredictor::Dc)
+            || syntax.luma_angle.is_some()
+            || syntax.filter_intra_mode.is_some()
+        {
+            return Err(PortableUnavailable);
+        }
+        return Ok(Some(reconstruct_lossy_luma_64x64_split_dc(split)));
     }
 
     if matches!(transform_grid, TransformGrid::Square16) && !syntax.palette.is_present() {

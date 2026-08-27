@@ -44,6 +44,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
 SQUARE32_SPLIT_TARGET_FIXTURES = frozenset(
     {"coverage_square32_origin_tx16x16_split_01.avif"}
 )
+SQUARE64_SPLIT_TARGET_FIXTURES = frozenset(
+    {"coverage_square64_origin_tx32x32_split_01.avif"}
+)
 SQUARE16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {"coverage_square16_filter_intra_mode0_01.avif"}
 )
@@ -968,6 +971,11 @@ EXPECTED_FIXTURES = {
         "file_sha256": "f4bf64e6de7a7265a1c5564324c812103135c043a05b7119ef4c97bf9892c987",
         "rgb_sha256": "6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b",
         "size": [32, 32],
+    },
+    "coverage_square64_origin_tx32x32_split_01.avif": {
+        "file_sha256": "657fa025c72a516cd0e2a6a8c1a6670e270bebbb301f39bb6a6858db65ced555",
+        "rgb_sha256": "be7eab35fabf3bd1032e7f1da118d4d4010584789051da47d0ae9500e8aeaa2c",
+        "size": [64, 64],
     },
     "coverage_r32x32_filter_intra_probe_01.avif": {
         "file_sha256": "2c4eb6014ec79e58d5fbc79b8e89024fbf624b918c4decee0cef790d98914c56",
@@ -1950,6 +1958,14 @@ def generate(
         target_executable, target_env = build_dav1d(
             dav1d_source, work / "target", meson, ninja, python_path
         )
+        square64_executable, square64_env = build_dav1d(
+            dav1d_source,
+            work / "square64",
+            meson,
+            ninja,
+            python_path,
+            square64_origin=True,
+        )
         square16_chroma_executable, square16_chroma_env = build_dav1d(
             dav1d_source,
             work / "square16-chroma",
@@ -1985,6 +2001,8 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_executable
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
+                else square64_executable
+                if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
@@ -2006,6 +2024,8 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_env
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
+                else square64_env
+                if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
