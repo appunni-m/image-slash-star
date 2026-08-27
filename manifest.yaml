@@ -4417,6 +4417,12 @@ formats:
       status: planned
       gap: Pure Rust AV1 still decoding does not yet cover 10/12-bit sample reconstruction and conversion.
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_10bit_444_lossless
+      description: Single-frame 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
+      test_assets:
+      - high_bitdepth_still_10bit_444_lossless.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: with_alpha
       description: AVIF with alpha channel
       test_assets:

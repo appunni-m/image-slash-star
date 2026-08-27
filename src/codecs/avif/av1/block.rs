@@ -12,6 +12,7 @@
 
 use super::entropy::RangeDecoder;
 use super::quantization;
+use super::sample_depth::SampleDepth;
 use super::transform;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1174,6 +1175,7 @@ pub(super) struct Lossless444Neighbors<'a> {
 /// Shared adaptive block state for the first complete 4:4:4 frame class.
 pub(super) struct Lossless444Decoder {
     cdfs: BlockCdfs,
+    sample_depth: SampleDepth,
 }
 
 impl MonochromeLeaf {
@@ -5971,6 +5973,21 @@ fn chroma_contextual_skip_cdf(above: u8, left: u8) -> CoefficientSkipCdf {
     }
 }
 
+fn single_transform_chroma_skip_cdf(above: u8, left: u8) -> CoefficientSkipCdf {
+    // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx()` in src/recon_tmpl.c:68-100.
+    // A 4x4 4:4:4 chroma transform uses the subsampled-chroma CDF family,
+    // even though the image itself is not subsampled.  For a single transform
+    // the transform-size context is zero; the two external coefficient edges
+    // select contexts seven, eight, or nine.
+    let skip_context = 7_usize
+        .saturating_add(usize::from(above != 0x40))
+        .saturating_add(usize::from(left != 0x40));
+    CoefficientSkipCdf::Subsampled {
+        transform_context: 0,
+        skip_context,
+    }
+}
+
 fn subsampled_chroma_one_neighbor_skip_cdf(context: u8) -> CoefficientSkipCdf {
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:59-105. A single 4x4
     // chroma transform in a following 8x8 4:2:0 luma leaf has exactly one
@@ -6120,7 +6137,19 @@ fn decode_contextual_top_left_color_coefficients(
             left_context = 0x40;
         }
         let above_context = above_contexts[column];
-        let skip_cdf = contextual_skip_cdf(plane, above_context, left_context)?;
+        let skip_cdf = if transform_grid_width == 1 && transform_grid_height == 1 {
+            if plane == 0 {
+                // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx()` in
+                // src/recon_tmpl.c:101-137. A BLOCK_4X4 luma leaf has the
+                // same dimensions as its TX_4X4 transform and therefore uses
+                // luma coefficient-skip context zero.
+                CoefficientSkipCdf::LumaContext(0)
+            } else {
+                single_transform_chroma_skip_cdf(above_context, left_context)
+            }
+        } else {
+            contextual_skip_cdf(plane, above_context, left_context)?
+        };
         let skipped = decode_contextual_skip(decoder, coefficient_context, skip_cdf, cdfs);
         let residual_context = if skipped {
             0x40
@@ -6313,7 +6342,17 @@ fn decode_contextual_following_coefficients(
             };
         }
         let above_context = above_contexts[column];
-        let skip_cdf = if general_luma && plane == 0 {
+        let skip_cdf = if general_luma && transform_grid_width == 1 && transform_grid_height == 1 {
+            if plane == 0 {
+                // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx()` in
+                // src/recon_tmpl.c:101-137. Every BLOCK_4X4 luma leaf uses
+                // context zero, including leaves reached through a horizontal
+                // or vertical split.
+                CoefficientSkipCdf::LumaContext(0)
+            } else {
+                single_transform_chroma_skip_cdf(above_context, left_context)
+            }
+        } else if general_luma && plane == 0 {
             contextual_skip_cdf(0, above_context, left_context)?
         } else if single_subsampled_chroma_transform {
             let external_context = match orientation {
@@ -6484,7 +6523,17 @@ fn decode_contextual_boundary_coefficients_general(
             left_context = left_contexts[row];
         }
         let above_context = above_contexts[column];
-        let skip_cdf = if plane == 0 {
+        let skip_cdf = if transform_grid_width == 1 && transform_grid_height == 1 {
+            if plane == 0 {
+                // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx()` in
+                // src/recon_tmpl.c:101-137. A BLOCK_4X4 luma leaf has the
+                // same dimensions as its TX_4X4 transform and therefore uses
+                // luma coefficient-skip context zero.
+                CoefficientSkipCdf::LumaContext(0)
+            } else {
+                single_transform_chroma_skip_cdf(above_context, left_context)
+            }
+        } else if plane == 0 {
             contextual_skip_cdf(0, above_context, left_context)?
         } else {
             chroma_contextual_skip_cdf(above_context, left_context)
@@ -21941,11 +21990,7 @@ fn reconstruct_lossy_luma_8x8_filter_intra_no_top(
                             sum.saturating_add(weight.saturating_mul(input))
                         });
                     let value = accumulator.saturating_add(8).div_euclid(16).clamp(0, 255);
-                    #[expect(
-                        clippy::cast_sign_loss,
-                        reason = "filter-intra output is explicitly clamped to eight-bit range"
-                    )]
-                    let value = value as u16;
+                    let value = u16::try_from(value).map_err(|_| PortableUnavailable)?;
                     prediction[(y.saturating_add(yy))
                         .saturating_mul(8)
                         .saturating_add(x.saturating_add(xx))] = value;
@@ -21989,10 +22034,6 @@ fn reconstruct_lossy_luma_8x8_filter_intra_no_top(
 /// subsequent groups use the already predicted row above and the previous
 /// pixel in the current rows. Keeping this as a checked slice operation makes
 /// the same state transition explicit without requiring a scratch pointer.
-#[expect(
-    clippy::arithmetic_side_effects,
-    reason = "filter-intra dimensions and edge lengths are validated before bounded indexing"
-)]
 fn reconstruct_filter_intra_prediction(
     mode: usize,
     width: usize,
@@ -22000,6 +22041,18 @@ fn reconstruct_filter_intra_prediction(
     top_left: u16,
     top: &[u16],
     left: &[u16],
+) -> PortableResult<Vec<u16>> {
+    reconstruct_filter_intra_prediction_with_max(mode, width, height, top_left, top, left, 255)
+}
+
+fn reconstruct_filter_intra_prediction_with_max(
+    mode: usize,
+    width: usize,
+    height: usize,
+    top_left: u16,
+    top: &[u16],
+    left: &[u16],
+    maximum: u16,
 ) -> PortableResult<Vec<u16>> {
     if mode >= FILTER_INTRA_TAPS.len()
         || width == 0
@@ -22059,12 +22112,8 @@ fn reconstruct_filter_intra_prediction(
                         taps.into_iter().zip(p).fold(0_i32, |sum, (weight, input)| {
                             sum.saturating_add(weight.saturating_mul(input))
                         });
-                    let value = (accumulator.saturating_add(8) >> 4).clamp(0, 255);
-                    #[expect(
-                        clippy::cast_sign_loss,
-                        reason = "filter-intra output is explicitly clamped to eight-bit range"
-                    )]
-                    let value = value as u16;
+                    let value = (accumulator.saturating_add(8) >> 4).clamp(0, i32::from(maximum));
+                    let value = u16::try_from(value).map_err(|_| PortableUnavailable)?;
                     let index = y
                         .saturating_add(yy)
                         .saturating_mul(width)
@@ -24937,6 +24986,13 @@ fn resolve_lossless_predictor(
     has_top: bool,
     has_left: bool,
 ) -> LosslessPredictor {
+    let predictor = match (predictor, has_top, has_left) {
+        (LosslessPredictor::Dc, _, _) => LosslessPredictor::Dc,
+        (LosslessPredictor::Paeth, false, false) => LosslessPredictor::Dc,
+        (LosslessPredictor::Paeth, true, false) => LosslessPredictor::Vertical,
+        (LosslessPredictor::Paeth, false, true) => LosslessPredictor::Horizontal,
+        (predictor, _, _) => predictor,
+    };
     let Some(angle) = angle else {
         return predictor;
     };
@@ -24986,6 +25042,7 @@ fn lossless444_external_edges(
     geometry: Lossless444BlockGeometry,
     plane: usize,
     above: bool,
+    sample_depth: SampleDepth,
 ) -> PortableResult<(Vec<u16>, bool)> {
     let length = if above {
         usize::try_from(geometry.width)
@@ -24995,11 +25052,12 @@ fn lossless444_external_edges(
         usize::try_from(geometry.height).map_err(|_| PortableUnavailable)?
     };
     let has_neighbor = neighbors.iter().any(Option::is_some) || (above && above_right.is_some());
-    let mut edge = vec![128_u16; length];
+    let midpoint = sample_depth.midpoint();
+    let mut edge = vec![midpoint; length];
     if !has_neighbor {
         return Ok((edge, false));
     }
-    let mut previous_sample = 128_u16;
+    let mut previous_sample = midpoint;
     for (index, sample) in edge.iter_mut().enumerate() {
         let offset = u32::try_from(index).map_err(|_| PortableUnavailable)?;
         let (x, y) = if above {
@@ -25049,11 +25107,13 @@ fn lossless444_external_below_left_edge(
     neighbors: [Option<&Lossless444Leaf>; 8],
     geometry: Lossless444BlockGeometry,
     plane: usize,
+    sample_depth: SampleDepth,
 ) -> PortableResult<Vec<u16>> {
     if !neighbors.iter().any(Option::is_some) {
         return Ok(Vec::new());
     }
-    let mut edge = vec![128_u16; 8];
+    let midpoint = sample_depth.midpoint();
+    let mut edge = vec![midpoint; 8];
     let Some(left_x) = geometry.origin_x.checked_sub(1) else {
         return Ok(edge);
     };
@@ -25073,7 +25133,7 @@ fn lossless444_external_below_left_edge(
             edge[index] = index
                 .checked_sub(1)
                 .and_then(|previous| edge.get(previous).copied())
-                .unwrap_or(128);
+                .unwrap_or(midpoint);
         }
     }
     Ok(edge)
@@ -25083,9 +25143,10 @@ fn lossless444_top_left(
     above_left: Option<&Lossless444Leaf>,
     geometry: Lossless444BlockGeometry,
     plane: usize,
+    sample_depth: SampleDepth,
 ) -> u16 {
     if geometry.origin_x == 0 || geometry.origin_y == 0 {
-        return 128;
+        return sample_depth.midpoint();
     }
     above_left
         .and_then(|leaf| {
@@ -25096,15 +25157,21 @@ fn lossless444_top_left(
                 geometry.origin_y.saturating_sub(1),
             )
         })
-        .unwrap_or(128)
+        .unwrap_or(sample_depth.midpoint())
 }
 
-fn lossless_dc_predictor(top: [u16; 4], left: [u16; 4], has_top: bool, has_left: bool) -> u16 {
+fn lossless_dc_predictor(
+    top: [u16; 4],
+    left: [u16; 4],
+    has_top: bool,
+    has_left: bool,
+    sample_depth: SampleDepth,
+) -> u16 {
     match (has_top, has_left) {
         (true, true) => dc_predictor(top, left),
         (true, false) => one_sided_dc_predictor_4(top),
         (false, true) => one_sided_dc_predictor_4(left),
-        (false, false) => 128,
+        (false, false) => sample_depth.midpoint(),
     }
 }
 
@@ -25118,6 +25185,7 @@ fn lossless_dc_predictor(top: [u16; 4], left: [u16; 4], has_top: bool, has_left:
 )]
 fn reconstruct_lossless_plane(
     geometry: Lossless444BlockGeometry,
+    sample_depth: SampleDepth,
     predictor: LosslessPredictor,
     angle: Option<i32>,
     coefficients: PlaneCoefficients,
@@ -25129,6 +25197,7 @@ fn reconstruct_lossless_plane(
     below_left: &[u16],
     enable_intra_edge_filter: bool,
     filter_intra_mode: Option<usize>,
+    smooth_edges: bool,
 ) -> PortableResult<ReconstructedPlane> {
     let (grid_width, grid_height, _) = geometry.transform_grid.properties();
     let coded_width = grid_width.saturating_mul(4);
@@ -25138,6 +25207,10 @@ fn reconstruct_lossless_plane(
     if width != coded_width || height != coded_height || top.len() < width || left.len() != height {
         return Err(PortableUnavailable);
     }
+    let top_default = sample_depth.top_edge_default();
+    let left_default = sample_depth.left_edge_default();
+    let midpoint = sample_depth.midpoint();
+    let maximum = i32::from(sample_depth.maximum());
     let z1_upsample =
         enable_intra_edge_filter && angle.is_some_and(|angle| 50 < angle && angle < 90);
     let z3_upsample =
@@ -25149,16 +25222,16 @@ fn reconstruct_lossless_plane(
     let effective_top = if has_top {
         top.to_vec()
     } else if has_left {
-        vec![left.first().copied().unwrap_or(129); width]
+        vec![left.first().copied().unwrap_or(left_default); width]
     } else {
-        vec![127_u16; width]
+        vec![top_default; width]
     };
     let effective_left = if has_left {
         left.to_vec()
     } else if has_top {
-        vec![effective_top.first().copied().unwrap_or(127); height]
+        vec![effective_top.first().copied().unwrap_or(top_default); height]
     } else {
-        vec![129_u16; height]
+        vec![left_default; height]
     };
     let diagonal_z2_edges = if angle.is_some_and(|angle| 90 < angle && angle < 180) {
         const DR_INTRA_DERIVATIVE: [i32; 44] = [
@@ -25186,7 +25259,7 @@ fn reconstruct_lossless_plane(
         let top_right = effective_top
             .get(width.saturating_sub(1))
             .copied()
-            .unwrap_or(127);
+            .unwrap_or(top_default);
         for index in 0..top_length {
             let sample = effective_top.get(index).copied().unwrap_or(top_right);
             let edge_index = left_length
@@ -25210,7 +25283,7 @@ fn reconstruct_lossless_plane(
         let dy = *DR_INTRA_DERIVATIVE.get(dy_index).portable()?;
         let max_base_y = width.saturating_add(height).saturating_sub(1);
         let mut edge = Vec::with_capacity(max_base_y.saturating_add(1));
-        let mut last = effective_left.first().copied().unwrap_or(129);
+        let mut last = effective_left.first().copied().unwrap_or(left_default);
         for row in 0..=max_base_y {
             if let Some(sample) = effective_left.get(row).copied() {
                 last = sample;
@@ -25248,7 +25321,7 @@ fn reconstruct_lossless_plane(
     let smooth_vertical = if matches!(predictor, LosslessPredictor::SmoothVertical) {
         Some((
             smooth_weight_table(height)?,
-            effective_left.last().copied().unwrap_or(129),
+            effective_left.last().copied().unwrap_or(left_default),
         ))
     } else {
         None
@@ -25259,7 +25332,7 @@ fn reconstruct_lossless_plane(
             effective_top
                 .get(width.saturating_sub(1))
                 .copied()
-                .unwrap_or(127),
+                .unwrap_or(top_default),
         ))
     } else {
         None
@@ -25277,8 +25350,8 @@ fn reconstruct_lossless_plane(
         let row = transform_index / grid_width;
         let block_x = column.saturating_mul(4);
         let block_y = row.saturating_mul(4);
-        let mut top_edge = [128_u16; 4];
-        let mut left_edge = [128_u16; 4];
+        let mut top_edge = [midpoint; 4];
+        let mut left_edge = [midpoint; 4];
         let top_available = row > 0 || has_top;
         let left_available = column > 0 || has_left;
         if row > 0 {
@@ -25353,19 +25426,26 @@ fn reconstruct_lossless_plane(
         } else {
             top_left
         };
-        let dc = lossless_dc_predictor(top_edge, left_edge, top_available, left_available);
+        let dc = lossless_dc_predictor(
+            top_edge,
+            left_edge,
+            top_available,
+            left_available,
+            sample_depth,
+        );
         let residual = inverse_wht_4x4(coefficient);
         let transform_predictor =
             resolve_lossless_predictor(predictor, angle, top_available, left_available);
         let filter_block_prediction = filter_intra_mode
             .map(|mode| {
-                reconstruct_filter_intra_prediction(
+                reconstruct_filter_intra_prediction_with_max(
                     mode,
                     4,
                     4,
                     prediction_top_left,
                     &top_edge,
                     &left_edge,
+                    sample_depth.maximum(),
                 )
             })
             .transpose()?;
@@ -25388,7 +25468,7 @@ fn reconstruct_lossless_plane(
                         // prediction edge.  For a lower transform row the
                         // top-right samples come from the already reconstructed
                         // row above, not from the coded leaf's outer edge.
-                        let mut edge = [127_u16; 8];
+                        let mut edge = [top_default; 8];
                         if block_y > 0 {
                             let start = (block_y.saturating_sub(1))
                                 .saturating_mul(coded_width)
@@ -25413,26 +25493,58 @@ fn reconstruct_lossless_plane(
                                 edge[available.len()..].fill(last);
                             }
                         }
-                        let upsampled_edge = upsample_intra_top_edge(edge, prediction_top_left);
+                        let filter_strength = if enable_intra_edge_filter && !z1_upsample {
+                            intra_edge_filter_strength(
+                                8,
+                                90_i32.saturating_sub(angle.ok_or(PortableUnavailable)?),
+                                smooth_edges,
+                            )
+                        } else {
+                            0
+                        };
+                        let filtered_edge = if filter_strength == 0 {
+                            edge
+                        } else {
+                            filter_intra_top_edge_8_with_max(
+                                edge,
+                                prediction_top_left,
+                                filter_strength,
+                                sample_depth.maximum(),
+                            )
+                        };
+                        let upsampled_edge = upsample_intra_top_edge_with_max(
+                            filtered_edge,
+                            prediction_top_left,
+                            sample_depth.maximum(),
+                        );
                         let (edge, max_base_x, dx) = if z1_upsample {
                             (&upsampled_edge[..], 14, (*dx).saturating_mul(2))
                         } else {
-                            (&edge[..], 7, *dx)
+                            (&filtered_edge[..], 7, *dx)
                         };
-                        diagonal_z1_predictor_sample(
+                        diagonal_z1_predictor_sample_with_max(
                             edge,
                             max_base_x,
                             dx,
                             if z1_upsample { 2 } else { 1 },
                             local_column,
                             local_row,
+                            sample_depth.maximum(),
                         )?
                     }
                     LosslessPredictor::DiagonalDownRight
                     | LosslessPredictor::Diagonal113
                     | LosslessPredictor::Diagonal157 => {
                         let (edge, left_length, dx, dy) = diagonal_z2_edges.as_ref().portable()?;
-                        diagonal_predictor_sample(edge, *left_length, *dx, *dy, x, y)?
+                        diagonal_predictor_sample_with_max(
+                            edge,
+                            *left_length,
+                            *dx,
+                            *dy,
+                            x,
+                            y,
+                            sample_depth.maximum(),
+                        )?
                     }
                     LosslessPredictor::Diagonal203 => {
                         let (_, _, dy) = diagonal_z3_edges.as_ref().portable()?;
@@ -25441,7 +25553,7 @@ fn reconstruct_lossless_plane(
                         // already reconstructed previous column and its
                         // bottom-left extension repeats the last available
                         // sample; it is not the outer leaf edge.
-                        let mut edge = [129_u16; 8];
+                        let mut edge = [left_default; 8];
                         if block_x > 0 {
                             let start = block_y
                                 .saturating_mul(coded_width)
@@ -25458,10 +25570,10 @@ fn reconstruct_lossless_plane(
                             let last = edge
                                 .get(available_height.saturating_sub(1))
                                 .copied()
-                                .unwrap_or(129);
+                                .unwrap_or(left_default);
                             edge[available_height..].fill(last);
                         } else {
-                            let fallback = effective_left.last().copied().unwrap_or(129);
+                            let fallback = effective_left.last().copied().unwrap_or(left_default);
                             for (index, sample) in edge.iter_mut().enumerate() {
                                 let global_index = block_y.saturating_add(index);
                                 if let Some(value) = effective_left.get(global_index) {
@@ -25475,19 +25587,43 @@ fn reconstruct_lossless_plane(
                                 }
                             }
                         }
-                        let upsampled_edge = upsample_intra_left_edge(edge, prediction_top_left);
+                        let filter_strength = if enable_intra_edge_filter && !z3_upsample {
+                            intra_edge_filter_strength(
+                                8,
+                                angle.ok_or(PortableUnavailable)?.saturating_sub(180),
+                                smooth_edges,
+                            )
+                        } else {
+                            0
+                        };
+                        let filtered_edge = if filter_strength == 0 {
+                            edge
+                        } else {
+                            filter_z2_left_edge_with_max(
+                                edge,
+                                prediction_top_left,
+                                filter_strength,
+                                sample_depth.maximum(),
+                            )
+                        };
+                        let upsampled_edge = upsample_intra_left_edge_with_max(
+                            filtered_edge,
+                            prediction_top_left,
+                            sample_depth.maximum(),
+                        );
                         let (edge, max_base_y, dy) = if z3_upsample {
                             (&upsampled_edge[..], 14, (*dy).saturating_mul(2))
                         } else {
-                            (&edge[..], 7, *dy)
+                            (&filtered_edge[..], 7, *dy)
                         };
-                        diagonal_z3_predictor_sample(
+                        diagonal_z3_predictor_sample_with_max(
                             edge,
                             max_base_y,
                             dy,
                             if z3_upsample { 2 } else { 1 },
                             local_column,
                             local_row,
+                            sample_depth.maximum(),
                         )?
                     }
                     LosslessPredictor::SmoothVertical => {
@@ -25502,7 +25638,7 @@ fn reconstruct_lossless_plane(
                             )
                             .saturating_add(128)
                             >> 8;
-                        u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?
                     }
                     LosslessPredictor::SmoothHorizontal => {
                         let (weights, right) = smooth_horizontal.as_ref().portable()?;
@@ -25516,7 +25652,7 @@ fn reconstruct_lossless_plane(
                             )
                             .saturating_add(128)
                             >> 8;
-                        u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?
                     }
                     LosslessPredictor::Smooth => {
                         let (horizontal_weights, vertical_weights) = smooth.as_ref().portable()?;
@@ -25525,8 +25661,8 @@ fn reconstruct_lossless_plane(
                         let right = effective_top
                             .get(width.saturating_sub(1))
                             .copied()
-                            .unwrap_or(127);
-                        let bottom = effective_left.last().copied().unwrap_or(129);
+                            .unwrap_or(top_default);
+                        let bottom = effective_left.last().copied().unwrap_or(left_default);
                         let value = vertical_weight
                             .saturating_mul(i32::from(*effective_top.get(x).portable()?))
                             .saturating_add(
@@ -25545,7 +25681,7 @@ fn reconstruct_lossless_plane(
                             )
                             .saturating_add(256)
                             >> 9;
-                        u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?
                     }
                     LosslessPredictor::Paeth => paeth_predictor(
                         top_edge[local_column],
@@ -25554,17 +25690,85 @@ fn reconstruct_lossless_plane(
                     ),
                 }
             };
-            let reconstructed = i32::from(prediction).saturating_add(value).clamp(0, 255);
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the reconstructed lossless sample is explicitly clamped to eight-bit range"
-            )]
-            let reconstructed = reconstructed as u16;
+            let reconstructed = i32::from(prediction)
+                .saturating_add(value)
+                .clamp(0, maximum);
+            let reconstructed = u16::try_from(reconstructed).map_err(|_| PortableUnavailable)?;
             *samples
                 .get_mut(y.saturating_mul(coded_width).saturating_add(x))
                 .portable()? = reconstructed;
         }
     }
+    Ok(ReconstructedPlane { samples })
+}
+
+fn reconstruct_lossless_cfl_sample(
+    predictor: u16,
+    alpha: i32,
+    ac: i32,
+    residual: i32,
+    sample_depth: SampleDepth,
+) -> PortableResult<u16> {
+    let scaled = alpha.saturating_mul(ac);
+    let magnitude = scaled.abs().saturating_add(32) >> 6;
+    let signed = if scaled < 0 {
+        magnitude.saturating_neg()
+    } else {
+        magnitude
+    };
+    let maximum = i32::from(sample_depth.maximum());
+    let cfl_prediction = i32::from(predictor)
+        .saturating_add(signed)
+        .clamp(0, maximum);
+    let reconstructed = cfl_prediction.saturating_add(residual).clamp(0, maximum);
+    u16::try_from(reconstructed).map_err(|_| PortableUnavailable)
+}
+
+/// Reconstruct a 4×4 full-resolution lossless chroma block with CFL.
+///
+/// Lossless full-resolution CFL is restricted to one 4×4 transform by the
+/// AV1 syntax. Its AC plane is the reconstructed luma block multiplied by
+/// eight and centered with the AV1 rounded mean; the ordinary chroma DC edge
+/// predictor is then adjusted by the signed alpha before the inverse WHT
+/// residual is added.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the CFL helper keeps the AV1 plane, depth, alpha, transform, and edge state explicit"
+)]
+fn reconstruct_lossless_full_4x4_cfl(
+    luma: &ReconstructedPlane,
+    sample_depth: SampleDepth,
+    alpha: i32,
+    coefficients: PlaneCoefficients,
+    top: &[u16],
+    left: &[u16],
+    has_top: bool,
+    has_left: bool,
+) -> PortableResult<ReconstructedPlane> {
+    if luma.samples.len() != 16 || top.len() < 4 || left.len() != 4 {
+        return Err(PortableUnavailable);
+    }
+    let mut ac = [0_i32; 16];
+    let mut sum = 8_i32;
+    for (index, sample) in luma.samples.iter().copied().enumerate() {
+        ac[index] = i32::from(sample).saturating_mul(8);
+        sum = sum.saturating_add(ac[index]);
+    }
+    let mean = sum >> 4;
+    for value in &mut ac {
+        *value = value.saturating_sub(mean);
+    }
+    let top = top[..4].try_into().map_err(|_| PortableUnavailable)?;
+    let left = left.try_into().map_err(|_| PortableUnavailable)?;
+    let predictor = lossless_dc_predictor(top, left, has_top, has_left, sample_depth);
+    let residual = inverse_wht_4x4(coefficients[0]);
+    let samples = residual
+        .into_iter()
+        .enumerate()
+        .map(|(index, value)| {
+            reconstruct_lossless_cfl_sample(predictor, alpha, ac[index], value, sample_depth)
+        })
+        .collect::<PortableResult<Vec<_>>>()?;
     Ok(ReconstructedPlane { samples })
 }
 
@@ -25575,6 +25779,7 @@ fn reconstruct_lossless_plane(
 fn reconstruct_lossless444_leaf(
     syntax: BlockSyntax,
     geometry: Lossless444BlockGeometry,
+    sample_depth: SampleDepth,
     above_left: Option<&Lossless444Leaf>,
     above: [Option<&Lossless444Leaf>; 8],
     above_right: Option<&Lossless444Leaf>,
@@ -25601,17 +25806,26 @@ fn reconstruct_lossless444_leaf(
         transform_grid,
         ..geometry
     };
-    let luma_edges = lossless444_external_edges(above, above_right, geometry, 0, true)?;
-    let luma_left = lossless444_external_edges(left, None, geometry, 0, false)?;
-    let u_edges = lossless444_external_edges(above, above_right, geometry, 1, true)?;
-    let u_left = lossless444_external_edges(left, None, geometry, 1, false)?;
-    let v_edges = lossless444_external_edges(above, above_right, geometry, 2, true)?;
-    let v_left = lossless444_external_edges(left, None, geometry, 2, false)?;
-    let luma_below_left = lossless444_external_below_left_edge(left_below, geometry, 0)?;
-    let u_below_left = lossless444_external_below_left_edge(left_below, geometry, 1)?;
-    let v_below_left = lossless444_external_below_left_edge(left_below, geometry, 2)?;
+    let luma_edges =
+        lossless444_external_edges(above, above_right, geometry, 0, true, sample_depth)?;
+    let luma_left = lossless444_external_edges(left, None, geometry, 0, false, sample_depth)?;
+    let u_edges = lossless444_external_edges(above, above_right, geometry, 1, true, sample_depth)?;
+    let u_left = lossless444_external_edges(left, None, geometry, 1, false, sample_depth)?;
+    let v_edges = lossless444_external_edges(above, above_right, geometry, 2, true, sample_depth)?;
+    let v_left = lossless444_external_edges(left, None, geometry, 2, false, sample_depth)?;
+    let luma_below_left =
+        lossless444_external_below_left_edge(left_below, geometry, 0, sample_depth)?;
+    let u_below_left = lossless444_external_below_left_edge(left_below, geometry, 1, sample_depth)?;
+    let v_below_left = lossless444_external_below_left_edge(left_below, geometry, 2, sample_depth)?;
+    let smooth_luma_edges = above.iter().chain(left.iter()).flatten().any(|leaf| {
+        matches!(
+            leaf.closed.luma_predictor,
+            LumaPredictor::Smooth | LumaPredictor::SmoothVertical | LumaPredictor::SmoothHorizontal
+        )
+    });
     let luma = reconstruct_lossless_plane(
         geometry,
+        sample_depth,
         lossless_luma_predictor(luma_predictor),
         luma_angle,
         coefficients[0],
@@ -25619,39 +25833,68 @@ fn reconstruct_lossless444_leaf(
         &luma_left.0,
         luma_edges.1,
         luma_left.1,
-        lossless444_top_left(above_left, geometry, 0),
+        lossless444_top_left(above_left, geometry, 0, sample_depth),
         &luma_below_left,
         enable_intra_edge_filter,
         filter_intra_mode,
+        smooth_luma_edges,
     )?;
-    let u = reconstruct_lossless_plane(
-        geometry,
-        lossless_chroma_predictor(chroma_predictor),
-        chroma_angle,
-        coefficients[1],
-        &u_edges.0,
-        &u_left.0,
-        u_edges.1,
-        u_left.1,
-        lossless444_top_left(above_left, geometry, 1),
-        &u_below_left,
-        enable_intra_edge_filter,
-        None,
-    )?;
-    let v = reconstruct_lossless_plane(
-        geometry,
-        lossless_chroma_predictor(chroma_predictor),
-        chroma_angle,
-        coefficients[2],
-        &v_edges.0,
-        &v_left.0,
-        v_edges.1,
-        v_left.1,
-        lossless444_top_left(above_left, geometry, 2),
-        &v_below_left,
-        enable_intra_edge_filter,
-        None,
-    )?;
+    let u = match chroma_predictor {
+        ChromaPredictor::Cfl { alpha_u, .. } => reconstruct_lossless_full_4x4_cfl(
+            &luma,
+            sample_depth,
+            alpha_u,
+            coefficients[1],
+            &u_edges.0,
+            &u_left.0,
+            u_edges.1,
+            u_left.1,
+        )?,
+        _ => reconstruct_lossless_plane(
+            geometry,
+            sample_depth,
+            lossless_chroma_predictor(chroma_predictor),
+            chroma_angle,
+            coefficients[1],
+            &u_edges.0,
+            &u_left.0,
+            u_edges.1,
+            u_left.1,
+            lossless444_top_left(above_left, geometry, 1, sample_depth),
+            &u_below_left,
+            enable_intra_edge_filter,
+            None,
+            false,
+        )?,
+    };
+    let v = match chroma_predictor {
+        ChromaPredictor::Cfl { alpha_v, .. } => reconstruct_lossless_full_4x4_cfl(
+            &luma,
+            sample_depth,
+            alpha_v,
+            coefficients[2],
+            &v_edges.0,
+            &v_left.0,
+            v_edges.1,
+            v_left.1,
+        )?,
+        _ => reconstruct_lossless_plane(
+            geometry,
+            sample_depth,
+            lossless_chroma_predictor(chroma_predictor),
+            chroma_angle,
+            coefficients[2],
+            &v_edges.0,
+            &v_left.0,
+            v_edges.1,
+            v_left.1,
+            lossless444_top_left(above_left, geometry, 2, sample_depth),
+            &v_below_left,
+            enable_intra_edge_filter,
+            None,
+            false,
+        )?,
+    };
     let planes = [luma, u, v];
     Ok(ClosedLeaf {
         luma_predictor,
@@ -36946,9 +37189,10 @@ impl Lossless444Leaf {
 }
 
 impl Lossless444Decoder {
-    pub(super) fn new() -> Self {
+    pub(super) fn new(sample_depth: SampleDepth) -> Self {
         Self {
             cdfs: BlockCdfs::defaults([24_902, 0]),
+            sample_depth,
         }
     }
 
@@ -36995,6 +37239,7 @@ impl Lossless444Decoder {
         let closed = reconstruct_lossless444_leaf(
             syntax,
             geometry,
+            self.sample_depth,
             None,
             [None; 8],
             None,
@@ -37104,6 +37349,7 @@ impl Lossless444Decoder {
         let closed = match reconstruct_lossless444_leaf(
             syntax,
             geometry,
+            self.sample_depth,
             above_left,
             above,
             above_right,
@@ -37435,6 +37681,18 @@ fn diagonal_predictor_sample(
     x: usize,
     y: usize,
 ) -> PortableResult<u16> {
+    diagonal_predictor_sample_with_max(edge, left_length, dx, dy, x, y, 255)
+}
+
+fn diagonal_predictor_sample_with_max(
+    edge: &[u16],
+    left_length: usize,
+    dx: i32,
+    dy: i32,
+    x: usize,
+    y: usize,
+    maximum: u16,
+) -> PortableResult<u16> {
     let x = i32::try_from(x).map_err(|_| PortableUnavailable)?;
     let y = i32::try_from(y).map_err(|_| PortableUnavailable)?;
     let xpos = 64_i32.saturating_sub(dx.saturating_mul(y.saturating_add(1)));
@@ -37476,7 +37734,7 @@ fn diagonal_predictor_sample(
             .saturating_add(32)
             >> 6
     };
-    u16::try_from(sample.clamp(0, 255)).map_err(|_| PortableUnavailable)
+    u16::try_from(sample.clamp(0, i32::from(maximum))).map_err(|_| PortableUnavailable)
 }
 
 /// Apply AV1's four-tap intra-edge upsampler to one eight-sample edge.
@@ -37581,6 +37839,15 @@ fn upsample_z2_left_edge(left: [u16; 8], top_left: u16) -> [u16; 17] {
 }
 
 fn filter_z2_left_edge(edge: [u16; 8], top_left: u16, strength: usize) -> [u16; 8] {
+    filter_z2_left_edge_with_max(edge, top_left, strength, 255)
+}
+
+fn filter_z2_left_edge_with_max(
+    edge: [u16; 8],
+    top_left: u16,
+    strength: usize,
+    maximum: u16,
+) -> [u16; 8] {
     if strength == 0 {
         return edge;
     }
@@ -37607,13 +37874,7 @@ fn filter_z2_left_edge(edge: [u16; 8], top_left: u16, strength: usize) -> [u16; 
             let source_index = usize::try_from(source_index).unwrap_or(0);
             sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
         }
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the filtered intra edge is explicitly clamped to eight-bit range"
-        )]
-        {
-            ((sum.saturating_add(8) >> 4).clamp(0, 255)) as u16
-        }
+        u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum))).unwrap_or(maximum)
     });
     std::array::from_fn(|index| {
         filtered_reverse[edge.len().saturating_sub(1).saturating_sub(index)]
@@ -37718,6 +37979,10 @@ fn filter_z2_top_edge(edge: [u16; 16], top_left: u16, strength: usize) -> [u16; 
 }
 
 fn upsample_intra_top_edge(edge: [u16; 8], top_left: u16) -> [u16; 15] {
+    upsample_intra_top_edge_with_max(edge, top_left, 255)
+}
+
+fn upsample_intra_top_edge_with_max(edge: [u16; 8], top_left: u16, maximum: u16) -> [u16; 15] {
     const KERNEL: [i32; 4] = [-1, 9, 9, -1];
     let mut upsampled = [0_u16; 15];
     for index in 0_usize..7 {
@@ -37738,14 +38003,9 @@ fn upsample_intra_top_edge(edge: [u16; 8], top_left: u16) -> [u16; 15] {
             };
             sum = sum.saturating_add(i32::from(sample).saturating_mul(weight));
         }
-        let filtered = (sum.saturating_add(8) >> 4).clamp(0, 255);
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the upsampled intra edge is explicitly clamped to eight-bit range"
-        )]
-        {
-            upsampled[index.saturating_mul(2).saturating_add(1)] = filtered as u16;
-        }
+        let filtered = (sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum));
+        upsampled[index.saturating_mul(2).saturating_add(1)] =
+            u16::try_from(filtered).unwrap_or(maximum);
     }
     upsampled[14] = edge[7];
     upsampled
@@ -37792,11 +38052,11 @@ fn upsample_intra_top_edge_16(edge: [u16; 16], top_left: u16) -> [u16; 31] {
 /// implementation walks the same edge backwards from the top-left corner.
 /// The ninth source sample is top-left, which matters for the last filter
 /// tap on non-flat edges.
-#[expect(
-    clippy::arithmetic_side_effects,
-    reason = "the fixed eight-sample edge makes every reversed index in range"
-)]
 fn upsample_intra_left_edge(edge: [u16; 8], top_left: u16) -> [u16; 15] {
+    upsample_intra_left_edge_with_max(edge, top_left, 255)
+}
+
+fn upsample_intra_left_edge_with_max(edge: [u16; 8], top_left: u16, maximum: u16) -> [u16; 15] {
     const KERNEL: [i32; 4] = [-1, 9, 9, -1];
     let source: [u16; 9] = std::array::from_fn(|index| {
         if index < edge.len() {
@@ -37816,14 +38076,9 @@ fn upsample_intra_left_edge(edge: [u16; 8], top_left: u16) -> [u16; 15] {
                 .min(source.len().saturating_sub(1));
             sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
         }
-        let filtered = (sum.saturating_add(8) >> 4).clamp(0, 255);
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the upsampled intra edge is explicitly clamped to eight-bit range"
-        )]
-        {
-            upsampled[index.saturating_mul(2).saturating_add(1)] = filtered as u16;
-        }
+        let filtered = (sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum));
+        upsampled[index.saturating_mul(2).saturating_add(1)] =
+            u16::try_from(filtered).unwrap_or(maximum);
     }
     upsampled[14] = source[7];
     let mut forward = [0_u16; 15];
@@ -37940,6 +38195,15 @@ fn filter_intra_top_edge_16(edge: [u16; 16], top_left: u16, strength: usize) -> 
 }
 
 fn filter_intra_top_edge_8(edge: [u16; 8], top_left: u16, strength: usize) -> [u16; 8] {
+    filter_intra_top_edge_8_with_max(edge, top_left, strength, 255)
+}
+
+fn filter_intra_top_edge_8_with_max(
+    edge: [u16; 8],
+    top_left: u16,
+    strength: usize,
+    maximum: u16,
+) -> [u16; 8] {
     const KERNELS: [[i32; 5]; 3] = [[0, 4, 8, 4, 0], [0, 5, 6, 5, 0], [2, 4, 4, 4, 2]];
     let kernel = KERNELS[strength.saturating_sub(1).min(2)];
     std::array::from_fn(|index| {
@@ -37955,13 +38219,7 @@ fn filter_intra_top_edge_8(edge: [u16; 8], top_left: u16, strength: usize) -> [u
                 };
                 sum.saturating_add(i32::from(source).saturating_mul(weight))
             });
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the filtered intra edge is explicitly clamped to eight-bit range"
-        )]
-        {
-            ((sum.saturating_add(8) >> 4).clamp(0, 255)) as u16
-        }
+        u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum))).unwrap_or(maximum)
     })
 }
 
@@ -38202,6 +38460,18 @@ fn diagonal_z3_predictor_sample(
     x: usize,
     y: usize,
 ) -> PortableResult<u16> {
+    diagonal_z3_predictor_sample_with_max(edge, max_base_y, dy, base_increment, x, y, 255)
+}
+
+fn diagonal_z3_predictor_sample_with_max(
+    edge: &[u16],
+    max_base_y: usize,
+    dy: i32,
+    base_increment: usize,
+    x: usize,
+    y: usize,
+    maximum: u16,
+) -> PortableResult<u16> {
     let x = i32::try_from(x).map_err(|_| PortableUnavailable)?;
     let y = i32::try_from(y).map_err(|_| PortableUnavailable)?;
     let base_increment = i32::try_from(base_increment).map_err(|_| PortableUnavailable)?;
@@ -38224,7 +38494,7 @@ fn diagonal_z3_predictor_sample(
         .saturating_add(second.saturating_mul(fraction))
         .saturating_add(32)
         >> 6;
-    u16::try_from(sample.clamp(0, 255)).map_err(|_| PortableUnavailable)
+    u16::try_from(sample.clamp(0, i32::from(maximum))).map_err(|_| PortableUnavailable)
 }
 
 fn diagonal_z1_predictor_sample(
@@ -38234,6 +38504,18 @@ fn diagonal_z1_predictor_sample(
     base_increment: usize,
     x: usize,
     y: usize,
+) -> PortableResult<u16> {
+    diagonal_z1_predictor_sample_with_max(edge, max_base_x, dx, base_increment, x, y, 255)
+}
+
+fn diagonal_z1_predictor_sample_with_max(
+    edge: &[u16],
+    max_base_x: usize,
+    dx: i32,
+    base_increment: usize,
+    x: usize,
+    y: usize,
+    maximum: u16,
 ) -> PortableResult<u16> {
     let x = i32::try_from(x).map_err(|_| PortableUnavailable)?;
     let y = i32::try_from(y).map_err(|_| PortableUnavailable)?;
@@ -38256,7 +38538,7 @@ fn diagonal_z1_predictor_sample(
         .saturating_add(second.saturating_mul(fraction))
         .saturating_add(32)
         >> 6;
-    u16::try_from(sample.clamp(0, 255)).map_err(|_| PortableUnavailable)
+    u16::try_from(sample.clamp(0, i32::from(maximum))).map_err(|_| PortableUnavailable)
 }
 
 fn monochrome_sample_from_above_neighbors(

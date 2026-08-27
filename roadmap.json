@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1519,
-      "decode_rows": 1122,
+      "total_rows": 1520,
+      "decode_rows": 1123,
       "encode_rows": 397,
-      "decode_active": 1115,
+      "decode_active": 1116,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 295,
-      "decode_active": 288,
+      "decode_rows": 296,
+      "decode_active": 289,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1283,8 +1283,20 @@
           "high_bitdepth"
         ],
         "deliverable": "Reconstruct 10/12-bit planes and apply checked sample-to-8-bit conversion with limits and cancellation.",
-        "current_evidence": "A checked pure-Rust sample-depth boundary now validates 8/10/12-bit nominal ranges and truncates validated samples to the required 8-bit boundary; the existing 8-bit public materializer uses that boundary. Entropy reconstruction, restoration, 4:2:2 decoding, and public high-depth materialization remain 8-bit-only gaps.",
-        "next": "Add high-depth AV1 block reconstruction and exact source-depth fixtures."
+        "current_evidence": "A checked pure-Rust sample-depth boundary now validates 8/10/12-bit nominal ranges and truncates validated samples to the required 8-bit boundary. The committed 16x16 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 still fixture now reconstructs Y/U/V in checked u16 arithmetic and matches the independent dav1d 1.5.3 plane oracle plus the Pillow 12.2.0 RGB8 reference exactly. Entropy reconstruction, restoration, 4:2:2 decoding, high-depth alpha/sequence materialization, HDR conversion, and 12-bit coverage remain open.",
+        "next": "Extend the proven 10-bit lossless 4:4:4 slice to the remaining 12-bit, subsampling, restoration, alpha/sequence, color-conversion, and limit/cancellation cases without widening the public acceptance boundary by guesswork.",
+        "active_slice": {
+          "id": "high_bitdepth_still_10bit_444_lossless",
+          "status": "completed",
+          "scope": "One 10-bit profile-1, full-range BT.601/SDR, single-frame, all-lossless, 4:4:4 AVIF class with checked u16 reconstruction and measured Pillow-compatible RGB8 output.",
+          "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_10bit_444_lossless.avif",
+          "independent_provenance": "Generated with AOM 3.13.0/libavif 1.4.1 and promoted only after pinned dav1d 1.5.3 reconstruction and Pillow 12.2.0 public RGB8 references matched exactly.",
+          "non_goals": [
+            "the existing 12-bit animated 10bit.avif row",
+            "HDR transfer/primaries conversion",
+            "high-depth alpha, grids, sequences, 4:2:0, 4:2:2, restoration, or encoding"
+          ]
+        }
       },
       "AVF-ALPHA-001": {
         "status": "implemented_for_fixture",
@@ -1352,6 +1364,20 @@
         64
       ],
       "mode": "Rgba8"
+    },
+    "active_high_bitdepth_fixture": {
+      "id": "high_bitdepth_still_10bit_444_lossless",
+      "fixture": "tests/fixtures/input/images/avif/high_bitdepth_still_10bit_444_lossless.avif",
+      "status": "completed",
+      "scope": "10-bit profile-1, full-range BT.601/SDR, single-frame, all-lossless 4:4:4 still; public output remains Rgb8 after checked conversion.",
+      "fixture_sha256": "c49589983c8492a12c3920123f9535c887b8715bf5cbdb25b57dfdad0d8c3c7e",
+      "reference_sha256": "e11c0ff053477c85dee9ef479a13777cb4677c5236f1a1e2b15423d12351a1c3",
+      "dimensions": [
+        16,
+        16
+      ],
+      "source_depth": 10,
+      "mode": "Rgb8"
     }
   },
 "finding_details": [

@@ -2298,8 +2298,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 });
                                 complete.then_some(edge)
                             })
-                        } else if (!full_resolution || width == 4)
-                            && (width == 4 || width == 16)
+                        } else if (width == 4 || (!full_resolution && width == 16))
                             && height == 16
                         {
                             let chroma_left_x = node.x.saturating_sub(node.x % 2);
@@ -3054,7 +3053,9 @@ pub(super) fn validate_complete_lossless_444_partition(
         return Ok(None);
     }
     let mut walker = PartitionWalker::new(&mut decoder, context);
-    let mut block_decoder = super::block::Lossless444Decoder::new();
+    let sample_depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+        .ok_or_else(|| malformed("unsupported lossless 4:4:4 sample depth"))?;
+    let mut block_decoder = super::block::Lossless444Decoder::new(sample_depth);
     let mut canvas =
         super::raster::FrameCanvas::new(context.frame_width, context.frame_height, false, false)?;
     let mut leaves = Vec::<super::block::Lossless444Leaf>::new();
@@ -3220,7 +3221,7 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
-    context.bit_depth == 8
+    matches!(context.bit_depth, 8 | 10)
         && !context.superres_enabled
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
@@ -3232,7 +3233,7 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0
-        && context.level == 1
+        && matches!(context.level, 0 | 1)
         && dimensions_are_supported
         && context.all_lossless
         && context.restoration_types == [None; 3]
