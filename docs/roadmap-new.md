@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 293 rows total, 286 active, 7 explicit planned
+- AVIF decode/inspect/verify: 294 rows total, 287 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,517 rows total, 1113 active decode rows, 365 active encode
+- Whole matrix: 1,518 rows total, 1114 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -1156,7 +1156,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,517 total | 1,120 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,113 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,518 total | 1,121 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,114 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2358,6 +2358,37 @@ The input-only campaign explored 100 candidates across 10 families and
 qualified five per orientation with `repository_rust_invoked=false`. This is
 bounded evidence only; broader rectangular predictors, filter-intra states,
 and AVF-STILL-001 remain partial.
+
+The newest rectangular-transform campaign tested three 100-candidate,
+input-only workloads with the pinned Pillow 12.2.0/libavif 1.4.1/libaom
+3.13.2 encoder and dav1d 1.5.3 decoder. The 16x8 origin Horizontal16x8
+IDTX/V_DCT search qualified 0/100, and the 16x16 PARTITION_H4
+Horizontal16x4 V_DCT/H_DCT search qualified 0/100. The predictor-enabled
+16x16 PARTITION_H4 Horizontal16x4 search qualified 2/100 for ADST-DCT and
+0/100 for ADST-ADST; it promoted `h16x4-f10-n00` for ADST-DCT. None of the
+campaigns invoked repository Rust, and each report records deterministic
+double-encode/item/trace predicates.
+
+The promoted `coverage_h16x4_predictor_adst_dct_01.avif` fixture is a 16x16
+8-bit 4:2:0 quality-26/speed-0 frame with four Horizontal16x4 luma leaves.
+Its pinned root partition is `poc=0,y=0,x=0,level=3,context=0,partition=8,
+range=43136`; the trace has 77 entropy operations and the encoded item is 35
+bytes. The four luma leaves use modes 12, 9, 0, and 9; the first luma leaf
+selects CDF transform symbol 5 / dav1d `txtp=1` (ADST-DCT), while the other
+three use DCT-DCT. Both chroma residuals are skipped with EOB -1, so this
+fixture does not prove the UV matrix-7 lookup. Exact evidence is fixture SHA
+`f736f845547eab5d301e5e2b5ae9b3f306224dea14179090679736c5eaecc535`, encoded
+item SHA `8a8a38d3ede09fabddb1775277c6337b5f0b0c487e78a4068b3d809f0adf172d`,
+Y SHA `978f0ef5c9800af08f2a938392d863e20c158d41230c5c91db0ff74c2c3f7c1d`,
+U/V SHA `1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68`,
+Pillow RGB SHA
+`84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167`, and
+trace SHA `62ab3da7e02c479ce6d2beff1a6774865fd00ee5cc8c22c664e66d4b3a0047f0`.
+The production fix seeds the H4 walker with the effective qindex for the
+qcat-three frame CDF state, admits only this narrow no-filter frame-tools
+class, and wires dav1d-verified luma matrix 6 for `RTX_16X4`. This closes only
+the predictor-enabled H16x4 ADST-DCT class; ADST-ADST, IDTX, V_DCT, H_DCT,
+broader rectangular states, and AVF-STILL-001 remain partial.
 
 Every row in this map is a pure safe-Rust task. A native oracle may explain a
 bitstream or provide an independent pixel reference, but it cannot satisfy the

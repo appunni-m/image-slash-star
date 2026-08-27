@@ -13432,6 +13432,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         return Ok(None);
     }
     match quantization.matrix_y {
+        6 => Ok(Some(&quantization::Y_16X4_MATRIX_6)),
         5 => Ok(Some(&quantization::Y_16X4_MATRIX_5)),
         8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
@@ -41616,7 +41617,7 @@ pub(super) fn decode_four_lossy_420_horizontal_leaves<F>(
 where
     F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
-    let mut state = Lossy420Decoder::new();
+    let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
     let first = state.decode_origin_without_chroma(
         decoder,
         16,
