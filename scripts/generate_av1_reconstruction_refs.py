@@ -53,6 +53,9 @@ SQUARE16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
 SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES = frozenset(
     {"coverage_square16_chroma_smooth_horizontal_01.avif"}
 )
+SQUARE16_CHROMA_SMOOTH_VERTICAL_TARGET_FIXTURES = frozenset(
+    {"coverage_square16_chroma_smooth_vertical_01.avif"}
+)
 VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
     {
         "coverage_vertical8x16_filter_intra_mode0_01.avif",
@@ -1015,6 +1018,11 @@ EXPECTED_FIXTURES = {
     "coverage_square16_chroma_smooth_horizontal_01.avif": {
         "file_sha256": "f81f98994be3ecce57b31a721d80af4c75ad31acf2ea45ace4a5d05d677cf1f3",
         "rgb_sha256": "cbca1ceee34545f791090f42e152e5bfd495f4ab0cefcce6d943c57ec8edc144",
+        "size": [32, 16],
+    },
+    "coverage_square16_chroma_smooth_vertical_01.avif": {
+        "file_sha256": "66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380",
+        "rgb_sha256": "76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258",
         "size": [32, 16],
     },
     "coverage_vertical8x16_filter_intra_mode0_01.avif": {
@@ -2001,6 +2009,7 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_executable
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
+                or name in SQUARE16_CHROMA_SMOOTH_VERTICAL_TARGET_FIXTURES
                 else square64_executable
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_executable
@@ -2024,6 +2033,7 @@ def generate(
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
                 else square16_chroma_env
                 if name in SQUARE16_CHROMA_SMOOTH_HORIZONTAL_TARGET_FIXTURES
+                or name in SQUARE16_CHROMA_SMOOTH_VERTICAL_TARGET_FIXTURES
                 else square64_env
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_env

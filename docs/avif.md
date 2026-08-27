@@ -61,10 +61,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 288 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 290 AVIF decode rows and 32 encode
 rows:
 
-- 281 decode rows are active: portable still reconstruction and structural
+- 283 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
@@ -207,6 +207,32 @@ with SHA-256
 `e8599c33aff2b5abc6baff55dc4cf571c1841d7fe683413b5c99e12b4f158e65`.
 This is bounded evidence for the nominal `ChromaPredictor::Diagonal45` arm,
 not general angular chroma or AV1 completion.
+
+The newest bounded following-leaf witness is
+`coverage_square16_chroma_smooth_vertical_01.avif`, a deterministic 32x16
+8-bit 4:2:0 clipped root split with origin and following `Square16` leaves at
+x=0 and x=4. The following leaf selects chroma `SmoothVertical` mode 10 with
+ADST-DCT TX8x8 U/V transforms and non-empty AC; both luma leaves use unsplit
+TX16x16 DCT-DCT transforms. Its pinned scalar dav1d trace has 239 entropy
+operations and partition ranges `38416/36560/44978`; safe Rust matches the
+exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes.
+The input-only campaign explored 100 candidates across 10 families, qualified
+9, and promoted `SV16-F06-N03` (seed 9053). It performed deterministic
+double-encode, double-item, double-trace, double-YUV, and double-RGB checks
+without invoking repository Rust. The fixture, encoded-item, Pillow RGB, and
+Y/U/V plane SHA-256 values are
+`66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380`,
+`4ee03bf0a854404d475cb478ff5346ead0ba4cc771f85c41ae06079e906e4768`,
+`76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258`,
+`8626df874e0d5890025bacfbed8d0b7907e67388275d9bfaaf172f5b4a8d5157`,
+`f82af4758130efa6d9b239f764d280e4ff797dcf170d4b90ecc2d387e8d5f977`, and
+`6685b6d534af785fb4975b72264fb1319bc57f215e0b73ce632422d82062b6e9`.
+The durable campaign report is
+`tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json`
+with SHA-256
+`d7155bcb67dd01c23ec7ddf7286dbf5530547d35ad8acf72d55ae907645996d9`.
+This closes only the bounded following-Square16/chroma-SmoothVertical/ADST-DCT
+class; broader AV1 and AVF-STILL-001 remain open.
 
 The newest following-leaf witness is
 `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
