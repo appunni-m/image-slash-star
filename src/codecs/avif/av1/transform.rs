@@ -2760,11 +2760,11 @@ mod tests {
     use super::{
         assert_rectangular_wrapper_conformance, inverse_adst_adst4x4, inverse_adst_adst4x8,
         inverse_adst_adst8x8, inverse_adst_adst16x8, inverse_adst_dct4x4, inverse_adst_dct4x8,
-        inverse_adst_dct8x8, inverse_adst_dct16x16, inverse_adst16, inverse_dct_adst4x4,
-        inverse_dct_adst4x8, inverse_dct_adst8x8, inverse_dct_adst8x16, inverse_dct_identity4x8,
-        inverse_dct_identity8x8, inverse_dct_identity16x4, inverse_dct4x4, inverse_dct4x8,
-        inverse_dct8x8, inverse_dct16x64, inverse_dct32x16, inverse_dct32x32, inverse_dct64x64,
-        inverse_identity_dct16x4, inverse_identity_dct16x8, inverse_identity16x4,
+        inverse_adst_dct4x16, inverse_adst_dct8x8, inverse_adst_dct16x16, inverse_adst16,
+        inverse_dct_adst4x4, inverse_dct_adst4x8, inverse_dct_adst8x8, inverse_dct_adst8x16,
+        inverse_dct_identity4x8, inverse_dct_identity8x8, inverse_dct_identity16x4, inverse_dct4x4,
+        inverse_dct4x8, inverse_dct8x8, inverse_dct16x64, inverse_dct32x16, inverse_dct32x32,
+        inverse_dct64x64, inverse_identity_dct16x4, inverse_identity_dct16x8, inverse_identity16x4,
         inverse_identity16x8,
     };
 
@@ -2895,6 +2895,29 @@ mod tests {
     fn zero_rectangular_transform_is_zero() {
         assert_eq!(inverse_dct_adst8x16(&[0; 128]), [0; 128]);
         assert_eq!(inverse_dct4x8(&[0; 32]), [0; 32]);
+    }
+
+    #[test]
+    fn r4x16_dct_adst_matches_dav1d_vertical4x16_witness() {
+        // Dequantized coefficients dumped by dav1d 1.5.3 for the third
+        // horizontal sibling of the pure-Rust AVIF coverage witness
+        // `coverage_v4x16_predictor_adst_adst_01.avif`. The four 16-value
+        // rows are AV1's column-major coefficient storage.
+        let coefficients = [
+            -3360, -104, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let expected = [
+            -24, -45, -61, -69, -24, -45, -61, -69, -24, -46, -61, -70, -25, -46, -62, -71, -25,
+            -47, -63, -71, -25, -47, -63, -72, -25, -47, -63, -72, -25, -47, -63, -72, -25, -47,
+            -63, -72, -24, -46, -62, -71, -24, -45, -61, -69, -23, -44, -59, -68, -23, -43, -58,
+            -66, -22, -42, -57, -65, -22, -41, -56, -63, -22, -41, -55, -63,
+        ];
+
+        // AV1 spells this transform in vertical-then-horizontal order:
+        // DCT_ADST is horizontal ADST followed by vertical DCT.
+        assert_eq!(inverse_adst_dct4x16(&coefficients), expected);
     }
 
     #[test]

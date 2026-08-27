@@ -16766,8 +16766,10 @@ fn reconstruct_lossy_luma_4x16_from_prediction(
         Lossy4x8TransformKind::IdentityDct => transform::inverse_identity_dct4x16(&coefficients),
         Lossy4x8TransformKind::DctIdentity => transform::inverse_dct_identity4x16(&coefficients),
         Lossy4x8TransformKind::AdstAdst => transform::inverse_adst_adst4x16(&coefficients),
-        Lossy4x8TransformKind::AdstDct => transform::inverse_adst_dct4x16(&coefficients),
-        Lossy4x8TransformKind::DctAdst => transform::inverse_dct_adst4x16(&coefficients),
+        // AV1 names rectangular transform axes vertical-then-horizontal;
+        // these safe kernels receive the width pass before the height pass.
+        Lossy4x8TransformKind::AdstDct => transform::inverse_dct_adst4x16(&coefficients),
+        Lossy4x8TransformKind::DctAdst => transform::inverse_adst_dct4x16(&coefficients),
     };
     let samples = prediction
         .into_iter()
