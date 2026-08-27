@@ -18837,6 +18837,81 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_h16x4_tx8x4_split_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "16x16 4:2:0 quality-24 speed-0 PARTITION_H4 witness with one following Horizontal16x4 leaf split into two TX8x4 luma transforms",
+          "asset": "coverage_h16x4_tx8x4_split_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "546b40c28569c5d751fd4ba435f73e9af91da1f2e773dce54e94d9b3fb27873d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_h16x4_tx8x4_split_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_h16x4_filter_intra_cdf14_false_01",
           "type": "decode",
           "format": "avif",
@@ -119723,12 +119798,12 @@
     }
   },
   "summary": {
-    "total_rows": 1521,
-    "decode_rows": 1124,
+    "total_rows": 1522,
+    "decode_rows": 1125,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1123,
-    "decode_active": 1117,
+    "assets_available": 1124,
+    "decode_active": 1118,
     "decode_planned": 7,
     "encode_not_wired": 32
   }

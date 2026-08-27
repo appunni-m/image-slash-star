@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 292 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 298 AVIF decode rows and 32 encode
 rows:
 
-- 285 decode rows are active: portable still reconstruction and structural
+- 291 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
   high-bit-depth reconstruction, HDR color handling, and three sequence cases.
