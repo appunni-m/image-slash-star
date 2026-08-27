@@ -278,9 +278,10 @@ struct CdefMetadata {
 }
 
 #[derive(Clone, Copy)]
-enum ChromaSampling {
+pub(super) enum ChromaSampling {
     Full,
     Subsampled420,
+    Subsampled422,
     Monochrome,
 }
 
@@ -412,16 +413,28 @@ const fn chroma_rect_transform_kind(predictor: ChromaPredictor) -> Lossy4x8Trans
 }
 
 impl ChromaSampling {
+    pub(super) const fn from_subsampling(subsampling_x: bool, subsampling_y: bool) -> Option<Self> {
+        match (subsampling_x, subsampling_y) {
+            (false, false) => Some(Self::Full),
+            (true, true) => Some(Self::Subsampled420),
+            (true, false) => Some(Self::Subsampled422),
+            (false, true) => None,
+        }
+    }
+
     const fn transform_grid(
         self,
         luma_grid_width: usize,
         luma_grid_height: usize,
         plane: usize,
     ) -> (usize, usize) {
-        if plane != 0 && matches!(self, Self::Subsampled420) {
-            (luma_grid_width.div_ceil(2), luma_grid_height.div_ceil(2))
-        } else {
-            (luma_grid_width, luma_grid_height)
+        if plane == 0 {
+            return (luma_grid_width, luma_grid_height);
+        }
+        match self {
+            Self::Subsampled420 => (luma_grid_width.div_ceil(2), luma_grid_height.div_ceil(2)),
+            Self::Subsampled422 => (luma_grid_width.div_ceil(2), luma_grid_height),
+            Self::Full | Self::Monochrome => (luma_grid_width, luma_grid_height),
         }
     }
 
@@ -12584,6 +12597,55 @@ fn lossy_420_chroma_skip_cdf(
     }
 }
 
+fn lossy_422_chroma_skip_cdf(
+    transform_grid: TransformGrid,
+    above_contexts: [u8; 8],
+    left_contexts: [u8; 8],
+) -> PortableResult<CoefficientSkipCdf> {
+    // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx` with ss_hor=1 and ss_ver=0.
+    // This slice admits only the exact Square16 terminal: its projected
+    // chroma footprint is 2x4 transform units (8x16 pixels), its dav1d
+    // transform context is 2, and its one-transform predicate is false.
+    // Other 4:2:2 geometries must remain typed unsupported until their
+    // complete block-dimension and transform tables are implemented.
+    let (luma_width, luma_height, _) = transform_grid.properties();
+    let chroma_width = luma_width.div_ceil(2);
+    let chroma_height = luma_height;
+    if !matches!(transform_grid, TransformGrid::Square16) || (chroma_width, chroma_height) != (2, 4)
+    {
+        return Err(PortableUnavailable);
+    }
+    let transform_context = 2;
+    // `dav1d_block_dimensions[BS_16X16][2..4]` is [2, 2] and
+    // `dav1d_txfm_dimensions[RTX_8X16]` is [1, 2]. Applying
+    // `get_skip_ctx`'s 4:2:2 shifts [ss_hor=1, ss_ver=0] therefore proves
+    // that this is the single-transform context.
+    let block_width_log2 = 2_usize;
+    let block_height_log2 = 2_usize;
+    let transform_width_log2 = 1_usize;
+    let transform_height_log2 = 2_usize;
+    let not_one_block = usize::from(
+        block_width_log2.saturating_sub(1) > transform_width_log2
+            || block_height_log2 > transform_height_log2,
+    );
+    if not_one_block != 0 {
+        return Err(PortableUnavailable);
+    }
+    let above_non_neutral = above_contexts[..chroma_width.min(8)]
+        .iter()
+        .any(|&context| context != 0x40);
+    let left_non_neutral = left_contexts[..chroma_height.min(8)]
+        .iter()
+        .any(|&context| context != 0x40);
+    Ok(CoefficientSkipCdf::Subsampled {
+        transform_context,
+        skip_context: 7
+            + not_one_block.saturating_mul(3)
+            + usize::from(above_non_neutral)
+            + usize::from(left_non_neutral),
+    })
+}
+
 fn lossy_full_chroma_skip_cdf(
     transform_grid: TransformGrid,
     above_contexts: [u8; 8],
@@ -12632,11 +12694,21 @@ fn lossy_chroma_skip_cdf_for_sampling(
     transform_grid: TransformGrid,
     above_contexts: [u8; 8],
     left_contexts: [u8; 8],
-) -> CoefficientSkipCdf {
+) -> PortableResult<CoefficientSkipCdf> {
     if matches!(chroma_sampling, ChromaSampling::Full) {
-        lossy_full_chroma_skip_cdf(transform_grid, above_contexts, left_contexts)
+        Ok(lossy_full_chroma_skip_cdf(
+            transform_grid,
+            above_contexts,
+            left_contexts,
+        ))
+    } else if matches!(chroma_sampling, ChromaSampling::Subsampled422) {
+        lossy_422_chroma_skip_cdf(transform_grid, above_contexts, left_contexts)
     } else {
-        lossy_420_chroma_skip_cdf(transform_grid, above_contexts, left_contexts)
+        Ok(lossy_420_chroma_skip_cdf(
+            transform_grid,
+            above_contexts,
+            left_contexts,
+        ))
     }
 }
 
@@ -12649,6 +12721,7 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     plane: usize,
     luma_mode: usize,
     _luma_predictor: LumaPredictor,
+    chroma_sampling: ChromaSampling,
     transform_grid: TransformGrid,
     quantization: LossyQuantization,
     cdfs: &mut BlockCdfs,
@@ -12661,7 +12734,12 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
         let skipped = decode_contextual_skip(
             decoder,
             1,
-            lossy_420_chroma_skip_cdf(transform_grid, above_chroma_contexts, left_chroma_contexts),
+            lossy_chroma_skip_cdf_for_sampling(
+                chroma_sampling,
+                transform_grid,
+                above_chroma_contexts,
+                left_chroma_contexts,
+            )?,
             cdfs,
         );
 
@@ -14478,6 +14556,15 @@ fn decode_syntax_with_cdef(
     tools: BlockTools,
     cdef_index_bits: u32,
 ) -> PortableResult<(BlockSyntax, CdefMetadata)> {
+    // The current pure-Rust 4:2:2 path is deliberately limited to the
+    // reference-proven Square16 terminal. Reject other geometries before
+    // reading even the block skip symbol; their transform/CDF tables are not
+    // implemented yet and must not be decoded with an accidental context.
+    if matches!(chroma_sampling, ChromaSampling::Subsampled422)
+        && !matches!(transform_grid, TransformGrid::Square16)
+    {
+        return Err(PortableUnavailable);
+    }
     let SyntaxPolicy {
         spatial_luma_context,
         coefficient_policy,
@@ -14591,7 +14678,10 @@ fn decode_syntax_with_cdef(
         11 if allow_smooth_luma => LumaPredictor::SmoothHorizontal,
         12 if matches!(
             chroma_sampling,
-            ChromaSampling::Monochrome | ChromaSampling::Full | ChromaSampling::Subsampled420
+            ChromaSampling::Monochrome
+                | ChromaSampling::Full
+                | ChromaSampling::Subsampled420
+                | ChromaSampling::Subsampled422
         ) =>
         {
             LumaPredictor::Paeth
@@ -14759,7 +14849,7 @@ fn decode_syntax_with_cdef(
             }
             chroma_predictor
         }
-        ChromaSampling::Subsampled420 => {
+        ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 => {
             // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1072-1078,
             // src/cdf.c:113-177, and the pinned Slice 32/33 scalar traces.
             // CFL follows dav1d's luma-block mask: luma blocks through 32×32
@@ -15330,7 +15420,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
                         if !skipped {
@@ -15390,7 +15480,7 @@ fn decode_syntax_with_cdef(
                             transform_grid,
                             above_chroma_edge_contexts,
                             left_chroma_edge_contexts,
-                        ),
+                        )?,
                         cdfs,
                     );
 
@@ -15408,6 +15498,20 @@ fn decode_syntax_with_cdef(
                                         &above_chroma_edge_contexts,
                                         &left_chroma_edge_contexts,
                                     ),
+                                )?);
+                        } else if matches!(chroma_sampling, ChromaSampling::Subsampled422) {
+                            lossy_chroma_8x16_coefficients[plane.saturating_sub(1)] =
+                                Some(decode_lossy_chroma_8x16_coefficients(
+                                    decoder,
+                                    plane,
+                                    cdfs,
+                                    lossy_quantization,
+                                    Some(coefficient_dc_sign_context_for_dimensions(
+                                        2,
+                                        4,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    )),
                                 )?);
                         } else {
                             lossy_chroma_8x8_coefficients[plane.saturating_sub(1)] =
@@ -15487,7 +15591,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
                         if !skipped {
@@ -15526,7 +15630,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
                         if !skipped {
@@ -15627,7 +15731,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
 
@@ -15759,7 +15863,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
                         if !skipped {
@@ -15828,7 +15932,7 @@ fn decode_syntax_with_cdef(
                                 transform_grid,
                                 above_chroma_edge_contexts,
                                 left_chroma_edge_contexts,
-                            ),
+                            )?,
                             cdfs,
                         );
 
@@ -16269,6 +16373,7 @@ fn decode_syntax_with_cdef(
                     plane,
                     transform_luma_mode,
                     luma_predictor,
+                    chroma_sampling,
                     transform_grid,
                     lossy_quantization,
                     cdfs,
@@ -24473,7 +24578,10 @@ fn reconstruct_palette_square8_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> {
 fn reconstruct_palette_square16_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> {
     if !syntax.palette.is_present()
         || !matches!(syntax.transform_grid, TransformGrid::Square16)
-        || !matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        || !matches!(
+            syntax.chroma_sampling,
+            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+        )
         || !matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
         || !syntax.palette.y.is_present()
         || !syntax.palette.u.is_present()
@@ -24495,17 +24603,34 @@ fn reconstruct_palette_square16_leaf(syntax: BlockSyntax) -> Option<ClosedLeaf> 
         |split| reconstruct_lossy_luma_16x16_split_from_prediction(luma_prediction, split),
     );
     let chroma_transform = chroma_transform_kind(syntax.chroma_predictor);
-    let chroma = |palette: PalettePlane, coefficients| {
-        let prediction = palette_prediction(palette, syntax.palette.uv_indices)?;
-        let prediction = std::array::from_fn(|index| prediction[index]);
-        Some(reconstruct_lossy_luma_8x8_from_prediction(
-            prediction,
-            coefficients,
-            chroma_transform,
-        ))
+    let chroma = |palette: PalettePlane, coefficients_420, coefficients_422| {
+        if matches!(syntax.chroma_sampling, ChromaSampling::Subsampled422) {
+            let prediction = palette_prediction_prefix::<128>(palette, &syntax.palette.uv_indices)?;
+            Some(reconstruct_lossy_luma_8x16_from_prediction(
+                prediction,
+                coefficients_422,
+                chroma_transform,
+            ))
+        } else {
+            let prediction = palette_prediction(palette, syntax.palette.uv_indices)?;
+            let prediction = std::array::from_fn(|index| prediction[index]);
+            Some(reconstruct_lossy_luma_8x8_from_prediction(
+                prediction,
+                coefficients_420,
+                chroma_transform,
+            ))
+        }
     };
-    let chroma_u = chroma(syntax.palette.u, syntax.lossy_chroma_8x8_coefficients[0])?;
-    let chroma_v = chroma(syntax.palette.v, syntax.lossy_chroma_8x8_coefficients[1])?;
+    let chroma_u = chroma(
+        syntax.palette.u,
+        syntax.lossy_chroma_8x8_coefficients[0],
+        syntax.lossy_chroma_8x16_coefficients[0],
+    )?;
+    let chroma_v = chroma(
+        syntax.palette.v,
+        syntax.lossy_chroma_8x8_coefficients[1],
+        syntax.lossy_chroma_8x16_coefficients[1],
+    )?;
 
     Some(ClosedLeaf {
         luma_predictor: syntax.luma_predictor,
@@ -24678,6 +24803,11 @@ fn reconstruct_leaf_with_luma_override(
 ) -> ClosedLeaf {
     if luma_override.is_none()
         && let Some(leaf) = reconstruct_palette_square8_leaf(syntax)
+    {
+        return leaf;
+    }
+    if luma_override.is_none()
+        && let Some(leaf) = reconstruct_palette_square16_leaf(syntax)
     {
         return leaf;
     }
@@ -25045,6 +25175,19 @@ fn reconstruct_leaf_with_luma_override(
                         predictors[plane],
                         lossy_chroma_16x16_coefficients[plane - 1],
                     ),
+                };
+                return ClosedLeaf {
+                    luma_predictor,
+                    planes: [luma, chroma(1), chroma(2)],
+                };
+            }
+            if matches!(chroma_sampling, ChromaSampling::Subsampled422) {
+                let chroma = |plane: usize| {
+                    reconstruct_lossy_luma_8x16(
+                        predictors[plane],
+                        lossy_chroma_8x16_coefficients[plane - 1],
+                        chroma_transform_kind(chroma_predictor),
+                    )
                 };
                 return ClosedLeaf {
                     luma_predictor,
@@ -37184,16 +37327,19 @@ fn visible_leaf(
 ) -> FirstLeaf {
     let (transform_grid_width, _, _) = transform_grid.properties();
     let coded_width = transform_grid_width.saturating_mul(4);
-    let (chroma_coded_width, chroma_width, chroma_height) =
-        if matches!(chroma_sampling, ChromaSampling::Subsampled420) {
-            (
-                transform_grid_width.div_ceil(2).saturating_mul(4),
-                width.div_ceil(2).max(4),
-                height.div_ceil(2).max(4),
-            )
-        } else {
-            (coded_width, width, height)
-        };
+    let (chroma_coded_width, chroma_width, chroma_height) = match chroma_sampling {
+        ChromaSampling::Subsampled420 => (
+            transform_grid_width.div_ceil(2).saturating_mul(4),
+            width.div_ceil(2).max(4),
+            height.div_ceil(2).max(4),
+        ),
+        ChromaSampling::Subsampled422 => (
+            transform_grid_width.div_ceil(2).saturating_mul(4),
+            width.div_ceil(2).max(4),
+            height.max(4),
+        ),
+        ChromaSampling::Full | ChromaSampling::Monochrome => (coded_width, width, height),
+    };
     let planes = [
         visible_plane(&leaf.planes[0], coded_width, width, height),
         visible_plane(
@@ -39893,6 +40039,21 @@ impl Lossy420Decoder {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
             chroma_sampling: ChromaSampling::Subsampled420,
+            pending_cdef_index_bits: 0,
+            pending_delta_q: false,
+            current_qindex: Some(qindex),
+            last_cdef_active: false,
+            last_cdef_index: 0,
+        })
+    }
+
+    pub(super) fn with_qindex_and_sampling(
+        qindex: u32,
+        chroma_sampling: ChromaSampling,
+    ) -> Option<Self> {
+        Some(Self {
+            cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
+            chroma_sampling,
             pending_cdef_index_bits: 0,
             pending_delta_q: false,
             current_qindex: Some(qindex),

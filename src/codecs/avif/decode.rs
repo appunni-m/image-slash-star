@@ -248,7 +248,8 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
         (false, false) => false,
         (true, true) => true,
-        _ => return None,
+        (true, false) => false,
+        (false, true) => return None,
     };
     let mut canvas = super::av1::FrameCanvas::new(
         still.width,
@@ -268,7 +269,11 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     }
     let planes = canvas.finish().ok()?;
     let [y_plane, u_plane, v_plane] = &planes;
-    let chroma_width = if subsampled { width.div_ceil(2) } else { width };
+    let chroma_width = if subsampled || still.subsampling_x {
+        width.div_ceil(2)
+    } else {
+        width
+    };
     if still
         .alpha_plane
         .as_ref()
@@ -305,6 +310,15 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                     column,
                     row,
                 ),
+            )
+        } else if still.subsampling_x {
+            #[allow(clippy::arithmetic_side_effects)]
+            let row = index.wrapping_div(width);
+            #[allow(clippy::arithmetic_side_effects)]
+            let column = index.wrapping_rem(width);
+            (
+                libavif_422_bilinear_sample(&u_plane.samples, chroma_width, width, column, row),
+                libavif_422_bilinear_sample(&v_plane.samples, chroma_width, width, column, row),
             )
         } else {
             (u_plane.samples[index], v_plane.samples[index])
@@ -345,6 +359,41 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         metadata: Vec::new(),
         source_color: SourceColor::new(),
     })
+}
+
+// ✅ VERIFIED: libavif 1.4.1 `src/reformat.c`'s bilinear YUV422 branch. The
+// closest chroma sample receives 3/4 weight and its horizontal neighbor 1/4;
+// even output columns use the left neighbor and odd columns the right. 4:2:2
+// has no vertical chroma interpolation.
+fn libavif_422_bilinear_sample(
+    plane: &[u16],
+    chroma_width: usize,
+    width: usize,
+    column: usize,
+    row: usize,
+) -> u16 {
+    if plane.is_empty() || chroma_width == 0 || width == 0 {
+        return 0;
+    }
+    let source_column = column.div_euclid(2);
+    let adjacent_column = if column.is_multiple_of(2) {
+        source_column.saturating_sub(1)
+    } else {
+        source_column.saturating_add(1)
+    };
+    let sample = |source_column: usize| {
+        plane
+            .get(
+                row.saturating_mul(chroma_width)
+                    .saturating_add(source_column.min(chroma_width.saturating_sub(1))),
+            )
+            .copied()
+            .unwrap_or_default()
+    };
+    let weighted = u32::from(sample(source_column))
+        .saturating_mul(3)
+        .saturating_add(u32::from(sample(adjacent_column)));
+    u16::try_from(weighted.saturating_add(2).wrapping_shr(2)).unwrap_or(u16::MAX)
 }
 
 // ✅ VERIFIED: libyuv 1922 commit 6067afde, source/convert_argb.cc:6799-6927
@@ -615,7 +664,7 @@ mod tests {
         include!("../../../tests/support/sha256.rs");
     }
 
-    use super::decode_portable;
+    use super::{decode_portable, libavif_422_bilinear_sample};
     use crate::codecs::avif::av1::{PortableStill, ReconstructedPlane, ValidatedAv1};
     use crate::codecs::{CodecError, CodecResult};
     use crate::types::{ColorType, ImageMode, SourceAlpha};
@@ -656,6 +705,15 @@ mod tests {
         assert_eq!(image.source.alpha(), Some(SourceAlpha::Auxiliary));
         assert_eq!(image.pixels.get(..4), Some([128, 128, 128, 64].as_slice()));
         assert_eq!(image.pixels.len(), 64);
+    }
+
+    #[test]
+    fn avif_422_bilinear_uses_closest_sample_phase() {
+        let plane = [10, 20, 30, 40, 50, 60];
+        let samples = (0..6)
+            .map(|column| libavif_422_bilinear_sample(&plane, 3, 6, column, 1))
+            .collect::<Vec<_>>();
+        assert_eq!(samples, [40, 33, 48, 53, 58, 60]);
     }
 
     #[test]

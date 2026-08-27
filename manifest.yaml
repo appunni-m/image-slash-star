@@ -4202,6 +4202,12 @@ formats:
       description: 16x16 4:2:0 quality-76 speed-0 origin Square16 leaf using filter-intra mode 0, one TX16x16 luma transform, and TX8x8 U/V transforms
       test_assets:
       - coverage_square16_filter_intra_mode0_01.avif
+    - id: coverage_422_square16_vertical_halves_01
+      description: 16x16 4:2:2 quality-76 speed-0 origin Square16 leaf with half-width/full-height chroma, one TX16x16 luma transform, and TX8x16 U/V transforms
+      test_assets:
+      - coverage_422_square16_vertical_halves_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_square16_chroma_smooth_horizontal_01
       description: 32x16 4:2:0 quality-76 speed-0 clipped horizontal split with a following Square16 leaf using chroma SmoothHorizontal mode 11, DCT-ADST TX8x8 U/V transforms, and non-empty AC
       test_assets:
