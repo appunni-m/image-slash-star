@@ -74,7 +74,7 @@ def failures() -> list[str]:
         errors.append("base_revision must be a 40-character git commit SHA-1")
     else:
         check = subprocess.run(
-            ["git", "rev-parse", "--verify", revision],
+            ["git", "rev-parse", "--verify", f"{revision}^{{commit}}"],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -112,6 +112,22 @@ def failures() -> list[str]:
             value = coverage.get(field)
             if not isinstance(value, str) or not UUID_RE.fullmatch(value):
                 errors.append(f"coverage.{field} must be a UUID")
+
+    try:
+        measurement = roadmap["current_state"]["coverage"]["measurement"]
+    except (KeyError, TypeError):
+        errors.append("roadmap.json current_state.coverage.measurement is missing")
+        measurement = None
+    if not isinstance(measurement, dict):
+        errors.append("roadmap.json current coverage measurement must be an object")
+    else:
+        if measurement.get("managed_coverage_mcp") is not True:
+            errors.append("roadmap current coverage measurement is not managed Coverage MCP evidence")
+        for field in ("run_id", "snapshot_id", "suite"):
+            if isinstance(coverage, dict) and coverage.get(field) != measurement.get(field):
+                errors.append(f"coverage.{field} does not match roadmap current measurement")
+        if revision != measurement.get("commit_sha"):
+            errors.append("base_revision does not match roadmap current measurement commit_sha")
 
     for doc in DOCS:
         text = (ROOT / doc).read_text()

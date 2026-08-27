@@ -6,20 +6,17 @@ Reviewed: 2026-08-27 against the current safe-Rust AVIF cutover working tree;
 the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
-The current claim-ledger refresh base is
-`99f8cd59d8fb2ae0109f071e5902435de1812139`; the historical Pillow parity
-record below remains bound to
+The current claim-ledger implementation anchor is
+`17f548e91b83b61fbc071787ef8285d3d621c0ee`; the current complete managed
+Coverage MCP record is run `eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d`, snapshot
+`c694d0a5-4b6e-490c-b7b7-df010e668fb8`, executed at that exact commit. It
+records 100,316/110,009 lines (91.1889%), 12,835/14,220 branches (90.2602%),
+5,124/5,794 functions (88.4363%), and 150,124/166,363 regions (90.2388%).
+The compact snapshot retains metadata commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat. The
+historical Pillow parity record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
-The current strict Coverage MCP snapshot is
-`283cc397-39ec-4dc5-98ec-21cc4720cdf8` from run
-`40400567-ea79-4811-a683-c823c683646f` (full all-feature workload passed at
-exact execution commit `99f8cd59d8fb2ae0109f071e5902435de1812139`). Its LLVM
-report records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches
-(90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions
-(90.3071%). The run record is exact for the implementation commit, while the
-compact snapshot projection retains commit metadata
-`3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is explicit.
 Explicit coverage review with baseline snapshot
 `dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` records additive-union deltas of +36
 covered lines, +0 branches, +10 functions, and +66 regions, with denominator
@@ -5583,15 +5580,14 @@ metadata extent); the policy manifests cited there are the active boundary
 evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
-revision-bound tuple: implementation revision
-`60718f5ac2109801761a8fa506e08c01b3d18bc1`, manifest SHA-256
-`778c80a4aea24a78a188bbe0941a56ceb1b0d07d44dddf657f1c3ffd41b0e229`,
+implementation anchor `17f548e91b83b61fbc071787ef8285d3d621c0ee`, manifest
+SHA-256 `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`,
 generated-matrix SHA-256
-`68dcb5e73ec0b52d322c9ac922ce68129f84c8bbe9f5503ee60f3fc31df22601`,
-Coverage MCP run `9e291695-f0ae-4e87-9d41-e6e40865e688` and snapshot
-`12b456c3-5f22-4c9a-82bc-15f779a3cdcd`, every fixture-manifest SHA-256, the
+`f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`,
+Coverage MCP run `eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d` and snapshot
+`c694d0a5-4b6e-490c-b7b7-df010e668fb8`, every fixture-manifest SHA-256, the
 VP8L property-map SHA-256
-`f1de6d7164e1c021a21db2108cc5c5f5946cbfbcab11a40fdf63298ad29b69f9`, and
+`4af152b07754467a15cdc4e7fb75f8598332e2dd79bd52d4b5b58c649480da5a`, and
 the inspector SHA-256
 `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision

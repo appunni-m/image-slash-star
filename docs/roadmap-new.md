@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-27
 
-- Current claim-ledger refresh base revision: `99f8cd59d8fb2ae0109f071e5902435de1812139`
+- Current claim-ledger implementation anchor: `17f548e91b83b61fbc071787ef8285d3d621c0ee`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -74,7 +74,7 @@ its immutable command invokes the configured Cargo `sccache`; the same script
   observations, not universal performance claims.
 
 This checkpoint improves engineering hygiene and measurement honesty. It does
-not close the 266-item active-finding roadmap below: format capability, metadata,
+not close the 252-item active-finding roadmap below: format capability, metadata,
 partial-input, target, assurance, and lifecycle items remain pending until their
 own caller need and evidence are complete.
 
@@ -594,7 +594,7 @@ The immediately previous current-tree managed Coverage MCP run was
 ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
-The latest managed Coverage MCP run is
+The previously latest managed Coverage MCP run is
 `1c2bb88e-0523-4641-ad69-5482124055eb`. Its run record is bound to exact
 implementation commit `24a80016f7e89566494e9fea22f7fb999720e383`; it passed in
 162,453 ms and ingested snapshot `c78cac84-591f-4091-a0eb-8ffb44f8321c`.
@@ -692,10 +692,20 @@ the historical Pillow parity run.
 The current committed tree passes formatting, locked all-feature check, strict
 Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
-claim-ledger, and diff checks. The one remaining measured release gate is:
-
-- LLVM coverage: 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions
-  remain below the 100% release target.
+claim-ledger, and diff checks. The latest complete managed Coverage MCP run is
+`eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d`; it passed in 154,519 ms at implementation
+commit `17f548e91b83b61fbc071787ef8285d3d621c0ee` and ingested snapshot
+`c694d0a5-4b6e-490c-b7b7-df010e668fb8`. The snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`, which is recorded as a provenance
+caveat. It reports 100,316/110,009 lines (91.1889%), 12,835/14,220 branches
+(90.2602%), 5,124/5,794 functions (88.4363%), and 150,124/166,363 regions
+(90.2388%); 9,693 lines, 1,385 branches, 670 functions, and 16,239 regions
+remain below the 100% release target.
+The pure-Rust cutover also closes the obsolete native-path findings
+`AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
+`FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
+The current active inventory is therefore 252 findings; the closed rows retain
+their original finding text and explicit resolution evidence in `roadmap.json`.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
 accepted-brand variants, grid fixture, and two-column multitile fixture. The
@@ -1138,15 +1148,15 @@ that an entire workstream is finished because one slice passed.
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 503 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `283cc397-39ec-4dc5-98ec-21cc4720cdf8` is recorded from run `40400567-ea79-4811-a683-c823c683646f` at exact implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`. The four metrics remain below 100% and stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 285 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set is one bounded production class, not general AVIF completion. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 503 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `c694d0a5-4b6e-490c-b7b7-df010e668fb8` is recorded from run `eb12a17f-1ff0-43ec-a8b0-78c2fef2c93d` at implementation commit `17f548e91b83b61fbc071787ef8285d3d621c0ee`; snapshot metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` is retained as a caveat. The four metrics remain below 100% and stay visible in the current coverage table. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 289 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set is one bounded production class, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
 slices are represented by reviewed commits on `main`; no worker pushed
 directly. The accepted product-claim tuple remains revision-bound to the
 historical Pillow parity record at `36b9396`; the current hash and
-coverage-evidence refresh is bound to `99f8cd59` and does not silently rewrite
+coverage-evidence refresh is bound to implementation anchor `17f548e9` and does not silently rewrite
 that parity result.
 
 ## Contract catalog: behavior Pillow cannot prove
@@ -1232,26 +1242,16 @@ It does **not** mean that every legal file in every image specification is
 implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
-The latest managed Coverage MCP snapshot below was ingested from run
-`40400567-ea79-4811-a683-c823c683646f`, whose run record is bound to exact
-implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`, with snapshot
-`283cc397-39ec-4dc5-98ec-21cc4720cdf8`. It passed in 159,185 ms. The compact
-snapshot projection retains commit metadata
-`3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
-explicit. Explicit review against baseline snapshot
-`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` records additive-union gains of +36
-lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of
-+15 lines, +0 branches, +3 functions, and +24 regions. The complete snapshot
-diff has 21 newly covered line identities and no regressions; source review
-marks all seven rectangular transform wrappers green. The new hook is
-coverage-only, so AVF-STILL-001 and the remaining 100% gate stay open.
+The latest complete managed Coverage MCP snapshot above is the release
+measurement for this current source tree. A selected-subset incremental run is
+recorded separately and is never substituted for this full denominator.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 100,057 | 109,749 | 91.1689% | 9,692 | 8.8311% |
-| Branches (managed Coverage MCP) | 12,809 | 14,188 | 90.2805% | 1,379 | 9.7195% |
-| Functions (managed Coverage MCP) | 5,109 | 5,777 | 88.4369% | 668 | 11.5631% |
-| Regions (managed Coverage MCP) | 149,698 | 165,957 | 90.2029% | 16,259 | 9.7971% |
+| Lines (managed Coverage MCP) | 100,316 | 110,009 | 91.1889% | 9,693 | 8.8111% |
+| Branches (managed Coverage MCP) | 12,835 | 14,220 | 90.2602% | 1,385 | 9.7398% |
+| Functions (managed Coverage MCP) | 5,124 | 5,794 | 88.4363% | 670 | 11.5637% |
+| Regions (managed Coverage MCP) | 150,124 | 166,363 | 90.2388% | 16,239 | 9.7612% |
 
 The predictor-enabled H16x4 fixture is a real safe-Rust reconstruction class,
 not a coverage-only test. Its input-only search reports and exact pinned dav1d,
@@ -1965,7 +1965,7 @@ this Rust-only behavior.
 checkpoint slice, not completion of RN-003. Other codec interiors, progress
 callbacks, allocator/peak measurement, short-write semantics, rollback,
 cleanup/error precedence, and managed same-revision evidence remain open. The
-complete inventory therefore remains 266 active finding rows; this slice
+at that historical revision, the complete inventory therefore remained 266 active finding rows; this slice
 narrows the API-036/RN-003 work without closing the whole category.
 
 #### Current candidate slice — API-036 JPEG baseline-MCU decode checkpoint
@@ -2012,7 +2012,7 @@ acceptance and claims no Pillow row or diagnostic origin.
 other codec interiors, progress callbacks,
 allocator/peak measurement, short-write semantics, rollback, cleanup/error
 precedence, and managed same-revision evidence remain open. RN-003 remains
-partial and the complete inventory remains 266 active finding rows.
+partial and, at that historical revision, the complete inventory remained 266 active finding rows.
 
 #### Current candidate slice — API-036 JPEG progressive-MCU decode checkpoint
 
@@ -2058,7 +2058,7 @@ acceptance and claims no Pillow row or diagnostic origin.
 other codec interiors, progress callbacks, allocator/peak measurement,
 short-write semantics, rollback, cleanup/error precedence, and managed
 same-revision evidence remain open. RN-003 remains partial and the complete
-inventory remains 266 active finding rows.
+at that historical revision, the inventory remained 266 active finding rows.
 
 #### Current candidate slice — API-036 BMP raw payload and scanline checkpoints
 
@@ -2104,7 +2104,7 @@ acceptance and claims no Pillow row or diagnostic origin.
 row-conversion work only; compressed/RLE BMP interiors, other codec interiors,
 progress callbacks, allocator/peak measurement, short-write semantics,
 rollback, cleanup/error precedence, and managed same-revision evidence remain
-open. RN-003 remains partial and the complete inventory remains 266 active
+open. RN-003 remains partial and, at that historical revision, the complete inventory remained 266 active
 finding rows.
 
 #### Current candidate slice — API-036 ICO embedded BMP row checkpoints
@@ -2148,7 +2148,7 @@ conversion; ICO indexed conversion, CUR DIB conversion, other codec
 interiors, progress callbacks, allocator/peak measurement, short-write
 semantics, rollback, cleanup/error precedence, and managed same-revision
 evidence remain open. RN-003 remains partial and the complete inventory
-remains 266 active finding rows.
+at that historical revision, remained 266 active finding rows.
 
 #### Current candidate slice — API-036 ICO embedded 32-bit BMP row checkpoints
 
@@ -2189,7 +2189,7 @@ conversion; ICO indexed conversion, CUR DIB conversion, other codec
 interiors, progress callbacks, allocator/peak measurement, short-write
 semantics, rollback, cleanup/error precedence, and managed same-revision
 evidence remain open. RN-003 remains partial and the complete inventory
-remains 266 active finding rows.
+at that historical revision, remained 266 active finding rows.
 
 ### RN-004 — Metadata and source facts — LATER
 
@@ -2469,7 +2469,7 @@ fixtures are active with exact
 public references; broader AV1 classes still require safe-Rust implementation
 before they can move to `active`.
 
-### RN-006 — Portable AVIF completion — LATER
+### RN-006 — Portable AVIF completion — IN PROGRESS
 
 **Why:** The old implementation used a native AVIF bridge on some targets and
 had a different effective contract on WASM. The bridge is now removed. The
@@ -2738,7 +2738,7 @@ the release-package first-use proof, not a repository integration test.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **266 active
+moved into the appropriate contract document. The list contains **252 active
 finding rows**.
 
 | Area | Count | Open IDs |
@@ -2751,9 +2751,9 @@ finding rows**.
 | ICO/CUR | 20 | `ICO-001`, `ICO-002`, `ICO-004`–`ICO-021` |
 | TIFF | 26 | `TIF-002`, `TIF-003`, `TIF-005`–`TIF-014`, `TIF-016`–`TIF-018`, `TIF-020`–`TIF-030` |
 | WebP | 20 | `WEP-001`, `WEP-003`–`WEP-005`, `WEP-007`–`WEP-022` |
-| AVIF | 33 | `AVF-001`–`AVF-009`, `AVF-011`–`AVF-020`, `AVF-022`–`AVF-035` |
-| Features/package | 33 | `FTR-001`–`FTR-024`, `FTR-027`, `FTR-029`–`FTR-031`, `FTR-033`–`FTR-035`, `FTR-037`, `FTR-038` |
-| Assurance | 33 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-008`, `QA-009`–`QA-013`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-042` |
+| AVIF | 30 | `AVF-001`, `AVF-003`–`AVF-006`, `AVF-008`–`AVF-009`, `AVF-011`–`AVF-016`, `AVF-018`–`AVF-020`, `AVF-022`–`AVF-035` |
+| Features/package | 24 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
+| Assurance | 31 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-008`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
 | Documentation | 5 | `DOC-003`, `DOC-005`–`DOC-008` |
 
 The shorthand ranges above expand only to the IDs actually present in the
@@ -2761,10 +2761,10 @@ current audit. The historical roadmap is retained for provenance and original
 finding context; this file is the canonical status inventory, dependency order,
 and acceptance contract.
 
-These 266 rows are not 266 equal-sized coding tasks. A row may be a small
+These 252 rows are not 252 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 266 active finding rows, the current four-metric coverage
+today are the exact 252 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.
