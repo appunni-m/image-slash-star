@@ -914,6 +914,21 @@ it does not count a planned row as completed. The two adjacent EOB mutation
 controls are active negative rows instead: the matrix verifies their exact
 typed `Malformed` result, so they are not counted as open capability gaps.
 
+Managed Coverage MCP then ran the exact central matrix selection for both
+controls: run `bcd2e044-53c5-4c06-a9c6-d6ca8b02220d` passed in 31,206 ms at
+implementation commit `feb851bdb1c882191c1467117b2acbb5b533ec3a` and ingested
+snapshot `287b9937-982e-471d-92f0-4137927a0730` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The log reports `selected=2 active=2`
+and `2/2 active rows passed`. The standalone incremental review is measured
+with additive baseline-union deltas of +1 covered branch and +0 covered lines,
+functions, or regions; the selected projection reports 1,080 newly covered
+line identities. The merge is conservative, 75,631 baseline observations were
+not observed in the selected subset, named-test attribution is unavailable,
+and the run makes no regression claim. Snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; the durable run commit is the
+authoritative implementation provenance. This is bounded coverage evidence,
+not a replacement for the complete four-metric release measurement.
+
 The current implementation slice is a checked `FrameCanvas` in
 `src/codecs/avif/av1/raster.rs`. The current still path uses it to place all
 three reconstructed planes, and its eleven Rust tests prove subsampling
