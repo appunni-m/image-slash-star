@@ -64,6 +64,19 @@ searched 100 candidates across 10 families, qualified 9, promoted
 and its item, trace, Y/U/V, and Pillow RGB outputs were checked for
 determinism.
 
+`coverage_square16_chroma_smooth_01.avif`
+(`1d663c7f7e3d65f12062124880ab1ae4d3eee5eaada570d9a38504aa58093080`) is a
+repository-generated 32x16 8-bit 4:2:0 quality-76/speed-0 witness. Its clipped
+root split has origin/following Square16 leaves; the following chroma selects
+Smooth mode 9 with ADST-ADST TX8x8 U/V and non-empty AC. The input-only
+campaign report is
+`tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_campaign_01.json`
+(`e6fd49048f42a9ed36ea54d527a70d1a67cc40908a3db2d6767905bad77769e7`); it
+searched 100 candidates across 10 families, qualified 10, promoted
+`SS16-F06-N01`, and invoked no repository Rust. The fixture was double-encoded
+and its item, trace, Y/U/V, and Pillow RGB outputs were checked for
+determinism.
+
 `portable_lossless_a.avif`
 (`ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411`)
 and `portable_lossless_b.avif`
