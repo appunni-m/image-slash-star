@@ -15,7 +15,7 @@ to be done. The manifest and generated matrix provide machine-backed fixture
 status; CI runs `scripts/verify_roadmap.py` to reject drift between those
 records, the JSON roadmap, and this human rendering.
 
-Reviewed: 2026-08-27
+Reviewed: 2026-08-28
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 299 rows total, 292 active, 7 explicit planned
+- AVIF decode/inspect/verify: 300 rows total, 293 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,523 rows total, 1119 active decode rows, 365 active encode
+- Whole matrix: 1,524 rows total, 1120 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -117,6 +117,22 @@ the corresponding status is recorded in `roadmap.json`:
   parity; an input-only pinned dav1d probe confirms the two-child topology.
   One-dimensional V_DCT/H_DCT, other H16x4 states, and `AVF-STILL-001` remain
   partial.
+- The new bounded AVIF witness is
+  `coverage_v4x16_predictor_adst_adst_01.avif`: a deterministic 16x16 8-bit
+  4:2:0 `PARTITION_V4` stream with four `Vertical4x16` luma leaves. Its
+  input-only five-campaign search evaluated 100 candidates per campaign and
+  promoted `v4x16-f07-n07` (seed 107) after one candidate qualified. The
+  third leaf selects AV1 `DCT_ADST` (CDF symbol 6 / dav1d `txtp=2`), while the
+  other leaves select DC, Paeth/`ADST_ADST`, and Horizontal/`DCT_DCT`.
+  Pinned dav1d reports 263 entropy operations; safe Rust now maps AV1’s
+  vertical-then-horizontal names to the width-pass/height-pass rectangular
+  kernels and matches the exact reconstructed Y/U/V planes and 768-byte
+  Pillow RGB8 output. Fixture SHA-256 is
+  `e5c6fe86bdc3a1339836521421aba220e4fe703b1379483d7b69972af974920b`; RGB
+  SHA-256 is
+  `66d1531446de70283fcb048f1f82f7c0a5e454eaf8e2bee70afa8efecf683994`.
+  This closes only the bounded predictor-enabled Vertical4x16 transform-
+  dispatch class; other rectangular states and `AVF-STILL-001` remain partial.
 - The completed high-depth slice is
   `high_bitdepth_still_10bit_444_lossless.avif`: a single-frame 10-bit
   profile-1, full-range BT.601/SDR, all-lossless 4:4:4 image. Checked u16
@@ -784,6 +800,17 @@ code. Snapshot metadata retains commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db`; test attribution is unavailable,
 and this selected-subset result is bounded evidence rather than a replacement
 for the complete release measurement.
+The clean-revision R4x16 reconstruction run
+`2794788f-4fe8-4212-8256-edd7f57e0b37` passed in 40,221 ms at exact
+implementation commit `8e695c7f3c437f91597e3acfb0959de3eeff5a8c`. Automatic
+ingestion marked its generated report stale after the test passed, so the exact
+report was explicitly imported as snapshot
+`c1df95e5-7a3f-4db6-bac9-b438856faa5b` and reviewed against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The additive baseline-union review
+reports +1,638 covered lines, +0 branches, +0 functions, and +0 regions, with
+denominator changes of +2,815, +72, +10, and +582. Merge exactness is false,
+test attribution is unavailable, and unobserved baseline hits are not
+regressions; this selected-subset result is not a full-release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
@@ -1232,7 +1259,7 @@ that an entire workstream is finished because one slice passed.
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 504 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c` is recorded from run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` at implementation commit `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`; the selected incremental run `de02b397-48fa-44ed-bdaf-df4487b096bf` covered the runtime validation of the compile-time JPEG AC table builder through the two standard/custom Huffman rows. Snapshot metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` is retained as a caveat. The four metrics remain below 100% and stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 292 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The 10-bit and 12-bit still witnesses, H16x4 TX4x4 and TX8x4 witnesses, and the Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set are bounded production classes, not general AVIF completion. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 293 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The 10-bit and 12-bit still witnesses, H16x4 TX4x4 and TX8x4 witnesses, the new V4x16 predictor/transform witness, and the Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set are bounded production classes, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
@@ -1296,7 +1323,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,523 total | 1,126 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,119 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,524 total | 1,127 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,120 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 36/36 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
