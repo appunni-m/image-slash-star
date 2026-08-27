@@ -572,23 +572,22 @@ ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
 The latest managed Coverage MCP run is
-`40400567-ea79-4811-a683-c823c683646f`. Its run record is bound to exact
-implementation commit `99f8cd59d8fb2ae0109f071e5902435de1812139`; it passed in
-159,185 ms and ingested snapshot `283cc397-39ec-4dc5-98ec-21cc4720cdf8`.
-Its complete all-feature LLVM snapshot records 100,078/109,648 lines (91.2721%),
-12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and
-149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658
-functions, and 16,074 regions uncovered. The run record is exact for the
+`1c2bb88e-0523-4641-ad69-5482124055eb`. Its run record is bound to exact
+implementation commit `24a80016f7e89566494e9fea22f7fb999720e383`; it passed in
+162,453 ms and ingested snapshot `c78cac84-591f-4091-a0eb-8ffb44f8321c`.
+Its complete all-feature LLVM snapshot records 100,057/109,749 lines (91.1689%),
+12,809/14,188 branches (90.2805%), 5,109/5,777 functions (88.4369%), and
+149,698/165,957 regions (90.2029%), leaving 9,692 lines, 1,379 branches, 668
+functions, and 16,259 regions uncovered. The run record is exact for the
 implementation commit, while the compact snapshot projection retains commit
 metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
-explicit. Explicit coverage review against baseline snapshot
-`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` reports additive-union deltas of +36
-covered lines, +0 branches, +10 functions, and +66 regions, with denominator
-deltas of +15 lines, +0 branches, +3 functions, and +24 regions. The complete
-snapshot diff reports 21 newly covered line identities and no regressions;
-bounded source review marks all seven rectangular transform wrappers green.
-Named test attribution is unavailable. This coverage-only hook does not close
-AVF-STILL-001, AVIF encoding, or the four-metric 100% gate.
+explicit. Coverage review against prior complete snapshot
+`283cc397-39ec-4dc5-98ec-21cc4720cdf8` records -21 covered lines with +101 total
+lines, +20 covered branches with +36 total branches, -3 covered functions with
++7 total functions, and -60 covered regions with +125 total regions; this is an
+instrumentation/denominator comparison, not a claim of a release-gate
+improvement. Named test attribution is unavailable. This exact run does not
+close AVF-STILL-001, AVIF encoding, or the four-metric 100% gate.
 
 The previous managed Coverage MCP run was
 `3b4748a2-f5bf-43d2-9f56-1067f4210257`, whose run record is bound to exact
@@ -1226,10 +1225,10 @@ coverage-only, so AVF-STILL-001 and the remaining 100% gate stay open.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 100,078 | 109,648 | 91.2721% | 9,570 | 8.7279% |
-| Branches (managed Coverage MCP) | 12,789 | 14,152 | 90.3689% | 1,363 | 9.6311% |
-| Functions (managed Coverage MCP) | 5,112 | 5,770 | 88.5962% | 658 | 11.4038% |
-| Regions (managed Coverage MCP) | 149,758 | 165,832 | 90.3071% | 16,074 | 9.6929% |
+| Lines (managed Coverage MCP) | 100,057 | 109,749 | 91.1689% | 9,692 | 8.8311% |
+| Branches (managed Coverage MCP) | 12,809 | 14,188 | 90.2805% | 1,379 | 9.7195% |
+| Functions (managed Coverage MCP) | 5,109 | 5,777 | 88.4369% | 668 | 11.5631% |
+| Regions (managed Coverage MCP) | 149,698 | 165,957 | 90.2029% | 16,259 | 9.7971% |
 
 The predictor-enabled H16x4 fixture is a real safe-Rust reconstruction class,
 not a coverage-only test. Its input-only search reports and exact pinned dav1d,

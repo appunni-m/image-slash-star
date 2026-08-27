@@ -4,8 +4,8 @@
   "manifest_sha256": "67303885049f0e45ac1e2740ce5fcc5da711bbc9092f076886bfb97d1b8ea55f",
   "matrix_sha256": "c2d8239b746c000d9ec16953fc22cf7f9e09c15bb2ed30ecbf078ca9e399513c",
   "coverage": {
-    "run_id": "40400567-ea79-4811-a683-c823c683646f",
-    "snapshot_id": "283cc397-39ec-4dc5-98ec-21cc4720cdf8",
+    "run_id": "1c2bb88e-0523-4641-ad69-5482124055eb",
+    "snapshot_id": "c78cac84-591f-4091-a0eb-8ffb44f8321c",
     "suite": "all-features-lines-branches-nightly"
   },
   "fixture_manifests": {
@@ -23,6 +23,6 @@
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
     "webp_property_map": "32d4a1cf837317581c5d634019934ae7efba4f40bfd7ab81467bda2e39eb3bb4",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "3c4a83946e6de72e52c5dc21dd7eee4f3d7191e6ea05a29d5651eaaabc62354c"
+    "roadmap": "1462da9a8736ed22ddb8861c67cf2af65cce6a900a036f5e9ef55aa35cc8507c"
   }
 }

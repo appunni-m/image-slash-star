@@ -113,42 +113,42 @@
     },
     "coverage": {
       "line": {
-        "covered": 100078,
-        "total": 109648,
-        "percent": 91.2721,
-        "uncovered": 9570
+        "covered": 100057,
+        "total": 109749,
+        "percent": 91.1689,
+        "uncovered": 9692
       },
       "branch": {
-        "covered": 12789,
-        "total": 14152,
-        "percent": 90.3689,
-        "uncovered": 1363
+        "covered": 12809,
+        "total": 14188,
+        "percent": 90.2805,
+        "uncovered": 1379
       },
       "function": {
-        "covered": 5112,
-        "total": 5770,
-        "percent": 88.5962,
-        "uncovered": 658
+        "covered": 5109,
+        "total": 5777,
+        "percent": 88.4369,
+        "uncovered": 668
       },
       "region": {
-        "covered": 149758,
-        "total": 165832,
-        "percent": 90.3071,
-        "uncovered": 16074
+        "covered": 149698,
+        "total": 165957,
+        "percent": 90.2029,
+        "uncovered": 16259
       },
       "measurement": {
         "kind": "managed Coverage MCP all-feature LLVM run",
         "command": "cargo +nightly llvm-cov --all-features --branch --json --output-path .coverage-mcp/pillow-rs-image-llvm-nightly-branch.json --no-fail-fast",
         "measured": "2026-08-27",
         "managed_coverage_mcp": true,
-        "commit_sha": "99f8cd59d8fb2ae0109f071e5902435de1812139",
-        "run_id": "40400567-ea79-4811-a683-c823c683646f",
-        "snapshot_id": "283cc397-39ec-4dc5-98ec-21cc4720cdf8",
+        "commit_sha": "24a80016f7e89566494e9fea22f7fb999720e383",
+        "run_id": "1c2bb88e-0523-4641-ad69-5482124055eb",
+        "snapshot_id": "c78cac84-591f-4091-a0eb-8ffb44f8321c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
         "suite": "all-features-lines-branches-nightly",
-        "duration_ms": 159185,
+        "duration_ms": 162453,
         "release_gate": "open_until_all_four_metrics_are_100_percent",
-        "note": "Managed Coverage MCP run 40400567-ea79-4811-a683-c823c683646f passed the all-feature LLVM workload in 159,185 ms at exact implementation commit 99f8cd59d8fb2ae0109f071e5902435de1812139 and ingested snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8. The complete snapshot records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Explicit coverage_review against baseline snapshot dcebe092-02c4-4343-9dcc-c6b10dcaf9fc reports additive-union deltas of +36 covered lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of +15 lines, +0 branches, +3 functions, and +24 regions; the complete-snapshot diff reports 21 newly covered line identities and no regressions. Newly covered source ranges include src/codecs/avif/av1/transform.rs:1173-1175,1178-1180,1208-1210,1213-1215,1218-1220,1238-1240,1338-1340 and src/codecs/avif/av1/mod.rs:1023,1026. Bounded source review reports all seven rectangular transform wrappers green. Named test attribution is unavailable. This coverage-only hook does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial."
+        "note": "Managed Coverage MCP run 1c2bb88e-0523-4641-ad69-5482124055eb passed the all-feature LLVM workload in 162,453 ms at exact implementation commit 24a80016f7e89566494e9fea22f7fb999720e383 and ingested snapshot c78cac84-591f-4091-a0eb-8ffb44f8321c. The complete snapshot records 100,057/109,749 lines (91.1689%), 12,809/14,188 branches (90.2805%), 5,109/5,777 functions (88.4369%), and 149,698/165,957 regions (90.2029%), leaving 9,692 lines, 1,379 branches, 668 functions, and 16,259 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage review against prior complete snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8 records -21 covered lines with +101 total lines, +20 covered branches with +36 total branches, -3 covered functions with +7 total functions, and -60 covered regions with +125 total regions; this is an instrumentation/denominator comparison, not a claim of a release-gate improvement. Named test attribution is unavailable. The new I444 Paeth fixture is exact through safe Rust, but this coverage run does not close AVF-STILL-001 or the four-metric release gate."
       },
       "coverage_origin_inventory": {
         "guards": 503,
@@ -193,8 +193,11 @@
     "historical_open_gates": {
       "llvm_coverage": "Managed Coverage MCP run 8740ab80-5d32-4bcf-8026-e5df72346f0e passed the all-feature LLVM workload in 151,052 ms; its run record is bound to exact implementation checkout d85561351dd1e779aff5eedbf5e562eebb7201e9 and ingested snapshot 02ea7870-faee-4687-94e4-4af30f443dbb. It records 99,047/109,168 lines (90.7290%), 12,574/13,934 branches (90.2397%), 5,050/5,747 functions (87.8719%), and 148,219/165,163 regions (89.7410%). The compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this caveat is retained rather than silently relabeled. Explicit incremental review against baseline snapshot 83ab4ee9-193f-4393-93ba-15c53962c6cb is measured, reports zero regressions, and records 4 newly covered line identities and 5 newly covered regions; named test attribution is unavailable. The following-Square16 chroma SmoothHorizontal witness is exact through safe Rust, but the four-metric release target remains open; AVF-STILL-001 and the broader roadmap remain partial."
     },
-    "open_gates": {
+    "previous_open_gates_before_i444_paeth": {
       "llvm_coverage": "Managed Coverage MCP run 40400567-ea79-4811-a683-c823c683646f passed the all-feature LLVM workload in 159,185 ms at exact implementation commit 99f8cd59d8fb2ae0109f071e5902435de1812139 and ingested snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8. The complete snapshot records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Explicit coverage_review against baseline snapshot dcebe092-02c4-4343-9dcc-c6b10dcaf9fc reports additive-union deltas of +36 covered lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of +15 lines, +0 branches, +3 functions, and +24 regions; the complete-snapshot diff reports 21 newly covered line identities and no regressions. Newly covered source ranges include src/codecs/avif/av1/transform.rs:1173-1175,1178-1180,1208-1210,1213-1215,1218-1220,1238-1240,1338-1340 and src/codecs/avif/av1/mod.rs:1023,1026. Bounded source review reports all seven rectangular transform wrappers green. Named test attribution is unavailable. This coverage-only hook does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial."
+    },
+    "open_gates": {
+      "llvm_coverage": "Managed Coverage MCP run 1c2bb88e-0523-4641-ad69-5482124055eb passed the all-feature LLVM workload in 162,453 ms at exact implementation commit 24a80016f7e89566494e9fea22f7fb999720e383 and ingested snapshot c78cac84-591f-4091-a0eb-8ffb44f8321c. The complete snapshot records 100,057/109,749 lines (91.1689%), 12,809/14,188 branches (90.2805%), 5,109/5,777 functions (88.4369%), and 149,698/165,957 regions (90.2029%), leaving 9,692 lines, 1,379 branches, 668 functions, and 16,259 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage review against the prior complete snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8 records -21 covered lines with +101 total lines, +20 covered branches with +36 total branches, -3 covered functions with +7 total functions, and -60 covered regions with +125 total regions. Named test attribution is unavailable. This exact run records the current release baseline but does not close AVF-STILL-001 or the four-metric release gate."
     },
     "next_json_ordered_work": "AVF-STILL-001"
   },
@@ -237,7 +240,7 @@
       "status": "in_progress",
       "why": "Measure the missing flashlight beams before selecting new tests.",
       "done_when": "All four current native all-feature metrics reach 100%, or a reviewed instrumentation decision changes the release target.",
-      "latest_evidence": "Managed Coverage MCP run 40400567-ea79-4811-a683-c823c683646f passed the all-feature LLVM workload in 159,185 ms at exact implementation commit 99f8cd59d8fb2ae0109f071e5902435de1812139 and ingested snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8. The complete snapshot records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Explicit coverage_review against baseline snapshot dcebe092-02c4-4343-9dcc-c6b10dcaf9fc reports additive-union deltas of +36 covered lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of +15 lines, +0 branches, +3 functions, and +24 regions; the complete-snapshot diff reports 21 newly covered line identities and no regressions. Newly covered source ranges include src/codecs/avif/av1/transform.rs:1173-1175,1178-1180,1208-1210,1213-1215,1218-1220,1238-1240,1338-1340 and src/codecs/avif/av1/mod.rs:1023,1026. Bounded source review reports all seven rectangular transform wrappers green. Named test attribution is unavailable. This coverage-only hook does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial.",
+      "latest_evidence": "Managed Coverage MCP run 1c2bb88e-0523-4641-ad69-5482124055eb passed the all-feature LLVM workload in 162,453 ms at exact implementation commit 24a80016f7e89566494e9fea22f7fb999720e383 and ingested snapshot c78cac84-591f-4091-a0eb-8ffb44f8321c. The complete snapshot records 100,057/109,749 lines (91.1689%), 12,809/14,188 branches (90.2805%), 5,109/5,777 functions (88.4369%), and 149,698/165,957 regions (90.2029%), leaving 9,692 lines, 1,379 branches, 668 functions, and 16,259 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage review against prior complete snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8 records -21 covered lines with +101 total lines, +20 covered branches with +36 total branches, -3 covered functions with +7 total functions, and -60 covered regions with +125 total regions; this is an instrumentation/denominator comparison, not a claim of a release-gate improvement. Named test attribution is unavailable. This current baseline does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial.",
       "source_ids": [
         "QA-003",
         "QA-010",
@@ -245,7 +248,7 @@
         "QA-030",
         "DOC-005"
       ],
-      "current_evidence": "Managed Coverage MCP run 40400567-ea79-4811-a683-c823c683646f passed the all-feature LLVM workload in 159,185 ms at exact implementation commit 99f8cd59d8fb2ae0109f071e5902435de1812139 and ingested snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8. The complete snapshot records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions (90.3071%), leaving 9,570 lines, 1,363 branches, 658 functions, and 16,074 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Explicit coverage_review against baseline snapshot dcebe092-02c4-4343-9dcc-c6b10dcaf9fc reports additive-union deltas of +36 covered lines, +0 branches, +10 functions, and +66 regions, with denominator deltas of +15 lines, +0 branches, +3 functions, and +24 regions; the complete-snapshot diff reports 21 newly covered line identities and no regressions. Newly covered source ranges include src/codecs/avif/av1/transform.rs:1173-1175,1178-1180,1208-1210,1213-1215,1218-1220,1238-1240,1338-1340 and src/codecs/avif/av1/mod.rs:1023,1026. Bounded source review reports all seven rectangular transform wrappers green. Named test attribution is unavailable. This coverage-only hook does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial.",
+      "current_evidence": "Managed Coverage MCP run 1c2bb88e-0523-4641-ad69-5482124055eb passed the all-feature LLVM workload in 162,453 ms at exact implementation commit 24a80016f7e89566494e9fea22f7fb999720e383 and ingested snapshot c78cac84-591f-4091-a0eb-8ffb44f8321c. The complete snapshot records 100,057/109,749 lines (91.1689%), 12,809/14,188 branches (90.2805%), 5,109/5,777 functions (88.4369%), and 149,698/165,957 regions (90.2029%), leaving 9,692 lines, 1,379 branches, 668 functions, and 16,259 regions uncovered; all four release metrics remain open. The run record is exact for the implementation commit, while the compact snapshot projection retains commit metadata 3272b3ef49a87c2947c08b46596b442195c6a8db; this provenance caveat is explicit. Coverage review against prior complete snapshot 283cc397-39ec-4dc5-98ec-21cc4720cdf8 records -21 covered lines with +101 total lines, +20 covered branches with +36 total branches, -3 covered functions with +7 total functions, and -60 covered regions with +125 total regions; this is an instrumentation/denominator comparison, not a claim of a release-gate improvement. Named test attribution is unavailable. This current baseline does not close AVF-STILL-001; broader AV1 states, AVIF encoding, and the four-metric release gate remain partial.",
       "evidence": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed at exact implementation commit f92b3d6896e7e03a46396d53ad44dba96866de0e in 149,159 ms and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Direct aggregate comparison with prior snapshot 6fa9ab92 records +5 covered lines, +0 branches, +1 function, and +5 regions with no denominator changes; named-test attribution is unavailable. The following-Horizontal AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
     },
     {
