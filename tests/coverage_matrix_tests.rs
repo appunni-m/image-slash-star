@@ -4713,7 +4713,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 227);
+    assert_eq!(expected.cases.len(), 228);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7137,6 +7137,90 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 Horizontal16x4 witness must select four TX16x4 luma grids"
             );
         }
+        if case.fixture == "coverage_h16x4_predictor_adst_dct_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 predictor-enabled Horizontal16x4 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                77,
+                "AV1 predictor-enabled Horizontal16x4 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-cdef_idx[0]: r=41704",
+                    "Post-ymode[12]: r=45424",
+                    "Post-tx[14]: r=45424",
+                    "Post-txtp-intra[14->0][12][5->1]: r=46816",
+                    "Post-y-cf-blk[tx=14,txtp=1,eob=3]: r=52232",
+                    "Post-skip[0]: r=50596",
+                    "Post-ymode[9]: r=47312",
+                    "Post-uvmode[0]: r=62080",
+                    "Post-tx[14]: r=62080",
+                    "Post-txtp-intra[14->0][9][1->0]: r=51952",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=44256",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=40252 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=36977 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=35893",
+                    "Post-ymode[0]: r=64140",
+                    "Post-tx[14]: r=64140",
+                    "Post-txtp-intra[14->0][0][1->0]: r=49996",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=1]: r=34056",
+                    "Post-skip[0]: r=33121",
+                    "Post-ymode[9]: r=37184",
+                    "Post-uvmode[0]: r=51668",
+                    "Post-tx[14]: r=51668",
+                    "Post-txtp-intra[14->0][9][1->0]: r=54408",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=0]: r=39174",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=36188 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=33562 [x=0,cbx4=0]",
+                ],
+                "AV1 predictor-enabled Horizontal16x4 witness leaf state and chroma ownership"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| { line.starts_with("Post-txtp-intra[14->0][12][5->1]:") })
+                    .count(),
+                1,
+                "AV1 predictor-enabled Horizontal16x4 witness must select ADST-DCT once"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[14]:"))
+                    .count(),
+                4,
+                "AV1 predictor-enabled Horizontal16x4 witness must select four TX16x4 luma grids"
+            );
+        }
         if case.fixture == "coverage_v4x16_filter_intra_cdf19_false_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -8173,6 +8257,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h4_horizontal_bands.avif" => {
                 "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
+            }
+            "coverage_h16x4_predictor_adst_dct_01.avif" => {
+                "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167"
             }
             "coverage_h16x4_filter_intra_cdf14_false_01.avif" => {
                 "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4"

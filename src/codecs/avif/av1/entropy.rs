@@ -3633,13 +3633,73 @@ fn closed_lossy_420_square64_split_context(context: &FirstBlockContext) -> bool 
         & context.frame_tools.cdef.is_none()
 }
 
+fn closed_lossy_420_qcat3_horizontal_four_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+
+    let base_context = context.bit_depth == 8
+        && !context.superres_enabled
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.disable_cdf_update
+        && !context.frame_tools.film_grain_present;
+    let geometry = matches!(context.level, 0 | 1)
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.subsampling_x
+        && context.subsampling_y;
+    let sequence_tools = !context.enable_filter_intra && !context.enable_intra_edge_filter;
+    let quantization_state = (121..=255).contains(&quantization.base)
+        && context.frame_tools.segment_qindex == quantization.base
+        && !context.frame_tools.segment_lossless
+        && quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == -16
+        && quantization.u_ac_delta == -16
+        && quantization.v_dc_delta == -16
+        && quantization.v_ac_delta == -16
+        && quantization.using_matrix
+        && quantization.matrix_y == 6
+        && quantization.matrix_u == 7
+        && quantization.matrix_v == 7;
+    let tile_delta_state =
+        !context.frame_tools.delta_q_present && !context.frame_tools.delta_lf_present;
+    let no_effective_filters = context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context.restoration_unit_size_log2 == [8; 2];
+    let transform_state =
+        context.frame_tools.transform_mode == 1 && !context.frame_tools.reduced_transform_set;
+
+    base_context
+        && geometry
+        && sequence_tools
+        && quantization_state
+        && tile_delta_state
+        && no_effective_filters
+        && transform_state
+}
+
 fn closed_lossy_420_horizontal_four_split_context(context: &FirstBlockContext) -> bool {
-    // The H4 fixture uses the syntax form without frame-level delta-q. The
-    // four-leaf helper does not arm a superblock delta-q sentence, so do not
-    // admit the true form until that state transition is implemented there.
-    closed_lossy_420_frame_context_with_delta_q(context, false)
-        & (context.frame_width == 16)
-        & (context.frame_height == 16)
+    // The H4 helper does not arm a superblock delta-q sentence. Keep the
+    // existing exact class and add only the independently evidenced qcat-three
+    // frame-tools class for the predictor-enabled 16x16 witness.
+    let legacy_exact = closed_lossy_420_frame_context_with_delta_q(context, false)
+        && (context.frame_width == 16)
+        && (context.frame_height == 16);
+    legacy_exact || closed_lossy_420_qcat3_horizontal_four_context(context)
 }
 
 fn decode_closed_leaf(

@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1517,
-      "decode_rows": 1120,
+      "total_rows": 1518,
+      "decode_rows": 1121,
       "encode_rows": 397,
-      "decode_active": 1113,
+      "decode_active": 1114,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 293,
-      "decode_active": 286,
+      "decode_rows": 294,
+      "decode_active": 287,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -1118,6 +1118,91 @@
             }
           },
           "scope": "This is evidence for one 8-bit 4:2:0 origin mode-2 class. Generic safe-Rust prediction already implements the mode; no production decoder change is claimed. Modes 3 and 4, other topologies, and AVF-STILL-001 remain partial."
+        },
+        "current_slice_update_2026_08_27_h16x4_transform_search": {
+          "target": "origin PARTITION_H4 16x16 4:2:0 with four Horizontal16x4 luma leaves; predictor-enabled ADST_DCT and ADST_ADST transform pairs",
+          "fixtures": [
+            "coverage_h16x4_predictor_adst_dct_01.avif"
+          ],
+          "scripts": [
+            "scripts/explore_avif_horizontal16x8_identity.py",
+            "scripts/explore_avif_horizontal16x4.py",
+            "scripts/explore_avif_horizontal16x4_predictor.py"
+          ],
+          "reports": [
+            "tests/fixtures/outputs/av1_search/coverage_horizontal16x8_identity_campaign_01.json",
+            "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_transform_campaign_01.json",
+            "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_predictor_transform_campaign_01.json"
+          ],
+          "campaigns": [
+            {
+              "target": "H16x8 IDTX/V_DCT",
+              "candidate_count": 100,
+              "qualified": 0,
+              "promotions": {
+                "idtx": null,
+                "v_dct": null
+              },
+              "repository_rust_invoked": false,
+              "report_sha256": "522faa93fcd8ad15944288b40c7930ebac5f67228f1a3f5816e8053281392bdf"
+            },
+            {
+              "target": "DC-oriented H16x4 V_DCT/H_DCT",
+              "candidate_count": 100,
+              "qualified": 0,
+              "promotions": {
+                "v_dct": null,
+                "h_dct": null
+              },
+              "repository_rust_invoked": false,
+              "report_sha256": "740ec1108711893cab8dec963baa82ada4e224af5cabaea99110c42fa54ce2a1"
+            },
+            {
+              "target": "predictor-enabled H16x4 ADST_DCT/ADST_ADST",
+              "candidate_count": 100,
+              "qualified": 2,
+              "qualified_by_target": {
+                "adst_dct": 2,
+                "adst_adst": 0
+              },
+              "promotions": {
+                "adst_dct": "h16x4-f10-n00",
+                "adst_adst": null
+              },
+              "repository_rust_invoked": false,
+              "report_sha256": "838ce8cb5a79115010a14814e0145c57e97a3b98efe36a64888635ef8a36c339"
+            }
+          ],
+          "promoted": "h16x4-f10-n00",
+          "seed": 164900,
+          "entropy_operation_count": 77,
+          "encoded_item_length": 35,
+          "encoded_item_sha256": "8a8a38d3ede09fabddb1775277c6337b5f0b0c487e78a4068b3d809f0adf172d",
+          "fixture_sha256": "f736f845547eab5d301e5e2b5ae9b3f306224dea14179090679736c5eaecc535",
+          "pillow_rgb_sha256": "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167",
+          "decoded_plane_sha256": {
+            "y": "978f0ef5c9800af08f2a938392d863e20c158d41230c5c91db0ff74c2c3f7c1d",
+            "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+            "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+          },
+          "trace_sha256": "62ab3da7e02c479ce6d2beff1a6774865fd00ee5cc8c22c664e66d4b3a0047f0",
+          "dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=8,range=43136",
+            "root_context_level": "0 or 1; the mutable H4 leaf loop reaches level 3",
+            "transform_pairs": [
+              "ADST_DCT: CDF symbol 5 -> txtp 1",
+              "DCT_DCT: CDF symbol 1 -> txtp 0"
+            ],
+            "chroma": "both U/V leaves have EOB -1 and remain DC-only; no UV matrix-7 lookup is claimed"
+          },
+          "production_changes": [
+            "H4 reconstruction seeds Lossy420Decoder with the effective qindex so qcat-three frame CDFs match the bitstream",
+            "a narrow qcat-three H4 admission predicate covers only the evidenced 16x16 8-bit 4:2:0 no-filter frame-tools class",
+            "dav1d-verified luma matrix 6 is wired for RTX_16X4 dequantization"
+          ],
+          "scope": "This closes only the bounded predictor-enabled H16x4 ADST_DCT class. ADST_ADST and identity/V_DCT/H_DCT wrappers remain open; no claim of general AV1/AVIF or aggregate coverage completion is made."
         }
       },
       "AVF-ENTROPY-001": {

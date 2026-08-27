@@ -1162,6 +1162,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7",
         "size": [16, 16],
     },
+    "coverage_h16x4_predictor_adst_dct_01.avif": {
+        "file_sha256": "f736f845547eab5d301e5e2b5ae9b3f306224dea14179090679736c5eaecc535",
+        "rgb_sha256": "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167",
+        "size": [16, 16],
+    },
     "coverage_h16x4_filter_intra_cdf14_false_01.avif": {
         "file_sha256": "5bc0e17ad980bfa5d5a55c26cae21718a67be584c294530d1255e4f8e37647f9",
         "rgb_sha256": "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4",

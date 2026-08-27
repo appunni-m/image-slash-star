@@ -5198,6 +5198,68 @@ def gen_avif():
 
     write_h4_horizontal_bands()
 
+    def horizontal16x4_predictor_adst_dct():
+        """Generate the selected predictor-enabled H16x4 witness.
+
+        This is h16x4-f10-n00 from the bounded input-only campaign: the
+        first Horizontal16x4 luma leaf selects CDF symbol 5 / dav1d txtp 1.
+        Keep the construction in this maintained generator so the promoted
+        fixture is reproducible without copying bytes from the campaign.
+        """
+
+        amplitude = 4
+        phase = 9
+        random_state = random.Random(164900)
+        column_prbs = [random_state.choice((-1, 1)) for _ in range(16)]
+        row_prbs = [random_state.choice((-1, 1)) for _ in range(4)]
+        positive_row = random_state.randrange(4)
+        negative_row = (positive_row + 1 + random_state.randrange(3)) % 4
+        bases = (48, 104, 160, 216)
+
+        def pixel(x, y):
+            band = y // 4
+            local_y = y % 4
+            if band == 0:
+                signal = amplitude * column_prbs[x]
+            elif band == 1:
+                signal = ((x - local_y + phase) % 16 - 8) * amplitude // 3
+            elif band == 2:
+                signal = (2 * local_y - 3) * amplitude
+            elif local_y == positive_row:
+                signal = amplitude
+            elif local_y == negative_row:
+                signal = -amplitude
+            else:
+                signal = 0
+            value = clamp_channel(bases[band] + signal)
+            return (value, value, value)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_h16x4_predictor_adst_dct_01",
+        horizontal16x4_predictor_adst_dct(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-directional-intra": "1",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=26,
+        speed=0,
+    )
+
     rect4_filter_intra_advanced = {
         "min-partition-size": "4",
         "max-partition-size": "16",
