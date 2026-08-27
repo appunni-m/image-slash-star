@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1514,
-      "decode_rows": 1117,
+      "total_rows": 1515,
+      "decode_rows": 1118,
       "encode_rows": 397,
-      "decode_active": 1110,
+      "decode_active": 1111,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 290,
-      "decode_active": 283,
+      "decode_rows": 291,
+      "decode_active": 284,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -967,40 +967,40 @@
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
         "current_evidence_addendum": "The latest bounded proof is coverage_square64_origin_tx32x32_split_01.avif: a deterministic 64x64 8-bit 4:2:0 quality-76/speed-0 origin Square64 leaf with four TX32x32 luma DCT children, DC prediction, non-empty luma residuals, and TX32x32 DCT chroma. The input-only 100-candidate, 10-family campaign qualified 60 candidates across F01/F02/F06/F07/F08/F10 and promoted S64-F01-N00 (seed 64000); repository Rust was not invoked. Its pinned dav1d trace has 17,158 entropy operations; safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. Fixture SHA-256 is 657fa025c72a516cd0e2a6a8c1a6670e270bebbb301f39bb6a6858db65ced555, encoded-item SHA-256 is a47ac7368caf3629a3daef6c3d05d3f7dad566b3d2609632723e24e5072660ec, Pillow RGB SHA-256 is be7eab35fabf3bd1032e7f1da118d4d4010584789051da47d0ae9500e8aeaa2c, Y/U/V SHA-256 values are 7dfbb60af2c344a3666041e139b389b352b658ab0541175533b329461e4276c4, cb73b73ccc07ddf10e2d56d55c349294e64268407f425e4b959f4cd252c15d03, and 6235409f54f5830f36cefea0c11f7973df655d7bf9add6a348640d8047a3b115, and trace SHA-256 is bf806be48b3b716fd23e1b8504d36612b03e60fcc65789d64b0df04d5eb877b7. This closes only the origin Square64 split luma/residual class; AVF-STILL-001 remains partial.",
     "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The new coverage_r32x8_h4_ripple_01.avif witness is a 32x32 8-bit 4:2:0 PARTITION_H4 frame with three 32x8 luma leaves and 16x4 subsampled chroma leaves, an exact 1,522-operation entropy trace, exact Y/U/V planes, and exact Pillow RGB output; it exercises the geometry-specific matrix-9 dequantization and one-sided DC path. The coverage_i444_rect_01.avif witness is a 16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals, full-resolution Y/U/V residuals, delta-Q, a pinned 499-operation dav1d trace, exact 16x16 reconstructed planes, and exact Pillow RGB8 output. The new coverage_i444_rect_02.avif witness is a second 16x16 8-bit lossy 4:4:4 split-root/four-leaf frame with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB8 output, distinct residual/EOB states, and a filter-intra leaf. The new coverage_r32x32_filter_intra_probe_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with an origin Horizontal32x16 leaf using filter-intra y-mode 13/filter mode 2 and dav1d's missing-edge values (top 127, left 129, top-left 128), followed by a second Horizontal32x16 leaf; its pinned trace has 1,168 entropy operations and safe Rust matches exact Y/U/V planes and Pillow RGB bytes. The new coverage_r32x32_filter_intra_mode3_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. The production path reconstructs the vertically following second leaf from its prepared spatial edges; its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. Its fixture, encoded-item, and RGB SHA-256 values are 79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29, cbf90be7ee9f18a5ef502f3fa0030d0fe97be481459461df687d968dfbdcb2e5, and 8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495. The new coverage_r32x16_filter_intra_tx8x8_01.avif witness is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled (trace sentinel Post-filterintramode[0/0]) and a depth-two TX8x8 luma grid. Its pinned dav1d trace has 2,328 entropy operations, the partition path is root H followed by the visible Horizontal32x16 terminal, safe Rust reconstructs all four luma TX8x8 children through the generic split path, and exact Y/U/V planes and Pillow RGB8 bytes match independently. Its fixture, encoded-item, and RGB SHA-256 values are 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 test is assembly evidence only and no 4:2:2 decoder path is enabled. The new coverage_square16_filter_intra_mode0_01.avif origin witness adds exact Square16 filter-intra mode-0, unsplit TX16x16 luma, TX8x8 chroma, 1,116-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode0_01.avif witness adds exact origin Vertical8x16 filter-intra mode-0, unsplit TX8x16 luma, TX4x8 chroma, 584-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode1_01.avif witness adds exact origin Vertical8x16 filter-intra mode-1, unsplit TX8x16 luma, TX4x8 chroma, 559-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The newest bounded witness is coverage_square8_chroma_diagonal113_01.avif, a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial. The newest paired rectangular H16x4/V4x16 fixtures add exact safe-Rust false-filter-CDF and UV-palette reconstruction evidence with 162-operation traces in each orientation; this is one bounded class and AVF-STILL-001 remains partial. The new coverage_square32_origin_tx16x16_split_01.avif witness adds a 32x32 4:2:0 origin Square32 leaf with four TX16x16 luma DCT children, DC prediction, non-empty residuals, and TX16x16 DCT chroma; its 4,436-operation pinned trace, exact Y/U/V planes, and Pillow RGB bytes match safe Rust.",
-       "latest_witness": "The latest bounded proof is coverage_square16_chroma_smooth_vertical_01.avif: a deterministic 32x16 8-bit 4:2:0 clipped root split with origin/following Square16 leaves at x=0/x=4. The following leaf selects chroma SmoothVertical mode 10 with ADST-DCT TX8x8 U/V transforms and non-empty AC; both luma leaves use unsplit TX16x16 DCT-DCT transforms. Its pinned dav1d trace has 239 entropy operations and partition ranges 38416/36560/44978; safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. The 100-case, 10-family input-only campaign qualified 9 candidates and promoted SV16-F06-N03 (seed 9053). This closes only the bounded following-Square16/chroma-SmoothVertical/ADST-DCT class; broader AV1 and AVF-STILL-001 remain partial.",
-       "latest_slice": "The SmoothVertical slice adds one deterministic 32x16 8-bit 4:2:0 following-Square16 fixture with chroma mode 10, ADST-DCT TX8x8 U/V transforms, non-empty AC, and unsplit TX16x16 DCT-DCT luma in both leaves. The maintained input-only campaign evaluates 100 candidates across 10 families, qualified 9, and promoted SV16-F06-N03 without invoking repository Rust. Safe Rust matches exact dav1d partition/entropy/Y/U/V and Pillow RGB evidence; this remains one bounded class, not general AV1 or AVIF completion.",
-               "latest_evidence_addition": "The promoted SV16-F06-N03 fixture has fixture SHA-256 66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380, encoded-item SHA-256 4ee03bf0a854404d475cb478ff5346ead0ba4cc771f85c41ae06079e906e4768, Pillow RGB SHA-256 76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258, Y/U/V SHA-256 values 8626df874e0d5890025bacfbed8d0b7907e67388275d9bfaaf172f5b4a8d5157, f82af4758130efa6d9b239f764d280e4ff797dcf170d4b90ecc2d387e8d5f977, and 6685b6d534af785fb4975b72264fb1319bc57f215e0b73ce632422d82062b6e9, and trace SHA-256 90c4cb4582ada6a1627bb9da470ce9eb3f44f6284efa9c060efa263e7d000d5b. The pinned trace has 239 entropy operations and partition ranges 38416/36560/44978. The input-only campaign report is tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json; it records repository_rust_invoked=false and deterministic double-encode, double-item, double-trace, double-YUV, and double-RGB predicates.",
-               "current_slice": "The new SmoothVertical fixture promotes an independently qualified following Square16/chroma SmoothVertical mode-10/ADST-DCT class. It is a 32x16 8-bit 4:2:0 quality-76/speed-0 frame with origin/following Square16 leaves at x=0/x=4, unsplit TX16x16 DCT-DCT luma, and non-empty following U/V AC. Safe Rust matches exact partition, entropy, reconstructed Y/U/V, and Pillow RGB evidence. Other chroma modes, predictors, transform partitions, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
+       "latest_witness": "The latest bounded proof is coverage_square16_chroma_smooth_01.avif: a deterministic 32x16 8-bit 4:2:0 clipped root split with origin/following Square16 leaves at x=0/x=4. The following leaf selects chroma Smooth mode 9 with ADST-ADST TX8x8 U/V transforms and non-empty AC; both luma leaves use unsplit TX16x16 DCT-DCT transforms. Its pinned dav1d trace has 359 entropy operations and partition ranges 38416/36560/62182; safe Rust matches exact partition, entropy, reconstructed Y/U/V planes, and Pillow RGB bytes. The 100-case, 10-family input-only campaign qualified 10 candidates and promoted SS16-F06-N01 (seed 10051). This closes only the bounded following-Square16/chroma-Smooth/ADST-ADST class; broader AV1 and AVF-STILL-001 remain partial.",
+       "latest_slice": "The Smooth slice adds one deterministic 32x16 8-bit 4:2:0 following-Square16 fixture with chroma mode 9, ADST-ADST TX8x8 U/V transforms, non-empty AC, and unsplit TX16x16 DCT-DCT luma in both leaves. The maintained input-only campaign evaluates 100 candidates across 10 families, qualified 10, and promoted SS16-F06-N01 without invoking repository Rust. Safe Rust matches exact dav1d partition/entropy/Y/U/V and Pillow RGB evidence; this remains one bounded class, not general AV1 or AVIF completion.",
+               "latest_evidence_addition": "The promoted SS16-F06-N01 fixture has fixture SHA-256 1d663c7f7e3d65f12062124880ab1ae4d3eee5eaada570d9a38504aa58093080, encoded-item SHA-256 a1b6e59abdae9c1f1e9bf1e7359314d03eba5669f50e2d3170313c3191e6bfa3, Pillow RGB SHA-256 04aa5e9f6facb7895149696ada7e559de9e44a50c13ac7be2db57d9fd1f273b6, Y/U/V SHA-256 values eeb162fb2c4552315306723e52c02666f0767ac3a09cce8c05a644218eac22bb, 80908489022031ac8b6243af83babc14951d455d740d45d7536858fd814de916, and fa766db8382ae94c774d248531ace690ba08beeea6666f61308de5e68bcfa43e, and trace SHA-256 e516eee9f42415a54035801b9ae2f7482b24fe495776c8b1404c4cdccfcdb15a. The pinned trace has 359 entropy operations and partition ranges 38416/36560/62182. The input-only campaign report is tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_campaign_01.json; it records repository_rust_invoked=false and deterministic double-encode, double-item, double-trace, double-YUV, and double-RGB predicates.",
+               "current_slice": "The new Smooth fixture promotes an independently qualified following Square16/chroma Smooth mode-9/ADST-ADST class. It is a 32x16 8-bit 4:2:0 quality-76/speed-0 frame with origin/following Square16 leaves at x=0/x=4, unsplit TX16x16 DCT-DCT luma, and non-empty following U/V AC. Safe Rust matches exact partition, entropy, reconstructed Y/U/V, and Pillow RGB evidence. Other chroma modes, predictors, transform partitions, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
         "current_slice_update": {
-          "target": "following Square16 chroma SmoothVertical mode 10 with ADST-DCT TX8x8 U/V",
+          "target": "following Square16 chroma Smooth mode 9 with ADST-ADST TX8x8 U/V",
           "fixtures": [
-            "coverage_square16_chroma_smooth_vertical_01.avif"
+            "coverage_square16_chroma_smooth_01.avif"
           ],
-          "script": "scripts/explore_avif_square16_following_chroma_smooth_vertical.py",
-          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json",
-          "report_sha256": "d7155bcb67dd01c23ec7ddf7286dbf5530547d35ad8acf72d55ae907645996d9",
+          "script": "scripts/explore_avif_square16_following_chroma_smooth.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_campaign_01.json",
+          "report_sha256": "e6fd49048f42a9ed36ea54d527a70d1a67cc40908a3db2d6767905bad77769e7",
           "candidate_count": 100,
           "family_count": 10,
-          "qualified": 9,
-          "promoted": "SV16-F06-N03",
-          "seed": 9053,
+          "qualified": 10,
+          "promoted": "SS16-F06-N01",
+          "seed": 10051,
           "repository_rust_invoked": false,
-          "entropy_operation_count": 239,
+          "entropy_operation_count": 359,
           "partition_ranges": [
             38416,
             36560,
-            44978
+            62182
           ],
-          "fixture_sha256": "66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380",
-          "encoded_item_sha256": "4ee03bf0a854404d475cb478ff5346ead0ba4cc771f85c41ae06079e906e4768",
-          "pillow_rgb_sha256": "76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258",
+          "fixture_sha256": "1d663c7f7e3d65f12062124880ab1ae4d3eee5eaada570d9a38504aa58093080",
+          "encoded_item_sha256": "a1b6e59abdae9c1f1e9bf1e7359314d03eba5669f50e2d3170313c3191e6bfa3",
+          "pillow_rgb_sha256": "04aa5e9f6facb7895149696ada7e559de9e44a50c13ac7be2db57d9fd1f273b6",
           "decoded_plane_sha256": {
-            "y": "8626df874e0d5890025bacfbed8d0b7907e67388275d9bfaaf172f5b4a8d5157",
-            "u": "f82af4758130efa6d9b239f764d280e4ff797dcf170d4b90ecc2d387e8d5f977",
-            "v": "6685b6d534af785fb4975b72264fb1319bc57f215e0b73ce632422d82062b6e9"
+            "y": "eeb162fb2c4552315306723e52c02666f0767ac3a09cce8c05a644218eac22bb",
+            "u": "80908489022031ac8b6243af83babc14951d455d740d45d7536858fd814de916",
+            "v": "fa766db8382ae94c774d248531ace690ba08beeea6666f61308de5e68bcfa43e"
           },
-          "trace_sha256": "90c4cb4582ada6a1627bb9da470ce9eb3f44f6284efa9c060efa263e7d000d5b",
-          "scope": "This closes only the bounded following-Square16 chroma SmoothVertical mode-10 ADST-DCT class; it does not claim general chroma prediction, AV1, or AVF-STILL-001 completion."
+          "trace_sha256": "e516eee9f42415a54035801b9ae2f7482b24fe495776c8b1404c4cdccfcdb15a",
+          "scope": "This closes only the bounded following-Square16 chroma Smooth mode-9 ADST-ADST class; it does not claim general chroma prediction, AV1, or AVF-STILL-001 completion."
         },
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",
@@ -1029,52 +1029,52 @@
           "decision": "The two disjoint campaigns are bounded no-hit evidence, not proof that Diagonal67 is unreachable. No fixture or production decoder edit is justified; keep this class planned and choose the next slice independently."
         },
         "latest_slice_evidence": {
-          "target": "following Square16 chroma SmoothVertical mode 10 with ADST-DCT TX8x8 U/V",
+          "target": "following Square16 chroma Smooth mode 9 with ADST-ADST TX8x8 U/V",
           "fixtures": [
-            "coverage_square16_chroma_smooth_vertical_01.avif"
+            "coverage_square16_chroma_smooth_01.avif"
           ],
-          "script": "scripts/explore_avif_square16_following_chroma_smooth_vertical.py",
-          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json",
-          "report_sha256": "d7155bcb67dd01c23ec7ddf7286dbf5530547d35ad8acf72d55ae907645996d9",
+          "script": "scripts/explore_avif_square16_following_chroma_smooth.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_campaign_01.json",
+          "report_sha256": "e6fd49048f42a9ed36ea54d527a70d1a67cc40908a3db2d6767905bad77769e7",
           "candidate_count": 100,
           "family_count": 10,
-          "qualified": 9,
-          "promoted": "SV16-F06-N03",
-          "seed": 9053,
+          "qualified": 10,
+          "promoted": "SS16-F06-N01",
+          "seed": 10051,
           "repository_rust_invoked": false,
-          "entropy_operation_count": 239,
+          "entropy_operation_count": 359,
           "partition_ranges": [
             38416,
             36560,
-            44978
+            62182
           ],
-          "fixture_sha256": "66ed5a57015730ce80eb529483102fbe781d1d073e3443fa041177e38be8e380",
-          "encoded_item_sha256": "4ee03bf0a854404d475cb478ff5346ead0ba4cc771f85c41ae06079e906e4768",
-          "pillow_rgb_sha256": "76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258",
+          "fixture_sha256": "1d663c7f7e3d65f12062124880ab1ae4d3eee5eaada570d9a38504aa58093080",
+          "encoded_item_sha256": "a1b6e59abdae9c1f1e9bf1e7359314d03eba5669f50e2d3170313c3191e6bfa3",
+          "pillow_rgb_sha256": "04aa5e9f6facb7895149696ada7e559de9e44a50c13ac7be2db57d9fd1f273b6",
           "decoded_plane_sha256": {
-            "y": "8626df874e0d5890025bacfbed8d0b7907e67388275d9bfaaf172f5b4a8d5157",
-            "u": "f82af4758130efa6d9b239f764d280e4ff797dcf170d4b90ecc2d387e8d5f977",
-            "v": "6685b6d534af785fb4975b72264fb1319bc57f215e0b73ce632422d82062b6e9"
+            "y": "eeb162fb2c4552315306723e52c02666f0767ac3a09cce8c05a644218eac22bb",
+            "u": "80908489022031ac8b6243af83babc14951d455d740d45d7536858fd814de916",
+            "v": "fa766db8382ae94c774d248531ace690ba08beeea6666f61308de5e68bcfa43e"
           },
-          "trace_sha256": "90c4cb4582ada6a1627bb9da470ce9eb3f44f6284efa9c060efa263e7d000d5b",
-          "scope": "Input-only oracle search plus exact safe-Rust reconstruction evidence for one bounded following-Square16 chroma SmoothVertical/ADST-DCT class; not general AV1 completion."
+          "trace_sha256": "e516eee9f42415a54035801b9ae2f7482b24fe495776c8b1404c4cdccfcdb15a",
+          "scope": "Input-only oracle search plus exact safe-Rust reconstruction evidence for one bounded following-Square16 chroma Smooth/ADST-ADST class; not general AV1 completion."
         },
         "latest_search_evidence": {
-          "target_id": "following_square16_chroma_smooth_vertical_adst_dct_420",
-          "target": "32x16 8-bit 4:2:0 clipped root split with origin/following Square16 leaves, following chroma SmoothVertical mode 10, ADST-DCT TX8x8 U/V, unsplit TX16x16 DCT-DCT luma, and non-empty following chroma AC",
-          "script": "scripts/explore_avif_square16_following_chroma_smooth_vertical.py",
-          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_vertical_campaign_01.json",
-          "report_sha256": "d7155bcb67dd01c23ec7ddf7286dbf5530547d35ad8acf72d55ae907645996d9",
+          "target_id": "following_square16_chroma_smooth_adst_adst_420",
+          "target": "32x16 8-bit 4:2:0 clipped root split with origin/following Square16 leaves, following chroma Smooth mode 9, ADST-ADST TX8x8 U/V, unsplit TX16x16 DCT-DCT luma, and non-empty following chroma AC",
+          "script": "scripts/explore_avif_square16_following_chroma_smooth.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_square16_following_chroma_smooth_campaign_01.json",
+          "report_sha256": "e6fd49048f42a9ed36ea54d527a70d1a67cc40908a3db2d6767905bad77769e7",
           "candidate_count": 100,
           "family_count": 10,
-          "qualified": 9,
-          "promoted": "SV16-F06-N03",
-          "seed": 9053,
-          "entropy_operation_count": 239,
+          "qualified": 10,
+          "promoted": "SS16-F06-N01",
+          "seed": 10051,
+          "entropy_operation_count": 359,
           "partition_ranges": [
             38416,
             36560,
-            44978
+            62182
           ],
           "tool_contract": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2, pinned dav1d 1.5.3, 32x16 4:2:0, quality 76, speed 0, one thread, deterministic double encoding/item/trace/YUV/RGB; repository Rust was not invoked",
           "repository_rust_invoked": false,

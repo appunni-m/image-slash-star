@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 290 rows total, 283 active, 7 explicit planned
+- AVIF decode/inspect/verify: 291 rows total, 284 active, 7 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,514 rows total, 1110 active decode rows, 365 active encode
+- Whole matrix: 1,515 rows total, 1111 active decode rows, 365 active encode
   rows, 7 planned decode rows, and 32 planned encode rows.
 - Earlier bounded AVIF witness: `coverage_r32x8_h4_ripple_01.avif` is a 32x32 8-bit
   4:2:0 `PARTITION_H4` frame with three 32x8 luma leaves, 16x4 subsampled
@@ -431,6 +431,19 @@ the corresponding status is recorded in `roadmap.json`:
   double-trace/double-YUV/double-RGB checks and no repository Rust invocation.
   This closes only the bounded following-Square16/chroma-SmoothVertical/
   ADST-DCT class; broader AV1 and AVF-STILL-001 remain partial.
+- The newest bounded chroma proof is
+  `coverage_square16_chroma_smooth_01.avif`, a deterministic 32x16 8-bit
+  4:2:0 clipped root split with origin/following Square16 leaves at x=0/x=4.
+  The following leaf selects chroma Smooth mode 9 with ADST-ADST TX8x8 U/V
+  transforms and non-empty AC; both luma leaves use unsplit TX16x16 DCT_DCT
+  transforms. Its pinned dav1d trace has 359 entropy operations and partition
+  ranges `38416/36560/62182`; safe Rust matches the exact partition, entropy,
+  reconstructed Y/U/V planes, and Pillow RGB bytes. The 100-case/10-family
+  input-only campaign qualified 10 candidates and promoted `SS16-F06-N01`
+  (seed 10051), with deterministic double-encode/double-item/double-trace/
+  double-YUV/double-RGB checks and no repository Rust invocation. This closes
+  only the bounded following-Square16/chroma-Smooth/ADST-ADST class; broader
+  AV1 and AVF-STILL-001 remain partial.
 - Current local Rust contracts: 34/34 matrix tests and 66/66 feature-gate
   tests pass with all features enabled.
 - The newest bounded rectangular proof pairs
@@ -1111,7 +1124,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,514 total | 1,117 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,110 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,515 total | 1,118 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,111 active decode rows, 365 active encode rows, 7 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 34/34 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2351,7 +2364,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 290 AVIF decode/inspect/verify rows exist: 283 are
+**Current exact state:** 291 AVIF decode/inspect/verify rows exist: 284 are
 active and 7 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
