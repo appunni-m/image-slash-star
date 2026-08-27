@@ -17,7 +17,7 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-27
 
-- Current claim-ledger refresh base revision: `9615bc2408b84f075445e4f6a137b483ec3501db`
+- Current claim-ledger refresh base revision: `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
   fixture/hash refresh does not silently relabel that historical parity run)
@@ -550,20 +550,19 @@ ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
 The latest managed Coverage MCP run is
-`e3bdfa3f-1d31-4557-8c18-935fac8964fd`. Its run record is bound to exact
-implementation commit `9615bc2408b84f075445e4f6a137b483ec3501db`; it passed in
-152,353 ms and ingested snapshot `c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b`.
+`2c15aada-4d4a-4a4f-8547-25172ad7d370`. Its run record is bound to exact
+implementation commit `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`; it passed in
+146,945 ms and ingested snapshot `b3552b87-34e3-4982-aed9-097741233eb6`.
 Its aggregate all-feature LLVM snapshot records 99,780/109,576 lines (91.0601%),
-12,712/14,058 branches (90.4254%), 5,090/5,766 functions (88.2761%), and
-149,391/165,733 regions (90.1396%), leaving 9,796 lines, 1,346 branches, 676
-functions, and 16,342 regions uncovered. The compact snapshot projection retains
+12,713/14,058 branches (90.4325%), 5,090/5,766 functions (88.2761%), and
+149,392/165,733 regions (90.1402%), leaving 9,796 lines, 1,345 branches, 676
+functions, and 16,341 regions uncovered. The compact snapshot projection retains
 commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance
-caveat is explicit. Direct comparison with the previous stored snapshot records
-covered deltas of -2 lines, +5 branches, +0 functions, and -2 regions, with
-denominator deltas of +4 lines, +4 branches, +0 functions, and +8 regions; no
-source-attributable gain or named-test attribution is claimed because the compact
-projection does not provide reliable changed-code attribution. The Diagonal67
-vertical Square8 witness is exact through safe Rust, but AVF-STILL-001, AVIF
+caveat is explicit. Explicit incremental review against snapshot
+`c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b` reports +1 covered branch and +1 covered
+region, no aggregate line/function change, and one newly covered line identity at
+`src/codecs/avif/av1/block.rs:7860`; named test attribution is unavailable. The
+mode-2 Vertical8x16 witness is exact through safe Rust, but AVF-STILL-001, AVIF
 encoding, and the four-metric 100% gate remain open.
 
 The previous managed Coverage MCP run was
@@ -1203,11 +1202,11 @@ still open.
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Lines (managed Coverage MCP) | 99,780 | 109,576 | 91.0601% | 9,796 | 8.9399% |
-| Branches (managed Coverage MCP) | 12,712 | 14,058 | 90.4254% | 1,346 | 9.5746% |
+| Branches (managed Coverage MCP) | 12,713 | 14,058 | 90.4325% | 1,345 | 9.5675% |
 | Functions (managed Coverage MCP) | 5,090 | 5,766 | 88.2761% | 676 | 11.7239% |
-| Regions (managed Coverage MCP) | 149,391 | 165,733 | 90.1396% | 16,342 | 9.8604% |
+| Regions (managed Coverage MCP) | 149,392 | 165,733 | 90.1402% | 16,341 | 9.8598% |
 
-The Diagonal67 vertical Square8 fixture is a real safe-Rust reconstruction class,
+The Vertical8x16 filter-intra mode-2 fixture is a real safe-Rust reconstruction class,
 not a coverage-only test. Its input-only search report and exact pinned dav1d,
 Y/U/V, and Pillow RGB evidence are recorded in the AVIF section above.
 The current managed LLVM JSON report carries the warning that segments are

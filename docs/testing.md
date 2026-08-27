@@ -7,17 +7,17 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`9615bc2408b84f075445e4f6a137b483ec3501db`; the historical Pillow parity
+`2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`c1f5c626-d2d8-48ba-81e2-d8e9a6ce564b` from run
-`e3bdfa3f-1d31-4557-8c18-935fac8964fd` (full all-feature workload passed at
-exact execution commit `9615bc2408b84f075445e4f6a137b483ec3501db`). Its LLVM
-report records 99,780/109,576 lines (91.0601%), 12,712/14,058 branches
-(90.4254%), 5,090/5,766 functions (88.2761%), and 149,391/165,733 regions
-(90.1396%). The compact snapshot projection retains prior commit metadata
+`b3552b87-34e3-4982-aed9-097741233eb6` from run
+`2c15aada-4d4a-4a4f-8547-25172ad7d370` (full all-feature workload passed at
+exact execution commit `2afc9c4f0e249a5a40eda8e6a655c100dcb2d13f`). Its LLVM
+report records 99,780/109,576 lines (91.0601%), 12,713/14,058 branches
+(90.4325%), 5,090/5,766 functions (88.2761%), and 149,392/165,733 regions
+(90.1402%). The compact snapshot projection retains prior commit metadata
 `3272b3ef49a87c2947c08b46596b442195c6a8db`, so the run and snapshot are not
 silently treated as having identical metadata. Direct comparison with the
 previous stored snapshot records covered deltas of -2 lines, +5 branches, +0
