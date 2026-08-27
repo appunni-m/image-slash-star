@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1523,
-      "decode_rows": 1126,
+      "total_rows": 1524,
+      "decode_rows": 1127,
       "encode_rows": 397,
-      "decode_active": 1119,
+      "decode_active": 1120,
       "decode_planned": 7,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 299,
-      "decode_active": 292,
+      "decode_rows": 300,
+      "decode_active": 293,
       "decode_planned": 7,
       "encode_rows": 32,
       "encode_active": 0,
@@ -249,6 +249,47 @@
             "merge_exact": false,
             "note": "Standalone coverage_review(task=incremental) measured the additive baseline-union result: 686 additional covered line identities and no additional covered branch, function, or region identities. The aggregate denominator grew by 2,823 lines, 72 branches, 10 functions, and 582 regions because this slice adds production code. The selected snapshot diff is limited because unselected baseline hits are not observed; it is not a full-release measurement or a regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run with explicit report import",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "commit_sha": "8e695c7f3c437f91597e3acfb0959de3eeff5a8c",
+          "run_id": "2794788f-4fe8-4212-8256-edd7f57e0b37",
+          "snapshot_id": "c1df95e5-7a3f-4db6-bac9-b438856faa5b",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 40221,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+            "--",
+            "--nocapture"
+          ],
+          "selected_rows": [
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture (all 230 pinned reconstruction cases)"
+          ],
+          "status": "passed_and_report_imported",
+          "automatic_ingestion": "stale artifact rejected after the test passed; the exact generated LLVM report was explicitly imported with commit provenance",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "baseline_union_incremental",
+            "covered_lines_delta": 1638,
+            "covered_branches_delta": 0,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 0,
+            "total_lines_delta": 2815,
+            "total_branches_delta": 72,
+            "total_functions_delta": 10,
+            "total_regions_delta": 582,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "note": "The additive baseline-union review measured the selected reconstruction test and retained unobserved baseline hits as not_observed. It is bounded evidence, not a complete four-metric release measurement or a global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -267,7 +308,7 @@
     }
   },
   "latest_verification": {
-    "measured": "2026-08-27",
+    "measured": "2026-08-28",
     "passing": [
       "cargo fmt --all -- --check",
       "cargo check --all-features --locked",
@@ -1481,6 +1522,94 @@
           ],
           "focused_verification": "cargo test --locked --all-features --test coverage_matrix_tests test_decode_matrix_avif passes 291/291 active AVIF rows; exact public RGB parity passes for the witness. Managed Coverage MCP selected-row incremental run ec9eeafa-f383-40f0-a5fb-d938e19de70f passed in 65,013 ms, ingested snapshot 0e194d9f-dfa5-4746-b1af-9b6316281d48, and its standalone incremental review reports +686 covered lines, +0 branches/functions/regions, and zero regressions against baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c.",
           "scope": "This closes only bounded depth-one DCT_DCT TX8x4 evidence. The row's container verification remains header-only; one-dimensional V_DCT/H_DCT, other H16x4 states, broader AV1/AVIF completion, and the four-metric 100% coverage gate remain open."
+        },
+        "current_slice_update_2026_08_28_v4x16_transform_mapping": {
+          "target": "PARTITION_V4 16x16 4:2:0 with four Vertical4x16 luma leaves and predictor-enabled rectangular transforms",
+          "fixture": "coverage_v4x16_predictor_adst_adst_01.avif",
+          "generator": "scripts/generate_test_assets.py::vertical4x16_predictor_adst_adst",
+          "search_script": "scripts/explore_avif_vertical4x16_transform.py",
+          "campaign_reports": [
+            "tests/fixtures/outputs/av1_search/coverage_vertical4x16_transform_campaign_01.json",
+            "tests/fixtures/outputs/av1_search/coverage_vertical4x16_transform_campaign_02_rotate_cw.json",
+            "tests/fixtures/outputs/av1_search/coverage_vertical4x16_transform_campaign_03_rotate_ccw.json",
+            "tests/fixtures/outputs/av1_search/coverage_vertical4x16_transform_campaign_04_rotate_cw_core_predictors.json",
+            "tests/fixtures/outputs/av1_search/coverage_vertical4x16_transform_campaign_05_vertical_flip_core_predictors.json"
+          ],
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified": 1,
+            "promoted": "v4x16-f07-n07",
+            "seed": 107,
+            "repository_rust_invoked": false,
+            "selection": "vertical flip of the predictor corpus; the third Vertical4x16 luma leaf selects AV1 DCT_ADST (CDF symbol 6, dav1d txtp 2)"
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=9,range=53504",
+            "entropy_operation_count": 263,
+            "luma_leaves": [
+              "DC / DCT_DCT / TX4x16 / EOB 57",
+              "Paeth / ADST_ADST / TX4x16 / EOB 36",
+              "Horizontal / DCT_ADST / TX4x16 / EOB 5",
+              "Horizontal / DCT_DCT / TX4x16 / EOB 3"
+            ],
+            "chroma": "the second and fourth luma groups own U/V TX4x8 DCT_DCT leaves with EOB -1"
+          },
+          "fixture_sha256": "e5c6fe86bdc3a1339836521421aba220e4fe703b1379483d7b69972af974920b",
+          "encoded_item": {
+            "bytes": 57,
+            "sha256": "0ec0bbfd3aea8429d71e2cdfba4b46d2e21d51a0df2ddc326f81da989eabbcf2"
+          },
+          "pillow_rgb": {
+            "bytes": 768,
+            "mode": "RGB8",
+            "sha256": "66d1531446de70283fcb048f1f82f7c0a5e454eaf8e2bee70afa8efecf683994"
+          },
+          "decoded_plane_sha256": {
+            "y": "02a148b1a6320f01edcbc5cbe364872d2b0c25f11ec9e137ded50fba4d7a82c7",
+            "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+            "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+          },
+          "trace_sha256": "5b00b985a00dcf608e5be35137c664355c6b2f4c555957942ed9e34bf973203f",
+          "production_change": "Correct the AV1 vertical-then-horizontal DCT_ADST/ADST_DCT mapping to the safe width-pass/height-pass rectangular kernels; retain a direct dav1d-derived R4x16 transform regression test.",
+          "focused_verification": "The direct R4x16 witness test, full 36-test coverage_matrix_tests target, AVIF decode matrix (293/293 active), and pinned AV1 reconstruction test pass; strict fmt, locked all-feature check, and Clippy pass.",
+          "scope": "This closes only the bounded predictor-enabled Vertical4x16 transform-dispatch class. Other rectangular transform/topology states, broader AV1/AVIF completion, encoding, and the four-metric 100% coverage gate remain open.",
+          "managed_incremental_coverage": {
+            "run_id": "2794788f-4fe8-4212-8256-edd7f57e0b37",
+            "snapshot_id": "c1df95e5-7a3f-4db6-bac9-b438856faa5b",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "commit_sha": "8e695c7f3c437f91597e3acfb0959de3eeff5a8c",
+            "duration_ms": 40221,
+            "arguments": [
+              "test",
+              "--test",
+              "coverage_matrix_tests",
+              "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+              "--",
+              "--nocapture"
+            ],
+            "status": "passed_and_report_imported",
+            "automatic_ingestion": "stale artifact rejected after the test passed; the exact generated LLVM report was explicitly imported as snapshot c1df95e5-7a3f-4db6-bac9-b438856faa5b with commit provenance",
+            "review": {
+              "claim_status": "supported",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "baseline_union_incremental",
+              "covered_lines_delta": 1638,
+              "covered_branches_delta": 0,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 0,
+              "total_lines_delta": 2815,
+              "total_branches_delta": 72,
+              "total_functions_delta": 10,
+              "total_regions_delta": 582,
+              "regressed": 0,
+              "test_attribution": "unavailable",
+              "merge_exact": false,
+              "note": "The additive baseline-union review measured the selected reconstruction test and retained unobserved baseline hits as not_observed. It is bounded evidence, not a complete four-metric release measurement or a global regression claim."
+            }
+          }
         }
       },
       "AVF-ENTROPY-001": {

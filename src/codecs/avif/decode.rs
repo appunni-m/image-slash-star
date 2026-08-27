@@ -530,7 +530,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     still.height = 5;
     rejects(still);
     let mut still = valid_still.clone();
-    still.bit_depth = 12;
+    // 12-bit stills are now a supported pure-Rust class; use 14 to exercise
+    // the unsupported-depth admission branch without mutating other invariants.
+    still.bit_depth = 14;
     rejects(still);
     let mut still = valid_still.clone();
     still.monochrome = true;
