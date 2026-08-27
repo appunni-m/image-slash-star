@@ -279,6 +279,12 @@ pub(super) const Y_4X4_MATRIX_9: [u8; 16] = [
     32, 32, 35, 43, 32, 34, 37, 43, 35, 37, 48, 54, 43, 43, 54, 65,
 ];
 
+/// AV1 quantization matrix 8 for a 4×4 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[8][0][TX_4X4]`.
+pub(super) const Y_4X4_MATRIX_8: [u8; 16] = [
+    32, 32, 38, 51, 32, 35, 40, 49, 38, 40, 54, 64, 51, 49, 64, 81,
+];
+
 /// AV1 quantization matrix 9 for a 4×4 U/V transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][1][TX_4X4]`.
 pub(super) const UV_4X4_MATRIX_9: [u8; 16] = [
@@ -1189,9 +1195,9 @@ mod tests {
         UV_4X4_MATRIX_9, UV_4X4_MATRIX_10, UV_4X8_MATRIX_6, UV_4X8_MATRIX_9, UV_4X8_MATRIX_10,
         UV_8BIT, UV_8X4_MATRIX_6, UV_8X4_MATRIX_9, UV_8X4_MATRIX_10, UV_8X8_MATRIX_2,
         UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_2,
-        UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10, Y_4X16_MATRIX_5,
-        Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9, Y_16X4_MATRIX_5,
-        Y_16X4_MATRIX_10,
+        UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_8, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10,
+        Y_4X16_MATRIX_5, Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9,
+        Y_16X4_MATRIX_5, Y_16X4_MATRIX_10,
     };
 
     #[test]
@@ -1226,7 +1232,13 @@ mod tests {
     }
 
     #[test]
-    fn matrix_9_and_luma_matrix_10_have_checked_4x4_values() {
+    fn luma_matrices_8_9_and_10_have_checked_4x4_values() {
+        assert_eq!(
+            Y_4X4_MATRIX_8,
+            [
+                32, 32, 38, 51, 32, 35, 40, 49, 38, 40, 54, 64, 51, 49, 64, 81
+            ]
+        );
         assert_eq!(
             Y_4X4_MATRIX_9,
             [
