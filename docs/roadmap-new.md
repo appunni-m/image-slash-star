@@ -506,18 +506,19 @@ ingested snapshot `b5a94b2e-fdf6-4838-beb0-f970a616b5ad`. Its result is retained
 as historical context for the current measurement.
 
 The latest managed Coverage MCP run is
-`fdaa53de-02a4-46b7-a763-76262a26eebe`. Its run record is bound to clean
-implementation commit `bd5c840a3834af7c4c81a0c176e7c0c520a204fd`; it passed in
-147,744 ms and ingested snapshot `32722ec9-0c14-4b7d-a0d4-e21daa02be42`.
-Its current all-feature LLVM snapshot records 99,775/109,572 lines (91.0588%),
+`c4507315-ea6b-44cb-84d6-8054ccf016be`. Its run record is bound to clean
+implementation commit `39b3679409038c0c3947f3d0ef922f11dbe2512f`; it passed in
+153,667 ms and ingested snapshot `d1ed9865-de44-4053-abda-ed79d277d067`.
+Its current all-feature LLVM snapshot records 99,782/109,572 lines (91.0652%),
 12,707/14,054 branches (90.4155%), 5,090/5,766 functions (88.2761%), and
-149,388/165,725 regions (90.1421%). The compact snapshot projection retains
+149,393/165,725 regions (90.1451%). The compact snapshot projection retains
 commit metadata `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance
-caveat is explicit. `coverage_review` against baseline snapshot
-`1ac75559-0323-47ab-81bd-d9c6dac620fb` is measured, but named test attribution
-is unavailable and no source-only attribution is claimed. The Square64 split
-witness is exact through safe Rust, but AVF-STILL-001, AVIF encoding, and the
-four-metric 100% gate remain open.
+caveat is explicit. `coverage_review` against explicit baseline snapshot
+`32722ec9-0c14-4b7d-a0d4-e21daa02be42` recorded 4 newly covered line identities
+and 5 newly covered regions, with no regressions or denominator changes; named
+test attribution is unavailable and no source-only attribution is claimed. The
+SmoothVertical Square16 witness is exact through safe Rust, but AVF-STILL-001,
+AVIF encoding, and the four-metric 100% gate remain open.
 
 The previous managed Coverage MCP run was
 `3b4748a2-f5bf-43d2-9f56-1067f4210257`, whose run record is bound to exact
@@ -601,7 +602,7 @@ Clippy, the complete all-feature test suite, strict rustdoc, coverage-origin,
 diagnostic-provenance, unreachable-contract, package-surface, license, roadmap,
 claim-ledger, and diff checks. The one remaining measured release gate is:
 
-- LLVM coverage: 9,797 lines, 1,347 branches, 676 functions, and 16,337 regions
+- LLVM coverage: 9,790 lines, 1,347 branches, 676 functions, and 16,332 regions
   remain below the 100% release target.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
@@ -609,8 +610,9 @@ accepted-brand variants, grid fixture, and two-column multitile fixture. The
 work item remains partial until broader partition/block states, independent
 evidence, and target checks exist.
 The latest managed insight ranks `src/codecs/avif/av1/block.rs` first, with
-uncovered line targets 335, 667, and 1,034, plus 1,082 uncovered branches and
-470 uncovered functions in that file; this is the next investigation target,
+uncovered line targets 349, 1,053, and 1,346-1,350, plus 1,049 uncovered
+branches, 448 uncovered functions, and 2,178 uncovered regions in that file;
+this is the next investigation target,
 not evidence that those states are reachable from the current Pillow corpus.
 
 The 7 decode gaps and their pure-Rust dependencies are recorded exactly in
@@ -1044,8 +1046,8 @@ that an entire workstream is finished because one slice passed.
 | --- | --- | --- | --- |
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
-| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 502 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `32722ec9-0c14-4b7d-a0d4-e21daa02be42` is recorded from the latest all-feature run, bound to clean implementation commit `bd5c840a3834af7c4c81a0c176e7c0c520a204fd`. The four metrics remain below 100% and stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 282 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette witness set is one bounded production class, not general AVIF completion. |
+| W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 502 exact `cfg(coverage)` guards across 85 files, with no Pillow-parity origin assigned. The current managed snapshot `d1ed9865-de44-4053-abda-ed79d277d067` is recorded from the latest all-feature run, bound to clean implementation commit `39b3679409038c0c3947f3d0ef922f11dbe2512f`. The four metrics remain below 100% and stay visible in the current coverage table. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 283 AVIF decode rows are active, 7 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The new Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical witness set is one bounded production class, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed
@@ -1139,30 +1141,33 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The latest managed Coverage MCP snapshot below was ingested from run
-`fdaa53de-02a4-46b7-a763-76262a26eebe`, whose run record is bound to clean
-implementation commit `bd5c840a3834af7c4c81a0c176e7c0c520a204fd`, with snapshot
-`32722ec9-0c14-4b7d-a0d4-e21daa02be42`. It passed in 147,744 ms. The compact
+`c4507315-ea6b-44cb-84d6-8054ccf016be`, whose run record is bound to clean
+implementation commit `39b3679409038c0c3947f3d0ef922f11dbe2512f`, with snapshot
+`d1ed9865-de44-4053-abda-ed79d277d067`. It passed in 153,667 ms. The compact
 snapshot projection retains commit metadata
 `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is
 explicit. `coverage_review` against explicit baseline snapshot
-`1ac75559-0323-47ab-81bd-d9c6dac620fb` is measured, but named test attribution
-is unavailable and no source-only attribution is claimed. The remaining 100%
-gate is still open.
+`32722ec9-0c14-4b7d-a0d4-e21daa02be42` recorded 4 newly covered line identities
+and 5 newly covered regions, with no regressions or denominator changes; named
+test attribution is unavailable and no source-only attribution is claimed. The
+remaining 100% gate is still open.
 
 | Metric | Covered | Total | Covered % | Gap | Gap % |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Lines (managed Coverage MCP) | 99,775 | 109,572 | 91.0588% | 9,797 | 8.9412% |
+| Lines (managed Coverage MCP) | 99,782 | 109,572 | 91.0652% | 9,790 | 8.9348% |
 | Branches (managed Coverage MCP) | 12,707 | 14,054 | 90.4155% | 1,347 | 9.5845% |
 | Functions (managed Coverage MCP) | 5,090 | 5,766 | 88.2761% | 676 | 11.7239% |
-| Regions (managed Coverage MCP) | 149,388 | 165,725 | 90.1421% | 16,337 | 9.8579% |
+| Regions (managed Coverage MCP) | 149,393 | 165,725 | 90.1451% | 16,332 | 9.8549% |
 
-The Square64 split fixture is a real safe-Rust reconstruction class, not a
+The SmoothVertical Square16 fixture is a real safe-Rust reconstruction class, not a
 coverage-only test. Its input-only search report and exact pinned dav1d,
 Y/U/V, and Pillow RGB evidence are recorded in the AVIF section above.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:
-the release target is still 100% for all four measures.
+the release target is still 100% for all four measures. The explicit aggregate
+comparison found 4 newly covered line identities and 5 newly covered regions
+without a regression or denominator change.
 The snapshot does not claim complete format support or close the product
 roadmap.
 
