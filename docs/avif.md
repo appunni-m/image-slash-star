@@ -4,7 +4,14 @@ Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
 Reviewed: 2026-08-27
 
-Current claim-ledger refresh base revision: `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`.
+Current claim-ledger refresh base revision: `99f8cd59d8fb2ae0109f071e5902435de1812139`.
+The current managed Coverage MCP snapshot is
+`283cc397-39ec-4dc5-98ec-21cc4720cdf8` from run
+`40400567-ea79-4811-a683-c823c683646f`, bound to exact implementation commit
+`99f8cd59d8fb2ae0109f071e5902435de1812139`. It records 100,078/109,648 lines
+(91.2721%), 12,789/14,152 branches (90.3689%), 5,112/5,770 functions
+(88.5962%), and 149,758/165,832 regions (90.3071%); all four 100% metrics
+remain open.
 The historical Pillow parity baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205`; the current managed LLVM evidence
 is recorded in `roadmap-new.md`, and its 100% release gate remains open.

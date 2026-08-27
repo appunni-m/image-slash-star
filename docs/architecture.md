@@ -10,16 +10,16 @@ historical pre-cutover evidence; the current AVIF contract is in
 [roadmap-new.md](roadmap-new.md). The prior source-quality checkpoint was
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`. Current managed nightly LLVM
 all-feature coverage is recorded in [roadmap.json](../roadmap.json):
-100,042/109,633 lines, 12,789/14,152 branches, 5,102/5,767 functions, and
-149,695/165,811 regions. This is not yet 100% metric coverage; the remaining
+100,078/109,648 lines, 12,789/14,152 branches, 5,112/5,770 functions, and
+149,758/165,832 regions. This is not yet 100% metric coverage; the remaining
 source-level gaps are documented there. The current claim-ledger refresh base
-is `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; the historical Pillow parity
+is `99f8cd59d8fb2ae0109f071e5902435de1812139`; the historical Pillow parity
 baseline remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` and remains separate from this
 engineering-quality checkpoint. The exact current Coverage MCP snapshot is
-`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` from run
-`10e5a9c1-5d4e-473c-81f9-f00fd9d9a882` (full all-feature workload passed at
-exact execution commit `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; the
+`283cc397-39ec-4dc5-98ec-21cc4720cdf8` from run
+`40400567-ea79-4811-a683-c823c683646f` (full all-feature workload passed at
+exact execution commit `99f8cd59d8fb2ae0109f071e5902435de1812139`; the
 compact snapshot projection retains prior commit metadata
 `3272b3ef49a87c2947c08b46596b442195c6a8db`).
 Historical run

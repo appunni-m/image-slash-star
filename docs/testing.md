@@ -7,25 +7,25 @@ the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
 The current claim-ledger refresh base is
-`8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`; the historical Pillow parity
+`99f8cd59d8fb2ae0109f071e5902435de1812139`; the historical Pillow parity
 record below remains bound to
 `36b939696415a962285d37f9120ff389aebf0205` because changing fixtures, lint,
 coverage hooks, or test scaffolding does not silently relabel that run.
 The current strict Coverage MCP snapshot is
-`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` from run
-`10e5a9c1-5d4e-473c-81f9-f00fd9d9a882` (full all-feature workload passed at
-exact execution commit `8d76a5c8fc4fa7e26548d59cf0c11c13b761ccd6`). Its LLVM
-report records 100,042/109,633 lines (91.2517%), 12,789/14,152 branches
-(90.3689%), 5,102/5,767 functions (88.4689%), and 149,695/165,811 regions
-(90.2805%). The run record is exact for the implementation commit, while the
+`283cc397-39ec-4dc5-98ec-21cc4720cdf8` from run
+`40400567-ea79-4811-a683-c823c683646f` (full all-feature workload passed at
+exact execution commit `99f8cd59d8fb2ae0109f071e5902435de1812139`). Its LLVM
+report records 100,078/109,648 lines (91.2721%), 12,789/14,152 branches
+(90.3689%), 5,112/5,770 functions (88.5962%), and 149,758/165,832 regions
+(90.3071%). The run record is exact for the implementation commit, while the
 compact snapshot projection retains commit metadata
 `3272b3ef49a87c2947c08b46596b442195c6a8db`; this provenance caveat is explicit.
-Explicit incremental comparison with baseline snapshot
-`b3552b87-34e3-4982-aed9-097741233eb6` records covered deltas of +262 lines,
-+76 branches, +12 functions, and +303 regions, with denominator deltas of +57
-lines, +94 branches, +1 function, and +78 regions. Named-test attribution is
-unavailable; the branch rate decreased because the complete report added more
-branch identities than it covered.
+Explicit coverage review with baseline snapshot
+`dcebe092-02c4-4343-9dcc-c6b10dcaf9fc` records additive-union deltas of +36
+covered lines, +0 branches, +10 functions, and +66 regions, with denominator
+deltas of +15 lines, +0 branches, +3 functions, and +24 regions. Named-test
+attribution is unavailable; bounded source review marks all seven rectangular
+transform wrappers green.
 The
 managed Pillow parity identifier below is the
 accepted claim-ledger result at its own recorded revision; the local
@@ -39,8 +39,8 @@ lane passing; the configured `sccache` client was used and no `RUSTC_WRAPPER`
 setting was changed.
 The current implementation also passes the complete all-feature test set plus
 one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 9,591 lines,
-1,363 branches, 665 functions, and 16,116 regions are recorded explicitly in
+remains red because the release target is 100%; the remaining 9,570 lines,
+1,363 branches, 658 functions, and 16,074 regions are recorded explicitly in
 the canonical roadmap.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
