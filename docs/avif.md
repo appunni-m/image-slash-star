@@ -70,14 +70,27 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 298 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 299 AVIF decode rows and 32 encode
 rows:
 
-- 291 decode rows are active: portable still reconstruction and structural
+- 292 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
-  high-bit-depth reconstruction, HDR color handling, and three sequence cases.
+  high-bit-depth animation/reconstruction beyond the proven still slices, HDR
+  color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
+
+The committed 12-bit witness is
+`high_bitdepth_still_12bit_444_lossless.avif`: a single-frame AV1 profile-2,
+full-range BT.601/SDR, all-lossless 4:4:4 image. Independent AV1C/ISO-BMFF
+inspection records 12-bit samples, one still-picture tile, and base qindex 0;
+safe Rust matches the exact 768-byte Pillow 12.2.0 RGB8 reference
+(`9bb7dfcac6b47a80ec62d5d1732dc2d5954390e55c8462b312f5eb2ccb332661`) from the
+fixture SHA-256
+`8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd`. This
+closes only the single-frame 12-bit 4:4:4 still class; the animated
+`high_bitdepth` fixture, other subsampling, restoration, alpha/sequence, HDR,
+and encoding remain planned.
 
 The current newest bounded witness is
 `coverage_square32_origin_tx16x16_split_01.avif`: a deterministic 32x32
@@ -442,7 +455,7 @@ they can move from `planned` to `active` in `manifest.yaml` and
 | Category | Planned rows | Why it is missing |
 | --- | --- | --- |
 | Adjacent entropy syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | Safe Rust now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes, including moving coefficient-context lookup, matrix-10 dequantization, and independent pixel fixtures. These two byte mutations are rejected by the independent Pillow oracle, so they remain explicit negative planned controls rather than being widened into successful decoding. |
-| Sample depth | `high_bitdepth` | `high_bitdepth` needs 12-bit reconstruction and conversion. The 64×64 `with_alpha` primary/auxiliary pair is active with exact RGBA8 evidence; broader alpha dimensions, depths, and relationships remain future work. |
+| Sample depth | `high_bitdepth` | The single-frame 10-bit and 12-bit 4:4:4 still classes are active with exact RGB8 evidence. `high_bitdepth` still needs animated/high-depth sequence materialization, other subsampling, and broader alpha/depth relationships; the 64×64 `with_alpha` primary/auxiliary pair remains active with exact RGBA8 evidence. |
 | Color pipeline | `hdr` | HDR transfer/primaries/matrix application is not implemented; the current public color path is the narrow checked 8-bit BT.601 full-range class. |
 | Animation and tracks | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | Track references, timing, and sequence presentation are not implemented; the safe validator now rejects the repeated current frame ID in the named error fixture. |
 

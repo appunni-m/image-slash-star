@@ -4431,6 +4431,12 @@ formats:
       - high_bitdepth_still_10bit_444_lossless.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_12bit_444_lossless
+      description: Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
+      test_assets:
+      - high_bitdepth_still_12bit_444_lossless.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: with_alpha
       description: AVIF with alpha channel
       test_assets:

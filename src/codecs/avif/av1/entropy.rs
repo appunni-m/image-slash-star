@@ -3221,7 +3221,7 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
-    matches!(context.bit_depth, 8 | 10)
+    matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
