@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 310 rows total, 305 active, 5 explicit planned
+- AVIF decode/inspect/verify: 311 rows total, 306 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,534 rows total, 1132 active decode rows, 365 active encode
+- Whole matrix: 1,535 rows total, 1133 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -611,6 +611,37 @@ the corresponding status is recorded in `roadmap.json`:
   unobserved baseline observations, and zero regressions. Merge is conservative
   and named-test attribution is unavailable; the snapshot metadata retains
   commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat.
+- The latest bounded angle-delta proof is
+  `coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif`: an
+  8×16 visible 8-bit 4:2:0 frame with the same clipped 16×16 vertical split
+  and following Square8 geometry. The bottom leaf uses luma mode 8 Diagonal67
+  at angle symbol 4 (signed delta 1, resolved 70°), four split TX4×4 DCT-DCT
+  payloads with EOB values `4/-1/-1/-1`, one decoded dequantized AC at scan
+  index 5 = 84, and skipped U/V. The input-only split campaign evaluated 100
+  candidates across 10 families, qualified 5, and promoted `D67V-F05-N01`
+  (seed 12041) without invoking repository Rust. Its pinned dav1d trace has
+  78 entropy operations and partition ranges `46608/54426/34793`; fixture,
+  encoded-item, Pillow RGB, decoded Y/U/V/YUV, and trace hashes are recorded
+  in `roadmap.json`. The separate unsplit symbol-4 campaign qualified zero
+  cases, so it remains no-hit evidence and does not admit unsplit angle 70.
+  Safe Rust matches the exact raw-edge predictor, partition, trace, planes,
+  and Pillow RGB output after an exact semantic gate for top-only/no-left/
+  no-extension, split-TX4×4, DCT-DCT, resolved-70 behavior; the prior 67°
+  gate remains separate. The selected reconstruction proof passes 1/1 and
+  the full coverage-configured matrix passes 44/44, including 306/306 active
+  AVIF rows with 5 explicit planned skips. Managed incremental Coverage MCP
+  run `9aec028b-b175-410b-bef9-3ad0ca87c070` passed in 88,715 ms at exact
+  implementation commit `f027d3366db0ed4b1fa085011561a733916acedc` and
+  ingested snapshot `c82ba70d-f026-40c2-aaed-052c7ebb140c` against explicit
+  baseline `7665cda3-f4a7-4568-b871-a9d34afaa92c`. Standalone incremental
+  review is supported selected-subset evidence: +665/+17/+1/+5,289 covered
+  line/branch/function/region identities, denominator changes
+  +3,676/+414/+41/+10,301, 7,388 newly covered line identities, 39,326
+  unobserved baseline observations, and zero regressions. The merge is
+  conservative and named-test attribution is unavailable; this is not a
+  complete four-metric release measurement. This closes only the bounded
+  split angle-70 class; broader angles, availability, transforms, AV1 still
+  states, AVIF encoding, and AVF-STILL-001 remain partial.
 - The newest bounded following-leaf proof is
   `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
   8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode
