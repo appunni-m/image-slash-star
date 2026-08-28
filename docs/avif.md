@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 311 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 312 AVIF decode rows and 32 encode
 rows:
 
-- 308 decode rows are active: portable still reconstruction and structural
+- 309 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -115,6 +115,21 @@ independent 768-byte Pillow RGB8 reference (fixture SHA-256
 SHA-256 `ef2809ae0834bdb5f3aaf71eeddbad0f5589ed0391fb4d010ac879ff5622bb54`).
 The row remains header-only for container verification; V_DCT/H_DCT and other
 H16x4 states remain explicit bounded gaps.
+
+The newest bounded one-dimensional transform witness is
+`coverage_h16x4_h_dct_cfl_01.avif`: a deterministic 16x16 8-bit 4:2:0 origin
+`PARTITION_H4` frame with four ordered unsplit `Horizontal16x4` luma leaves.
+All four luma leaves select H_DCT (CDF symbol 3, dav1d `txtp=11`, EOB 63),
+while leaves 1 and 3 select UV mode 13/CFL with nonzero TX6 U/V payloads. Safe
+Rust matches the pinned 3,780-operation scalar dav1d trace, exact partition,
+Y/U/V planes, and Pillow RGB8 bytes. The fixture, encoded-item, and Pillow RGB
+SHA-256 values are
+`c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c`,
+`800f1eeb5dd7a6e11a4550a2a027835fb471654c7728a60937bc48d5994db703`, and
+`8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e`.
+This closes only the exact observed origin H_DCT/CFL class; broader H_DCT,
+V_DCT, other predictor/partition/transform states, and AVF-STILL-001 remain
+open.
 
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and

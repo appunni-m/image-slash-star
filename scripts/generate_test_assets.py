@@ -5374,6 +5374,54 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal16x4_h_dct_cfl():
+        """Generate the exact bounded H_DCT/CFL witness.
+
+        The source bytes are the pinned RGB8 normalization of the retained
+        input-only H16x4 oracle candidate. Keeping the normalized input here
+        makes the promoted witness reproducible without copying an encoded
+        AVIF bitstream into the asset generator.
+        """
+
+        pixels = bytes.fromhex(
+            "13aa6991f9ce3a4445c8a4b0654037b17c80d381b186285abd626f3c1400a6dd9c71c47457873f667554bfb5da8c75bc34b08463b79d868a93a57f96b38b96deb3c4a9789d86557292655fe8dbb96a9d6ca9eab48baf8144513f453e5db2a1d8"
+            "0038367faab1443a5569406b62366b624973b0c2d0719a8a5e885ab9e3b5668d7a203e3e3d4c535e64706b6c7e3b394e647b9d101e3b817e934d3e5b58457b292556789aa61c5345b9f5d16da08250696e262c448c87a55c596a6a7169b5c2ae"
+            "5e4e8f716f96b7d1c4416855244c5e8da5c92a29496c66826d788e9dacbfced7e92e2b40301d316f6160b4c092a0b9774d34767e789e94b3a3447558184a4d748ea56b57788161886e668f3134551c1e2dc8c2c477625de5d5beadb5839cb170"
+            "ababcf9498b3111b244a585b3d4c53626470d6c2cd705b6a47455a575f6c969e93babb9d463b0feaddb3a29d87a0a09447565b555e659999a3b1a9b8796c7ec7b2c392777ec7b2b536353da6b2b06d7c652b3b1412200091936b3b2927725567"
+            "63755bbfcbb5c3c1b489787e3614376a406650293b5a3f448d84856670688fab95add8ba5e947494af9c86656eecacc49bbb8ac3d5ad7d77616b4e50eabadabc8aafa47f916958629ca4af667d8592aba84c6e654174678eaba7785d6ef4bed8"
+            "83b87a9ab789857868ffdde198667185586559444b4d56676da1c72b5b89787ca175697f999da040484b7a7b904f4c6a326022849e71c1afa38e656bf4c4d05f3f4c9799a6355268204f795a7dadc5bae57a587bcdadc2a195a1455d67325d64"
+            "778456babe9b7c6b61573742cea6c84331596182a5456b88828193c2adbe3921398b6888662f5660445a618f7aa2f5cb967967624d3ab3b29ecccccc7a6a912d285e5c7da82e4a6749363a6f49466e5457a68c97ccacc3a59ea591c3a0a9f6c0"
+            "8f3950704244b9d4b180b599263e5c6772a2afb5d96265787a7675f4e8da957e6a9d977d9fc2a437674783a686bdd8b982103bcd919da2cda179c8a076a2bb233364e1daf9685d6bbfc1be84837169543574774c7bbe8858a571829c7f777a67"
+        )
+        expected_sha256 = "f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8"
+        if hashlib.sha256(pixels).hexdigest() != expected_sha256:
+            raise RuntimeError("H16x4 H_DCT/CFL source normalization changed")
+        return Image.frombytes("RGB", (16, 16), pixels)
+
+    write_campaign_image(
+        "coverage_h16x4_h_dct_cfl_01",
+        horizontal16x4_h_dct_cfl(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "1",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=99,
+        speed=0,
+    )
+
     def vertical4x16_predictor_adst_adst():
         """Generate the selected predictor-enabled V4x16 witness.
 

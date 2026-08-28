@@ -4380,6 +4380,12 @@ formats:
       description: 16x16 4:2:0 quality-26 speed-0 PARTITION_H4 witness with predictor-diverse Horizontal16x4 leaves and an ADST-DCT luma transform
       test_assets:
       - coverage_h16x4_predictor_adst_dct_01.avif
+    - id: coverage_h16x4_h_dct_cfl_01
+      description: 16x16 4:2:0 quality-99 speed-0 PARTITION_H4 witness with four unsplit Horizontal16x4 H_DCT luma leaves and nonzero CFL chroma on two leaves
+      test_assets:
+      - coverage_h16x4_h_dct_cfl_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_v4x16_predictor_adst_adst_01
       description: 16x16 4:2:0 quality-68 speed-0 PARTITION_V4 witness with DC/Horizontal/Paeth Vertical4x16 leaves and an ADST-ADST luma transform
       test_assets:
