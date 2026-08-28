@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 307 rows total, 302 active, 5 explicit planned
+- AVIF decode/inspect/verify: 308 rows total, 303 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,531 rows total, 1129 active decode rows, 365 active encode
+- Whole matrix: 1,532 rows total, 1130 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -673,7 +673,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  237 reconstruction cases; a selected run reads and executes only the
+  238 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -1121,6 +1121,20 @@ is the declared typed safe-Rust gap. That test is a guardrail for the roadmap;
 it does not count a planned row as completed. The two adjacent EOB mutation
 controls are active negative rows instead: the matrix verifies their exact
 typed `Malformed` result, so they are not counted as open capability gaps.
+
+The input-only EOB campaign
+`tests/fixtures/outputs/av1_search/coverage_luma_eob_bin_campaign_01.json`
+generated exactly 100 candidates in 10 deterministic families and qualified
+one stable candidate, `luma-eob-bin-f01-n03`. It is promoted as
+`portable_lossy_420_q99_luma_eob_bin2_eob3.avif`: a 4×4 8-bit 4:2:0 one-tile
+origin TX8×8 DCT-DCT block with luma EOB-bin two, EOB three, direct EOB-base
+zero, and a non-empty AC coefficient. Its pinned dav1d trace contains 27
+entropy operations, and its encoded-item, Y, U/V, and Pillow RGB hashes are
+recorded in `roadmap.json` and
+`tests/fixtures/outputs/av1_reconstruction.json`. The existing generic safe
+Rust coefficient path already handles this sentence, so the slice adds
+independent structural and pixel evidence without claiming broader EOB
+support.
 
 Managed Coverage MCP then ran the exact central matrix selection for both
 controls: run `bcd2e044-53c5-4c06-a9c6-d6ca8b02220d` passed in 31,206 ms at
@@ -1621,7 +1635,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,530 total | 1,133 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,128 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,532 total | 1,135 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,130 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2657,7 +2671,7 @@ the decoder, not an excuse to route around Rust.
 | --- | --- | --- |
 | General still brand/container control | Closed: baseline and all three accepted-brand rows | The 128×128 baseline and each legal generic-HEIF major-brand ordering now decode through the same safe Rust AV1 path with exact independent 49,152-byte RGB references. |
 | Partitioned-square public raster | Closed: all 16 partitioned-square rows | The safe decoder now materializes all twelve cropped 12×12 and four 16×16 4:4:4 square fixtures with exact pinned planes and entropy traces. This category is no longer a planned matrix gap; broader baseline/tile/sequence classes remain separate work. |
-| Adjacent entropy and tile syntax | No planned row; `portable_lossy_420_q99_eob_bin_control` and `portable_lossy_420_q99_eob_base_control` are active malformed controls | The safe decoder proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes with independent ramp/diagonal fixtures. The two one-byte mutations are independently rejected at EOB-bin/EOB-base with no YUV output, and safe Rust reports the AV1 symbol-coder overread as typed `Malformed`; this is invalid-input evidence, not a claim that the mutations are legal syntax. Empty-tile malformed input and the adjacent lossy DC predictor are also active. |
+| Adjacent entropy and tile syntax | No planned row; `portable_lossy_420_q99_eob_bin_control` and `portable_lossy_420_q99_eob_base_control` are active malformed controls | The safe decoder proves legal luma EOB-bin-two, EOB-bin-five, and EOB-bin-six AC classes plus legal chroma EOB-base/high branches, with independent fixtures and exact traces. The two one-byte mutations are independently rejected at EOB-bin/EOB-base with no YUV output, and safe Rust reports the AV1 symbol-coder overread as typed `Malformed`; this is invalid-input evidence, not a claim that the mutations are legal syntax. Empty-tile malformed input and the adjacent lossy DC predictor are also active. |
 | Sample depth and future alpha variants | `high_bitdepth` (the committed `with_alpha` row and bounded 10-bit/12-bit still slices are active) | A picture may use more than 8 bits or carry a second transparency picture. Pure safe Rust now decodes the committed 64×64 alpha pair and bounded 16×16 10-bit and 12-bit 4:4:4 stills to exact public bytes; animated/high-depth sequence materialization, other subsampling, and broader alpha relationships/depths remain explicit future work. |
 | Color | `hdr` | HDR changes how numbers become colors. It needs explicit safe-Rust bounds, declared color conversion, and metadata rules. |
 | Sequences and frame identity | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | A movie is many pictures plus timing and frame IDs. Safe Rust now rejects the repeated current-ID error case and keeps a primary item independently eligible from a later movie track; first-frame materialization, track presentation, and partial-state rules remain. |
@@ -2737,7 +2751,7 @@ planes.
 | Pure-Rust work item | Required before | Exact deliverable | Current state |
 | --- | --- | --- | --- |
 | `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame, the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair, the pinned `coverage_r32x16_origin_01.avif` 32×16 4:2:0 Horizontal32x16 origin leaf, the `coverage_r32x16_filter_intra_tx8x8_01.avif` 32×16 origin Horizontal32x16 split with filter-intra disabled and four TX8x8 luma children, the new `coverage_r32x32_following_filter_intra_split_mode0_01.avif` 32×32 horizontal split with a following mode-0 filter-intra leaf and a TX16x16 luma split, and the pinned `coverage_r16x64_grid_01.avif` 16×64 4:2:0 Vertical16x64 depth-two TX16x16 luma split. The R8x16, Horizontal32x16, TX8x8 split, following mode-0, and R16x64 fixtures share pinned dav1d topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references; the TX8x8 witness has a 2,328-operation trace and proves split residual placement through the generic safe path, while the following mode-0 witness has a 2,204-operation trace and proves prepared spatial-edge publication for a true following filter-intra leaf. R16x64 additionally verifies the 16×16 matrix-10 luma table and top-only DC prediction for every child without a left neighbor. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The `coverage_i444_rect_01.avif` witness adds a 16×16 full-resolution 4:4:4 split-root/four-leaf case with a 499-operation trace, exact Y/U/V planes, full-resolution chroma residuals, matrix-10 U/V AC deltas, delta-Q, and exact public RGB bytes. The new `coverage_i444_rect_02.avif` witness holds the same topology but adds a 553-operation trace, distinct residual/EOB states, exact Y/U/V planes and RGB bytes, and a filter-intra leaf. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. The new `coverage_vertical8x16_filter_intra_mode0_01.avif` origin witness adds a checked Vertical8x16 filter-intra mode-0/unsplit-TX8x16/TX4x8-chroma class with exact 584-operation entropy, plane, and Pillow RGB evidence; broader classes remain open. |
-| `AVF-ENTROPY-001` adjacent EOB syntax | active malformed controls plus future legal EOB-bin/base classes | Implement the remaining legal EOB-bin and EOB-base branches with their coefficient scans, tokens, signs, dequantization, and transform output; preserve typed `Malformed` for invalid arithmetic termination and typed `Unsupported` for valid syntax not yet proven. | Partial: safe Rust handles legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches including EOB-bin-four, and exact UV dequantization plus matrix-10 data. The two one-byte controls are active negative evidence: pinned dav1d 1.5.3 rejects them at the recorded EOB stages with no YUV output, and safe Rust reports the symbol-coder overread as `Malformed`. They do not activate unproven positive EOB syntax. |
+| `AVF-ENTROPY-001` adjacent EOB syntax | active malformed controls plus future legal EOB-bin/base classes | Implement the remaining legal EOB-bin and EOB-base branches with their coefficient scans, tokens, signs, dequantization, and transform output; preserve typed `Malformed` for invalid arithmetic termination and typed `Unsupported` for valid syntax not yet proven. | Partial: safe Rust handles legal luma EOB-bin 0, 2, 3, 4, 5, and 6 classes, including the promoted 4×4 4:2:0 TX8×8 DCT-DCT witness `portable_lossy_420_q99_luma_eob_bin2_eob3.avif` (27 entropy operations, EOB-bin two, EOB three, direct EOB-base zero, exact Y/U/V and Pillow RGB hashes), legal chroma EOB-base/high branches including EOB-bin-four, and exact UV dequantization plus matrix-10 data. The 100-candidate/10-family campaign qualified exactly one candidate and did not invoke repository Rust. The two one-byte controls are active negative evidence: pinned dav1d 1.5.3 rejects them at the recorded EOB stages with no YUV output, and safe Rust reports the symbol-coder overread as `Malformed`. They do not activate unproven positive EOB syntax. |
 | `AVF-SAMPLE-001` sample depth | `high_bitdepth`; later `hdr` | Reconstruct 10/12-bit planes, apply checked sample-to-8-bit conversion at the public boundary, and test overflow, limits, and cancellation. | Partial: `av1/sample_depth.rs` validates 8/10/12-bit nominal ranges and performs explicit high-depth bit truncation. Safe Rust now proves exact public RGB8 parity for the bounded 16×16 10-bit profile-1 and 12-bit AV1 profile-2 full-range 4:4:4 all-lossless still classes. Entropy reconstruction, restoration, 4:2:2 decoding, animated/high-depth alpha and sequence materialization, HDR conversion, and broader 12-bit cases remain open. |
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
 | `AVF-COLOR-001` declared color pipeline | `hdr` | Implement transfer, primaries, matrix, range, and sample-position conversion with bounded arithmetic and explicit source metadata. | Planned; current RGB conversion is the narrow 8-bit BT.601 full-range class. |
@@ -2890,7 +2904,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 305 AVIF decode/inspect/verify rows exist: 300 are
+**Current exact state:** 308 AVIF decode/inspect/verify rows exist: 303 are
 active and 5 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

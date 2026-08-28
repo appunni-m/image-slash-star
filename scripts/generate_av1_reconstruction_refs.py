@@ -157,6 +157,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008",
         "size": [8, 8],
     },
+    "portable_lossy_420_q99_luma_eob_bin2_eob3.avif": {
+        "file_sha256": "1e8f492d54742c0662595952247b15cd98054d4f6e11346041d1d7db4cf5b34c",
+        "rgb_sha256": "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42",
+        "size": [4, 4],
+    },
     "portable_lossy_420_q99_gray_0.avif": {
         "file_sha256": "7f1485129fd93e4318cf21bcf59934963c1a84b3bcb0d74f3e7555b3bad20b38",
         "rgb_sha256": "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1",

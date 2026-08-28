@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 237);
+    assert_eq!(expected.cases.len(), 238);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7569,6 +7569,51 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=54268 [x=0,cbx4=2]",
                 ],
                 "AV1 following Horizontal16x8 DCT-DCT witness leaf states"
+            );
+        }
+        if case.fixture == "portable_lossy_420_q99_luma_eob_bin2_eob3.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                27,
+                "AV1 luma EOB-bin-two witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-delta_q[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-eob_bin_64[")
+                        || line.starts_with("Post-eob_hi_bit[")
+                        || line.starts_with("Post-eob[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=36978",
+                    "Post-cdef_idx[0]: r=36978",
+                    "Post-delta_q[-2->2]: r=41736",
+                    "Post-ymode[1]: r=60128",
+                    "Post-uvmode[0]: r=62288",
+                    "Post-tx[1]: r=62288",
+                    "Post-txtp-intra[1->1][1][1->0]: r=61792",
+                    "Post-eob_bin_64[0][0][2]: r=38688",
+                    "Post-eob_hi_bit[1][0][0][1]: r=58300",
+                    "Post-eob[3]: r=58300",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=3]: r=40712",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=62336 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=48482 [x=0,cbx4=0]",
+                ],
+                "AV1 luma EOB-bin-two witness leaf states"
             );
         }
         if case.fixture == "coverage_square16_filter_intra_mode0_01.avif" {
@@ -9717,6 +9762,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "9a5f0b79fce197304a6aa5a89af73862b128be0db6e93117a67d3ddd07e28edd"
             }
             "portable_lossy_420_q99_gray_127.avif" => {
+                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+            }
+            "portable_lossy_420_q99_luma_eob_bin2_eob3.avif" => {
                 "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
             }
             "portable_lossy_420_q99_8x8_gray_127.avif" => {

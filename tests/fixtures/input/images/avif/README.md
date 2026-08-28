@@ -180,6 +180,7 @@ oracle and remains a normal active matrix row.
 | `portable_lossy_420_q99_rampx_eob5.avif` | 4×4 luma ramp, `96 + 8*x`, EOB-bin five | `24ad87c6b33fc5178d3ff662bcb84d5893dfef0fd46ed738d59663153a866262` |
 | `portable_lossy_420_q99_rampy_eob6.avif` | 4×4 luma ramp, `96 + 8*y`, EOB-bin six | `581705cc684dc5154896387dd9bbaac6b3c407af3ad46bf21ae505196a23c73c` |
 | `portable_lossy_420_q99_8x8_diag_eob6.avif` | 8×8 diagonal impulse, `129` on the diagonal and `127` elsewhere, EOB-bin six | `006c41743bcf6b1990981cabc01f301b97ea8424c13e6c9e837375ab2792eb3c` |
+| `portable_lossy_420_q99_luma_eob_bin2_eob3.avif` | 4×4 luma impulse at `(3,0)`, legal TX8×8 EOB-bin two / EOB three / EOB-base zero | `1e8f492d54742c0662595952247b15cd98054d4f6e11346041d1d7db4cf5b34` |
 
 The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
 and Pillow RGB hashes are pinned in `docs/avif.md` and
