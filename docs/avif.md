@@ -423,6 +423,17 @@ Diagonal67 cases retain their prior path. The full active AVIF matrix passes
 only this bounded following-vertical Square8/luma-Diagonal67 class; broader
 angle deltas, split/depth/transform variants, other availability contexts,
 chroma Diagonal67, and AVF-STILL-001 remain open.
+The managed incremental Coverage MCP run
+`f5d16417-a1d5-4947-8c38-0631cf01388b` passed in 75,327 ms at exact
+implementation commit `c69c882cfe45d6a1e534e70ebc5786d687908c15` and ingested
+snapshot `e5252c8c-b8b0-4584-82a8-891dddef1dca` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its standalone incremental review is
+supported selected-subset evidence: additive deltas are +658 lines, +17
+branches, +1 function, and +5,289 regions; denominator deltas are
++3,664/+388/+41/+10,273; 7,381 line identities were newly covered, 39,379
+baseline observations were not observed, and regressions are 0. Merge is
+conservative and named-test attribution is unavailable; this does not replace
+the complete four-metric release baseline.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
