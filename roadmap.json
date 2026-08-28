@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1532,
-      "decode_rows": 1135,
+      "total_rows": 1533,
+      "decode_rows": 1136,
       "encode_rows": 397,
-      "decode_active": 1130,
+      "decode_active": 1131,
       "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 308,
-      "decode_active": 303,
+      "decode_rows": 309,
+      "decode_active": 304,
       "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_238_reconstruction_cases",
+      "no_selector_behavior": "run_all_239_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -2257,6 +2257,101 @@
           },
           "trace_sha256": "1b5c7e5dda87d07e4b4cdd37fe99ce3b33d56368a05026deb74c124e308589ba",
           "scope": "This closes only the bounded following-vertical Square8 chroma Diagonal67 mode-8 ADST-DCT class; it does not claim general chroma prediction, AV1, or AVF-STILL-001 completion."
+        },
+        "current_slice_update_2026_08_28_luma_diagonal67_vertical": {
+          "status": "completed",
+          "target": "following vertical Square8 luma Diagonal67 mode 8 with a true Zone-1 top edge and no left context",
+          "fixtures": [
+            "coverage_square8_luma_diagonal67_vertical_01.avif"
+          ],
+          "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+          "campaign_report": "tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json",
+          "campaign_report_sha256": "f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef",
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified": 8,
+            "promoted": "D67V-F06-N01",
+            "seed": 12051,
+            "repository_rust_invoked": false,
+            "qualified_candidates": [
+              "D67V-F06-N01",
+              "D67V-F06-N03",
+              "D67V-F06-N04",
+              "D67V-F06-N05",
+              "D67V-F06-N06",
+              "D67V-F06-N07",
+              "D67V-F06-N08",
+              "D67V-F06-N09"
+            ],
+            "rejection_counts": {
+              "bottom_luma_angle_symbol_zero_delta_67": 59,
+              "bottom_luma_is_unsplit_tx8x8_with_ac": 91,
+              "bottom_luma_mode_diagonal67": 0,
+              "decoded_yuv_has_expected_size": 0,
+              "double_color_item_equal": 0,
+              "double_encode_equal": 0,
+              "double_pillow_rgb_equal": 0,
+              "double_trace_equal": 0,
+              "eight_bit_420_frame": 0,
+              "exact_vertical_split_shape": 0,
+              "no_unexpected_angle_or_tool_syntax": 0,
+              "origin_and_bottom_chroma_are_dc_skipped": 0,
+              "origin_bottom_edge_is_not_midpoint": 0,
+              "origin_bottom_edge_varies": 0,
+              "origin_luma_is_unsplit_tx8x8": 0,
+              "origin_luma_mode_dc": 0,
+              "two_visible_square8_groups": 0
+            }
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition_ranges": [
+              46608,
+              54426,
+              37798
+            ],
+            "entropy_operation_count": 67,
+            "encoded_item_length": 31,
+            "encoded_item_sha256": "3912489d6f3ac34c30345fa0ed52b27d7cdebe120a47767ee406f805bf6c2b21",
+            "fixture_sha256": "3bbcb1feb155e38a237e93680f88bc9825cac7300386a8817318b152578364fe",
+            "pillow_rgb_sha256": "1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0",
+            "decoded_plane_sha256": {
+              "y": "fc031c4f9e0656a6d88087ba047d41a1b4121184d5257c026b8da10e6bcb3cd3",
+              "u": "bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6",
+              "v": "bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6"
+            },
+            "decoded_yuv_sha256": "634af16d6b1cdcd0134d6e7b9c4311f1db4ca0b6dfd35425cfd7f22e72495bf8",
+            "trace_sha256": "decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f"
+          },
+          "syntax_contract": {
+            "visible_size": [
+              8,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "root": "poc=0,x=0,y=0,level=3,context=0,partition=3",
+            "leaves": "top and following bottom Square8 leaves at x=0,y=0 and x=0,y=8",
+            "origin_luma": "DC, unsplit TX8x8 DCT-DCT, EOB 6",
+            "following_luma": "Diagonal67 mode 8, angle symbol 3, signed delta 0, resolved angle 67, unsplit TX8x8 DCT-DCT, EOB 2",
+            "chroma": "origin and following U/V are DC-skipped TX4x4",
+            "availability": "have_top=true, have_left=false, have_topright=false; origin bottom luma edge [81,85,92,98,103,109,116,120]"
+          },
+          "production_change": "The following-vertical Square8 luma Diagonal67 arm now uses the reconstructed eight-sample top edge, top[0] as top-left, and repeated top[7] for the unavailable top-right extension only when semantic availability is top-only with no left context, zero-delta resolved angle 67, unsplit TX8x8 DCT-DCT, and no intra-edge extension. Transform-split and all other Diagonal67 contexts retain the prior extended/upsampled path. No fixture-name or coordinate special case is used.",
+          "negative_search": {
+            "target": "visible 16x8 top-row right-hand Square8 luma Diagonal67 with top unavailable and left available",
+            "report": "tests/fixtures/outputs/av1_search/coverage_square8_luma_diagonal67_campaign_01.json",
+            "report_sha256": "fb882ad79d240da6dce4c106bceb0e371b054efcb75815433946a80d681b17b4",
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified": 0,
+            "repository_rust_invoked": false,
+            "decision": "Bounded no-hit evidence only; this does not prove the adjacent horizontal/top-row class unreachable and does not justify a decoder change."
+          },
+          "focused_verification": "The selected public matrix row passes 1/1; the independent pinned-dav1d reconstruction selector passes 1/1; the complete active AVIF matrix passes 304/304 with 0 failures and 5 explicit planned skips; cargo fmt --check, locked all-feature check, strict workspace Clippy, and warnings-as-errors rustdoc pass.",
+          "scope": "This closes only the bounded following-vertical 8x16 4:2:0 Square8 luma Diagonal67 mode-8 zero-delta unsplit-DCT-DCT class. Nonzero angle deltas, split/depth/alternate transforms, left or top-right availability variants, top-row/no-top variants, chroma Diagonal67, broader AV1/AVIF still coverage, sequences, encoding, and the four-metric 100% gate remain open."
         },
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",

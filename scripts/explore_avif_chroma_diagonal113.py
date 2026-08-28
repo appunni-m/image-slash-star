@@ -73,6 +73,18 @@ LUMA_DIAGONAL45_FAMILY_NAMES = (
     "F09_diagonal45_dual_ac",
     "F10_diagonal45_mixed",
 )
+LUMA_DIAGONAL67_FAMILY_NAMES = (
+    "F01_diagonal67_vertical_ramp",
+    "F02_diagonal67_vertical_step",
+    "F03_diagonal67_vertical_saw",
+    "F04_diagonal67_vertical_ripple",
+    "F05_diagonal67_vertical_bands",
+    "F06_diagonal67_vertical_checker",
+    "F07_diagonal67_vertical_edge",
+    "F08_diagonal67_vertical_mirror",
+    "F09_diagonal67_vertical_dual_ac",
+    "F10_diagonal67_vertical_mixed",
+)
 CHROMA_DIAGONAL45_FAMILY_NAMES = (
     "F01_descending_ramp",
     "F02_descending_step",
@@ -361,6 +373,49 @@ def luma_diagonal45_pattern(family: int, index: int) -> bytes:
     return bytes(pixels)
 
 
+def luma_diagonal67_pattern(family: int, index: int) -> bytes:
+    """Generate deterministic near-vertical luma candidates.
+
+    The right leaf is on the frame's top edge, so the oracle's effective
+    predictor for coded D67 syntax is vertical prediction from the first
+    sample of the available left edge.  These families vary that edge and add
+    bounded residual detail without introducing chroma structure.
+    """
+
+    bases = (44, 60, 76, 92, 108, 124, 140, 156, 172, 188)
+    slopes = (13, 15, 17, 19, 21, 11, 23, 14, 18, 16)
+    base = bases[family] + (index % 3)
+    slope = slopes[family]
+    pixels = bytearray()
+    for y in range(SIZE[1]):
+        for x in range(SIZE[0]):
+            if x < 8:
+                luma = base + slope * y
+                if family in (1, 5):
+                    luma += 18 if (y // 2 + index) % 2 == 0 else -18
+                elif family in (2, 8):
+                    luma += ((3 * y + index + family) % 7) - 3
+                elif family == 6:
+                    luma += 22 if y >= 4 else -22
+            else:
+                right_y = y
+                luma = base + slope * right_y
+                if family in (0, 3, 7):
+                    luma += (x - 8) // 2
+                elif family in (1, 4):
+                    luma += 16 if ((x - 8) + y + index) % 4 < 2 else -16
+                elif family == 5:
+                    luma += ((5 * (x - 8) + 3 * y + index) % 11) - 5
+                elif family == 6:
+                    luma += 24 if x >= 12 else -24
+                elif family == 8:
+                    luma += ((x - 8) + 2 * y + index) % 9 - 4
+                elif family == 9:
+                    luma += 12 if (x + y + index) % 3 == 0 else -8
+            pixels.extend(yuv_to_rgb(clamp(luma), 128, 128))
+    return bytes(pixels)
+
+
 def chroma_diagonal45_pattern(family: int, index: int) -> bytes:
     """Generate deterministic chroma fields for a mode-3 witness search."""
 
@@ -455,6 +510,26 @@ def candidates(target: str = "diagonal113") -> list[dict[str, object]]:
             raise AssertionError(f"candidate corpus must contain 100 cases, found {len(result)}")
         return result
 
+    if target == "luma_diagonal67":
+        result = []
+        for family, family_name in enumerate(LUMA_DIAGONAL67_FAMILY_NAMES):
+            for index in range(10):
+                result.append(
+                    {
+                        "id": f"LD67-F{family + 1:02d}-N{index:02d}",
+                        "family": family_name,
+                        "family_index": family,
+                        "candidate_index": index,
+                        "seed": 7000 + 10 * family + index,
+                        "pixels": luma_diagonal67_pattern(family, index),
+                        "quality": 76,
+                        "speed": 0,
+                    }
+                )
+        if len(result) != 100:
+            raise AssertionError(f"candidate corpus must contain 100 cases, found {len(result)}")
+        return result
+
     if target == "chroma_diagonal45":
         result = []
         for family, family_name in enumerate(CHROMA_DIAGONAL45_FAMILY_NAMES):
@@ -522,6 +597,8 @@ def advanced_for_target(target: str) -> dict[str, str]:
     if target == "luma_smooth":
         return LUMA_SMOOTH_ADVANCED
     if target == "luma_diagonal45":
+        return LUMA_DIAGONAL45_ADVANCED
+    if target == "luma_diagonal67":
         return LUMA_DIAGONAL45_ADVANCED
     return ADVANCED
 
@@ -1078,6 +1155,152 @@ def classify_luma_diagonal45(
     }
 
 
+def classify_luma_diagonal67(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+) -> dict[str, object]:
+    """Apply exact predicates for a top-row D67 syntax witness.
+
+    The right leaf has a left neighbor but no above neighbor.  dav1d therefore
+    converts this coded near-vertical angle to the effective vertical mode and
+    repeats the first left-edge sample across the synthetic top edge.
+    """
+
+    parsed = [parse_group(group) for group in groups]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angle_symbols = [
+        symbol for group in parsed for symbol in group["y_angle_symbols"]
+    ]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angle_symbols = [
+        int(match["symbol"])
+        for group in groups
+        for line in group
+        if (match := UVANGLE_PATTERN.match(line)) is not None
+    ]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    expected_shape = [
+        (0, 0, 0, 3, 0, 3),
+        (0, 0, 0, 4, 0, 0),
+        (0, 2, 0, 4, 0, 0),
+    ]
+    y_plane = yuv[: SIZE[0] * SIZE[1]]
+    left_edge = [
+        y_plane[row * SIZE[0] + 7]
+        for row in range(SIZE[1])
+    ] if len(y_plane) == SIZE[0] * SIZE[1] else []
+    luma_groups = [group["luma_payloads"] for group in parsed]
+    chroma_groups = [group["chroma_payloads"] for group in parsed]
+    no_palette_or_filter = not any(
+        line.startswith(
+            (
+                "Post-filterintramode[",
+                "Post-y_pal[",
+                "Post-pal[",
+                "Post-y-pal-indices",
+                "y-pal-pred",
+                "Post-uv_pal[",
+                "Post-uv-pal-indices",
+                "uv-pal-pred",
+            )
+        )
+        for group in groups
+        for line in group
+    )
+
+    def is_tx8x8(payloads: list[dict[str, int]], with_ac: bool) -> bool:
+        return (
+            len(payloads) == 1
+            and payloads[0]["tx"] == 1
+            and payloads[0]["txtp"] == 0
+            and (payloads[0]["eob"] >= 1 if with_ac else payloads[0]["eob"] >= 0)
+        )
+
+    def is_skipped_chroma(payloads: list[dict[str, int]], cbx4: int) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 0
+                and payload["txtp"] == 0
+                and payload["eob"] == -1
+                and payload.get("cbx4") == cbx4
+                for payload in payloads
+            )
+        )
+
+    predicates = {
+        "exact_visible_split_blocks": shape == expected_shape,
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_square8_groups": len(groups) == 2,
+        "luma_modes_dc_then_diagonal67": y_modes == [0, 8],
+        "right_luma_angle_symbol_is_zero_delta_67": (
+            len(parsed) == 2
+            and parsed[0]["y_angle_symbols"] == []
+            and parsed[1]["y_angle_symbols"] == [3]
+        ),
+        "uv_modes_dc_then_dc": uv_modes == [0, 0],
+        "no_uv_angle_symbols": uv_angle_symbols == [],
+        "no_palette_or_filter_intra": no_palette_or_filter,
+        "origin_luma_is_unsplit_tx8x8": (
+            len(luma_groups) == 2 and is_tx8x8(luma_groups[0], False)
+        ),
+        "right_luma_is_unsplit_tx8x8_with_ac": (
+            len(luma_groups) == 2 and is_tx8x8(luma_groups[1], True)
+        ),
+        "left_chroma_is_dc_skipped": (
+            len(chroma_groups) == 2 and is_skipped_chroma(chroma_groups[0], 0)
+        ),
+        "right_chroma_is_dc_skipped": (
+            len(chroma_groups) == 2 and is_skipped_chroma(chroma_groups[1], 1)
+        ),
+        "right_leaf_top_unavailable_left_available": shape == expected_shape,
+        "left_edge_varies": len(left_edge) == SIZE[1] and len(set(left_edge)) > 1,
+        "left_top_sample_is_not_midpoint": (
+            len(left_edge) == SIZE[1] and left_edge[0] != 128
+        ),
+    }
+    return {
+        "target": "luma_diagonal67",
+        "effective_predictor": "vertical_no_top_left_available",
+        "root_partition": blocks[0] if blocks else None,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angle_symbols,
+        "y_angle_deltas": [symbol - 3 for symbol in y_angle_symbols],
+        "y_angles": [67 + 3 * (symbol - 3) for symbol in y_angle_symbols],
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angle_symbols,
+        "left_edge": left_edge,
+        "left_luma_payloads": luma_groups[0] if luma_groups else [],
+        "right_luma_payloads": luma_groups[1] if len(luma_groups) == 2 else [],
+        "left_chroma_payloads": chroma_groups[0] if chroma_groups else [],
+        "right_chroma_payloads": chroma_groups[1] if len(chroma_groups) == 2 else [],
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
 def classify_chroma_diagonal45(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -1242,6 +1465,11 @@ def classify(
         if portable_color is None:
             raise ValueError("portable color metadata is required for the luma target")
         return classify_luma_diagonal45(blocks, groups, yuv, portable_color)
+
+    if target == "luma_diagonal67":
+        if portable_color is None:
+            raise ValueError("portable color metadata is required for the luma target")
+        return classify_luma_diagonal67(blocks, groups, yuv, portable_color)
 
     if target == "chroma_diagonal45":
         if portable_color is None:
@@ -1418,6 +1646,7 @@ def main() -> None:
             "luma_diagonal_down_right",
             "luma_smooth",
             "luma_diagonal45",
+            "luma_diagonal67",
             "chroma_diagonal45",
         ),
         default="diagonal113",
@@ -1441,7 +1670,7 @@ def main() -> None:
                 resolve_tool(args.ninja, "Ninja"),
                 args.python_path.resolve() if args.python_path else None,
                 include_luma_angles=args.target
-                in ("luma_diagonal_down_right", "luma_diagonal45"),
+                in ("luma_diagonal_down_right", "luma_diagonal45", "luma_diagonal67"),
                 include_block_angles=args.target == "chroma_diagonal45",
             )
         else:
@@ -1531,6 +1760,31 @@ def main() -> None:
             "left_chroma_is_dc_skipped",
             "right_chroma_is_dc_skipped",
             "left_top_right_is_not_default",
+        )
+    elif args.target == "luma_diagonal67":
+        target_description = (
+            "visible 16x8 top-row right-hand Square8 leaf with luma mode 8 "
+            "(Diagonal67), angle symbol 3 (67 degrees), effective vertical "
+            "prediction from the available left edge, DC-skipped chroma, "
+            "and unsplit TX8x8 luma with AC"
+        )
+        families = list(LUMA_DIAGONAL67_FAMILY_NAMES)
+        rejection_reasons = (
+            "exact_visible_split_blocks",
+            "eight_bit_420_frame",
+            "two_visible_square8_groups",
+            "luma_modes_dc_then_diagonal67",
+            "right_luma_angle_symbol_is_zero_delta_67",
+            "uv_modes_dc_then_dc",
+            "no_uv_angle_symbols",
+            "no_palette_or_filter_intra",
+            "origin_luma_is_unsplit_tx8x8",
+            "right_luma_is_unsplit_tx8x8_with_ac",
+            "left_chroma_is_dc_skipped",
+            "right_chroma_is_dc_skipped",
+            "right_leaf_top_unavailable_left_available",
+            "left_edge_varies",
+            "left_top_sample_is_not_midpoint",
         )
     elif args.target == "chroma_diagonal45":
         target_description = (
@@ -1647,7 +1901,7 @@ def main() -> None:
                         report["id"] for report in reports if report["qualifies"]
                     ]
                 }
-                if args.target in ("luma_diagonal45", "chroma_diagonal45")
+                if args.target in ("luma_diagonal45", "luma_diagonal67", "chroma_diagonal45")
                 else {}
             ),
         **(

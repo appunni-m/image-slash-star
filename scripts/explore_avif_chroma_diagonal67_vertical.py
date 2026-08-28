@@ -4,10 +4,12 @@
 The campaign creates exactly one hundred deterministic 8x16 RGB candidates in
 ten named families. Each candidate is encoded twice with the pinned
 Pillow/libavif/libaom oracle and decoded twice through an independently
-instrumented scalar dav1d build. A candidate qualifies only when it produces a
-clipped 16x16 split with a vertically following bottom Square8 leaf, coded
-chroma Diagonal67 mode 8, ADST-DCT 4x4 U/V transforms, and the required
-non-empty residuals. Repository Rust is never invoked during the search.
+instrumented scalar dav1d build. The default chroma target qualifies a clipped
+16x16 split with a vertically following bottom Square8 leaf, coded chroma
+Diagonal67 mode 8, ADST-DCT 4x4 U/V transforms, and the required non-empty
+residuals. The luma target qualifies the same topology with coded luma
+Diagonal67 mode 8, a genuine Zone-1 edge, and skipped chroma. Repository Rust
+is never invoked during the search.
 """
 
 from __future__ import annotations
@@ -51,6 +53,10 @@ ADVANCED = {
     "loopfilter-control": "0",
     "aq-mode": "0",
     "deltaq-mode": "0",
+}
+LUMA_ADVANCED = {
+    **ADVANCED,
+    "use-intra-dct-only": "1",
 }
 FAMILY_NAMES = (
     "positive_diagonal_ramp",
@@ -225,31 +231,48 @@ def luma_residual(family: int, x: int, local_y: int) -> int:
     return 5 if x < 4 and local_y < 4 and (x + local_y) % 2 == 0 else -5 if x < 4 and local_y < 4 else 0
 
 
-def luma_sample(family: int, index: int, x: int, y: int) -> int:
-    """Build a top-edge-continuous 45-degree luma field."""
+def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
+    """Build a top-edge-continuous luma field for the selected target."""
 
     if y < 8:
         value = luma_edge_value(family, index, x) + (y - 7) * ((family + index) % 2)
     else:
         local_y = y - 8
-        source_x = min(7, x + local_y + 1)
+        if target == "luma_diagonal67":
+            # D67 is near vertical: each lower row advances only part of one
+            # top-edge sample.  The encoder sees a real top edge here.
+            source_x = min(7, x + (local_y + 1) // 2)
+        else:
+            source_x = min(7, x + local_y + 1)
         value = luma_edge_value(family, index, source_x)
-        value += luma_residual(family, x, local_y)
+        if target == "chroma_diagonal67":
+            value += luma_residual(family, x, local_y)
+        else:
+            value += ((3 * x + 5 * local_y + 7 * family + index) % 7) - 3
     return value
 
 
-def candidate_pixels(family: int, index: int) -> bytes:
+def candidate_pixels(family: int, index: int, target: str) -> bytes:
     """Create one deterministic 8x16 RGB candidate from synthetic YUV."""
 
     pixels = bytearray()
     for y in range(SIZE[1]):
         for x in range(SIZE[0]):
-            u_delta, v_delta = chroma_sample(family, index, x // 2, y // 2)
-            pixels.extend(yuv_to_rgb(luma_sample(family, index, x, y), 128 + u_delta, 128 + v_delta))
+            if target == "luma_diagonal67":
+                u_delta = v_delta = 0
+            else:
+                u_delta, v_delta = chroma_sample(family, index, x // 2, y // 2)
+            pixels.extend(
+                yuv_to_rgb(
+                    luma_sample(family, index, x, y, target),
+                    128 + u_delta,
+                    128 + v_delta,
+                )
+            )
     return bytes(pixels)
 
 
-def candidates() -> list[dict[str, object]]:
+def candidates(target: str) -> list[dict[str, object]]:
     """Return exactly ten deterministic families with ten cases each."""
 
     result = []
@@ -262,7 +285,7 @@ def candidates() -> list[dict[str, object]]:
                     "family_index": family,
                     "candidate_index": index,
                     "seed": 12000 + 10 * family + index,
-                    "pixels": candidate_pixels(family, index),
+                    "pixels": candidate_pixels(family, index, target),
                     "quality": 76,
                     "speed": 0,
                 }
@@ -272,7 +295,7 @@ def candidates() -> list[dict[str, object]]:
     return result
 
 
-def encode(pixels: bytes, quality: int, speed: int) -> bytes:
+def encode(pixels: bytes, quality: int, speed: int, target: str) -> bytes:
     """Encode one candidate with the pinned Pillow AVIF oracle."""
 
     output = BytesIO()
@@ -284,7 +307,7 @@ def encode(pixels: bytes, quality: int, speed: int) -> bytes:
         max_threads=1,
         subsampling=SUBSAMPLING,
         autotiling=False,
-        advanced=ADVANCED,
+        advanced=LUMA_ADVANCED if target == "luma_diagonal67" else ADVANCED,
     )
     return output.getvalue()
 
@@ -349,13 +372,145 @@ def top_edge(yuv: bytes, plane: int) -> list[int]:
     return [yuv[offset + 3 * width + x] for x in range(width)]
 
 
-def classify(
+def classify_luma(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
     yuv: bytes,
     portable_color: dict[str, object],
 ) -> dict[str, object]:
+    """Apply exact predicates for the vertical-following luma D67 class."""
+
+    parsed = [parse_group(group) for group in groups]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angles = [symbol for group in parsed for symbol in group["y_angle_symbols"]]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angles = [symbol for group in parsed for symbol in group["uv_angle_symbols"]]
+    y_payloads = [group["luma_payloads"] for group in parsed]
+    chroma_payloads = [group["chroma_payloads"] for group in parsed]
+    all_lines = [line for group in groups for line in group]
+    forbidden_prefixes = (
+        "Post-filterintramode[",
+        "Post-y_pal[",
+        "Post-pal[",
+        "Post-y-pal-indices",
+        "y-pal-pred",
+        "Post-uv_pal[",
+        "Post-uv-pal-indices",
+        "uv-pal-pred",
+    )
+    y_length = SIZE[0] * SIZE[1]
+    top_luma_edge = (
+        [yuv[7 * SIZE[0] + x] for x in range(SIZE[0])]
+        if len(yuv) == 192
+        else []
+    )
+
+    def is_tx8x8(payloads: list[dict[str, int]], with_ac: bool) -> bool:
+        return (
+            len(payloads) == 1
+            and payloads[0]["tx"] == 1
+            and payloads[0]["txtp"] == 0
+            and (payloads[0]["eob"] >= 1 if with_ac else payloads[0]["eob"] >= 0)
+        )
+
+    def is_skipped_chroma(payloads: list[dict[str, int]], cbx4: int) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 0
+                and payload["txtp"] == 0
+                and payload["eob"] == -1
+                and payload.get("cbx4") == cbx4
+                for payload in payloads
+            )
+        )
+
+    predicates = {
+        "exact_vertical_split_shape": shape == [
+            (0, 0, 0, 3, 0, 3),
+            (0, 0, 0, 4, 0, 0),
+            (0, 0, 2, 4, 0, 0),
+        ],
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_square8_groups": len(groups) == 2,
+        "origin_luma_mode_dc": len(y_modes) == 2 and y_modes[0] == 0,
+        "bottom_luma_mode_diagonal67": y_modes[1:2] == [8],
+        "bottom_luma_angle_symbol_zero_delta_67": y_angles == [3],
+        "origin_luma_is_unsplit_tx8x8": (
+            len(y_payloads) == 2 and is_tx8x8(y_payloads[0], False)
+        ),
+        "bottom_luma_is_unsplit_tx8x8_with_ac": (
+            len(y_payloads) == 2 and is_tx8x8(y_payloads[1], True)
+        ),
+        "origin_and_bottom_chroma_are_dc_skipped": (
+            len(chroma_payloads) == 2
+            and is_skipped_chroma(chroma_payloads[0], 0)
+            and is_skipped_chroma(chroma_payloads[1], 0)
+        ),
+        "no_unexpected_angle_or_tool_syntax": not any(
+            line.startswith(forbidden_prefixes) for line in all_lines
+        ),
+        "decoded_yuv_has_expected_size": len(yuv) == y_length + 2 * (4 * 8),
+        "origin_bottom_edge_varies": (
+            len(top_luma_edge) == SIZE[0] and len(set(top_luma_edge)) > 1
+        ),
+        "origin_bottom_edge_is_not_midpoint": (
+            len(top_luma_edge) == SIZE[0] and top_luma_edge[0] != 128
+        ),
+    }
+    return {
+        "target": "vertical_following_luma_diagonal67",
+        "effective_predictor": "z1_top_available_left_unavailable",
+        "root_partition": blocks[0] if blocks else None,
+        "partition_shape": shape,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angles,
+        "y_angle_deltas": [symbol - 3 for symbol in y_angles],
+        "y_angles": [67 + 3 * (symbol - 3) for symbol in y_angles],
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angles,
+        "origin_bottom_luma_edge": top_luma_edge,
+        "top_luma_payloads": y_payloads[0] if y_payloads else [],
+        "bottom_luma_payloads": y_payloads[1] if len(y_payloads) == 2 else [],
+        "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
+        "bottom_chroma_payloads": chroma_payloads[1] if len(chroma_payloads) == 2 else [],
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
+def classify(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+    target: str,
+) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
+
+    if target == "luma_diagonal67":
+        return classify_luma(blocks, groups, yuv, portable_color)
 
     parsed = [parse_group(group) for group in groups]
     shape = [
@@ -519,6 +674,7 @@ def decode_candidate(
     work: Path,
     candidate: dict[str, object],
     retain_dir: Path | None,
+    target: str,
 ) -> dict[str, object]:
     """Double-encode, double-trace, and classify one candidate."""
 
@@ -527,8 +683,8 @@ def decode_candidate(
         raise TypeError("candidate pixels must be bytes")
     quality = int(candidate["quality"])
     speed = int(candidate["speed"])
-    encoded_a = encode(pixels, quality, speed)
-    encoded_b = encode(pixels, quality, speed)
+    encoded_a = encode(pixels, quality, speed, target)
+    encoded_b = encode(pixels, quality, speed, target)
     path_a = work / f"{candidate['id']}.avif"
     path_b = work / f"{candidate['id']}-second.avif"
     path_a.write_bytes(encoded_a)
@@ -546,7 +702,7 @@ def decode_candidate(
         pillow_rgb_a = decoded.convert("RGB").tobytes()
     with Image.open(BytesIO(encoded_b)) as decoded:
         pillow_rgb_b = decoded.convert("RGB").tobytes()
-    classification = classify(blocks_a, groups_a, yuv_a, portable_color)
+    classification = classify(blocks_a, groups_a, yuv_a, portable_color, target)
     classification["predicates"].update(
         {
             "double_encode_equal": encoded_a == encoded_b,
@@ -611,6 +767,11 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument(
+        "--target",
+        choices=("chroma_diagonal67", "luma_diagonal67"),
+        default="chroma_diagonal67",
+    )
     args = parser.parse_args()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -640,8 +801,15 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
-            decode_candidate(executable, environment, work, candidate, args.retain_dir)
-            for candidate in candidates()
+            decode_candidate(
+                executable,
+                environment,
+                work,
+                candidate,
+                args.retain_dir,
+                args.target,
+            )
+            for candidate in candidates(args.target)
         ]
     rejection_reasons = list(reports[0]["predicates"])
     report = {
@@ -660,16 +828,23 @@ def main() -> None:
             "speed": 0,
             "max_threads": 1,
             "autotiling": False,
-            "advanced": ADVANCED,
+            "advanced": LUMA_ADVANCED if args.target == "luma_diagonal67" else ADVANCED,
         },
         "search": {
             "candidate_count": len(reports),
             "seed_formula": "12000 + 10*family_index + candidate_index",
-            "target_id": "vertical_following_chroma_diagonal67",
+            "target_id": args.target,
             "target": (
                 "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
-                "Square8 leaves; bottom following UV mode 8 Diagonal67, "
-                "ADST-DCT TX4x4 U/V, and non-empty AC"
+                "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
+                "angle 67 degrees, genuine Zone-1 top edge, unsplit TX8x8 "
+                "luma with AC, and skipped chroma"
+                if args.target == "luma_diagonal67"
+                else (
+                    "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
+                    "Square8 leaves; bottom following UV mode 8 Diagonal67, "
+                    "ADST-DCT TX4x4 U/V, and non-empty AC"
+                )
             ),
             "families": list(FAMILY_NAMES),
             "repository_rust_invoked": False,

@@ -6569,6 +6569,55 @@ def gen_avif():
         speed=0,
     )
 
+    def luma_diagonal67_vertical_square8():
+        """Generate the promoted vertical-following luma mode-8 witness.
+
+        This is D67V-F06-N01 from the pinned 100-case input-only campaign.
+        The bottom Square8 leaf has a real top edge and uses the nominal
+        Diagonal67 angle with zero delta; neutral chroma keeps the fixture
+        focused on the luma Zone-1 predictor and its non-empty TX8x8 residual.
+        """
+
+        family = 5
+        candidate = 1
+
+        def pixel(x, y):
+            if y < 8:
+                luma = 80 + 6 * x
+            else:
+                local_y = y - 8
+                source_x = min(7, x + (local_y + 1) // 2)
+                luma = 80 + 6 * source_x
+                luma += (3 * x + 5 * local_y + 7 * family + candidate) % 7 - 3
+            luma = clamp_channel(luma)
+            return (luma, luma, luma)
+
+        return image_from_pixels((8, 16), pixel)
+
+    write_campaign_image(
+        "coverage_square8_luma_diagonal67_vertical_01",
+        luma_diagonal67_vertical_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal67_vertical_square8():
         """Generate the promoted vertical-following UV mode-8 witness.
 

@@ -4270,6 +4270,12 @@ formats:
       description: 8x16 4:2:0 quality-76 speed-0 clipped vertical split with a following bottom Square8 leaf using chroma Diagonal67 mode 8 at angle symbol 3, ADST-DCT TX4x4 U/V transforms, split TX4x4 luma, and non-empty residuals
       test_assets:
       - coverage_square8_chroma_diagonal67_vertical_01.avif
+    - id: coverage_square8_luma_diagonal67_vertical_01
+      description: 8x16 4:2:0 quality-76 speed-0 clipped vertical split with a following bottom Square8 leaf using luma Diagonal67 mode 8 at angle symbol 3 and resolved angle 67, unsplit TX8x8 DCT-DCT luma with non-empty AC, and skipped neutral chroma
+      test_assets:
+      - coverage_square8_luma_diagonal67_vertical_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_square8_luma_diagonal_down_right_01
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using luma DiagonalDownRight mode 4 at angle 135, DC chroma, split TX4x4 luma, and DCT-DCT U/V transforms
       test_assets:

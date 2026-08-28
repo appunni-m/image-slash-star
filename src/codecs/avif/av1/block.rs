@@ -18747,6 +18747,41 @@ fn reconstruct_lossy_luma_8x8_diagonal_z1(
     coefficients: Option<LossyTransformCoefficients>,
     transform_kind: LossyTransformKind,
 ) -> PortableResult<ReconstructedPlane> {
+    reconstruct_lossy_luma_8x8_diagonal_z1_with_upsampling(
+        top,
+        top_left,
+        angle,
+        50 < angle,
+        coefficients,
+        transform_kind,
+    )
+}
+
+fn reconstruct_lossy_luma_8x8_diagonal_z1_without_upsampling(
+    top: [u16; 8],
+    top_left: u16,
+    angle: i32,
+    coefficients: Option<LossyTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> PortableResult<ReconstructedPlane> {
+    reconstruct_lossy_luma_8x8_diagonal_z1_with_upsampling(
+        top,
+        top_left,
+        angle,
+        false,
+        coefficients,
+        transform_kind,
+    )
+}
+
+fn reconstruct_lossy_luma_8x8_diagonal_z1_with_upsampling(
+    top: [u16; 8],
+    top_left: u16,
+    angle: i32,
+    upsample: bool,
+    coefficients: Option<LossyTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> PortableResult<ReconstructedPlane> {
     const DR_INTRA_DERIVATIVE: [i32; 44] = [
         0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71,
         64, 0, 57, 51, 0, 45, 0, 40, 35, 0, 31, 27, 0, 23, 19, 0, 15, 0, 11, 0, 7, 3,
@@ -18757,7 +18792,6 @@ fn reconstruct_lossy_luma_8x8_diagonal_z1(
         .get(dx_index)
         .filter(|&&value| value > 0)
         .portable()?;
-    let upsample = 50 < angle;
     let upsampled_edge = upsample_intra_top_edge(top, top_left);
     let (edge, max_base_x, dx, base_increment) = if upsample {
         (&upsampled_edge[..], 14, dx.saturating_mul(2), 2)
@@ -36785,6 +36819,7 @@ fn reconstruct_following_lossy_420_vertical_leaf(
     above_right_width: u32,
     above_left_x_offset: u32,
     above_right_x_offset: u32,
+    above_right_is_above_left: bool,
     above_luma_extension: Option<[u16; 8]>,
     above_chroma_extension: Option<&ClosedLeaf>,
     above_chroma_extension_width: u32,
@@ -36919,6 +36954,18 @@ fn reconstruct_following_lossy_420_vertical_leaf(
     };
     let smooth_neighbor_edges = smooth_edges(above_left.luma_predictor)
         || left_luma_top_neighbor.is_some_and(|neighbor| smooth_edges(neighbor.luma_predictor));
+    let unupsampled_diagonal67 = above_right_is_above_left
+        && above_luma_extension.is_none()
+        && above_left_width == 8
+        && above_right_width == 8
+        && above_left_x_offset == 0
+        && above_right_x_offset == 0
+        && left_neighbor.is_none()
+        && left_top_neighbor.is_none()
+        && left_luma_top_neighbor.is_none()
+        && left_luma_edge.is_none()
+        && luma_angle == Some(67)
+        && matches!(lossy_luma_transform, LossyTransformKind::DctDct);
 
     let luma = if let Some(split) = lossy_luma_4x4_split {
         match (filter_intra_mode, luma_predictor) {
@@ -37142,7 +37189,27 @@ fn reconstruct_following_lossy_420_vertical_leaf(
                         lossy_luma_transform,
                     )?
                 }
-                (LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67, Some(angle)) => {
+                (LumaPredictor::Diagonal45, Some(angle)) => {
+                    reconstruct_lossy_luma_8x8_diagonal_z1_extended(
+                        luma_top,
+                        luma_top_left_for_prediction,
+                        angle,
+                        enable_intra_edge_filter,
+                        smooth_neighbor_edges,
+                        lossy_luma_coefficients,
+                        lossy_luma_transform,
+                    )?
+                }
+                (LumaPredictor::Diagonal67, Some(angle @ 67)) if unupsampled_diagonal67 => {
+                    reconstruct_lossy_luma_8x8_diagonal_z1_without_upsampling(
+                        luma_top_left,
+                        luma_top_left_for_prediction,
+                        angle,
+                        lossy_luma_coefficients,
+                        lossy_luma_transform,
+                    )?
+                }
+                (LumaPredictor::Diagonal67, Some(angle)) => {
                     reconstruct_lossy_luma_8x8_diagonal_z1_extended(
                         luma_top,
                         luma_top_left_for_prediction,
@@ -41846,6 +41913,7 @@ impl Lossy420Decoder {
                 neighbors.above_right_width,
                 neighbors.above_left_x_offset,
                 neighbors.above_right_x_offset,
+                above_right_is_above_left,
                 above_luma_extension,
                 above_chroma_extension.as_ref(),
                 neighbors
@@ -42473,6 +42541,7 @@ impl Lossy420Decoder {
                 neighbors.above_right_width,
                 neighbors.above_left_x_offset,
                 neighbors.above_right_x_offset,
+                above_right_is_above_left,
                 above_luma_extension,
                 above_chroma_extension.as_ref(),
                 neighbors
