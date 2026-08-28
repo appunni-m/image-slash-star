@@ -45,6 +45,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
 H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
     {"coverage_h16x8_origin_dct_dct_01.avif"}
 )
+H16X8_FOLLOWING_TARGET_FIXTURES = frozenset(
+    {"coverage_h16x8_following_dct_dct_01.avif"}
+)
 SQUARE32_SPLIT_TARGET_FIXTURES = frozenset(
     {"coverage_square32_origin_tx16x16_split_01.avif"}
 )
@@ -989,6 +992,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab",
         "size": [16, 8],
     },
+    "coverage_h16x8_following_dct_dct_01.avif": {
+        "file_sha256": "e60c2fd265b7e59fa61e4dc712e168f38707cc775b4bc2f09cbdbfd9c74b8695",
+        "rgb_sha256": "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f",
+        "size": [32, 8],
+    },
     "coverage_r32x32_following_01.avif": {
         "file_sha256": "28b9df05ad61bf01fef2ac11a6a9fa775ced07aed181e30c5c905caaedf4b6d3",
         "rgb_sha256": "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7",
@@ -1379,6 +1387,7 @@ def instrument(
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
     broaden_horizontal_square16: bool = False,
+    broaden_horizontal_rect_following: bool = False,
     square64_origin: bool = False,
 ) -> None:
     recon_path = source / "src" / "recon.h"
@@ -1426,6 +1435,18 @@ def instrument(
           t->by >= 0 && t->by < 4 && t->bx >= 4 && t->bx < 8))
 #define DEBUG_B_PIXELS 1
 """
+    horizontal_rect_following = """\
+#define DEBUG_BLOCK_INFO 1 && \
+        (((t->by >= 0 && t->by < 4 || \
+           (t->by == 4 && f->frame_hdr->width[0] == 32 && \
+            f->frame_hdr->height == 32 && !f->frame_hdr->delta.q.present && \
+            !f->frame_hdr->allow_screen_content_tools)) && \
+          t->bx >= 0 && t->bx < 4) || \
+         (f->frame_hdr->width[0] == 32 && f->frame_hdr->height == 8 && \
+          f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
+          t->by >= 0 && t->by < 2 && t->bx >= 0 && t->bx < 8))
+#define DEBUG_B_PIXELS 1
+"""
     square64_origin_debug = """\
 #define DEBUG_BLOCK_INFO 1 && \
         f->frame_hdr->width[0] == 64 && f->frame_hdr->height == 64 && \
@@ -1439,6 +1460,8 @@ def instrument(
         if square64_origin
         else horizontal_square16
         if broaden_horizontal_square16
+        else horizontal_rect_following
+        if broaden_horizontal_rect_following
         else broadened
         if broaden_vertical_following
         else legacy
@@ -1470,11 +1493,16 @@ def instrument(
     horizontal_square16 = """\
     const int dbg = DEBUG_BLOCK_INFO;
 """
+    horizontal_rect_following = """\
+    const int dbg = DEBUG_BLOCK_INFO;
+"""
     new = (
         "    const int dbg = DEBUG_BLOCK_INFO;\n"
         if square64_origin
         else horizontal_square16
         if broaden_horizontal_square16
+        else horizontal_rect_following
+        if broaden_horizontal_rect_following
         else broadened
         if broaden_vertical_following
         else legacy
@@ -1756,6 +1784,7 @@ def build_dav1d(
     include_block_angles: bool = False,
     include_luma_angles: bool = False,
     broaden_horizontal_square16: bool = False,
+    broaden_horizontal_rect_following: bool = False,
     square64_origin: bool = False,
 ) -> tuple[Path, dict[str, str]]:
     clone = work / "dav1d"
@@ -1768,6 +1797,7 @@ def build_dav1d(
         include_block_angles,
         include_luma_angles,
         broaden_horizontal_square16,
+        broaden_horizontal_rect_following,
         square64_origin,
     )
     env = tool_environment(meson, ninja, python_path)
@@ -2052,6 +2082,15 @@ def generate(
         target_executable, target_env = build_dav1d(
             dav1d_source, work / "target", meson, ninja, python_path
         )
+        h16x8_following_executable, h16x8_following_env = build_dav1d(
+            dav1d_source,
+            work / "h16x8-following",
+            meson,
+            ninja,
+            python_path,
+            broaden_vertical_following=False,
+            broaden_horizontal_rect_following=True,
+        )
         square64_executable, square64_env = build_dav1d(
             dav1d_source,
             work / "square64",
@@ -2087,7 +2126,7 @@ def generate(
         )
         cases = [
                 decode_fixture(
-                    luma_angle_executable
+                luma_angle_executable
                 if name in LUMA_DIAGONAL_DOWN_RIGHT_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
@@ -2100,6 +2139,8 @@ def generate(
                 or name in SQUARE16_CHROMA_SMOOTH_TARGET_FIXTURES
                 else square64_executable
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
+                else h16x8_following_executable
+                if name in H16X8_FOLLOWING_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in H16X8_ORIGIN_TARGET_FIXTURES
@@ -2129,6 +2170,8 @@ def generate(
                 or name in SQUARE16_CHROMA_SMOOTH_TARGET_FIXTURES
                 else square64_env
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
+                else h16x8_following_env
+                if name in H16X8_FOLLOWING_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in H16X8_ORIGIN_TARGET_FIXTURES
