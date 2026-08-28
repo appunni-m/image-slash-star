@@ -552,6 +552,17 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only this bounded luma class; broader angle deltas, split/depth/
   transform variants, other availability contexts, chroma Diagonal67, and
   AVF-STILL-001 remain partial.
+  The managed incremental Coverage MCP run
+  `f5d16417-a1d5-4947-8c38-0631cf01388b` passed in 75,327 ms at exact
+  implementation commit `c69c882cfe45d6a1e534e70ebc5786d687908c15` and
+  ingested snapshot `e5252c8c-b8b0-4584-82a8-891dddef1dca` against explicit
+  baseline `7665cda3-f4a7-4568-b871-a9d34afaa92c`. The standalone incremental
+  review is supported selected-subset evidence: +658/+17/+1/+5,289 covered
+  line/branch/function/region identities, denominator changes
+  +3,664/+388/+41/+10,273, 7,381 newly covered line identities, 39,379
+  unobserved baseline observations, and zero regressions. The merge is
+  conservative and named-test attribution is unavailable; this is not a
+  complete four-metric release measurement.
 - The newest bounded following-leaf proof is
   `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
   8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode

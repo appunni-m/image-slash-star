@@ -1,8 +1,8 @@
 {
   "format_version": 1,
   "base_revision": "93ec80ec99c42671dce6cf70694bce27ad8a2ef4",
-  "manifest_sha256": "c44bd444800a4feb7eb091bb99262cdaa2fd9e48b56a93d7b30c70de1ff7b8b0",
-  "matrix_sha256": "f023c0a7d5be09bc0a2cc5cb07f944efd0564bcf34517f31d525cd205ca458b7",
+  "manifest_sha256": "d14928513106df9150a94d40d52ab27d818e93283d2cf051e6690a29f9574981",
+  "matrix_sha256": "790b49ec4894a5bdd58a9c74d93999b521cb13554af77ae1a96b87bbaf35b9b7",
   "coverage": {
     "run_id": "ec4c4bbd-dbda-4e49-8109-d7da07722dc0",
     "snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
@@ -21,8 +21,8 @@
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "coverage_origins": "4d030f78f07c2e04000b39c1a00d0a35349db2cccef28f6426a2768b133d639c",
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
-    "webp_property_map": "2d90950bf4aa2a476ed355fb4dcc57e4481f0d9e1041dbbf164a1d9ebe5872a8",
+    "webp_property_map": "1e24542964d266b888a26826046b05dcb71a443f5b28e6ca8c9d3fdf7d176205",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "a07c3c8ecaf4376cb09e7827f0c2ea447eb3ec20b4586d1eee589ac20e6959c5"
+    "roadmap": "4a56b87b4f2d75388725a88733f379d25785c2fcd706117640569d3574ca057f"
   }
 }
