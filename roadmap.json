@@ -110,9 +110,9 @@
         ],
         "status": "passed_and_ingested",
         "result": {
-          "passed": 1,
+          "passed": 44,
           "failed": 0,
-          "filtered_out": 43,
+          "selected_fixtures": 1,
           "status": "passed_and_ingested"
         },
         "review": {
@@ -3241,9 +3241,9 @@
           "selected_fixture": "coverage_h16x8_following_dct_dct_01.avif",
           "status": "passed_and_ingested",
           "result": {
-            "passed": 1,
+            "passed": 44,
             "failed": 0,
-            "filtered_out": 43,
+            "selected_fixtures": 1,
             "status": "passed_and_ingested"
           },
           "review": {
