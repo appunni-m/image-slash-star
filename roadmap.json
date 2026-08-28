@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1535,
-      "decode_rows": 1138,
+      "total_rows": 1536,
+      "decode_rows": 1139,
       "encode_rows": 397,
-      "decode_active": 1135,
+      "decode_active": 1136,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 311,
-      "decode_active": 308,
+      "decode_rows": 312,
+      "decode_active": 309,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_241_reconstruction_cases",
+      "no_selector_behavior": "run_all_242_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -2297,12 +2297,75 @@
             "focused_verification": "The exact AV1 fixture selector passes 1/1 with 1,023 entropy operations, the exact three-record partition, all four leaf filter/transform states, Y/U/V planes, and Pillow RGB8. The full AV1 reconstruction target passes 235/235; the full coverage-configured matrix target passes 44/44; strict fmt, locked check, workspace Clippy, rustdoc, and all-feature tests pass.",
             "scope": "This closes only the bounded 16x32 8-bit 4:2:0 following Vertical8x16 topology with the proven lower-left FILTER_PRED mode-2 and lower-right FILTER_PRED mode-0 leaves. Other following modes/geometries, transform states, optional tools, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_h16x4_h_dct_cfl_01": {
+            "fixture": "coverage_h16x4_h_dct_cfl_01.avif",
+            "dimensions": [
+              16,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 99,
+            "speed": 0,
+            "topology": "PARTITION_H4 root with four ordered unsplit Horizontal16x4 luma leaves",
+            "luma_transforms": [
+              "four TX16x4 H_DCT luma payloads",
+              "transform CDF symbol 3 -> dav1d txtp 11",
+              "all four luma EOB values are 63"
+            ],
+            "chroma": "Leaves 1 and 3 select UV mode 13/CFL with nonzero TX6 chroma payloads; leaves 0 and 2 have no chroma payload",
+            "fixture_sha256": "c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c",
+            "input_rgb_sha256": "f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8",
+            "encoded_item": {
+              "bytes": 424,
+              "sha256": "800f1eeb5dd7a6e11a4550a2a027835fb471654c7728a60937bc48d5994db703"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
+            },
+            "decoded_plane_sha256": {
+              "y": "5c1d776713322a84d761c09b0e38c1b0c4361ea36e1937808e1bef9ac04e1542",
+              "u": "5145273ccbddd0d453273068b4c3f62abf40068a3cfbbd2a8081324b58426819",
+              "v": "63208eb4bfb5a2d9ffc5ee653b2a7262de9a83d1ad549be77659a0ddbe79196c"
+            },
+            "decoded_yuv_sha256": "458e1af3b7c674d2dbc650a3855747fd76fa05d146c65ab585e88c258a234f24",
+            "trace_sha256": "1ff300824348aa39783bea17d21ac2c33e8b74853f2894e41d56f5deb1ddf796",
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition": "poc=0,y=0,x=0,level=3,context=0,partition=8,range=43136",
+              "entropy_operation_count": 3780,
+              "luma": "All four luma leaves are unsplit TX16x4 H_DCT; each records CDF symbol 3 -> txtp 11 and EOB 63",
+              "chroma": "Leaves 1 and 3 record u-cfl-pred/v-cfl-pred and nonzero TX6 U/V payloads with EOB 30/31 and 31/31; leaves 0 and 2 carry no chroma syntax",
+              "evidence": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 generated the fixture twice with identical bytes; pinned scalar dav1d generated the trace and Y/U/V planes twice with identical bytes; repository Rust was not invoked by the oracle."
+            },
+            "generator": {
+              "script": "scripts/generate_test_assets.py::horizontal16x4_h_dct_cfl",
+              "repository_rust_invoked": false,
+              "source_normalization": "Pinned RGB8 bytes from the retained input-only H16x4 candidate, checked by input SHA-256 before encoding",
+              "controls": "quality 99, speed 0, one thread, 16x16, 4:2:0, min/max partition 4/16, CFL enabled, filter-intra/directional/smooth/Paeth/edge-filter/CDEF/restoration/loop-filter/AQ/delta-Q disabled"
+            },
+            "production_changes": [
+              "No production codec change is required: the existing checked safe-Rust H16x4 transform and CFL/chroma paths already reconstruct this exact class.",
+              "Register the fixture in the manifest, generated Pillow references, independent dav1d reconstruction oracle, and exact production parity assertions so this H_DCT/CFL state cannot regress."
+            ],
+            "negative_boundaries": [
+              "V_DCT remains an explicit planned/unproven gap",
+              "broader H_DCT predictor, partition, split-transform, and chroma combinations",
+              "other dimensions, sample depths, subsampling, HDR, sequences, optional tools, malformed/truncated residuals, and encoding"
+            ],
+            "focused_verification": "The exact AV1 fixture selector passes 1/1 with the exact partition, all 3,780 entropy operations, four H_DCT luma records, CFL markers, U/V payloads, Y/U/V planes, and Pillow RGB8 output; the selected AVIF matrix row passes 1/1. Managed incremental Coverage MCP evidence and full strict gates remain to be recorded at the implementation commit.",
+            "scope": "This closes only the exact 16x16 8-bit 4:2:0 origin H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. It does not close general H_DCT, V_DCT, other predictors or transform grids, broader AVF-STILL-001, AVIF encoding, or the four-metric 100% coverage gate.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
-        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, and split-transform classes recorded in bounded_witnesses, including the bounded origin and following Horizontal16x8 DCT_DCT classes and the following-vertical Square8 luma Diagonal67 classes with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the existing complete 4:2:0 canvas walker to publish the preceding leaf before reconstructing the following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
-        "latest_witness": "The latest bounded proof is coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif: an 8x16 8-bit 4:2:0 clipped 16x16 split root with top and following Square8 leaves. The following bottom leaf uses luma mode 8 Diagonal67 at angle symbol 4/resolved 70 degrees, four split TX4x4 DCT-DCT luma payloads with EOB values 4/-1/-1/-1 and decoded dequantized AC coefficient at scan index 5 = 84, and skipped TX4x4 U/V; safe Rust matches the 78-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output. The prior zero-delta/67-degree split and unsplit witnesses remain separate bounded proofs.",
-        "latest_slice": "The latest AVF-STILL-001 slice is the following-vertical Square8 luma Diagonal67 split-TX4x4 angle-symbol-4/resolved-70 class. The split helper now disables intra-edge filtering/upsampling only for exact top-only/no-left/no-extension, split-TX4x4, DCT-DCT, resolved-angle-70 semantics; the prior 67-degree gate remains separate and all other angle, split, transform, and availability contexts retain their previous path.",
-        "latest_evidence_addition": "The latest promoted fixture is coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif with fixture SHA-256 c92781d7682cccd4569dd4e84bad14f9145f077cd629bc97a943002fff59bf89, encoded-item SHA-256 7d4f5df8425c16308f32707d1306180184567eadbd8b5b81ade352c0d390d01d, Pillow RGB SHA-256 7ba0cab00dbb9d6b9c65788839e471bfe4df2008e47a61ad5bc82ebd5101dce6, decoded Y/U/V SHA-256 values caf9b59ea7ba6791f50e1c38d1a9fdc67dc2be220d0a009b34da2447b1d86f26, bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, decoded YUV SHA-256 148e3a0ca64649d2be9476eafe9a22115da34c03937cfd67fb5d166750219775, and pinned trace SHA-256 ac83d48e3b4d396778afcda497578ebe15d4bacfb84f4c25bfd0a79cc6f6d6a3. The split angle-symbol-4 campaign qualified 5 and promoted D67V-F05-N01 (seed 12041); the separate unsplit symbol-4 campaign qualified 0. The selected reconstruction test passes 1/1, and managed incremental Coverage MCP evidence is recorded in current_slice_update_2026_08_28_luma_diagonal67_split_tx4x4_angle70.",
+        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, and exact H_DCT/CFL classes recorded in bounded_witnesses, including the bounded origin and following Horizontal16x8 DCT_DCT classes and the following-vertical Square8 luma Diagonal67 classes with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the existing complete 4:2:0 canvas walker to publish the preceding leaf before reconstructing the following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, V_DCT/general H_DCT states, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
+        "latest_witness": "The latest bounded proof is coverage_h16x4_h_dct_cfl_01.avif: a 16x16 8-bit 4:2:0 PARTITION_H4 frame with four ordered unsplit Horizontal16x4 luma leaves. All four leaves select H_DCT (CDF symbol 3 -> dav1d txtp 11, EOB 63); leaves 1 and 3 additionally select UV mode 13/CFL with nonzero TX6 U/V payloads. Safe Rust matches the 3,780-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output. V_DCT, broader H_DCT predictor/partition/transform classes, and other AVF-STILL-001 states remain open.",
+        "latest_slice": "The latest AVF-STILL-001 slice is the exact origin H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. The existing checked safe-Rust rectangular transform and CFL/chroma paths already reconstruct it; this slice adds a deterministic manifest fixture, independent scalar dav1d trace/YUV oracle, exact structural assertions, and incremental coverage evidence without widening admission beyond the proven class.",
+        "latest_evidence_addition": "The latest promoted fixture is coverage_h16x4_h_dct_cfl_01.avif with fixture SHA-256 c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c, encoded-item SHA-256 800f1eeb5dd7a6e11a4550a2a027835fb471654c7728a60937bc48d5994db703, Pillow RGB SHA-256 8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e, decoded Y/U/V SHA-256 values 5c1d776713322a84d761c09b0e38c1b0c4361ea36e1937808e1bef9ac04e1542, 5145273ccbddd0d453273068b4c3f62abf40068a3cfbbd2a8081324b58426819, and 63208eb4bfb5a2d9ffc5ee653b2a7262de9a83d1ad549be77659a0ddbe79196c, decoded YUV SHA-256 458e1af3b7c674d2dbc650a3855747fd76fa05d146c65ab585e88c258a234f24, and pinned trace SHA-256 1ff300824348aa39783bea17d21ac2c33e8b74853f2894e41d56f5deb1ddf796. The maintained generator checks source normalization SHA-256 f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8. The exact reconstruction test passes 1/1; managed incremental Coverage MCP evidence is recorded in current_slice_update_2026_08_29_h16x4_h_dct_cfl.",
         "current_slice": "The current AVF-STILL-001 slice proves one following-vertical 8x16 8-bit 4:2:0 Square8 luma Diagonal67 mode-8 angle-symbol-4/resolved-70 split-TX4x4 DCT-DCT class. It uses the reconstructed top edge with semantic no-left/top-only availability and keeps unsplit angle 70, other Diagonal67 angles, partition, transform, depth, optional-tool, sequence, encoding, and four-metric coverage work open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
@@ -3839,6 +3902,68 @@
             "note": "The exact selected fixture passed and standalone Coverage MCP coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +662 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected projection reports 7,393 newly covered line identities; 39,434 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 349f5d436b79a26086a28b6110aeb67eb3c374d6. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
         }
+      },
+      "current_slice_update_2026_08_29_h16x4_h_dct_cfl": {
+        "status": "in_progress",
+        "target": "origin PARTITION_H4 16x16 8-bit 4:2:0 with four unsplit Horizontal16x4 luma leaves selecting H_DCT and two CFL/nonzero-chroma leaves",
+        "fixture": "coverage_h16x4_h_dct_cfl_01.avif",
+        "generator": "scripts/generate_test_assets.py::horizontal16x4_h_dct_cfl",
+        "input_only_search": {
+          "script": "scripts/explore_avif_horizontal16x4.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_transform_campaign_01.json",
+          "report_sha256": "740ec1108711893cab8dec963baa82ada4e224af5cabaea99110c42fa54ce2a1",
+          "candidate_count": 100,
+          "family_count": 10,
+          "qualified_h_dct": 0,
+          "repository_rust_invoked": false,
+          "decision": "The maintained 100-candidate/10-family DC-oriented search remains a bounded no-hit result for H_DCT/V_DCT; the promoted fixture is the separately retained H_DCT oracle candidate normalized into the authoritative generator, not a claim that the no-hit campaign qualified a case."
+        },
+        "promotion": "Promote one exact retained H_DCT witness only after deterministic Pillow encoding, encoded-item identity, scalar dav1d trace/YUV identity, four-leaf geometry, exact transform records, exact CFL/chroma payloads, and public RGB parity all agree.",
+        "dimensions": [
+          16,
+          16
+        ],
+        "bit_depth": 8,
+        "subsampling": "4:2:0",
+        "encoding": {
+          "quality": 99,
+          "speed": 0,
+          "root": "PARTITION_H4",
+          "luma": "four unsplit TX16x4 H_DCT payloads; CDF symbol 3 -> dav1d txtp 11; EOB 63 on every leaf",
+          "chroma": "leaf 1: UV mode 13/CFL with U/V TX6 EOB 30/31; leaf 3: UV mode 13/CFL with U/V TX6 EOB 31/31; leaves 0 and 2 have no chroma payload",
+          "controls": "min/max partition 4/16, CFL enabled, filter-intra/directional/smooth/Paeth/edge-filter/CDEF/restoration/loop-filter/AQ/delta-Q disabled, one encoder thread"
+        },
+        "pinned_dav1d": {
+          "implementation": "dav1d 1.5.3",
+          "commit": "b546257f770768b2c88258c533da38b91a06f737",
+          "partition": "poc=0,y=0,x=0,level=3,context=0,partition=8,range=43136",
+          "entropy_operation_count": 3780,
+          "trace_sha256": "1ff300824348aa39783bea17d21ac2c33e8b74853f2894e41d56f5deb1ddf796",
+          "decoded_yuv_sha256": "458e1af3b7c674d2dbc650a3855747fd76fa05d146c65ab585e88c258a234f24",
+          "decoded_plane_sha256": {
+            "y": "5c1d776713322a84d761c09b0e38c1b0c4361ea36e1937808e1bef9ac04e1542",
+            "u": "5145273ccbddd0d453273068b4c3f62abf40068a3cfbbd2a8081324b58426819",
+            "v": "63208eb4bfb5a2d9ffc5ee653b2a7262de9a83d1ad549be77659a0ddbe79196c"
+          }
+        },
+        "fixture_sha256": "c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c",
+        "input_rgb_sha256": "f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8",
+        "encoded_item": {
+          "bytes": 424,
+          "sha256": "800f1eeb5dd7a6e11a4550a2a027835fb471654c7728a60937bc48d5994db703"
+        },
+        "pillow_rgb": {
+          "bytes": 768,
+          "mode": "RGB8",
+          "sha256": "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
+        },
+        "repository_rust_invoked_by_oracle": false,
+        "production_changes": [
+          "No production source change is required: the existing checked safe-Rust H16x4 rectangular transform and CFL/chroma paths already reconstruct this exact witness.",
+          "Register the fixture in the manifest, generated Pillow references, independent dav1d reconstruction oracle, and exact production parity assertions."
+        ],
+        "focused_verification": "The exact reconstruction selector passes 1/1 with exact partition, all 3,780 entropy operations, four H_DCT records, two CFL marker pairs, U/V payloads, Y/U/V planes, and Pillow RGB8; the selected AVIF matrix row passes 1/1. Managed incremental Coverage MCP evidence and strict final gates remain pending.",
+        "scope": "This closes only the exact origin 16x16 8-bit 4:2:0 H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. V_DCT, general H_DCT predictor/partition/transform states, other dimensions/depths/subsampling, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open."
       },
       "AVF-ENTROPY-001": {
         "status": "partial",

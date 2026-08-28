@@ -5863,7 +5863,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 241);
+    assert_eq!(expected.cases.len(), 242);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -9337,6 +9337,104 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 predictor-enabled Horizontal16x4 witness must select four TX16x4 luma grids"
             );
         }
+        if case.fixture == "coverage_h16x4_h_dct_cfl_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 H_DCT/CFL Horizontal16x4 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                3_780,
+                "AV1 H_DCT/CFL Horizontal16x4 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                        || *line == "u-cfl-pred"
+                        || *line == "v-cfl-pred"
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-cdef_idx[0]: r=41704",
+                    "Post-ymode[0]: r=39896",
+                    "Post-tx[14]: r=39896",
+                    "Post-txtp-intra[14->0][0][3->11]: r=62464",
+                    "Post-y-cf-blk[tx=14,txtp=11,eob=63]: r=63496",
+                    "Post-skip[0]: r=61508",
+                    "Post-ymode[0]: r=60520",
+                    "Post-uvmode[13]: r=62792",
+                    "Post-tx[14]: r=34076",
+                    "Post-txtp-intra[14->0][0][3->11]: r=33312",
+                    "Post-y-cf-blk[tx=14,txtp=11,eob=63]: r=57352",
+                    "u-cfl-pred",
+                    "v-cfl-pred",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=30]: r=40456 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=31]: r=39688 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=38522",
+                    "Post-ymode[0]: r=39298",
+                    "Post-tx[14]: r=39298",
+                    "Post-txtp-intra[14->0][0][3->11]: r=47392",
+                    "Post-y-cf-blk[tx=14,txtp=11,eob=63]: r=41224",
+                    "Post-skip[0]: r=40093",
+                    "Post-ymode[0]: r=42026",
+                    "Post-uvmode[13]: r=47576",
+                    "Post-tx[14]: r=43108",
+                    "Post-txtp-intra[14->0][0][3->11]: r=60664",
+                    "Post-y-cf-blk[tx=14,txtp=11,eob=63]: r=37384",
+                    "u-cfl-pred",
+                    "v-cfl-pred",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=31]: r=45320 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=31]: r=50440 [x=0,cbx4=0]",
+                ],
+                "AV1 H_DCT/CFL Horizontal16x4 witness leaf state and chroma syntax"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| { line.starts_with("Post-txtp-intra[14->0][0][3->11]:") })
+                    .count(),
+                4,
+                "AV1 H_DCT witness must select H_DCT for all four luma leaves"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| *line == &"u-cfl-pred")
+                    .count(),
+                2,
+                "AV1 H_DCT/CFL witness must select U CFL prediction twice"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| *line == &"v-cfl-pred")
+                    .count(),
+                2,
+                "AV1 H_DCT/CFL witness must select V CFL prediction twice"
+            );
+        }
         if case.fixture == "coverage_v4x16_filter_intra_cdf19_false_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -10629,6 +10727,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h16x4_predictor_adst_dct_01.avif" => {
                 "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167"
+            }
+            "coverage_h16x4_h_dct_cfl_01.avif" => {
+                "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
             }
             "coverage_h16x4_filter_intra_tx8x4_split_01.avif" => {
                 "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
