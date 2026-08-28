@@ -202,6 +202,22 @@ the corresponding status is recorded in `roadmap.json`:
   the common DCT-DCT witness, not identity/V_DCT, following H16x8, split/depth
   variants, alternate transforms, nonzero chroma, or `AVF-STILL-001`.
 
+  Managed Coverage MCP recorded the exact selected-fixture incremental run
+  `a399cf98-f51b-48ac-a248-6c267fe56d8b` against explicit baseline snapshot
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 78,479 ms at exact
+  implementation commit `7f7e76be3b94128f65472f17631d098aa19be7ea` and
+  ingested snapshot `469dc5dd-36f1-47a2-b3fd-ce2a995336af`. The standalone
+  additive baseline-union review reports +663 covered lines, +17 branches,
+  +1 function, and +5,289 regions, with denominator changes of
+  +3,639/+364/+39/+10,218 and zero reported regressions. The merge is
+  conservative rather than exact; 7,400 selected-projection line identities
+  were newly covered, 39,411 baseline observations were not observed, and
+  named-test attribution is unavailable. The compact snapshot projection
+  retains metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db`; the
+  durable run record is authoritative for implementation provenance. This is
+  bounded selected-subset evidence, not a complete four-metric release
+  measurement or a global regression claim.
+
   Managed Coverage MCP then ran the exact reconstruction selector against
   baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
   `44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms and ingested
@@ -1609,7 +1625,7 @@ implemented, that the code is secure, or that a million random images were
 tested. Those are different promises and have their own tasks below.
 
 The latest complete managed Coverage MCP snapshot above remains the accepted
-release-measurement baseline; the current H16x4 commit has a separate
+release-measurement baseline; the current H16x8 commit has a separate
 selected-subset incremental result recorded below. That bounded result is never
 substituted for the complete denominator.
 
@@ -1620,9 +1636,10 @@ substituted for the complete denominator.
 | Functions (managed Coverage MCP) | 5,125 | 5,794 | 88.4536% | 669 | 11.5464% |
 | Regions (managed Coverage MCP) | 150,221 | 166,375 | 90.2906% | 16,154 | 9.7094% |
 
-The predictor-enabled H16x4 fixture is a real safe-Rust reconstruction class,
-not a coverage-only test. Its input-only search reports and exact pinned dav1d,
-Y/U/V, and Pillow RGB evidence are recorded in the AVIF section above.
+The newest H16x8 fixture is a real safe-Rust reconstruction class, not a
+coverage-only test. Its input-only search reports and exact pinned dav1d,
+Y/U/V, and Pillow RGB evidence are recorded in the AVIF section above, along
+with the bounded selected-fixture Coverage MCP review.
 The current managed LLVM JSON report carries the warning that segments are
 normalized to segment-start lines; aggregate region coverage is preserved from
 its report summary. RN-001 therefore remains open for the current source tree:

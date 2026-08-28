@@ -723,6 +723,50 @@
             "snapshot_diff_claim_status": "limited",
             "note": "The additive baseline-union review reports +8 covered lines, +7 branches, +0 functions, and +281 regions. Denominator changes are +3,553 lines, +254 branches, +38 functions, and +10,093 regions because this selected fixture adds production code. The selected snapshot projection reports 562 newly covered line identities; 75,363 baseline hits were not observed and are not regressions. The compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 9061135585461cb9309f2760e525a230cec68d22. This is bounded selected-subset evidence, not a complete four-metric release measurement or global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "7f7e76be3b94128f65472f17631d098aa19be7ea",
+          "run_id": "a399cf98-f51b-48ac-a248-6c267fe56d8b",
+          "snapshot_id": "469dc5dd-36f1-47a2-b3fd-ce2a995336af",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 78479,
+          "arguments": [
+            "--",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_h16x8_origin_dct_dct_01.avif"
+          ],
+          "selected_fixtures": [
+            "coverage_h16x8_origin_dct_dct_01.avif"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "Coverage MCP run passed with exit code 0 and ingested one ordinary LLVM snapshot for the exact selected AV1 fixture.",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 663,
+            "covered_branches_delta": 17,
+            "covered_functions_delta": 1,
+            "covered_regions_delta": 5289,
+            "total_lines_delta": 3639,
+            "total_branches_delta": 364,
+            "total_functions_delta": 39,
+            "total_regions_delta": 10218,
+            "selected_projection_newly_covered_line_identities": 7400,
+            "not_observed": 39411,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "snapshot_diff_claim_status": "limited",
+            "note": "The exact selected fixture passed and the standalone Coverage MCP incremental review measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +663 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected projection reports 7,400 newly covered line identities; 39,411 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 7f7e76be3b94128f65472f17631d098aa19be7ea. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -2114,7 +2158,7 @@
         "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, and split-transform classes recorded in bounded_witnesses, including the newest origin Horizontal16x8 DCT_DCT class with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and rejects unproven rectangular geometries/modes with typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
         "latest_witness": "The latest bounded proof is coverage_h16x8_origin_dct_dct_01.avif: a 16x8 8-bit 4:2:0 origin Horizontal16x8 leaf with one unsplit TX16x8 DCT_DCT luma payload (transform CDF symbol 1, EOB 127) and skipped TX8x4 DCT_DCT U/V payloads. Safe Rust matches the pinned 154-operation dav1d trace, exact partition record, Y/U/V planes, and 384-byte Pillow RGB8 output. This closes only the bounded origin DCT-DCT class; identity/V_DCT, following H16x8, split/depth variants, alternate transforms, nonzero chroma, and broader AV1/AVF-STILL-001 remain partial.",
         "latest_slice": "The origin Horizontal16x8 slice adds one deterministic 16x8 8-bit 4:2:0 fixture with an exact qcat-three CDF sentence, matrix-7 luma dequantization, one unsplit TX16x8 DCT_DCT luma payload, skipped TX8x4 chroma payloads, and explicit absent-edge DC prediction. The fixture’s independent Y/U/V/RGB references and pinned entropy trace are exact; the selected Coverage MCP measurement is recorded separately as bounded subset evidence and does not replace the complete release gate.",
-        "latest_evidence_addition": "The promoted coverage_h16x8_origin_dct_dct_01.avif fixture has fixture SHA-256 abcc5033662bf727681061787deddc63e3bf8e9c16af6dd700848339c09ca9f2, encoded-item SHA-256 bebf964204dc4e5be3a103fc621cfb19ea35447ce131e0d675c567a6df492cca, Pillow RGB SHA-256 2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab, decoded Y/U/V SHA-256 values f85589ffca557ab3b74745638ed0e5f4253b495146a7f446f47e9b013f678547, bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and dav1d trace SHA-256 e889c04315850eaa12d9710586f8c546dd85be0efc9924c73429388c427c7741. The pinned dav1d trace has 154 entropy operations and one exact partition record; the maintained deterministic generator and input-only oracle never invoked repository Rust. Managed Coverage MCP will be recorded separately against the explicit baseline after the clean implementation verification.",
+        "latest_evidence_addition": "The promoted coverage_h16x8_origin_dct_dct_01.avif fixture has fixture SHA-256 abcc5033662bf727681061787deddc63e3bf8e9c16af6dd700848339c09ca9f2, encoded-item SHA-256 bebf964204dc4e5be3a103fc621cfb19ea35447ce131e0d675c567a6df492cca, Pillow RGB SHA-256 2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab, decoded Y/U/V SHA-256 values f85589ffca557ab3b74745638ed0e5f4253b495146a7f446f47e9b013f678547, bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and dav1d trace SHA-256 e889c04315850eaa12d9710586f8c546dd85be0efc9924c73429388c427c7741. The pinned dav1d trace has 154 entropy operations and one exact partition record; the maintained deterministic generator and input-only oracle never invoked repository Rust. Managed Coverage MCP run a399cf98-f51b-48ac-a248-6c267fe56d8b passed the exact selected fixture in 78,479 ms and ingested snapshot 469dc5dd-36f1-47a2-b3fd-ce2a995336af against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c at implementation commit 7f7e76be3b94128f65472f17631d098aa19be7ea. Its standalone additive review reports +663 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639/+364/+39/+10,218, zero reported regressions, conservative merge, unavailable named-test attribution, and 39,411 unobserved baseline observations. The selected-subset result is bounded evidence and does not replace the complete four-metric release measurement; the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db as a provenance caveat.",
         "current_slice": "The new origin Horizontal16x8 fixture promotes a bounded 16x8 8-bit 4:2:0 class: one origin leaf, one unsplit TX16x8 DCT_DCT luma payload with EOB 127, skipped TX8x4 DCT_DCT U/V payloads, qcat-three transform-context-two CDFs, and dav1d-verified matrix-7 dequantization. The implementation uses narrow geometry/tool/CDF admission, checked safe-Rust reconstruction, and explicit top=127/left=129/top-left=128 origin-edge semantics for the DC predictor. Following H16x8, identity/V_DCT, split/depth variants, alternate transforms, nonzero chroma, optional tools, other dimensions/depths/subsampling, encoding, and the four-metric 100% coverage gate remain open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
@@ -3012,7 +3056,41 @@
             "other dimensions, sample depths, subsampling, optional tools, and malformed/truncated residuals"
           ],
           "focused_verification": "The exact AV1 fixture selector passes 1/1; the complete pinned AV1 reconstruction target passes 236/236; the coverage-configured matrix passes 44/44; strict fmt, locked all-feature check, workspace Clippy, rustdoc, and all-feature tests pass.",
-          "scope": "This closes only the bounded origin Horizontal16x8 DCT_DCT class. Identity/V_DCT, following H16x8, alternate transforms, split/depth variants, nonzero chroma, broader rectangular states, general AV1/AVIF completion, and the four-metric 100% coverage gate remain open."
+          "scope": "This closes only the bounded origin Horizontal16x8 DCT_DCT class. Identity/V_DCT, following H16x8, alternate transforms, split/depth variants, nonzero chroma, broader rectangular states, general AV1/AVIF completion, and the four-metric 100% coverage gate remain open.",
+          "managed_incremental_coverage": {
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "run_id": "a399cf98-f51b-48ac-a248-6c267fe56d8b",
+            "snapshot_id": "469dc5dd-36f1-47a2-b3fd-ce2a995336af",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "commit_sha": "7f7e76be3b94128f65472f17631d098aa19be7ea",
+            "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+            "duration_ms": 78479,
+            "selected_fixtures": [
+              "coverage_h16x8_origin_dct_dct_01.avif"
+            ],
+            "status": "passed_and_ingested",
+            "review": {
+              "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 663,
+              "covered_branches_delta": 17,
+              "covered_functions_delta": 1,
+              "covered_regions_delta": 5289,
+              "total_lines_delta": 3639,
+              "total_branches_delta": 364,
+              "total_functions_delta": 39,
+              "total_regions_delta": 10218,
+              "selected_projection_newly_covered_line_identities": 7400,
+              "not_observed": 39411,
+              "regressed": 0,
+              "test_attribution": "unavailable",
+              "merge_exact": false,
+              "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+              "snapshot_diff_claim_status": "limited",
+              "note": "The exact selected fixture passed and the standalone Coverage MCP incremental review measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +663 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected projection reports 7,400 newly covered line identities; 39,411 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 7f7e76be3b94128f65472f17631d098aa19be7ea. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+            }
+          }
         }
       },
       "AVF-ENTROPY-001": {
