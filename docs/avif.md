@@ -131,6 +131,17 @@ This closes only the exact observed origin H_DCT/CFL class; broader H_DCT,
 V_DCT, other predictor/partition/transform states, and AVF-STILL-001 remain
 open.
 
+The managed incremental Coverage MCP run for this exact reconstruction selector
+is `90d68af5-f06f-4392-b5e6-b2fda4a74c1c`, with ingested snapshot
+`9467e718-f36b-4910-bace-d04d89ebc5c8` and explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 38,688 ms at exact
+implementation commit `f05cdf26436e80f751b6f98646151db7f226cdc9`; the test log
+reports 1 passed, 0 failed, and 43 filtered out. Its additive baseline-union
+review reports +8 lines, +10 branches, +0 functions, and +938 regions, with
+zero regressions; 1,867 selected line identities were newly covered. Merge
+exactness is false and named-test attribution is unavailable, so this remains
+bounded selected-subset evidence rather than a full-release coverage claim.
+
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
 `coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16

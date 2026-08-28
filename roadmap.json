@@ -3904,7 +3904,7 @@
         }
       },
       "current_slice_update_2026_08_29_h16x4_h_dct_cfl": {
-        "status": "in_progress",
+        "status": "completed_bounded",
         "target": "origin PARTITION_H4 16x16 8-bit 4:2:0 with four unsplit Horizontal16x4 luma leaves selecting H_DCT and two CFL/nonzero-chroma leaves",
         "fixture": "coverage_h16x4_h_dct_cfl_01.avif",
         "generator": "scripts/generate_test_assets.py::horizontal16x4_h_dct_cfl",
@@ -3962,7 +3962,73 @@
           "No production source change is required: the existing checked safe-Rust H16x4 rectangular transform and CFL/chroma paths already reconstruct this exact witness.",
           "Register the fixture in the manifest, generated Pillow references, independent dav1d reconstruction oracle, and exact production parity assertions."
         ],
-        "focused_verification": "The exact reconstruction selector passes 1/1 with exact partition, all 3,780 entropy operations, four H_DCT records, two CFL marker pairs, U/V payloads, Y/U/V planes, and Pillow RGB8; the selected AVIF matrix row passes 1/1. Managed incremental Coverage MCP evidence and strict final gates remain pending.",
+        "focused_verification": "The exact reconstruction selector passes 1/1 with exact partition, all 3,780 entropy operations, four H_DCT records, two CFL marker pairs, U/V payloads, Y/U/V planes, and Pillow RGB8; the selected AVIF matrix row passes 1/1. The managed incremental Coverage MCP run, all strict Rust gates, 33-lane native/WASM feature matrix, package consumer, and static verifiers pass at the implementation commit.",
+        "managed_incremental_coverage": {
+          "project_id": "2b9f48753c80b021b894b600",
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "run_id": "90d68af5-f06f-4392-b5e6-b2fda4a74c1c",
+          "snapshot_id": "9467e718-f36b-4910-bace-d04d89ebc5c8",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "commit_sha": "f05cdf26436e80f751b6f98646151db7f226cdc9",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "duration_ms": 38688,
+          "arguments": [
+            "--test",
+            "coverage_matrix_tests",
+            "--",
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_h16x4_h_dct_cfl_01.avif"
+          ],
+          "selected_fixtures": [
+            "coverage_h16x4_h_dct_cfl_01.avif"
+          ],
+          "result": {
+            "passed": 1,
+            "failed": 0,
+            "filtered_out": 43,
+            "test_runtime": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.60s",
+            "status": "passed_and_ingested"
+          },
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 8,
+            "covered_branches_delta": 10,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 938,
+            "total_lines_delta": 4121,
+            "total_branches_delta": 440,
+            "total_functions_delta": 46,
+            "total_regions_delta": 12367,
+            "selected_projection_newly_covered_line_identities": 1867,
+            "not_observed": 75809,
+            "regressed": 0,
+            "merge_exact": false,
+            "test_attribution": "unavailable",
+            "snapshot_diff_claim_status": "limited",
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The exact selected fixture passed 1/1 through the registered all-feature command. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +938 regions. Denominator changes are +4,121 lines, +440 branches, +46 functions, and +12,367 regions. The selected projection reports 1,867 newly covered line identities; 75,809 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit f05cdf26436e80f751b6f98646151db7f226cdc9. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          }
+        },
+        "strict_verification": {
+          "commit_sha": "f05cdf26436e80f751b6f98646151db7f226cdc9",
+          "passed": [
+            "cargo fmt --all -- --check",
+            "cargo check --all-features --locked",
+            "cargo test --locked --all-features",
+            "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            "RUSTDOCFLAGS=-D warnings cargo doc --all-features --no-deps --locked",
+            "RUSTFLAGS=--cfg coverage cargo +nightly test --locked --all-features --test coverage_matrix_tests",
+            "33/33 native, wasm32-unknown-unknown, and wasm32-wasip1 feature lanes",
+            "cargo package --allow-dirty --locked and clean package consumer",
+            "roadmap, claim-ledger, coverage-origin, diagnostic, unreachable-contract, package-surface, license, WebP property-map, and diff checks"
+          ],
+          "rustc_wrapper_changed": false
+        },
         "scope": "This closes only the exact origin 16x16 8-bit 4:2:0 H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. V_DCT, general H_DCT predictor/partition/transform states, other dimensions/depths/subsampling, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open."
       },
       "AVF-ENTROPY-001": {
