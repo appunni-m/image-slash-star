@@ -6,10 +6,10 @@ ten families.  Every candidate is encoded twice with the pinned
 Pillow/libavif/libaom oracle and its extracted AV1 item is decoded twice with
 an independently built scalar dav1d.  A candidate qualifies only when the
 oracle produces the already-supported one-tile 8-bit 4:2:0 origin topology,
-an unsplit TX8x8 DCT_DCT luma block, EOB-bin symbol two (EOB three), direct
-EOB-base zero, a non-empty AC sentence, and skipped 4x4 chroma.  The campaign
-never invokes repository Rust code; the selected AVIF is retained separately
-for later fixture promotion.
+an unsplit TX8x8 DCT_DCT luma block, the requested EOB-bin/EOB sentence,
+direct EOB-base zero, a non-empty AC sentence, and skipped 4x4 chroma.  The
+campaign never invokes repository Rust code; the selected AVIF is retained
+separately for later fixture promotion.
 """
 
 from __future__ import annotations
@@ -206,7 +206,7 @@ def frame_header(path: Path) -> dict[str, object]:
 def operation_after_eob_bin(
     entropy: list[dict[str, object]], eob_bin: dict[str, object]
 ) -> dict[str, object] | None:
-    """Return the EOB-base operation following an EOB-bin-two operation."""
+    """Return the direct three-symbol EOB-base operation after EOB-bin."""
 
     for operation in entropy:
         if (
@@ -226,6 +226,8 @@ def classify(
     yuv: bytes,
     color: dict[str, object],
     header: dict[str, object],
+    target_eob_bin: int,
+    target_eob: int,
 ) -> dict[str, object]:
     """Apply the fixed legal syntax predicate to one oracle result."""
 
@@ -290,7 +292,7 @@ def classify(
         )
     eob_base_operation = (
         operation_after_eob_bin(entropy, eob_bin_operation)
-        if eob_bin_operation is not None and first_eob_bin["value"] == 2
+        if eob_bin_operation is not None and first_eob_bin["value"] == target_eob_bin
         else None
     )
     forbidden_prefixes = (
@@ -341,11 +343,13 @@ def classify(
                     "txtp": 0,
                 }
             ]
-            and luma == [{"tx": 1, "txtp": 0, "eob": 3}]
+            and luma == [{"tx": 1, "txtp": 0, "eob": target_eob}]
         ),
-        "luma_eob_bin_two": first_eob_bin is not None and first_eob_bin["value"] == 2,
-        "luma_eob_three": len(eob_matches) == 1 and eob_matches[0]["value"] == 3,
-        "luma_eob_base_zero": (
+        "target_luma_eob_bin": (
+            first_eob_bin is not None and first_eob_bin["value"] == target_eob_bin
+        ),
+        "target_luma_eob": len(eob_matches) == 1 and eob_matches[0]["value"] == target_eob,
+        "target_luma_eob_base_zero": (
             eob_base_operation is not None and eob_base_operation["value"] == 0
         ),
         "nonempty_luma_ac": any(token > 0 for token in luma_tokens),
@@ -378,6 +382,8 @@ def decode_candidate(
     work: Path,
     candidate: dict[str, object],
     retain_dir: Path | None,
+    target_eob_bin: int,
+    target_eob: int,
 ) -> dict[str, object]:
     """Double-encode and double-decode one candidate through the oracles."""
 
@@ -439,7 +445,16 @@ def decode_candidate(
         pillow_rgb_second = decoded.convert("RGB").tobytes()
     if pillow_rgb != pillow_rgb_second:
         raise RuntimeError(f"nondeterministic Pillow RGB decode for {candidate['id']}")
-    classification = classify(blocks, lines, entropy, yuv_a, color, header)
+    classification = classify(
+        blocks,
+        lines,
+        entropy,
+        yuv_a,
+        color,
+        header,
+        target_eob_bin,
+        target_eob,
+    )
     return {
         "id": candidate["id"],
         "family": candidate["family"],
@@ -472,6 +487,8 @@ def decode_candidate(
             "delta_q": header["delta_q"],
         },
         "repository_rust_invoked": False,
+        "target_eob_bin": target_eob_bin,
+        "target_eob": target_eob,
         **classification,
     }
 
@@ -488,7 +505,24 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument(
+        "--target-eob-bin",
+        type=int,
+        default=2,
+        help="EOB-bin symbol to qualify (default: 2, the original campaign target)",
+    )
+    parser.add_argument(
+        "--target-eob",
+        type=int,
+        default=3,
+        help="direct EOB value to qualify (default: 3, the original campaign target)",
+    )
     args = parser.parse_args()
+
+    if not 1 <= args.target_eob_bin <= 6:
+        parser.error("--target-eob-bin must be between 1 and 6 for this 8x8 campaign")
+    if not 1 <= args.target_eob <= 63:
+        parser.error("--target-eob must be between 1 and 63 for an 8x8 transform")
 
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -517,7 +551,15 @@ def main() -> None:
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
         reports = [
-            decode_candidate(executable, environment, work, candidate, args.retain_dir)
+            decode_candidate(
+                executable,
+                environment,
+                work,
+                candidate,
+                args.retain_dir,
+                args.target_eob_bin,
+                args.target_eob,
+            )
             for candidate in candidates()
         ]
 
@@ -528,9 +570,9 @@ def main() -> None:
         "no_optional_prediction_syntax",
         "dc_luma_and_chroma_modes",
         "tx8x8_dct_dct_luma",
-        "luma_eob_bin_two",
-        "luma_eob_three",
-        "luma_eob_base_zero",
+        "target_luma_eob_bin",
+        "target_luma_eob",
+        "target_luma_eob_base_zero",
         "nonempty_luma_ac",
         "two_skipped_4x4_chroma",
         "complete_yuv_output",
@@ -558,10 +600,14 @@ def main() -> None:
             "candidate_count": len(reports),
             "family_count": len(FAMILY_NAMES),
             "candidates_per_family": 10,
-            "target_id": "luma_tx8x8_eob_bin2_eob3_base0",
+            "target_id": (
+                f"luma_tx8x8_eob_bin{args.target_eob_bin}"
+                f"_eob{args.target_eob}_base0"
+            ),
             "target": (
                 "4x4 8-bit 4:2:0 single-frame one-tile origin block; unsplit "
-                "TX8x8 DCT_DCT luma with EOB-bin symbol two, EOB three, "
+                f"TX8x8 DCT_DCT luma with EOB-bin symbol {args.target_eob_bin}, "
+                f"EOB {args.target_eob}, "
                 "direct EOB-base zero, non-empty AC, and skipped 4x4 U/V"
             ),
             "families": list(FAMILY_NAMES),

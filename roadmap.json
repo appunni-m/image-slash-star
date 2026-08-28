@@ -3272,7 +3272,7 @@
         "status": "partial",
         "depends_on": [],
         "deliverable": "Implement the remaining EOB-bin/base coefficient scans, signs, dequantization, transforms, and typed unsupported boundaries.",
-        "current_evidence": "Legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches, and matrix-10 dequantization are covered. The two one-byte controls are now active malformed-input rows: pinned dav1d 1.5.3 rejects each at the intended EOB stage with no YUV output, and safe Rust preserves the AV1 symbol-coder overread as typed Malformed rather than collapsing it into Unsupported. This classifies invalid arithmetic termination; it does not claim that either mutation is a legal EOB syntax implementation. A deterministic 100-candidate/10-family input-only campaign qualified exactly one additional positive witness, `luma-eob-bin-f01-n03`, promoted as `portable_lossy_420_q99_luma_eob_bin2_eob3.avif`. It is a 4x4 8-bit 4:2:0 one-tile origin TX8x8 DCT-DCT case with luma EOB-bin two, EOB three, direct EOB-base zero, and a non-empty AC coefficient; the pinned trace has 27 entropy operations and exact Y/U/V plus Pillow RGB hashes. The existing generic safe-Rust luma coefficient path already handles this sentence, so this slice adds independent structural and pixel evidence without widening production support by guesswork.",
+        "current_evidence": "Legal luma EOB-bin 0, 2, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches, and matrix-10 dequantization are covered. The two one-byte controls are now active malformed-input rows: pinned dav1d 1.5.3 rejects each at the intended EOB stage with no YUV output, and safe Rust preserves the AV1 symbol-coder overread as typed Malformed rather than collapsing it into Unsupported. This classifies invalid arithmetic termination; it does not claim that either mutation is a legal EOB syntax implementation. A deterministic 100-candidate/10-family input-only campaign qualified exactly one additional positive witness, `luma-eob-bin-f01-n03`, promoted as `portable_lossy_420_q99_luma_eob_bin2_eob3.avif`. It is a 4x4 8-bit 4:2:0 one-tile origin TX8x8 DCT-DCT case with luma EOB-bin two, EOB three, direct EOB-base zero, and a non-empty AC coefficient; the pinned trace has 27 entropy operations and exact Y/U/V plus Pillow RGB hashes. The existing generic safe-Rust luma coefficient path already handles this sentence, so this slice adds independent structural and pixel evidence without widening production support by guesswork. A follow-up deterministic 100-candidate/10-family input-only search for the legal 8x8 luma EOB-bin-one/EOB-one/direct-EOB-base-zero sentence qualified zero candidates; it is retained as bounded no-hit evidence and does not change production admission or claim that bin one is unreachable.",
         "positive_witnesses": [
           {
             "id": "portable_lossy_420_q99_luma_eob_bin2_eob3",
@@ -3298,6 +3298,29 @@
             "independent_decoder": "dav1d 1.5.3, commit b546257f770768b2c88258c533da38b91a06f737",
             "entropy_operation_count": 27,
             "status": "promoted_evidence_only"
+          }
+        ],
+        "negative_campaigns": [
+          {
+            "id": "luma_tx8x8_eob_bin1_eob1_base0",
+            "campaign": "tests/fixtures/outputs/av1_search/coverage_luma_eob_bin1_campaign_01.json",
+            "campaign_sha256": "2f2de5fc6d5a551e9d883a3f7c75a3ff4d26c167f2a399c3ca62398439c9bb08",
+            "candidate_count": 100,
+            "family_count": 10,
+            "candidates_per_family": 10,
+            "qualified_count": 0,
+            "repository_rust_invoked": false,
+            "target": "4x4 8-bit 4:2:0 single-frame one-tile origin block; unsplit TX8x8 DCT_DCT luma with EOB-bin symbol one, EOB one, direct EOB-base zero, non-empty AC, and skipped 4x4 U/V",
+            "observed_eob_bins": {
+              "skipped_or_no_eob": 35,
+              "two": 2,
+              "four": 4,
+              "five": 20,
+              "six": 39
+            },
+            "oracles": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 with independent dav1d 1.5.3 at b546257f770768b2c88258c533da38b91a06f737",
+            "decision": "bounded_no_hit",
+            "interpretation": "The maintained corpus did not emit the requested legal positive sentence. This is reachability evidence for this encoder/settings/family set only; it is not proof that EOB-bin one is unreachable and does not justify a production or denominator change."
           }
         ],
         "active_negative_controls": [
@@ -3412,7 +3435,7 @@
             "note": "The exact selected fixture passed 1/1 through the registered all-feature command. The additive baseline-union review reports +661 covered lines, +17 branches, +1 function, and +5,289 regions. Denominator changes are +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected snapshot projection reports 7,393 newly covered line identities; 39,423 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 288223f66f31814c2bb30f2047284cd20550f4bc. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
         },
-        "next": "Add independent positive fixtures for the remaining legal EOB-bin/base coefficient sentences, then implement only the syntax and transforms proven by those fixtures; retain Malformed for arithmetic overread and Unsupported for valid but unimplemented syntax."
+        "next": "The bounded EOB-bin-one/EOB-one campaign qualified 0/100 and remains no-hit evidence only. Continue with the next reachable legal EOB-bin/base, coefficient-context, scan, or transform sentence; implement only syntax and transforms proven by an independent fixture, while retaining Malformed for arithmetic overread and Unsupported for valid but unimplemented syntax."
       },
       "AVF-SAMPLE-001": {
         "status": "partial",
