@@ -861,6 +861,21 @@ the corresponding status is recorded in `roadmap.json`:
   `6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b`.
   This closes only the origin Square32 split luma/residual class; broader
   AV1, AVF-STILL-001, and AVIF encoding remain open.
+- The newest bounded H_DCT/CFL incremental run
+  `90d68af5-f06f-4392-b5e6-b2fda4a74c1c` passed in 38,688 ms at exact
+  implementation commit `f05cdf26436e80f751b6f98646151db7f226cdc9` and
+  ingested snapshot `9467e718-f36b-4910-bace-d04d89ebc5c8` against explicit
+  baseline `7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its exact reconstruction
+  test passed 1/1 with 43 filtered-out tests. The additive baseline-union
+  review reports +8 covered lines, +10 branches, +0 functions, and +938
+  regions, with denominator changes of +4,121/+440/+46/+12,367; the selected
+  projection reports 1,867 newly covered line identities, 75,809 baseline
+  observations were not observed, and zero regressions were reported. Merge
+  exactness is false and named-test attribution is unavailable; the snapshot
+  projection retains metadata commit
+  `3272b3ef49a87c2947c08b46596b442195c6a8db` while the durable run record is
+  exact for `f05cdf26`. This is bounded selected-subset evidence, not a
+  complete four-metric release measurement.
 - The newest bounded full-resolution proof is
   `coverage_i444_full_chroma_top_left_paeth_01.avif`: a deterministic 32x32
   8-bit 4:4:4 frame whose target fourth top-left `Square8` leaf at pixel
@@ -1152,6 +1167,10 @@ remain below the 100% release target. Compared with the prior complete snapshot
 `c694d0a5-4b6e-490c-b7b7-df010e668fb8`, the covered deltas are +73 lines, +26
 branches, +1 function, and +97 regions; denominator deltas are +6, +26, +0,
 and +12 respectively.
+The current H16x4 H_DCT/CFL implementation commit `f05cdf26436e80f751b6f98646151db7f226cdc9`
+also passes the 33-lane native/WASM feature matrix, the clean package-consumer
+check, and the 44 coverage-configured matrix tests; its bounded incremental
+Coverage MCP evidence is recorded above.
 The bounded incremental run `95dc20e0-33b6-499a-9567-2d54f37c73ae` ingested
 snapshot `de02b397-48fa-44ed-bdaf-df4487b096bf` against baseline
 `c694d0a5-4b6e-490c-b7b7-df010e668fb8`, selected exactly
