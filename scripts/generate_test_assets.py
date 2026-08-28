@@ -6162,6 +6162,55 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_vertical8x16_mode3_mosaic():
+        """Generate the origin Vertical8x16 filter-intra mode-3 witness.
+
+        This is the promoted ``f10_mosaic_04`` candidate from the pinned
+        100-case input-only campaign. Keep the exact candidate construction
+        here so the committed fixture can be regenerated without copying
+        encoded bytes from the oracle work directory.
+        """
+
+        pixels = bytearray()
+        seed = 1005
+        for y in range(16):
+            for x in range(8):
+                tile = (x // 2) + 4 * (y // 4)
+                luma = (36, 92, 148, 204)[(tile + seed) % 4]
+                chroma = ((x * 9 + y * 7 + seed) % 31) - 15
+                pixels.extend(
+                    (
+                        luma,
+                        clamp_channel(128 + chroma),
+                        clamp_channel(128 - chroma),
+                    )
+                )
+        return Image.frombytes("RGB", (8, 16), bytes(pixels))
+
+    write_campaign_image(
+        "coverage_vertical8x16_filter_intra_mode3_01",
+        filter_intra_vertical8x16_mode3_mosaic(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal113_square8():
         """Generate the right-hand Square8 Diagonal113 witness."""
 
