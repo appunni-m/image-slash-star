@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 305 rows total, 300 active, 5 explicit planned
+- AVIF decode/inspect/verify: 306 rows total, 301 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,529 rows total, 1127 active decode rows, 365 active encode
+- Whole matrix: 1,530 rows total, 1128 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -182,6 +182,25 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the bounded split filter-intra TX8x4 class; other
   filter-intra modes, transforms, topologies, and `AVF-STILL-001` remain
   partial.
+
+- The common-valid candidate from the H16x8 campaign is now promoted as
+  `coverage_h16x8_origin_dct_dct_01.avif`: a 16x8 8-bit 4:2:0 origin
+  `Horizontal16x8` leaf with one unsplit TX16x8 DCT-DCT luma payload (transform
+  CDF symbol 1, EOB 127) and skipped TX8x4 DCT-DCT U/V payloads. Its pinned
+  dav1d trace has 154 entropy operations and one exact partition record
+  (`poc=0,y=0,x=0,level=3,context=0,partition=1,range=46840`). Safe Rust
+  matches the exact Y/U/V planes and 384-byte Pillow RGB8 output. The
+  production boundary adds the qcat-three CDF sentences and matrix-7 R16x8
+  dequantization, then admits only this origin/no-filter/DC/DCT-DCT class.
+  Fixture SHA-256 is
+  `abcc5033662bf727681061787deddc63e3bf8e9c16af6dd700848339c09ca9f2`, encoded
+  item SHA-256 is
+  `bebf964204dc4e5be3a103fc621cfb19ea35447ce131e0d675c567a6df492cca`, and
+  Pillow RGB SHA-256 is
+  `2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab`. The
+  campaign's identity/V_DCT target remains 0/100; this promotion closes only
+  the common DCT-DCT witness, not identity/V_DCT, following H16x8, split/depth
+  variants, alternate transforms, nonzero chroma, or `AVF-STILL-001`.
 
   Managed Coverage MCP then ran the exact reconstruction selector against
   baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
@@ -1560,7 +1579,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,529 total | 1,132 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,127 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,530 total | 1,133 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,128 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
