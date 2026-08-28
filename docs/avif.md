@@ -70,14 +70,13 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 299 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 304 AVIF decode rows and 32 encode
 rows:
 
-- 292 decode rows are active: portable still reconstruction and structural
+- 299 decode rows are active: portable still reconstruction and structural
   error contracts.
-- 7 decode rows are planned pure-Rust gaps: two rejected EOB controls,
-  high-bit-depth animation/reconstruction beyond the proven still slices, HDR
-  color handling, and three sequence cases.
+- 5 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
+  sequence materialization, HDR color handling, and three sequence cases.
 - 0 encode rows are active; all 32 are explicit planned gaps.
 
 The committed 12-bit witness is
@@ -212,6 +211,22 @@ are
 The generic safe-Rust mode-2 path was already implemented, so this closes only
 the origin Vertical8x16/mode-2/unsplit-TX8x16/TX4x8-chroma evidence class;
 broader filter-intra modes and AVF-STILL-001 remain partial.
+
+The newest bounded origin implementation proof is
+`coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif`: an 8x16
+8-bit 4:2:0 `Vertical8x16` origin leaf with `FILTER_PRED[13/4]`, transform-
+luma mode 0, and a depth-two 2×4 grid of eight row-major TX4x4 luma DCT-DCT
+children with EOB values `2/2/14/15/14/4/2/2`. The two TX4x8 chroma
+payloads have EOB 0, proving geometry and zero residuals only. The input-only
+100-candidate/10-family campaign qualified exactly one deterministic
+double-encoded candidate (`f03_color_ramp_08`, seed 309) without invoking
+repository Rust. Its pinned 361-operation dav1d trace, exact partition,
+reconstructed Y/U/V planes, and independent Pillow RGB8 bytes match safe Rust.
+Here transform-luma mode 0 names the residual transform/CDF context, not
+ordinary DC prediction—the predictor is `FILTER_PRED` mode 4. The production
+path uses a dedicated checked eight-child grid and dav1d-compatible child-local
+missing-edge propagation. This closes only this proven origin mode-4 grid
+class; broader filter-intra, AV1, and AVF-STILL-001 remain partial.
 
 The newest following-leaf witness is
 `coverage_square8_chroma_diagonal113_01.avif`, a 16x8 8-bit 4:2:0 horizontal
@@ -442,19 +457,18 @@ safe-Rust `Unsupported` result (with the named repeated-frame-ID sequence case
 intentionally returning `Malformed`). The generated matrix drops that marker
 as soon as a row becomes active, so it cannot silently survive a real closure.
 
-The current matrix contains 39 former-native AVIF rows: 7 decode gaps and 32
+The current matrix contains 37 former-native AVIF rows: 5 decode gaps and 32
 encode gaps. Every remaining row is explicitly planned until pure safe Rust and
 independent compatibility evidence exist.
 
 ## Exact planned gaps
 
-These are the 7 decode rows that must become real safe-Rust behavior before
+These are the 5 decode rows that must become real safe-Rust behavior before
 they can move from `planned` to `active` in `manifest.yaml` and
 `coverage_matrix.json`:
 
 | Category | Planned rows | Why it is missing |
 | --- | --- | --- |
-| Adjacent entropy syntax | `portable_lossy_420_q99_eob_bin_control`; `portable_lossy_420_q99_eob_base_control` | Safe Rust now proves legal EOB-bin-five and EOB-bin-six 8×8 AC classes, including moving coefficient-context lookup, matrix-10 dequantization, and independent pixel fixtures. These two byte mutations are rejected by the independent Pillow oracle, so they remain explicit negative planned controls rather than being widened into successful decoding. |
 | Sample depth | `high_bitdepth` | The single-frame 10-bit and 12-bit 4:4:4 still classes are active with exact RGB8 evidence. `high_bitdepth` still needs animated/high-depth sequence materialization, other subsampling, and broader alpha/depth relationships; the 64×64 `with_alpha` primary/auxiliary pair remains active with exact RGBA8 evidence. |
 | Color pipeline | `hdr` | HDR transfer/primaries/matrix application is not implemented; the current public color path is the narrow checked 8-bit BT.601 full-range class. |
 | Animation and tracks | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | Track references, timing, and sequence presentation are not implemented; the safe validator now rejects the repeated current frame ID in the named error fixture. |

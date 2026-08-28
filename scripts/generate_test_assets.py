@@ -6211,6 +6211,53 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_vertical8x16_mode4_tx4x4_grid():
+        """Generate the origin Vertical8x16 mode-4 2x4 TX4x4 witness.
+
+        This is the promoted ``f03_color_ramp_08`` candidate from the pinned
+        100-case input-only campaign. Keep its deterministic pixel formula
+        here so the fixture can be regenerated from source rather than copied
+        from the temporary oracle directory.
+        """
+
+        pixels = bytearray()
+        seed = 309
+        for y in range(16):
+            for x in range(8):
+                base = 24 + ((5 * x + 9 * y + seed) % 192)
+                pixels.extend(
+                    (
+                        clamp_channel(base + 24),
+                        base,
+                        clamp_channel(base - 24),
+                    )
+                )
+        return Image.frombytes("RGB", (8, 16), bytes(pixels))
+
+    write_campaign_image(
+        "coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01",
+        filter_intra_vertical8x16_mode4_tx4x4_grid(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal113_square8():
         """Generate the right-hand Square8 Diagonal113 witness."""
 

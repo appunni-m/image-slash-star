@@ -48,6 +48,7 @@ type Lossy64x16TransformCoefficients = [i32; 512];
 type Lossy32x8TransformCoefficients = [i32; 256];
 type Lossy16x4TransformCoefficients = [i32; 64];
 type LossyLuma4x4SplitCoefficients = [Option<TransformCoefficients>; 4];
+type LossyLuma4x4GridSplitCoefficients = [Option<TransformCoefficients>; 8];
 type LossyLuma8x4SplitCoefficients = [Option<Lossy4x8TransformCoefficients>; 2];
 type LossyLuma8x8SplitCoefficients = [Option<LossyTransformCoefficients>; 4];
 type LossyLuma8x8GridSplitCoefficients = [Option<LossyTransformCoefficients>; 8];
@@ -116,6 +117,20 @@ struct LossyLuma4x4Split {
     bottom_contexts: [u8; 4],
     grid_width: usize,
     grid_height: usize,
+}
+
+/// The fixed 2×4 TX4x4 luma topology of an origin R8x16 split.
+///
+/// This remains separate from [`LossyLuma4x4Split`] because that type is
+/// shared by the existing 1×4, 4×1, and 2×2 layouts. Keeping the geometry in
+/// the type prevents an eight-child stream from being represented by unused
+/// slots or an inferred bitstream-sized collection.
+#[derive(Clone, Copy)]
+struct LossyLuma4x4GridSplit {
+    coefficients: LossyLuma4x4GridSplitCoefficients,
+    transforms: [LossyTransformKind; 8],
+    right_contexts: [u8; 4],
+    bottom_contexts: [u8; 2],
 }
 
 #[derive(Clone, Copy)]
@@ -240,6 +255,7 @@ struct BlockSyntax {
     lossy_luma_transform: LossyTransformKind,
     lossy_luma_residual_context: Option<u8>,
     lossy_luma_4x4_split: Option<LossyLuma4x4Split>,
+    lossy_luma_4x4_grid_split: Option<LossyLuma4x4GridSplit>,
     lossy_luma_8x4_split: Option<LossyLuma8x4Split>,
     lossy_luma_8x8_split: Option<LossyLuma8x8Split>,
     lossy_luma_8x8_grid_split: Option<LossyLuma8x8GridSplit>,
@@ -9971,6 +9987,85 @@ fn decode_lossy_luma_4x4_split(
     })
 }
 
+/// Decode the fixed 2×4 TX4x4 luma grid of an origin R8x16 leaf.
+///
+/// The eight children are consumed row-major. Each child receives the
+/// external context on the top/left boundary and the already decoded
+/// neighboring residual context everywhere else. This is deliberately a
+/// dedicated topology so the existing four-child split decoder keeps its
+/// smaller layout contract.
+fn decode_lossy_luma_4x4_grid_split(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    luma_mode: usize,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    mut above_contexts: [u8; 2],
+    mut left_contexts: [u8; 4],
+) -> PortableResult<LossyLuma4x4GridSplit> {
+    let mut coefficients = [None; 8];
+    let mut transforms = [LossyTransformKind::DctDct; 8];
+    let mut right_contexts = [0x40_u8; 4];
+    let mut bottom_contexts = [0x40_u8; 2];
+
+    for row in 0_usize..4 {
+        for column in 0_usize..2 {
+            let transform_index = row
+                .checked_mul(2)
+                .and_then(|index| index.checked_add(column))
+                .ok_or(PortableUnavailable)?;
+            let above = *above_contexts.get(column).portable()?;
+            let left = *left_contexts.get(row).portable()?;
+            let skipped =
+                decode_contextual_skip(decoder, 0, contextual_skip_cdf(0, above, left)?, cdfs);
+
+            if skipped {
+                *above_contexts.get_mut(column).portable()? = 0x40;
+                *left_contexts.get_mut(row).portable()? = 0x40;
+                if column == 1 {
+                    *right_contexts.get_mut(row).portable()? = 0x40;
+                }
+                if row == 3 {
+                    *bottom_contexts.get_mut(column).portable()? = 0x40;
+                }
+                continue;
+            }
+
+            let transform_type = decoder.adaptive_symbol(
+                cdfs.lossy_luma_4x8_transform_type
+                    .get_mut(luma_mode)
+                    .portable()?,
+                6,
+            );
+            let transform_kind = lossy_transform_kind_from_intra1(transform_type)?;
+            let (transform_coefficients, context) = decode_lossy_luma_4x4_coefficients(
+                decoder,
+                cdfs,
+                quantization,
+                coefficient_dc_sign_context(above, left),
+                transform_kind,
+            )?;
+
+            *coefficients.get_mut(transform_index).portable()? = Some(transform_coefficients);
+            *transforms.get_mut(transform_index).portable()? = transform_kind;
+            *above_contexts.get_mut(column).portable()? = context;
+            *left_contexts.get_mut(row).portable()? = context;
+            if column == 1 {
+                *right_contexts.get_mut(row).portable()? = context;
+            }
+            if row == 3 {
+                *bottom_contexts.get_mut(column).portable()? = context;
+            }
+        }
+    }
+
+    Ok(LossyLuma4x4GridSplit {
+        coefficients,
+        transforms,
+        right_contexts,
+        bottom_contexts,
+    })
+}
+
 fn merged_luma_split_context(contexts: [u8; 2]) -> u8 {
     contexts[0] | contexts[1]
 }
@@ -15064,6 +15159,7 @@ fn decode_syntax_with_cdef(
     let mut lossy_luma_16x8_transform = Lossy4x8TransformKind::DctDct;
     let mut lossy_luma_transform = LossyTransformKind::DctDct;
     let mut lossy_luma_4x4_split = None;
+    let mut lossy_luma_4x4_grid_split = None;
     let mut lossy_luma_8x4_split = None;
     let mut lossy_luma_8x8_split = None;
     let mut lossy_luma_8x8_grid_split = None;
@@ -15953,6 +16049,31 @@ fn decode_syntax_with_cdef(
                     return Ok([[0_i32; 16]; 64]);
                 }
                 if plane == 0 && matches!(transform_grid, TransformGrid::Vertical8x16) {
+                    if transform_depth == 2
+                        && matches!(spatial_luma_context, SpatialLumaContext::Origin)
+                        && matches!(filter_intra_mode, Some(4))
+                    {
+                        // The promoted origin witness is a depth-two R8x16
+                        // filter-intra mode-4 leaf. Its luma syntax is eight
+                        // TX4x4 sentences; the 4:2:0 chroma path below still
+                        // consumes its independent TX4x8 sentences.
+                        let split = decode_lossy_luma_4x4_grid_split(
+                            decoder,
+                            transform_luma_mode,
+                            cdfs,
+                            lossy_quantization,
+                            [above_luma_contexts[0], above_luma_contexts[1]],
+                            [
+                                left_luma_contexts[0],
+                                left_luma_contexts[1],
+                                left_luma_contexts[2],
+                                left_luma_contexts[3],
+                            ],
+                        )?;
+                        cdfs.last_lossy_luma_residual_context = Some(split.bottom_contexts[1]);
+                        lossy_luma_4x4_grid_split = Some(split);
+                        return Ok([[0_i32; 16]; 64]);
+                    }
                     if transform_depth == 1 {
                         // A switchable TX size of depth one selects two
                         // vertically stacked TX_8X8 transforms inside the
@@ -16584,6 +16705,7 @@ fn decode_syntax_with_cdef(
             lossy_luma_transform,
             lossy_luma_residual_context,
             lossy_luma_4x4_split,
+            lossy_luma_4x4_grid_split,
             lossy_luma_8x4_split,
             lossy_luma_8x8_split,
             lossy_luma_8x8_grid_split,
@@ -24858,6 +24980,7 @@ fn reconstruct_leaf_with_luma_override(
         lossy_luma_transform,
         lossy_luma_residual_context: _,
         lossy_luma_4x4_split,
+        lossy_luma_4x4_grid_split: _,
         lossy_luma_8x4_split,
         lossy_luma_8x8_split,
         lossy_luma_8x8_grid_split,
@@ -27386,6 +27509,7 @@ fn reconstruct_following_square_leaf(
         lossy_luma_transform: _,
         lossy_luma_residual_context: _,
         lossy_luma_4x4_split: _,
+        lossy_luma_4x4_grid_split: _,
         lossy_luma_8x4_split: _,
         lossy_luma_8x8_split: _,
         lossy_luma_8x8_grid_split: _,
@@ -34727,6 +34851,118 @@ fn reconstruct_lossy_luma_8x16_split(
     Ok(ReconstructedPlane { samples })
 }
 
+/// Reconstruct the promoted origin R8x16 mode-4 leaf from eight TX4x4
+/// children. Each child publishes its residual-adjusted pixels before the
+/// next child reads an internal top or left edge.
+fn reconstruct_lossy_luma_8x16_4x4_grid_filter_intra(
+    top: [u16; 16],
+    left: [u16; 16],
+    top_left: u16,
+    mode: usize,
+    split: LossyLuma4x4GridSplit,
+) -> PortableResult<ReconstructedPlane> {
+    (mode < FILTER_INTRA_TAPS.len()).then_some(()).portable()?;
+    let mut samples = vec![0_u16; 128];
+    for row in 0_usize..4 {
+        let offset_y = row.checked_mul(4).ok_or(PortableUnavailable)?;
+        for column in 0_usize..2 {
+            let offset_x = column.checked_mul(4).ok_or(PortableUnavailable)?;
+            let left_edge: [u16; 4] = if column == 0 {
+                if row == 0 {
+                    let left_end = offset_y.checked_add(4).ok_or(PortableUnavailable)?;
+                    left.get(offset_y..left_end)
+                        .portable()?
+                        .try_into()
+                        .map_err(|_| PortableUnavailable)?
+                } else {
+                    let top_row = offset_y.checked_sub(1).ok_or(PortableUnavailable)?;
+                    let top_index = top_row
+                        .checked_mul(8)
+                        .and_then(|index| index.checked_add(offset_x))
+                        .ok_or(PortableUnavailable)?;
+                    [*samples.get(top_index).portable()?; 4]
+                }
+            } else {
+                let left_column = offset_x.checked_sub(1).ok_or(PortableUnavailable)?;
+                let mut edge = [0_u16; 4];
+                for (row_offset, value) in edge.iter_mut().enumerate() {
+                    let sample_row = offset_y
+                        .checked_add(row_offset)
+                        .ok_or(PortableUnavailable)?;
+                    let sample_index = sample_row
+                        .checked_mul(8)
+                        .and_then(|index| index.checked_add(left_column))
+                        .ok_or(PortableUnavailable)?;
+                    *value = *samples.get(sample_index).portable()?;
+                }
+                edge
+            };
+            let top_end = offset_x.checked_add(4).ok_or(PortableUnavailable)?;
+            let top_edge: [u16; 4] = if row == 0 {
+                if column == 0 {
+                    top.get(offset_x..top_end)
+                        .portable()?
+                        .try_into()
+                        .map_err(|_| PortableUnavailable)?
+                } else {
+                    [left_edge[0]; 4]
+                }
+            } else {
+                let top_row = offset_y.checked_sub(1).ok_or(PortableUnavailable)?;
+                let top_start = top_row
+                    .checked_mul(8)
+                    .and_then(|index| index.checked_add(offset_x));
+                let top_start = top_start.ok_or(PortableUnavailable)?;
+                let top_end = top_start.checked_add(4).ok_or(PortableUnavailable)?;
+                samples
+                    .get(top_start..top_end)
+                    .portable()?
+                    .try_into()
+                    .map_err(|_| PortableUnavailable)?
+            };
+            let block_top_left = if row == 0 {
+                if column == 0 { top_left } else { left_edge[0] }
+            } else if column == 0 {
+                top_edge[0]
+            } else {
+                let sample_row = offset_y.checked_sub(1).ok_or(PortableUnavailable)?;
+                let sample_column = offset_x.checked_sub(1).ok_or(PortableUnavailable)?;
+                let sample_index = sample_row
+                    .checked_mul(8)
+                    .and_then(|index| index.checked_add(sample_column))
+                    .ok_or(PortableUnavailable)?;
+                *samples.get(sample_index).portable()?
+            };
+            let transform_index = row
+                .checked_mul(2)
+                .and_then(|index| index.checked_add(column))
+                .ok_or(PortableUnavailable)?;
+            let prediction =
+                reconstruct_filter_intra_4x4_prediction(mode, block_top_left, top_edge, left_edge);
+            let block = reconstruct_lossy_4x4_from_prediction(
+                prediction,
+                *split.coefficients.get(transform_index).portable()?,
+                *split.transforms.get(transform_index).portable()?,
+            );
+            for (row_offset, source) in block.samples.as_chunks::<4>().0.iter().enumerate() {
+                let output_row = offset_y
+                    .checked_add(row_offset)
+                    .ok_or(PortableUnavailable)?;
+                let output_start = output_row
+                    .checked_mul(8)
+                    .and_then(|index| index.checked_add(offset_x))
+                    .ok_or(PortableUnavailable)?;
+                let output_end = output_start.checked_add(4).ok_or(PortableUnavailable)?;
+                samples
+                    .get_mut(output_start..output_end)
+                    .portable()?
+                    .copy_from_slice(source);
+            }
+        }
+    }
+    Ok(ReconstructedPlane { samples })
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "the AV1 split reconstruction needs the predictor edges, filtering state, and decoded child syntax"
@@ -37468,6 +37704,9 @@ fn luma_edge_contexts_for_syntax(syntax: &BlockSyntax) -> ([u8; 16], [u8; 16]) {
         for (index, context) in split.bottom_contexts.into_iter().enumerate() {
             bottom[index * 2..index * 2 + 2].fill(context);
         }
+    } else if let Some(split) = syntax.lossy_luma_4x4_grid_split.as_ref() {
+        right[..4].copy_from_slice(&split.right_contexts);
+        bottom[..2].copy_from_slice(&split.bottom_contexts);
     } else if let Some(split) = syntax.lossy_luma_4x4_split.as_ref() {
         match (split.grid_width, split.grid_height) {
             (1, 4) => {
@@ -42349,19 +42588,25 @@ impl Lossy420Decoder {
         }
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
-        let tx_context = luma_transform_context_for_syntax(
-            transform_grid,
-            syntax.lossy_luma_4x4_split.is_some()
-                || syntax.lossy_luma_8x4_split.is_some()
-                || syntax.lossy_luma_8x8_split.is_some()
-                || syntax.lossy_luma_8x8_grid_split.is_some()
-                || syntax.lossy_luma_16x16_split.is_some()
-                || syntax.lossy_luma_32x16_horizontal_split.is_some()
-                || syntax.lossy_luma_16x16_vertical_split.is_some()
-                || syntax.lossy_luma_64x64_split.is_some(),
-            syntax.lossy_luma_16x16_vertical_split.is_some(),
-            syntax.lossy_luma_8x4_split.is_some(),
-        );
+        let tx_context = if syntax.lossy_luma_4x4_grid_split.is_some() {
+            // The promoted R8x16 split ends in TX4x4 children, unlike the
+            // existing depth-one R8x16 split whose children are TX8x8.
+            (0, 0)
+        } else {
+            luma_transform_context_for_syntax(
+                transform_grid,
+                syntax.lossy_luma_4x4_split.is_some()
+                    || syntax.lossy_luma_8x4_split.is_some()
+                    || syntax.lossy_luma_8x8_split.is_some()
+                    || syntax.lossy_luma_8x8_grid_split.is_some()
+                    || syntax.lossy_luma_16x16_split.is_some()
+                    || syntax.lossy_luma_32x16_horizontal_split.is_some()
+                    || syntax.lossy_luma_16x16_vertical_split.is_some()
+                    || syntax.lossy_luma_64x64_split.is_some(),
+                syntax.lossy_luma_16x16_vertical_split.is_some(),
+                syntax.lossy_luma_8x4_split.is_some(),
+            )
+        };
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
 
         let leaf = reconstruct_leaf_with_luma_override(
@@ -42384,6 +42629,7 @@ impl Lossy420Decoder {
                         syntax_chroma_sampling,
                         tx_context,
                         syntax.lossy_luma_4x4_split.is_some()
+                            || syntax.lossy_luma_4x4_grid_split.is_some()
                             || syntax.lossy_luma_8x4_split.is_some()
                             || syntax.lossy_luma_8x8_split.is_some()
                             || syntax.lossy_luma_8x8_grid_split.is_some()
@@ -43843,6 +44089,16 @@ fn reconstruct_origin_luma_override(
     }
     if matches!(transform_grid, TransformGrid::Vertical8x16) && !syntax.palette.is_present() {
         let left = [129_u16; 16];
+        if let Some(split) = syntax.lossy_luma_4x4_grid_split {
+            let Some(mode) = syntax.filter_intra_mode else {
+                return Err(PortableUnavailable);
+            };
+            (mode == 4).then_some(()).portable()?;
+            let top = [127_u16; 16];
+            let luma =
+                reconstruct_lossy_luma_8x16_4x4_grid_filter_intra(top, left, 128, mode, split)?;
+            return Ok(Some(luma));
+        }
         if let Some(split) = syntax.lossy_luma_8x8_split {
             let top = if syntax.filter_intra_mode.is_some() {
                 [127_u16; 16]
