@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 309 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 310 AVIF decode rows and 32 encode
 rows:
 
-- 304 decode rows are active: portable still reconstruction and structural
+- 305 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 5 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and three sequence cases.
@@ -424,6 +424,25 @@ Diagonal67 cases retain their prior path. The full active AVIF matrix passes
 only this bounded following-vertical Square8/luma-Diagonal67 class; broader
 angle deltas, split/depth/transform variants, other availability contexts,
 chroma Diagonal67, and AVF-STILL-001 remain open.
+The split-transform fallback is now covered by
+`coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif`: the same
+8×16 clipped vertical split has a following luma mode-8/angle-symbol-3 leaf
+with four split TX4×4 DCT-DCT payloads, EOB values `15/-1/-1/-1`, one decoded
+dequantized AC at scan index 15 = 160, and skipped U/V. The 100-candidate,
+10-family input-only campaign qualified 40 and promoted `D67V-F02-N00`
+(seed 12010) without invoking repository Rust. Its pinned dav1d trace has 92
+entropy operations and partition ranges `46608/54426/35039`; fixture,
+encoded-item, Pillow RGB, decoded Y/U/V/YUV, and trace hashes are recorded in
+`roadmap.json` and the durable campaign report
+`tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_split_tx4x4_campaign_01.json`
+(SHA-256
+`24cf68436cb30dc01ae7c9277f2647c220a2868646921c8f3cc8d4b1f42fb18b`). Safe
+Rust passes the real split helper's edge-filter state and disables filtered
+upsampling only for the proven top-only/no-left/no-extension, zero-delta,
+67-degree, DCT-DCT semantic class; other contexts retain their prior path.
+The selected reconstruction proof passes 1/1 and the full active AVIF matrix
+passes 305/305 with 5 explicit planned skips; broader split/depth/transform
+and AVF-STILL-001 work remain open.
 The managed incremental Coverage MCP run
 `f5d16417-a1d5-4947-8c38-0631cf01388b` passed in 75,327 ms at exact
 implementation commit `c69c882cfe45d6a1e534e70ebc5786d687908c15` and ingested

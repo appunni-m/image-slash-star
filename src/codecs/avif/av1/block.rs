@@ -21603,6 +21603,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1_extended(
     left: Option<[u16; 8]>,
     top_left: Option<u16>,
     angle: i32,
+    enable_intra_edge_filter: bool,
     smooth_edges: bool,
     split: LossyLuma4x4Split,
 ) -> PortableResult<ReconstructedPlane> {
@@ -21638,7 +21639,7 @@ fn reconstruct_lossy_luma_8x8_split_diagonal_z1_extended(
             top_edge,
             block_top_left,
             angle,
-            true,
+            enable_intra_edge_filter,
             smooth_edges,
             split.coefficients[transform_index],
             split.transforms[transform_index],
@@ -36999,6 +37000,7 @@ fn reconstruct_following_lossy_420_vertical_leaf(
                     left_luma_edge,
                     Some(luma_top_left_for_prediction),
                     luma_angle.ok_or(PortableUnavailable)?,
+                    !unupsampled_diagonal67,
                     smooth_neighbor_edges,
                     split,
                 )
@@ -37014,6 +37016,7 @@ fn reconstruct_following_lossy_420_vertical_leaf(
                         left_luma_edge,
                         Some(luma_top_left_for_prediction),
                         angle,
+                        true,
                         smooth_neighbor_edges,
                         split,
                     )

@@ -7,9 +7,10 @@ Pillow/libavif/libaom oracle and decoded twice through an independently
 instrumented scalar dav1d build. The default chroma target qualifies a clipped
 16x16 split with a vertically following bottom Square8 leaf, coded chroma
 Diagonal67 mode 8, ADST-DCT 4x4 U/V transforms, and the required non-empty
-residuals. The luma target qualifies the same topology with coded luma
-Diagonal67 mode 8, a genuine Zone-1 edge, and skipped chroma. Repository Rust
-is never invoked during the search.
+residuals. The luma targets qualify the same topology with coded luma
+Diagonal67 mode 8, a genuine Zone-1 edge, and skipped chroma. The split-luma
+target additionally requires four TX4x4 DCT-DCT luma payloads with a decoded
+nonzero AC coefficient. Repository Rust is never invoked during the search.
 """
 
 from __future__ import annotations
@@ -58,6 +59,9 @@ LUMA_ADVANCED = {
     **ADVANCED,
     "use-intra-dct-only": "1",
 }
+LUMA_TARGETS = frozenset(
+    {"luma_diagonal67", "luma_diagonal67_split_tx4x4"}
+)
 FAMILY_NAMES = (
     "positive_diagonal_ramp",
     "negative_diagonal_ramp",
@@ -238,14 +242,14 @@ def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
         value = luma_edge_value(family, index, x) + (y - 7) * ((family + index) % 2)
     else:
         local_y = y - 8
-        if target == "luma_diagonal67":
+        if target in LUMA_TARGETS:
             # D67 is near vertical: each lower row advances only part of one
             # top-edge sample.  The encoder sees a real top edge here.
             source_x = min(7, x + (local_y + 1) // 2)
         else:
             source_x = min(7, x + local_y + 1)
         value = luma_edge_value(family, index, source_x)
-        if target == "chroma_diagonal67":
+        if target in ("chroma_diagonal67", "luma_diagonal67_split_tx4x4"):
             value += luma_residual(family, x, local_y)
         else:
             value += ((3 * x + 5 * local_y + 7 * family + index) % 7) - 3
@@ -258,7 +262,7 @@ def candidate_pixels(family: int, index: int, target: str) -> bytes:
     pixels = bytearray()
     for y in range(SIZE[1]):
         for x in range(SIZE[0]):
-            if target == "luma_diagonal67":
+            if target in LUMA_TARGETS:
                 u_delta = v_delta = 0
             else:
                 u_delta, v_delta = chroma_sample(family, index, x // 2, y // 2)
@@ -307,7 +311,7 @@ def encode(pixels: bytes, quality: int, speed: int, target: str) -> bytes:
         max_threads=1,
         subsampling=SUBSAMPLING,
         autotiling=False,
-        advanced=LUMA_ADVANCED if target == "luma_diagonal67" else ADVANCED,
+        advanced=LUMA_ADVANCED if target in LUMA_TARGETS else ADVANCED,
     )
     return output.getvalue()
 
@@ -394,8 +398,9 @@ def classify_luma(
     yuv: bytes,
     portable_color: dict[str, object],
     angle_symbol: int,
+    split_tx4x4: bool,
 ) -> dict[str, object]:
-    """Apply exact predicates for one vertical-following luma D67 angle."""
+    """Apply exact predicates for one vertical-following luma D67 target."""
 
     parsed = [parse_group(group) for group in groups]
     shape = [
@@ -445,6 +450,11 @@ def classify_luma(
     def has_nonzero_ac(matrices: list[list[int]]) -> bool:
         return any(value != 0 for matrix in matrices for value in matrix[1:])
 
+    def is_tx4x4_grid(payloads: list[dict[str, int]]) -> bool:
+        return len(payloads) == 4 and all(
+            payload["tx"] == 0 and payload["txtp"] == 0 for payload in payloads
+        )
+
     def is_skipped_chroma(payloads: list[dict[str, int]], cbx4: int) -> bool:
         return (
             len(payloads) == 2
@@ -457,6 +467,32 @@ def classify_luma(
                 for payload in payloads
             )
         )
+
+    if split_tx4x4:
+        bottom_luma_layout_name = "bottom_luma_is_split_tx4x4"
+        bottom_luma_layout = (
+            len(y_payloads) == 2 and is_tx4x4_grid(y_payloads[1])
+        )
+        bottom_luma_ac_name = "bottom_luma_split_has_nonzero_ac"
+        bottom_luma_ac = (
+            len(y_payloads) == 2
+            and len(dq_matrices) == 2
+            and 0 < len(dq_matrices[1]) <= 4
+            and all(len(matrix) == 16 for matrix in dq_matrices[1])
+            and has_nonzero_ac(dq_matrices[1])
+        )
+    else:
+        bottom_luma_layout_name = "bottom_luma_is_unsplit_tx8x8_with_ac"
+        bottom_luma_layout = (
+            len(y_payloads) == 2
+            and is_tx8x8(y_payloads[1], True)
+            and len(dq_matrices) == 2
+            and len(dq_matrices[1]) == 1
+            and len(dq_matrices[1][0]) == 64
+            and has_nonzero_ac(dq_matrices[1])
+        )
+        bottom_luma_ac_name = None
+        bottom_luma_ac = None
 
     predicates = {
         "exact_vertical_split_shape": shape == [
@@ -479,14 +515,6 @@ def classify_luma(
         "origin_luma_is_unsplit_tx8x8": (
             len(y_payloads) == 2 and is_tx8x8(y_payloads[0], False)
         ),
-        "bottom_luma_is_unsplit_tx8x8_with_ac": (
-            len(y_payloads) == 2
-            and is_tx8x8(y_payloads[1], True)
-            and len(dq_matrices) == 2
-            and len(dq_matrices[1]) == 1
-            and len(dq_matrices[1][0]) == 64
-            and has_nonzero_ac(dq_matrices[1])
-        ),
         "origin_and_bottom_chroma_are_dc_skipped": (
             len(chroma_payloads) == 2
             and is_skipped_chroma(chroma_payloads[0], 0)
@@ -503,8 +531,15 @@ def classify_luma(
             len(top_luma_edge) == SIZE[0] and top_luma_edge[0] != 128
         ),
     }
+    predicates[bottom_luma_layout_name] = bottom_luma_layout
+    if bottom_luma_ac_name is not None:
+        predicates[bottom_luma_ac_name] = bool(bottom_luma_ac)
     return {
-        "target": f"vertical_following_luma_diagonal67_symbol_{angle_symbol}",
+        "target": (
+            f"vertical_following_luma_diagonal67_split_tx4x4_symbol_{angle_symbol}"
+            if split_tx4x4
+            else f"vertical_following_luma_diagonal67_symbol_{angle_symbol}"
+        ),
         "effective_predictor": "z1_top_available_left_unavailable",
         "root_partition": blocks[0] if blocks else None,
         "partition_shape": shape,
@@ -522,6 +557,9 @@ def classify_luma(
             dq_matrices[1][0]
             if len(dq_matrices) == 2 and len(dq_matrices[1]) == 1
             else []
+        ),
+        "bottom_luma_dq_matrices": (
+            dq_matrices[1] if len(dq_matrices) == 2 else []
         ),
         "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
         "bottom_chroma_payloads": chroma_payloads[1] if len(chroma_payloads) == 2 else [],
@@ -541,8 +579,15 @@ def classify(
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
-    if target == "luma_diagonal67":
-        return classify_luma(blocks, groups, yuv, portable_color, angle_symbol)
+    if target in LUMA_TARGETS:
+        return classify_luma(
+            blocks,
+            groups,
+            yuv,
+            portable_color,
+            angle_symbol,
+            split_tx4x4=target == "luma_diagonal67_split_tx4x4",
+        )
 
     parsed = [parse_group(group) for group in groups]
     shape = [
@@ -804,7 +849,11 @@ def main() -> None:
     parser.add_argument("--retain-dir", type=Path)
     parser.add_argument(
         "--target",
-        choices=("chroma_diagonal67", "luma_diagonal67"),
+        choices=(
+            "chroma_diagonal67",
+            "luma_diagonal67",
+            "luma_diagonal67_split_tx4x4",
+        ),
         default="chroma_diagonal67",
     )
     parser.add_argument(
@@ -815,6 +864,27 @@ def main() -> None:
         help="D67 luma angle symbol to qualify (2=64 degrees, 3=67, 4=70)",
     )
     args = parser.parse_args()
+    if args.target in LUMA_TARGETS:
+        luma_transform = (
+            "four split TX4x4 DCT-DCT luma payloads with decoded AC"
+            if args.target == "luma_diagonal67_split_tx4x4"
+            else "unsplit TX8x8 luma with AC"
+        )
+        target_id = f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
+        target_description = (
+            "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
+            "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
+            f"angle symbol {args.luma_angle_symbol} (resolved "
+            f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
+            f"top edge, {luma_transform}, and skipped chroma"
+        )
+    else:
+        target_id = args.target
+        target_description = (
+            "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
+            "Square8 leaves; bottom following UV mode 8 Diagonal67, "
+            "ADST-DCT TX4x4 U/V, and non-empty AC"
+        )
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
     codecs = _avif.codec_versions()
@@ -871,29 +941,13 @@ def main() -> None:
             "speed": 0,
             "max_threads": 1,
             "autotiling": False,
-            "advanced": LUMA_ADVANCED if args.target == "luma_diagonal67" else ADVANCED,
+            "advanced": LUMA_ADVANCED if args.target in LUMA_TARGETS else ADVANCED,
         },
         "search": {
             "candidate_count": len(reports),
             "seed_formula": "12000 + 10*family_index + candidate_index",
-            "target_id": (
-                f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
-                if args.target == "luma_diagonal67"
-                else args.target
-            ),
-            "target": (
-                "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
-                "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
-                f"angle symbol {args.luma_angle_symbol} (resolved "
-                f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 top edge, unsplit TX8x8 "
-                "luma with AC, and skipped chroma"
-                if args.target == "luma_diagonal67"
-                else (
-                    "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
-                    "Square8 leaves; bottom following UV mode 8 Diagonal67, "
-                    "ADST-DCT TX4x4 U/V, and non-empty AC"
-                )
-            ),
+            "target_id": target_id,
+            "target": target_description,
             "families": list(FAMILY_NAMES),
             "repository_rust_invoked": False,
         },
